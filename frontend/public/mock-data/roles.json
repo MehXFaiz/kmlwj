@@ -1,0 +1,26 @@
+[
+  {
+    "id": "r1",
+    "name": "Super Admin",
+    "locked": true,
+    "permissions": {"coa": true, "journals": true, "reports": true, "users": true, "settings": true}
+  },
+  {
+    "id": "r2",
+    "name": "Accountant",
+    "locked": false,
+    "permissions": {"coa": true, "journals": true, "reports": true, "users": false, "settings": false}
+  },
+  {
+    "id": "r3",
+    "name": "Data Entry Operator",
+    "locked": false,
+    "permissions": {"coa": false, "journals": true, "reports": false, "users": false, "settings": false}
+  },
+  {
+    "id": "r4",
+    "name": "Auditor",
+    "locked": false,
+    "permissions": {"coa": true, "journals": false, "reports": true, "users": false, "settings": false}
+  }
+]

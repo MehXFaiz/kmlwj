@@ -1,0 +1,5 @@
+[
+  {"id":"a1","actor":"system","action":"Created default roles","date":"2026-01-01"},
+  {"id":"a2","actor":"mubasher","action":"Reserved code 8000-8999","date":"2026-03-15"},
+  {"id":"a3","actor":"auditor","action":"Reviewed GL structure","date":"2026-05-01"}
+]

@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  ACCOUNTANT
+  VIEWER
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum AccountLevel {
+  MAIN
+  PARENT
+  SUBSIDIARY
+}
+
+enum HeadType {
+  REVENUE
+  EXPENSE
+}
+
+model User {
+  id                   String           @id @default(uuid()) @db.Uuid
+  email                String           @unique
+  password             String
+  name                 String?
+  role                 Role             @default(ACCOUNTANT)
+  permissions          UserPermission[]
+  createdAccounts      ChartAccount[]   @relation("CreatedChartAccounts")
+  updatedAccounts      ChartAccount[]   @relation("UpdatedChartAccounts")
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  auditLogs            AuditLog[]       @relation("UserAudit")
+  refreshTokens        RefreshToken[]
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revokedAt DateTime?
+}
+
+model ChartAccount {
+  id              String      @id @default(uuid()) @db.Uuid
+  glCode          String      @unique
+  accountName     String
+  accountType     AccountType
+  accountLevel    AccountLevel
+  parentId        String?     @db.Uuid
+  parent          ChartAccount? @relation("AccountChildren", fields: [parentId], references: [id])
+  children        ChartAccount[] @relation("AccountChildren")
+  isLocked        Boolean     @default(false)
+  isReserved      Boolean     @default(false)
+  isSystemDefined Boolean     @default(false)
+  description     String?
+  createdById     String?     @db.Uuid
+  createdBy       User?       @relation("CreatedChartAccounts", fields: [createdById], references: [id])
+  updatedById     String?     @db.Uuid
+  updatedBy       User?       @relation("UpdatedChartAccounts", fields: [updatedById], references: [id])
+  deletedAt       DateTime?
+  isDeleted       Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @db.Uuid
+  user       User?    @relation("UserAudit", fields: [userId], references: [id])
+  action     String
+  entity     String
+  entityId   String?
+  before     Json?
+  after      Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+}
+
+model Permission {
+  id          String           @id @default(uuid()) @db.Uuid
+  name        String           @unique
+  description String?
+  users       UserPermission[]
+}
+
+model UserPermission {
+  id           String     @id @default(uuid()) @db.Uuid
+  user         User       @relation(fields: [userId], references: [id])
+  userId       String     @db.Uuid
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  permissionId String     @db.Uuid
+  createdAt    DateTime   @default(now())
+}
