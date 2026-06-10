@@ -34,12 +34,9 @@ export const AuthLayout = ({ children }) => {
         {/* Top — Logo & Tagline */}
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-2">
-            <img
-              src="/src/assets/kmlwj_logo.svg"
-              alt="KMLWJ Logo"
-              className="w-10 h-10 rounded-xl shadow-lg shadow-indigo-500/20"
-            />
-            <span className="text-xl font-extrabold tracking-tight text-white">KMLWJ</span>
+            <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-900/80 to-slate-900/80 border border-indigo-500/30 shadow-lg shadow-indigo-500/20">
+              <span className="text-lg font-black tracking-[0.18em] bg-gradient-to-r from-indigo-300 via-blue-300 to-emerald-300 bg-clip-text text-transparent">KMLWJ</span>
+            </div>
           </div>
           <p className="text-slate-400 text-sm font-medium mt-1 max-w-xs">
             Enterprise Resource Planning for modern finance teams
@@ -88,13 +85,10 @@ export const AuthLayout = ({ children }) => {
 
         <div className="w-full max-w-[420px] relative z-10">
           {/* Mobile-only logo */}
-          <div className="lg:hidden flex items-center justify-center gap-2.5 mb-8">
-            <img
-              src="/src/assets/kmlwj_logo.svg"
-              alt="KMLWJ Logo"
-              className="w-9 h-9 rounded-xl shadow-lg shadow-indigo-500/20"
-            />
-            <span className="text-lg font-extrabold tracking-tight text-white">KMLWJ</span>
+          <div className="lg:hidden flex items-center justify-center mb-8">
+            <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-900/80 to-slate-900/80 border border-indigo-500/30 shadow-lg shadow-indigo-500/20">
+              <span className="text-lg font-black tracking-[0.18em] bg-gradient-to-r from-indigo-300 via-blue-300 to-emerald-300 bg-clip-text text-transparent">KMLWJ</span>
+            </div>
           </div>
 
           {children}

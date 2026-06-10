@@ -43,15 +43,16 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
       <div>
         <div className="h-16 flex items-center px-4 border-b border-slate-800/80 justify-between bg-slate-900/60">
           <div className="flex items-center gap-3 overflow-hidden">
-            <img
-              src="/src/assets/kmlwj_logo.svg"
-              alt="KMLWJ"
-              className="h-9 w-9 rounded-lg flex-shrink-0 shadow-lg shadow-indigo-500/20"
-            />
-            {!isCollapsed && (
-              <span className="font-extrabold text-sm uppercase tracking-widest text-white whitespace-nowrap text-gradient-brand">
-                KMLWJ
+            {isCollapsed ? (
+              <span className="font-black text-sm tracking-widest bg-gradient-to-r from-indigo-300 via-blue-300 to-emerald-300 bg-clip-text text-transparent whitespace-nowrap">
+                K
               </span>
+            ) : (
+              <div className="flex items-center px-2.5 py-1 rounded-lg bg-gradient-to-r from-indigo-900/80 to-slate-900 border border-indigo-500/30 shadow-md shadow-indigo-500/10">
+                <span className="font-black text-sm tracking-[0.2em] bg-gradient-to-r from-indigo-300 via-blue-300 to-emerald-300 bg-clip-text text-transparent whitespace-nowrap">
+                  KMLWJ
+                </span>
+              </div>
             )}
           </div>
         </div>

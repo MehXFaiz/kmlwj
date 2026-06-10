@@ -44,19 +44,37 @@ function LogoMark({ visible }) {
           animation: 'splash-pulse 2s ease-in-out infinite',
         }}
       />
-      {/* KMLWJ Logo */}
-      <img
-        src="/src/assets/kmlwj_logo.svg"
-        alt="KMLWJ"
+      {/* KMLWJ Text Logo */}
+      <div
         style={{
           position: 'relative',
           zIndex: 10,
-          width: 88,
+          width: 110,
           height: 88,
           borderRadius: 16,
-          boxShadow: '0 0 40px rgba(99,102,241,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'linear-gradient(135deg, rgba(30,27,75,0.9) 0%, rgba(15,23,42,0.95) 100%)',
+          border: '1.5px solid rgba(129,140,248,0.35)',
+          boxShadow: '0 0 40px rgba(99,102,241,0.45)',
         }}
-      />
+      >
+        <span
+          style={{
+            fontSize: 15,
+            fontWeight: 900,
+            letterSpacing: '0.22em',
+            background: 'linear-gradient(135deg, #a5b4fc 0%, #60a5fa 50%, #34d399 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
+          }}
+        >
+          KMLWJ
+        </span>
+      </div>
     </div>
   );
 }
