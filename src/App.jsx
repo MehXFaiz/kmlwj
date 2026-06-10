@@ -1,26 +1,28 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { SplashScreen } from './components/common/SplashScreen';
 import { Sidebar } from './components/common/Sidebar';
 import { Topbar } from './components/common/Topbar';
-import { Dashboard } from './views/Dashboard';
-import { ChartOfAccounts } from './views/ChartOfAccounts';
-import { GeneralLedger } from './views/GeneralLedger';
-import { JournalEntries } from './views/JournalEntries';
-import { AuditTrail } from './views/AuditTrail';
-import { Settings } from './views/Settings';
-import { RevenueHeads } from './views/RevenueHeads';
-import { ExpenseHeads } from './views/ExpenseHeads';
-import { ReservedCodes } from './views/ReservedCodes';
-import { UsersRoles } from './views/UsersRoles';
-import { Reports } from './views/Reports';
-
-// Auth Views
-import { Login } from './views/Login';
-import { Signup } from './views/Signup';
-import { ForgotPassword } from './views/ForgotPassword';
-import { ResetPassword } from './views/ResetPassword';
 import { useAuthStore } from './store/authStore';
+
+// Lazy-loaded views for code splitting
+const Dashboard = lazy(() => import('./views/Dashboard').then(m => ({ default: m.Dashboard })));
+const ChartOfAccounts = lazy(() => import('./views/ChartOfAccounts').then(m => ({ default: m.ChartOfAccounts })));
+const GeneralLedger = lazy(() => import('./views/GeneralLedger').then(m => ({ default: m.GeneralLedger })));
+const JournalEntries = lazy(() => import('./views/JournalEntries').then(m => ({ default: m.JournalEntries })));
+const AuditTrail = lazy(() => import('./views/AuditTrail').then(m => ({ default: m.AuditTrail })));
+const Settings = lazy(() => import('./views/Settings').then(m => ({ default: m.Settings })));
+const RevenueHeads = lazy(() => import('./views/RevenueHeads').then(m => ({ default: m.RevenueHeads })));
+const ExpenseHeads = lazy(() => import('./views/ExpenseHeads').then(m => ({ default: m.ExpenseHeads })));
+const ReservedCodes = lazy(() => import('./views/ReservedCodes').then(m => ({ default: m.ReservedCodes })));
+const UsersRoles = lazy(() => import('./views/UsersRoles').then(m => ({ default: m.UsersRoles })));
+const Reports = lazy(() => import('./views/Reports').then(m => ({ default: m.Reports })));
+
+// Auth Views (also lazy-loaded)
+const Login = lazy(() => import('./views/Login').then(m => ({ default: m.Login })));
+const Signup = lazy(() => import('./views/Signup').then(m => ({ default: m.Signup })));
+const ForgotPassword = lazy(() => import('./views/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
+const ResetPassword = lazy(() => import('./views/ResetPassword').then(m => ({ default: m.ResetPassword })));
 
 // Protected Routes Shell
 const ProtectedRoutesWrapper = ({ isCollapsed, setIsCollapsed }) => {
@@ -43,7 +45,13 @@ const ProtectedRoutesWrapper = ({ isCollapsed, setIsCollapsed }) => {
         {/* Scrollable View Area */}
         <main className="flex-1 overflow-y-auto px-4 py-6 md:px-8 md:py-8 bg-slate-950">
           <div className="max-w-7xl mx-auto space-y-6">
-            <Outlet />
+            <Suspense fallback={
+              <div className="flex items-center justify-center h-[50vh]">
+                <div className="h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            }>
+              <Outlet />
+            </Suspense>
           </div>
         </main>
       </div>
@@ -62,6 +70,11 @@ function App() {
 
       {/* Main ERP Shell */}
       <Router>
+        <Suspense fallback={
+          <div className="flex items-center justify-center h-screen w-screen bg-slate-950">
+            <div className="h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        }>
         <Routes>
           {/* Public Authentication Screens */}
           <Route path="/login" element={<Login />} />
@@ -94,6 +107,7 @@ function App() {
             } />
           </Route>
         </Routes>
+        </Suspense>
       </Router>
     </>
   );

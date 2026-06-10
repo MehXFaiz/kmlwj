@@ -1,21 +1,34 @@
 import { create } from 'zustand';
 import { authService, tokenStorage } from '../services/authService';
 
+const GUEST_KEY = 'kmlwj_guest_session';
+
+const guestUser = {
+  id: 'guest',
+  email: 'guest@demo.kmlwj.com',
+  name: 'Guest User',
+  role: 'VIEWER',
+};
+
 export const useAuthStore = create((set) => {
   // Listen for session expiry event from service layer
   if (typeof window !== 'undefined') {
     window.addEventListener('auth_session_expired', () => {
-      set({ user: null, isAuthenticated: false, error: 'Your session has expired. Please log in again.' });
+      sessionStorage.removeItem(GUEST_KEY);
+      set({ user: null, isAuthenticated: false, isGuest: false, error: 'Your session has expired. Please log in again.' });
     });
   }
 
   const userMeta = tokenStorage.getUserMeta();
   const hasAccessToken = !!tokenStorage.getAccessToken();
 
+  // Restore guest session if it was active
+  const isGuestSession = sessionStorage.getItem(GUEST_KEY) === 'true';
+
   return {
-    user: userMeta,
-    isAuthenticated: hasAccessToken,
-    isGuest: false,
+    user: isGuestSession ? guestUser : userMeta,
+    isAuthenticated: hasAccessToken || isGuestSession,
+    isGuest: isGuestSession,
     loading: false,
     error: null,
     successMessage: null,
@@ -24,12 +37,7 @@ export const useAuthStore = create((set) => {
     clearSuccess: () => set({ successMessage: null }),
 
     loginAsGuest: () => {
-      const guestUser = {
-        id: 'guest',
-        email: 'guest@demo.acculedger.com',
-        name: 'Guest User',
-        role: 'VIEWER',
-      };
+      sessionStorage.setItem(GUEST_KEY, 'true');
       set({ user: guestUser, isAuthenticated: true, isGuest: true, loading: false, error: null });
     },
 
@@ -37,6 +45,7 @@ export const useAuthStore = create((set) => {
       set({ loading: true, error: null });
       try {
         const user = await authService.login(email, password);
+        sessionStorage.removeItem(GUEST_KEY);
         set({ user, isAuthenticated: true, isGuest: false, loading: false });
         return true;
       } catch (err) {
@@ -60,12 +69,12 @@ export const useAuthStore = create((set) => {
     logout: async () => {
       set({ loading: true });
       try {
-        // Skip API call for guest users
         const state = useAuthStore.getState();
         if (!state.isGuest) {
           await authService.logout();
         }
       } finally {
+        sessionStorage.removeItem(GUEST_KEY);
         set({ user: null, isAuthenticated: false, isGuest: false, loading: false, successMessage: 'Logged out successfully' });
       }
     },

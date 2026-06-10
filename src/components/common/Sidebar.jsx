@@ -10,6 +10,7 @@ import {
   ChevronLeft, 
   ChevronRight,
   TrendingDown,
+  TrendingUp,
   ShieldCheck,
   BarChart3,
   Users,
