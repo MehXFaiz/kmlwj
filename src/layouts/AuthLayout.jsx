@@ -34,10 +34,12 @@ export const AuthLayout = ({ children }) => {
         {/* Top — Logo & Tagline */}
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-indigo-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-              <span className="text-lg">🪙</span>
-            </div>
-            <span className="text-xl font-extrabold tracking-tight text-white">AccuLedger</span>
+            <img
+              src="/src/assets/kmlwj_logo.svg"
+              alt="KMLWJ Logo"
+              className="w-10 h-10 rounded-xl shadow-lg shadow-indigo-500/20"
+            />
+            <span className="text-xl font-extrabold tracking-tight text-white">KMLWJ</span>
           </div>
           <p className="text-slate-400 text-sm font-medium mt-1 max-w-xs">
             Enterprise Resource Planning for modern finance teams
@@ -87,10 +89,12 @@ export const AuthLayout = ({ children }) => {
         <div className="w-full max-w-[420px] relative z-10">
           {/* Mobile-only logo */}
           <div className="lg:hidden flex items-center justify-center gap-2.5 mb-8">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-indigo-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-              <span className="text-base">🪙</span>
-            </div>
-            <span className="text-lg font-extrabold tracking-tight text-white">AccuLedger</span>
+            <img
+              src="/src/assets/kmlwj_logo.svg"
+              alt="KMLWJ Logo"
+              className="w-9 h-9 rounded-xl shadow-lg shadow-indigo-500/20"
+            />
+            <span className="text-lg font-extrabold tracking-tight text-white">KMLWJ</span>
           </div>
 
           {children}

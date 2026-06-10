@@ -44,56 +44,19 @@ function LogoMark({ visible }) {
           animation: 'splash-pulse 2s ease-in-out infinite',
         }}
       />
-      {/* Core icon panel */}
-      <div
-        className="relative z-10 flex items-center justify-center rounded-2xl"
+      {/* KMLWJ Logo */}
+      <img
+        src="/src/assets/kmlwj_logo.svg"
+        alt="KMLWJ"
         style={{
+          position: 'relative',
+          zIndex: 10,
           width: 88,
           height: 88,
-          background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #1d4ed8 100%)',
-          border: '1.5px solid rgba(129,140,248,0.4)',
-          boxShadow: '0 0 40px rgba(99,102,241,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
+          borderRadius: 16,
+          boxShadow: '0 0 40px rgba(99,102,241,0.5)',
         }}
-      >
-        {/* Abstract ledger / balance icon */}
-        <svg width="46" height="46" viewBox="0 0 46 46" fill="none">
-          {/* Top bar – assets */}
-          <rect x="6" y="8" width="34" height="3.5" rx="1.75" fill="url(#g1)" opacity="0.9" />
-          {/* Left column lines */}
-          <rect x="6" y="16" width="14" height="2.5" rx="1.25" fill="url(#g2)" opacity="0.75" />
-          <rect x="6" y="22" width="10" height="2.5" rx="1.25" fill="url(#g2)" opacity="0.55" />
-          <rect x="6" y="28" width="12" height="2.5" rx="1.25" fill="url(#g2)" opacity="0.45" />
-          {/* Vertical divider */}
-          <rect x="23" y="14" width="1" height="20" rx="0.5" fill="rgba(129,140,248,0.4)" />
-          {/* Right column lines */}
-          <rect x="27" y="16" width="13" height="2.5" rx="1.25" fill="url(#g3)" opacity="0.75" />
-          <rect x="27" y="22" width="9" height="2.5" rx="1.25" fill="url(#g3)" opacity="0.55" />
-          <rect x="27" y="28" width="11" height="2.5" rx="1.25" fill="url(#g3)" opacity="0.45" />
-          {/* Bottom balance bar */}
-          <rect x="6" y="35" width="34" height="3" rx="1.5" fill="url(#g4)" opacity="0.9" />
-          {/* Balance check mark (∑) */}
-          <circle cx="23" cy="5.5" r="3" fill="rgba(167,139,250,0.3)" />
-          <defs>
-            <linearGradient id="g1" x1="6" y1="8" x2="40" y2="8" gradientUnits="userSpaceOnUse">
-              <stop stopColor="#a5b4fc" />
-              <stop offset="1" stopColor="#60a5fa" />
-            </linearGradient>
-            <linearGradient id="g2" x1="6" y1="16" x2="20" y2="16" gradientUnits="userSpaceOnUse">
-              <stop stopColor="#818cf8" />
-              <stop offset="1" stopColor="#6366f1" />
-            </linearGradient>
-            <linearGradient id="g3" x1="27" y1="16" x2="40" y2="16" gradientUnits="userSpaceOnUse">
-              <stop stopColor="#34d399" />
-              <stop offset="1" stopColor="#10b981" />
-            </linearGradient>
-            <linearGradient id="g4" x1="6" y1="35" x2="40" y2="35" gradientUnits="userSpaceOnUse">
-              <stop stopColor="#818cf8" />
-              <stop offset="0.5" stopColor="#60a5fa" />
-              <stop offset="1" stopColor="#34d399" />
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
+      />
     </div>
   );
 }
@@ -409,7 +372,7 @@ export function SplashScreen({ onComplete }) {
                 transition: 'opacity 0.8s cubic-bezier(0.16,1,0.3,1) 0.3s, transform 0.8s cubic-bezier(0.16,1,0.3,1) 0.3s',
               }}
             >
-              FinLedger ERP
+              KMLWJ
             </h1>
             <p
               style={{

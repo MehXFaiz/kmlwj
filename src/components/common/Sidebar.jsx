@@ -9,7 +9,6 @@ import {
   Settings, 
   ChevronLeft, 
   ChevronRight,
-  TrendingUp,
   TrendingDown,
   ShieldCheck,
   BarChart3,
@@ -44,12 +43,14 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
       <div>
         <div className="h-16 flex items-center px-4 border-b border-slate-800/80 justify-between bg-slate-900/60">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="h-9 w-9 rounded-lg bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-brand-500/10">
-              <TrendingUp className="h-5 w-5 text-white" />
-            </div>
+            <img
+              src="/src/assets/kmlwj_logo.svg"
+              alt="KMLWJ"
+              className="h-9 w-9 rounded-lg flex-shrink-0 shadow-lg shadow-indigo-500/20"
+            />
             {!isCollapsed && (
               <span className="font-extrabold text-sm uppercase tracking-widest text-white whitespace-nowrap text-gradient-brand">
-                AccuLedger<span className="text-xs font-semibold text-slate-400">ERP</span>
+                KMLWJ
               </span>
             )}
           </div>
