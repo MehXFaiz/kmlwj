@@ -15,6 +15,7 @@ export const useAuthStore = create((set) => {
   return {
     user: userMeta,
     isAuthenticated: hasAccessToken,
+    isGuest: false,
     loading: false,
     error: null,
     successMessage: null,
@@ -22,11 +23,21 @@ export const useAuthStore = create((set) => {
     clearError: () => set({ error: null }),
     clearSuccess: () => set({ successMessage: null }),
 
+    loginAsGuest: () => {
+      const guestUser = {
+        id: 'guest',
+        email: 'guest@demo.acculedger.com',
+        name: 'Guest User',
+        role: 'VIEWER',
+      };
+      set({ user: guestUser, isAuthenticated: true, isGuest: true, loading: false, error: null });
+    },
+
     login: async (email, password) => {
       set({ loading: true, error: null });
       try {
         const user = await authService.login(email, password);
-        set({ user, isAuthenticated: true, loading: false });
+        set({ user, isAuthenticated: true, isGuest: false, loading: false });
         return true;
       } catch (err) {
         set({ error: err.message, loading: false });
@@ -49,9 +60,13 @@ export const useAuthStore = create((set) => {
     logout: async () => {
       set({ loading: true });
       try {
-        await authService.logout();
+        // Skip API call for guest users
+        const state = useAuthStore.getState();
+        if (!state.isGuest) {
+          await authService.logout();
+        }
       } finally {
-        set({ user: null, isAuthenticated: false, loading: false, successMessage: 'Logged out successfully' });
+        set({ user: null, isAuthenticated: false, isGuest: false, loading: false, successMessage: 'Logged out successfully' });
       }
     },
 

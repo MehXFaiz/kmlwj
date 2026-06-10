@@ -1,8 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { User, Lock, Mail, Loader2, ArrowLeft } from 'lucide-react';
+import { User, Lock, Mail, Loader2, ArrowLeft, Eye, EyeOff, ChevronDown, ShieldCheck, BarChart3, BookOpen } from 'lucide-react';
 import { AuthLayout } from '../layouts/AuthLayout';
+
+const roleOptions = [
+  { value: 'ACCOUNTANT', label: 'Accountant', desc: 'Read & write access', icon: BookOpen },
+  { value: 'ADMIN', label: 'Administrator', desc: 'Full system access', icon: ShieldCheck },
+  { value: 'VIEWER', label: 'Viewer / Auditor', desc: 'Read-only access', icon: BarChart3 },
+];
 
 export const Signup = () => {
   const navigate = useNavigate();
@@ -13,6 +19,8 @@ export const Signup = () => {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('ACCOUNTANT');
   const [localError, setLocalError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
 
   useEffect(() => {
     clearError();
@@ -21,6 +29,15 @@ export const Signup = () => {
       navigate('/');
     }
   }, [isAuthenticated, navigate]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClick = () => setShowRoleDropdown(false);
+    if (showRoleDropdown) {
+      document.addEventListener('click', handleClick);
+      return () => document.removeEventListener('click', handleClick);
+    }
+  }, [showRoleDropdown]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -45,126 +62,246 @@ export const Signup = () => {
     }
   };
 
+  const displayError = error || localError;
+  const selectedRole = roleOptions.find((r) => r.value === role);
+
+  // Password strength indicator
+  const getPasswordStrength = () => {
+    if (!password) return { width: '0%', color: 'bg-slate-800', label: '' };
+    if (password.length < 4) return { width: '25%', color: 'bg-red-500', label: 'Weak' };
+    if (password.length < 8) return { width: '50%', color: 'bg-amber-500', label: 'Fair' };
+    if (password.length < 12) return { width: '75%', color: 'bg-blue-500', label: 'Good' };
+    return { width: '100%', color: 'bg-emerald-500', label: 'Strong' };
+  };
+  const strength = getPasswordStrength();
+
   return (
     <AuthLayout>
+      {/* Card wrapper */}
       <div className="relative group">
-        <div className="absolute -inset-1.5 bg-gradient-to-r from-indigo-600 to-emerald-600 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-        
-        <div className="relative bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-8 shadow-2xl">
-          <div className="mb-6">
-            <Link to="/login" className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors mb-4">
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back to Login
-            </Link>
-            <h2 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-emerald-400">
-              Request Access
+        {/* Ambient glow */}
+        <div className="absolute -inset-[2px] bg-gradient-to-r from-indigo-500/20 via-blue-500/20 to-emerald-500/20 rounded-[26px] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+
+        {/* Main card */}
+        <div className="relative bg-slate-900/70 backdrop-blur-2xl border border-slate-800/60 rounded-3xl p-7 sm:p-9 shadow-2xl shadow-black/30">
+          {/* Back nav */}
+          <Link
+            to="/login"
+            className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 hover:text-slate-300 transition-colors duration-200 mb-6"
+          >
+            <ArrowLeft className="h-3 w-3" />
+            Back to sign in
+          </Link>
+
+          {/* Header */}
+          <div className="mb-7">
+            <h2 className="text-2xl sm:text-[28px] font-extrabold tracking-tight text-white">
+              Create account
             </h2>
-            <p className="text-slate-400 text-sm mt-1 font-medium">
-              Register an operator account in the ledger database
+            <p className="text-slate-500 text-[13px] mt-1.5 font-medium">
+              Set up your operator credentials for the ledger
             </p>
           </div>
 
-          {/* Messages */}
-          {error && (
-            <div className="mb-5 p-4 rounded-xl bg-red-950/40 border border-red-800/60 text-red-300 text-xs font-semibold leading-relaxed animate-fade-in">
-              {error}
+          {/* Alert Messages */}
+          {displayError && (
+            <div className="mb-5 flex items-start gap-2.5 p-3.5 rounded-xl bg-red-500/[0.08] border border-red-500/20 animate-[fadeIn_0.25s_ease-out]">
+              <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-[7px] shrink-0" />
+              <p className="text-red-300/90 text-xs font-medium leading-relaxed">{displayError}</p>
             </div>
           )}
 
           {successMessage && (
-            <div className="mb-5 p-4 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 text-xs font-semibold leading-relaxed animate-fade-in">
-              {successMessage}
+            <div className="mb-5 flex items-start gap-2.5 p-3.5 rounded-xl bg-emerald-500/[0.08] border border-emerald-500/20 animate-[fadeIn_0.25s_ease-out]">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-[7px] shrink-0" />
+              <p className="text-emerald-300/90 text-xs font-medium leading-relaxed">{successMessage}</p>
             </div>
           )}
 
-          {localError && (
-            <div className="mb-5 p-4 rounded-xl bg-red-950/40 border border-red-800/60 text-red-300 text-xs font-semibold leading-relaxed animate-fade-in">
-              {localError}
-            </div>
-          )}
-
+          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Full Name */}
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-300 tracking-wider uppercase">Full Name</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                  <User className="h-4 w-4" />
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">
+                Full Name
+              </label>
+              <div className="relative group/input">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <User className="h-[15px] w-[15px] text-slate-600 group-focus-within/input:text-indigo-400 transition-colors" />
                 </div>
                 <input
                   type="text"
+                  id="signup-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-sm transition-all"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/50 border border-slate-800/80 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 text-sm transition-all duration-200"
                   placeholder="John Doe"
+                  autoComplete="name"
                   required
                 />
               </div>
             </div>
 
-            {/* Email Address */}
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-300 tracking-wider uppercase">Email Address</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                  <Mail className="h-4 w-4" />
+            {/* Email */}
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">
+                Email Address
+              </label>
+              <div className="relative group/input">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <Mail className="h-[15px] w-[15px] text-slate-600 group-focus-within/input:text-indigo-400 transition-colors" />
                 </div>
                 <input
                   type="email"
+                  id="signup-email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-sm transition-all"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/50 border border-slate-800/80 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 text-sm transition-all duration-200"
                   placeholder="name@company.com"
+                  autoComplete="email"
                   required
                 />
               </div>
             </div>
 
-            {/* Password */}
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-300 tracking-wider uppercase">Password (Min 8 chars)</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                  <Lock className="h-4 w-4" />
+            {/* Password with strength meter */}
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">
+                Password
+              </label>
+              <div className="relative group/input">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <Lock className="h-[15px] w-[15px] text-slate-600 group-focus-within/input:text-indigo-400 transition-colors" />
                 </div>
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
+                  id="signup-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-sm transition-all"
-                  placeholder="••••••••"
+                  className="w-full pl-10 pr-11 py-3 rounded-xl bg-slate-950/50 border border-slate-800/80 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 text-sm transition-all duration-200"
+                  placeholder="Min 8 characters"
+                  autoComplete="new-password"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-600 hover:text-slate-300 transition-colors cursor-pointer"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {/* Strength bar */}
+              {password && (
+                <div className="flex items-center gap-2.5 mt-1.5">
+                  <div className="flex-1 h-1 bg-slate-800/80 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${strength.color} rounded-full transition-all duration-500`}
+                      style={{ width: strength.width }}
+                    />
+                  </div>
+                  <span className={`text-[10px] font-bold tracking-wider uppercase ${
+                    strength.color === 'bg-red-500' ? 'text-red-400' :
+                    strength.color === 'bg-amber-500' ? 'text-amber-400' :
+                    strength.color === 'bg-blue-500' ? 'text-blue-400' :
+                    'text-emerald-400'
+                  }`}>
+                    {strength.label}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Custom Role Selector */}
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">
+                System Role
+              </label>
+              <div className="relative">
+                <button
+                  type="button"
+                  id="signup-role"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowRoleDropdown(!showRoleDropdown);
+                  }}
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-slate-950/50 border border-slate-800/80 text-sm transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50"
+                >
+                  <div className="flex items-center gap-2.5">
+                    {selectedRole && <selectedRole.icon className="h-4 w-4 text-indigo-400" />}
+                    <div className="text-left">
+                      <span className="text-slate-100 font-medium">{selectedRole?.label}</span>
+                      <span className="text-slate-600 ml-2 text-xs">{selectedRole?.desc}</span>
+                    </div>
+                  </div>
+                  <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform duration-200 ${showRoleDropdown ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Dropdown */}
+                {showRoleDropdown && (
+                  <div className="absolute z-50 w-full mt-2 rounded-xl bg-slate-900/95 backdrop-blur-xl border border-slate-800/80 shadow-2xl shadow-black/40 overflow-hidden animate-[fadeIn_0.15s_ease-out]">
+                    {roleOptions.map(({ value, label, desc, icon: Icon }) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setRole(value);
+                          setShowRoleDropdown(false);
+                        }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors cursor-pointer ${
+                          role === value
+                            ? 'bg-indigo-500/10 text-white'
+                            : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+                        }`}
+                      >
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                          role === value
+                            ? 'bg-indigo-500/20 border border-indigo-500/30'
+                            : 'bg-slate-800/50 border border-slate-700/50'
+                        }`}>
+                          <Icon className={`h-3.5 w-3.5 ${role === value ? 'text-indigo-400' : 'text-slate-500'}`} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold">{label}</p>
+                          <p className="text-[11px] text-slate-500">{desc}</p>
+                        </div>
+                        {role === value && (
+                          <div className="ml-auto w-2 h-2 rounded-full bg-indigo-400" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Access Role Selection */}
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-300 tracking-wider uppercase">System Role</label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-sm transition-all cursor-pointer"
-              >
-                <option value="ACCOUNTANT">Accountant (Read/Write)</option>
-                <option value="ADMIN">Administrator (Full Access)</option>
-                <option value="VIEWER">Auditor / Viewer (Read Only)</option>
-              </select>
-            </div>
-
-            {/* Register Button */}
+            {/* Submit Button */}
             <button
               type="submit"
+              id="signup-submit"
               disabled={loading}
-              className="w-full py-3 px-4 mt-2 bg-gradient-to-r from-indigo-500 to-emerald-600 hover:from-indigo-400 hover:to-emerald-500 active:scale-[0.98] text-white font-bold text-sm rounded-xl shadow-lg focus:outline-none transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="w-full py-3 px-4 mt-2 bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-400 hover:to-blue-500 active:scale-[0.98] text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/20 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                'Submit Application'
+                'Create Account'
               )}
             </button>
           </form>
+
+          {/* Footer */}
+          <div className="text-center mt-7 pt-6 border-t border-slate-800/50">
+            <span className="text-slate-600 text-xs">Already have an account? </span>
+            <Link
+              to="/login"
+              className="text-indigo-400/80 hover:text-indigo-300 text-xs font-bold transition-colors duration-200"
+            >
+              Sign in
+            </Link>
+          </div>
         </div>
       </div>
     </AuthLayout>

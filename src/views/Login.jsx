@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { Lock, Mail, Loader2, ArrowRight } from 'lucide-react';
+import { Lock, Mail, Loader2, ArrowRight, UserCircle, Eye, EyeOff } from 'lucide-react';
 import { AuthLayout } from '../layouts/AuthLayout';
 
 export const Login = () => {
   const navigate = useNavigate();
-  const { login, isAuthenticated, loading, error, successMessage, clearError, clearSuccess } = useAuthStore();
+  const { login, loginAsGuest, isAuthenticated, loading, error, successMessage, clearError, clearSuccess } = useAuthStore();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     clearError();
@@ -36,112 +37,154 @@ export const Login = () => {
     }
   };
 
+  const displayError = error || localError;
+
   return (
     <AuthLayout>
+      {/* Card wrapper */}
       <div className="relative group">
-        {/* Glow effect behind the login card */}
-        <div className="absolute -inset-1.5 bg-gradient-to-r from-emerald-600 to-indigo-600 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-        
-        {/* Glassmorphic Card */}
-        <div className="relative bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-8 shadow-2xl">
+        {/* Ambient glow */}
+        <div className="absolute -inset-[2px] bg-gradient-to-r from-emerald-500/20 via-blue-500/20 to-indigo-500/20 rounded-[26px] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+
+        {/* Main card */}
+        <div className="relative bg-slate-900/70 backdrop-blur-2xl border border-slate-800/60 rounded-3xl p-7 sm:p-9 shadow-2xl shadow-black/30">
+          {/* Header */}
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-indigo-400">
-              ERP Accounting
+            <h2 className="text-2xl sm:text-[28px] font-extrabold tracking-tight text-white">
+              Welcome back
             </h2>
-            <p className="text-slate-400 text-sm mt-2 font-medium">
-              Secure Ledger Access & Financial Terminal
+            <p className="text-slate-500 text-[13px] mt-1.5 font-medium">
+              Sign in to your financial workspace
             </p>
           </div>
 
-          {/* Messages */}
-          {error && (
-            <div className="mb-5 p-4 rounded-xl bg-red-950/40 border border-red-800/60 text-red-300 text-xs font-semibold leading-relaxed animate-fade-in">
-              {error}
+          {/* Alert Messages */}
+          {displayError && (
+            <div className="mb-5 flex items-start gap-2.5 p-3.5 rounded-xl bg-red-500/[0.08] border border-red-500/20 animate-[fadeIn_0.25s_ease-out]">
+              <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-[7px] shrink-0" />
+              <p className="text-red-300/90 text-xs font-medium leading-relaxed">{displayError}</p>
             </div>
           )}
 
           {successMessage && (
-            <div className="mb-5 p-4 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 text-xs font-semibold leading-relaxed animate-fade-in">
-              {successMessage}
+            <div className="mb-5 flex items-start gap-2.5 p-3.5 rounded-xl bg-emerald-500/[0.08] border border-emerald-500/20 animate-[fadeIn_0.25s_ease-out]">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-[7px] shrink-0" />
+              <p className="text-emerald-300/90 text-xs font-medium leading-relaxed">{successMessage}</p>
             </div>
           )}
 
-          {localError && (
-            <div className="mb-5 p-4 rounded-xl bg-red-950/40 border border-red-800/60 text-red-300 text-xs font-semibold leading-relaxed animate-fade-in">
-              {localError}
-            </div>
-          )}
-
+          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email Input */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300 tracking-wider uppercase">Email Address</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                  <Mail className="h-4 w-4" />
+            {/* Email */}
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">
+                Email
+              </label>
+              <div className="relative group/input">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <Mail className="h-[15px] w-[15px] text-slate-600 group-focus-within/input:text-emerald-400 transition-colors" />
                 </div>
                 <input
                   type="email"
+                  id="login-email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 text-sm transition-all"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/50 border border-slate-800/80 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 text-sm transition-all duration-200"
                   placeholder="name@company.com"
+                  autoComplete="email"
                   required
                 />
               </div>
             </div>
 
-            {/* Password Input */}
-            <div className="space-y-1.5">
+            {/* Password */}
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-300 tracking-wider uppercase">Password</label>
+                <label className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">
+                  Password
+                </label>
                 <Link
                   to="/forgot-password"
-                  className="text-xs font-bold text-emerald-400 hover:text-emerald-300 transition-colors"
+                  className="text-[11px] font-semibold text-slate-500 hover:text-emerald-400 transition-colors duration-200"
                 >
-                  Forgot Password?
+                  Forgot?
                 </Link>
               </div>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                  <Lock className="h-4 w-4" />
+              <div className="relative group/input">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <Lock className="h-[15px] w-[15px] text-slate-600 group-focus-within/input:text-emerald-400 transition-colors" />
                 </div>
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
+                  id="login-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 text-sm transition-all"
+                  className="w-full pl-10 pr-11 py-3 rounded-xl bg-slate-950/50 border border-slate-800/80 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 text-sm transition-all duration-200"
                   placeholder="••••••••"
+                  autoComplete="current-password"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-600 hover:text-slate-300 transition-colors cursor-pointer"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </div>
 
-            {/* Login Button */}
+            {/* Sign In Button */}
             <button
               type="submit"
+              id="login-submit"
               disabled={loading}
-              className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-500 to-indigo-600 hover:from-emerald-400 hover:to-indigo-500 active:scale-[0.98] text-white font-bold text-sm rounded-xl shadow-lg hover:shadow-emerald-500/10 focus:outline-none transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+              className="w-full py-3 px-4 bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-400 hover:to-blue-500 active:scale-[0.98] text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <>
-                  Enter Terminal
+                  Sign In
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}
             </button>
           </form>
 
-          {/* Footer link to register */}
-          <div className="text-center mt-6">
-            <span className="text-slate-500 text-xs">Don't have access? </span>
+          {/* Divider */}
+          <div className="flex items-center gap-4 my-6">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-800 to-transparent" />
+            <span className="text-[10px] text-slate-600 font-bold uppercase tracking-[0.2em]">or</span>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-800 to-transparent" />
+          </div>
+
+          {/* Guest Mode */}
+          <button
+            type="button"
+            id="guest-login"
+            onClick={() => {
+              loginAsGuest();
+              navigate('/');
+            }}
+            className="w-full py-3 px-4 bg-white/[0.03] hover:bg-white/[0.06] border border-slate-800/80 hover:border-slate-700 text-slate-400 hover:text-slate-200 font-semibold text-sm rounded-xl focus:outline-none transition-all duration-200 flex items-center justify-center gap-2.5 cursor-pointer active:scale-[0.98]"
+          >
+            <UserCircle className="h-4 w-4" />
+            Explore as Guest
+          </button>
+          <p className="text-center text-[10px] text-slate-600 mt-2.5 tracking-wide">
+            Read-only access · No credentials required
+          </p>
+
+          {/* Footer */}
+          <div className="text-center mt-7 pt-6 border-t border-slate-800/50">
+            <span className="text-slate-600 text-xs">New to AccuLedger? </span>
             <Link
               to="/signup"
-              className="text-indigo-400 hover:text-indigo-300 text-xs font-bold transition-colors"
+              className="text-emerald-400/80 hover:text-emerald-300 text-xs font-bold transition-colors duration-200"
             >
-              Request Credentials
+              Create an account
             </Link>
           </div>
         </div>
