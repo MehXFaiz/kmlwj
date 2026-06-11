@@ -60,16 +60,16 @@ export const ResetPassword = () => {
 
   return (
     <AuthLayout>
-      <div className="relative group">
-        <div className="absolute -inset-1.5 bg-gradient-to-r from-emerald-600 to-indigo-600 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+      <div className="relative group w-full max-w-full min-w-0">
+        <div className="absolute -inset-1.5 bg-gradient-to-r from-emerald-600 to-indigo-600 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200 hidden sm:block pointer-events-none"></div>
         
-        <div className="relative bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-2xl">
-          <div className="mb-6">
-            <Link to="/login" className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors mb-4">
+        <div className="relative w-full box-border bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-8 shadow-2xl">
+          <div className="mb-5 sm:mb-6">
+            <Link to="/login" className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors mb-3 sm:mb-4">
               <ArrowLeft className="h-3.5 w-3.5" />
               Back to Login
             </Link>
-            <h2 className="text-2xl sm:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-indigo-400">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-indigo-400">
               Reset Password
             </h2>
             <p className="text-slate-400 text-sm mt-1 font-medium">

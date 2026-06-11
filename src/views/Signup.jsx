@@ -78,24 +78,22 @@ export const Signup = () => {
   return (
     <AuthLayout>
       {/* Card wrapper */}
-      <div className="relative group">
-        {/* Ambient glow */}
-        <div className="absolute -inset-[2px] bg-gradient-to-r from-indigo-500/20 via-blue-500/20 to-emerald-500/20 rounded-[26px] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+      <div className="relative group w-full max-w-full min-w-0">
+        <div className="absolute -inset-[2px] bg-gradient-to-r from-indigo-500/20 via-blue-500/20 to-emerald-500/20 rounded-[26px] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 hidden sm:block pointer-events-none" />
 
-        {/* Main card */}
-        <div className="relative bg-slate-900/70 backdrop-blur-2xl border border-slate-800/60 rounded-3xl p-7 sm:p-9 shadow-2xl shadow-black/30">
+        <div className="relative w-full box-border bg-slate-900/70 backdrop-blur-2xl border border-slate-800/60 rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-9 shadow-2xl shadow-black/30">
           {/* Back nav */}
           <Link
             to="/login"
-            className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 hover:text-slate-300 transition-colors duration-200 mb-6"
+            className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 hover:text-slate-300 transition-colors duration-200 mb-4 sm:mb-6"
           >
             <ArrowLeft className="h-3 w-3" />
             Back to sign in
           </Link>
 
           {/* Header */}
-          <div className="mb-7">
-            <h2 className="text-2xl sm:text-[28px] font-extrabold tracking-tight text-white">
+          <div className="mb-5 sm:mb-7">
+            <h2 className="text-xl sm:text-2xl lg:text-[28px] font-extrabold tracking-tight text-white">
               Create account
             </h2>
             <p className="text-slate-500 text-[13px] mt-1.5 font-medium">
@@ -226,16 +224,16 @@ export const Signup = () => {
                     e.stopPropagation();
                     setShowRoleDropdown(!showRoleDropdown);
                   }}
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-slate-950/50 border border-slate-800/80 text-sm transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50"
+                  className="w-full flex items-center justify-between gap-2 px-3 sm:px-4 py-3 rounded-xl bg-slate-950/50 border border-slate-800/80 text-sm transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 min-w-0"
                 >
-                  <div className="flex items-center gap-2.5">
-                    {selectedRole && <selectedRole.icon className="h-4 w-4 text-indigo-400" />}
-                    <div className="text-left">
-                      <span className="text-slate-100 font-medium">{selectedRole?.label}</span>
-                      <span className="text-slate-600 ml-2 text-xs">{selectedRole?.desc}</span>
+                  <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
+                    {selectedRole && <selectedRole.icon className="h-4 w-4 text-indigo-400 shrink-0" />}
+                    <div className="text-left min-w-0 flex-1">
+                      <span className="text-slate-100 font-medium block truncate">{selectedRole?.label}</span>
+                      <span className="text-slate-600 text-[11px] block truncate">{selectedRole?.desc}</span>
                     </div>
                   </div>
-                  <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform duration-200 ${showRoleDropdown ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`h-4 w-4 text-slate-500 shrink-0 transition-transform duration-200 ${showRoleDropdown ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* Dropdown */}
@@ -293,7 +291,7 @@ export const Signup = () => {
           </form>
 
           {/* Footer */}
-          <div className="text-center mt-7 pt-6 border-t border-slate-800/50">
+          <div className="text-center mt-5 sm:mt-7 pt-5 sm:pt-6 border-t border-slate-800/50">
             <span className="text-slate-600 text-xs">Already have an account? </span>
             <Link
               to="/login"

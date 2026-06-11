@@ -42,15 +42,15 @@ export const Login = () => {
   return (
     <AuthLayout>
       {/* Card wrapper */}
-      <div className="relative group">
-        {/* Ambient glow */}
-        <div className="absolute -inset-[2px] bg-gradient-to-r from-emerald-500/20 via-blue-500/20 to-indigo-500/20 rounded-[26px] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+      <div className="relative group w-full max-w-full min-w-0">
+        {/* Ambient glow — hidden on very small screens to avoid overflow */}
+        <div className="absolute -inset-[2px] bg-gradient-to-r from-emerald-500/20 via-blue-500/20 to-indigo-500/20 rounded-[26px] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 hidden sm:block pointer-events-none" />
 
         {/* Main card */}
-        <div className="relative bg-slate-900/70 backdrop-blur-2xl border border-slate-800/60 rounded-3xl p-7 sm:p-9 shadow-2xl shadow-black/30">
+        <div className="relative w-full box-border bg-slate-900/70 backdrop-blur-2xl border border-slate-800/60 rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-9 shadow-2xl shadow-black/30">
           {/* Header */}
-          <div className="text-center mb-8">
-            <h2 className="text-2xl sm:text-[28px] font-extrabold tracking-tight text-white">
+          <div className="text-center mb-6 sm:mb-8">
+            <h2 className="text-xl sm:text-2xl lg:text-[28px] font-extrabold tracking-tight text-white">
               Welcome back
             </h2>
             <p className="text-slate-500 text-[13px] mt-1.5 font-medium">
@@ -99,7 +99,7 @@ export const Login = () => {
 
             {/* Password */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                 <label className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">
                   Password
                 </label>
@@ -178,7 +178,7 @@ export const Login = () => {
           </p>
 
           {/* Footer */}
-          <div className="text-center mt-7 pt-6 border-t border-slate-800/50">
+          <div className="text-center mt-5 sm:mt-7 pt-5 sm:pt-6 border-t border-slate-800/50">
             <span className="text-slate-600 text-xs">New to AccuLedger? </span>
             <Link
               to="/signup"
