@@ -1,5 +1,5 @@
-import { useState, lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { useState, lazy, Suspense, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { SplashScreen } from './components/common/SplashScreen';
 import { Sidebar } from './components/common/Sidebar';
 import { Topbar } from './components/common/Topbar';
@@ -28,23 +28,28 @@ const ResetPassword = lazy(() => import('./views/ResetPassword').then(m => ({ de
 const ProtectedRoutesWrapper = ({ isCollapsed, setIsCollapsed }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const { isAuthenticated } = useAuthStore();
+  const location = useLocation();
+
+  useEffect(() => {
+    setIsMobileOpen(false);
+  }, [location.pathname]);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-950 text-slate-100 font-sans">
+    <div className="flex h-[100dvh] w-full overflow-hidden bg-slate-950 text-slate-100 font-sans">
       {/* Navigation Sidebar */}
       <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} isMobileOpen={isMobileOpen} setIsMobileOpen={setIsMobileOpen} />
 
       {/* Core Workspace Layout */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+      <div className="flex-1 flex flex-col min-w-0 w-full overflow-hidden relative">
         {/* Top Info / Entity selection bar */}
-        <Topbar onMobileMenuToggle={() => setIsMobileOpen(!isMobileOpen)} />
+        <Topbar onMobileMenuToggle={() => setIsMobileOpen((open) => !open)} />
 
         {/* Scrollable View Area */}
-        <main className="flex-1 overflow-y-auto px-4 py-6 md:px-8 md:py-8 bg-slate-950">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 sm:px-4 sm:py-6 md:px-8 md:py-8 bg-slate-950">
           <div className="max-w-7xl mx-auto space-y-6">
             <Suspense fallback={
               <div className="flex items-center justify-center h-[50vh]">

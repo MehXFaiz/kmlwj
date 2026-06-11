@@ -114,12 +114,12 @@ function KpiCard({ title, value, prefix = '', suffix = '', decimals = 0, icon: I
 ───────────────────────────────────────────── */
 function SectionHeader({ title, subtitle, action }) {
   return (
-    <div className="flex items-center justify-between mb-4">
-      <div>
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
+      <div className="min-w-0">
         <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider">{title}</h3>
         {subtitle && <p className="text-[11px] text-slate-500 mt-0.5">{subtitle}</p>}
       </div>
-      {action}
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   );
 }
@@ -340,17 +340,17 @@ export const Dashboard = () => {
           <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">Financial Command Center</h2>
           <p className="text-xs text-slate-500 mt-0.5">Consolidated real-time analytics · {selectedSubsidiary} · FY 2026</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleRefresh}
             className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all text-xs font-semibold"
           >
             <RefreshCw className="h-3.5 w-3.5" />
-            Refresh
+            <span className="hidden xs:inline">Refresh</span>
           </button>
           <button className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all text-xs font-semibold">
             <Download className="h-3.5 w-3.5" />
-            Export
+            <span className="hidden xs:inline">Export</span>
           </button>
           <button className="relative p-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all">
             <Bell className="h-4 w-4" />
@@ -360,7 +360,7 @@ export const Dashboard = () => {
       </div>
 
       {/* ── KPI Cards Row ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         <KpiCard title="Total Accounts" value={acctStats.total} icon={Layers}
           iconBg="bg-indigo-950/60" iconColor="text-indigo-400"
           trend="neutral" trendLabel={`${acctStats.byType.Asset} asset types`} delay={0} />
@@ -435,7 +435,7 @@ export const Dashboard = () => {
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 font-mono text-sm font-bold">
+        <div className="flex flex-wrap items-center gap-2 font-mono text-xs sm:text-sm font-bold overflow-x-auto pb-1">
           <span className="text-blue-400">${stats.assets.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
           <span className="text-slate-600">=</span>
           <span className="text-amber-400">${stats.liabilities.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
@@ -608,7 +608,36 @@ export const Dashboard = () => {
               </button>
             }
           />
-          <div className="overflow-x-auto">
+          {/* Mobile card list */}
+          <div className="space-y-2 sm:hidden">
+            {recentJournals.map((je, i) => {
+              const total = je.lines.reduce((s, l) => s + l.debit, 0);
+              return (
+                <div
+                  key={je.id}
+                  className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-3"
+                  style={{ opacity: 0, animation: `fadeSlideIn 0.4s ease ${i * 70}ms forwards` }}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <span className="font-mono text-[11px] font-bold text-indigo-400">{je.id}</span>
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-950/50 text-emerald-400 border border-emerald-900/40 shrink-0">
+                      Posted
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 mb-1.5 break-words">{je.reference}</p>
+                  <div className="flex items-center justify-between gap-2 text-[11px]">
+                    <span className="text-slate-500">{je.date}</span>
+                    <span className="font-mono font-bold text-emerald-400">
+                      ${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden sm:block overflow-x-auto -mx-1 px-1">
             <table className="w-full text-left min-w-[500px]">
               <thead>
                 <tr className="border-b border-slate-800/60">
