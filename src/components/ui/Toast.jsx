@@ -8,6 +8,7 @@ export function showToast(message, opts = {}){
   const el = document.createElement('div');
   el.id = id;
   el.className = 'px-4 py-2 mb-2 rounded-md text-sm shadow-lg ml-auto';
+  el.style.maxWidth = 'calc(100vw - 24px)';
   el.style.background = opts.type==='error' ? '#3b0b0b' : '#0f172a';
   el.style.color = '#e6edf3';
   el.textContent = message;

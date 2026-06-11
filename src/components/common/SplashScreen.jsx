@@ -335,7 +335,7 @@ export function SplashScreen({ onComplete }) {
         <ScanLine />
 
         {/* ── Content Card ── */}
-        <div className="relative z-10 flex flex-col items-center gap-0 select-none" style={{ width: 420 }}>
+        <div className="relative z-10 flex flex-col items-center gap-0 select-none px-6 sm:px-0" style={{ width: '100%', maxWidth: 420 }}>
 
           {/* Floating badge */}
           <div
@@ -377,7 +377,7 @@ export function SplashScreen({ onComplete }) {
           <div style={{ marginTop: 32, textAlign: 'center' }}>
             <h1
               style={{
-                fontSize: 38,
+                fontSize: 'clamp(28px, 8vw, 38px)',
                 fontWeight: 800,
                 letterSpacing: '-0.02em',
                 lineHeight: 1.1,

@@ -39,7 +39,7 @@ export const UsersRoles = () => {
       <ToastPlaceholder />
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-100">Users & Roles</h2>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100">Users & Roles</h2>
           <p className="text-xs text-slate-500">Manage role permissions, lock editing and review recent user activity</p>
         </div>
         <div className="flex items-center gap-2">
@@ -48,7 +48,7 @@ export const UsersRoles = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 rounded-2xl bg-slate-900/60 border border-slate-800 p-4">
+        <div className="lg:col-span-2 rounded-2xl bg-slate-900/60 border border-slate-800 p-2 sm:p-4">
           <div className="overflow-x-auto">
           <table className="w-full text-left min-w-[600px]">
             <thead>
@@ -77,7 +77,7 @@ export const UsersRoles = () => {
           </div>
         </div>
 
-        <div className="rounded-2xl bg-slate-900/60 border border-slate-800 p-4">
+        <div className="rounded-2xl bg-slate-900/60 border border-slate-800 p-3 sm:p-4">
           <h4 className="text-sm font-bold text-slate-200 mb-3">Recent Activity</h4>
           <div className="space-y-3 text-[13px] text-slate-300">
             {activity.map(a => (

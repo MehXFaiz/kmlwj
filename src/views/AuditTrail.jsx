@@ -37,12 +37,12 @@ export const AuditTrail = () => {
     <div className="space-y-6">
       {/* Title */}
       <div className="flex flex-col gap-1">
-        <h2 className="text-xl font-bold text-slate-100 uppercase tracking-wider font-sans">SOX Audit Trail Logs</h2>
+        <h2 className="text-lg sm:text-xl font-bold text-slate-100 uppercase tracking-wider font-sans">SOX Audit Trail Logs</h2>
         <p className="text-xs text-slate-400">Strict internal control modifications tracker to guarantee regulatory compliance.</p>
       </div>
 
       {/* Info Warning */}
-      <div className="flex items-center gap-3 p-4 bg-blue-950/20 border border-blue-900/40 rounded-xl">
+      <div className="flex items-start gap-3 p-3 sm:p-4 bg-blue-950/20 border border-blue-900/40 rounded-xl">
         <ShieldCheck className="h-5 w-5 text-brand-400 flex-shrink-0" />
         <p className="text-xs text-slate-400 leading-relaxed">
           The Sarbanes-Oxley Act requires all journal changes, chart of account changes, and financial modifications to be logged in a read-only trial.
@@ -68,7 +68,7 @@ export const AuditTrail = () => {
 
       {/* Audit Log list */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <CardTitle>Compliance Logs</CardTitle>
             <CardDescription>Chronological trial trace.</CardDescription>

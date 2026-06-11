@@ -107,7 +107,7 @@ export const GeneralLedger = () => {
     <div className="space-y-6">
       {/* Title */}
       <div className="flex flex-col gap-1">
-        <h2 className="text-xl font-bold text-slate-100 uppercase tracking-wider">General Ledger Register</h2>
+        <h2 className="text-lg sm:text-xl font-bold text-slate-100 uppercase tracking-wider">General Ledger Register</h2>
         <p className="text-xs text-slate-400">Audit trail transaction registers and historical debit/credit account balances.</p>
       </div>
 
@@ -211,7 +211,7 @@ export const GeneralLedger = () => {
           {/* Right Panel: Transaction Journal Lines Ledger */}
           <div className="lg:col-span-2">
             <Card className="h-full">
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <CardTitle>Ledger Postings</CardTitle>
                   <CardDescription>All posted journals reflecting debits/credits on this account.</CardDescription>

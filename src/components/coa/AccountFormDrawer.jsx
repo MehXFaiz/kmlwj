@@ -225,7 +225,7 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
         </div>
 
         {/* Row 3: Parent Account and Currency */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Select
             label="Parent Account"
             error={errors.parentCode?.message}

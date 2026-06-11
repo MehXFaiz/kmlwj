@@ -276,7 +276,7 @@ export const CoaTableView = ({
 
       {/* Pagination Controls */}
       {table.getPageCount() > 1 && (
-        <div className="flex items-center justify-between border-t border-slate-800/60 pt-4 px-2">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800/60 pt-4 px-2">
           {/* Info */}
           <div className="text-xs text-slate-400">
             Showing <span className="font-semibold text-slate-200">

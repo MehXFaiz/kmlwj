@@ -30,7 +30,7 @@ export const JournalEntries = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h2 className="text-xl font-bold text-slate-100 uppercase tracking-wider">Journal Entries Ledger</h2>
+          <h2 className="text-lg sm:text-xl font-bold text-slate-100 uppercase tracking-wider">Journal Entries Ledger</h2>
           <p className="text-xs text-slate-400">Post manual adjustments, corrections, payroll, and asset depreciation logs.</p>
         </div>
 
@@ -123,7 +123,7 @@ export const JournalEntries = () => {
                         <tr>
                           <td colSpan="8" className="bg-slate-950/50 p-4 border-l-2 border-brand-500">
                             <div className="space-y-3">
-                              <div className="flex justify-between items-center">
+                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
                                   <FileSpreadsheet className="h-3.5 w-3.5 text-brand-400" />
                                   <span>Voucher Double-Entry Balancing Sheet ({je.id})</span>
@@ -131,7 +131,7 @@ export const JournalEntries = () => {
                                 <span className="text-[10px] text-slate-500">Posted by: <span className="font-semibold text-slate-400">{je.postedBy}</span></span>
                               </div>
 
-                              <div className="border border-slate-800/80 rounded-lg overflow-hidden bg-slate-950 overflow-x-auto">
+                              <div className="border border-slate-800/80 rounded-lg overflow-hidden overflow-x-auto bg-slate-950">
                                 <table className="w-full text-left border-collapse min-w-[500px]">
                                   <thead>
                                     <tr className="border-b border-slate-850 text-[9px] font-bold text-slate-500 uppercase bg-slate-900/25">

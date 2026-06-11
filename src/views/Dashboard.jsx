@@ -75,7 +75,7 @@ function KpiCard({ title, value, prefix = '', suffix = '', decimals = 0, icon: I
         transform: visible ? 'translateY(0)' : 'translateY(18px)',
         transition: `opacity 0.6s ease ${delay}ms, transform 0.6s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
       }}
-      className={`relative overflow-hidden rounded-xl p-5 border ${accent || 'border-slate-800/70 bg-slate-900/50'} backdrop-blur-sm group hover:border-slate-700/80 hover:shadow-lg hover:shadow-black/30 transition-all duration-300`}
+      className={`relative overflow-hidden rounded-xl p-4 sm:p-5 border ${accent || 'border-slate-800/70 bg-slate-900/50'} backdrop-blur-sm group hover:border-slate-700/80 hover:shadow-lg hover:shadow-black/30 transition-all duration-300`}
     >
       {/* Background glow */}
       <div className={`absolute -top-8 -right-8 w-28 h-28 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl ${iconBg}`} />
@@ -453,7 +453,7 @@ export const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Area Chart: Revenue vs Expenses Trend */}
-        <div className="lg:col-span-2 rounded-xl border border-slate-800/70 bg-slate-900/50 p-5">
+        <div className="lg:col-span-2 rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5">
           <SectionHeader
             title="Revenue vs Expenses Trend"
             subtitle="Monthly operating performance (YTD FY 2026)"
@@ -463,7 +463,7 @@ export const Dashboard = () => {
               </span>
             }
           />
-          <div className="h-44 sm:h-56">
+          <div className="h-48 sm:h-56">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={areaData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <defs>
@@ -492,7 +492,7 @@ export const Dashboard = () => {
         </div>
 
         {/* Pie Chart: Account type distribution */}
-        <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-5">
+        <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5">
           <SectionHeader title="Account Distribution" subtitle="By account type" />
           <div className="h-36 sm:h-40 mb-3">
             <ResponsiveContainer width="100%" height="100%">
@@ -524,7 +524,7 @@ export const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Balance Sheet Bar */}
-        <div className="lg:col-span-2 rounded-xl border border-slate-800/70 bg-slate-900/50 p-5">
+        <div className="lg:col-span-2 rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5">
           <SectionHeader
             title="Balance Sheet Overview"
             subtitle="Assets vs Liabilities vs Equity"
@@ -538,7 +538,7 @@ export const Dashboard = () => {
               </span>
             }
           />
-          <div className="h-44 sm:h-56">
+          <div className="h-48 sm:h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={balSheetData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barSize={32}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
@@ -557,7 +557,7 @@ export const Dashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-5">
+        <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5">
           <SectionHeader title="Quick Actions" subtitle="Common ERP operations" />
           <div className="space-y-2">
             <QuickAction icon={Plus} label="New Journal Entry"
@@ -598,7 +598,7 @@ export const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Recent Transactions */}
-        <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-5">
+        <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5">
           <SectionHeader
             title="Recent Transactions"
             subtitle="Latest posted journal entries"
@@ -651,7 +651,7 @@ export const Dashboard = () => {
         </div>
 
         {/* Activity Feed */}
-        <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-5">
+        <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5">
           <SectionHeader
             title="Recent Activity"
             subtitle="System audit trail"

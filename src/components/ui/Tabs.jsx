@@ -25,7 +25,7 @@ export const Tabs = ({
 
 export const TabsList = ({ children, className = '' }) => {
   return (
-    <div className={`flex gap-1.5 p-1 bg-slate-900/60 border border-slate-800/80 rounded-lg self-start overflow-x-auto ${className}`}>
+    <div className={`flex flex-nowrap gap-1.5 p-1 bg-slate-900/60 border border-slate-800/80 rounded-lg self-start overflow-x-auto scrollbar-none ${className}`}>
       {children}
     </div>
   );

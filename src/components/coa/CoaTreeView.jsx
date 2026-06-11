@@ -176,7 +176,7 @@ export const CoaTreeView = ({
 
                   {/* Account Name (with hierarchical indentation) */}
                   <td className="py-3.5 px-4">
-                    <div className="flex items-center" style={{ paddingLeft: `${depth * 24}px` }}>
+                    <div className="flex items-center" style={{ paddingLeft: `${depth * 16}px` }}>
                       {/* Tree Join lines indicator */}
                       {depth > 0 && (
                         <div className="flex items-center mr-2">
