@@ -59,12 +59,12 @@ export const ChartOfAccounts = () => {
           <p className="text-xs text-slate-400">Establish and organize general ledger index accounts, summary nodes, and hierarchies.</p>
         </div>
 
-        <div className="flex items-center gap-2 self-end sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {/* CSV Tools */}
           <CoaExportImport />
           
           {/* Create Button */}
-          <Button variant="primary" size="sm" onClick={handleCreateAccount} className="gap-1.5 cursor-pointer">
+          <Button variant="primary" size="sm" onClick={handleCreateAccount} className="gap-1.5 cursor-pointer flex-1 sm:flex-none justify-center">
             <Plus className="h-4 w-4" />
             <span>New Account</span>
           </Button>
@@ -73,10 +73,10 @@ export const ChartOfAccounts = () => {
 
       {/* Filter panel */}
       <Card>
-        <CardContent className="p-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 flex-1">
+        <CardContent className="p-3 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 flex-1 min-w-0">
             {/* Search */}
-            <div className="relative flex-1 max-w-md">
+            <div className="relative flex-1 w-full md:max-w-md min-w-0">
               <Search className="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-500" />
               <input
                 type="text"
@@ -105,11 +105,11 @@ export const ChartOfAccounts = () => {
           </div>
 
           {/* View Toggler (Tree vs Table) */}
-          <div className="flex items-center gap-1 p-0.5 bg-slate-950/60 border border-slate-800 rounded-lg">
+          <div className="flex items-center gap-1 p-0.5 bg-slate-950/60 border border-slate-800 rounded-lg w-full md:w-auto shrink-0">
             <button
               onClick={() => setViewMode('tree')}
               className={`
-                px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer flex items-center gap-1.5
+                flex-1 md:flex-none px-2 sm:px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5
                 ${viewMode === 'tree'
                   ? 'bg-slate-800 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
@@ -117,12 +117,13 @@ export const ChartOfAccounts = () => {
               `}
             >
               <Layers className="h-3.5 w-3.5" />
-              <span>Hierarchical Tree</span>
+              <span className="hidden xs:inline">Hierarchical Tree</span>
+              <span className="xs:hidden">Tree</span>
             </button>
             <button
               onClick={() => setViewMode('table')}
               className={`
-                px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer flex items-center gap-1.5
+                flex-1 md:flex-none px-2 sm:px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5
                 ${viewMode === 'table'
                   ? 'bg-slate-800 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
@@ -130,7 +131,8 @@ export const ChartOfAccounts = () => {
               `}
             >
               <Grid className="h-3.5 w-3.5" />
-              <span>Grid Table</span>
+              <span className="hidden xs:inline">Grid Table</span>
+              <span className="xs:hidden">Grid</span>
             </button>
           </div>
         </CardContent>

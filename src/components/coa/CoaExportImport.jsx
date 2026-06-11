@@ -133,15 +133,17 @@ export const CoaExportImport = () => {
 6700,Software SaaS Tools,Expense,Expense,6000,USD,Active,4500,General software licenses,Global`;
 
   return (
-    <div className="flex items-center gap-2">
-      <Button variant="outline" size="sm" onClick={handleExport} className="gap-2 cursor-pointer">
+    <div className="flex flex-wrap items-center gap-2">
+      <Button variant="outline" size="sm" onClick={handleExport} className="gap-2 cursor-pointer flex-1 sm:flex-none justify-center">
         <Download className="h-4 w-4 text-slate-400" />
-        <span className="hidden sm:inline">Export CSV</span>
+        <span className="hidden xs:inline">Export CSV</span>
+        <span className="xs:hidden">Export</span>
       </Button>
 
-      <Button variant="outline" size="sm" onClick={() => { setIsImportModalOpen(true); setImportStatus(null); }} className="gap-2 cursor-pointer">
+      <Button variant="outline" size="sm" onClick={() => { setIsImportModalOpen(true); setImportStatus(null); }} className="gap-2 cursor-pointer flex-1 sm:flex-none justify-center">
         <Upload className="h-4 w-4 text-slate-400" />
-        <span className="hidden sm:inline">Import CSV</span>
+        <span className="hidden xs:inline">Import CSV</span>
+        <span className="xs:hidden">Import</span>
       </Button>
 
       {/* Import Modal */}
@@ -172,7 +174,7 @@ export const CoaExportImport = () => {
               
               {/* Sample template box */}
               <div className="bg-slate-950 border border-slate-800 rounded-lg p-3">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
+                <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2 border-b border-slate-800 pb-2 mb-2">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">
                     <FileText className="h-4 w-4 text-brand-400" />
                     <span>CSV Template (Copy to Test)</span>
@@ -208,11 +210,11 @@ export const CoaExportImport = () => {
               </div>
 
               {/* Buttons */}
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
-                <Button variant="outline" onClick={() => setIsImportModalOpen(false)}>
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-3 border-t border-slate-800">
+                <Button variant="outline" onClick={() => setIsImportModalOpen(false)} className="w-full sm:w-auto justify-center">
                   Cancel
                 </Button>
-                <Button variant="primary" onClick={handleImport}>
+                <Button variant="primary" onClick={handleImport} className="w-full sm:w-auto justify-center">
                   Verify & Import
                 </Button>
               </div>

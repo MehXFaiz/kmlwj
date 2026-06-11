@@ -79,7 +79,7 @@ export const AuthLayout = ({ children }) => {
       </div>
 
       {/* ─── RIGHT FORM PANEL ─── */}
-      <div className="flex-1 flex items-center justify-center p-5 sm:p-8 lg:p-12 relative">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-8 lg:p-12 relative min-h-0 overflow-y-auto">
         {/* Subtle radial glow behind form */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-500/[0.04] rounded-full blur-[120px] pointer-events-none" />
 

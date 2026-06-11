@@ -73,7 +73,7 @@ export const Settings = () => {
     <div className="space-y-6">
       {/* Title */}
       <div className="flex flex-col gap-1">
-        <h2 className="text-xl font-bold text-slate-100 uppercase tracking-wider">System Settings</h2>
+        <h2 className="text-lg sm:text-xl font-bold text-slate-100 uppercase tracking-wider">System Settings</h2>
         <p className="text-xs text-slate-400">Configure global configurations, system variables, database controls, and local storage caches.</p>
       </div>
 

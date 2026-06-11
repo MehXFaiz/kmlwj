@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../co
 import { Select } from '../components/ui/Select';
 import { Badge, AccountTypeBadge } from '../components/ui/Badge';
 import { BookOpen, Calendar, ArrowRightLeft } from 'lucide-react';
+import { MobileOnly, DesktopOnly } from '../components/common/responsive';
 
 export const GeneralLedger = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -113,8 +114,8 @@ export const GeneralLedger = () => {
 
       {/* Account Filter Panel */}
       <Card>
-        <CardContent className="p-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3 w-full sm:max-w-md">
+        <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3 w-full sm:max-w-md min-w-0">
             <BookOpen className="h-5 w-5 text-slate-500 flex-shrink-0" />
             <Select
               label="Select General Ledger Account"
@@ -222,7 +223,30 @@ export const GeneralLedger = () => {
                 </div>
               </CardHeader>
               
-              <CardContent className="p-0 overflow-x-auto">
+              <CardContent className="p-0">
+                <MobileOnly className="p-3 space-y-2">
+                  <div className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-3 text-xs italic text-slate-400">
+                    <div className="flex justify-between mb-1"><span>Starting Balance</span><span className="font-mono font-semibold text-slate-200">${runningLedger.startingBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
+                  </div>
+                  {runningLedger.rows.length === 0 ? (
+                    <p className="py-6 text-center text-slate-500 italic text-sm">No journal entries posted to this account.</p>
+                  ) : runningLedger.rows.map((row, index) => (
+                    <div key={`${row.jeId}-${index}`} className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-3">
+                      <div className="flex justify-between gap-2 mb-1">
+                        <span className="text-brand-400 font-mono font-bold text-xs">{row.jeId}</span>
+                        <span className="text-slate-400 text-xs">{row.date}</span>
+                      </div>
+                      <p className="text-slate-300 text-xs mb-2">{row.description}</p>
+                      <div className="grid grid-cols-3 gap-2 text-[11px] font-mono">
+                        <div><span className="text-slate-500 block">DR</span><span className="text-emerald-400">{row.debit > 0 ? `$${row.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}</span></div>
+                        <div><span className="text-slate-500 block">CR</span><span className="text-red-400">{row.credit > 0 ? `$${row.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}</span></div>
+                        <div className="text-right"><span className="text-slate-500 block">Bal</span><span className="text-slate-200 font-bold">${row.runningBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
+                      </div>
+                    </div>
+                  ))}
+                </MobileOnly>
+                <DesktopOnly>
+              <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[600px]">
                   <thead>
                     <tr className="border-b border-slate-800 text-xs font-semibold text-slate-400 uppercase bg-slate-900/10">
@@ -273,6 +297,8 @@ export const GeneralLedger = () => {
                     )}
                   </tbody>
                 </table>
+              </div>
+                </DesktopOnly>
               </CardContent>
             </Card>
           </div>

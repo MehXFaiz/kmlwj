@@ -3,6 +3,7 @@ import { useJournalStore } from '../store/journalStore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { History, ShieldCheck, Search, HelpCircle, Terminal } from 'lucide-react';
+import { MobileOnly, DesktopOnly } from '../components/common/responsive';
 
 export const AuditTrail = () => {
   const { auditLogs } = useJournalStore();
@@ -52,7 +53,7 @@ export const AuditTrail = () => {
 
       {/* Search Filter bar */}
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-3 sm:p-4">
           <div className="relative w-full max-w-md">
             <Search className="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-500" />
             <input
@@ -76,7 +77,26 @@ export const AuditTrail = () => {
           <History className="h-5 w-5 text-slate-600" />
         </CardHeader>
 
-        <CardContent className="p-0 overflow-x-auto">
+        <CardContent className="p-0">
+        <MobileOnly className="p-3 space-y-2">
+          {filteredLogs.length === 0 ? (
+            <p className="py-8 text-center text-slate-500 italic text-sm">No compliance events match the search queries.</p>
+          ) : filteredLogs.map((log) => {
+            const formattedTime = new Date(log.timestamp).toLocaleString();
+            return (
+              <div key={log.id} className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-3">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <Badge variant={getActionBadgeVariant(log.action)}>{log.action}</Badge>
+                  <span className="text-[10px] text-slate-500 shrink-0">{formattedTime}</span>
+                </div>
+                <p className="text-xs text-slate-200 mb-1">{log.details}</p>
+                <p className="text-[11px] text-brand-300 font-bold">{log.user}</p>
+              </div>
+            );
+          })}
+        </MobileOnly>
+        <DesktopOnly>
+        <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[600px]">
             <thead>
               <tr className="border-b border-slate-800 text-xs font-semibold text-slate-400 uppercase bg-slate-900/10">
@@ -112,6 +132,8 @@ export const AuditTrail = () => {
               )}
             </tbody>
           </table>
+        </div>
+        </DesktopOnly>
         </CardContent>
       </Card>
     </div>

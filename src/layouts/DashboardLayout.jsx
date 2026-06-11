@@ -3,9 +3,9 @@ import { Breadcrumbs } from '../components/common/Breadcrumbs';
 
 export const DashboardLayout = ({children, breadcrumbs=[]}) => {
   return (
-    <div className="p-4 md:p-6">
+    <div className="space-y-4 sm:space-y-6 min-w-0">
       <Breadcrumbs items={breadcrumbs} />
-      <div className="space-y-6">{children}</div>
+      {children}
     </div>
   );
 }

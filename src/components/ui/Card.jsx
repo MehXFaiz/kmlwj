@@ -47,7 +47,7 @@ export const CardContent = ({ children, className = '', ...props }) => (
 );
 
 export const CardFooter = ({ children, className = '', ...props }) => (
-  <div className={`mt-6 pt-4 border-t border-slate-800/60 flex items-center justify-end ${className}`} {...props}>
+  <div className={`mt-6 pt-4 border-t border-slate-800/60 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 ${className}`} {...props}>
     {children}
   </div>
 );

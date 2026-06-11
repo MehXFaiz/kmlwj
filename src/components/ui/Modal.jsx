@@ -34,7 +34,7 @@ export const Modal = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
           {/* Overlay */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -51,15 +51,16 @@ export const Modal = ({
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
             transition={{ type: "spring", duration: 0.4 }}
             className={`
-              relative w-full glass-panel glow-indigo rounded-xl shadow-2xl overflow-hidden z-10 border border-slate-800
+              relative w-full glass-panel glow-indigo rounded-t-2xl sm:rounded-xl shadow-2xl overflow-hidden z-10 border border-slate-800
+              max-h-[92dvh] sm:max-h-none flex flex-col
               ${sizes[size]}
               ${className}
             `}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-800/80 bg-slate-900/40">
+            <div className="flex items-start sm:items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-800/80 bg-slate-900/40 shrink-0">
               {title && (
-                <h3 className="text-base font-bold text-slate-100 uppercase tracking-wide">
+                <h3 className="text-sm sm:text-base font-bold text-slate-100 uppercase tracking-wide pr-2 line-clamp-2">
                   {title}
                 </h3>
               )}
@@ -73,7 +74,7 @@ export const Modal = ({
             </div>
 
             {/* Content */}
-            <div className="p-4 sm:p-6 overflow-y-auto max-h-[70vh] sm:max-h-[78vh]">
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0 max-h-[calc(92dvh-4rem)] sm:max-h-[78vh]">
               {children}
             </div>
           </motion.div>

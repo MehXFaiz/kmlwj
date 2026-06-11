@@ -3,15 +3,16 @@ import {
   ShieldBan, Search, Plus, ChevronDown, ChevronUp, X, AlertTriangle,
   Lock, Hash, Edit2, Trash2, Download, Layers, CheckCircle2, Copy, Info,
 } from 'lucide-react';
+import { MobileOnly, DesktopOnly, pageActionsClass, statGridClass } from '../components/common/responsive';
 
 /* ─── Stat Card ─── */
 function StatCard({ title, value, icon: Icon, iconBg, iconColor, sub, delay = 0 }) {
   return (
-    <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-5 flex items-start justify-between gap-3 hover:border-slate-700 transition-all duration-300"
+    <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5 flex items-start justify-between gap-3 hover:border-slate-700 transition-all duration-300"
       style={{ animation: `fadeUp 0.5s ease ${delay}ms both` }}>
       <div>
         <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500 mb-1.5">{title}</p>
-        <p className="text-2xl font-extrabold font-mono text-slate-100">{value}</p>
+        <p className="text-xl sm:text-2xl font-extrabold font-mono text-slate-100">{value}</p>
         {sub && <p className="text-[11px] text-slate-500 mt-1">{sub}</p>}
       </div>
       <div className={`h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 ${iconBg} border border-white/5`}>
@@ -59,10 +60,10 @@ function ReservedCodeModal({ isOpen, onClose, onSave, initial }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-lg rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
+      <div className="relative z-10 w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl max-h-[92dvh] flex flex-col">
+        <div className="flex items-start sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="h-8 w-8 rounded-lg bg-amber-950/60 border border-amber-800/40 flex items-center justify-center">
               <Hash className="h-4 w-4 text-amber-400" />
@@ -77,7 +78,7 @@ function ReservedCodeModal({ isOpen, onClose, onSave, initial }) {
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Start Code *</label>
@@ -125,7 +126,7 @@ function ReservedCodeModal({ isOpen, onClose, onSave, initial }) {
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-800">
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-4 border-t border-slate-800 shrink-0">
           <button onClick={onClose} className="px-4 py-2 rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 text-sm font-semibold transition-all">Cancel</button>
           <button onClick={handleSave} disabled={!form.name.trim() || !form.code.trim()}
             className="px-5 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold transition-all shadow-lg shadow-amber-900/40">
@@ -204,22 +205,21 @@ export const ReservedCodes = () => {
               <ShieldBan className="h-3 w-3" /> Code Governance
             </span>
           </div>
-          <h2 className="text-2xl font-extrabold text-slate-100 tracking-tight">Reserved Codes</h2>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">Reserved Codes</h2>
           <p className="text-xs text-slate-500 mt-0.5">Manage restricted GL code ranges and system-protected account blocks</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all text-xs font-semibold">
+        <div className={pageActionsClass}>
+          <button className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all text-xs font-semibold flex-1 sm:flex-none">
             <Download className="h-3.5 w-3.5" /> Export
           </button>
           <button onClick={() => { setEditItem(null); setModalOpen(true); }}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-lg shadow-amber-900/40 transition-all">
+            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-lg shadow-amber-900/40 transition-all flex-1 sm:flex-none">
             <Plus className="h-4 w-4" /> Reserve Code
           </button>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className={statGridClass}>
         <StatCard title="Total Reservations" value={stats.total} icon={Hash} iconBg="bg-amber-950/60" iconColor="text-amber-400" delay={0} />
         <StatCard title="Locked (System)" value={stats.locked} icon={Lock} iconBg="bg-red-950/60" iconColor="text-red-400" sub="Cannot be modified" delay={80} />
         <StatCard title="System Ranges" value={stats.system} icon={ShieldBan} iconBg="bg-indigo-950/60" iconColor="text-indigo-400" delay={160} />
@@ -227,7 +227,7 @@ export const ReservedCodes = () => {
       </div>
 
       {/* Info Banner */}
-      <div className="rounded-xl border border-indigo-900/30 bg-indigo-950/10 px-5 py-3.5 flex items-start gap-3">
+      <div className="rounded-xl border border-indigo-900/30 bg-indigo-950/10 px-4 sm:px-5 py-3.5 flex items-start gap-3">
         <Info className="h-4 w-4 text-indigo-400 mt-0.5 flex-shrink-0" />
         <div>
           <p className="text-[11px] font-semibold text-indigo-300">Why Reserve GL Codes?</p>
@@ -239,18 +239,18 @@ export const ReservedCodes = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-52">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
+        <div className="relative flex-1 w-full sm:min-w-52">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, code or range..."
             className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-amber-600/50 transition-all" />
         </div>
         <select value={filterType} onChange={e => setFilterType(e.target.value)}
-          className="px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-300 focus:outline-none transition-all">
+          className="w-full sm:w-auto px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-300 focus:outline-none transition-all">
           {['All', 'System', 'Category', 'Custom'].map(s => <option key={s}>{s}</option>)}
         </select>
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          className="px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-300 focus:outline-none transition-all">
+          className="w-full sm:w-auto px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-300 focus:outline-none transition-all">
           {['All', 'Locked', 'Active'].map(s => <option key={s}>{s}</option>)}
         </select>
         <span className="text-xs text-slate-500 ml-auto">{filtered.length} result{filtered.length !== 1 ? 's' : ''}</span>
@@ -258,8 +258,44 @@ export const ReservedCodes = () => {
 
       {/* Table */}
       <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 overflow-hidden">
+        <MobileOnly className="p-3 space-y-3">
+          {filtered.length === 0 ? (
+            <p className="py-8 text-center text-slate-500 text-sm">No reserved codes match your filters.</p>
+          ) : filtered.map((c, i) => {
+            const sc = STATUS_COLORS[c.status] || STATUS_COLORS.Active;
+            const tc = TYPE_COLORS[c.type] || TYPE_COLORS.Custom;
+            return (
+              <div key={c.id} className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-3" style={{ animation: `fadeUp 0.35s ease ${i * 50}ms both` }}>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div>
+                    <span className="font-mono text-xs font-bold text-amber-400">{c.code}</span>
+                    <span className="ml-2 font-mono text-[10px] text-slate-500">{c.range}</span>
+                  </div>
+                  <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${sc.badge}`}><span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />{c.status}</span>
+                </div>
+                <p className="text-sm font-semibold text-slate-200 mb-1">{c.name}</p>
+                {c.reason && <p className="text-[11px] text-slate-500 mb-2 line-clamp-2">{c.reason}</p>}
+                <div className="flex flex-wrap gap-2 mb-3 text-[11px] text-slate-500">
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${tc}`}>{c.type}</span>
+                  <span>{c.reservedBy}</span>
+                  <span>{c.reservedDate}</span>
+                </div>
+                <div className="flex items-center gap-1 pt-2 border-t border-slate-800/50">
+                  <button onClick={() => setDetailId(c.id)} className="flex-1 py-2 rounded-lg bg-slate-800/60 text-slate-400 text-xs font-semibold">Details</button>
+                  {c.type !== 'System' && (
+                    <>
+                      <button onClick={() => { setEditItem(c); setModalOpen(true); }} className="flex-1 py-2 rounded-lg bg-slate-800/60 text-slate-400 text-xs font-semibold">Edit</button>
+                      <button onClick={() => setDeleteId(c.id)} className="flex-1 py-2 rounded-lg bg-red-950/30 text-red-400 text-xs font-semibold">Remove</button>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </MobileOnly>
+        <DesktopOnly>
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-left min-w-[700px]">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-900/80">
                 {[
@@ -307,7 +343,7 @@ export const ReservedCodes = () => {
                       </span>
                     </td>
                     <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                         <button onClick={() => setDetailId(c.id)}
                           className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-500 hover:text-slate-200 transition-colors">
                           <Info className="h-3.5 w-3.5" />
@@ -332,6 +368,7 @@ export const ReservedCodes = () => {
             </tbody>
           </table>
         </div>
+        </DesktopOnly>
         <div className="px-4 py-3 border-t border-slate-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <span className="text-[11px] text-slate-500">Showing {filtered.length} of {codes.length} reserved ranges</span>
           <div className="flex items-center gap-1.5 text-[11px] text-slate-500">

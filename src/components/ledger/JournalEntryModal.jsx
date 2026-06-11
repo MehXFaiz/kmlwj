@@ -152,7 +152,7 @@ export const JournalEntryModal = ({ isOpen, onClose }) => {
 
           {/* Grid lines */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2">
               <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                 Transaction Lines
               </h5>
@@ -169,7 +169,7 @@ export const JournalEntryModal = ({ isOpen, onClose }) => {
             </div>
 
             <div className="border border-slate-800 rounded-lg overflow-hidden overflow-x-auto bg-slate-950/20">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left border-collapse min-w-[520px]">
                 <thead>
                   <tr className="border-b border-slate-800 text-[10px] font-bold text-slate-400 uppercase bg-slate-900/35">
                     <th className="py-2.5 px-3 w-72">Account</th>
@@ -312,14 +312,15 @@ export const JournalEntryModal = ({ isOpen, onClose }) => {
           </div>
 
           {/* Footer buttons */}
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
-            <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+            <div className="flex flex-wrap justify-end gap-2 sm:gap-3 pt-3 border-t border-slate-800">
+            <Button variant="outline" onClick={onClose} disabled={isSubmitting} className="flex-1 sm:flex-none justify-center">
               Cancel
             </Button>
             <Button
               type="submit"
               variant="primary"
               disabled={isSubmitting || !isBalanced}
+              className="flex-1 sm:flex-none justify-center"
             >
               Post Journal Entry
             </Button>
