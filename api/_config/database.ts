@@ -1,5 +1,5 @@
-import { prisma } from '../_prisma';
-import { logger } from '../_utils/logger';
+import { prisma } from '../_prisma.js';
+import { logger } from '../_utils/logger.js';
 
 export async function checkDatabaseConnection(): Promise<boolean> {
   try {

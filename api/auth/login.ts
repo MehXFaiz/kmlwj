@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { z } from 'zod';
-import { makeHandler } from '../_utils/handler';
-import * as authService from '../_services/auth.service';
+import { makeHandler } from '../_utils/handler.js';
+import * as authService from '../_services/auth.service.js';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),

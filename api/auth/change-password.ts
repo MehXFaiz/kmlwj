@@ -1,8 +1,8 @@
 import type { VercelResponse } from '@vercel/node';
 import { z } from 'zod';
-import { makeHandler } from '../_utils/handler';
-import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middleware';
-import * as authService from '../_services/auth.service';
+import { makeHandler } from '../_utils/handler.js';
+import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import * as authService from '../_services/auth.service.js';
 
 const changePasswordSchema = z.object({
   oldPassword: z.string().min(1, 'Old password is required'),

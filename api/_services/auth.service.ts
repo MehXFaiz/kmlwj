@@ -1,8 +1,8 @@
-import { prisma } from '../_prisma';
+import { prisma } from '../_prisma.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { logger } from '../_utils/logger';
+import { logger } from '../_utils/logger.js';
 
 const ACCESS_TOKEN_EXPIRY = '15m'; // Short-lived access token
 const REFRESH_TOKEN_EXPIRY_DAYS = 7;

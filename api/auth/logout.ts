@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { makeHandler } from '../_utils/handler';
-import * as authService from '../_services/auth.service';
+import { makeHandler } from '../_utils/handler.js';
+import * as authService from '../_services/auth.service.js';
 
 export default makeHandler(async (req: VercelRequest, res: VercelResponse) => {
   if (req.method !== 'POST') {

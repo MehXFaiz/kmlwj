@@ -1,4 +1,4 @@
-import { logger } from '../_utils/logger';
+import { logger } from '../_utils/logger.js';
 
 export interface HttpError extends Error {
   status?: number;

@@ -3,18 +3,18 @@ dotenv.config();
 
 import express from 'express';
 import cors from 'cors';
-import { checkDatabaseConnection } from './_config/database';
-import { logger } from './_utils/logger';
+import { checkDatabaseConnection } from './_config/database.js';
+import { logger } from './_utils/logger.js';
 
 // Import Vercel serverless handlers
-import loginHandler from './auth/login';
-import registerHandler from './auth/register';
-import refreshHandler from './auth/refresh';
-import logoutHandler from './auth/logout';
-import forgotPasswordHandler from './auth/forgot-password';
-import resetPasswordHandler from './auth/reset-password';
-import changePasswordHandler from './auth/change-password';
-import healthHandler from './health';
+import loginHandler from './auth/login.js';
+import registerHandler from './auth/register.js';
+import refreshHandler from './auth/refresh.js';
+import logoutHandler from './auth/logout.js';
+import forgotPasswordHandler from './auth/forgot-password.js';
+import resetPasswordHandler from './auth/reset-password.js';
+import changePasswordHandler from './auth/change-password.js';
+import healthHandler from './health.js';
 
 const PORT = process.env.PORT || 4000;
 const app = express();

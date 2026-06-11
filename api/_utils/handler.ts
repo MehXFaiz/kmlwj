@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { ZodError } from 'zod';
-import { logger } from './logger';
+import { logger } from './logger.js';
 
 type ServerlessFunction = (req: any, res: any) => Promise<any>;
 

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { makeHandler } from './_utils/handler';
+import { makeHandler } from './_utils/handler.js';
 
 export default makeHandler(async (req: VercelRequest, res: VercelResponse) => {
   if (req.method !== 'GET') {
