@@ -210,7 +210,8 @@ export async function forgotPassword(email: string) {
   });
 
   // Log reset link in terminal for development
-  const resetLink = `http://localhost:5173/reset-password?token=${resetToken}`;
+  const appUrl = process.env.APP_URL || process.env.CORS_ORIGIN || 'http://localhost:5173';
+  const resetLink = `${appUrl.replace(/\/$/, '')}/reset-password?token=${resetToken}`;
   logger.info(`
 ============================================================
 [DEV EMAIL SENDER MOCK]

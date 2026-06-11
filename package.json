@@ -6,7 +6,11 @@
   "description": "Accounting ERP – Full-stack monorepo",
   "scripts": {
     "dev": "vite",
-    "build": "chmod +x node_modules/.bin/vite && vite build",
+    "dev:api": "tsx watch api/dev.ts",
+    "build": "prisma generate && vite build",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate deploy",
+    "db:studio": "prisma studio",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -34,7 +38,8 @@
     "recharts": "^3.8.1",
     "tailwindcss": "^4.3.0",
     "zod": "^4.4.3",
-    "zustand": "^5.0.13"
+    "zustand": "^5.0.13",
+    "tsx": "^4.22.4"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -47,6 +52,7 @@
     "@types/pg": "^8.11.4",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@vercel/node": "^5.3.0",
     "@vitejs/plugin-react": "^6.0.1",
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
