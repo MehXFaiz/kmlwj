@@ -1,10 +1,10 @@
 {
-  "buildCommand": "prisma generate && prisma migrate deploy && vite build",
+  "buildCommand": "node scripts/compile-api-shared.mjs && prisma generate && prisma migrate deploy && vite build",
   "outputDirectory": "dist",
   "framework": "vite",
   "functions": {
     "api/**/*.ts": {
-      "includeFiles": "api/_**/**"
+      "includeFiles": "api/{_prisma.js,_utils/**,_services/**,_middlewares/**,_config/**}"
     }
   },
   "rewrites": [
