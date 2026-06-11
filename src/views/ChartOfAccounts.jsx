@@ -117,7 +117,7 @@ export const ChartOfAccounts = () => {
               `}
             >
               <Layers className="h-3.5 w-3.5" />
-              <span>Hierarchical Tree</span>
+              <span className="hidden sm:inline">Hierarchical Tree</span>
             </button>
             <button
               onClick={() => setViewMode('table')}
@@ -130,7 +130,7 @@ export const ChartOfAccounts = () => {
               `}
             >
               <Grid className="h-3.5 w-3.5" />
-              <span>Grid Table</span>
+              <span className="hidden sm:inline">Grid Table</span>
             </button>
           </div>
         </CardContent>

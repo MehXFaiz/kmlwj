@@ -78,7 +78,7 @@ function ReservedCodeModal({ isOpen, onClose, onSave, initial }) {
         </div>
 
         <div className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Start Code *</label>
               <input value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} placeholder="e.g. 8000"
@@ -104,7 +104,7 @@ function ReservedCodeModal({ isOpen, onClose, onSave, initial }) {
               className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm placeholder-slate-600 focus:outline-none focus:border-amber-600/60 transition-all resize-none" />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Type</label>
               <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
@@ -307,7 +307,7 @@ export const ReservedCodes = () => {
                       </span>
                     </td>
                     <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         <button onClick={() => setDetailId(c.id)}
                           className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-500 hover:text-slate-200 transition-colors">
                           <Info className="h-3.5 w-3.5" />
@@ -332,7 +332,7 @@ export const ReservedCodes = () => {
             </tbody>
           </table>
         </div>
-        <div className="px-4 py-3 border-t border-slate-800/60 flex items-center justify-between">
+        <div className="px-4 py-3 border-t border-slate-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <span className="text-[11px] text-slate-500">Showing {filtered.length} of {codes.length} reserved ranges</span>
           <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
             <Lock className="h-3.5 w-3.5 text-amber-500" />

@@ -37,13 +37,13 @@ export const ForgotPassword = () => {
       <div className="relative group">
         <div className="absolute -inset-1.5 bg-gradient-to-r from-indigo-600 to-rose-600 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
         
-        <div className="relative bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-8 shadow-2xl">
+        <div className="relative bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-2xl">
           <div className="mb-6">
             <Link to="/login" className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors mb-4">
               <ArrowLeft className="h-3.5 w-3.5" />
               Back to Login
             </Link>
-            <h2 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-rose-400">
+            <h2 className="text-2xl sm:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-rose-400">
               Recover Access
             </h2>
             <p className="text-slate-400 text-sm mt-1 font-medium">

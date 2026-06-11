@@ -59,7 +59,7 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial }) {
         </div>
 
         <div className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Revenue Code *</label>
               <input
@@ -104,7 +104,7 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial }) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Annual Budget ($)</label>
               <input
@@ -369,7 +369,7 @@ export const RevenueHeads = () => {
                       </span>
                     </td>
                     <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         <button onClick={() => { setEditItem(h); setModalOpen(true); }}
                           className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-500 hover:text-slate-200 transition-colors">
                           <Edit2 className="h-3.5 w-3.5" />
@@ -386,7 +386,7 @@ export const RevenueHeads = () => {
             </tbody>
           </table>
         </div>
-        <div className="px-4 py-3 border-t border-slate-800/60 flex items-center justify-between">
+        <div className="px-4 py-3 border-t border-slate-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <span className="text-[11px] text-slate-500">Showing {filtered.length} of {heads.length} revenue heads</span>
           <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
             <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" />

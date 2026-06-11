@@ -83,7 +83,7 @@ function KpiCard({ title, value, prefix = '', suffix = '', decimals = 0, icon: I
       <div className="relative flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500 mb-2">{title}</p>
-          <p className={`text-2xl font-extrabold font-mono leading-none ${iconColor || 'text-slate-100'}`}>
+          <p className={`text-xl sm:text-2xl font-extrabold font-mono leading-none ${iconColor || 'text-slate-100'}`}>
             {animated}
           </p>
           {trendLabel && (
@@ -223,7 +223,7 @@ function AccountTypeStat({ label, count, pct, color, dotColor }) {
     <div className="flex items-center gap-3 py-2">
       <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dotColor}`} />
       <span className="text-xs text-slate-400 flex-1 truncate">{label}</span>
-      <div className="w-24 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+      <div className="w-16 sm:w-24 h-1.5 rounded-full bg-slate-800 overflow-hidden">
         <div
           className={`h-full rounded-full ${color} transition-all duration-700 ease-out`}
           style={{ width: `${bar}%` }}
@@ -337,7 +337,7 @@ export const Dashboard = () => {
               Live Data
             </span>
           </div>
-          <h2 className="text-2xl font-extrabold text-slate-100 tracking-tight">Financial Command Center</h2>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">Financial Command Center</h2>
           <p className="text-xs text-slate-500 mt-0.5">Consolidated real-time analytics · {selectedSubsidiary} · FY 2026</p>
         </div>
         <div className="flex items-center gap-2">
@@ -463,7 +463,7 @@ export const Dashboard = () => {
               </span>
             }
           />
-          <div className="h-56">
+          <div className="h-44 sm:h-56">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={areaData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <defs>
@@ -494,7 +494,7 @@ export const Dashboard = () => {
         {/* Pie Chart: Account type distribution */}
         <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-5">
           <SectionHeader title="Account Distribution" subtitle="By account type" />
-          <div className="h-40 mb-3">
+          <div className="h-36 sm:h-40 mb-3">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie data={typeDistData} cx="50%" cy="50%" innerRadius={40} outerRadius={68}
@@ -538,9 +538,9 @@ export const Dashboard = () => {
               </span>
             }
           />
-          <div className="h-56">
+          <div className="h-44 sm:h-56">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={balSheetData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barSize={48}>
+              <BarChart data={balSheetData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barSize={32}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
                 <XAxis dataKey="name" stroke="#475569" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#475569" fontSize={11} tickLine={false} axisLine={false}
@@ -609,7 +609,7 @@ export const Dashboard = () => {
             }
           />
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full text-left min-w-[500px]">
               <thead>
                 <tr className="border-b border-slate-800/60">
                   {['ID', 'Date', 'Reference', 'Amount', 'Status'].map(h => (

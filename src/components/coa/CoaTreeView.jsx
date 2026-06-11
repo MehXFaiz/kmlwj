@@ -242,7 +242,7 @@ export const CoaTreeView = ({
                   </td>
 
                   {/* Inline Actions */}
-                  <td className="py-3.5 px-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+                  <td className="py-3.5 px-4 text-right md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                     <div className="inline-flex gap-1.5">
                       {/* Create sub-account */}
                       {account.detailType === 'Header' && (

@@ -25,7 +25,7 @@ export const Tabs = ({
 
 export const TabsList = ({ children, className = '' }) => {
   return (
-    <div className={`flex gap-1.5 p-1 bg-slate-900/60 border border-slate-800/80 rounded-lg self-start ${className}`}>
+    <div className={`flex gap-1.5 p-1 bg-slate-900/60 border border-slate-800/80 rounded-lg self-start overflow-x-auto ${className}`}>
       {children}
     </div>
   );
@@ -40,7 +40,7 @@ export const TabsTrigger = ({ value, children, className = '' }) => {
       type="button"
       onClick={() => setTab(value)}
       className={`
-        px-3.5 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer
+        px-3.5 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer whitespace-nowrap flex-shrink-0
         ${isActive
           ? 'bg-slate-800 text-white shadow-sm'
           : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'

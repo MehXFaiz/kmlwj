@@ -15,9 +15,10 @@ import {
   BarChart3,
   Users,
   LogOut,
+  X,
 } from 'lucide-react';
 
-export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
+export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }) => {
   const { user, logout } = useAuthStore();
   
   const menuItems = [
@@ -34,10 +35,20 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   ];
 
   return (
+    <>
+    {/* Mobile backdrop overlay */}
+    {isMobileOpen && (
+      <div
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+        onClick={() => setIsMobileOpen(false)}
+      />
+    )}
     <div
       className={`
-        relative h-screen bg-slate-900 border-r border-slate-800 flex flex-col justify-between transition-all duration-300 z-30
+        h-screen bg-slate-900 border-r border-slate-800 flex flex-col justify-between transition-all duration-300
         ${isCollapsed ? 'w-16' : 'w-64'}
+        fixed md:relative z-50
+        ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}
     >
       {/* Top Section - Brand */}
@@ -71,6 +82,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                   : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
                 }
               `}
+              onClick={() => setIsMobileOpen && setIsMobileOpen(false)}
             >
               <item.icon className="h-5 w-5 flex-shrink-0" />
               {!isCollapsed && (
@@ -131,6 +143,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
               : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
             }
           `}
+          onClick={() => setIsMobileOpen && setIsMobileOpen(false)}
         >
           <Settings className="h-5 w-5 flex-shrink-0" />
           {!isCollapsed && <span className="truncate">System Settings</span>}
@@ -144,7 +157,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         {/* Collapsible toggle trigger */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="w-full flex items-center justify-center p-2 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800/40 border border-slate-800/60 cursor-pointer"
+          className="w-full hidden md:flex items-center justify-center p-2 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800/40 border border-slate-800/60 cursor-pointer"
         >
           {isCollapsed ? (
             <ChevronRight className="h-4 w-4" />
@@ -156,6 +169,6 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
           )}
         </button>
       </div>
-    </div>
+    </div></>
   );
 };

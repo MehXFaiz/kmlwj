@@ -168,7 +168,7 @@ export const JournalEntryModal = ({ isOpen, onClose }) => {
               </Button>
             </div>
 
-            <div className="border border-slate-800 rounded-lg overflow-hidden bg-slate-950/20">
+            <div className="border border-slate-800 rounded-lg overflow-hidden overflow-x-auto bg-slate-950/20">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-slate-800 text-[10px] font-bold text-slate-400 uppercase bg-slate-900/35">

@@ -131,8 +131,8 @@ export const JournalEntries = () => {
                                 <span className="text-[10px] text-slate-500">Posted by: <span className="font-semibold text-slate-400">{je.postedBy}</span></span>
                               </div>
 
-                              <div className="border border-slate-800/80 rounded-lg overflow-hidden bg-slate-950">
-                                <table className="w-full text-left border-collapse">
+                              <div className="border border-slate-800/80 rounded-lg overflow-hidden bg-slate-950 overflow-x-auto">
+                                <table className="w-full text-left border-collapse min-w-[500px]">
                                   <thead>
                                     <tr className="border-b border-slate-850 text-[9px] font-bold text-slate-500 uppercase bg-slate-900/25">
                                       <th className="py-2 px-3 w-40">GL Account</th>

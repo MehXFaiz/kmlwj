@@ -10,7 +10,7 @@ export const Card = ({
   return (
     <div
       className={`
-        rounded-xl glass-panel border border-slate-800/80 shadow-md p-6
+        rounded-xl glass-panel border border-slate-800/80 shadow-md p-4 sm:p-6
         ${hover ? 'glass-panel-hover' : ''}
         ${glow ? 'glow-indigo' : ''}
         ${className}

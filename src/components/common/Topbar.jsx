@@ -1,7 +1,7 @@
 import { useCoaStore } from '../../store/coaStore';
-import { Globe, Calendar, Bell, ShieldCheck, Sun, Moon } from 'lucide-react';
+import { Globe, Calendar, Bell, ShieldCheck, Sun, Moon, Menu } from 'lucide-react';
 
-export const Topbar = () => {
+export const Topbar = ({ onMobileMenuToggle }) => {
   const { 
     selectedSubsidiary, 
     setSelectedSubsidiary, 
@@ -13,10 +13,19 @@ export const Topbar = () => {
   const fiscalYears = ['2025', '2026', '2027'];
 
   return (
-    <header className="h-16 bg-slate-900 border-b border-slate-800/80 flex items-center justify-between px-6 z-20">
+    <header className="h-14 md:h-16 bg-slate-900 border-b border-slate-800/80 flex items-center justify-between px-3 md:px-6 z-20">
       
+      {/* Mobile menu toggle */}
+      <button
+        onClick={onMobileMenuToggle}
+        className="p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 transition-colors md:hidden mr-2"
+        aria-label="Toggle navigation menu"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+
       {/* Left side - Filters */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 md:gap-4">
         {/* Subsidiary Selector */}
         <div className="flex items-center gap-2">
           <Globe className="h-4 w-4 text-slate-400" />
@@ -53,7 +62,7 @@ export const Topbar = () => {
       </div>
 
       {/* Right side - User & System Indicators */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 md:gap-4">
         {/* Live Indicator */}
         <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-emerald-950/30 border border-emerald-800/40 rounded-full">
           <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -80,7 +89,7 @@ export const Topbar = () => {
           className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors">
           {document.documentElement.classList.contains('dark') ? <Sun className="h-4.5 w-4.5"/> : <Moon className="h-4.5 w-4.5"/>}
         </button>
-        <div className="h-6 w-px bg-slate-800"></div>
+        <div className="h-6 w-px bg-slate-800 hidden sm:block"></div>
 
         {/* User profile dropdown */}
         <div className="flex items-center gap-2.5">

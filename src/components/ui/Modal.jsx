@@ -57,7 +57,7 @@ export const Modal = ({
             `}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800/80 bg-slate-900/40">
+            <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-800/80 bg-slate-900/40">
               {title && (
                 <h3 className="text-base font-bold text-slate-100 uppercase tracking-wide">
                   {title}
@@ -73,7 +73,7 @@ export const Modal = ({
             </div>
 
             {/* Content */}
-            <div className="p-6 overflow-y-auto max-h-[78vh]">
+            <div className="p-4 sm:p-6 overflow-y-auto max-h-[70vh] sm:max-h-[78vh]">
               {children}
             </div>
           </motion.div>
