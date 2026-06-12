@@ -1,11 +1,16 @@
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import pg from 'pg';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // 1. Verify environment variables are loaded
 console.log('--- Phase 1: Environment Variables Check ---');
-dotenv.config({ override: true });
+dotenv.config({ path: path.resolve(__dirname, '../.env'), override: true });
 
 const dbUrl = process.env.DATABASE_URL;
 const directUrl = process.env.DIRECT_URL;
