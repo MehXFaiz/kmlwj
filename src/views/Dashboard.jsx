@@ -76,7 +76,7 @@ function KpiCard({ title, value, prefix = '', suffix = '', decimals = 0, icon: I
         transform: visible ? 'translateY(0)' : 'translateY(18px)',
         transition: `opacity 0.6s ease ${delay}ms, transform 0.6s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
       }}
-      className={`relative overflow-hidden rounded-xl p-4 sm:p-5 border ${accent || 'border-slate-200 dark:border-slate-800/70 bg-white dark:bg-slate-900/50'} backdrop-blur-sm group hover:border-slate-300 dark:hover:border-slate-700/80 hover:shadow-lg hover:shadow-slate-200/50 dark:hover:shadow-black/30 transition-all duration-300 shadow-sm dark:shadow-none`}
+      className={`relative overflow-hidden rounded-xl p-4 sm:p-5 border ${accent || 'border-slate-800/70 bg-slate-900/50'} backdrop-blur-sm group hover:border-slate-700/80 hover:shadow-slate-200/50 hover:shadow-black/30 transition-all duration-300 shadow-none`}
     >
       {/* Background glow */}
       <div className={`absolute -top-8 -right-8 w-28 h-28 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl ${iconBg}`} />
@@ -88,7 +88,7 @@ function KpiCard({ title, value, prefix = '', suffix = '', decimals = 0, icon: I
             {animated}
           </p>
           {trendLabel && (
-            <div className={`flex items-center gap-1 mt-2.5 text-[10px] font-bold uppercase tracking-wider ${trend === 'up' ? 'text-emerald-600 dark:text-emerald-400' : trend === 'down' ? 'text-red-600 dark:text-red-400' : 'text-slate-500'}`}>
+            <div className={`flex items-center gap-1 mt-2.5 text-[10px] font-bold uppercase tracking-wider ${trend === 'up' ? 'text-emerald-400' : trend === 'down' ? 'text-red-400' : 'text-slate-500'}`}>
               {trend === 'up' && <ArrowUpRight className="h-3 w-3" />}
               {trend === 'down' && <ArrowDownRight className="h-3 w-3" />}
               {trend === 'neutral' && <Activity className="h-3 w-3" />}
@@ -377,69 +377,69 @@ export const Dashboard = () => {
       {/* ── KPI Cards Row ── */}
       <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         <KpiCard title="Total Accounts" value={acctStats.total} icon={Layers}
-          iconBg="bg-indigo-50 dark:bg-indigo-950/60" iconColor="text-indigo-600 dark:text-indigo-400"
+          iconBg="bg-indigo-950/60" iconColor="text-indigo-400"
           trend="neutral" trendLabel={`${acctStats.byType.Asset} asset types`} delay={0} />
         <KpiCard title="Active Accounts" value={acctStats.active} icon={Unlock}
-          iconBg="bg-emerald-50 dark:bg-emerald-950/60" iconColor="text-emerald-600 dark:text-emerald-400"
+          iconBg="bg-emerald-950/60" iconColor="text-emerald-400"
           trend="up" trendLabel="Operational" delay={80} />
         <KpiCard title="Locked Accounts" value={acctStats.locked} icon={Lock}
-          iconBg="bg-red-50 dark:bg-red-950/60" iconColor="text-red-600 dark:text-red-400"
+          iconBg="bg-red-950/60" iconColor="text-red-400"
           trend="neutral" trendLabel="Restricted" delay={160} />
         <KpiCard title="Revenue Accounts" value={acctStats.byType.Revenue} icon={TrendingUp}
-          iconBg="bg-green-50 dark:bg-green-950/60" iconColor="text-green-600 dark:text-green-400"
+          iconBg="bg-green-950/60" iconColor="text-green-400"
           trend="up" trendLabel="Income streams" delay={240} />
         <KpiCard title="Expense Accounts" value={acctStats.byType.Expense} icon={TrendingDown}
-          iconBg="bg-orange-50 dark:bg-orange-950/60" iconColor="text-orange-600 dark:text-orange-400"
+          iconBg="bg-orange-950/60" iconColor="text-orange-400"
           trend="neutral" trendLabel="Cost centers" delay={320} />
         <KpiCard title="Journal Entries" value={journals.length} icon={BookOpen}
-          iconBg="bg-violet-50 dark:bg-violet-950/60" iconColor="text-violet-600 dark:text-violet-400"
+          iconBg="bg-violet-950/60" iconColor="text-violet-400"
           trend="up" trendLabel="Posted" delay={400} />
       </div>
 
       {/* ── Financial KPI Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard title="Total Assets" value={stats.assets} prefix="$" decimals={2}
-          icon={DollarSign} iconBg="bg-blue-50 dark:bg-blue-950/60" iconColor="text-blue-600 dark:text-blue-400"
+          icon={DollarSign} iconBg="bg-blue-950/60" iconColor="text-blue-400"
           trend="up" trendLabel="Liquid + Fixed"
-          accent="border-blue-200 dark:border-blue-900/40 bg-white dark:bg-gradient-to-br dark:from-blue-950/30 dark:to-slate-900/60"
+          accent="border-blue-900/40 bg-gradient-to-br from-blue-950/30 to-slate-900/60"
           delay={100} />
         <KpiCard title="Total Liabilities" value={stats.liabilities} prefix="$" decimals={2}
-          icon={Activity} iconBg="bg-amber-50 dark:bg-amber-950/60" iconColor="text-amber-600 dark:text-amber-400"
+          icon={Activity} iconBg="bg-amber-950/60" iconColor="text-amber-400"
           trend="neutral" trendLabel="Payables + Debt"
-          accent="border-amber-200 dark:border-amber-900/30 bg-white dark:bg-gradient-to-br dark:from-amber-950/20 dark:to-slate-900/60"
+          accent="border-amber-900/30 bg-gradient-to-br from-amber-950/20 to-slate-900/60"
           delay={180} />
         <KpiCard title="Total Equity" value={stats.equity} prefix="$" decimals={2}
-          icon={Scale} iconBg="bg-violet-50 dark:bg-violet-950/60" iconColor="text-violet-600 dark:text-violet-400"
+          icon={Scale} iconBg="bg-violet-950/60" iconColor="text-violet-400"
           trend="up" trendLabel="Shareholder value"
-          accent="border-violet-200 dark:border-violet-900/30 bg-white dark:bg-gradient-to-br dark:from-violet-950/20 dark:to-slate-900/60"
+          accent="border-violet-900/30 bg-gradient-to-br from-violet-950/20 to-slate-900/60"
           delay={260} />
         <KpiCard title="Net Income" value={stats.netIncome} prefix="$" decimals={2}
           icon={stats.netIncome >= 0 ? TrendingUp : TrendingDown}
-          iconBg={stats.netIncome >= 0 ? "bg-emerald-50 dark:bg-emerald-950/60" : "bg-red-50 dark:bg-red-950/60"}
-          iconColor={stats.netIncome >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}
+          iconBg={stats.netIncome >= 0 ? "bg-emerald-950/60" : "bg-red-950/60"}
+          iconColor={stats.netIncome >= 0 ? "text-emerald-400" : "text-red-400"}
           trend={stats.netIncome >= 0 ? "up" : "down"}
           trendLabel={stats.netIncome >= 0 ? `${stats.grossMargin.toFixed(1)}% margin` : "Operating deficit"}
           accent={stats.netIncome >= 0
-            ? "border-emerald-200 dark:border-emerald-900/30 bg-white dark:bg-gradient-to-br dark:from-emerald-950/20 dark:to-slate-900/60"
-            : "border-red-200 dark:border-red-900/30 bg-white dark:bg-gradient-to-br dark:from-red-950/20 dark:to-slate-900/60"}
+            ? "border-emerald-900/30 bg-gradient-to-br from-emerald-950/20 to-slate-900/60"
+            : "border-red-900/30 bg-gradient-to-br from-red-950/20 to-slate-900/60"}
           delay={340} />
       </div>
 
       {/* ── Balance Equation Banner ── */}
       <div className={`rounded-xl border-l-4 px-5 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 ${
         stats.isEquationBalanced
-          ? 'border-l-emerald-500 border-t border-r border-b border-emerald-200 dark:border-emerald-900/30 bg-emerald-50 dark:bg-emerald-950/10 shadow-sm dark:shadow-none'
-          : 'border-l-red-500 border-t border-r border-b border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-950/10 shadow-sm dark:shadow-none'
+          ? 'border-l-emerald-500 border-t border-r border-b border-emerald-900/30 bg-emerald-950/10 shadow-none'
+          : 'border-l-red-500 border-t border-r border-b border-red-900/40 bg-red-950/10 shadow-none'
       }`}>
         <div className="flex items-center gap-3">
           <div className={`h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 border ${
             stats.isEquationBalanced
-              ? 'bg-emerald-100 border-emerald-200 dark:bg-emerald-950 dark:border-emerald-800/50'
-              : 'bg-red-100 border-red-200 dark:bg-red-950 dark:border-red-800/50 animate-pulse'
+              ? 'bg-emerald-100 border-emerald-200 bg-emerald-950 border-emerald-800/50'
+              : 'bg-red-100 border-red-200 bg-red-950 border-red-800/50 animate-pulse'
           }`}>
             {stats.isEquationBalanced
-              ? <ShieldCheck className="h-4.5 w-4.5 text-emerald-600 dark:text-emerald-400" />
-              : <ShieldAlert className="h-4.5 w-4.5 text-red-600 dark:text-red-400" />}
+              ? <ShieldCheck className="h-4.5 w-4.5 text-emerald-400" />
+              : <ShieldAlert className="h-4.5 w-4.5 text-red-400" />}
           </div>
           <div>
             <p className="text-sm font-bold text-slate-200 uppercase tracking-wider">
@@ -451,15 +451,15 @@ export const Dashboard = () => {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 font-mono text-xs sm:text-sm font-bold overflow-x-auto pb-1">
-          <span className="text-blue-600 dark:text-blue-400">${stats.assets.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+          <span className="text-blue-400">${stats.assets.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
           <span className="text-slate-600">=</span>
-          <span className="text-amber-600 dark:text-amber-400">${stats.liabilities.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+          <span className="text-amber-400">${stats.liabilities.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
           <span className="text-slate-600">+</span>
-          <span className="text-violet-600 dark:text-violet-400">${stats.equity.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+          <span className="text-violet-400">${stats.equity.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
           <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
             stats.isEquationBalanced
-              ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50'
-              : 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/50'
+              ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-900/50'
+              : 'bg-red-950/60 text-red-400 border border-red-900/50'
           }`}>{stats.isEquationBalanced ? '✓ Balanced' : '✗ Unbalanced'}</span>
         </div>
       </div>
@@ -468,7 +468,7 @@ export const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Area Chart: Revenue vs Expenses Trend */}
-        <div className="lg:col-span-2 rounded-xl border border-slate-200 dark:border-slate-800/70 bg-white dark:bg-slate-900/50 p-4 sm:p-5 shadow-sm dark:shadow-none">
+        <div className="lg:col-span-2 rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5 shadow-none">
           <SectionHeader
             title="Revenue vs Expenses Trend"
             subtitle="Monthly operating performance (YTD FY 2026)"
@@ -507,7 +507,7 @@ export const Dashboard = () => {
         </div>
 
         {/* Pie Chart: Account type distribution */}
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800/70 bg-white dark:bg-slate-900/50 p-4 sm:p-5 shadow-sm dark:shadow-none">
+        <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5 shadow-none">
           <SectionHeader title="Account Distribution" subtitle="By account type" />
           <div className="h-36 sm:h-40 mb-3">
             <ResponsiveContainer width="100%" height="100%">
@@ -539,7 +539,7 @@ export const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Balance Sheet Bar */}
-        <div className="lg:col-span-2 rounded-xl border border-slate-200 dark:border-slate-800/70 bg-white dark:bg-slate-900/50 p-4 sm:p-5 shadow-sm dark:shadow-none">
+        <div className="lg:col-span-2 rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5 shadow-none">
           <SectionHeader
             title="Balance Sheet Overview"
             subtitle="Assets vs Liabilities vs Equity"
@@ -572,21 +572,21 @@ export const Dashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800/70 bg-white dark:bg-slate-900/50 p-4 sm:p-5 shadow-sm dark:shadow-none">
+        <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5 shadow-none">
           <SectionHeader title="Quick Actions" subtitle="Common ERP operations" />
           <div className="space-y-2">
             <QuickAction icon={Plus} label="New Journal Entry"
-              color="bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800/40 text-indigo-600 dark:text-indigo-400" />
+              color="bg-indigo-950/60 border border-indigo-800/40 text-indigo-400" />
             <QuickAction icon={Layers} label="Manage Chart of Accounts"
-              color="bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/40 text-blue-600 dark:text-blue-400" />
+              color="bg-blue-950/60 border border-blue-800/40 text-blue-400" />
             <QuickAction icon={BookOpen} label="View General Ledger"
-              color="bg-violet-50 dark:bg-violet-950/60 border border-violet-200 dark:border-violet-800/40 text-violet-600 dark:text-violet-400" />
+              color="bg-violet-950/60 border border-violet-800/40 text-violet-400" />
             <QuickAction icon={BarChart3} label="Run Financial Reports"
-              color="bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/40 text-emerald-600 dark:text-emerald-400" />
+              color="bg-emerald-950/60 border border-emerald-800/40 text-emerald-400" />
             <QuickAction icon={Users} label="User Permissions"
-              color="bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/40 text-amber-600 dark:text-amber-400" />
+              color="bg-amber-950/60 border border-amber-800/40 text-amber-400" />
             <QuickAction icon={ShieldCheck} label="View Audit Trail"
-              color="bg-slate-100 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700/40 text-slate-600 dark:text-slate-400" />
+              color="bg-slate-800/60 border border-slate-700/40 text-slate-400" />
           </div>
 
           {/* System status */}
@@ -613,7 +613,7 @@ export const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Recent Transactions */}
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800/70 bg-white dark:bg-slate-900/50 p-4 sm:p-5 shadow-sm dark:shadow-none">
+        <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5 shadow-none">
           <SectionHeader
             title="Recent Transactions"
             subtitle="Latest posted journal entries"
@@ -634,15 +634,15 @@ export const Dashboard = () => {
                   style={{ opacity: 0, animation: `fadeSlideIn 0.4s ease ${i * 70}ms forwards` }}
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <span className="font-mono text-[11px] font-bold text-indigo-600 dark:text-indigo-400">{je.id}</span>
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40 shrink-0">
+                    <span className="font-mono text-[11px] font-bold text-indigo-400">{je.id}</span>
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-950/50 text-emerald-400 border border-emerald-900/40 shrink-0">
                       Posted
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-300 mb-1.5 break-words">{je.reference}</p>
                   <div className="flex items-center justify-between gap-2 text-[11px]">
                     <span className="text-slate-500">{je.date}</span>
-                    <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    <span className="font-mono font-bold text-emerald-400">
                       ${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </span>
                   </div>
@@ -668,7 +668,7 @@ export const Dashboard = () => {
                     <tr key={je.id} className="group hover:bg-slate-800/20 transition-colors"
                       style={{ opacity: 0, animation: `fadeSlideIn 0.4s ease ${i * 70}ms forwards` }}>
                       <td className="py-2.5 pr-3">
-                        <span className="font-mono text-[11px] font-bold text-indigo-600 dark:text-indigo-400">{je.id}</span>
+                        <span className="font-mono text-[11px] font-bold text-indigo-400">{je.id}</span>
                       </td>
                       <td className="py-2.5 pr-3">
                         <span className="text-[11px] text-slate-400">{je.date}</span>
@@ -677,12 +677,12 @@ export const Dashboard = () => {
                         <span className="text-[11px] text-slate-300 truncate block">{je.reference}</span>
                       </td>
                       <td className="py-2.5 pr-3">
-                        <span className="font-mono text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                        <span className="font-mono text-[11px] font-bold text-emerald-400">
                           ${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </span>
                       </td>
                       <td className="py-2.5 text-right">
-                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40">
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-950/50 text-emerald-400 border border-emerald-900/40">
                           Posted
                         </span>
                       </td>
@@ -695,7 +695,7 @@ export const Dashboard = () => {
         </div>
 
         {/* Activity Feed */}
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800/70 bg-white dark:bg-slate-900/50 p-4 sm:p-5 shadow-sm dark:shadow-none">
+        <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5 shadow-none">
           <SectionHeader
             title="Recent Activity"
             subtitle="System audit trail"
