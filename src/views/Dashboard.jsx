@@ -325,11 +325,11 @@ export const Dashboard = () => {
   ], [stats]);
 
   // Recent transactions from journals
-  const recentJournals = useMemo(() => journals.slice(0, 6), [journals]);
+  const recentJournals = useMemo(() => (journals || []).slice(0, 6), [journals]);
 
   const recentActivity = useMemo(() => {
     if (dbStats && dbStats.recentActivities) return dbStats.recentActivities;
-    return auditLogs.slice(0, 8);
+    return (auditLogs || []).slice(0, 8);
   }, [dbStats, auditLogs]);
 
   const typeColors = {
