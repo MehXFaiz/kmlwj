@@ -83,9 +83,9 @@ export const Topbar = ({ onMobileMenuToggle }) => {
 
         {/* Right side - User & System Indicators */}
         <div className="flex items-center gap-1 sm:gap-2 md:gap-4 shrink-0">
-          <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-emerald-950/30 border border-emerald-800/40 rounded-full">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest">GL Live</span>
+          <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 rounded-full">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></span>
+            <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-widest">GL Live</span>
           </div>
 
           <button className="relative p-2 text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 rounded-lg transition-colors cursor-pointer">
@@ -93,8 +93,8 @@ export const Topbar = ({ onMobileMenuToggle }) => {
             <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-brand-500 ring-2 ring-slate-900"></span>
           </button>
 
-          <div className="hidden lg:flex items-center gap-1.5 text-slate-400 hover:text-slate-200 text-xs cursor-help" title="Fully GAAP / IFRS compliant mock sandbox">
-            <ShieldCheck className="h-4 w-4 text-brand-400" />
+          <div className="hidden lg:flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-xs cursor-help" title="Fully GAAP / IFRS compliant mock sandbox">
+            <ShieldCheck className="h-4 w-4 text-brand-600 dark:text-brand-400" />
             <span className="font-semibold uppercase tracking-wider text-[10px]">SOX Audit Enabled</span>
           </div>
 
@@ -117,7 +117,7 @@ export const Topbar = ({ onMobileMenuToggle }) => {
                 </>
               ) : (
                 <>
-                  <div className="h-8 w-8 rounded-full bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-400 font-bold text-xs select-none">
+                  <div className="h-8 w-8 rounded-full bg-brand-100 dark:bg-brand-500/20 border border-brand-200 dark:border-brand-500/30 flex items-center justify-center text-brand-700 dark:text-brand-400 font-bold text-xs select-none">
                     {getInitials(user?.name || user?.fullName)}
                   </div>
                   <div className="hidden xl:flex flex-col text-left">
@@ -132,7 +132,7 @@ export const Topbar = ({ onMobileMenuToggle }) => {
             {userMenuOpen && !loading && (
               <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-800 rounded-md shadow-lg z-50">
                 <div className="p-4 border-b border-slate-800 flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-400 font-bold text-sm select-none shrink-0">
+                  <div className="h-10 w-10 rounded-full bg-brand-100 dark:bg-brand-500/20 border border-brand-200 dark:border-brand-500/30 flex items-center justify-center text-brand-700 dark:text-brand-400 font-bold text-sm select-none shrink-0">
                     {getInitials(user?.name || user?.fullName)}
                   </div>
                   <div className="flex flex-col min-w-0">
@@ -158,7 +158,7 @@ export const Topbar = ({ onMobileMenuToggle }) => {
                   </div>
                 </div>
                 <div className="p-1.5 border-t border-slate-800">
-                  <button onClick={() => { logout(); setUserMenuOpen(false); }} className="flex items-center gap-2 px-2.5 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-sm transition-colors w-full text-left">
+                  <button onClick={() => { logout(); setUserMenuOpen(false); }} className="flex items-center gap-2 px-2.5 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-sm transition-colors w-full text-left">
                     <LogOut className="h-4 w-4" /> Logout
                   </button>
                 </div>
