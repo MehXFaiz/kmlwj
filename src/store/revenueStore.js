@@ -20,13 +20,10 @@ export const useRevenueStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const newHead = await revenueService.create({
-        code: head.code,
         name: head.name,
-        category: head.category || 'Operating',
-        description: head.description || '',
-        budget: parseFloat(head.budget) || 0,
-        actual: parseFloat(head.actual) || 0,
-        status: head.status || 'Active',
+        category: head.category || 'Other Income',
+        accountId: head.accountId || null,
+        isActive: head.isActive !== undefined ? head.isActive : true,
       });
       await get().fetchHeads();
       set({ loading: false });
@@ -41,13 +38,10 @@ export const useRevenueStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const updated = await revenueService.update(id, {
-        code: updatedFields.code,
         name: updatedFields.name,
         category: updatedFields.category,
-        description: updatedFields.description,
-        budget: parseFloat(updatedFields.budget) || 0,
-        actual: parseFloat(updatedFields.actual) || 0,
-        status: updatedFields.status,
+        accountId: updatedFields.accountId || null,
+        isActive: updatedFields.isActive,
       });
       await get().fetchHeads();
       set({ loading: false });
