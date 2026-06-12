@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useCoaStore } from '../store/coaStore';
 import { useJournalStore, calculateAccountBalances } from '../store/journalStore';
+import { useReservedCodeStore } from '../store/reservedCodeStore';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { CoaTreeView } from '../components/coa/CoaTreeView';
@@ -21,6 +22,7 @@ export const ChartOfAccounts = () => {
   } = useCoaStore();
   
   const { journals } = useJournalStore();
+  const { codes: reservedCodes, fetchCodes: fetchReservedCodes } = useReservedCodeStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
@@ -31,6 +33,10 @@ export const ChartOfAccounts = () => {
   const [limit, setLimit] = useState(10);
   const [sortBy, setSortBy] = useState('glCode');
   const [order, setOrder] = useState('asc');
+
+  useEffect(() => {
+    fetchReservedCodes();
+  }, [fetchReservedCodes]);
 
   useEffect(() => {
     if (viewMode === 'tree') {
@@ -185,6 +191,7 @@ export const ChartOfAccounts = () => {
             <CoaTreeView
               accounts={treeAccounts}
               balances={rollupBalances}
+              reservedCodes={reservedCodes}
               onEditAccount={handleEditAccount}
               onToggleStatus={toggleAccountStatus}
               onCreateSubAccount={handleCreateSubAccount}
@@ -196,6 +203,7 @@ export const ChartOfAccounts = () => {
             <CoaTableView
               accounts={flatAccounts}
               balances={rollupBalances}
+              reservedCodes={reservedCodes}
               onEditAccount={handleEditAccount}
               onToggleStatus={toggleAccountStatus}
               meta={meta}

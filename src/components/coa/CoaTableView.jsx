@@ -19,7 +19,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  Lock
 } from 'lucide-react';
 import { AccountTypeBadge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -27,6 +28,7 @@ import { Button } from '../ui/Button';
 export const CoaTableView = ({
   accounts,
   balances,
+  reservedCodes = [],
   onEditAccount,
   onToggleStatus,
   meta,
@@ -83,11 +85,17 @@ export const CoaTableView = ({
             )}
           </button>
         ),
-        cell: ({ row }) => (
-          <span className="font-mono font-medium text-slate-300">
-            {row.getValue('code')}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const account = row.original;
+          return (
+            <div className="flex items-center gap-1.5 font-mono font-medium text-slate-300">
+              {account.code}
+              {(account.isReserved || reservedCodes.some(r => r.isActive && account.code >= r.reserveStart && account.code <= r.reserveEnd)) && (
+                <Lock className="h-3 w-3 text-amber-500" title="This account code is system-reserved" />
+              )}
+            </div>
+          );
+        },
       },
       {
         accessorKey: 'name',

@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronRight, Edit2, ToggleLeft, ToggleRight, BookOpen, AlertCircle, Plus } from 'lucide-react';
+import { ChevronDown, ChevronRight, Edit2, ToggleLeft, ToggleRight, BookOpen, AlertCircle, Plus, Lock } from 'lucide-react';
 import { AccountTypeBadge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 
 export const CoaTreeView = ({
   accounts,
   balances,
+  reservedCodes = [],
   onEditAccount,
   onToggleStatus,
   onCreateSubAccount,
@@ -140,7 +141,12 @@ export const CoaTreeView = ({
                 >
                   {/* Account Code */}
                   <td className="py-3.5 px-4 font-mono font-medium text-slate-300">
-                    {account.code}
+                    <div className="flex items-center gap-1.5">
+                      {account.code}
+                      {(account.isReserved || reservedCodes.some(r => r.isActive && account.code >= r.reserveStart && account.code <= r.reserveEnd)) && (
+                        <Lock className="h-3 w-3 text-amber-500" title="This account code is system-reserved" />
+                      )}
+                    </div>
                   </td>
 
                   {/* Account Name (with hierarchical indentation) */}

@@ -168,6 +168,20 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     const { code, name, type, detailType, parentCode, currency, subsidiary, initialBalance, description, isLocked } = req.body;
 
+    if (code !== undefined) {
+      // Reserved accounts cannot be assigned
+      const reservedMatch = await prisma.reservedCode.findFirst({
+        where: {
+          isActive: true,
+          reserveStart: { lte: code },
+          reserveEnd: { gte: code },
+        }
+      });
+      if (reservedMatch) {
+        return res.status(400).json({ error: { message: `Code ${code} falls within a reserved range: ${reservedMatch.reserveReason}`, status: 400 } });
+      }
+    }
+
     const updateData: any = {};
     if (code !== undefined) updateData.glCode = code;
     if (name !== undefined) updateData.accountName = name;
