@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useCoaStore } from '../../store/coaStore';
 import { useAuthStore } from '../../store/authStore';
-import { Globe, Calendar, Bell, ShieldCheck, Sun, Moon, Menu } from 'lucide-react';
+import { Globe, Calendar, Bell, ShieldCheck, Sun, Moon, Menu, User, Settings, LogOut, ChevronDown } from 'lucide-react';
+import { ThemeDropdown } from '../theme/ThemeDropdown';
 
 export const Topbar = ({ onMobileMenuToggle }) => {
-  const { user } = useAuthStore();
+  const { user, loading, logout } = useAuthStore();
   const { 
     selectedSubsidiary, 
     setSelectedSubsidiary, 
@@ -12,25 +13,18 @@ export const Topbar = ({ onMobileMenuToggle }) => {
     setFiscalYear 
   } = useCoaStore();
 
-  const [theme, setTheme] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('theme') || 'dark';
-    }
-    return 'dark';
-  });
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
 
   useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
-  };
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const getInitials = (name) => {
     if (!name) return 'U';
@@ -104,21 +98,72 @@ export const Topbar = ({ onMobileMenuToggle }) => {
             <span className="font-semibold uppercase tracking-wider text-[10px]">SOX Audit Enabled</span>
           </div>
 
-          <button onClick={toggleTheme}
-            className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors">
-            {theme === 'dark' ? <Sun className="h-4.5 w-4.5"/> : <Moon className="h-4.5 w-4.5"/>}
-          </button>
+          <ThemeDropdown />
 
           <div className="h-6 w-px bg-slate-800 hidden sm:block"></div>
 
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-slate-800 border border-slate-700/80 flex items-center justify-center text-slate-300 font-bold text-xs select-none">
-              {getInitials(user?.fullName)}
-            </div>
-            <div className="hidden xl:flex flex-col text-left">
-              <span className="text-xs font-semibold text-slate-200 leading-none">{user?.fullName || 'Operator'}</span>
-              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">{user?.role || 'User'}</span>
-            </div>
+          <div className="relative" ref={userMenuRef}>
+            <button 
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className="flex items-center gap-2 hover:bg-slate-800/50 p-1 pr-2 rounded-lg transition-colors cursor-pointer text-left"
+            >
+              {loading ? (
+                <>
+                  <div className="h-8 w-8 rounded-full bg-slate-800 animate-pulse"></div>
+                  <div className="hidden xl:flex flex-col gap-1">
+                    <div className="h-3 w-20 bg-slate-800 animate-pulse rounded"></div>
+                    <div className="h-2 w-12 bg-slate-800 animate-pulse rounded"></div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="h-8 w-8 rounded-full bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-400 font-bold text-xs select-none">
+                    {getInitials(user?.name || user?.fullName)}
+                  </div>
+                  <div className="hidden xl:flex flex-col text-left">
+                    <span className="text-xs font-semibold text-slate-200 leading-none">{user?.name || user?.fullName || 'Operator'}</span>
+                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">{user?.role || 'User'}</span>
+                  </div>
+                  <ChevronDown className="h-3 w-3 text-slate-400 ml-1 hidden xl:block" />
+                </>
+              )}
+            </button>
+
+            {userMenuOpen && !loading && (
+              <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-800 rounded-md shadow-lg z-50">
+                <div className="p-4 border-b border-slate-800 flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-400 font-bold text-sm select-none shrink-0">
+                    {getInitials(user?.name || user?.fullName)}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-sm font-semibold text-slate-200 truncate">{user?.name || user?.fullName || 'Operator'}</span>
+                    <span className="text-xs text-slate-400 truncate">{user?.email || 'operator@example.com'}</span>
+                  </div>
+                </div>
+                <div className="p-1.5 flex flex-col gap-0.5">
+                  <button className="flex items-center gap-2 px-2.5 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100 rounded-sm transition-colors w-full text-left">
+                    <User className="h-4 w-4" /> Profile
+                  </button>
+                  <button className="flex items-center gap-2 px-2.5 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100 rounded-sm transition-colors w-full text-left">
+                    <User className="h-4 w-4" /> My Account
+                  </button>
+                  <button className="flex items-center gap-2 px-2.5 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100 rounded-sm transition-colors w-full text-left">
+                    <Settings className="h-4 w-4" /> Settings
+                  </button>
+                  <div className="flex items-center justify-between px-2.5 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100 rounded-sm transition-colors w-full text-left">
+                    <div className="flex items-center gap-2">
+                      <Sun className="h-4 w-4" /> Theme Switcher
+                    </div>
+                    <ThemeDropdown />
+                  </div>
+                </div>
+                <div className="p-1.5 border-t border-slate-800">
+                  <button onClick={() => { logout(); setUserMenuOpen(false); }} className="flex items-center gap-2 px-2.5 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-sm transition-colors w-full text-left">
+                    <LogOut className="h-4 w-4" /> Logout
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

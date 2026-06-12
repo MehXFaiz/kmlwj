@@ -4,6 +4,7 @@ import { SplashScreen } from './components/common/SplashScreen';
 import { Sidebar } from './components/common/Sidebar';
 import { Topbar } from './components/common/Topbar';
 import { useAuthStore } from './store/authStore';
+import { ThemeProvider } from './components/theme/ThemeProvider';
 
 // Lazy-loaded views for code splitting
 const Dashboard = lazy(() => import('./views/Dashboard').then(m => ({ default: m.Dashboard })));
@@ -107,7 +108,7 @@ function App() {
   }
 
   return (
-    <>
+    <ThemeProvider>
       {/* Splash screen — shown until loading sequence completes */}
       {!splashDone && <SplashScreen onComplete={() => setSplashDone(true)} />}
 
@@ -192,7 +193,7 @@ function App() {
         </Routes>
         </Suspense>
       </Router>
-    </>
+    </ThemeProvider>
   );
 }
 
