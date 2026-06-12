@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useCoaStore } from '../../store/coaStore';
 import { useAuthStore } from '../../store/authStore';
 import { Globe, Calendar, Bell, ShieldCheck, Sun, Moon, Menu } from 'lucide-react';
@@ -10,6 +11,26 @@ export const Topbar = ({ onMobileMenuToggle }) => {
     fiscalYear, 
     setFiscalYear 
   } = useCoaStore();
+
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('theme') || 'dark';
+    }
+    return 'dark';
+  });
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+  };
 
   const getInitials = (name) => {
     if (!name) return 'U';
@@ -83,12 +104,9 @@ export const Topbar = ({ onMobileMenuToggle }) => {
             <span className="font-semibold uppercase tracking-wider text-[10px]">SOX Audit Enabled</span>
           </div>
 
-          <button onClick={() => {
-              const dark = document.documentElement.classList.toggle('dark');
-              try{ localStorage.setItem('theme', dark ? 'dark' : 'light'); }catch(e){}
-            }}
+          <button onClick={toggleTheme}
             className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors">
-            {document.documentElement.classList.contains('dark') ? <Sun className="h-4.5 w-4.5"/> : <Moon className="h-4.5 w-4.5"/>}
+            {theme === 'dark' ? <Sun className="h-4.5 w-4.5"/> : <Moon className="h-4.5 w-4.5"/>}
           </button>
 
           <div className="h-6 w-px bg-slate-800 hidden sm:block"></div>
