@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
-import { prisma } from '../_prisma.js';
+import { prisma, pool } from '../_prisma.js';
 
 export default makeHandler(async (req: VercelRequest, res: VercelResponse) => {
   if (req.method !== 'GET') {
@@ -8,7 +8,10 @@ export default makeHandler(async (req: VercelRequest, res: VercelResponse) => {
   }
 
   try {
-    // Verifies that the Prisma Client is active and database is reachable
+    // 1. Verify raw PostgreSQL connection
+    await pool.query('SELECT 1');
+
+    // 2. Verify Prisma connection
     await prisma.$queryRaw`SELECT 1`;
 
     return res.status(200).json({
