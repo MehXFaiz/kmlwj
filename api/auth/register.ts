@@ -7,7 +7,8 @@ const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters long'),
   name: z.string().optional(),
-  role: z.enum(['ADMIN', 'ACCOUNTANT', 'VIEWER']).optional(),
+  fullName: z.string().optional(),
+  role: z.string().optional(),
 });
 
 export default makeHandler(async (req: VercelRequest, res: VercelResponse) => {

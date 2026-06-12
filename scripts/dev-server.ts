@@ -15,6 +15,7 @@ import forgotPasswordHandler from '../api/auth/forgot-password.js';
 import resetPasswordHandler from '../api/auth/reset-password.js';
 import changePasswordHandler from '../api/auth/change-password.js';
 import healthHandler from '../api/health.js';
+import healthV1Handler from '../api/v1/health.js';
 
 const PORT = process.env.PORT || 4000;
 const app = express();
@@ -48,6 +49,7 @@ app.post('/api/auth/forgot-password', makeExpress(forgotPasswordHandler));
 app.post('/api/auth/reset-password', makeExpress(resetPasswordHandler));
 app.post('/api/auth/change-password', makeExpress(changePasswordHandler));
 app.get('/api/health', makeExpress(healthHandler));
+app.get('/api/v1/health', makeExpress(healthV1Handler));
 
 async function startServer() {
   logger.info('Initializing Dev Express server mounting Vercel handlers...');

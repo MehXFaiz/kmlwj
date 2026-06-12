@@ -27,6 +27,25 @@ function hashResetToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
+// Helper to map old role enums to seeded role names
+function mapRoleName(input?: string): string {
+  if (!input) return 'Accountant';
+  const roleUpper = input.toUpperCase();
+  if (roleUpper === 'ADMIN' || roleUpper === 'SUPER ADMIN') {
+    return 'Super Admin';
+  }
+  if (roleUpper === 'ACCOUNTANT') {
+    return 'Accountant';
+  }
+  if (roleUpper === 'AUDITOR' || roleUpper === 'VIEWER') {
+    return 'Auditor';
+  }
+  if (roleUpper === 'DATA_ENTRY' || roleUpper === 'DATA ENTRY OPERATOR') {
+    return 'Data Entry Operator';
+  }
+  return input;
+}
+
 export async function register(data: any) {
   const existing = await prisma.user.findUnique({ where: { email: data.email } });
   if (existing) {
@@ -34,33 +53,56 @@ export async function register(data: any) {
   }
 
   const hashedPassword = await hashPassword(data.password);
-  
+  const targetRoleName = mapRoleName(data.role);
+
+  let roleRecord = await prisma.role.findUnique({ where: { name: targetRoleName } });
+  if (!roleRecord) {
+    roleRecord = await prisma.role.upsert({
+      where: { name: targetRoleName },
+      update: {},
+      create: { name: targetRoleName, description: `${targetRoleName} Role` },
+    });
+  }
+
+  const fullName = data.fullName || data.name || 'Operator';
+
   // Create user
   const user = await prisma.user.create({
     data: {
       email: data.email,
       password: hashedPassword,
-      name: data.name || null,
-      role: data.role || 'ACCOUNTANT',
+      fullName,
+      roleId: roleRecord.id,
+      isActive: true,
     },
-    select: {
-      id: true,
-      email: true,
-      name: true,
+    include: {
       role: true,
-      createdAt: true,
     },
   });
 
   // Log user creation
   logger.info({ userId: user.id, email: user.email }, 'User registered');
-  return user;
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.fullName,
+    fullName: user.fullName,
+    role: user.role.name,
+    createdAt: user.createdAt,
+  };
 }
 
 export async function login(data: any) {
-  const user = await prisma.user.findUnique({ where: { email: data.email } });
+  const user = await prisma.user.findUnique({
+    where: { email: data.email },
+    include: { role: true },
+  });
   if (!user) {
     throw { status: 401, message: 'Invalid credentials' };
+  }
+
+  if (!user.isActive) {
+    throw { status: 403, message: 'This account has been deactivated' };
   }
 
   const matches = await bcrypt.compare(data.password, user.password);
@@ -68,7 +110,7 @@ export async function login(data: any) {
     throw { status: 401, message: 'Invalid credentials' };
   }
 
-  const accessToken = generateAccessToken(user.id, user.email, user.role);
+  const accessToken = generateAccessToken(user.id, user.email, user.role.name);
   const refreshTokenStr = generateRefreshTokenString();
 
   // Save refresh token to DB
@@ -87,8 +129,9 @@ export async function login(data: any) {
     user: {
       id: user.id,
       email: user.email,
-      name: user.name,
-      role: user.role,
+      name: user.fullName,
+      fullName: user.fullName,
+      role: user.role.name,
     },
   };
 }
@@ -99,13 +142,10 @@ export async function rotateTokens(refreshTokenStr: string) {
   });
 
   if (!tokenRecord) {
-    // SECURITY ALARM: Token not found might mean it's forged or someone is trying to reuse a deleted one.
     throw { status: 401, message: 'Invalid refresh token' };
   }
 
   if (tokenRecord.revokedAt || tokenRecord.expiresAt < new Date()) {
-    // REUSE DETECTION!
-    // Revoke all refresh tokens for this user because their token might have been compromised.
     await prisma.refreshToken.updateMany({
       where: { userId: tokenRecord.userId },
       data: { revokedAt: new Date() },
@@ -119,12 +159,19 @@ export async function rotateTokens(refreshTokenStr: string) {
   }
 
   // Generate new tokens
-  const user = await prisma.user.findUnique({ where: { id: tokenRecord.userId } });
+  const user = await prisma.user.findUnique({
+    where: { id: tokenRecord.userId },
+    include: { role: true },
+  });
   if (!user) {
     throw { status: 401, message: 'User not found' };
   }
 
-  const newAccessToken = generateAccessToken(user.id, user.email, user.role);
+  if (!user.isActive) {
+    throw { status: 403, message: 'This account has been deactivated' };
+  }
+
+  const newAccessToken = generateAccessToken(user.id, user.email, user.role.name);
   const newRefreshTokenStr = generateRefreshTokenString();
 
   // Rotate token: Revoke old token, create new token
@@ -180,7 +227,7 @@ export async function changePassword(userId: string, data: any) {
     data: { password: hashed },
   });
 
-  // Revoke all existing refresh tokens (forces re-login across all devices for security)
+  // Revoke all existing refresh tokens
   await prisma.refreshToken.updateMany({
     where: { userId },
     data: { revokedAt: new Date() },
@@ -192,7 +239,6 @@ export async function changePassword(userId: string, data: any) {
 export async function forgotPassword(email: string) {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
-    // Anti-enumeration: Return success even if email doesn't exist, but don't log link
     logger.info({ email }, 'Forgot password requested for non-existent email');
     return;
   }
