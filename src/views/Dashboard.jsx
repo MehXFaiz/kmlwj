@@ -310,18 +310,18 @@ export const Dashboard = () => {
 
   // Pie chart — account type distribution
   const typeDistData = useMemo(() => [
-    { name: 'Assets', value: acctStats.byType.Asset, fill: '#3b82f6' },
-    { name: 'Liabilities', value: acctStats.byType.Liability, fill: '#f59e0b' },
-    { name: 'Equity', value: acctStats.byType.Equity, fill: '#8b5cf6' },
-    { name: 'Revenue', value: acctStats.byType.Revenue, fill: '#10b981' },
-    { name: 'Expenses', value: acctStats.byType.Expense, fill: '#ef4444' },
+    { name: 'Assets', value: acctStats.byType.Asset, fill: 'var(--chart-asset)' },
+    { name: 'Liabilities', value: acctStats.byType.Liability, fill: 'var(--chart-liability)' },
+    { name: 'Equity', value: acctStats.byType.Equity, fill: 'var(--chart-equity)' },
+    { name: 'Revenue', value: acctStats.byType.Revenue, fill: 'var(--chart-revenue)' },
+    { name: 'Expenses', value: acctStats.byType.Expense, fill: 'var(--chart-expense)' },
   ], [acctStats]);
 
   // Balance sheet bar data
   const balSheetData = useMemo(() => [
-    { name: 'Assets', value: Math.round(stats.assets), fill: '#3b82f6' },
-    { name: 'Liabilities', value: Math.round(stats.liabilities), fill: '#f59e0b' },
-    { name: 'Equity', value: Math.round(stats.equity), fill: '#8b5cf6' },
+    { name: 'Assets', value: Math.round(stats.assets), fill: 'var(--chart-asset)' },
+    { name: 'Liabilities', value: Math.round(stats.liabilities), fill: 'var(--chart-liability)' },
+    { name: 'Equity', value: Math.round(stats.equity), fill: 'var(--chart-equity)' },
   ], [stats]);
 
   // Recent transactions from journals
@@ -401,17 +401,17 @@ export const Dashboard = () => {
         <KpiCard title="Total Assets" value={stats.assets} prefix="$" decimals={2}
           icon={DollarSign} iconBg="bg-blue-50 dark:bg-blue-950/60" iconColor="text-blue-600 dark:text-blue-400"
           trend="up" trendLabel="Liquid + Fixed"
-          accent="border-blue-200 dark:border-blue-900/40 bg-gradient-to-br from-blue-50/80 to-white dark:from-blue-950/30 dark:to-slate-900/60"
+          accent="border-blue-200 dark:border-blue-900/40 bg-white dark:bg-gradient-to-br dark:from-blue-950/30 dark:to-slate-900/60"
           delay={100} />
         <KpiCard title="Total Liabilities" value={stats.liabilities} prefix="$" decimals={2}
           icon={Activity} iconBg="bg-amber-50 dark:bg-amber-950/60" iconColor="text-amber-600 dark:text-amber-400"
           trend="neutral" trendLabel="Payables + Debt"
-          accent="border-amber-200 dark:border-amber-900/30 bg-gradient-to-br from-amber-50/80 to-white dark:from-amber-950/20 dark:to-slate-900/60"
+          accent="border-amber-200 dark:border-amber-900/30 bg-white dark:bg-gradient-to-br dark:from-amber-950/20 dark:to-slate-900/60"
           delay={180} />
         <KpiCard title="Total Equity" value={stats.equity} prefix="$" decimals={2}
           icon={Scale} iconBg="bg-violet-50 dark:bg-violet-950/60" iconColor="text-violet-600 dark:text-violet-400"
           trend="up" trendLabel="Shareholder value"
-          accent="border-violet-200 dark:border-violet-900/30 bg-gradient-to-br from-violet-50/80 to-white dark:from-violet-950/20 dark:to-slate-900/60"
+          accent="border-violet-200 dark:border-violet-900/30 bg-white dark:bg-gradient-to-br dark:from-violet-950/20 dark:to-slate-900/60"
           delay={260} />
         <KpiCard title="Net Income" value={stats.netIncome} prefix="$" decimals={2}
           icon={stats.netIncome >= 0 ? TrendingUp : TrendingDown}
@@ -420,8 +420,8 @@ export const Dashboard = () => {
           trend={stats.netIncome >= 0 ? "up" : "down"}
           trendLabel={stats.netIncome >= 0 ? `${stats.grossMargin.toFixed(1)}% margin` : "Operating deficit"}
           accent={stats.netIncome >= 0
-            ? "border-emerald-200 dark:border-emerald-900/30 bg-gradient-to-br from-emerald-50/80 to-white dark:from-emerald-950/20 dark:to-slate-900/60"
-            : "border-red-200 dark:border-red-900/30 bg-gradient-to-br from-red-50/80 to-white dark:from-red-950/20 dark:to-slate-900/60"}
+            ? "border-emerald-200 dark:border-emerald-900/30 bg-white dark:bg-gradient-to-br dark:from-emerald-950/20 dark:to-slate-900/60"
+            : "border-red-200 dark:border-red-900/30 bg-white dark:bg-gradient-to-br dark:from-red-950/20 dark:to-slate-900/60"}
           delay={340} />
       </div>
 
@@ -483,23 +483,23 @@ export const Dashboard = () => {
               <AreaChart data={areaData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                    <stop offset="5%" stopColor="var(--chart-revenue)" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="var(--chart-revenue)" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="gExpenses" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                    <stop offset="5%" stopColor="var(--chart-expense)" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="var(--chart-expense)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                <XAxis dataKey="month" stroke="#475569" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="#475569" fontSize={11} tickLine={false} axisLine={false}
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
+                <XAxis dataKey="month" stroke="var(--chart-axis)" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="var(--chart-axis)" fontSize={11} tickLine={false} axisLine={false}
                   tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
                 <ChartTooltip content={<DarkTooltip />} />
-                <Area type="monotone" dataKey="Revenue" stroke="#10b981" strokeWidth={2}
-                  fill="url(#gRevenue)" dot={false} activeDot={{ r: 4, strokeWidth: 0, fill: '#10b981' }} />
-                <Area type="monotone" dataKey="Expenses" stroke="#ef4444" strokeWidth={2}
-                  fill="url(#gExpenses)" dot={false} activeDot={{ r: 4, strokeWidth: 0, fill: '#ef4444' }} />
+                <Area type="monotone" dataKey="Revenue" stroke="var(--chart-revenue)" strokeWidth={2}
+                  fill="url(#gRevenue)" dot={false} activeDot={{ r: 4, strokeWidth: 0, fill: 'var(--chart-revenue)' }} />
+                <Area type="monotone" dataKey="Expenses" stroke="var(--chart-expense)" strokeWidth={2}
+                  fill="url(#gExpenses)" dot={false} activeDot={{ r: 4, strokeWidth: 0, fill: 'var(--chart-expense)' }} />
                 <Legend wrapperStyle={{ fontSize: '11px', color: '#64748b', paddingTop: '12px' }} />
               </AreaChart>
             </ResponsiveContainer>
@@ -556,9 +556,9 @@ export const Dashboard = () => {
           <div className="h-48 sm:h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={balSheetData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barSize={32}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                <XAxis dataKey="name" stroke="#475569" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#475569" fontSize={11} tickLine={false} axisLine={false}
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
+                <XAxis dataKey="name" stroke="var(--chart-axis)" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="var(--chart-axis)" fontSize={11} tickLine={false} axisLine={false}
                   tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
                 <ChartTooltip content={<DarkTooltip />} />
                 <Bar dataKey="value" name="Balance" radius={[6, 6, 0, 0]}>

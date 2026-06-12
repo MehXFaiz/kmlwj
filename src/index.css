@@ -19,6 +19,15 @@
   --glass-border: rgba(15, 23, 42, 0.08);
   --glass-hover-bg: rgba(255, 255, 255, 0.9);
   --glass-hover-border: rgba(15, 23, 42, 0.15);
+
+  /* Chart Colors for Light Mode */
+  --chart-revenue: #059669;
+  --chart-expense: #dc2626;
+  --chart-asset: #2563eb;
+  --chart-liability: #d97706;
+  --chart-equity: #7c3aed;
+  --chart-grid: rgba(0, 0, 0, 0.06);
+  --chart-axis: #94a3b8;
 }
 
 .dark {
@@ -38,6 +47,15 @@
   --glass-border: rgba(255, 255, 255, 0.06);
   --glass-hover-bg: rgba(17, 24, 39, 0.85);
   --glass-hover-border: rgba(255, 255, 255, 0.12);
+
+  /* Chart Colors for Dark Mode */
+  --chart-revenue: #10b981;
+  --chart-expense: #ef4444;
+  --chart-asset: #3b82f6;
+  --chart-liability: #f59e0b;
+  --chart-equity: #8b5cf6;
+  --chart-grid: rgba(255, 255, 255, 0.04);
+  --chart-axis: #475569;
 }
 
 @theme {
