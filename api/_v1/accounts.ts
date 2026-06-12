@@ -12,19 +12,46 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const id = req.query.id as string;
 
   if (method === 'GET') {
-    const dbAccounts = await prisma.account.findMany({
-      include: {
-        accountType: true,
-        parent: true,
-      },
-      orderBy: { glCode: 'asc' },
-    });
+    const { search, type, status, sortBy = 'glCode', order = 'asc', page = '1', limit = '100' } = req.query as any;
+
+    const whereClause: any = {};
+    if (search) {
+      whereClause.OR = [
+        { glCode: { contains: search, mode: 'insensitive' } },
+        { accountName: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    if (type && type !== 'All') {
+      whereClause.accountType = { name: type.toUpperCase() };
+    }
+    if (status && status !== 'All') {
+      whereClause.isLocked = status === 'Inactive';
+    }
+
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 100;
+    const skip = (pageNum - 1) * limitNum;
+
+    const [dbAccounts, total] = await Promise.all([
+      prisma.account.findMany({
+        where: whereClause,
+        include: {
+          accountType: true,
+          parent: true,
+        },
+        orderBy: { [sortBy]: order === 'desc' ? 'desc' : 'asc' },
+        skip,
+        take: limitNum,
+      }),
+      prisma.account.count({ where: whereClause })
+    ]);
 
     const formatted = dbAccounts.map((acc) => ({
       id: acc.id,
       code: acc.glCode,
       name: acc.accountName,
       type: acc.accountType ? (acc.accountType.name.charAt(0) + acc.accountType.name.slice(1).toLowerCase()) : 'Asset',
+      level: acc.accountLevel,
       detailType: acc.detailType,
       parentCode: acc.parent ? acc.parent.glCode : null,
       currency: acc.currency,
@@ -36,7 +63,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       isReserved: acc.isReserved,
     }));
 
-    return res.status(200).json({ status: 200, data: formatted });
+    return res.status(200).json({ status: 200, data: formatted, meta: { total, page: pageNum, limit: limitNum } });
   }
 
   // Verify User Role & Permissions for mutations
@@ -62,6 +89,18 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     if (!code || !name || !type) {
       return res.status(400).json({ error: { message: 'Code, Name, and Type are required', status: 400 } });
+    }
+
+    // Reserved accounts cannot be assigned
+    const reservedMatch = await prisma.reservedCode.findFirst({
+      where: {
+        isActive: true,
+        reserveStart: { lte: code },
+        reserveEnd: { gte: code },
+      }
+    });
+    if (reservedMatch) {
+      return res.status(400).json({ error: { message: `Code ${code} falls within a reserved range: ${reservedMatch.reserveReason}`, status: 400 } });
     }
 
     const typeNameUpper = type.toUpperCase();
@@ -116,7 +155,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(404).json({ error: { message: 'Account not found', status: 404 } });
     }
 
+    // Locked accounts cannot be edited (unless it's just unlocking it)
     const isToggleLock = req.body.isLocked !== undefined && Object.keys(req.body).length === 1;
+    if (existingAccount.isLocked && !isToggleLock && req.body.isLocked !== false) {
+      return res.status(400).json({ error: { message: 'Locked accounts cannot be edited', status: 400 } });
+    }
     const requiredPerm = isToggleLock ? 'LOCK_ACCOUNT' : 'UPDATE_ACCOUNT';
 
     if (!checkPerm(requiredPerm)) {
@@ -179,6 +222,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const existingAccount = await prisma.account.findUnique({ where: { id } });
     if (!existingAccount) {
       return res.status(404).json({ error: { message: 'Account not found', status: 404 } });
+    }
+
+    if (existingAccount.accountLevel === 'MAIN') {
+      return res.status(400).json({ error: { message: 'MAIN accounts cannot be deleted', status: 400 } });
     }
 
     await prisma.account.delete({ where: { id } });

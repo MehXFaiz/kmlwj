@@ -2,7 +2,10 @@ import { create } from 'zustand';
 import { accountService } from '../services/apiServices';
 
 export const useCoaStore = create((set, get) => ({
-  accounts: [],
+  accounts: [], // flat list fallback if needed globally
+  treeAccounts: [], // Nested tree structure
+  flatAccounts: [], // Paginated list
+  meta: { total: 0, page: 1, limit: 100 },
   selectedSubsidiary: 'Global',
   fiscalYear: '2026',
   loading: false,
@@ -11,13 +14,38 @@ export const useCoaStore = create((set, get) => ({
   setSelectedSubsidiary: (subsidiary) => set({ selectedSubsidiary: subsidiary }),
   setFiscalYear: (fiscalYear) => set({ fiscalYear }),
 
+  // Deprecated generic fetch, kept for backward compatibility if needed elsewhere
   fetchAccounts: async () => {
     set({ loading: true, error: null });
     try {
       const data = await accountService.getAll();
-      set({ accounts: data, loading: false });
+      set({ accounts: data.data || data, loading: false });
     } catch (err) {
       set({ error: err.message || 'Failed to fetch accounts', loading: false });
+    }
+  },
+
+  fetchAccountsList: async (params = {}) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await accountService.getAll(params);
+      set({ 
+        flatAccounts: response.data, 
+        meta: response.meta || { total: 0, page: 1, limit: 100 },
+        loading: false 
+      });
+    } catch (err) {
+      set({ error: err.message || 'Failed to fetch account list', loading: false });
+    }
+  },
+
+  fetchAccountsTree: async () => {
+    set({ loading: true, error: null });
+    try {
+      const data = await accountService.getTree();
+      set({ treeAccounts: data, loading: false });
+    } catch (err) {
+      set({ error: err.message || 'Failed to fetch account tree', loading: false });
     }
   },
 
@@ -35,7 +63,8 @@ export const useCoaStore = create((set, get) => ({
         initialBalance: account.initialBalance || 0,
         description: account.description || '',
       });
-      await get().fetchAccounts();
+      // Try to update both views if they were in use, but normally the component will re-fetch.
+      await get().fetchAccountsTree();
       set({ loading: false });
       return newAcc;
     } catch (err) {
@@ -58,7 +87,7 @@ export const useCoaStore = create((set, get) => ({
         initialBalance: updatedFields.initialBalance,
         description: updatedFields.description,
       });
-      await get().fetchAccounts();
+      await get().fetchAccountsTree();
       set({ loading: false });
       return updated;
     } catch (err) {
@@ -76,7 +105,7 @@ export const useCoaStore = create((set, get) => ({
       await accountService.update(id, {
         isLocked: acc.status === 'Active',
       });
-      await get().fetchAccounts();
+      await get().fetchAccountsTree();
       set({ loading: false });
     } catch (err) {
       set({ error: err.message || 'Failed to toggle status', loading: false });
@@ -87,7 +116,7 @@ export const useCoaStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       await accountService.delete(id);
-      await get().fetchAccounts();
+      await get().fetchAccountsTree();
       set({ loading: false });
     } catch (err) {
       set({ error: err.message || 'Failed to delete account', loading: false });
@@ -101,7 +130,7 @@ export const useCoaStore = create((set, get) => ({
       for (const item of importedList) {
         await accountService.create(item);
       }
-      await get().fetchAccounts();
+      await get().fetchAccountsTree();
       set({ loading: false });
     } catch (err) {
       set({ error: err.message || 'Failed to import accounts', loading: false });
@@ -109,6 +138,7 @@ export const useCoaStore = create((set, get) => ({
   },
 
   resetAccounts: () => {
-    get().fetchAccounts();
+    get().fetchAccountsTree();
+    get().fetchAccountsList();
   },
 }));

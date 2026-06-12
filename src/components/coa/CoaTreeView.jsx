@@ -31,44 +31,18 @@ export const CoaTreeView = ({
     });
   };
 
-  // Helper to build hierarchy
+  // Helper to traverse and flatten the nested tree for rendering
   const treeRows = useMemo(() => {
-    // Filter accounts by subsidiary first
-    const subsidiaryFiltered = accounts.filter((acc) => {
-      if (selectedSubsidiary === 'Global') return true;
-      return acc.subsidiary.includes(selectedSubsidiary) || acc.subsidiary.includes('Global');
-    });
-
-    // Create maps
-    const accountsMap = {};
-    const rootAccounts = [];
-    const childrenMap = {};
-
-    subsidiaryFiltered.forEach((acc) => {
-      accountsMap[acc.code] = acc;
-      if (!acc.parentCode) {
-        rootAccounts.push(acc);
-      } else {
-        if (!childrenMap[acc.parentCode]) {
-          childrenMap[acc.parentCode] = [];
-        }
-        childrenMap[acc.parentCode].push(acc);
-      }
-    });
-
-    // Sort roots by code
-    rootAccounts.sort((a, b) => a.code.localeCompare(b.code));
-
-    // Sort children lists by code
-    Object.keys(childrenMap).forEach((pCode) => {
-      childrenMap[pCode].sort((a, b) => a.code.localeCompare(b.code));
-    });
-
     const result = [];
 
     // Traverse recursively (DFS)
     const traverse = (node, depth = 0, isLastChild = false, parentPath = []) => {
-      const children = childrenMap[node.code] || [];
+      // Filter by subsidiary at the node level
+      if (selectedSubsidiary !== 'Global' && !node.subsidiary.includes(selectedSubsidiary) && !node.subsidiary.includes('Global')) {
+        return; // Skip if it doesn't match subsidiary
+      }
+
+      const children = node.children || [];
       const hasChildren = children.length > 0;
       
       const nodeRow = {
@@ -79,32 +53,27 @@ export const CoaTreeView = ({
         parentPath,
       };
 
-      // We always add if no filters, but if filters exist, we might skip.
-      // However, to keep tree structure, if a child matches search, we must show parents too!
-      // So let's build the full list, and then we filter.
-      // Wait, let's filter after DFS or during DFS.
-      // A simple approach is: include everything in the DFS list, then filter out rows that don't match.
-      // BUT if we filter out a parent, we break the visual tree.
-      // Instead, if search is active, we expand all matching nodes and show matching nodes + their parents.
-      
       result.push(nodeRow);
 
       // If search is active, we auto-expand everything. Otherwise, respect collapse state.
       const isCollapsed = collapsedCodes.has(node.code) && !searchQuery;
 
       if (!isCollapsed && hasChildren) {
-        children.forEach((child, index) => {
-          traverse(child, depth + 1, index === children.length - 1, [...parentPath, node.code]);
+        // Sort children by code
+        const sortedChildren = [...children].sort((a, b) => a.code.localeCompare(b.code));
+        sortedChildren.forEach((child, index) => {
+          traverse(child, depth + 1, index === sortedChildren.length - 1, [...parentPath, node.code]);
         });
       }
     };
 
+    // accounts is already an array of root nodes from the API
+    const rootAccounts = [...accounts].sort((a, b) => a.code.localeCompare(b.code));
     rootAccounts.forEach((root, index) => {
       traverse(root, 0, index === rootAccounts.length - 1, []);
     });
 
-    // Filter rows based on filters
-    // If a node matches the criteria, OR has a descendant that matches.
+    // Filter rows based on search and type filters
     if (searchQuery || typeFilter !== 'All') {
       const matches = new Set();
       
@@ -122,7 +91,7 @@ export const CoaTreeView = ({
         }
       });
 
-      // Pass 2: Filter results array
+      // Pass 2: Filter results array to keep matched nodes and their ancestors
       return result.filter((row) => matches.has(row.account.code));
     }
 

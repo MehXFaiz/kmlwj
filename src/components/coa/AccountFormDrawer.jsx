@@ -38,8 +38,19 @@ const detailTypeOptions = {
 };
 
 export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
-  const { accounts, addAccount, updateAccount } = useCoaStore();
+  const { treeAccounts, flatAccounts, addAccount, updateAccount } = useCoaStore();
   const { logActivity } = useJournalStore();
+
+  // Create a flat list of accounts for searching/filtering
+  const allAccounts = useMemo(() => {
+    const flatten = (nodes) => nodes.reduce((acc, node) => {
+      acc.push(node);
+      if (node.children) acc.push(...flatten(node.children));
+      return acc;
+    }, []);
+    // if treeAccounts is populated use it, else fallback to flatAccounts
+    return treeAccounts.length > 0 ? flatten(treeAccounts) : flatAccounts;
+  }, [treeAccounts, flatAccounts]);
 
   const {
     register,
@@ -107,7 +118,7 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
   }, [editingAccount, reset, isOpen]);
 
   // Filter possible parents: must be the same account type (or header type) and not self
-  const potentialParents = accounts.filter((acc) => {
+  const potentialParents = allAccounts.filter((acc) => {
     if (editingAccount && acc.id === editingAccount.id) return false; // cannot be own parent
     
     // Parent should be of same Type (e.g. Asset parent for Asset child)
@@ -118,16 +129,16 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
 
   // Auto-suggest a GL code based on same-type highest code
   const suggestCode = () => {
-    const sameType = accounts.filter((a) => a.type === watch('type'));
+    const sameType = allAccounts.filter((a) => a.type === watch('type'));
     const numericCodes = sameType.map((a) => parseInt(a.code, 10)).filter(Number.isFinite);
     const max = numericCodes.length ? Math.max(...numericCodes) : null;
     const suggestion = max ? String(max + 1) : (watch('type') === 'Asset' ? '1000' : '4000');
     setValue('code', suggestion);
   };
 
-  const onSubmitForm = (data) => {
+  const onSubmitForm = async (data) => {
     // Check code uniqueness
-    const codeExists = accounts.some(
+    const codeExists = allAccounts.some(
       (acc) => acc.code === data.code && (!editingAccount || acc.id !== editingAccount.id)
     );
 
@@ -141,22 +152,26 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
       parentCode: data.parentCode === 'none' ? null : data.parentCode,
     };
 
-    if (editingAccount) {
-      updateAccount(editingAccount.id, formattedData);
-      logActivity(
-        'Modify Account',
-        `Modified Account ${editingAccount.code} - ${editingAccount.name}.`
-      );
-      alert('Account updated successfully');
-    } else {
-      const created = addAccount(formattedData);
-      logActivity(
-        'Create Account',
-        `Created Account ${created.code} - ${created.name} (${created.type}).`
-      );
-      alert('Account created successfully');
+    try {
+      if (editingAccount) {
+        await updateAccount(editingAccount.id, formattedData);
+        logActivity(
+          'Modify Account',
+          `Modified Account ${editingAccount.code} - ${editingAccount.name}.`
+        );
+        alert('Account updated successfully');
+      } else {
+        const created = await addAccount(formattedData);
+        logActivity(
+          'Create Account',
+          `Created Account ${created.code} - ${created.name} (${created.type}).`
+        );
+        alert('Account created successfully');
+      }
+      onClose();
+    } catch (e) {
+      alert(e.message || "An error occurred");
     }
-    onClose();
   };
 
   return (

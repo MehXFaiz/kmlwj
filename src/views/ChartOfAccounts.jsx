@@ -10,25 +10,54 @@ import { AccountFormDrawer } from '../components/coa/AccountFormDrawer';
 import { Plus, Search, Layers, Grid } from 'lucide-react';
 
 export const ChartOfAccounts = () => {
-  const { accounts, fetchAccounts, selectedSubsidiary, toggleAccountStatus } = useCoaStore();
+  const { 
+    treeAccounts, 
+    flatAccounts, 
+    meta,
+    fetchAccountsTree, 
+    fetchAccountsList, 
+    selectedSubsidiary, 
+    toggleAccountStatus 
+  } = useCoaStore();
+  
   const { journals } = useJournalStore();
 
   const [searchQuery, setSearchQuery] = useState('');
-
-  useEffect(() => {
-    fetchAccounts();
-  }, [fetchAccounts]);
   const [typeFilter, setTypeFilter] = useState('All');
   const [viewMode, setViewMode] = useState('tree'); // tree or table
   
+  // Pagination State for Table View
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [sortBy, setSortBy] = useState('glCode');
+  const [order, setOrder] = useState('asc');
+
+  useEffect(() => {
+    if (viewMode === 'tree') {
+      fetchAccountsTree();
+    } else {
+      fetchAccountsList({ search: searchQuery, type: typeFilter, page, limit, sortBy, order });
+    }
+  }, [fetchAccountsTree, fetchAccountsList, viewMode, searchQuery, typeFilter, page, limit, sortBy, order]);
+
   // Drawer states
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
 
-  // Calculate live balances
+  // Calculate live balances (using whichever list is currently loaded for the view)
   const { rollupBalances } = useMemo(() => {
-    return calculateAccountBalances(accounts, journals, selectedSubsidiary);
-  }, [accounts, journals, selectedSubsidiary]);
+    const activeAccounts = viewMode === 'tree' ? [] /* we will let tree handle it internally or use a flat map */ : flatAccounts;
+    // Actually, calculateAccountBalances expects a flat list. We should flatten treeAccounts or just rely on flatAccounts.
+    // For simplicity, let's keep it computing on flatAccounts if table, but for tree, calculateAccountBalances needs a flat list.
+    // So we can flatten treeAccounts here:
+    const flatten = (nodes) => nodes.reduce((acc, node) => {
+      acc.push(node);
+      if (node.children) acc.push(...flatten(node.children));
+      return acc;
+    }, []);
+    const sourceAccounts = viewMode === 'tree' ? flatten(treeAccounts) : flatAccounts;
+    return calculateAccountBalances(sourceAccounts, journals, selectedSubsidiary);
+  }, [treeAccounts, flatAccounts, viewMode, journals, selectedSubsidiary]);
 
   const handleEditAccount = (account) => {
     setEditingAccount(account);
@@ -40,9 +69,16 @@ export const ChartOfAccounts = () => {
     setIsDrawerOpen(true);
   };
 
-  // Callback to create a sub-account pre-filled with parent details
   const handleCreateSubAccount = (parentCode) => {
-    const parent = accounts.find(a => a.code === parentCode);
+    // Find parent from either tree or flat list
+    const flatten = (nodes) => nodes.reduce((acc, node) => {
+      acc.push(node);
+      if (node.children) acc.push(...flatten(node.children));
+      return acc;
+    }, []);
+    const sourceAccounts = viewMode === 'tree' ? flatten(treeAccounts) : flatAccounts;
+    const parent = sourceAccounts.find(a => a.code === parentCode);
+    
     if (parent) {
       setEditingAccount({
         parentCode: parent.code,
@@ -147,7 +183,7 @@ export const ChartOfAccounts = () => {
         <CardContent className="p-0">
           {viewMode === 'tree' ? (
             <CoaTreeView
-              accounts={accounts}
+              accounts={treeAccounts}
               balances={rollupBalances}
               onEditAccount={handleEditAccount}
               onToggleStatus={toggleAccountStatus}
@@ -158,10 +194,19 @@ export const ChartOfAccounts = () => {
             />
           ) : (
             <CoaTableView
-              accounts={accounts}
+              accounts={flatAccounts}
               balances={rollupBalances}
               onEditAccount={handleEditAccount}
               onToggleStatus={toggleAccountStatus}
+              meta={meta}
+              page={page}
+              setPage={setPage}
+              limit={limit}
+              setLimit={setLimit}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+              order={order}
+              setOrder={setOrder}
               searchQuery={searchQuery}
               typeFilter={typeFilter}
               selectedSubsidiary={selectedSubsidiary}
