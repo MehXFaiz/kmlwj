@@ -123,7 +123,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
         {/* User profile section */}
         <div className={`mb-3 p-3 rounded-xl bg-slate-950/45 border border-slate-800/80 flex items-center justify-between gap-2 overflow-hidden ${isCollapsed ? 'lg:hidden' : ''}`}>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-slate-200 truncate">{user?.name || 'Operator'}</p>
+            <p className="text-xs font-bold text-slate-200 truncate">{user?.fullName || 'Operator'}</p>
             <p className="text-[10px] text-slate-500 truncate">{user?.email}</p>
             <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-800/40 text-[9px] font-bold text-emerald-400 uppercase tracking-wider">
               {user?.role}
@@ -146,7 +146,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
               <LogOut className="h-4.5 w-4.5" />
             </button>
             <div className="absolute left-16 bg-slate-950 text-slate-200 border border-slate-800 text-xs px-2.5 py-1.5 rounded-md shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-              Logout ({user?.name || 'Operator'})
+              Logout ({user?.fullName || 'Operator'})
             </div>
           </div>
         )}
