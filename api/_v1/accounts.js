@@ -137,6 +137,18 @@ var accounts_default = makeHandler(async (req, res) => {
       return res.status(403).json({ error: { message: "Forbidden: Insufficient permissions", status: 403 } });
     }
     const { code, name, type, detailType, parentCode, currency, subsidiary, initialBalance, description, isLocked } = req.body;
+    if (code !== void 0) {
+      const reservedMatch = await prisma.reservedCode.findFirst({
+        where: {
+          isActive: true,
+          reserveStart: { lte: code },
+          reserveEnd: { gte: code }
+        }
+      });
+      if (reservedMatch) {
+        return res.status(400).json({ error: { message: `Code ${code} falls within a reserved range: ${reservedMatch.reserveReason}`, status: 400 } });
+      }
+    }
     const updateData = {};
     if (code !== void 0) updateData.glCode = code;
     if (name !== void 0) updateData.accountName = name;

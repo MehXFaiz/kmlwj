@@ -9,7 +9,10 @@ var expense_heads_default = makeHandler(async (req, res) => {
   const id = req.query.id;
   if (method === "GET") {
     const dbExpenseHeads = await prisma.expenseHead.findMany({
-      orderBy: { code: "asc" }
+      orderBy: { name: "asc" },
+      include: {
+        account: true
+      }
     });
     return res.status(200).json({ status: 200, data: dbExpenseHeads });
   }
@@ -27,19 +30,19 @@ var expense_heads_default = makeHandler(async (req, res) => {
     if (!checkPerm("CREATE_ACCOUNT")) {
       return res.status(403).json({ error: { message: "Forbidden: Insufficient permissions", status: 403 } });
     }
-    const { code, name, category, description, budget, actual, status } = req.body;
-    if (!code || !name) {
-      return res.status(400).json({ error: { message: "Code and Name are required", status: 400 } });
+    const { name, category, accountId, isActive } = req.body;
+    if (!name || !category) {
+      return res.status(400).json({ error: { message: "Name and Category are required", status: 400 } });
     }
     const newHead = await prisma.expenseHead.create({
       data: {
-        code,
         name,
-        category: category || "Operating",
-        description,
-        status: status || "Active",
-        budget: parseFloat(budget) || 0,
-        actual: parseFloat(actual) || 0
+        category,
+        accountId: accountId || null,
+        isActive: isActive !== void 0 ? isActive : true
+      },
+      include: {
+        account: true
       }
     });
     await logAudit(req.user.id, "Create Expense Head", "EXPENSE", null, newHead, req.headers["x-forwarded-for"], req.headers["user-agent"]);
@@ -56,17 +59,17 @@ var expense_heads_default = makeHandler(async (req, res) => {
     if (!existingHead) {
       return res.status(404).json({ error: { message: "Expense Head not found", status: 404 } });
     }
-    const { code, name, category, description, budget, actual, status } = req.body;
+    const { name, category, accountId, isActive } = req.body;
     const updatedHead = await prisma.expenseHead.update({
       where: { id },
       data: {
-        code: code !== void 0 ? code : void 0,
         name: name !== void 0 ? name : void 0,
         category: category !== void 0 ? category : void 0,
-        description: description !== void 0 ? description : void 0,
-        status: status !== void 0 ? status : void 0,
-        budget: budget !== void 0 ? parseFloat(budget) || 0 : void 0,
-        actual: actual !== void 0 ? parseFloat(actual) || 0 : void 0
+        accountId: accountId !== void 0 ? accountId || null : void 0,
+        isActive: isActive !== void 0 ? isActive : void 0
+      },
+      include: {
+        account: true
       }
     });
     await logAudit(req.user.id, "Modify Expense Head", "EXPENSE", existingHead, updatedHead, req.headers["x-forwarded-for"], req.headers["user-agent"]);

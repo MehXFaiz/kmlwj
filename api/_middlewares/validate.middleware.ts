@@ -11,7 +11,7 @@ export function validateBody(schema: ZodSchema) {
           error: {
             message: 'Validation failed',
             status: 400,
-            details: error.errors.map(err => ({
+            details: (error as any).errors.map((err: any) => ({
               field: err.path.join('.'),
               message: err.message,
             })),
