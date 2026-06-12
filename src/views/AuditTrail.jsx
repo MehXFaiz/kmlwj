@@ -1,13 +1,17 @@
-import React, { useState, useMemo } from 'react';
-import { useJournalStore } from '../store/journalStore';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useAuditStore } from '../store/auditStore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { History, ShieldCheck, Search, HelpCircle, Terminal } from 'lucide-react';
 import { MobileOnly, DesktopOnly } from '../components/common/responsive';
 
 export const AuditTrail = () => {
-  const { auditLogs } = useJournalStore();
+  const { logs: auditLogs, fetchLogs } = useAuditStore();
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
 
   const getActionBadgeVariant = (action) => {
     switch (action) {

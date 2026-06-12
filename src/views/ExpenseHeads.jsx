@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useExpenseStore } from '../store/expenseStore';
 import {
   TrendingDown, Search, Plus, ChevronDown, ChevronUp, BarChart3,
   CheckCircle2, Edit2, Trash2, Download, X, AlertTriangle, Layers,
@@ -165,7 +166,7 @@ const CAT_COLORS = {
 };
 
 export const ExpenseHeads = () => {
-  const [heads, setHeads] = useState(defaultExpenseHeads);
+  const { heads, fetchHeads, addHead, updateHead, deleteHead } = useExpenseStore();
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterCat, setFilterCat] = useState('All');
@@ -175,6 +176,10 @@ export const ExpenseHeads = () => {
   const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
 
+  useEffect(() => {
+    fetchHeads();
+  }, [fetchHeads]);
+
   const stats = useMemo(() => ({
     total: heads.length,
     active: heads.filter(h => h.status === 'Active').length,
@@ -183,7 +188,7 @@ export const ExpenseHeads = () => {
     overBudget: heads.filter(h => h.actual > h.budget).length,
   }), [heads]);
 
-  const categories = useMemo(() => ['All', ...new Set(defaultExpenseHeads.map(h => h.category))], []);
+  const categories = useMemo(() => ['All', ...new Set(heads.map(h => h.category))], [heads]);
 
   const filtered = useMemo(() => {
     let list = [...heads];
@@ -206,10 +211,18 @@ export const ExpenseHeads = () => {
     else { setSortField(field); setSortDir('asc'); }
   };
 
-  const handleSave = (data) => {
-    if (editItem) setHeads(prev => prev.map(h => h.id === editItem.id ? { ...editItem, ...data } : h));
-    else setHeads(prev => [...prev, { ...data, id: Date.now().toString(), actual: 0 }]);
+  const handleSave = async (data) => {
+    if (editItem) {
+      await updateHead(editItem.id, data);
+    } else {
+      await addHead(data);
+    }
     setEditItem(null);
+  };
+
+  const handleDelete = async (id) => {
+    await deleteHead(id);
+    setDeleteId(null);
   };
 
   const SortIcon = ({ field }) => (
@@ -409,7 +422,7 @@ export const ExpenseHeads = () => {
             </div>
             <div className="flex gap-3">
               <button onClick={() => setDeleteId(null)} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 text-sm font-semibold transition-all">Cancel</button>
-              <button onClick={() => { setHeads(prev => prev.filter(h => h.id !== deleteId)); setDeleteId(null); }}
+              <button onClick={() => handleDelete(deleteId)}
                 className="flex-1 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-bold transition-all">Delete</button>
             </div>
           </div>

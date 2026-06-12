@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useRevenueStore } from '../store/revenueStore';
 import { useCoaStore } from '../store/coaStore';
 import {
   TrendingUp, Search, Plus, Filter, ChevronDown, ChevronUp,
@@ -180,7 +181,7 @@ const CAT_COLORS = {
 };
 
 export const RevenueHeads = () => {
-  const [heads, setHeads] = useState(defaultRevenueHeads);
+  const { heads, fetchHeads, addHead, updateHead, deleteHead } = useRevenueStore();
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterCat, setFilterCat] = useState('All');
@@ -190,6 +191,10 @@ export const RevenueHeads = () => {
   const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
 
+  useEffect(() => {
+    fetchHeads();
+  }, [fetchHeads]);
+
   const stats = useMemo(() => ({
     total: heads.length,
     active: heads.filter(h => h.status === 'Active').length,
@@ -197,7 +202,7 @@ export const RevenueHeads = () => {
     totalActual: heads.reduce((s, h) => s + h.actual, 0),
   }), [heads]);
 
-  const categories = useMemo(() => ['All', ...new Set(defaultRevenueHeads.map(h => h.category))], []);
+  const categories = useMemo(() => ['All', ...new Set(heads.map(h => h.category))], [heads]);
 
   const filtered = useMemo(() => {
     let list = [...heads];
@@ -219,17 +224,17 @@ export const RevenueHeads = () => {
     else { setSortField(field); setSortDir('asc'); }
   };
 
-  const handleSave = (data) => {
+  const handleSave = async (data) => {
     if (editItem) {
-      setHeads(prev => prev.map(h => h.id === editItem.id ? { ...editItem, ...data } : h));
+      await updateHead(editItem.id, data);
     } else {
-      setHeads(prev => [...prev, { ...data, id: Date.now().toString(), actual: 0 }]);
+      await addHead(data);
     }
     setEditItem(null);
   };
 
-  const handleDelete = (id) => {
-    setHeads(prev => prev.filter(h => h.id !== id));
+  const handleDelete = async (id) => {
+    await deleteHead(id);
     setDeleteId(null);
   };
 

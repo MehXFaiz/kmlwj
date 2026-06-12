@@ -28,17 +28,24 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
     return () => { document.body.style.overflow = ''; };
   }, [isMobileOpen]);
 
+  const hasPerm = (requiredPerms) => {
+    if (!user) return false;
+    if (user.role === 'Super Admin') return true;
+    if (!user.permissions) return false;
+    return requiredPerms.some(p => user.permissions.includes(p));
+  };
+
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
-    { name: 'Chart of Accounts', icon: Layers, path: '/coa' },
-    { name: 'Revenue Heads', icon: TrendingUp, path: '/revenue-heads' },
-    { name: 'Expense Heads', icon: TrendingDown, path: '/expense-heads' },
-    { name: 'Reserved Codes', icon: ShieldCheck, path: '/reserved' },
-    { name: 'Reports', icon: BarChart3, path: '/reports' },
-    { name: 'Users & Roles', icon: Users, path: '/users-roles' },
-    { name: 'General Ledger', icon: BookOpen, path: '/ledger' },
-    { name: 'Journal Entries', icon: FileSpreadsheet, path: '/journals' },
-    { name: 'Audit Trail', icon: History, path: '/audit' },
+    { name: 'Chart of Accounts', icon: Layers, path: '/coa', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT', 'LOCK_ACCOUNT'] },
+    { name: 'Revenue Heads', icon: TrendingUp, path: '/revenue-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
+    { name: 'Expense Heads', icon: TrendingDown, path: '/expense-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
+    { name: 'Reserved Codes', icon: ShieldCheck, path: '/reserved', perms: ['MANAGE_RESERVED_CODES'] },
+    { name: 'Reports', icon: BarChart3, path: '/reports', perms: ['VIEW_REPORTS'] },
+    { name: 'Users & Roles', icon: Users, path: '/users-roles', perms: ['MANAGE_USERS', 'MANAGE_ROLES'] },
+    { name: 'General Ledger', icon: BookOpen, path: '/ledger', perms: ['VIEW_REPORTS'] },
+    { name: 'Journal Entries', icon: FileSpreadsheet, path: '/journals', perms: ['VIEW_REPORTS'] },
+    { name: 'Audit Trail', icon: History, path: '/audit', perms: ['VIEW_REPORTS', 'MANAGE_USERS'] },
   ];
 
   return (
@@ -85,7 +92,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
 
         {/* Navigation Items */}
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {menuItems.map((item) => (
+          {menuItems.filter(item => !item.perms || hasPerm(item.perms)).map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
@@ -145,25 +152,27 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
         )}
 
         {/* System Settings link */}
-        <NavLink
-          to="/settings"
-          className={({ isActive }) => `
-            flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative mb-2
-            ${isActive 
-              ? 'bg-slate-800 text-white font-semibold' 
-              : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
-            }
-          `}
-          onClick={() => setIsMobileOpen && setIsMobileOpen(false)}
-        >
-          <Settings className="h-5 w-5 flex-shrink-0" />
-          <span className={`truncate ${isCollapsed ? 'lg:hidden' : ''}`}>System Settings</span>
-          {isCollapsed && (
-            <div className="absolute left-16 bg-slate-950 text-slate-200 border border-slate-800 text-xs px-2.5 py-1.5 rounded-md shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 hidden lg:block">
-              System Settings
-            </div>
-          )}
-        </NavLink>
+        {hasPerm(['MANAGE_ROLES']) && (
+          <NavLink
+            to="/settings"
+            className={({ isActive }) => `
+              flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative mb-2
+              ${isActive 
+                ? 'bg-slate-800 text-white font-semibold' 
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+              }
+            `}
+            onClick={() => setIsMobileOpen && setIsMobileOpen(false)}
+          >
+            <Settings className="h-5 w-5 flex-shrink-0" />
+            <span className={`truncate ${isCollapsed ? 'lg:hidden' : ''}`}>System Settings</span>
+            {isCollapsed && (
+              <div className="absolute left-16 bg-slate-950 text-slate-200 border border-slate-800 text-xs px-2.5 py-1.5 rounded-md shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 hidden lg:block">
+                System Settings
+              </div>
+            )}
+          </NavLink>
+        )}
 
         {/* Collapsible toggle trigger */}
         <button

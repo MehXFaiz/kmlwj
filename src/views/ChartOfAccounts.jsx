@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useCoaStore } from '../store/coaStore';
 import { useJournalStore, calculateAccountBalances } from '../store/journalStore';
 import { Button } from '../components/ui/Button';
@@ -10,10 +10,14 @@ import { AccountFormDrawer } from '../components/coa/AccountFormDrawer';
 import { Plus, Search, Layers, Grid } from 'lucide-react';
 
 export const ChartOfAccounts = () => {
-  const { accounts, selectedSubsidiary, toggleAccountStatus } = useCoaStore();
+  const { accounts, fetchAccounts, selectedSubsidiary, toggleAccountStatus } = useCoaStore();
   const { journals } = useJournalStore();
 
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    fetchAccounts();
+  }, [fetchAccounts]);
   const [typeFilter, setTypeFilter] = useState('All');
   const [viewMode, setViewMode] = useState('tree'); // tree or table
   

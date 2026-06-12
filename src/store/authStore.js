@@ -1,34 +1,20 @@
 import { create } from 'zustand';
 import { authService, tokenStorage } from '../services/authService';
+import api from '../services/api';
 
-const GUEST_KEY = 'kmlwj_guest_session';
-
-const guestUser = {
-  id: 'guest',
-  email: 'guest@demo.kmlwj.com',
-  name: 'Guest User',
-  role: 'VIEWER',
-};
-
-export const useAuthStore = create((set) => {
+export const useAuthStore = create((set, get) => {
   // Listen for session expiry event from service layer
   if (typeof window !== 'undefined') {
     window.addEventListener('auth_session_expired', () => {
-      sessionStorage.removeItem(GUEST_KEY);
-      set({ user: null, isAuthenticated: false, isGuest: false, error: 'Your session has expired. Please log in again.' });
+      set({ user: null, role: null, permissions: [], isAuthenticated: false, loading: false, error: 'Your session has expired. Please log in again.' });
     });
   }
 
-  const userMeta = tokenStorage.getUserMeta();
-  const hasAccessToken = !!tokenStorage.getAccessToken();
-
-  // Restore guest session if it was active
-  const isGuestSession = sessionStorage.getItem(GUEST_KEY) === 'true';
-
   return {
-    user: isGuestSession ? guestUser : userMeta,
-    isAuthenticated: hasAccessToken || isGuestSession,
-    isGuest: isGuestSession,
+    user: null,
+    role: null,
+    permissions: [],
+    isAuthenticated: false,
     loading: false,
     error: null,
     successMessage: null,
@@ -36,17 +22,44 @@ export const useAuthStore = create((set) => {
     clearError: () => set({ error: null }),
     clearSuccess: () => set({ successMessage: null }),
 
-    loginAsGuest: () => {
-      sessionStorage.setItem(GUEST_KEY, 'true');
-      set({ user: guestUser, isAuthenticated: true, isGuest: true, loading: false, error: null });
+    restoreSession: async () => {
+      const token = tokenStorage.getAccessToken();
+      if (!token) return false;
+      
+      set({ loading: true, error: null });
+      try {
+        const res = await api.get('/api/v1/auth/me');
+        const userData = res.data.data;
+        set({
+          user: userData,
+          role: userData.role,
+          permissions: userData.permissions || [],
+          isAuthenticated: true,
+          loading: false,
+        });
+        return true;
+      } catch (err) {
+        tokenStorage.clear();
+        set({ user: null, role: null, permissions: [], isAuthenticated: false, loading: false });
+        return false;
+      }
     },
 
     login: async (email, password) => {
       set({ loading: true, error: null });
       try {
-        const user = await authService.login(email, password);
-        sessionStorage.removeItem(GUEST_KEY);
-        set({ user, isAuthenticated: true, isGuest: false, loading: false });
+        await authService.login(email, password);
+        // Immediately fetch the full user profile including permissions
+        const res = await api.get('/api/v1/auth/me');
+        const userData = res.data.data;
+        
+        set({
+          user: userData,
+          role: userData.role,
+          permissions: userData.permissions || [],
+          isAuthenticated: true,
+          loading: false
+        });
         return true;
       } catch (err) {
         set({ error: err.message, loading: false });
@@ -69,13 +82,9 @@ export const useAuthStore = create((set) => {
     logout: async () => {
       set({ loading: true });
       try {
-        const state = useAuthStore.getState();
-        if (!state.isGuest) {
-          await authService.logout();
-        }
+        await authService.logout();
       } finally {
-        sessionStorage.removeItem(GUEST_KEY);
-        set({ user: null, isAuthenticated: false, isGuest: false, loading: false, successMessage: 'Logged out successfully' });
+        set({ user: null, role: null, permissions: [], isAuthenticated: false, loading: false, successMessage: 'Logged out successfully' });
       }
     },
 

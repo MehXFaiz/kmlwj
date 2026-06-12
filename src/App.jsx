@@ -65,9 +65,46 @@ const ProtectedRoutesWrapper = ({ isCollapsed, setIsCollapsed }) => {
   );
 };
 
+const PermissionGuard = ({ requiredPerms, children }) => {
+  const { user } = useAuthStore();
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role === 'Super Admin') return children;
+  
+  const hasPerm = requiredPerms.some((p) => user.permissions?.includes(p));
+  if (!hasPerm) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[50vh] text-center">
+        <h3 className="text-lg font-bold text-red-500 uppercase tracking-widest">
+          403 — Access Denied
+        </h3>
+        <p className="text-xs text-slate-500 mt-2">
+          Your credentials do not permit viewing this financial classification path.
+        </p>
+      </div>
+    );
+  }
+  return children;
+};
+
 function App() {
   const [splashDone, setSplashDone] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { restoreSession } = useAuthStore();
+  const [restoring, setRestoring] = useState(true);
+
+  useEffect(() => {
+    restoreSession().finally(() => {
+      setRestoring(false);
+    });
+  }, [restoreSession]);
+
+  if (restoring) {
+    return (
+      <div className="flex items-center justify-center h-screen w-screen bg-slate-950">
+        <div className="h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -91,16 +128,56 @@ function App() {
           {/* Secure ERP Interface */}
           <Route element={<ProtectedRoutesWrapper isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />}>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/coa" element={<ChartOfAccounts />} />
-            <Route path="/revenue-heads" element={<RevenueHeads />} />
-            <Route path="/expense-heads" element={<ExpenseHeads />} />
-            <Route path="/reserved" element={<ReservedCodes />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/users-roles" element={<UsersRoles />} />
-            <Route path="/ledger" element={<GeneralLedger />} />
-            <Route path="/journals" element={<JournalEntries />} />
-            <Route path="/audit" element={<AuditTrail />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/coa" element={
+              <PermissionGuard requiredPerms={['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT', 'LOCK_ACCOUNT']}>
+                <ChartOfAccounts />
+              </PermissionGuard>
+            } />
+            <Route path="/revenue-heads" element={
+              <PermissionGuard requiredPerms={['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT']}>
+                <RevenueHeads />
+              </PermissionGuard>
+            } />
+            <Route path="/expense-heads" element={
+              <PermissionGuard requiredPerms={['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT']}>
+                <ExpenseHeads />
+              </PermissionGuard>
+            } />
+            <Route path="/reserved" element={
+              <PermissionGuard requiredPerms={['MANAGE_RESERVED_CODES']}>
+                <ReservedCodes />
+              </PermissionGuard>
+            } />
+            <Route path="/reports" element={
+              <PermissionGuard requiredPerms={['VIEW_REPORTS']}>
+                <Reports />
+              </PermissionGuard>
+            } />
+            <Route path="/users-roles" element={
+              <PermissionGuard requiredPerms={['MANAGE_USERS', 'MANAGE_ROLES']}>
+                <UsersRoles />
+              </PermissionGuard>
+            } />
+            <Route path="/ledger" element={
+              <PermissionGuard requiredPerms={['VIEW_REPORTS']}>
+                <GeneralLedger />
+              </PermissionGuard>
+            } />
+            <Route path="/journals" element={
+              <PermissionGuard requiredPerms={['VIEW_REPORTS']}>
+                <JournalEntries />
+              </PermissionGuard>
+            } />
+            <Route path="/audit" element={
+              <PermissionGuard requiredPerms={['VIEW_REPORTS', 'MANAGE_USERS']}>
+                <AuditTrail />
+              </PermissionGuard>
+            } />
+            <Route path="/settings" element={
+              <PermissionGuard requiredPerms={['MANAGE_ROLES']}>
+                <Settings />
+              </PermissionGuard>
+            } />
             <Route path="*" element={
               <div className="flex flex-col items-center justify-center h-[50vh] text-center">
                 <h3 className="text-lg font-bold text-slate-200 uppercase tracking-widest">

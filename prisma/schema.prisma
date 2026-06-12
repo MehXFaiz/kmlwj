@@ -85,6 +85,10 @@ model Account {
   isReserved      Boolean       @default(false)
   isSystemDefined Boolean       @default(false)
   description     String?
+  currency        String        @default("USD")
+  subsidiary      String[]      @default(["Global"])
+  initialBalance  Float         @default(0)
+  detailType      String        @default("Header")
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 }

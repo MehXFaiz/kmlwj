@@ -1,5 +1,6 @@
 import { useMemo, useEffect, useRef, useState, useCallback } from 'react';
 import { useCoaStore } from '../store/coaStore';
+import { useDashboardStore } from '../store/dashboardStore';
 import { useJournalStore, calculateAccountBalances } from '../store/journalStore';
 import {
   ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell,
@@ -238,11 +239,21 @@ function AccountTypeStat({ label, count, pct, color, dotColor }) {
    Main Dashboard
 ───────────────────────────────────────────── */
 export const Dashboard = () => {
-  const { accounts, selectedSubsidiary } = useCoaStore();
+  const { accounts, fetchAccounts, selectedSubsidiary } = useCoaStore();
   const { journals, auditLogs } = useJournalStore();
+  const { stats: dbStats, fetchStats } = useDashboardStore();
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const handleRefresh = useCallback(() => setRefreshKey(k => k + 1), []);
+  useEffect(() => {
+    fetchAccounts();
+    fetchStats();
+  }, [fetchAccounts, fetchStats]);
+
+  const handleRefresh = useCallback(() => {
+    fetchAccounts();
+    fetchStats();
+    setRefreshKey(k => k + 1);
+  }, [fetchAccounts, fetchStats]);
 
   // Live balances
   const { rollupBalances } = useMemo(
@@ -315,7 +326,11 @@ export const Dashboard = () => {
 
   // Recent transactions from journals
   const recentJournals = useMemo(() => journals.slice(0, 6), [journals]);
-  const recentActivity = useMemo(() => auditLogs.slice(0, 8), [auditLogs]);
+
+  const recentActivity = useMemo(() => {
+    if (dbStats && dbStats.recentActivities) return dbStats.recentActivities;
+    return auditLogs.slice(0, 8);
+  }, [dbStats, auditLogs]);
 
   const typeColors = {
     Asset: { bg: 'bg-blue-500', dot: 'bg-blue-500', bar: 'bg-blue-500' },

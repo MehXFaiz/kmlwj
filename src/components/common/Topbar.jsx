@@ -1,13 +1,20 @@
 import { useCoaStore } from '../../store/coaStore';
+import { useAuthStore } from '../../store/authStore';
 import { Globe, Calendar, Bell, ShieldCheck, Sun, Moon, Menu } from 'lucide-react';
 
 export const Topbar = ({ onMobileMenuToggle }) => {
+  const { user } = useAuthStore();
   const { 
     selectedSubsidiary, 
     setSelectedSubsidiary, 
     fiscalYear, 
     setFiscalYear 
   } = useCoaStore();
+
+  const getInitials = (name) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
 
   const subsidiaries = ['Global', 'Acme US', 'Acme Europe', 'Acme APAC'];
   const fiscalYears = ['2025', '2026', '2027'];
@@ -88,11 +95,11 @@ export const Topbar = ({ onMobileMenuToggle }) => {
 
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-full bg-slate-800 border border-slate-700/80 flex items-center justify-center text-slate-300 font-bold text-xs select-none">
-              M
+              {getInitials(user?.fullName)}
             </div>
             <div className="hidden xl:flex flex-col text-left">
-              <span className="text-xs font-semibold text-slate-200 leading-none">Mubasher Computer</span>
-              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Finance Director</span>
+              <span className="text-xs font-semibold text-slate-200 leading-none">{user?.fullName || 'Operator'}</span>
+              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">{user?.role || 'User'}</span>
             </div>
           </div>
         </div>

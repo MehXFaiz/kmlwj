@@ -22,6 +22,7 @@
     "@prisma/client": "^6.4.0",
     "@tailwindcss/vite": "^4.3.0",
     "@tanstack/react-table": "^8.21.3",
+    "axios": "^1.17.0",
     "bcrypt": "^6.0.0",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
