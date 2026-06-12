@@ -26,6 +26,10 @@ if (-not $vars['DATABASE_URL']) {
   throw "DATABASE_URL is missing from .env"
 }
 
+if (-not $vars['DIRECT_URL']) {
+  throw "DIRECT_URL is missing from .env"
+}
+
 $jwtSecret = $vars['JWT_SECRET']
 if (-not $jwtSecret -or $jwtSecret -eq 'super_secret_jwt_sign_key_123_abc') {
   $jwtSecret = [Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }))
@@ -34,6 +38,7 @@ if (-not $jwtSecret -or $jwtSecret -eq 'super_secret_jwt_sign_key_123_abc') {
 
 $entries = @{
   DATABASE_URL = $vars['DATABASE_URL']
+  DIRECT_URL   = $vars['DIRECT_URL']
   JWT_SECRET   = $jwtSecret
   CORS_ORIGIN  = $AppUrl.TrimEnd('/')
   APP_URL      = $AppUrl.TrimEnd('/')
