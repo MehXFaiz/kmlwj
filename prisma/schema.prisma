@@ -91,6 +91,7 @@ model Account {
   detailType      String        @default("Header")
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+  revenueHeads    RevenueHead[]
 }
 
 model AccountType {
@@ -114,15 +115,12 @@ model ReservedCode {
 
 model RevenueHead {
   id          String   @id @default(uuid()) @db.Uuid
-  code        String   @unique
   name        String
   category    String
-  description String?
-  status      String   @default("Active")
-  budget      Float    @default(0)
-  actual      Float    @default(0)
+  accountId   String?  @db.Uuid
+  account     Account? @relation(fields: [accountId], references: [id])
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 }
 
 model ExpenseHead {

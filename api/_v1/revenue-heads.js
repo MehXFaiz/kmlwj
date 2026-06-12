@@ -9,7 +9,7 @@ var revenue_heads_default = makeHandler(async (req, res) => {
   const id = req.query.id;
   if (method === "GET") {
     const dbRevenueHeads = await prisma.revenueHead.findMany({
-      orderBy: { code: "asc" }
+      orderBy: { createdAt: "desc" }
     });
     return res.status(200).json({ status: 200, data: dbRevenueHeads });
   }
@@ -27,19 +27,16 @@ var revenue_heads_default = makeHandler(async (req, res) => {
     if (!checkPerm("CREATE_ACCOUNT")) {
       return res.status(403).json({ error: { message: "Forbidden: Insufficient permissions", status: 403 } });
     }
-    const { code, name, category, description, budget, actual, status } = req.body;
-    if (!code || !name) {
-      return res.status(400).json({ error: { message: "Code and Name are required", status: 400 } });
+    const { name, category, accountId, isActive } = req.body;
+    if (!name || !category) {
+      return res.status(400).json({ error: { message: "Name and Category are required", status: 400 } });
     }
     const newHead = await prisma.revenueHead.create({
       data: {
-        code,
         name,
-        category: category || "Operating",
-        description,
-        status: status || "Active",
-        budget: parseFloat(budget) || 0,
-        actual: parseFloat(actual) || 0
+        category,
+        accountId: accountId || null,
+        isActive: isActive !== void 0 ? Boolean(isActive) : true
       }
     });
     await logAudit(req.user.id, "Create Revenue Head", "REVENUE", null, newHead, req.headers["x-forwarded-for"], req.headers["user-agent"]);
@@ -56,17 +53,14 @@ var revenue_heads_default = makeHandler(async (req, res) => {
     if (!existingHead) {
       return res.status(404).json({ error: { message: "Revenue Head not found", status: 404 } });
     }
-    const { code, name, category, description, budget, actual, status } = req.body;
+    const { name, category, accountId, isActive } = req.body;
     const updatedHead = await prisma.revenueHead.update({
       where: { id },
       data: {
-        code: code !== void 0 ? code : void 0,
         name: name !== void 0 ? name : void 0,
         category: category !== void 0 ? category : void 0,
-        description: description !== void 0 ? description : void 0,
-        status: status !== void 0 ? status : void 0,
-        budget: budget !== void 0 ? parseFloat(budget) || 0 : void 0,
-        actual: actual !== void 0 ? parseFloat(actual) || 0 : void 0
+        accountId: accountId !== void 0 ? accountId || null : void 0,
+        isActive: isActive !== void 0 ? Boolean(isActive) : void 0
       }
     });
     await logAudit(req.user.id, "Modify Revenue Head", "REVENUE", existingHead, updatedHead, req.headers["x-forwarded-for"], req.headers["user-agent"]);

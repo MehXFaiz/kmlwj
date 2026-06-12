@@ -13,7 +13,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   if (method === 'GET') {
     const dbRevenueHeads = await prisma.revenueHead.findMany({
-      orderBy: { code: 'asc' },
+      orderBy: { createdAt: 'desc' },
     });
     return res.status(200).json({ status: 200, data: dbRevenueHeads });
   }
@@ -37,21 +37,18 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
     }
 
-    const { code, name, category, description, budget, actual, status } = req.body;
+    const { name, category, accountId, isActive } = req.body;
 
-    if (!code || !name) {
-      return res.status(400).json({ error: { message: 'Code and Name are required', status: 400 } });
+    if (!name || !category) {
+      return res.status(400).json({ error: { message: 'Name and Category are required', status: 400 } });
     }
 
     const newHead = await prisma.revenueHead.create({
       data: {
-        code,
         name,
-        category: category || 'Operating',
-        description,
-        status: status || 'Active',
-        budget: parseFloat(budget) || 0,
-        actual: parseFloat(actual) || 0,
+        category,
+        accountId: accountId || null,
+        isActive: isActive !== undefined ? Boolean(isActive) : true,
       },
     });
 
@@ -74,18 +71,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(404).json({ error: { message: 'Revenue Head not found', status: 404 } });
     }
 
-    const { code, name, category, description, budget, actual, status } = req.body;
+    const { name, category, accountId, isActive } = req.body;
 
     const updatedHead = await prisma.revenueHead.update({
       where: { id },
       data: {
-        code: code !== undefined ? code : undefined,
         name: name !== undefined ? name : undefined,
         category: category !== undefined ? category : undefined,
-        description: description !== undefined ? description : undefined,
-        status: status !== undefined ? status : undefined,
-        budget: budget !== undefined ? parseFloat(budget) || 0 : undefined,
-        actual: actual !== undefined ? parseFloat(actual) || 0 : undefined,
+        accountId: accountId !== undefined ? (accountId || null) : undefined,
+        isActive: isActive !== undefined ? Boolean(isActive) : undefined,
       },
     });
 
