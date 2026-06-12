@@ -99,7 +99,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
               className={({ isActive }) => `
                 flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative
                 ${isActive 
-                  ? 'bg-brand-50 dark:bg-brand-600/15 text-brand-700 dark:text-brand-300 border-l-2 border-brand-500 font-semibold' 
+                  ? 'bg-brand-600/15 text-brand-300 border-l-2 border-brand-500 font-semibold' 
                   : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
                 }
               `}
@@ -125,14 +125,14 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
           <div className="min-w-0">
             <p className="text-xs font-bold text-slate-200 truncate">{user?.fullName || 'Operator'}</p>
             <p className="text-[10px] text-slate-500 truncate">{user?.email}</p>
-            <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-800/40 text-[9px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
+            <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-800/40 text-[9px] font-bold text-emerald-400 uppercase tracking-wider">
               {user?.role}
             </span>
           </div>
           <button
             onClick={logout}
             title="Logout"
-            className="p-2 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 border border-transparent hover:border-red-200 dark:hover:border-red-900/40 transition-all cursor-pointer flex-shrink-0"
+            className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-950/30 border border-transparent hover:border-red-900/40 transition-all cursor-pointer flex-shrink-0"
           >
             <LogOut className="h-4 w-4" />
           </button>
@@ -141,7 +141,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
           <div className="group relative hidden lg:flex justify-center mb-3">
             <button
               onClick={logout}
-              className="p-2.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 border border-slate-200 dark:border-slate-800/80 hover:border-red-200 dark:hover:border-red-900/40 transition-all cursor-pointer"
+              className="p-2.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-950/30 border border-slate-800/80 hover:border-red-900/40 transition-all cursor-pointer"
             >
               <LogOut className="h-4.5 w-4.5" />
             </button>

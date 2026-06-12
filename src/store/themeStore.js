@@ -1,14 +1,7 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
-export const useThemeStore = create(
-  persist(
-    (set) => ({
-      theme: 'system', // 'light', 'dark', or 'system'
-      setTheme: (theme) => set({ theme }),
-    }),
-    {
-      name: 'theme-storage',
-    }
-  )
-);
+// Theme is permanently fixed to dark — no persistence needed.
+export const useThemeStore = create(() => ({
+  theme: 'dark',
+  setTheme: () => {}, // no-op: theme is locked
+}));

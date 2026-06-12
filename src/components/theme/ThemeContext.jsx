@@ -1,7 +1,8 @@
 import { createContext, useContext } from 'react';
 
+// Theme is permanently fixed to dark.
 export const ThemeContext = createContext({
-  theme: 'system',
+  theme: 'dark',
   setTheme: () => null,
 });
 
