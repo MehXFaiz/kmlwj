@@ -1,0 +1,20 @@
+import { z } from "zod";
+import { makeHandler } from "../_utils/handler.js";
+import * as authService from "../_services/auth.service.js";
+const forgotPasswordSchema = z.object({
+  email: z.string().email("Invalid email address")
+});
+var forgot_password_default = makeHandler(async (req, res) => {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
+  }
+  const validatedData = forgotPasswordSchema.parse(req.body);
+  await authService.forgotPassword(validatedData.email);
+  return res.status(200).json({
+    status: 200,
+    message: "If the email exists, a password reset link has been generated and printed to server logs."
+  });
+});
+export {
+  forgot_password_default as default
+};

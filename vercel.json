@@ -3,12 +3,12 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "functions": {
-    "api/**/*.ts": {
-      "includeFiles": "api/{_prisma.js,_utils/**,_services/**,_middlewares/**,_config/**}"
+    "api/index.ts": {
+      "includeFiles": "api/{_prisma.js,_utils/**,_services/**,_middlewares/**,_config/**,_auth/**,_v1/**,_health.js}"
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/api/(.*)", "destination": "/api/index.ts" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

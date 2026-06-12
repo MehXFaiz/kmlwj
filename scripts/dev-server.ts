@@ -1,90 +1,14 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import express from 'express';
-import cors from 'cors';
 import { checkDatabaseConnection } from '../api/_config/database.js';
 import { logger } from '../api/_utils/logger.js';
-
-// Import Vercel serverless handlers
-import loginHandler from '../api/auth/login.js';
-import registerHandler from '../api/auth/register.js';
-import refreshHandler from '../api/auth/refresh.js';
-import logoutHandler from '../api/auth/logout.js';
-import forgotPasswordHandler from '../api/auth/forgot-password.js';
-import resetPasswordHandler from '../api/auth/reset-password.js';
-import changePasswordHandler from '../api/auth/change-password.js';
-import healthHandler from '../api/health.js';
-import healthV1Handler from '../api/v1/health.js';
-
-// New dynamic api/v1 route handlers
-import meHandler from '../api/v1/auth/me.js';
-import statsHandler from '../api/v1/dashboard/stats.js';
-import accountsHandler from '../api/v1/accounts.js';
-import revenueHandler from '../api/v1/revenue-heads.js';
-import expenseHandler from '../api/v1/expense-heads.js';
-import usersHandler from '../api/v1/users.js';
-import rolesHandler from '../api/v1/roles.js';
-import auditLogsHandler from '../api/v1/audit-logs.js';
+import app from '../api/index.js'; // The consolidated express app
 
 const PORT = process.env.PORT || 4000;
-const app = express();
-
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-  credentials: true,
-}));
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Helper to convert Vercel handler to Express-compatible middleware
-const makeExpress = (handler: any) => {
-  return async (req: any, res: any) => {
-    try {
-      await handler(req, res);
-    } catch (err) {
-      logger.error(err, 'Express dev server handler error');
-      res.status(500).json({ error: { message: 'Internal Dev Server Error', status: 500 } });
-    }
-  };
-};
-
-// API Routing matching Vercel Serverless Function architecture
-app.post('/api/auth/login', makeExpress(loginHandler));
-app.post('/api/auth/register', makeExpress(registerHandler));
-app.post('/api/auth/refresh', makeExpress(refreshHandler));
-app.post('/api/auth/logout', makeExpress(logoutHandler));
-app.post('/api/auth/forgot-password', makeExpress(forgotPasswordHandler));
-app.post('/api/auth/reset-password', makeExpress(resetPasswordHandler));
-app.post('/api/auth/change-password', makeExpress(changePasswordHandler));
-app.get('/api/health', makeExpress(healthHandler));
-app.get('/api/v1/health', makeExpress(healthV1Handler));
-
-// Register new API v1 route handlers
-app.get('/api/v1/auth/me', makeExpress(meHandler));
-app.get('/api/v1/dashboard/stats', makeExpress(statsHandler));
-app.get('/api/v1/accounts', makeExpress(accountsHandler));
-app.post('/api/v1/accounts', makeExpress(accountsHandler));
-app.put('/api/v1/accounts', makeExpress(accountsHandler));
-app.delete('/api/v1/accounts', makeExpress(accountsHandler));
-app.get('/api/v1/revenue-heads', makeExpress(revenueHandler));
-app.post('/api/v1/revenue-heads', makeExpress(revenueHandler));
-app.put('/api/v1/revenue-heads', makeExpress(revenueHandler));
-app.delete('/api/v1/revenue-heads', makeExpress(revenueHandler));
-app.get('/api/v1/expense-heads', makeExpress(expenseHandler));
-app.post('/api/v1/expense-heads', makeExpress(expenseHandler));
-app.put('/api/v1/expense-heads', makeExpress(expenseHandler));
-app.delete('/api/v1/expense-heads', makeExpress(expenseHandler));
-app.get('/api/v1/users', makeExpress(usersHandler));
-app.post('/api/v1/users', makeExpress(usersHandler));
-app.put('/api/v1/users', makeExpress(usersHandler));
-app.get('/api/v1/roles', makeExpress(rolesHandler));
-app.put('/api/v1/roles', makeExpress(rolesHandler));
-app.get('/api/v1/audit-logs', makeExpress(auditLogsHandler));
 
 async function startServer() {
-  logger.info('Initializing Dev Express server mounting Vercel handlers...');
+  logger.info('Initializing Dev Express server with consolidated API app...');
 
   // Verify Database Connection
   const dbConnected = await checkDatabaseConnection();
