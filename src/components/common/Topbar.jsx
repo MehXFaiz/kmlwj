@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useCoaStore } from '../../store/coaStore';
 import { useAuthStore } from '../../store/authStore';
 import { Globe, Calendar, Bell, ShieldCheck, Menu, User, Settings, LogOut, ChevronDown } from 'lucide-react';
@@ -142,15 +143,15 @@ export const Topbar = ({ onMobileMenuToggle }) => {
                   </div>
                 </div>
                 <div className="p-1.5 flex flex-col gap-0.5">
-                  <button className="flex items-center gap-2 px-2.5 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100 rounded-sm transition-colors w-full text-left">
+                  <Link to="/profile" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100 rounded-sm transition-colors w-full text-left">
                     <User className="h-4 w-4" /> Profile
-                  </button>
-                  <button className="flex items-center gap-2 px-2.5 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100 rounded-sm transition-colors w-full text-left">
+                  </Link>
+                  <Link to="/account" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100 rounded-sm transition-colors w-full text-left">
                     <User className="h-4 w-4" /> My Account
-                  </button>
-                  <button className="flex items-center gap-2 px-2.5 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100 rounded-sm transition-colors w-full text-left">
+                  </Link>
+                  <Link to="/settings" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100 rounded-sm transition-colors w-full text-left">
                     <Settings className="h-4 w-4" /> Settings
-                  </button>
+                  </Link>
                 </div>
                 <div className="p-1.5 border-t border-slate-800">
                   <button

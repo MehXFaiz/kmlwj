@@ -13,6 +13,8 @@ const GeneralLedger = lazy(() => import('./views/GeneralLedger').then(m => ({ de
 const JournalEntries = lazy(() => import('./views/JournalEntries').then(m => ({ default: m.JournalEntries })));
 const AuditTrail = lazy(() => import('./views/AuditTrail').then(m => ({ default: m.AuditTrail })));
 const Settings = lazy(() => import('./views/Settings').then(m => ({ default: m.Settings })));
+const Profile = lazy(() => import('./views/Profile').then(m => ({ default: m.Profile })));
+const MyAccount = lazy(() => import('./views/MyAccount').then(m => ({ default: m.MyAccount })));
 const RevenueHeads = lazy(() => import('./views/RevenueHeads').then(m => ({ default: m.RevenueHeads })));
 const ExpenseHeads = lazy(() => import('./views/ExpenseHeads').then(m => ({ default: m.ExpenseHeads })));
 const ReservedCodes = lazy(() => import('./views/ReservedCodes').then(m => ({ default: m.ReservedCodes })));
@@ -179,6 +181,8 @@ function App() {
                 <Settings />
               </PermissionGuard>
             } />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/account" element={<MyAccount />} />
             <Route path="*" element={
               <div className="flex flex-col items-center justify-center h-[50vh] text-center">
                 <h3 className="text-lg font-bold text-slate-200 uppercase tracking-widest">
