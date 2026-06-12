@@ -1,9 +1,61 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --slate-950: #f8fafc;
+  --slate-900: #ffffff;
+  --slate-800: #e2e8f0;
+  --slate-700: #cbd5e1;
+  --slate-600: #94a3b8;
+  --slate-500: #64748b;
+  --slate-400: #475569;
+  --slate-300: #334155;
+  --slate-200: #1e293b;
+  --slate-100: #0f172a;
+  --slate-50: #0f172a;
+
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(15, 23, 42, 0.08);
+  --glass-hover-bg: rgba(255, 255, 255, 0.9);
+  --glass-hover-border: rgba(15, 23, 42, 0.15);
+}
+
+.dark {
+  --slate-950: #030712;
+  --slate-900: #0f172a;
+  --slate-800: #1e293b;
+  --slate-700: #334155;
+  --slate-600: #475569;
+  --slate-500: #64748b;
+  --slate-400: #94a3b8;
+  --slate-300: #cbd5e1;
+  --slate-200: #e2e8f0;
+  --slate-100: #f1f5f9;
+  --slate-50: #f8fafc;
+
+  --glass-bg: rgba(17, 24, 39, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-hover-bg: rgba(17, 24, 39, 0.85);
+  --glass-hover-border: rgba(255, 255, 255, 0.12);
+}
+
 @theme {
   --breakpoint-xs: 30rem;
   --font-sans: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   
+  --color-slate-950: var(--slate-950);
+  --color-slate-900: var(--slate-900);
+  --color-slate-800: var(--slate-800);
+  --color-slate-700: var(--slate-700);
+  --color-slate-600: var(--slate-600);
+  --color-slate-500: var(--slate-500);
+  --color-slate-400: var(--slate-400);
+  --color-slate-300: var(--slate-300);
+  --color-slate-200: var(--slate-200);
+  --color-slate-100: var(--slate-100);
+  --color-slate-50: var(--slate-50);
+
   /* Brand color palette: Rich Royal Blue & Indigo (Enterprise aesthetic) */
   --color-brand-50: hsl(220, 100%, 97%);
   --color-brand-100: hsl(220, 100%, 92%);
@@ -50,9 +102,10 @@
 /* Custom Base Utilities and Base Styles */
 @layer base {
   body {
-    background-color: #030712; /* Tailwind slate-950 */
-    color: #f3f4f6; /* Tailwind slate-100 */
+    background-color: var(--slate-950);
+    color: var(--slate-100);
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   /* Custom scrollbar for high-end feel */
@@ -61,23 +114,27 @@
     height: 6px;
   }
   ::-webkit-scrollbar-track {
+    background: rgba(3, 7, 18, 0.05);
+  }
+  .dark ::-webkit-scrollbar-track {
     background: rgba(3, 7, 18, 0.5);
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(75, 85, 99, 0.4);
+    background: rgba(75, 85, 99, 0.3);
     border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(156, 163, 175, 0.6);
+    background: rgba(156, 163, 175, 0.5);
   }
 }
 
 /* Custom utility components */
 .glass-panel {
-  background: rgba(17, 24, 39, 0.7);
+  background: var(--glass-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .glass-panel-hover {
@@ -85,17 +142,26 @@
 }
 
 .glass-panel-hover:hover {
-  background: rgba(17, 24, 39, 0.85);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  background: var(--glass-hover-bg);
+  border-color: var(--glass-hover-border);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
   transform: translateY(-2px);
+}
+.dark .glass-panel-hover:hover {
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
 }
 
 .glow-indigo {
+  box-shadow: 0 0 40px -10px rgba(99, 102, 241, 0.06);
+}
+.dark .glow-indigo {
   box-shadow: 0 0 40px -10px rgba(99, 102, 241, 0.15);
 }
 
 .glow-emerald {
+  box-shadow: 0 0 40px -10px rgba(16, 185, 129, 0.06);
+}
+.dark .glow-emerald {
   box-shadow: 0 0 40px -10px rgba(16, 185, 129, 0.15);
 }
 
@@ -103,7 +169,7 @@
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  background-image: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+  background-image: linear-gradient(135deg, var(--slate-100) 0%, var(--slate-300) 100%);
 }
 
 .text-gradient-brand {
