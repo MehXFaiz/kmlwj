@@ -1,4 +1,4 @@
-import { useState, useMemo, Fragment } from 'react';
+import { useState, useMemo, Fragment, useEffect } from 'react';
 import { useJournalStore } from '../store/journalStore';
 import { useCoaStore } from '../store/coaStore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
@@ -9,16 +9,20 @@ import { Plus, Calendar, ChevronDown, ChevronUp, FileSpreadsheet } from 'lucide-
 import { MobileOnly, DesktopOnly } from '../components/common/responsive';
 
 export const JournalEntries = () => {
-  const { journals } = useJournalStore();
+  const { journals, fetchJournals, isLoading } = useJournalStore();
   const { selectedSubsidiary } = useCoaStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedJeId, setExpandedJeId] = useState(null);
+
+  useEffect(() => {
+    fetchJournals(selectedSubsidiary);
+  }, [fetchJournals, selectedSubsidiary]);
 
   const toggleExpand = (id) => {
     setExpandedJeId(expandedJeId === id ? null : id);
   };
 
-  // Filter journals by subsidiary
+  // Filter journals by subsidiary (now handled by API, but keeping fallback)
   const filteredJournals = useMemo(() => {
     return journals.filter((je) => {
       if (selectedSubsidiary === 'Global') return true;

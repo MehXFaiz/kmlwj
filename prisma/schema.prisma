@@ -91,8 +91,10 @@ model Account {
   detailType      String        @default("Header")
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
-  revenueHeads    RevenueHead[]
-  expenseHeads    ExpenseHead[]
+  revenueHeads      RevenueHead[]
+  expenseHeads      ExpenseHead[]
+  journalEntryLines JournalEntryLine[]
+  ledgerEntries     LedgerEntry[]
 }
 
 model AccountType {
@@ -145,4 +147,43 @@ model AuditLog {
   ipAddress String?
   userAgent String?
   createdAt DateTime @default(now())
+}
+
+model JournalEntry {
+  id          String             @id @default(uuid()) @db.Uuid
+  jeNumber    String             @unique
+  date        DateTime
+  subsidiary  String
+  reference   String
+  postedBy    String
+  status      String             @default("Posted")
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  lines       JournalEntryLine[]
+}
+
+model JournalEntryLine {
+  id             String       @id @default(uuid()) @db.Uuid
+  journalEntryId String       @db.Uuid
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  accountId      String       @db.Uuid
+  account        Account      @relation(fields: [accountId], references: [id])
+  description    String?
+  debit          Float        @default(0)
+  credit         Float        @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model LedgerEntry {
+  id          String   @id @default(uuid()) @db.Uuid
+  accountId   String   @db.Uuid
+  account     Account  @relation(fields: [accountId], references: [id])
+  debit       Float    @default(0)
+  credit      Float    @default(0)
+  reference   String
+  description String?
+  postingDate DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

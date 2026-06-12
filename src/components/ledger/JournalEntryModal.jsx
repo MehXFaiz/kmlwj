@@ -83,7 +83,7 @@ export const JournalEntryModal = ({ isOpen, onClose }) => {
     }
   }, [isOpen, reset, selectedSubsidiary]);
 
-  const onSubmitForm = (data) => {
+  const onSubmitForm = async (data) => {
     if (!isBalanced) {
       alert("Double-entry accounting error: Debits and credits must balance!");
       return;
@@ -96,7 +96,12 @@ export const JournalEntryModal = ({ isOpen, onClose }) => {
       return;
     }
 
-    addJournalEntry(data);
+    const res = await addJournalEntry(data);
+    if (res && res.error) {
+      alert("Error posting journal: " + res.error);
+      return;
+    }
+    
     setSuccess(true);
     setTimeout(() => {
       onClose();
