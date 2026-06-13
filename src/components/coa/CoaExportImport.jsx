@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { accountService } from '../../services/apiServices';
 import { Download, Upload, FileText, CheckCircle2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
@@ -14,37 +15,43 @@ export const CoaExportImport = () => {
   const [importedCount, setImportedCount] = useState(0);
 
   // Export COA to CSV
-  const handleExport = () => {
-    const headers = ['code', 'name', 'type', 'detailType', 'parentCode', 'currency', 'status', 'initialBalance', 'description', 'subsidiary'];
-    
-    const rows = accounts.map((acc) => [
-      acc.code,
-      `"${acc.name.replace(/"/g, '""')}"`,
-      acc.type,
-      acc.detailType,
-      acc.parentCode || '',
-      acc.currency,
-      acc.status,
-      acc.initialBalance || 0,
-      `"${(acc.description || '').replace(/"/g, '""')}"`,
-      acc.subsidiary.join(';'),
-    ]);
+  const handleExport = async () => {
+    try {
+      const response = await accountService.getAll({ limit: 100000 });
+      const accountsToExport = response.data || [];
+      const headers = ['code', 'name', 'type', 'detailType', 'parentCode', 'currency', 'status', 'initialBalance', 'description', 'subsidiary'];
+      
+      const rows = accountsToExport.map((acc) => [
+        acc.code,
+        `"${acc.name.replace(/"/g, '""')}"`,
+        acc.type,
+        acc.detailType,
+        acc.parentCode || '',
+        acc.currency,
+        acc.status,
+        acc.initialBalance || 0,
+        `"${(acc.description || '').replace(/"/g, '""')}"`,
+        (acc.subsidiary || []).join(';'),
+      ]);
 
-    const csvContent = [
-      headers.join(','),
-      ...rows.map((e) => e.join(',')),
-    ].join('\n');
+      const csvContent = [
+        headers.join(','),
+        ...rows.map((e) => e.join(',')),
+      ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `chart_of_accounts_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    logActivity('Export Accounts', `Exported ${accounts.length} accounts to CSV.`);
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `chart_of_accounts_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      logActivity('Export Accounts', `Exported ${accountsToExport.length} accounts to CSV.`);
+    } catch (err) {
+      alert('Failed to export accounts: ' + err.message);
+    }
   };
 
   // Import COA from CSV
@@ -94,17 +101,19 @@ export const CoaExportImport = () => {
         }
         values.push(currentVal.trim().replace(/^["']|["']$/g, ''));
 
-        // Map row to object
         const accObj = {};
+
         headers.forEach((header, index) => {
-          if (values[index] !== undefined) {
-            if (header === 'subsidiary') {
-              accObj[header] = values[index].split(';').map((s) => s.trim());
-            } else if (header === 'initialBalance') {
-              accObj[header] = Number(values[index]) || 0;
-            } else {
-              accObj[header] = values[index] === '' ? null : values[index];
-            }
+          if (header === 'subsidiary') {
+            accObj[header] = values[index] ? values[index].split(';') : ['Global'];
+          } else if (header === 'initialbalance') {
+            accObj.initialBalance = parseFloat(values[index]) || 0;
+          } else if (header === 'status') {
+            accObj.isLocked = values[index]?.toLowerCase() === 'inactive';
+          } else if (header === 'parentcode') {
+            accObj.parentCode = values[index] || 'none';
+          } else {
+            accObj[header] = values[index] || '';
           }
         });
 
@@ -116,7 +125,7 @@ export const CoaExportImport = () => {
         importedAccounts.push(accObj);
       }
 
-      importAccounts(importedAccounts);
+      await importAccounts(importedAccounts);
       setImportedCount(importedAccounts.length);
       setImportStatus('success');
       setCsvInput('');
