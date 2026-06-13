@@ -164,7 +164,7 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
         const created = await addAccount(formattedData);
         logActivity(
           'Create Account',
-          `Created Account ${created.code} - ${created.name} (${created.type}).`
+          `Created Account ${created.glCode || formattedData.code} - ${created.accountName || formattedData.name}.`
         );
         alert('Account created successfully');
       }

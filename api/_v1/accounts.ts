@@ -85,22 +85,24 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
     }
 
-    const { code, name, type, detailType, parentCode, currency, subsidiary, initialBalance, description } = req.body;
+    const { code, name, type, detailType, parentCode, currency, subsidiary, initialBalance, description, isLocked, isReserved } = req.body;
 
     if (!code || !name || !type) {
       return res.status(400).json({ error: { message: 'Code, Name, and Type are required', status: 400 } });
     }
 
-    // Reserved accounts cannot be assigned
-    const reservedMatch = await prisma.reservedCode.findFirst({
-      where: {
-        isActive: true,
-        reserveStart: { lte: code },
-        reserveEnd: { gte: code },
+    // Reserved accounts cannot be assigned unless explicitly marked as reserved
+    if (!isReserved) {
+      const reservedMatch = await prisma.reservedCode.findFirst({
+        where: {
+          isActive: true,
+          reserveStart: { lte: code },
+          reserveEnd: { gte: code },
+        }
+      });
+      if (reservedMatch) {
+        return res.status(400).json({ error: { message: `Code ${code} falls within a reserved range: ${reservedMatch.reserveReason}`, status: 400 } });
       }
-    });
-    if (reservedMatch) {
-      return res.status(400).json({ error: { message: `Code ${code} falls within a reserved range: ${reservedMatch.reserveReason}`, status: 400 } });
     }
 
     const typeNameUpper = type.toUpperCase();
@@ -137,6 +139,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         subsidiary: subsidiary || ['Global'],
         initialBalance: parseFloat(initialBalance) || 0,
         detailType: detailType || 'Header',
+        isLocked: !!isLocked,
+        isReserved: !!isReserved,
       },
     });
 
@@ -166,19 +170,21 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
     }
 
-    const { code, name, type, detailType, parentCode, currency, subsidiary, initialBalance, description, isLocked } = req.body;
+    const { code, name, type, detailType, parentCode, currency, subsidiary, initialBalance, description, isLocked, isReserved } = req.body;
 
     if (code !== undefined) {
-      // Reserved accounts cannot be assigned
-      const reservedMatch = await prisma.reservedCode.findFirst({
-        where: {
-          isActive: true,
-          reserveStart: { lte: code },
-          reserveEnd: { gte: code },
+      // Reserved accounts cannot be assigned unless explicitly marked as reserved
+      if (isReserved !== true && existingAccount.isReserved !== true) {
+        const reservedMatch = await prisma.reservedCode.findFirst({
+          where: {
+            isActive: true,
+            reserveStart: { lte: code },
+            reserveEnd: { gte: code },
+          }
+        });
+        if (reservedMatch) {
+          return res.status(400).json({ error: { message: `Code ${code} falls within a reserved range: ${reservedMatch.reserveReason}`, status: 400 } });
         }
-      });
-      if (reservedMatch) {
-        return res.status(400).json({ error: { message: `Code ${code} falls within a reserved range: ${reservedMatch.reserveReason}`, status: 400 } });
       }
     }
 
@@ -191,6 +197,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if (initialBalance !== undefined) updateData.initialBalance = parseFloat(initialBalance) || 0;
     if (detailType !== undefined) updateData.detailType = detailType;
     if (isLocked !== undefined) updateData.isLocked = isLocked;
+    if (isReserved !== undefined) updateData.isReserved = isReserved;
 
     if (type !== undefined) {
       const typeNameUpper = type.toUpperCase();

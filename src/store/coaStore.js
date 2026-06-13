@@ -62,6 +62,8 @@ export const useCoaStore = create((set, get) => ({
         subsidiary: account.subsidiary || ['Global'],
         initialBalance: account.initialBalance || 0,
         description: account.description || '',
+        isLocked: account.isLocked || false,
+        isReserved: account.isReserved || false,
       });
       // Try to update both views if they were in use, but normally the component will re-fetch.
       await get().fetchAccountsTree();
@@ -86,6 +88,8 @@ export const useCoaStore = create((set, get) => ({
         subsidiary: updatedFields.subsidiary,
         initialBalance: updatedFields.initialBalance,
         description: updatedFields.description,
+        isLocked: updatedFields.isLocked,
+        isReserved: updatedFields.isReserved,
       });
       await get().fetchAccountsTree();
       set({ loading: false });
