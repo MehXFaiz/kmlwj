@@ -46,8 +46,37 @@ export const useJournalStore = create((set, get) => ({
     }
   },
 
+  updateJournalStatus: async (id, status) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await fetch('/api/v1/journal-entries', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ id, status })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error?.message || 'Failed to update journal status');
+      
+      // Refresh the list after successful update
+      const { journals } = get();
+      // Just fetch again for the current subsidiary, or rely on caller to trigger fetch
+      // For now we can just update the local state to avoid full fetch if possible, but fetch is safer.
+      const entry = journals.find(j => j.dbId === id);
+      if (entry) {
+        await get().fetchJournals(entry.subsidiary || 'Global');
+      }
+      set({ isLoading: false });
+      return { success: true, data: data.data };
+    } catch (err) {
+      set({ error: err.message, isLoading: false });
+      return { success: false, error: err.message };
+    }
+  },
+
   logActivity: () => {
-    // Audit logs are now handled by the backend automatically
   },
 
   resetJournals: () => {

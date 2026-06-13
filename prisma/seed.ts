@@ -36,6 +36,7 @@ async function main() {
     { name: 'LOCK_ACCOUNT', description: 'Lock or unlock accounts' },
     { name: 'VIEW_REPORTS', description: 'View financial reports and audit logs' },
     { name: 'MANAGE_USERS', description: 'Manage users, roles, and permissions' },
+    { name: 'MANAGE_ROLES', description: 'Manage system roles and their permissions' },
     { name: 'MANAGE_RESERVED_CODES', description: 'Manage reserved account codes' },
   ];
 

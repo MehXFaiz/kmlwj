@@ -38,14 +38,17 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     ]);
 
     const formatted = entries.map(je => ({
-      id: je.jeNumber,
+      id: je.voucherNo,
       dbId: je.id,
-      date: je.date.toISOString().split('T')[0],
+      voucherNo: je.voucherNo,
+      postingDate: je.postingDate.toISOString().split('T')[0],
       subsidiary: je.subsidiary,
       reference: je.reference,
+      description: je.description,
       postedBy: je.postedBy,
       status: je.status,
       lines: je.lines.map(line => ({
+        id: line.id,
         accountCode: line.account.glCode,
         description: line.description,
         debit: line.debit,
@@ -57,7 +60,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'POST') {
-    const { date, subsidiary, reference, lines } = req.body;
+    const { postingDate, subsidiary, reference, description, status = 'Draft', lines } = req.body;
 
     if (!lines || !Array.isArray(lines) || lines.length === 0) {
       return res.status(400).json({ error: { message: 'Lines are required', status: 400 } });
@@ -71,30 +74,27 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       totalCredit += Number(line.credit) || 0;
     }
 
-    // simple float compare
     if (Math.abs(totalDebit - totalCredit) > 0.001) {
       return res.status(400).json({ error: { message: 'Journal entry must balance', status: 400 } });
     }
 
-    // Generate jeNumber (simple for now: JE-timestamp, in production use atomic sequence)
-    const jeNumber = `JE-${Date.now()}`;
+    const voucherNo = req.body.voucherNo || `JE-${Date.now()}`;
     const postedBy = req.user.email || 'system';
 
     try {
       const result = await prisma.$transaction(async (tx) => {
-        // Create the journal entry
         const je = await tx.journalEntry.create({
           data: {
-            jeNumber,
-            date: new Date(date || new Date()),
+            voucherNo,
+            postingDate: new Date(postingDate || new Date()),
             subsidiary: subsidiary || 'Global',
             reference: reference || 'Journal Entry',
+            description: description || null,
             postedBy,
-            status: 'Posted',
+            status,
           }
         });
 
-        // Add lines and ledger entries
         for (const line of lines) {
           const account = await tx.account.findUnique({
             where: { glCode: line.accountCode }
@@ -104,7 +104,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             throw new Error(`Account not found: ${line.accountCode}`);
           }
 
-          // Create JE Line
           await tx.journalEntryLine.create({
             data: {
               journalEntryId: je.id,
@@ -115,25 +114,119 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             }
           });
 
-          // Create Ledger Entry
-          await tx.ledgerEntry.create({
-            data: {
-              accountId: account.id,
-              debit: Number(line.debit) || 0,
-              credit: Number(line.credit) || 0,
-              reference: je.jeNumber,
-              description: line.description || reference || 'Journal Entry',
-              postingDate: new Date(date || new Date()),
-            }
-          });
+          if (status === 'Posted') {
+            await tx.ledgerEntry.create({
+              data: {
+                accountId: account.id,
+                debit: Number(line.debit) || 0,
+                credit: Number(line.credit) || 0,
+                reference: je.voucherNo,
+                description: line.description || description || reference || 'Journal Entry',
+                postingDate: new Date(postingDate || new Date()),
+              }
+            });
+
+            await tx.account.update({
+               where: { id: account.id },
+               data: {
+                 currentBalance: {
+                   increment: Number(line.debit) - Number(line.credit)
+                 }
+               }
+            });
+          }
         }
 
         return je;
       });
 
-      await logAudit(req.user.id, 'Post Journal', 'Journal Entries', null, { jeNumber, reference, total: totalDebit }, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      await logAudit(req.user.id, 'Create Journal', 'Journal Entries', null, { voucherNo, reference, status, total: totalDebit }, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
       return res.status(201).json({ status: 201, data: result });
+    } catch (err: any) {
+      return res.status(400).json({ error: { message: err.message, status: 400 } });
+    }
+  }
+
+  if (method === 'PATCH') {
+    const { id, status } = req.body;
+    
+    if (!id || !status) {
+       return res.status(400).json({ error: { message: 'Missing id or status', status: 400 } });
+    }
+
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        const je = await tx.journalEntry.findUnique({
+          where: { id },
+          include: { lines: true }
+        });
+
+        if (!je) throw new Error('Journal entry not found');
+
+        if (je.status === status) return je;
+
+        // Draft -> Posted
+        if (je.status === 'Draft' && status === 'Posted') {
+          for (const line of je.lines) {
+            await tx.ledgerEntry.create({
+              data: {
+                accountId: line.accountId,
+                debit: line.debit,
+                credit: line.credit,
+                reference: je.voucherNo,
+                description: line.description || je.description || je.reference || 'Journal Entry',
+                postingDate: je.postingDate,
+              }
+            });
+
+            await tx.account.update({
+               where: { id: line.accountId },
+               data: {
+                 currentBalance: {
+                   increment: line.debit - line.credit
+                 }
+               }
+            });
+          }
+        }
+        
+        // Posted -> Cancelled (Reversal)
+        if (je.status === 'Posted' && status === 'Cancelled') {
+          for (const line of je.lines) {
+             await tx.ledgerEntry.create({
+              data: {
+                accountId: line.accountId,
+                debit: line.credit,
+                credit: line.debit,
+                reference: je.voucherNo + '-REV',
+                description: 'Reversal: ' + (line.description || je.description || je.reference),
+                postingDate: new Date(),
+              }
+            });
+
+            await tx.account.update({
+               where: { id: line.accountId },
+               data: {
+                 currentBalance: {
+                   increment: line.credit - line.debit
+                 }
+               }
+            });
+          }
+        }
+
+        const updatedJe = await tx.journalEntry.update({
+          where: { id },
+          data: { status }
+        });
+
+        return updatedJe;
+      });
+
+      await logAudit(req.user.id, 'Update Journal Status', 'Journal Entries', null, { id, status }, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+
+      return res.status(200).json({ status: 200, data: result });
     } catch (err: any) {
       return res.status(400).json({ error: { message: err.message, status: 400 } });
     }

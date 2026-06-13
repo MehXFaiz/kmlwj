@@ -297,17 +297,6 @@ export const Dashboard = () => {
     return { total, active, locked, byType };
   }, [accounts]);
 
-  // Area chart — mock monthly P&L
-  const areaData = useMemo(() => {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May'];
-    const base = stats.revenue;
-    return months.map((m, i) => ({
-      month: m,
-      Revenue: Math.round(base * (0.6 + i * 0.1 + Math.random() * 0.08)),
-      Expenses: Math.round(stats.expenses * (0.55 + i * 0.09 + Math.random() * 0.06)),
-    }));
-  }, [stats.revenue, stats.expenses]);
-
   // Pie chart — account type distribution
   const typeDistData = useMemo(() => [
     { name: 'Assets', value: acctStats.byType.Asset, fill: 'var(--chart-asset)' },
@@ -376,24 +365,24 @@ export const Dashboard = () => {
 
       {/* ── KPI Cards Row ── */}
       <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-        <KpiCard title="Total Accounts" value={acctStats.total} icon={Layers}
+        <KpiCard title="Total Accounts" value={dbStats?.totalAccounts || 0} icon={Layers}
           iconBg="bg-indigo-950/60" iconColor="text-indigo-400"
           trend="neutral" trendLabel={`${acctStats.byType.Asset} asset types`} delay={0} />
-        <KpiCard title="Active Accounts" value={acctStats.active} icon={Unlock}
+        <KpiCard title="Active Users" value={dbStats?.activeUsers || 0} icon={Users}
           iconBg="bg-emerald-950/60" iconColor="text-emerald-400"
           trend="up" trendLabel="Operational" delay={80} />
-        <KpiCard title="Locked Accounts" value={acctStats.locked} icon={Lock}
+        <KpiCard title="Locked Accounts" value={dbStats?.lockedAccounts || 0} icon={Lock}
           iconBg="bg-red-950/60" iconColor="text-red-400"
           trend="neutral" trendLabel="Restricted" delay={160} />
-        <KpiCard title="Revenue Accounts" value={acctStats.byType.Revenue} icon={TrendingUp}
+        <KpiCard title="Revenue Heads" value={dbStats?.revenueHeads || 0} icon={TrendingUp}
           iconBg="bg-green-950/60" iconColor="text-green-400"
           trend="up" trendLabel="Income streams" delay={240} />
-        <KpiCard title="Expense Accounts" value={acctStats.byType.Expense} icon={TrendingDown}
+        <KpiCard title="Expense Heads" value={dbStats?.expenseHeads || 0} icon={TrendingDown}
           iconBg="bg-orange-950/60" iconColor="text-orange-400"
           trend="neutral" trendLabel="Cost centers" delay={320} />
-        <KpiCard title="Journal Entries" value={journals.length} icon={BookOpen}
+        <KpiCard title="Journal Entries" value={dbStats?.totalJournalEntries || 0} icon={BookOpen}
           iconBg="bg-violet-950/60" iconColor="text-violet-400"
-          trend="up" trendLabel="Posted" delay={400} />
+          trend="up" trendLabel="Total records" delay={400} />
       </div>
 
       {/* ── Financial KPI Cards ── */}
@@ -480,7 +469,7 @@ export const Dashboard = () => {
           />
           <div className="h-48 sm:h-56">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={areaData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+              <AreaChart data={dbStats?.monthlyData || []} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gRevenue" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--chart-revenue)" stopOpacity={0.25} />

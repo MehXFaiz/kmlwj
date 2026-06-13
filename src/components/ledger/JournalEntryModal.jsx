@@ -20,9 +20,11 @@ const journalLineSchema = zod.object({
 
 // Zod validation for whole journal
 const journalSchema = zod.object({
-  date: zod.string().min(1, "Date is required"),
+  postingDate: zod.string().min(1, "Date is required"),
+  voucherNo: zod.string().optional(),
   subsidiary: zod.string().min(1, "Subsidiary is required"),
   reference: zod.string().min(3, "Reference must be at least 3 characters").max(100),
+  description: zod.string().optional(),
   lines: zod.array(journalLineSchema).min(2, "Journal entry must have at least 2 lines"),
 });
 
@@ -45,9 +47,11 @@ export const JournalEntryModal = ({ isOpen, onClose }) => {
   } = useForm({
     resolver: zodResolver(journalSchema),
     defaultValues: {
-      date: new Date().toISOString().split('T')[0],
+      postingDate: new Date().toISOString().split('T')[0],
+      voucherNo: '',
       subsidiary: selectedSubsidiary === 'Global' ? 'Acme US' : selectedSubsidiary,
       reference: '',
+      description: '',
       lines: [
         { accountCode: '', description: '', debit: 0, credit: 0 },
         { accountCode: '', description: '', debit: 0, credit: 0 },
@@ -72,9 +76,11 @@ export const JournalEntryModal = ({ isOpen, onClose }) => {
     if (isOpen) {
       setSuccess(false);
       reset({
-        date: new Date().toISOString().split('T')[0],
+        postingDate: new Date().toISOString().split('T')[0],
+        voucherNo: '',
         subsidiary: selectedSubsidiary === 'Global' ? 'Acme US' : selectedSubsidiary,
         reference: '',
+        description: '',
         lines: [
           { accountCode: '', description: '', debit: 0, credit: 0 },
           { accountCode: '', description: '', debit: 0, credit: 0 },
@@ -83,7 +89,10 @@ export const JournalEntryModal = ({ isOpen, onClose }) => {
     }
   }, [isOpen, reset, selectedSubsidiary]);
 
-  const onSubmitForm = async (data) => {
+  const onSubmitForm = async (data, e) => {
+    const status = e.nativeEvent?.submitter?.value || 'Draft';
+    
+    // We enforce double entry for drafts and posted
     if (!isBalanced) {
       alert("Double-entry accounting error: Debits and credits must balance!");
       return;
@@ -96,7 +105,8 @@ export const JournalEntryModal = ({ isOpen, onClose }) => {
       return;
     }
 
-    const res = await addJournalEntry(data);
+    const payload = { ...data, status };
+    const res = await addJournalEntry(payload);
     if (res && res.error) {
       alert("Error posting journal: " + res.error);
       return;
@@ -118,23 +128,31 @@ export const JournalEntryModal = ({ isOpen, onClose }) => {
       {success ? (
         <div className="flex flex-col items-center justify-center py-8 text-center space-y-3">
           <CheckCircle2 className="h-12 w-12 text-emerald-400 animate-bounce" />
-          <h4 className="text-base font-bold text-slate-100">Journal Entry Posted</h4>
+          <h4 className="text-base font-bold text-slate-100">Journal Entry Saved</h4>
           <p className="text-xs text-slate-400">
-            The transactions have been recorded. Dynamic ledger balances updated.
+            The transactions have been recorded successfully.
           </p>
         </div>
       ) : (
         <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-6">
           {/* Header Metadata */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Voucher No (Auto-generated if empty)"
+              placeholder="e.g. JE-1001"
+              error={errors.voucherNo?.message}
+              {...register('voucherNo')}
+            />
             <Input
               label="Transaction Date"
               type="date"
               required
-              error={errors.date?.message}
-              {...register('date')}
+              error={errors.postingDate?.message}
+              {...register('postingDate')}
             />
-
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Select
               label="Subsidiary / Entity"
               required
@@ -152,6 +170,13 @@ export const JournalEntryModal = ({ isOpen, onClose }) => {
               placeholder="e.g. Accrued Payroll May"
               error={errors.reference?.message}
               {...register('reference')}
+            />
+
+            <Input
+              label="Description"
+              placeholder="Detailed description"
+              error={errors.description?.message}
+              {...register('description')}
             />
           </div>
 
@@ -323,6 +348,18 @@ export const JournalEntryModal = ({ isOpen, onClose }) => {
             </Button>
             <Button
               type="submit"
+              name="status"
+              value="Draft"
+              variant="outline"
+              disabled={isSubmitting}
+              className="flex-1 sm:flex-none justify-center"
+            >
+              Save as Draft
+            </Button>
+            <Button
+              type="submit"
+              name="status"
+              value="Posted"
               variant="primary"
               disabled={isSubmitting || !isBalanced}
               className="flex-1 sm:flex-none justify-center"

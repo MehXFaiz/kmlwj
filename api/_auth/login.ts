@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { z } from 'zod';
 import { makeHandler } from '../_utils/handler.js';
 import * as authService from '../_services/auth.service.js';
+import { logAudit } from '../_utils/audit.js';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -15,6 +16,16 @@ export default makeHandler(async (req: VercelRequest, res: VercelResponse) => {
 
   const validatedData = loginSchema.parse(req.body);
   const result = await authService.login(validatedData);
+
+  await logAudit(
+    result.user.id,
+    'User Login',
+    'AUTH',
+    null,
+    null,
+    req.headers['x-forwarded-for'] as string,
+    req.headers['user-agent']
+  );
 
   return res.status(200).json({
     status: 200,

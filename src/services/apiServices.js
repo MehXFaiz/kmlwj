@@ -50,3 +50,13 @@ export const reservedCodeService = {
   update: (id, data) => api.put(`/api/v1/reserved-codes?id=${id}`, data).then((r) => r.data.data),
   delete: (id) => api.delete(`/api/v1/reserved-codes?id=${id}`).then((r) => r.data),
 };
+
+export const reportsService = {
+  getTrialBalance: () => api.get('/api/v1/reports/trial-balance').then((r) => r.data.data),
+  getIncomeStatement: () => api.get('/api/v1/reports/income-statement').then((r) => r.data.data),
+  getBalanceSheet: () => api.get('/api/v1/reports/balance-sheet').then((r) => r.data.data),
+  getGeneralLedger: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return api.get(`/api/v1/general-ledger${qs ? `?${qs}` : ''}`).then((r) => r.data.data);
+  }
+};

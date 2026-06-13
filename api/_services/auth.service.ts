@@ -207,7 +207,9 @@ export async function logout(refreshTokenStr: string) {
       data: { revokedAt: new Date() },
     });
     logger.info({ userId: tokenRecord.userId }, 'User logged out');
+    return tokenRecord.userId;
   }
+  return null;
 }
 
 export async function changePassword(userId: string, data: any) {

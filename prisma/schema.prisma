@@ -88,6 +88,7 @@ model Account {
   currency        String        @default("USD")
   subsidiary      String[]      @default(["Global"])
   initialBalance  Float         @default(0)
+  currentBalance  Float         @default(0)
   detailType      String        @default("Header")
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -151,12 +152,13 @@ model AuditLog {
 
 model JournalEntry {
   id          String             @id @default(uuid()) @db.Uuid
-  jeNumber    String             @unique
-  date        DateTime
+  voucherNo   String             @unique
+  postingDate DateTime
   subsidiary  String
   reference   String
+  description String?
   postedBy    String
-  status      String             @default("Posted")
+  status      String             @default("Draft")
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
   lines       JournalEntryLine[]
