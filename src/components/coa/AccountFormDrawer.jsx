@@ -21,7 +21,7 @@ const accountSchema = zod.object({
   type: zod.enum(['Asset', 'Liability', 'Equity', 'Revenue', 'Expense']),
   detailType: zod.string().min(1, "Detail type is required"),
   parentCode: zod.string().nullable().optional(),
-  level: zod.number().min(0).max(10).optional(),
+  level: zod.any().optional(),
   isLocked: zod.boolean().optional(),
   isReserved: zod.boolean().optional(),
   currency: zod.string().min(3, "Select a valid 3-letter currency code"),
@@ -69,7 +69,7 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
       type: 'Asset',
       detailType: 'Cash',
       parentCode: 'none',
-      level: 1,
+      level: 'MAIN',
       isLocked: false,
       isReserved: false,
       currency: 'USD',
@@ -99,7 +99,9 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
         type: editingAccount.type,
         detailType: editingAccount.detailType,
         parentCode: editingAccount.parentCode || 'none',
-        currency: editingAccount.currency,
+        level: editingAccount.level || 'MAIN',
+        isLocked: editingAccount.status === 'Inactive',
+        currency: editingAccount.currency || 'USD',
         description: editingAccount.description || '',
         initialBalance: editingAccount.initialBalance || 0,
       });
@@ -256,9 +258,11 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
 
           <div>
             <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Account Level</label>
-            <select {...register('level')} className="w-full px-3 py-2 rounded-lg bg-slate-900/60 border border-slate-800 text-slate-200 text-sm">
-              {[1,2,3,4,5,6].map(l => <option key={l} value={l}>Level {l}</option>)}
-            </select>
+            <input 
+              value={watch('parentCode') === 'none' || !watch('parentCode') ? 'MAIN' : 'SUBSIDIARY'}
+              disabled
+              className="w-full px-3 py-2 rounded-lg bg-slate-900/40 border border-slate-800 text-slate-500 text-sm cursor-not-allowed"
+            />
           </div>
 
           <Select
