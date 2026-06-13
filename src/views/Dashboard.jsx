@@ -1,4 +1,5 @@
 import { useMemo, useEffect, useRef, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCoaStore } from '../store/coaStore';
 import { useDashboardStore } from '../store/dashboardStore';
 import { useJournalStore, calculateAccountBalances } from '../store/journalStore';
@@ -239,6 +240,7 @@ function AccountTypeStat({ label, count, pct, color, dotColor }) {
    Main Dashboard
 ───────────────────────────────────────────── */
 export const Dashboard = () => {
+  const navigate = useNavigate();
   const { accounts, fetchAccounts, selectedSubsidiary } = useCoaStore();
   const { journals, auditLogs } = useJournalStore();
   const { stats: dbStats, fetchStats } = useDashboardStore();
@@ -565,17 +567,23 @@ export const Dashboard = () => {
           <SectionHeader title="Quick Actions" subtitle="Common ERP operations" />
           <div className="space-y-2">
             <QuickAction icon={Plus} label="New Journal Entry"
-              color="bg-indigo-950/60 border border-indigo-800/40 text-indigo-400" />
+              color="bg-indigo-950/60 border border-indigo-800/40 text-indigo-400"
+              onClick={() => navigate('/journals')} />
             <QuickAction icon={Layers} label="Manage Chart of Accounts"
-              color="bg-blue-950/60 border border-blue-800/40 text-blue-400" />
+              color="bg-blue-950/60 border border-blue-800/40 text-blue-400"
+              onClick={() => navigate('/coa')} />
             <QuickAction icon={BookOpen} label="View General Ledger"
-              color="bg-violet-950/60 border border-violet-800/40 text-violet-400" />
+              color="bg-violet-950/60 border border-violet-800/40 text-violet-400"
+              onClick={() => navigate('/ledger')} />
             <QuickAction icon={BarChart3} label="Run Financial Reports"
-              color="bg-emerald-950/60 border border-emerald-800/40 text-emerald-400" />
+              color="bg-emerald-950/60 border border-emerald-800/40 text-emerald-400"
+              onClick={() => navigate('/reports')} />
             <QuickAction icon={Users} label="User Permissions"
-              color="bg-amber-950/60 border border-amber-800/40 text-amber-400" />
+              color="bg-amber-950/60 border border-amber-800/40 text-amber-400"
+              onClick={() => navigate('/users-roles')} />
             <QuickAction icon={ShieldCheck} label="View Audit Trail"
-              color="bg-slate-800/60 border border-slate-700/40 text-slate-400" />
+              color="bg-slate-800/60 border border-slate-700/40 text-slate-400"
+              onClick={() => navigate('/audit')} />
           </div>
 
           {/* System status */}
