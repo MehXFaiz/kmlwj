@@ -17,6 +17,8 @@ import {
   Users,
   LogOut,
   X,
+  Heart,
+  FileText
 } from 'lucide-react';
 
 export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }) => {
@@ -41,6 +43,9 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
     { name: 'Revenue Heads', icon: TrendingUp, path: '/revenue-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
     { name: 'Expense Heads', icon: TrendingDown, path: '/expense-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
     { name: 'Reserved Codes', icon: ShieldCheck, path: '/reserved', perms: ['MANAGE_RESERVED_CODES'] },
+    { name: 'Beneficiaries', icon: Users, path: '/beneficiaries' },
+    { name: 'Donations', icon: Heart, path: '/donations' },
+    { name: 'Donation Reports', icon: FileText, path: '/donation-reports' },
     { name: 'Reports', icon: BarChart3, path: '/reports', perms: ['VIEW_REPORTS'] },
     { name: 'Users & Roles', icon: Users, path: '/users-roles', perms: ['MANAGE_USERS', 'MANAGE_ROLES'] },
     { name: 'General Ledger', icon: BookOpen, path: '/ledger', perms: ['VIEW_REPORTS'] },

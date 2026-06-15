@@ -23,6 +23,8 @@ import expenseHandler from './_v1/expense-heads.js';
 import usersHandler from './_v1/users.js';
 import rolesHandler from './_v1/roles.js';
 import auditLogsHandler from './_v1/audit-logs.js';
+import beneficiariesHandler from './_v1/beneficiaries.js';
+import donationsHandler from './_v1/donations.js';
 
 const app = express();
 
@@ -79,5 +81,15 @@ app.put('/api/v1/users', makeExpress(usersHandler));
 app.get('/api/v1/roles', makeExpress(rolesHandler));
 app.put('/api/v1/roles', makeExpress(rolesHandler));
 app.get('/api/v1/audit-logs', makeExpress(auditLogsHandler));
+
+// Donation Management Routes
+app.get('/api/v1/beneficiaries', makeExpress(beneficiariesHandler));
+app.post('/api/v1/beneficiaries', makeExpress(beneficiariesHandler));
+app.put('/api/v1/beneficiaries', makeExpress(beneficiariesHandler));
+app.delete('/api/v1/beneficiaries', makeExpress(beneficiariesHandler));
+
+app.get('/api/v1/donations', makeExpress(donationsHandler));
+app.post('/api/v1/donations', makeExpress(donationsHandler));
+app.put('/api/v1/donations', makeExpress(donationsHandler));
 
 export default app;

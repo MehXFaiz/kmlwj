@@ -22,6 +22,7 @@ model User {
   updatedAt            DateTime       @updatedAt
   refreshTokens        RefreshToken[]
   auditLogs            AuditLog[]
+  donationsCreated     Donation[]     @relation("DonationCreatedBy")
 }
 
 model Role {
@@ -96,6 +97,7 @@ model Account {
   expenseHeads      ExpenseHead[]
   journalEntryLines JournalEntryLine[]
   ledgerEntries     LedgerEntry[]
+  donations         Donation[]    @relation("DonationBankAccount")
 }
 
 model AccountType {
@@ -188,4 +190,56 @@ model LedgerEntry {
   postingDate DateTime
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+enum DonationType {
+  MONTHLY
+  MARRIAGE
+  MEDICAL
+  EMERGENCY
+  EDUCATION
+  CUSTOM
+}
+
+enum PaymentMethod {
+  CASH
+  BANK
+  CHEQUE
+}
+
+enum DonationStatus {
+  PENDING
+  APPROVED
+  CANCELLED
+}
+
+model Beneficiary {
+  id        String     @id @default(uuid()) @db.Uuid
+  name      String
+  cnic      String?    @unique
+  mobile    String?
+  address   String?
+  remarks   String?
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  donations Donation[]
+}
+
+model Donation {
+  id             String         @id @default(uuid()) @db.Uuid
+  beneficiaryId  String         @db.Uuid
+  beneficiary    Beneficiary    @relation(fields: [beneficiaryId], references: [id])
+  donationType   DonationType
+  amount         Float
+  paymentMethod  PaymentMethod
+  bankAccountId  String?        @db.Uuid
+  bankAccount    Account?       @relation("DonationBankAccount", fields: [bankAccountId], references: [id])
+  chequeNumber   String?
+  remarks        String?
+  status         DonationStatus @default(PENDING)
+  createdById    String?        @db.Uuid
+  createdBy      User?          @relation("DonationCreatedBy", fields: [createdById], references: [id])
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 }

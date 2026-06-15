@@ -21,6 +21,11 @@ const ReservedCodes = lazy(() => import('./views/ReservedCodes').then(m => ({ de
 const UsersRoles = lazy(() => import('./views/UsersRoles').then(m => ({ default: m.UsersRoles })));
 const Reports = lazy(() => import('./views/Reports').then(m => ({ default: m.Reports })));
 
+// Donation Module Views
+const Beneficiaries = lazy(() => import('./views/Beneficiaries').then(m => ({ default: m.Beneficiaries })));
+const Donations = lazy(() => import('./views/Donations').then(m => ({ default: m.Donations })));
+const DonationReports = lazy(() => import('./views/DonationReports').then(m => ({ default: m.DonationReports })));
+
 // Auth Views (also lazy-loaded)
 const Login = lazy(() => import('./views/Login').then(m => ({ default: m.Login })));
 const Signup = lazy(() => import('./views/Signup').then(m => ({ default: m.Signup })));
@@ -156,6 +161,9 @@ function App() {
                 <Reports />
               </PermissionGuard>
             } />
+            <Route path="/beneficiaries" element={<Beneficiaries />} />
+            <Route path="/donations" element={<Donations />} />
+            <Route path="/donation-reports" element={<DonationReports />} />
             <Route path="/users-roles" element={
               <PermissionGuard requiredPerms={['MANAGE_USERS', 'MANAGE_ROLES']}>
                 <UsersRoles />
