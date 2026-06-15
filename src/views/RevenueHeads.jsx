@@ -25,7 +25,6 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial }) {
   const handleSave = () => {
     if (!form.name.trim() || !form.category.trim()) return;
     onSave({ ...form });
-    onClose();
   };
 
   return (
@@ -165,12 +164,17 @@ export const RevenueHeads = () => {
   };
 
   const handleSave = async (data) => {
-    if (editItem) {
-      await updateHead(editItem.id, data);
-    } else {
-      await addHead(data);
+    try {
+      if (editItem) {
+        await updateHead(editItem.id, data);
+      } else {
+        await addHead(data);
+      }
+      setEditItem(null);
+      setModalOpen(false);
+    } catch (err) {
+      alert(err?.response?.data?.error?.message || err.message || 'Failed to save. Please ensure inputs are correct (e.g., valid UUID for Linked Account).');
     }
-    setEditItem(null);
   };
 
   const handleDelete = async (id) => {

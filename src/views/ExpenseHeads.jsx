@@ -47,7 +47,7 @@ function ExpenseHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
 
   const handleSave = () => {
     if (!form.name.trim()) return;
-    onSave(form);
+    onSave({ ...form });
   };
 
   return (
@@ -168,13 +168,17 @@ export const ExpenseHeads = () => {
   };
 
   const handleSave = async (data) => {
-    if (editItem) {
-      await updateHead(editItem.id, data);
-    } else {
-      await addHead(data);
+    try {
+      if (editItem) {
+        await updateHead(editItem.id, data);
+      } else {
+        await addHead(data);
+      }
+      setEditItem(null);
+      setModalOpen(false);
+    } catch (err) {
+      alert(err?.response?.data?.error?.message || err.message || 'Failed to save. Please ensure inputs are correct (e.g., valid UUID for Linked Account).');
     }
-    setModalOpen(false);
-    setEditItem(null);
   };
 
   const handleDelete = async (id) => {
