@@ -58,7 +58,7 @@ export const useCoaStore = create((set, get) => ({
         type: account.type,
         detailType: account.detailType || 'Header',
         parentCode: account.parentCode,
-        currency: account.currency || 'USD',
+        currency: account.currency || 'PKR',
         subsidiary: account.subsidiary || ['Global'],
         initialBalance: account.initialBalance || 0,
         description: account.description || '',

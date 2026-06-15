@@ -137,9 +137,9 @@ export const CoaExportImport = () => {
   };
 
   const sampleCsvTemplate = `code,name,type,detailType,parentCode,currency,status,initialBalance,description,subsidiary
-1115,US Savings Account,Asset,Cash,1100,USD,Active,75000,Corporate interest savings,Acme US
-2115,Taxes Payable - State,Liability,Payable,2100,USD,Active,0,State payroll tax withholdings,Acme US;Acme Europe
-6700,Software SaaS Tools,Expense,Expense,6000,USD,Active,4500,General software licenses,Global`;
+1115,US Savings Account,Asset,Cash,1100,PKR,Active,75000,Corporate interest savings,Acme US
+2115,Taxes Payable - State,Liability,Payable,2100,PKR,Active,0,State payroll tax withholdings,Acme US;Acme Europe
+6700,Software SaaS Tools,Expense,Expense,6000,PKR,Active,4500,General software licenses,Global`;
 
   return (
     <div className="flex flex-wrap items-center gap-2">

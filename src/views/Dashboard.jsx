@@ -9,7 +9,7 @@ import {
   RadialBarChart, RadialBar, Legend,
 } from 'recharts';
 import {
-  TrendingUp, TrendingDown, DollarSign, Activity, BarChart3,
+  TrendingUp, TrendingDown, Banknote, Activity, BarChart3,
   ArrowUpRight, ArrowDownRight, Scale, ShieldCheck, ShieldAlert,
   Lock, Unlock, Layers, BookOpen, Zap, Plus, FileText,
   RefreshCw, Download, Bell, ChevronRight, CheckCircle2,
@@ -139,7 +139,7 @@ function DarkTooltip({ active, payload, label }) {
           <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
           <span className="text-slate-400">{p.name}:</span>
           <span className="font-mono font-bold text-slate-200">
-            {typeof p.value === 'number' ? `$${p.value.toLocaleString()}` : p.value}
+            {typeof p.value === 'number' ? `Rs ${p.value.toLocaleString()}` : p.value}
           </span>
         </div>
       ))}
@@ -389,22 +389,22 @@ export const Dashboard = () => {
 
       {/* ── Financial KPI Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard title="Total Assets" value={stats.assets} prefix="$" decimals={2}
-          icon={DollarSign} iconBg="bg-blue-950/60" iconColor="text-blue-400"
+        <KpiCard title="Total Assets" value={stats.assets} prefix="Rs " decimals={2}
+          icon={Banknote} iconBg="bg-blue-950/60" iconColor="text-blue-400"
           trend="up" trendLabel="Liquid + Fixed"
           accent="border-blue-900/40 bg-gradient-to-br from-blue-950/30 to-slate-900/60"
           delay={100} />
-        <KpiCard title="Total Liabilities" value={stats.liabilities} prefix="$" decimals={2}
+        <KpiCard title="Total Liabilities" value={stats.liabilities} prefix="Rs " decimals={2}
           icon={Activity} iconBg="bg-amber-950/60" iconColor="text-amber-400"
           trend="neutral" trendLabel="Payables + Debt"
           accent="border-amber-900/30 bg-gradient-to-br from-amber-950/20 to-slate-900/60"
           delay={180} />
-        <KpiCard title="Total Equity" value={stats.equity} prefix="$" decimals={2}
+        <KpiCard title="Total Equity" value={stats.equity} prefix="Rs " decimals={2}
           icon={Scale} iconBg="bg-violet-950/60" iconColor="text-violet-400"
           trend="up" trendLabel="Shareholder value"
           accent="border-violet-900/30 bg-gradient-to-br from-violet-950/20 to-slate-900/60"
           delay={260} />
-        <KpiCard title="Net Income" value={stats.netIncome} prefix="$" decimals={2}
+        <KpiCard title="Net Income" value={stats.netIncome} prefix="Rs " decimals={2}
           icon={stats.netIncome >= 0 ? TrendingUp : TrendingDown}
           iconBg={stats.netIncome >= 0 ? "bg-emerald-950/60" : "bg-red-950/60"}
           iconColor={stats.netIncome >= 0 ? "text-emerald-400" : "text-red-400"}
@@ -485,7 +485,7 @@ export const Dashboard = () => {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
                 <XAxis dataKey="month" stroke="var(--chart-axis)" fontSize={11} tickLine={false} axisLine={false} />
                 <YAxis stroke="var(--chart-axis)" fontSize={11} tickLine={false} axisLine={false}
-                  tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                  tickFormatter={(v) => `Rs ${(v / 1000).toFixed(0)}k`} />
                 <ChartTooltip content={<DarkTooltip />} />
                 <Area type="monotone" dataKey="Revenue" stroke="var(--chart-revenue)" strokeWidth={2}
                   fill="url(#gRevenue)" dot={false} activeDot={{ r: 4, strokeWidth: 0, fill: 'var(--chart-revenue)' }} />
@@ -550,7 +550,7 @@ export const Dashboard = () => {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
                 <XAxis dataKey="name" stroke="var(--chart-axis)" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="var(--chart-axis)" fontSize={11} tickLine={false} axisLine={false}
-                  tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                  tickFormatter={(v) => `Rs ${(v / 1000).toFixed(0)}k`} />
                 <ChartTooltip content={<DarkTooltip />} />
                 <Bar dataKey="value" name="Balance" radius={[6, 6, 0, 0]}>
                   {balSheetData.map((entry, i) => (

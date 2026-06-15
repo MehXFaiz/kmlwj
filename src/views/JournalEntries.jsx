@@ -111,7 +111,7 @@ export const JournalEntries = () => {
                     {je.lines.map((line, idx) => (
                       <div key={idx} className="text-[11px] grid grid-cols-2 gap-1">
                         <span className="font-mono text-slate-300">{line.accountCode}</span>
-                        <span className="text-right font-mono text-emerald-400">{line.debit > 0 ? `$${line.debit.toFixed(2)}` : line.credit > 0 ? `($${line.credit.toFixed(2)})` : '—'}</span>
+                        <span className="text-right font-mono text-emerald-400">{line.debit > 0 ? `Rs ${line.debit.toFixed(2)}` : line.credit > 0 ? `(Rs ${line.credit.toFixed(2)})` : '—'}</span>
                         {line.description && <span className="col-span-2 text-slate-500 truncate">{line.description}</span>}
                       </div>
                     ))}
@@ -216,8 +216,8 @@ export const JournalEntries = () => {
                                     <tr className="border-b border-slate-850 text-[9px] font-bold text-slate-500 uppercase bg-slate-900/25">
                                       <th className="py-2 px-3 w-40">GL Account</th>
                                       <th className="py-2 px-3">Description / Memo</th>
-                                      <th className="py-2 px-3 w-28 text-right">Debit ($)</th>
-                                      <th className="py-2 px-3 w-28 text-right">Credit ($)</th>
+                                      <th className="py-2 px-3 w-28 text-right">Debit (Rs)</th>
+                                      <th className="py-2 px-3 w-28 text-right">Credit (Rs)</th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-slate-800/50">
@@ -230,10 +230,10 @@ export const JournalEntries = () => {
                                           {line.description || '—'}
                                         </td>
                                         <td className="py-2 px-3 text-right font-mono text-emerald-400">
-                                          {line.debit > 0 ? `$${line.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
+                                          {line.debit > 0 ? `Rs ${line.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
                                         </td>
                                         <td className="py-2 px-3 text-right font-mono text-red-400">
-                                          {line.credit > 0 ? `$${line.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
+                                          {line.credit > 0 ? `Rs ${line.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
                                         </td>
                                       </tr>
                                     ))}

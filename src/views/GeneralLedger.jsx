@@ -165,10 +165,10 @@ export const GeneralLedger = () => {
                       )}
                       <td className="py-3.5 px-4 text-slate-200">{entry.description || '—'}</td>
                       <td className="py-3.5 px-4 text-right font-mono text-emerald-400">
-                        {entry.debit > 0 ? `$${entry.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
+                        {entry.debit > 0 ? `Rs ${entry.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
                       </td>
                       <td className="py-3.5 px-4 text-right font-mono text-red-400">
-                        {entry.credit > 0 ? `$${entry.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
+                        {entry.credit > 0 ? `Rs ${entry.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
                       </td>
                     </tr>
                   ))}

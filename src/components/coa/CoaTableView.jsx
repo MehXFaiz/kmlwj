@@ -157,7 +157,7 @@ export const CoaTableView = ({
           const balance = balances[acc.code] ?? 0;
           return (
             <div className={`text-right font-mono font-semibold ${balance < 0 ? 'text-red-400' : 'text-slate-200'}`}>
-              ${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              Rs {balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           );
         },

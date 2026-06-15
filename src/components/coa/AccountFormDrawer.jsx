@@ -72,7 +72,7 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
       level: 'MAIN',
       isLocked: false,
       isReserved: false,
-      currency: 'USD',
+      currency: 'PKR',
       description: '',
       initialBalance: 0,
     },
@@ -101,7 +101,7 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
         parentCode: editingAccount.parentCode || 'none',
         level: editingAccount.level || 'MAIN',
         isLocked: editingAccount.status === 'Inactive',
-        currency: editingAccount.currency || 'USD',
+        currency: editingAccount.currency || 'PKR',
         description: editingAccount.description || '',
         initialBalance: editingAccount.initialBalance || 0,
       });
@@ -112,7 +112,7 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
         type: 'Asset',
         detailType: 'Cash',
         parentCode: 'none',
-        currency: 'USD',
+        currency: 'PKR',
         description: '',
         initialBalance: 0,
       });
@@ -271,7 +271,7 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
             error={errors.currency?.message}
             {...register('currency')}
           >
-            <option value="USD">USD - US Dollar</option>
+            <option value="PKR">PKR - Pakistani Rupee</option>
             <option value="EUR">EUR - Euro</option>
             <option value="GBP">GBP - British Pound</option>
             <option value="CAD">CAD - Canadian Dollar</option>

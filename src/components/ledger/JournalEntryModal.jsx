@@ -204,8 +204,8 @@ export const JournalEntryModal = ({ isOpen, onClose }) => {
                   <tr className="border-b border-slate-800 text-[10px] font-bold text-slate-400 uppercase bg-slate-900/35">
                     <th className="py-2.5 px-3 w-72">Account</th>
                     <th className="py-2.5 px-3">Description / Memo</th>
-                    <th className="py-2.5 px-3 w-40">Debit ($)</th>
-                    <th className="py-2.5 px-3 w-40">Credit ($)</th>
+                    <th className="py-2.5 px-3 w-40">Debit (Rs)</th>
+                    <th className="py-2.5 px-3 w-40">Credit (Rs)</th>
                     <th className="py-2.5 px-3 w-16 text-center"></th>
                   </tr>
                 </thead>
@@ -319,7 +319,7 @@ export const JournalEntryModal = ({ isOpen, onClose }) => {
                   {isBalanced ? 'Journal is Balanced' : 'Journal is Out of Balance'}
                 </span>
                 <span className="text-[10px] text-slate-500 font-mono">
-                  Difference: ${imbalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  Difference: Rs {imbalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             </div>

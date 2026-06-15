@@ -91,7 +91,7 @@ export const MyAccount = () => {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-slate-400">Currency</span>
-                <span className="text-xs font-medium text-slate-200">USD ($)</span>
+                <span className="text-xs font-medium text-slate-200">PKR (Rs)</span>
               </div>
             </CardContent>
           </Card>

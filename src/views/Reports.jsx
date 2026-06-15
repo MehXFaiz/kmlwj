@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
 import { Button } from '../components/ui/Button';
 import { reportsService } from '../services/apiServices';
 import { showToast } from '../components/ui/Toast';
-import { FileText, DollarSign, PieChart, Activity, RefreshCw, BookOpen } from 'lucide-react';
+import { FileText, Banknote, PieChart, Activity, RefreshCw, BookOpen } from 'lucide-react';
 import { DesktopOnly, MobileOnly } from '../components/common/responsive';
 import { useNavigate } from 'react-router-dom';
 
@@ -49,7 +49,7 @@ export const Reports = () => {
 
   const formatMoney = (val) => {
     if (val === undefined || val === null) return '—';
-    return `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `Rs ${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   return (
@@ -84,7 +84,7 @@ export const Reports = () => {
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
-          <DollarSign className="h-4 w-4" /> Income Statement
+          <Banknote className="h-4 w-4" /> Income Statement
         </button>
         <button
           onClick={() => setActiveTab('balance-sheet')}

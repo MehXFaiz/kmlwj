@@ -113,7 +113,7 @@ var accounts_default = makeHandler(async (req, res) => {
         parentId,
         accountTypeId: accountType.id,
         description,
-        currency: currency || "USD",
+        currency: currency || "PKR",
         subsidiary: subsidiary || ["Global"],
         initialBalance: parseFloat(initialBalance) || 0,
         detailType: detailType || "Header",

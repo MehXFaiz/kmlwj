@@ -198,7 +198,7 @@ export const CoaTreeView = ({
 
                   {/* Balance */}
                   <td className={`py-3.5 px-4 text-right font-mono font-semibold ${balance < 0 ? 'text-red-400' : 'text-slate-200'}`}>
-                    ${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    Rs {balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
 
                   {/* Status Toggle */}

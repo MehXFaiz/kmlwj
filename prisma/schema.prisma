@@ -86,7 +86,7 @@ model Account {
   isReserved      Boolean       @default(false)
   isSystemDefined Boolean       @default(false)
   description     String?
-  currency        String        @default("USD")
+  currency        String        @default("PKR")
   subsidiary      String[]      @default(["Global"])
   initialBalance  Float         @default(0)
   currentBalance  Float         @default(0)
