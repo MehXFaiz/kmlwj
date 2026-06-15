@@ -72,31 +72,30 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
       `}
     >
       {/* Top Section - Brand */}
-      <div>
-        <div className="h-16 flex items-center px-4 border-b border-slate-800/80 justify-between bg-slate-900/60">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className={`flex items-center px-2.5 py-1 rounded-lg bg-gradient-to-r from-indigo-900/80 to-slate-900 border border-indigo-500/30 shadow-md shadow-indigo-500/10 ${showFullBrand ? '' : 'lg:hidden'}`}>
-              <span className="font-black text-sm tracking-[0.2em] bg-gradient-to-r from-indigo-300 via-blue-300 to-emerald-300 bg-clip-text text-transparent whitespace-nowrap">
-                KMLWJ
-              </span>
-            </div>
-            {isCollapsed && (
-              <span className="hidden lg:inline font-black text-sm tracking-widest bg-gradient-to-r from-indigo-300 via-blue-300 to-emerald-300 bg-clip-text text-transparent whitespace-nowrap">
-                K
-              </span>
-            )}
+      <div className="h-16 flex-shrink-0 flex items-center px-4 border-b border-slate-800/80 justify-between bg-slate-900/60">
+        <div className="flex items-center gap-3 overflow-hidden">
+          <div className={`flex items-center px-2.5 py-1 rounded-lg bg-gradient-to-r from-indigo-900/80 to-slate-900 border border-indigo-500/30 shadow-md shadow-indigo-500/10 ${showFullBrand ? '' : 'lg:hidden'}`}>
+            <span className="font-black text-sm tracking-[0.2em] bg-gradient-to-r from-indigo-300 via-blue-300 to-emerald-300 bg-clip-text text-transparent whitespace-nowrap">
+              KMLWJ
+            </span>
           </div>
-          <button
-            onClick={() => setIsMobileOpen(false)}
-            className="p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 transition-colors lg:hidden"
-            aria-label="Close navigation menu"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          {isCollapsed && (
+            <span className="hidden lg:inline font-black text-sm tracking-widest bg-gradient-to-r from-indigo-300 via-blue-300 to-emerald-300 bg-clip-text text-transparent whitespace-nowrap">
+              K
+            </span>
+          )}
         </div>
+        <button
+          onClick={() => setIsMobileOpen(false)}
+          className="p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 transition-colors lg:hidden"
+          aria-label="Close navigation menu"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
 
-        {/* Navigation Items */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-700 hover:scrollbar-thumb-slate-600">
+      {/* Navigation Items */}
+      <nav className="flex-1 min-h-0 px-3 py-4 space-y-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-700 hover:scrollbar-thumb-slate-600">
           {menuItems.filter(item => !item.perms || hasPerm(item.perms)).map((item) => (
             <NavLink
               key={item.path}
@@ -119,11 +118,10 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
               )}
             </NavLink>
           ))}
-        </nav>
-      </div>
+      </nav>
 
       {/* Bottom Section - User Session, Settings & Toggle */}
-      <div className="p-3 border-t border-slate-800/80 bg-slate-950/20">
+      <div className="flex-shrink-0 p-3 border-t border-slate-800/80 bg-slate-950/20">
         
         {/* User profile section */}
         <div className={`mb-3 p-3 rounded-xl bg-slate-950/45 border border-slate-800/80 flex items-center justify-between gap-2 overflow-hidden ${isCollapsed ? 'lg:hidden' : ''}`}>
