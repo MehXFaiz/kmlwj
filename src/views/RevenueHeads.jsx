@@ -144,7 +144,7 @@ export const RevenueHeads = () => {
   const filtered = useMemo(() => {
     let list = [...heads];
     if (search) list = list.filter(h =>
-      h.name.toLowerCase().includes(search.toLowerCase()) ||
+      (h.name || '').toLowerCase().includes(search.toLowerCase()) ||
       (h.category && h.category.toLowerCase().includes(search.toLowerCase()))
     );
     if (filterStatus !== 'All') {

@@ -152,7 +152,7 @@ export const ExpenseHeads = () => {
 
   const filtered = useMemo(() => {
     let list = [...heads];
-    if (search) list = list.filter(h => h.name.toLowerCase().includes(search.toLowerCase()));
+    if (search) list = list.filter(h => (h.name || '').toLowerCase().includes(search.toLowerCase()));
     if (filterStatus !== 'All') list = list.filter(h => h.isActive === (filterStatus === 'Active'));
     if (filterCat !== 'All') list = list.filter(h => h.category === filterCat);
     list.sort((a, b) => {

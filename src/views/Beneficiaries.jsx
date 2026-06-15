@@ -105,7 +105,7 @@ export const Beneficiaries = () => {
 
   const filtered = useMemo(() => {
     return beneficiaries.filter(b => 
-      b.name.toLowerCase().includes(search.toLowerCase()) || 
+      (b.name || '').toLowerCase().includes(search.toLowerCase()) || 
       (b.cnic && b.cnic.includes(search)) ||
       (b.mobile && b.mobile.includes(search))
     );
