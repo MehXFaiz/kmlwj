@@ -70,19 +70,21 @@ var accounts_default = makeHandler(async (req, res) => {
     if (!checkPerm("CREATE_ACCOUNT")) {
       return res.status(403).json({ error: { message: "Forbidden: Insufficient permissions", status: 403 } });
     }
-    const { code, name, type, detailType, parentCode, currency, subsidiary, initialBalance, description } = req.body;
+    const { code, name, type, detailType, parentCode, currency, subsidiary, initialBalance, description, isLocked, isReserved } = req.body;
     if (!code || !name || !type) {
       return res.status(400).json({ error: { message: "Code, Name, and Type are required", status: 400 } });
     }
-    const reservedMatch = await prisma.reservedCode.findFirst({
-      where: {
-        isActive: true,
-        reserveStart: { lte: code },
-        reserveEnd: { gte: code }
+    if (!isReserved) {
+      const reservedMatch = await prisma.reservedCode.findFirst({
+        where: {
+          isActive: true,
+          reserveStart: { lte: code },
+          reserveEnd: { gte: code }
+        }
+      });
+      if (reservedMatch) {
+        return res.status(400).json({ error: { message: `Code ${code} falls within a reserved range: ${reservedMatch.reserveReason}`, status: 400 } });
       }
-    });
-    if (reservedMatch) {
-      return res.status(400).json({ error: { message: `Code ${code} falls within a reserved range: ${reservedMatch.reserveReason}`, status: 400 } });
     }
     const typeNameUpper = type.toUpperCase();
     let accountType = await prisma.accountType.findUnique({ where: { name: typeNameUpper } });
@@ -114,7 +116,9 @@ var accounts_default = makeHandler(async (req, res) => {
         currency: currency || "USD",
         subsidiary: subsidiary || ["Global"],
         initialBalance: parseFloat(initialBalance) || 0,
-        detailType: detailType || "Header"
+        detailType: detailType || "Header",
+        isLocked: !!isLocked,
+        isReserved: !!isReserved
       }
     });
     await logAudit(req.user.id, "Create Account", "COA", null, newAccount, req.headers["x-forwarded-for"], req.headers["user-agent"]);
@@ -136,17 +140,19 @@ var accounts_default = makeHandler(async (req, res) => {
     if (!checkPerm(requiredPerm)) {
       return res.status(403).json({ error: { message: "Forbidden: Insufficient permissions", status: 403 } });
     }
-    const { code, name, type, detailType, parentCode, currency, subsidiary, initialBalance, description, isLocked } = req.body;
+    const { code, name, type, detailType, parentCode, currency, subsidiary, initialBalance, description, isLocked, isReserved } = req.body;
     if (code !== void 0) {
-      const reservedMatch = await prisma.reservedCode.findFirst({
-        where: {
-          isActive: true,
-          reserveStart: { lte: code },
-          reserveEnd: { gte: code }
+      if (isReserved !== true && existingAccount.isReserved !== true) {
+        const reservedMatch = await prisma.reservedCode.findFirst({
+          where: {
+            isActive: true,
+            reserveStart: { lte: code },
+            reserveEnd: { gte: code }
+          }
+        });
+        if (reservedMatch) {
+          return res.status(400).json({ error: { message: `Code ${code} falls within a reserved range: ${reservedMatch.reserveReason}`, status: 400 } });
         }
-      });
-      if (reservedMatch) {
-        return res.status(400).json({ error: { message: `Code ${code} falls within a reserved range: ${reservedMatch.reserveReason}`, status: 400 } });
       }
     }
     const updateData = {};
@@ -158,6 +164,7 @@ var accounts_default = makeHandler(async (req, res) => {
     if (initialBalance !== void 0) updateData.initialBalance = parseFloat(initialBalance) || 0;
     if (detailType !== void 0) updateData.detailType = detailType;
     if (isLocked !== void 0) updateData.isLocked = isLocked;
+    if (isReserved !== void 0) updateData.isReserved = isReserved;
     if (type !== void 0) {
       const typeNameUpper = type.toUpperCase();
       let accountType = await prisma.accountType.findUnique({ where: { name: typeNameUpper } });

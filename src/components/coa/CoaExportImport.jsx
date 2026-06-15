@@ -55,7 +55,7 @@ export const CoaExportImport = () => {
   };
 
   // Import COA from CSV
-  const handleImport = () => {
+  const handleImport = async () => {
     try {
       if (!csvInput.trim()) {
         alert('Please paste CSV content first.');
