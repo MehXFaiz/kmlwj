@@ -26,6 +26,11 @@ import auditLogsHandler from './_v1/audit-logs.js';
 import reservedCodesHandler from './_v1/reserved-codes.js';
 import beneficiariesHandler from './_v1/beneficiaries.js';
 import donationsHandler from './_v1/donations.js';
+import generalLedgerHandler from './_v1/general-ledger.js';
+import journalEntriesHandler from './_v1/journal-entries.js';
+import trialBalanceHandler from './_v1/reports/trial-balance.js';
+import incomeStatementHandler from './_v1/reports/income-statement.js';
+import balanceSheetHandler from './_v1/reports/balance-sheet.js';
 
 const app = express();
 
@@ -96,5 +101,17 @@ app.delete('/api/v1/beneficiaries', makeExpress(beneficiariesHandler));
 app.get('/api/v1/donations', makeExpress(donationsHandler));
 app.post('/api/v1/donations', makeExpress(donationsHandler));
 app.put('/api/v1/donations', makeExpress(donationsHandler));
+
+// Ledger & Journals
+app.get('/api/v1/general-ledger', makeExpress(generalLedgerHandler));
+app.get('/api/v1/journal-entries', makeExpress(journalEntriesHandler));
+app.post('/api/v1/journal-entries', makeExpress(journalEntriesHandler));
+app.put('/api/v1/journal-entries', makeExpress(journalEntriesHandler));
+app.delete('/api/v1/journal-entries', makeExpress(journalEntriesHandler));
+
+// Financial Reports
+app.get('/api/v1/reports/trial-balance', makeExpress(trialBalanceHandler));
+app.get('/api/v1/reports/income-statement', makeExpress(incomeStatementHandler));
+app.get('/api/v1/reports/balance-sheet', makeExpress(balanceSheetHandler));
 
 export default app;

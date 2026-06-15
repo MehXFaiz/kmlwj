@@ -145,9 +145,9 @@ export const Donations = () => {
 
   const filtered = useMemo(() => {
     return donations.filter(d => 
-      d.beneficiary?.name?.toLowerCase().includes(search.toLowerCase()) || 
-      d.donationType.toLowerCase().includes(search.toLowerCase()) ||
-      d.paymentMethod.toLowerCase().includes(search.toLowerCase())
+      (d.beneficiary?.name || '').toLowerCase().includes(search.toLowerCase()) || 
+      (d.donationType || '').toLowerCase().includes(search.toLowerCase()) ||
+      (d.paymentMethod || '').toLowerCase().includes(search.toLowerCase())
     );
   }, [donations, search]);
 
