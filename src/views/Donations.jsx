@@ -7,12 +7,12 @@ import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/
 
 function DonationModal({ isOpen, onClose, onSave, initial, beneficiaries, accounts }) {
   const [form, setForm] = useState(
-    initial || { beneficiaryId: '', donationType: 'MONTHLY', amount: '', paymentMethod: 'CASH', bankAccountId: '', chequeNumber: '', remarks: '' }
+    initial || { beneficiaryId: '', donationType: 'MONTHLY', amount: '', paymentMethod: 'CASH', bankAccountId: '', chequeNumber: '', donorBankName: '', remarks: '' }
   );
 
   useEffect(() => {
     if (isOpen) {
-      setForm(initial || { beneficiaryId: '', donationType: 'MONTHLY', amount: '', paymentMethod: 'CASH', bankAccountId: '', chequeNumber: '', remarks: '' });
+      setForm(initial || { beneficiaryId: '', donationType: 'MONTHLY', amount: '', paymentMethod: 'CASH', bankAccountId: '', chequeNumber: '', donorBankName: '', remarks: '' });
     }
   }, [isOpen, initial]);
 
@@ -74,8 +74,7 @@ function DonationModal({ isOpen, onClose, onSave, initial, beneficiaries, accoun
 
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Payment Method *</label>
-            <select value={form.paymentMethod} onChange={e => setForm(f => ({ ...f, paymentMethod: e.target.value, bankAccountId: '', chequeNumber: '' }))}
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-pink-600/60 transition-all">
+            <select value={form.paymentMethod} onChange={e => setForm(f => ({ ...f, paymentMethod: e.target.value, bankAccountId: '', chequeNumber: '', donorBankName: '' }))} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all">
               {['CASH', 'BANK', 'CHEQUE'].map(t => (
                 <option key={t} value={t}>{t}</option>
               ))}
@@ -101,6 +100,18 @@ function DonationModal({ isOpen, onClose, onSave, initial, beneficiaries, accoun
                     placeholder="CHQ-001" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-pink-600/60 transition-all" />
                 </div>
               )}
+            </div>
+          )}
+
+          {(form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && (
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Donor Bank (Pakistani Banks)</label>
+              <select value={form.donorBankName} onChange={e => setForm(f => ({ ...f, donorBankName: e.target.value }))} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all">
+                <option value="">Select Bank (Optional)</option>
+                {['Habib Bank Limited (HBL)', 'National Bank of Pakistan (NBP)', 'Meezan Bank', 'United Bank Limited (UBL)', 'MCB Bank', 'Allied Bank Limited (ABL)', 'Bank Alfalah', 'Standard Chartered Bank', 'Askari Bank', 'Bank AL Habib', 'Faysal Bank', 'Soneri Bank', 'Bank of Punjab (BOP)', 'JS Bank', 'Dubai Islamic Bank', 'Al Baraka Bank', 'Bank Islami', 'Sindh Bank', 'Habib Metropolitan Bank', 'First Women Bank', 'Samba Bank', 'Silkbank', 'Summit Bank'].map(b => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
             </div>
           )}
 
@@ -214,7 +225,14 @@ export const Donations = () => {
                     <td className="px-4 py-3.5"><p className="text-sm font-semibold text-slate-200">{d.beneficiary?.name}</p></td>
                     <td className="px-4 py-3.5"><span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-slate-800/50 text-slate-300 border-slate-700/40">{d.donationType}</span></td>
                     <td className="px-4 py-3.5 text-sm font-bold text-slate-200">{d.amount.toLocaleString()}</td>
-                    <td className="px-4 py-3.5 text-xs text-slate-400">{d.paymentMethod}</td>
+                    <td className="px-4 py-3.5 text-xs text-slate-400">
+                      <div>{d.paymentMethod}</div>
+                      {(d.paymentMethod === 'CHEQUE' || d.paymentMethod === 'BANK') && (d.donorBankName || d.chequeNumber) && (
+                        <div className="text-[10px] text-slate-500 mt-0.5 whitespace-nowrap">
+                          {d.donorBankName} {d.chequeNumber ? `#${d.chequeNumber}` : ''}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-3.5">
                       {d.status === 'APPROVED' ? (
                          <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border bg-emerald-950/60 text-emerald-400 border-emerald-900/50">Approved</span>

@@ -110,7 +110,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     // Action: Create Donation
-    const { beneficiaryId, donationType, amount, paymentMethod, bankAccountId, chequeNumber, remarks } = req.body;
+    const { beneficiaryId, donationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks } = req.body;
 
     if (!beneficiaryId || !donationType || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: 'Missing required fields', status: 400 } });
@@ -133,6 +133,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         paymentMethod,
         bankAccountId: bankAccountId || null,
         chequeNumber: chequeNumber || null,
+        donorBankName: donorBankName || null,
         remarks: remarks || null,
         createdById: req.user.id,
       },
@@ -151,7 +152,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if (!existingDonation) return res.status(404).json({ error: { message: 'Donation not found', status: 404 } });
     if (existingDonation.status !== 'PENDING') return res.status(400).json({ error: { message: 'Only pending donations can be updated', status: 400 } });
 
-    const { beneficiaryId, donationType, amount, paymentMethod, bankAccountId, chequeNumber, remarks, status } = req.body;
+    const { beneficiaryId, donationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks, status } = req.body;
 
     const updatedDonation = await prisma.donation.update({
       where: { id },
@@ -162,6 +163,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         paymentMethod: paymentMethod || undefined,
         bankAccountId: bankAccountId !== undefined ? (bankAccountId || null) : undefined,
         chequeNumber: chequeNumber !== undefined ? (chequeNumber || null) : undefined,
+        donorBankName: donorBankName !== undefined ? (donorBankName || null) : undefined,
         remarks: remarks !== undefined ? (remarks || null) : undefined,
         status: status || undefined,
       },

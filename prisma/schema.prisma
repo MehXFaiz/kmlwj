@@ -236,6 +236,7 @@ model Donation {
   bankAccountId  String?        @db.Uuid
   bankAccount    Account?       @relation("DonationBankAccount", fields: [bankAccountId], references: [id])
   chequeNumber   String?
+  donorBankName  String?
   remarks        String?
   status         DonationStatus @default(PENDING)
   createdById    String?        @db.Uuid

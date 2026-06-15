@@ -85,7 +85,7 @@ var donations_default = makeHandler(async (req, res) => {
       await logAudit(req.user.id, "Approve Donation", "DONATION", donation, result.approvedDonation, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, data: result.approvedDonation, message: "Donation approved and journal entries created successfully" });
     }
-    const { beneficiaryId, donationType, amount, paymentMethod, bankAccountId, chequeNumber, remarks } = req.body;
+    const { beneficiaryId, donationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks } = req.body;
     if (!beneficiaryId || !donationType || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: "Missing required fields", status: 400 } });
     }
@@ -106,6 +106,7 @@ var donations_default = makeHandler(async (req, res) => {
         paymentMethod,
         bankAccountId: bankAccountId || null,
         chequeNumber: chequeNumber || null,
+        donorBankName: donorBankName || null,
         remarks: remarks || null,
         createdById: req.user.id
       }
@@ -119,7 +120,7 @@ var donations_default = makeHandler(async (req, res) => {
     const existingDonation = await prisma.donation.findUnique({ where: { id } });
     if (!existingDonation) return res.status(404).json({ error: { message: "Donation not found", status: 404 } });
     if (existingDonation.status !== "PENDING") return res.status(400).json({ error: { message: "Only pending donations can be updated", status: 400 } });
-    const { beneficiaryId, donationType, amount, paymentMethod, bankAccountId, chequeNumber, remarks, status } = req.body;
+    const { beneficiaryId, donationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks, status } = req.body;
     const updatedDonation = await prisma.donation.update({
       where: { id },
       data: {
@@ -129,6 +130,7 @@ var donations_default = makeHandler(async (req, res) => {
         paymentMethod: paymentMethod || void 0,
         bankAccountId: bankAccountId !== void 0 ? bankAccountId || null : void 0,
         chequeNumber: chequeNumber !== void 0 ? chequeNumber || null : void 0,
+        donorBankName: donorBankName !== void 0 ? donorBankName || null : void 0,
         remarks: remarks !== void 0 ? remarks || null : void 0,
         status: status || void 0
       }
