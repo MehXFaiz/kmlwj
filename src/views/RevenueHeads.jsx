@@ -9,7 +9,7 @@ import {
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 
 /* ─── Add / Edit Modal ─── */
-function RevenueHeadModal({ isOpen, onClose, onSave, initial }) {
+function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
   const [form, setForm] = useState(
     initial || { name: '', category: 'Hall Bookings', accountId: '', isActive: true }
   );
@@ -72,12 +72,16 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial }) {
             </div>
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Linked Account ID</label>
-              <input
+              <select
                 value={form.accountId || ''}
                 onChange={e => setForm(f => ({ ...f, accountId: e.target.value }))}
-                placeholder="Optional UUID"
-                className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm font-mono placeholder-slate-600 focus:outline-none focus:border-emerald-600/60 transition-all"
-              />
+                className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-emerald-600/60 transition-all"
+              >
+                <option value="">No Linked Account (Optional)</option>
+                {accounts.map(a => (
+                  <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -125,6 +129,7 @@ const CAT_COLORS = {
 
 export const RevenueHeads = () => {
   const { heads, fetchHeads, addHead, updateHead, deleteHead } = useRevenueStore();
+  const { flatAccounts, fetchAccountsList } = useCoaStore();
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterCat, setFilterCat] = useState('All');
@@ -136,7 +141,8 @@ export const RevenueHeads = () => {
 
   useEffect(() => {
     fetchHeads();
-  }, [fetchHeads]);
+    fetchAccountsList();
+  }, [fetchHeads, fetchAccountsList]);
 
   const categories = useMemo(() => ['All', ...new Set(heads.map(h => h.category))], [heads]);
 
@@ -380,6 +386,7 @@ export const RevenueHeads = () => {
         onClose={() => { setModalOpen(false); setEditItem(null); }}
         onSave={handleSave}
         initial={editItem}
+        accounts={flatAccounts}
       />
     </div>
   );

@@ -93,7 +93,7 @@ function ExpenseHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
               className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-red-600/60 transition-all">
               <option value="">-- None --</option>
               {accounts.map(acc => (
-                <option key={acc.id} value={acc.id}>{acc.glCode} - {acc.accountName}</option>
+                <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
               ))}
             </select>
           </div>
