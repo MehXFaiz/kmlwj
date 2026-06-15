@@ -140,7 +140,7 @@ export const Donations = () => {
   }, [fetchDonations, fetchBeneficiaries, fetchAccountsList]);
 
   const bankAccounts = useMemo(() => {
-    return flatAccounts.filter(a => (a.accountName || '').toLowerCase().includes('bank') || (a.accountType?.name || '').toLowerCase() === 'bank');
+    return flatAccounts.filter(a => (a.name || '').toLowerCase().includes('bank') || (a.type || '').toLowerCase().includes('bank'));
   }, [flatAccounts]);
 
   const filtered = useMemo(() => {
