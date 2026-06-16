@@ -83,8 +83,11 @@ export async function apiRequest(path, options = {}) {
         }
       } catch (error) {
         isRefreshing = false;
-        tokenStorage.clear();
-        window.dispatchEvent(new Event('auth_session_expired'));
+        // Check if error is a Response object and has status property
+        if (error.status === 401 || error.status === 403) {
+          tokenStorage.clear();
+          window.dispatchEvent(new Event('auth_session_expired'));
+        }
         throw error;
       }
     }

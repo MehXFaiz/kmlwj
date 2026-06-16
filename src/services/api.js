@@ -79,8 +79,10 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         isRefreshing = false;
-        tokenStorage.clear();
-        window.dispatchEvent(new Event('auth_session_expired'));
+        if (refreshError.response && (refreshError.response.status === 401 || refreshError.response.status === 403)) {
+          tokenStorage.clear();
+          window.dispatchEvent(new Event('auth_session_expired'));
+        }
         return Promise.reject(refreshError);
       }
     }

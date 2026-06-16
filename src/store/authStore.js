@@ -39,7 +39,9 @@ export const useAuthStore = create((set, get) => {
         });
         return true;
       } catch (err) {
-        tokenStorage.clear();
+        if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+          tokenStorage.clear();
+        }
         set({ user: null, role: null, permissions: [], isAuthenticated: false, loading: false });
         return false;
       }
