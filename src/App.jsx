@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense, useEffect } from 'react';
+import React, { useState, lazy, Suspense, useEffect, Component } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { SplashScreen } from './components/common/SplashScreen';
 import { Sidebar } from './components/common/Sidebar';
@@ -31,6 +31,42 @@ const Login = lazy(() => import('./views/Login').then(m => ({ default: m.Login }
 const Signup = lazy(() => import('./views/Signup').then(m => ({ default: m.Signup })));
 const ForgotPassword = lazy(() => import('./views/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
 const ResetPassword = lazy(() => import('./views/ResetPassword').then(m => ({ default: m.ResetPassword })));
+
+// Error Boundary for Chunk Load Errors (new deployments)
+class ChunkErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    const isChunkLoadError = 
+      error?.name === 'ChunkLoadError' || 
+      error?.message?.includes('Failed to fetch dynamically imported module') || 
+      error?.message?.includes('Importing a module script failed');
+      
+    if (isChunkLoadError) {
+      window.location.reload();
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-screen w-screen bg-slate-950 text-center px-4">
+          <div className="h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
+          <h3 className="text-lg font-bold text-slate-200">Applying latest updates...</h3>
+          <p className="text-sm text-slate-500 mt-2">Loading the newest version of the application.</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // Protected Routes Shell
 const ProtectedRoutesWrapper = ({ isCollapsed, setIsCollapsed }) => {
@@ -121,12 +157,13 @@ function App() {
 
       {/* Main ERP Shell */}
       <Router>
-        <Suspense fallback={
-          <div className="flex items-center justify-center h-screen w-screen bg-slate-950">
-            <div className="h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          </div>
-        }>
-        <Routes>
+        <ChunkErrorBoundary>
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-screen w-screen bg-slate-950">
+              <div className="h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          }>
+          <Routes>
           {/* Public Authentication Screens */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
@@ -204,6 +241,7 @@ function App() {
           </Route>
         </Routes>
         </Suspense>
+        </ChunkErrorBoundary>
       </Router>
     </ThemeProvider>
   );

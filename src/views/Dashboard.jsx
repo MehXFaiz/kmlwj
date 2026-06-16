@@ -470,7 +470,7 @@ export const Dashboard = () => {
             }
           />
           <div className="h-48 sm:h-56">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={1}>
               <AreaChart data={dbStats?.monthlyData || []} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gRevenue" x1="0" y1="0" x2="0" y2="1">
@@ -501,7 +501,7 @@ export const Dashboard = () => {
         <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5 shadow-none">
           <SectionHeader title="Account Distribution" subtitle="By account type" />
           <div className="h-36 sm:h-40 mb-3">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={1}>
               <PieChart>
                 <Pie data={typeDistData} cx="50%" cy="50%" innerRadius={40} outerRadius={68}
                   paddingAngle={3} dataKey="value" strokeWidth={0}>
@@ -545,7 +545,7 @@ export const Dashboard = () => {
             }
           />
           <div className="h-48 sm:h-56">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={1}>
               <BarChart data={balSheetData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barSize={32}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
                 <XAxis dataKey="name" stroke="var(--chart-axis)" fontSize={12} tickLine={false} axisLine={false} />
