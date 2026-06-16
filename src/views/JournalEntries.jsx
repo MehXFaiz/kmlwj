@@ -102,8 +102,8 @@ export const JournalEntries = () => {
                     <Badge variant="brand">{je.subsidiary}</Badge>
                   </div>
                   <div className="flex justify-between font-mono text-xs">
-                    <span className="text-emerald-400">DR ${debitTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                    <span className="text-slate-400">CR ${creditTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span className="text-emerald-400">DR PKR {debitTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span className="text-slate-400">CR PKR {creditTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   </div>
                 </button>
                 {isExpanded && (
@@ -176,10 +176,10 @@ export const JournalEntries = () => {
                           {je.reference} {je.description && <span className="text-slate-500 font-normal ml-1">- {je.description}</span>}
                         </td>
                         <td className="py-3.5 px-4 text-right font-mono font-semibold text-emerald-400">
-                          ${debitTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          PKR {debitTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </td>
                         <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-300">
-                          ${creditTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          PKR {creditTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </td>
                         <td className="py-3.5 px-4 text-center">
                           {getStatusBadge(je.status)}
@@ -241,10 +241,10 @@ export const JournalEntries = () => {
                                       <td className="py-2 px-3">Total Voucher</td>
                                       <td className="py-2 px-3"></td>
                                       <td className="py-2 px-3 text-right font-mono text-emerald-400">
-                                        ${debitTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        PKR {debitTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                       </td>
                                       <td className="py-2 px-3 text-right font-mono text-slate-300">
-                                        ${creditTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        PKR {creditTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                       </td>
                                     </tr>
                                   </tbody>

@@ -48,7 +48,7 @@ export const JournalEntryModal = ({ isOpen, onClose }) => {
     resolver: zodResolver(journalSchema),
     defaultValues: {
       postingDate: new Date().toISOString().split('T')[0],
-      voucherNo: '',
+      voucherNo: `JE-${Math.floor(100000 + Math.random() * 900000)}`,
       subsidiary: selectedSubsidiary === 'Global' ? 'Acme US' : selectedSubsidiary,
       reference: '',
       description: '',
@@ -77,7 +77,7 @@ export const JournalEntryModal = ({ isOpen, onClose }) => {
       setSuccess(false);
       reset({
         postingDate: new Date().toISOString().split('T')[0],
-        voucherNo: '',
+        voucherNo: `JE-${Math.floor(100000 + Math.random() * 900000)}`,
         subsidiary: selectedSubsidiary === 'Global' ? 'Acme US' : selectedSubsidiary,
         reference: '',
         description: '',
@@ -329,13 +329,13 @@ export const JournalEntryModal = ({ isOpen, onClose }) => {
               <div>
                 <span className="block text-[10px] font-bold text-slate-500 uppercase">Total Debits</span>
                 <span className="font-mono text-sm font-bold text-slate-200">
-                  ${totalDebits.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  PKR {totalDebits.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               <div>
                 <span className="block text-[10px] font-bold text-slate-500 uppercase">Total Credits</span>
                 <span className="font-mono text-sm font-bold text-slate-200">
-                  ${totalCredits.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  PKR {totalCredits.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             </div>
