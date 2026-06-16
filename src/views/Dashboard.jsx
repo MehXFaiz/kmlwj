@@ -442,11 +442,11 @@ export const Dashboard = () => {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 font-mono text-xs sm:text-sm font-bold overflow-x-auto pb-1">
-          <span className="text-blue-400">${stats.assets.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+          <span className="text-blue-400">PKR {stats.assets.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
           <span className="text-slate-600">=</span>
-          <span className="text-amber-400">${stats.liabilities.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+          <span className="text-amber-400">PKR {stats.liabilities.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
           <span className="text-slate-600">+</span>
-          <span className="text-violet-400">${stats.equity.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+          <span className="text-violet-400">PKR {stats.equity.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
           <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
             stats.isEquationBalanced
               ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-900/50'
@@ -640,7 +640,7 @@ export const Dashboard = () => {
                   <div className="flex items-center justify-between gap-2 text-[11px]">
                     <span className="text-slate-500">{je.date}</span>
                     <span className="font-mono font-bold text-emerald-400">
-                      ${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      PKR {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>
@@ -675,7 +675,7 @@ export const Dashboard = () => {
                       </td>
                       <td className="py-2.5 pr-3">
                         <span className="font-mono text-[11px] font-bold text-emerald-400">
-                          ${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          PKR {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </span>
                       </td>
                       <td className="py-2.5 text-right">
