@@ -98,12 +98,7 @@ export const JournalEntryModal = ({ isOpen, onClose }) => {
       return;
     }
     
-    // Additional validation: cannot have both debit and credit on the same line
-    const invalidLine = data.lines.some(l => l.debit > 0 && l.credit > 0);
-    if (invalidLine) {
-      alert("Validation error: A line cannot contain both a Debit and a Credit.");
-      return;
-    }
+
 
     const payload = { ...data, status };
     const res = await addJournalEntry(payload);
