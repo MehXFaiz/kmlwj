@@ -16,6 +16,7 @@ export const JournalEntries = () => {
 
   useEffect(() => {
     fetchJournals(selectedSubsidiary);
+    useCoaStore.getState().fetchAccounts();
   }, [fetchJournals, selectedSubsidiary]);
 
   const toggleExpand = (id) => {
