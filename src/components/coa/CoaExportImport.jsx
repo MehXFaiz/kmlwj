@@ -206,9 +206,25 @@ export const CoaExportImport = () => {
 
               {/* Paste box */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  CSV Raw Data
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    CSV Raw Data
+                  </label>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    className="text-xs text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        setCsvInput(event.target.result);
+                      };
+                      reader.readAsText(file);
+                    }}
+                  />
+                </div>
                 <textarea
                   value={csvInput}
                   onChange={(e) => setCsvInput(e.target.value)}
