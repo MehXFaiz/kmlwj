@@ -92,8 +92,8 @@ export const JournalEntryModal = ({ isOpen, onClose }) => {
   const onSubmitForm = async (data, e) => {
     const status = e.nativeEvent?.submitter?.value || 'Draft';
     
-    // We enforce double entry for drafts and posted
-    if (!isBalanced) {
+    // We enforce double entry for posted journals
+    if (status === 'Posted' && !isBalanced) {
       alert("Double-entry accounting error: Debits and credits must balance!");
       return;
     }
@@ -361,7 +361,7 @@ export const JournalEntryModal = ({ isOpen, onClose }) => {
               name="status"
               value="Posted"
               variant="primary"
-              disabled={isSubmitting || !isBalanced}
+              disabled={isSubmitting}
               className="flex-1 sm:flex-none justify-center"
             >
               Post Journal Entry
