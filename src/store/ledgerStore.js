@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import api from '../services/api';
 
 export const useLedgerStore = create((set, get) => ({
   ledgerData: null,
@@ -16,17 +17,10 @@ export const useLedgerStore = create((set, get) => ({
       if (filters.page) queryParams.append('page', filters.page);
       if (filters.limit) queryParams.append('limit', filters.limit);
 
-      const response = await fetch(`/api/v1/general-ledger?${queryParams.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error?.message || 'Failed to fetch ledger');
-      
-      set({ ledgerData: data.data, isLoading: false });
+      const res = await api.get(`/api/v1/general-ledger?${queryParams.toString()}`);
+      set({ ledgerData: res.data.data, isLoading: false });
     } catch (err) {
-      set({ error: err.message, isLoading: false });
+      set({ error: err.message || 'Failed to fetch ledger', isLoading: false });
     }
   },
 

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import api from '../services/api';
 
 export const useJournalStore = create((set, get) => ({
   journals: [],
@@ -8,71 +9,44 @@ export const useJournalStore = create((set, get) => ({
   fetchJournals: async (subsidiary = 'Global', page = 1, limit = 100) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await fetch(`/api/v1/journal-entries?subsidiary=${subsidiary}&page=${page}&limit=${limit}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error?.message || 'Failed to fetch journals');
-      
-      set({ journals: data.data, isLoading: false });
+      const res = await api.get(`/api/v1/journal-entries?subsidiary=${subsidiary}&page=${page}&limit=${limit}`);
+      set({ journals: res.data.data, isLoading: false });
     } catch (err) {
-      set({ error: err.message, isLoading: false });
+      set({ error: err.message || 'Failed to fetch journals', isLoading: false });
     }
   },
 
   addJournalEntry: async (entry) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await fetch('/api/v1/journal-entries', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(entry)
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error?.message || 'Failed to create journal entry');
+      const res = await api.post('/api/v1/journal-entries', entry);
       
       // Refresh the list after successful creation
       await get().fetchJournals(entry.subsidiary || 'Global');
       set({ isLoading: false });
-      return { success: true, data: data.data };
+      return { success: true, data: res.data.data };
     } catch (err) {
-      set({ error: err.message, isLoading: false });
-      return { success: false, error: err.message };
+      set({ error: err.message || 'Failed to create journal entry', isLoading: false });
+      return { success: false, error: err.message || 'Failed to create journal entry' };
     }
   },
 
   updateJournalStatus: async (id, status) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await fetch('/api/v1/journal-entries', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ id, status })
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error?.message || 'Failed to update journal status');
+      const res = await api.put('/api/v1/journal-entries', { id, status });
       
       // Refresh the list after successful update
       const { journals } = get();
-      // Just fetch again for the current subsidiary, or rely on caller to trigger fetch
-      // For now we can just update the local state to avoid full fetch if possible, but fetch is safer.
       const entry = journals.find(j => j.dbId === id);
       if (entry) {
         await get().fetchJournals(entry.subsidiary || 'Global');
       }
       set({ isLoading: false });
-      return { success: true, data: data.data };
+      return { success: true, data: res.data.data };
     } catch (err) {
-      set({ error: err.message, isLoading: false });
-      return { success: false, error: err.message };
+      set({ error: err.message || 'Failed to update journal status', isLoading: false });
+      return { success: false, error: err.message || 'Failed to update journal status' };
     }
   },
 
