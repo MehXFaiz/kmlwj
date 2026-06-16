@@ -218,6 +218,86 @@ async function main() {
     });
   }
 
+  // 7. Seed Revenue Heads
+  console.log('Seeding Revenue Heads...');
+  const revenueCategories = [
+    {
+      category: 'Hall Bookings',
+      heads: ['Bagh-e-Hajiani Garden', 'Sadaya-Hall', 'Zikarya-Hall', 'Anexy-Hall']
+    },
+    {
+      category: 'Other Income & Donations',
+      heads: ['Bus booking', 'Membership fee', 'Qurbani space', 'Zakat', 'Fitra', 'Marriage donation', 'Decoration/Lighting commission']
+    }
+  ];
+
+  for (const group of revenueCategories) {
+    for (const headName of group.heads) {
+      const existingHead = await prisma.revenueHead.findFirst({
+        where: { name: headName, category: group.category }
+      });
+      if (!existingHead) {
+        await prisma.revenueHead.create({
+          data: {
+            name: headName,
+            category: group.category,
+            isActive: true
+          }
+        });
+      }
+    }
+  }
+
+  // 8. Seed Expense Heads
+  console.log('Seeding Expense Heads...');
+  const expenseCategories = [
+    {
+      category: 'Salaries & Benefits',
+      heads: ['Salary', 'Bonus']
+    },
+    {
+      category: 'Rent, Rates, and Taxes',
+      heads: ['Rent', 'Rates', 'Taxes']
+    },
+    {
+      category: 'Fuel and Power',
+      heads: ['Bus diesel', 'Generator diesel/petrol']
+    },
+    {
+      category: 'Repair and Maintenance',
+      heads: ['Bus repair', 'Generator repair', 'Hall repair']
+    },
+    {
+      category: 'Donations',
+      heads: ['Monthly donations', 'Marriage donations', 'Medical donations']
+    },
+    {
+      category: 'Legal, Professional, and Audit Fees',
+      heads: ['Legal Fees', 'Professional Fees', 'Audit Fees']
+    },
+    {
+      category: 'Other Administrative Expenses',
+      heads: ['Entertainment', 'Meetings', 'Security', 'Bank Charges']
+    }
+  ];
+
+  for (const group of expenseCategories) {
+    for (const headName of group.heads) {
+      const existingHead = await prisma.expenseHead.findFirst({
+        where: { name: headName, category: group.category }
+      });
+      if (!existingHead) {
+        await prisma.expenseHead.create({
+          data: {
+            name: headName,
+            category: group.category,
+            isActive: true
+          }
+        });
+      }
+    }
+  }
+
   console.log('Database seeding completed successfully!');
 }
 

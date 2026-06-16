@@ -12,9 +12,8 @@ import { useJournalStore } from '../../store/journalStore';
 // Zod validation schema
 const accountSchema = zod.object({
   code: zod.string()
-    .min(3, "Account code must be at least 3 digits")
-    .max(10, "Account code is too long")
-    .regex(/^\d+$/, "Account code must contain numbers only"),
+    .length(7, "GL Code must be exactly 7 digits")
+    .regex(/^\d{7}$/, "GL Code must contain 7 numbers only"),
   name: zod.string()
     .min(3, "Account name must be at least 3 characters")
     .max(80, "Account name is too long"),
@@ -119,23 +118,41 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
     }
   }, [editingAccount, reset, isOpen]);
 
-  // Filter possible parents: must be the same account type (or header type) and not self
+  // Filter possible parents: must be the same account type and not self, and cannot be a SUBSIDIARY
   const potentialParents = allAccounts.filter((acc) => {
     if (editingAccount && acc.id === editingAccount.id) return false; // cannot be own parent
-    
-    // Parent should be of same Type (e.g. Asset parent for Asset child)
-    // AND parent should be a "Header" or have detailType "Header" for best practice,
-    // though in standard accounts we can nest under any account.
-    return acc.type === selectedType && (acc.detailType === 'Header' || acc.parentCode === null);
+    return acc.type === selectedType && acc.level !== 'SUBSIDIARY';
   });
 
-  // Auto-suggest a GL code based on same-type highest code
+  const parentCodeVal = watch('parentCode');
+  const derivedLevel = useMemo(() => {
+    if (!parentCodeVal || parentCodeVal === 'none') return 'MAIN';
+    const parentAcc = allAccounts.find(a => a.code === parentCodeVal);
+    if (!parentAcc) return 'SUBSIDIARY';
+    return parentAcc.level === 'MAIN' ? 'PARENT' : 'SUBSIDIARY';
+  }, [parentCodeVal, allAccounts]);
+
+  // Auto-suggest a GL code based on parent and siblings
   const suggestCode = () => {
-    const sameType = allAccounts.filter((a) => a.type === watch('type'));
-    const numericCodes = sameType.map((a) => parseInt(a.code, 10)).filter(Number.isFinite);
-    const max = numericCodes.length ? Math.max(...numericCodes) : null;
-    const suggestion = max ? String(max + 1) : (watch('type') === 'Asset' ? '1000' : '4000');
-    setValue('code', suggestion);
+    if (!parentCodeVal || parentCodeVal === 'none') {
+      const mainAccounts = allAccounts.filter((a) => a.level === 'MAIN' && a.type === watch('type'));
+      const numericCodes = mainAccounts.map((a) => parseInt(a.code, 10)).filter(Number.isFinite);
+      const max = numericCodes.length ? Math.max(...numericCodes) : null;
+      let suggestion = max ? String(max + 1000000).substring(0, 1) + '000000' : '';
+      if (!suggestion) {
+        if (watch('type') === 'Asset') suggestion = '1000000';
+        else if (watch('type') === 'Liability') suggestion = '2000000';
+        else if (watch('type') === 'Equity') suggestion = '3000000';
+        else if (watch('type') === 'Revenue') suggestion = '4000000';
+        else suggestion = '5000000';
+      }
+      setValue('code', suggestion.padEnd(7, '0'));
+    } else {
+      const siblings = allAccounts.filter(a => a.parentCode === parentCodeVal);
+      const sibNumeric = siblings.map(a => parseInt(a.code, 10)).filter(Number.isFinite);
+      const sibMax = sibNumeric.length ? Math.max(...sibNumeric) : parseInt(parentCodeVal, 10);
+      setValue('code', String(sibMax + 1).padStart(7, '0'));
+    }
   };
 
   const onSubmitForm = async (data) => {
@@ -208,6 +225,7 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
             required
             error={errors.name?.message}
             placeholder="e.g. Petty Cash - Marketing"
+            disabled={!!(editingAccount && editingAccount.isLocked)}
             {...register('name')}
           />
         </div>
@@ -218,6 +236,7 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
             label="Account Type"
             required
             error={errors.type?.message}
+            disabled={!!(editingAccount && editingAccount.isLocked)}
             {...register('type')}
           >
             <option value="Asset">Asset</option>
@@ -231,6 +250,7 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
             label="Detail Type (Subtype)"
             required
             error={errors.detailType?.message}
+            disabled={!!(editingAccount && editingAccount.isLocked)}
             {...register('detailType')}
           >
             {(detailTypeOptions[selectedType] || []).map((opt) => (
@@ -246,6 +266,7 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
           <Select
             label="Parent Account"
             error={errors.parentCode?.message}
+            disabled={!!(editingAccount && editingAccount.isLocked)}
             {...register('parentCode')}
           >
             <option value="none">-- No Parent (Root Account) --</option>
@@ -259,9 +280,9 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
           <div>
             <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Account Level</label>
             <input 
-              value={watch('parentCode') === 'none' || !watch('parentCode') ? 'MAIN' : 'SUBSIDIARY'}
+              value={derivedLevel}
               disabled
-              className="w-full px-3 py-2 rounded-lg bg-slate-900/40 border border-slate-800 text-slate-500 text-sm cursor-not-allowed"
+              className="w-full px-3 py-2 rounded-lg bg-slate-900/40 border border-slate-800 text-slate-500 text-sm cursor-not-allowed font-semibold"
             />
           </div>
 
@@ -269,6 +290,7 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
             label="Currency"
             required
             error={errors.currency?.message}
+            disabled={!!(editingAccount && editingAccount.isLocked)}
             {...register('currency')}
           >
             <option value="PKR">PKR - Pakistani Rupee</option>
@@ -311,11 +333,13 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
           </label>
           <textarea
             rows="3"
+            disabled={!!(editingAccount && editingAccount.isLocked)}
             placeholder="Add detailed explanation of this account's purpose..."
             className={`
               w-full px-3 py-2 bg-slate-900/60 border border-slate-800 rounded-md text-sm text-slate-100 placeholder:text-slate-500
               focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all duration-200
               ${errors.description ? 'border-red-500/50' : ''}
+              ${editingAccount && editingAccount.isLocked ? 'cursor-not-allowed opacity-70' : ''}
             `}
             {...register('description')}
           />
