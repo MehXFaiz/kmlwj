@@ -48,8 +48,8 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
     { name: 'Donation Reports', icon: FileText, path: '/donation-reports' },
     { name: 'Reports', icon: BarChart3, path: '/reports', perms: ['VIEW_REPORTS'] },
     { name: 'Users & Roles', icon: Users, path: '/users-roles', perms: ['MANAGE_USERS', 'MANAGE_ROLES'] },
-    { name: 'General Ledger', icon: BookOpen, path: '/ledger', perms: ['VIEW_REPORTS'] },
-    { name: 'Journal Entries', icon: FileSpreadsheet, path: '/journals', perms: ['VIEW_REPORTS'] },
+    { name: 'General Ledger', icon: BookOpen, path: '/ledger' },
+    { name: 'Journal Entries', icon: FileSpreadsheet, path: '/journals' },
     { name: 'Audit Trail', icon: History, path: '/audit', perms: ['VIEW_REPORTS', 'MANAGE_USERS'] },
   ];
 
@@ -155,27 +155,25 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
         )}
 
         {/* System Settings link */}
-        {hasPerm(['MANAGE_ROLES']) && (
-          <NavLink
-            to="/settings"
-            className={({ isActive }) => `
-              flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative mb-2
-              ${isActive 
-                ? 'bg-slate-800 text-white font-semibold' 
-                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
-              }
-            `}
-            onClick={() => setIsMobileOpen && setIsMobileOpen(false)}
-          >
-            <Settings className="h-5 w-5 flex-shrink-0" />
-            <span className={`truncate ${isCollapsed ? 'lg:hidden' : ''}`}>System Settings</span>
-            {isCollapsed && (
-              <div className="absolute left-16 bg-slate-950 text-slate-200 border border-slate-800 text-xs px-2.5 py-1.5 rounded-md shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 hidden lg:block">
-                System Settings
-              </div>
-            )}
-          </NavLink>
-        )}
+        <NavLink
+          to="/settings"
+          className={({ isActive }) => `
+            flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative mb-2
+            ${isActive 
+              ? 'bg-slate-800 text-white font-semibold' 
+              : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+            }
+          `}
+          onClick={() => setIsMobileOpen && setIsMobileOpen(false)}
+        >
+          <Settings className="h-5 w-5 flex-shrink-0" />
+          <span className={`truncate ${isCollapsed ? 'lg:hidden' : ''}`}>System Settings</span>
+          {isCollapsed && (
+            <div className="absolute left-16 bg-slate-950 text-slate-200 border border-slate-800 text-xs px-2.5 py-1.5 rounded-md shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 hidden lg:block">
+              System Settings
+            </div>
+          )}
+        </NavLink>
 
         {/* Collapsible toggle trigger */}
         <button

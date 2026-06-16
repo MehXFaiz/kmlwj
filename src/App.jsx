@@ -206,26 +206,14 @@ function App() {
                 <UsersRoles />
               </PermissionGuard>
             } />
-            <Route path="/ledger" element={
-              <PermissionGuard requiredPerms={['VIEW_REPORTS']}>
-                <GeneralLedger />
-              </PermissionGuard>
-            } />
-            <Route path="/journals" element={
-              <PermissionGuard requiredPerms={['VIEW_REPORTS']}>
-                <JournalEntries />
-              </PermissionGuard>
-            } />
+            <Route path="/ledger" element={<GeneralLedger />} />
+            <Route path="/journals" element={<JournalEntries />} />
             <Route path="/audit" element={
               <PermissionGuard requiredPerms={['VIEW_REPORTS', 'MANAGE_USERS']}>
                 <AuditTrail />
               </PermissionGuard>
             } />
-            <Route path="/settings" element={
-              <PermissionGuard requiredPerms={['MANAGE_ROLES']}>
-                <Settings />
-              </PermissionGuard>
-            } />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/account" element={<MyAccount />} />
             <Route path="*" element={
