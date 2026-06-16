@@ -18,8 +18,8 @@ export const useBeneficiaryStore = create((set, get) => ({
 
   addBeneficiary: async (data) => {
     try {
-      const res = await beneficiaryService.create(data);
-      set(state => ({ beneficiaries: [res.data, ...state.beneficiaries] }));
+      await beneficiaryService.create(data);
+      await get().fetchBeneficiaries();
     } catch (err) {
       set({ error: err.message });
       throw err;
@@ -28,10 +28,8 @@ export const useBeneficiaryStore = create((set, get) => ({
 
   updateBeneficiary: async (id, data) => {
     try {
-      const res = await beneficiaryService.update(id, data);
-      set(state => ({
-        beneficiaries: state.beneficiaries.map(b => b.id === id ? res.data : b)
-      }));
+      await beneficiaryService.update(id, data);
+      await get().fetchBeneficiaries();
     } catch (err) {
       set({ error: err.message });
       throw err;

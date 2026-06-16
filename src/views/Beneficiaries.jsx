@@ -149,6 +149,7 @@ export const Beneficiaries = () => {
         <div className="relative flex-1 w-full sm:min-w-52">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, CNIC, or mobile..."
+            name="beneficiary-search" autoComplete="off"
             className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-indigo-600/50 transition-all" />
         </div>
       </div>
