@@ -1,52 +1,106 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from '../components/ui/Card';
-import { Search, Download, Printer } from 'lucide-react';
+import { Search, Download, Printer, Plus, Edit2 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
-
-// Mock data matching the structure from the uploaded image
-const initialData = [
-  { id: '1', code: '1000000', nature: 'ASSETS', mainCategory: '', glName: '', remarks: 'MAIN', type: 'main' },
-  { id: '2', code: '1010000', nature: 'CURRENT ASSETS', mainCategory: '', glName: '', remarks: 'PARENT', type: 'parent' },
-  { id: '3', code: '1010100', nature: 'CURRENT ASSETS', mainCategory: 'CASH AND BANK BALANCES', glName: '', remarks: 'SUBSIDIARY', type: 'subsidiary' },
-  { id: '4', code: '1010101', nature: 'CURRENT ASSETS', mainCategory: '', glName: 'PETTY CASH', remarks: 'SUBSIDIARY', type: 'subsidiary' },
-  { id: '5', code: '1010102', nature: 'CURRENT ASSETS', mainCategory: '', glName: 'BANK -1', remarks: 'SUBSIDIARY', type: 'subsidiary' },
-  { id: '6', code: '1010200', nature: 'CURRENT ASSETS', mainCategory: 'ACCOUNT RECEIVABLE', glName: '', remarks: 'SUBSIDIARY', type: 'subsidiary' },
-  { id: '7', code: '1010201', nature: 'CURRENT ASSETS', mainCategory: '', glName: 'RECEIVABLE FROM DECORATION COMMISSION', remarks: 'SUBSIDIARY', type: 'subsidiary' },
-  { id: '8', code: '1010202', nature: 'CURRENT ASSETS', mainCategory: '', glName: 'RECEIVABLE FROM ________', remarks: 'SUBSIDIARY', type: 'subsidiary' },
-  { id: '9', code: '1010203', nature: 'CURRENT ASSETS', mainCategory: '', glName: 'RECEIVABLE FROM ________', remarks: 'SUBSIDIARY', type: 'subsidiary' },
-  { id: '10', code: '1010300', nature: 'CURRENT ASSETS', mainCategory: 'TAXATION', glName: '', remarks: 'SUBSIDIARY', type: 'subsidiary' },
-  { id: '11', code: '1010301', nature: 'CURRENT ASSETS', mainCategory: '', glName: 'ADVANCE INCOME TAX', remarks: 'SUBSIDIARY', type: 'subsidiary' },
-  { id: '12', code: '1010400', nature: 'CURRENT ASSETS', mainCategory: 'LOANS AND ADVANCES', glName: '', remarks: 'SUBSIDIARY', type: 'subsidiary' },
-  { id: '13', code: '1010401', nature: 'CURRENT ASSETS', mainCategory: '', glName: 'STAFF LOAN ________', remarks: 'SUBSIDIARY', type: 'subsidiary' },
-  { id: '14', code: '1010402', nature: 'CURRENT ASSETS', mainCategory: '', glName: 'ADVANCE AGAINST EXPENSE', remarks: 'SUBSIDIARY', type: 'subsidiary' },
-  { id: '15', code: '1010403', nature: 'CURRENT ASSETS', mainCategory: '', glName: 'ADVANCE AGAINST CAPEX', remarks: 'SUBSIDIARY', type: 'subsidiary' },
-  { id: '16', code: '1010500', nature: 'CURRENT ASSETS', mainCategory: 'OTHER RECEIVABLE', glName: '', remarks: 'SUBSIDIARY', type: 'subsidiary' },
-  { id: '17', code: '1010501', nature: 'CURRENT ASSETS', mainCategory: '', glName: 'RECEIVABLE FROM ________', remarks: 'SUBSIDIARY', type: 'subsidiary' },
-];
+import { useCoaStore } from '../store/coaStore';
+import { AccountFormDrawer } from '../components/coa/AccountFormDrawer';
 
 export const TrialBalanceSheet = () => {
+  const { treeAccounts, fetchAccountsTree } = useCoaStore();
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState(null);
 
-  const filteredData = initialData.filter(item => 
+  useEffect(() => {
+    fetchAccountsTree();
+  }, [fetchAccountsTree]);
+
+  // Flatten the tree data for the matrix view
+  const flattenedData = useMemo(() => {
+    const result = [];
+    const traverse = (node, depth = 0) => {
+      // Determine columns based on the image format
+      const level = node.level || 'SUBSIDIARY';
+      const isHeader = node.detailType === 'Header';
+      
+      let mainCategoryName = '';
+      let glName = '';
+      
+      if (level === 'MAIN' || level === 'PARENT') {
+        mainCategoryName = node.name;
+      } else if (level === 'SUBSIDIARY') {
+        if (isHeader) {
+          mainCategoryName = node.name;
+        } else {
+          glName = node.name;
+        }
+      }
+
+      result.push({
+        id: node.id,
+        code: node.code,
+        nature: node.type || 'UNKNOWN',
+        mainCategory: mainCategoryName,
+        glName: glName,
+        remarks: level,
+        type: level.toLowerCase(),
+        rawAccount: node
+      });
+      
+      if (node.children && node.children.length > 0) {
+        // Sort children by code
+        const sortedChildren = [...node.children].sort((a, b) => a.code.localeCompare(b.code));
+        sortedChildren.forEach(child => traverse(child, depth + 1));
+      }
+    };
+    
+    // Sort treeAccounts by code
+    const sortedAccounts = [...treeAccounts].sort((a, b) => a.code.localeCompare(b.code));
+    sortedAccounts.forEach(root => traverse(root));
+    return result;
+  }, [treeAccounts]);
+
+  const filteredData = flattenedData.filter(item => 
     item.code.includes(searchQuery) || 
     item.nature.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.mainCategory.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.glName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Helper function to get row styling based on type
+  // Helper function to get row styling based on level
   const getRowStyle = (type) => {
     switch (type) {
       case 'main':
-        // Adapted for dark theme: subtle yellow/gold background with prominent text
         return 'bg-amber-500/20 hover:bg-amber-500/30 border-y border-amber-500/50 font-bold text-amber-200';
       case 'parent':
-        // Adapted for dark theme: subtle green background with prominent text
         return 'bg-emerald-500/20 hover:bg-emerald-500/30 border-y border-emerald-500/40 font-semibold text-emerald-200';
       case 'subsidiary':
         return 'bg-transparent hover:bg-slate-800/50 border-b border-slate-800/50 text-slate-300';
       default:
         return 'border-b border-slate-800/50 text-slate-300';
+    }
+  };
+
+  const handleEditAccount = (account) => {
+    setEditingAccount(account);
+    setIsDrawerOpen(true);
+  };
+
+  const handleCreateAccount = () => {
+    setEditingAccount(null);
+    setIsDrawerOpen(true);
+  };
+
+  const handleCreateSubAccount = (parent) => {
+    if (parent) {
+      setEditingAccount({
+        parentCode: parent.code,
+        type: parent.type,
+        currency: parent.currency,
+        subsidiary: parent.subsidiary,
+      });
+      setIsDrawerOpen(true);
     }
   };
 
@@ -64,9 +118,13 @@ export const TrialBalanceSheet = () => {
             <Printer className="h-4 w-4" />
             <span>Print</span>
           </Button>
-          <Button variant="primary" size="sm" className="gap-2">
+          <Button variant="outline" size="sm" className="gap-2">
             <Download className="h-4 w-4" />
             <span>Export CSV</span>
+          </Button>
+          <Button variant="primary" size="sm" onClick={handleCreateAccount} className="gap-2">
+            <Plus className="h-4 w-4" />
+            <span>New Account</span>
           </Button>
         </div>
       </div>
@@ -112,17 +170,18 @@ export const TrialBalanceSheet = () => {
                   <th className="py-3 px-4 w-64">Main Category Name <span className="text-slate-500 text-[10px] ml-1">(Locked)</span></th>
                   <th className="py-3 px-4 min-w-[200px]">GL Name <span className="text-slate-500 text-[10px] ml-1">(Open)</span></th>
                   <th className="py-3 px-4 w-32 text-center">Remarks</th>
+                  <th className="py-3 px-4 w-24 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredData.length > 0 ? (
                   filteredData.map((row) => (
                     <tr 
-                      key={row.id} 
-                      className={`transition-colors duration-150 ${getRowStyle(row.type)}`}
+                      key={row.code} 
+                      className={`group transition-colors duration-150 ${getRowStyle(row.type)}`}
                     >
                       <td className="py-2.5 px-4 font-mono">{row.code}</td>
-                      <td className="py-2.5 px-4">{row.nature}</td>
+                      <td className="py-2.5 px-4 uppercase">{row.nature}</td>
                       <td className={`py-2.5 px-4 ${row.type === 'subsidiary' && row.mainCategory ? 'font-semibold text-brand-300' : ''}`}>
                         {row.mainCategory}
                       </td>
@@ -137,12 +196,37 @@ export const TrialBalanceSheet = () => {
                           {row.remarks}
                         </span>
                       </td>
+                      <td className="py-2.5 px-4 text-right opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                        <div className="inline-flex gap-1.5 justify-end w-full">
+                          {row.type !== 'subsidiary' || row.rawAccount.detailType === 'Header' ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 cursor-pointer"
+                              onClick={() => handleCreateSubAccount(row.rawAccount)}
+                              title="Add child account"
+                            >
+                              <Plus className="h-3.5 w-3.5 text-brand-400" />
+                            </Button>
+                          ) : <div className="h-7 w-7"></div>}
+                          
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 cursor-pointer"
+                            onClick={() => handleEditAccount(row.rawAccount)}
+                            title="Edit Account Details"
+                          >
+                            <Edit2 className="h-3.5 w-3.5 text-slate-400 hover:text-amber-400" />
+                          </Button>
+                        </div>
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-slate-500">
-                      No matching records found.
+                    <td colSpan={6} className="py-8 text-center text-slate-500">
+                      No matching accounts found.
                     </td>
                   </tr>
                 )}
@@ -151,6 +235,16 @@ export const TrialBalanceSheet = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Detail drawer Form modal */}
+      <AccountFormDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => {
+          setIsDrawerOpen(false);
+          setEditingAccount(null);
+        }}
+        editingAccount={editingAccount}
+      />
     </div>
   );
 };
