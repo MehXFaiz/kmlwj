@@ -49,6 +49,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
     { name: 'Reports', icon: BarChart3, path: '/reports', perms: ['VIEW_REPORTS'] },
     { name: 'Users & Roles', icon: Users, path: '/users-roles', perms: ['MANAGE_USERS', 'MANAGE_ROLES'] },
     { name: 'General Ledger', icon: BookOpen, path: '/ledger' },
+    { name: 'Trial Balance Matrix', icon: Layers, path: '/trial-balance-sheet' },
     { name: 'Journal Entries', icon: FileSpreadsheet, path: '/journals' },
     { name: 'Audit Trail', icon: History, path: '/audit', perms: ['VIEW_REPORTS', 'MANAGE_USERS'] },
   ];

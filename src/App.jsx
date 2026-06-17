@@ -20,6 +20,7 @@ const ExpenseHeads = lazy(() => import('./views/ExpenseHeads').then(m => ({ defa
 const ReservedCodes = lazy(() => import('./views/ReservedCodes').then(m => ({ default: m.ReservedCodes })));
 const UsersRoles = lazy(() => import('./views/UsersRoles').then(m => ({ default: m.UsersRoles })));
 const Reports = lazy(() => import('./views/Reports').then(m => ({ default: m.Reports })));
+const TrialBalanceSheet = lazy(() => import('./views/TrialBalanceSheet').then(m => ({ default: m.TrialBalanceSheet })));
 
 // Donation Module Views
 const Beneficiaries = lazy(() => import('./views/Beneficiaries').then(m => ({ default: m.Beneficiaries })));
@@ -198,6 +199,7 @@ function App() {
                 <Reports />
               </PermissionGuard>
             } />
+            <Route path="/trial-balance-sheet" element={<TrialBalanceSheet />} />
             <Route path="/beneficiaries" element={<Beneficiaries />} />
             <Route path="/donations" element={<Donations />} />
             <Route path="/donation-reports" element={<DonationReports />} />
