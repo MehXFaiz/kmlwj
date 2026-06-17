@@ -106,25 +106,25 @@ export const GeneralLedger = () => {
           <Card className="bg-slate-900/50">
             <CardContent className="p-4 flex flex-col items-center justify-center">
               <span className="text-xs text-slate-400 uppercase tracking-wider mb-1">Opening Balance</span>
-              <span className="text-xl font-mono font-semibold text-slate-200">${summary.openingBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              <span className="text-xl font-mono font-semibold text-slate-200">PKR {summary.openingBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </CardContent>
           </Card>
           <Card className="bg-slate-900/50">
             <CardContent className="p-4 flex flex-col items-center justify-center">
               <span className="text-xs text-slate-400 uppercase tracking-wider mb-1">Period Debits</span>
-              <span className="text-xl font-mono font-semibold text-emerald-400">${summary.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              <span className="text-xl font-mono font-semibold text-emerald-400">PKR {summary.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </CardContent>
           </Card>
           <Card className="bg-slate-900/50">
             <CardContent className="p-4 flex flex-col items-center justify-center">
               <span className="text-xs text-slate-400 uppercase tracking-wider mb-1">Period Credits</span>
-              <span className="text-xl font-mono font-semibold text-red-400">${summary.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              <span className="text-xl font-mono font-semibold text-red-400">PKR {summary.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </CardContent>
           </Card>
           <Card className="bg-slate-900/50 border-brand-500/30">
             <CardContent className="p-4 flex flex-col items-center justify-center">
               <span className="text-xs text-slate-400 uppercase tracking-wider mb-1 text-brand-400">Closing Balance</span>
-              <span className="text-xl font-mono font-bold text-brand-400">${summary.closingBalance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              <span className="text-xl font-mono font-bold text-brand-400">PKR {summary.closingBalance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </CardContent>
           </Card>
         </div>
@@ -165,18 +165,18 @@ export const GeneralLedger = () => {
                       )}
                       <td className="py-3.5 px-4 text-slate-200">{entry.description || '—'}</td>
                       <td className="py-3.5 px-4 text-right font-mono text-emerald-400">
-                        {entry.debit > 0 ? `Rs ${entry.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
+                        {entry.debit > 0 ? `PKR ${entry.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
                       </td>
                       <td className="py-3.5 px-4 text-right font-mono text-red-400">
-                        {entry.credit > 0 ? `Rs ${entry.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
+                        {entry.credit > 0 ? `PKR ${entry.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
                       </td>
                     </tr>
                   ))}
                   {/* Totals Row */}
                   <tr className="bg-slate-900/40 font-bold border-t-2 border-slate-800">
                     <td colSpan={!accountInfo ? 4 : 3} className="py-3.5 px-4 text-right text-slate-400 uppercase">Period Totals</td>
-                    <td className="py-3.5 px-4 text-right font-mono text-emerald-400">${summary.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                    <td className="py-3.5 px-4 text-right font-mono text-red-400">${summary.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <td className="py-3.5 px-4 text-right font-mono text-emerald-400">PKR {summary.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <td className="py-3.5 px-4 text-right font-mono text-red-400">PKR {summary.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                   </tr>
                 </tbody>
               </table>
