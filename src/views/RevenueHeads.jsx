@@ -11,12 +11,12 @@ import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/
 /* ─── Add / Edit Modal ─── */
 function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
   const [form, setForm] = useState(
-    initial || { name: '', category: 'Hall Bookings', accountId: '', isActive: true }
+    initial || { name: '', category: 'Hall Bookings', amount: 0, accountId: '', isActive: true }
   );
 
   useEffect(() => {
     if (isOpen) {
-      setForm(initial || { name: '', category: 'Hall Bookings', accountId: '', isActive: true });
+      setForm(initial || { name: '', category: 'Hall Bookings', amount: 0, accountId: '', isActive: true });
     }
   }, [isOpen, initial]);
 
@@ -47,14 +47,26 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
         </div>
 
         <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Name *</label>
-            <input
-              value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              placeholder="e.g. Zakat"
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm placeholder-slate-600 focus:outline-none focus:border-emerald-600/60 focus:ring-1 focus:ring-emerald-600/30 transition-all"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Name *</label>
+              <input
+                value={form.name}
+                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                placeholder="e.g. Zakat"
+                className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm placeholder-slate-600 focus:outline-none focus:border-emerald-600/60 focus:ring-1 focus:ring-emerald-600/30 transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Amount (PKR)</label>
+              <input
+                type="number"
+                value={form.amount || ''}
+                onChange={e => setForm(f => ({ ...f, amount: parseFloat(e.target.value) || 0 }))}
+                placeholder="0.00"
+                className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm placeholder-slate-600 focus:outline-none focus:border-emerald-600/60 focus:ring-1 focus:ring-emerald-600/30 transition-all"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -260,6 +272,7 @@ export const RevenueHeads = () => {
                 </div>
                 <div className="flex flex-wrap gap-2 mb-3">
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cc}`}>{h.category}</span>
+                  {h.amount > 0 && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-emerald-950/50 text-emerald-400 border-emerald-900/40">PKR {h.amount.toLocaleString()}</span>}
                 </div>
                 {h.accountId && (
                   <div className="text-[11px] mb-3">
@@ -287,6 +300,7 @@ export const RevenueHeads = () => {
                 {[
                   { label: 'Name', field: 'name' },
                   { label: 'Category', field: 'category', w: 'w-48' },
+                  { label: 'Amount', field: 'amount', w: 'w-32' },
                   { label: 'Account ID', field: 'accountId', w: 'w-48' },
                   { label: 'Status', field: 'isActive', w: 'w-28' },
                   { label: 'Created', field: 'createdAt', w: 'w-36' },
@@ -322,6 +336,9 @@ export const RevenueHeads = () => {
                     </td>
                     <td className="px-4 py-3.5">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cc}`}>{h.category}</span>
+                    </td>
+                    <td className="px-4 py-3.5 font-mono text-emerald-400 text-sm">
+                      {h.amount > 0 ? `PKR ${h.amount.toLocaleString()}` : '—'}
                     </td>
                     <td className="px-4 py-3.5 font-mono text-[11px] text-slate-400 truncate max-w-[12rem]">
                       {h.accountId || <span className="text-slate-600 italic">Unlinked</span>}

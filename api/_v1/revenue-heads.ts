@@ -37,7 +37,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
     }
 
-    const { name, category, accountId, isActive } = req.body;
+    const { name, category, amount, accountId, isActive } = req.body;
 
     if (!name || !category) {
       return res.status(400).json({ error: { message: 'Name and Category are required', status: 400 } });
@@ -47,6 +47,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       data: {
         name,
         category,
+        amount: amount !== undefined ? parseFloat(amount) : 0,
         accountId: accountId || null,
         isActive: isActive !== undefined ? Boolean(isActive) : true,
       },
@@ -71,13 +72,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(404).json({ error: { message: 'Revenue Head not found', status: 404 } });
     }
 
-    const { name, category, accountId, isActive } = req.body;
+    const { name, category, amount, accountId, isActive } = req.body;
 
     const updatedHead = await prisma.revenueHead.update({
       where: { id },
       data: {
         name: name !== undefined ? name : undefined,
         category: category !== undefined ? category : undefined,
+        amount: amount !== undefined ? parseFloat(amount) : undefined,
         accountId: accountId !== undefined ? (accountId || null) : undefined,
         isActive: isActive !== undefined ? Boolean(isActive) : undefined,
       },

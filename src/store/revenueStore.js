@@ -22,6 +22,7 @@ export const useRevenueStore = create((set, get) => ({
       const newHead = await revenueService.create({
         name: head.name,
         category: head.category || 'Other Income',
+        amount: head.amount || 0,
         accountId: head.accountId || null,
         isActive: head.isActive !== undefined ? head.isActive : true,
       });
@@ -40,6 +41,7 @@ export const useRevenueStore = create((set, get) => ({
       const updated = await revenueService.update(id, {
         name: updatedFields.name,
         category: updatedFields.category,
+        amount: updatedFields.amount !== undefined ? updatedFields.amount : 0,
         accountId: updatedFields.accountId || null,
         isActive: updatedFields.isActive,
       });
