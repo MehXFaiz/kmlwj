@@ -165,59 +165,83 @@ function RevenueHeadViewModal({ isOpen, onClose, item }) {
   const cc = CAT_COLORS[item.category] || CAT_COLORS.Other;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl max-h-[92dvh] flex flex-col">
-        <div className="flex items-start sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-slate-800 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-blue-950/60 border border-blue-800/40 flex items-center justify-center">
-              <Layers className="h-4 w-4 text-blue-400" />
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 transition-all">
+      <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" onClick={onClose} />
+      <div className="relative z-10 w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl border border-slate-700/50 bg-slate-900/95 shadow-2xl shadow-black/50 max-h-[92dvh] flex flex-col overflow-hidden">
+        
+        {/* Top Header */}
+        <div className="flex items-start sm:items-center justify-between gap-3 px-6 py-5 border-b border-slate-800/60 bg-slate-900/50 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="relative flex items-center justify-center h-10 w-10 rounded-xl bg-gradient-to-br from-blue-900/50 to-slate-900 border border-blue-800/30 shadow-inner">
+              <Layers className="h-5 w-5 text-blue-400" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-200">Revenue Head Details</h3>
-              <p className="text-[11px] text-slate-500">View classification information</p>
+              <h3 className="text-base font-bold text-slate-100 tracking-tight">Revenue Head Details</h3>
+              <p className="text-xs text-slate-400">View classification information</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors">
-            <X className="h-4 w-4" />
+          <button onClick={onClose} className="p-2 rounded-xl hover:bg-slate-800 text-slate-500 hover:text-slate-200 transition-all focus:outline-none focus:ring-2 focus:ring-slate-700">
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="p-4 sm:p-6 space-y-6 overflow-y-auto flex-1 min-h-0">
-          <div>
-             <h4 className="text-xl font-bold text-slate-100">{item.name}</h4>
-             <div className="flex flex-wrap gap-2 mt-3">
-                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cc}`}>{item.category}</span>
-                 {item.hall && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border bg-indigo-950/50 text-indigo-400 border-indigo-900/40`}>{item.hall}</span>}
-                 <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${sc.badge}`}>
+        {/* Content Body */}
+        <div className="p-6 space-y-8 overflow-y-auto flex-1 min-h-0 custom-scrollbar">
+          
+          {/* Hero Section */}
+          <div className="space-y-4">
+             <h4 className="text-3xl font-extrabold text-white tracking-tight">{item.name}</h4>
+             <div className="flex flex-wrap gap-2.5">
+                 <span className={`px-2.5 py-1 text-xs font-bold rounded-md border ${cc} shadow-sm`}>
+                    {item.category}
+                 </span>
+                 {item.hall && (
+                   <span className={`px-2.5 py-1 text-xs font-bold rounded-md border bg-indigo-950/40 text-indigo-300 border-indigo-900/50 shadow-sm`}>
+                     {item.hall}
+                   </span>
+                 )}
+                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-md border ${sc.badge} shadow-sm`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />{sc.label}
                  </span>
              </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-4 bg-slate-950/50 p-4 rounded-xl border border-slate-800/50">
-             <div>
-               <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Amount</span>
-               <span className="font-mono text-emerald-400 text-sm">{item.amount > 0 ? `PKR ${item.amount.toLocaleString()}` : '—'}</span>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 gap-4">
+             <div className="flex flex-col gap-1.5 p-4 rounded-xl bg-slate-800/30 border border-slate-700/40 hover:bg-slate-800/50 transition-colors">
+               <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Amount</span>
+               <span className="font-mono text-emerald-400 text-lg font-medium">
+                 {item.amount > 0 ? `PKR ${item.amount.toLocaleString()}` : '—'}
+               </span>
              </div>
-             <div>
-               <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Linked Account</span>
-               <span className="font-mono text-slate-300 text-xs truncate block" title={item.accountId}>{item.accountId || 'Unlinked'}</span>
+             
+             <div className="flex flex-col gap-1.5 p-4 rounded-xl bg-slate-800/30 border border-slate-700/40 hover:bg-slate-800/50 transition-colors">
+               <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Linked Account</span>
+               <span className="font-mono text-slate-200 text-sm truncate" title={item.accountId}>
+                 {item.accountId || <span className="text-slate-500 italic">Unlinked</span>}
+               </span>
              </div>
-             <div>
-               <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Created At</span>
-               <span className="text-slate-300 text-sm">{new Date(item.createdAt).toLocaleDateString()}</span>
+             
+             <div className="flex flex-col gap-1.5 p-4 rounded-xl bg-slate-800/30 border border-slate-700/40 hover:bg-slate-800/50 transition-colors">
+               <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Created At</span>
+               <span className="text-slate-300 text-sm font-medium">
+                 {new Date(item.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+               </span>
              </div>
-             <div>
-               <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Last Updated</span>
-               <span className="text-slate-300 text-sm">{new Date(item.updatedAt || item.createdAt).toLocaleDateString()}</span>
+             
+             <div className="flex flex-col gap-1.5 p-4 rounded-xl bg-slate-800/30 border border-slate-700/40 hover:bg-slate-800/50 transition-colors">
+               <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Last Updated</span>
+               <span className="text-slate-300 text-sm font-medium">
+                 {new Date(item.updatedAt || item.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+               </span>
              </div>
           </div>
         </div>
         
-        <div className="px-4 sm:px-6 py-4 border-t border-slate-800 shrink-0 flex justify-end">
-          <button onClick={onClose} className="px-5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-sm font-bold transition-all">
-            Close
+        {/* Footer */}
+        <div className="px-6 py-5 border-t border-slate-800/60 bg-slate-900/50 shrink-0 flex justify-end">
+          <button onClick={onClose} className="px-6 py-2.5 rounded-xl border border-slate-700/60 bg-slate-800/50 hover:bg-slate-700 hover:text-white text-slate-300 text-sm font-bold transition-all focus:outline-none focus:ring-2 focus:ring-slate-600 shadow-sm">
+            Close Details
           </button>
         </div>
       </div>
