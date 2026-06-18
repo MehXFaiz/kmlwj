@@ -139,6 +139,72 @@ const CAT_COLORS = {
   'Other': 'bg-slate-800/50 text-slate-400 border-slate-700/40',
 };
 
+/* ─── View Modal ─── */
+function RevenueHeadViewModal({ isOpen, onClose, item }) {
+  if (!isOpen || !item) return null;
+  const sc = STATUS_COLORS[item.isActive] || STATUS_COLORS.false;
+  const cc = CAT_COLORS[item.category] || CAT_COLORS.Other;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl max-h-[92dvh] flex flex-col">
+        <div className="flex items-start sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-slate-800 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-lg bg-blue-950/60 border border-blue-800/40 flex items-center justify-center">
+              <Layers className="h-4 w-4 text-blue-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-200">Revenue Head Details</h3>
+              <p className="text-[11px] text-slate-500">View classification information</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="p-4 sm:p-6 space-y-6 overflow-y-auto flex-1 min-h-0">
+          <div>
+             <h4 className="text-xl font-bold text-slate-100">{item.name}</h4>
+             <div className="flex flex-wrap gap-2 mt-3">
+                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cc}`}>{item.category}</span>
+                 <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${sc.badge}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />{sc.label}
+                 </span>
+             </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4 bg-slate-950/50 p-4 rounded-xl border border-slate-800/50">
+             <div>
+               <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Amount</span>
+               <span className="font-mono text-emerald-400 text-sm">{item.amount > 0 ? `PKR ${item.amount.toLocaleString()}` : '—'}</span>
+             </div>
+             <div>
+               <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Linked Account</span>
+               <span className="font-mono text-slate-300 text-xs truncate block" title={item.accountId}>{item.accountId || 'Unlinked'}</span>
+             </div>
+             <div>
+               <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Created At</span>
+               <span className="text-slate-300 text-sm">{new Date(item.createdAt).toLocaleDateString()}</span>
+             </div>
+             <div>
+               <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Last Updated</span>
+               <span className="text-slate-300 text-sm">{new Date(item.updatedAt || item.createdAt).toLocaleDateString()}</span>
+             </div>
+          </div>
+        </div>
+        
+        <div className="px-4 sm:px-6 py-4 border-t border-slate-800 shrink-0 flex justify-end">
+          <button onClick={onClose} className="px-5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-sm font-bold transition-all">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export const RevenueHeads = () => {
   const { heads, fetchHeads, addHead, updateHead, deleteHead } = useRevenueStore();
   const { flatAccounts, fetchAccountsList } = useCoaStore();
@@ -149,6 +215,7 @@ export const RevenueHeads = () => {
   const [sortDir, setSortDir] = useState('asc');
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
+  const [viewItem, setViewItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
 
   useEffect(() => {
@@ -265,9 +332,12 @@ export const RevenueHeads = () => {
             return (
               <div key={h.id} className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-3" style={{ animation: `fadeUp 0.35s ease ${i * 50}ms both` }}>
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <button onClick={() => { setEditItem(h); setModalOpen(true); }} className="text-sm font-semibold text-slate-200 hover:text-emerald-400 hover:underline cursor-pointer text-left focus:outline-none">
+                  <p 
+                    className="text-sm font-semibold text-emerald-400 hover:text-emerald-300 cursor-pointer transition-colors"
+                    onClick={() => setViewItem(h)}
+                  >
                     {h.name}
-                  </button>
+                  </p>
                   <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${sc.badge}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />{sc.label}
                   </span>
@@ -334,9 +404,12 @@ export const RevenueHeads = () => {
                     style={{ animation: `fadeUp 0.35s ease ${i * 50}ms both` }}
                     className="hover:bg-slate-800/20 transition-colors group">
                     <td className="px-4 py-3.5">
-                      <button onClick={() => { setEditItem(h); setModalOpen(true); }} className="text-sm font-semibold text-slate-200 hover:text-emerald-400 hover:underline cursor-pointer text-left focus:outline-none">
+                      <p 
+                        className="text-sm font-semibold text-emerald-400 hover:text-emerald-300 cursor-pointer transition-colors inline-block"
+                        onClick={() => setViewItem(h)}
+                      >
                         {h.name}
-                      </button>
+                      </p>
                     </td>
                     <td className="px-4 py-3.5">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cc}`}>{h.category}</span>
@@ -408,6 +481,11 @@ export const RevenueHeads = () => {
         onSave={handleSave}
         initial={editItem}
         accounts={flatAccounts}
+      />
+      <RevenueHeadViewModal
+        isOpen={!!viewItem}
+        onClose={() => setViewItem(null)}
+        item={viewItem}
       />
     </div>
   );
