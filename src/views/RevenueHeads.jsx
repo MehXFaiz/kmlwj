@@ -265,7 +265,9 @@ export const RevenueHeads = () => {
             return (
               <div key={h.id} className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-3" style={{ animation: `fadeUp 0.35s ease ${i * 50}ms both` }}>
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <p className="text-sm font-semibold text-slate-200">{h.name}</p>
+                  <button onClick={() => { setEditItem(h); setModalOpen(true); }} className="text-sm font-semibold text-slate-200 hover:text-emerald-400 hover:underline cursor-pointer text-left focus:outline-none">
+                    {h.name}
+                  </button>
                   <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${sc.badge}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />{sc.label}
                   </span>
@@ -332,7 +334,9 @@ export const RevenueHeads = () => {
                     style={{ animation: `fadeUp 0.35s ease ${i * 50}ms both` }}
                     className="hover:bg-slate-800/20 transition-colors group">
                     <td className="px-4 py-3.5">
-                      <p className="text-sm font-semibold text-slate-200">{h.name}</p>
+                      <button onClick={() => { setEditItem(h); setModalOpen(true); }} className="text-sm font-semibold text-slate-200 hover:text-emerald-400 hover:underline cursor-pointer text-left focus:outline-none">
+                        {h.name}
+                      </button>
                     </td>
                     <td className="px-4 py-3.5">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cc}`}>{h.category}</span>
