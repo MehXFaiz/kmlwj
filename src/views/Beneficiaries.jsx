@@ -98,6 +98,9 @@ export const Beneficiaries = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchBeneficiaries();
@@ -111,6 +114,11 @@ export const Beneficiaries = () => {
     );
   }, [beneficiaries, search]);
 
+  const allIds = filtered.map(b => b.id);
+  const isAllSelected = filtered.length > 0 && selectedIds.length === filtered.length;
+  const toggleAll = () => isAllSelected ? setSelectedIds([]) : setSelectedIds(allIds);
+  const toggleSelect = (id) => setSelectedIds(p => p.includes(id) ? p.filter(i => i !== id) : [...p, id]);
+
   const handleSave = async (data) => {
     if (editItem) {
       await updateBeneficiary(editItem.id, data);
@@ -121,8 +129,23 @@ export const Beneficiaries = () => {
   };
 
   const handleDelete = async (id) => {
+    setIsDeleting(true);
     await deleteBeneficiary(id);
+    setSelectedIds(p => p.filter(i => i !== id));
     setDeleteId(null);
+    setIsDeleting(false);
+  };
+
+  const handleBulkDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await Promise.all(selectedIds.map(id => deleteBeneficiary(id)));
+      setSelectedIds([]);
+      setShowBulkConfirm(false);
+    } catch (err) {
+      alert("Failed to delete some items");
+    }
+    setIsDeleting(false);
   };
 
   return (
@@ -138,6 +161,14 @@ export const Beneficiaries = () => {
           <p className="text-xs text-slate-500 mt-0.5">Manage individuals or entities receiving donations</p>
         </div>
         <div className={pageActionsClass}>
+          {selectedIds.length > 0 && (
+            <button
+              onClick={() => setShowBulkConfirm(true)}
+              className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30 border border-red-900/50 transition-all text-xs font-semibold flex-1 sm:flex-none"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Bulk Delete ({selectedIds.length})
+            </button>
+          )}
           <button onClick={() => { setEditItem(null); setModalOpen(true); }}
             className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-900/40 transition-all flex-1 sm:flex-none">
             <Plus className="h-4 w-4" /> New Beneficiary
@@ -160,6 +191,14 @@ export const Beneficiaries = () => {
             <table className="w-full text-left min-w-[800px]">
               <thead>
                 <tr className="border-b border-slate-800 bg-slate-900/80">
+                  <th className="px-4 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      onChange={toggleAll}
+                      className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-indigo-600 focus:ring-indigo-600 focus:ring-offset-slate-900 cursor-pointer"
+                    />
+                  </th>
                   <th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-500">Name</th>
                   <th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-500">CNIC / Mobile</th>
                   <th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-500">Status</th>
@@ -169,7 +208,15 @@ export const Beneficiaries = () => {
               </thead>
               <tbody className="divide-y divide-slate-800/50">
                 {filtered.map(b => (
-                  <tr key={b.id} className="hover:bg-slate-800/20 transition-colors group">
+                  <tr key={b.id} className={`hover:bg-slate-800/20 transition-colors group ${selectedIds.includes(b.id) ? 'bg-indigo-900/10' : ''}`}>
+                    <td className="px-4 py-3.5">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(b.id)}
+                        onChange={() => toggleSelect(b.id)}
+                        className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-indigo-600 focus:ring-indigo-600 focus:ring-offset-slate-900 cursor-pointer"
+                      />
+                    </td>
                     <td className="px-4 py-3.5"><p className="text-sm font-semibold text-slate-200">{b.name}</p></td>
                     <td className="px-4 py-3.5">
                       <div className="text-xs text-slate-300">{b.cnic || 'No CNIC'}</div>
@@ -197,11 +244,19 @@ export const Beneficiaries = () => {
         </DesktopOnly>
         <MobileOnly className="p-3 space-y-3">
             {filtered.map(b => (
-              <div key={b.id} className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-3">
-                <div className="flex justify-between items-start mb-2">
-                  <h4 className="text-sm font-bold text-slate-200">{b.name}</h4>
+              <div key={b.id} className={`rounded-lg border bg-slate-950/40 p-3 transition-colors ${selectedIds.includes(b.id) ? 'border-indigo-600/50 bg-indigo-900/10' : 'border-slate-800/60'}`}>
+                <div className="flex items-start gap-3 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(b.id)}
+                    onChange={() => toggleSelect(b.id)}
+                    className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-indigo-600 focus:ring-indigo-600 focus:ring-offset-slate-900 cursor-pointer"
+                  />
+                  <div className="flex-1 flex justify-between items-start">
+                    <h4 className="text-sm font-bold text-slate-200">{b.name}</h4>
+                  </div>
                 </div>
-                <div className="text-xs text-slate-400 mb-2">CNIC: {b.cnic} | Mob: {b.mobile}</div>
+                <div className="text-xs text-slate-400 mb-2 pl-7">CNIC: {b.cnic} | Mob: {b.mobile}</div>
                 <div className="flex justify-between mt-3 pt-3 border-t border-slate-800/50">
                    <button onClick={() => { setEditItem(b); setModalOpen(true); }} className="text-xs text-slate-400 hover:text-white">Edit</button>
                    <button onClick={() => setDeleteId(b.id)} className="text-xs text-red-400">Delete</button>
@@ -217,8 +272,27 @@ export const Beneficiaries = () => {
           <div className="relative z-10 w-full max-w-sm rounded-2xl border border-red-900/50 bg-slate-900 p-6 shadow-2xl">
             <h4 className="text-sm font-bold text-slate-200 mb-4">Confirm Delete</h4>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteId(null)} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-sm font-semibold">Cancel</button>
-              <button onClick={() => handleDelete(deleteId)} className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-bold">Delete</button>
+              <button onClick={() => setDeleteId(null)} disabled={isDeleting} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-sm font-semibold">Cancel</button>
+              <button onClick={() => handleDelete(deleteId)} disabled={isDeleting} className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-bold">
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirm */}
+      {showBulkConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowBulkConfirm(false)} />
+          <div className="relative z-10 w-full max-w-sm rounded-2xl border border-red-900/50 bg-slate-900 p-6 shadow-2xl">
+            <h4 className="text-sm font-bold text-slate-200 mb-2">Bulk Delete Beneficiaries</h4>
+            <p className="text-xs text-slate-500 mb-4">Delete {selectedIds.length} items? This cannot be undone.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowBulkConfirm(false)} disabled={isDeleting} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-sm font-semibold">Cancel</button>
+              <button onClick={handleBulkDelete} disabled={isDeleting} className="flex-1 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-sm font-bold transition-all">
+                {isDeleting ? 'Deleting...' : 'Delete All'}
+              </button>
             </div>
           </div>
         </div>

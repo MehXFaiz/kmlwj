@@ -261,6 +261,9 @@ export const RevenueHeads = () => {
   const [editItem, setEditItem] = useState(null);
   const [viewItem, setViewItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchHeads();
@@ -292,6 +295,11 @@ export const RevenueHeads = () => {
     else { setSortField(field); setSortDir('asc'); }
   };
 
+  const allIds = filtered.map(h => h.id);
+  const isAllSelected = filtered.length > 0 && selectedIds.length === filtered.length;
+  const toggleAll = () => isAllSelected ? setSelectedIds([]) : setSelectedIds(allIds);
+  const toggleSelect = (id) => setSelectedIds(p => p.includes(id) ? p.filter(i => i !== id) : [...p, id]);
+
   const handleSave = async (data) => {
     try {
       if (editItem) {
@@ -307,8 +315,23 @@ export const RevenueHeads = () => {
   };
 
   const handleDelete = async (id) => {
+    setIsDeleting(true);
     await deleteHead(id);
+    setSelectedIds(p => p.filter(i => i !== id));
     setDeleteId(null);
+    setIsDeleting(false);
+  };
+
+  const handleBulkDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await Promise.all(selectedIds.map(id => deleteHead(id)));
+      setSelectedIds([]);
+      setShowBulkConfirm(false);
+    } catch (err) {
+      alert("Failed to delete some items");
+    }
+    setIsDeleting(false);
   };
 
   const SortIcon = ({ field }) => (
@@ -333,6 +356,14 @@ export const RevenueHeads = () => {
           <p className="text-xs text-slate-500 mt-0.5">Manage revenue streams and classifications</p>
         </div>
         <div className={pageActionsClass}>
+          {selectedIds.length > 0 && (
+            <button
+              onClick={() => setShowBulkConfirm(true)}
+              className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30 border border-red-900/50 transition-all text-xs font-semibold flex-1 sm:flex-none"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Bulk Delete ({selectedIds.length})
+            </button>
+          )}
           <button className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all text-xs font-semibold flex-1 sm:flex-none">
             <Download className="h-3.5 w-3.5" /> Export
           </button>
@@ -374,17 +405,25 @@ export const RevenueHeads = () => {
             const sc = STATUS_COLORS[h.isActive] || STATUS_COLORS.false;
             const cc = CAT_COLORS[h.category] || CAT_COLORS.Other;
             return (
-              <div key={h.id} className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-3" style={{ animation: `fadeUp 0.35s ease ${i * 50}ms both` }}>
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <p 
-                    className="text-sm font-semibold text-emerald-400 hover:text-emerald-300 cursor-pointer transition-colors"
-                    onClick={() => setViewItem(h)}
-                  >
-                    {h.name}
-                  </p>
-                  <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${sc.badge}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />{sc.label}
-                  </span>
+              <div key={h.id} className={`rounded-lg border bg-slate-950/40 p-3 transition-colors ${selectedIds.includes(h.id) ? 'border-emerald-600/50 bg-emerald-900/10' : 'border-slate-800/60'}`} style={{ animation: `fadeUp 0.35s ease ${i * 50}ms both` }}>
+                <div className="flex items-start gap-3 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(h.id)}
+                    onChange={() => toggleSelect(h.id)}
+                    className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-emerald-600 focus:ring-emerald-600 focus:ring-offset-slate-900 cursor-pointer"
+                  />
+                  <div className="flex-1 flex items-start justify-between gap-2">
+                    <p 
+                      className="text-sm font-semibold text-emerald-400 hover:text-emerald-300 cursor-pointer transition-colors"
+                      onClick={() => setViewItem(h)}
+                    >
+                      {h.name}
+                    </p>
+                    <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${sc.badge}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />{sc.label}
+                    </span>
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-2 mb-3">
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cc}`}>{h.category}</span>
@@ -413,6 +452,14 @@ export const RevenueHeads = () => {
           <table className="w-full text-left min-w-[720px]">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-900/80">
+                <th className="px-4 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={toggleAll}
+                    className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-emerald-600 focus:ring-emerald-600 focus:ring-offset-slate-900 cursor-pointer"
+                  />
+                </th>
                 {[
                   { label: 'Name', field: 'name' },
                   { label: 'Category', field: 'category', w: 'w-48' },
@@ -446,7 +493,15 @@ export const RevenueHeads = () => {
                 return (
                   <tr key={h.id}
                     style={{ animation: `fadeUp 0.35s ease ${i * 50}ms both` }}
-                    className="hover:bg-slate-800/20 transition-colors group">
+                    className={`hover:bg-slate-800/20 transition-colors group ${selectedIds.includes(h.id) ? 'bg-emerald-900/10' : ''}`}>
+                    <td className="px-4 py-3.5">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(h.id)}
+                        onChange={() => toggleSelect(h.id)}
+                        className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-emerald-600 focus:ring-emerald-600 focus:ring-offset-slate-900 cursor-pointer"
+                      />
+                    </td>
                     <td className="px-4 py-3.5">
                       <p 
                         className="text-sm font-semibold text-emerald-400 hover:text-emerald-300 cursor-pointer transition-colors inline-block"
@@ -512,8 +567,34 @@ export const RevenueHeads = () => {
               </div>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteId(null)} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 text-sm font-semibold transition-all">Cancel</button>
-              <button onClick={() => handleDelete(deleteId)} className="flex-1 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-bold transition-all">Delete</button>
+              <button onClick={() => setDeleteId(null)} disabled={isDeleting} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 text-sm font-semibold transition-all">Cancel</button>
+              <button onClick={() => handleDelete(deleteId)} disabled={isDeleting} className="flex-1 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-sm font-bold transition-all">
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirm */}
+      {showBulkConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowBulkConfirm(false)} />
+          <div className="relative z-10 w-full max-w-sm rounded-2xl border border-red-900/50 bg-slate-900 p-6 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-10 w-10 rounded-full bg-red-950/60 border border-red-800/40 flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-red-400" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-200">Bulk Delete Revenue Heads</h4>
+                <p className="text-xs text-slate-500">Delete {selectedIds.length} items? This cannot be undone.</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShowBulkConfirm(false)} disabled={isDeleting} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 text-sm font-semibold transition-all">Cancel</button>
+              <button onClick={handleBulkDelete} disabled={isDeleting} className="flex-1 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-sm font-bold transition-all">
+                {isDeleting ? 'Deleting...' : 'Delete All'}
+              </button>
             </div>
           </div>
         </div>

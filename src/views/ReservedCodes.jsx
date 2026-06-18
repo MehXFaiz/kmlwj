@@ -127,6 +127,9 @@ export const ReservedCodes = () => {
   const [deleteId, setDeleteId] = useState(null);
   const [detailId, setDetailId] = useState(null);
   const [apiError, setApiError] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchCodes();
@@ -158,6 +161,11 @@ export const ReservedCodes = () => {
     else { setSortField(field); setSortDir('asc'); }
   };
 
+  const allIds = filtered.map(c => c.id);
+  const isAllSelected = filtered.length > 0 && selectedIds.length === filtered.length;
+  const toggleAll = () => isAllSelected ? setSelectedIds([]) : setSelectedIds(allIds);
+  const toggleSelect = (id) => setSelectedIds(p => p.includes(id) ? p.filter(i => i !== id) : [...p, id]);
+
   const handleSave = async (data) => {
     setApiError(null);
     try {
@@ -174,12 +182,27 @@ export const ReservedCodes = () => {
   };
 
   const handleDelete = async (id) => {
+    setIsDeleting(true);
     try {
       await deleteCode(id);
+      setSelectedIds(p => p.filter(i => i !== id));
       setDeleteId(null);
     } catch (err) {
       console.error(err);
     }
+    setIsDeleting(false);
+  };
+
+  const handleBulkDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await Promise.all(selectedIds.map(id => deleteCode(id)));
+      setSelectedIds([]);
+      setShowBulkConfirm(false);
+    } catch (err) {
+      alert("Failed to delete some items");
+    }
+    setIsDeleting(false);
   };
 
   const SortIcon = ({ field }) => (
@@ -206,6 +229,14 @@ export const ReservedCodes = () => {
           <p className="text-xs text-slate-500 mt-0.5">Manage restricted GL code ranges and system-protected account blocks</p>
         </div>
         <div className={pageActionsClass}>
+          {selectedIds.length > 0 && (
+            <button
+              onClick={() => setShowBulkConfirm(true)}
+              className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30 border border-red-900/50 transition-all text-xs font-semibold flex-1 sm:flex-none"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Bulk Delete ({selectedIds.length})
+            </button>
+          )}
           <button className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all text-xs font-semibold flex-1 sm:flex-none">
             <Download className="h-3.5 w-3.5" /> Export
           </button>
@@ -255,12 +286,20 @@ export const ReservedCodes = () => {
           ) : filtered.map((c, i) => {
             const sc = STATUS_COLORS[c.isActive] || STATUS_COLORS[false];
             return (
-              <div key={c.id} className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-3" style={{ animation: `fadeUp 0.35s ease ${i * 50}ms both` }}>
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div>
-                    <span className="font-mono text-xs font-bold text-amber-400">{c.reserveStart} - {c.reserveEnd}</span>
+              <div key={c.id} className={`rounded-lg border bg-slate-950/40 p-3 transition-colors ${selectedIds.includes(c.id) ? 'border-amber-600/50 bg-amber-900/10' : 'border-slate-800/60'}`} style={{ animation: `fadeUp 0.35s ease ${i * 50}ms both` }}>
+                <div className="flex items-start gap-3 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(c.id)}
+                    onChange={() => toggleSelect(c.id)}
+                    className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-600 focus:ring-amber-600 focus:ring-offset-slate-900 cursor-pointer"
+                  />
+                  <div className="flex-1 flex items-start justify-between gap-2">
+                    <div>
+                      <span className="font-mono text-xs font-bold text-amber-400">{c.reserveStart} - {c.reserveEnd}</span>
+                    </div>
+                    <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${sc.badge}`}><span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />{sc.label}</span>
                   </div>
-                  <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${sc.badge}`}><span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />{sc.label}</span>
                 </div>
                 <p className="text-[11px] text-slate-300 mb-2">{c.reserveReason}</p>
                 <div className="flex items-center gap-1 pt-2 border-t border-slate-800/50">
@@ -277,6 +316,14 @@ export const ReservedCodes = () => {
           <table className="w-full text-left min-w-[700px]">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-900/80">
+                <th className="px-4 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={toggleAll}
+                    className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-600 focus:ring-amber-600 focus:ring-offset-slate-900 cursor-pointer"
+                  />
+                </th>
                 {[
                   { label: 'Start Code', field: 'reserveStart', w: 'w-32' },
                   { label: 'End Code', field: 'reserveEnd', w: 'w-32' },
@@ -299,7 +346,15 @@ export const ReservedCodes = () => {
                 const sc = STATUS_COLORS[c.isActive] || STATUS_COLORS[false];
                 return (
                   <tr key={c.id} style={{ animation: `fadeUp 0.35s ease ${i * 50}ms both` }}
-                    className="hover:bg-slate-800/20 transition-colors group">
+                    className={`hover:bg-slate-800/20 transition-colors group ${selectedIds.includes(c.id) ? 'bg-amber-900/10' : ''}`}>
+                    <td className="px-4 py-3.5">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(c.id)}
+                        onChange={() => toggleSelect(c.id)}
+                        className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-600 focus:ring-amber-600 focus:ring-offset-slate-900 cursor-pointer"
+                      />
+                    </td>
                     <td className="px-4 py-3.5"><span className="font-mono text-xs font-bold text-amber-400">{c.reserveStart}</span></td>
                     <td className="px-4 py-3.5"><span className="font-mono text-xs font-bold text-amber-400">{c.reserveEnd}</span></td>
                     <td className="px-4 py-3.5">
@@ -386,9 +441,35 @@ export const ReservedCodes = () => {
               </div>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteId(null)} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 text-sm font-semibold transition-all">Cancel</button>
-              <button onClick={() => handleDelete(deleteId)}
-                className="flex-1 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-bold transition-all">Remove</button>
+              <button onClick={() => setDeleteId(null)} disabled={isDeleting} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 text-sm font-semibold transition-all">Cancel</button>
+              <button onClick={() => handleDelete(deleteId)} disabled={isDeleting}
+                className="flex-1 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-sm font-bold transition-all">
+                {isDeleting ? 'Removing...' : 'Remove'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirm */}
+      {showBulkConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowBulkConfirm(false)} />
+          <div className="relative z-10 w-full max-w-sm rounded-2xl border border-red-900/50 bg-slate-900 p-6 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-10 w-10 rounded-full bg-red-950/60 border border-red-800/40 flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-red-400" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-200">Bulk Remove Reservations</h4>
+                <p className="text-xs text-slate-500">Remove {selectedIds.length} items? This will unreserve the GL code ranges.</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShowBulkConfirm(false)} disabled={isDeleting} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 text-sm font-semibold transition-all">Cancel</button>
+              <button onClick={handleBulkDelete} disabled={isDeleting} className="flex-1 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-sm font-bold transition-all">
+                {isDeleting ? 'Removing...' : 'Remove All'}
+              </button>
             </div>
           </div>
         </div>
