@@ -123,6 +123,7 @@ model RevenueHead {
   id          String   @id @default(uuid()) @db.Uuid
   name        String
   category    String
+  hall        String?
   amount      Float?   @default(0)
   accountId   String?  @db.Uuid
   account     Account? @relation(fields: [accountId], references: [id])

@@ -11,12 +11,12 @@ import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/
 /* ─── Add / Edit Modal ─── */
 function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
   const [form, setForm] = useState(
-    initial || { name: '', category: 'Hall Bookings', amount: 0, accountId: '', isActive: true }
+    initial || { name: '', category: 'Hall Bookings', hall: '', amount: 0, accountId: '', isActive: true }
   );
 
   useEffect(() => {
     if (isOpen) {
-      setForm(initial || { name: '', category: 'Hall Bookings', amount: 0, accountId: '', isActive: true });
+      setForm(initial || { name: '', category: 'Hall Bookings', hall: '', amount: 0, accountId: '', isActive: true });
     }
   }, [isOpen, initial]);
 
@@ -74,7 +74,7 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Category *</label>
               <select
                 value={form.category}
-                onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                onChange={e => setForm(f => ({ ...f, category: e.target.value, hall: e.target.value === 'Hall Bookings' ? '' : f.hall }))}
                 className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-emerald-600/60 transition-all"
               >
                 {['Hall Bookings', 'Other Income'].map(c => (
@@ -96,6 +96,25 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
               </select>
             </div>
           </div>
+
+          {form.category === 'Hall Bookings' && (
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Hall Name</label>
+                <select
+                  value={form.hall || ''}
+                  onChange={e => setForm(f => ({ ...f, hall: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-emerald-600/60 transition-all"
+                >
+                  <option value="">Select a hall...</option>
+                  <option value="Bagh-e-Hajiani Garden">Bagh-e-Hajiani Garden</option>
+                  <option value="Sadaya-Hall">Sadaya-Hall</option>
+                  <option value="Zikarya-Hall">Zikarya-Hall</option>
+                  <option value="Anexy-Hall">Anexy-Hall</option>
+                </select>
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center gap-3 pt-2">
             <input
@@ -169,6 +188,7 @@ function RevenueHeadViewModal({ isOpen, onClose, item }) {
              <h4 className="text-xl font-bold text-slate-100">{item.name}</h4>
              <div className="flex flex-wrap gap-2 mt-3">
                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cc}`}>{item.category}</span>
+                 {item.hall && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border bg-indigo-950/50 text-indigo-400 border-indigo-900/40`}>{item.hall}</span>}
                  <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${sc.badge}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />{sc.label}
                  </span>
