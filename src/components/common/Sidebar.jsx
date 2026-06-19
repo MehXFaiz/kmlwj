@@ -74,24 +74,15 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
       `}
     >
       {/* Top Section - Brand */}
-      <div className={`h-16 flex-shrink-0 flex items-center border-b border-slate-800/80 justify-between bg-slate-900/60 ${isCollapsed ? 'px-4 justify-center' : 'px-3.5'}`}>
-        <div className="flex items-center gap-2 overflow-hidden">
-          <img
-            src={logoImg}
-            alt="KMLWJ Logo"
-            className="w-8 h-8 object-contain shrink-0 filter drop-shadow(0 0 4px rgba(99,102,241,0.3))"
-          />
-          {!isCollapsed && (
-            <div className="flex items-center px-2.5 py-1 rounded-lg bg-gradient-to-r from-indigo-900/80 to-slate-900 border border-indigo-500/30 shadow-md shadow-indigo-500/10">
-              <span className="font-black text-sm tracking-[0.2em] bg-gradient-to-r from-indigo-300 via-blue-300 to-emerald-300 bg-clip-text text-transparent whitespace-nowrap">
-                KMLWJ
-              </span>
-            </div>
-          )}
-        </div>
+      <div className="h-16 flex-shrink-0 flex items-center justify-center border-b border-slate-800/80 bg-slate-900/60 px-4 relative">
+        <img
+          src={logoImg}
+          alt="KMLWJ Logo"
+          className="w-9 h-9 object-contain filter drop-shadow(0 0 6px rgba(99,102,241,0.3))"
+        />
         <button
           onClick={() => setIsMobileOpen(false)}
-          className="p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 transition-colors lg:hidden"
+          className="absolute right-4 p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 transition-colors lg:hidden"
           aria-label="Close navigation menu"
         >
           <X className="h-5 w-5" />
