@@ -74,6 +74,9 @@ var accounts_default = makeHandler(async (req, res) => {
     if (!code || !name || !type) {
       return res.status(400).json({ error: { message: "Code, Name, and Type are required", status: 400 } });
     }
+    if (!/^\d{7}$/.test(code)) {
+      return res.status(400).json({ error: { message: "GL Code must be exactly 7 digits (e.g., 1000000)", status: 400 } });
+    }
     if (!isReserved) {
       const reservedMatch = await prisma.reservedCode.findFirst({
         where: {
@@ -92,17 +95,24 @@ var accounts_default = makeHandler(async (req, res) => {
       accountType = await prisma.accountType.create({ data: { name: typeNameUpper } });
     }
     let parentId = null;
-    if (parentCode && parentCode !== "none") {
-      const parentAcc = await prisma.account.findUnique({ where: { glCode: parentCode } });
-      if (parentAcc) parentId = parentAcc.id;
-    }
-    let accountLevel = "SUBSIDIARY";
+    let accountLevel = "MAIN";
     if (!parentCode || parentCode === "none") {
       accountLevel = "MAIN";
+      if (!code.endsWith("000000")) {
+        return res.status(400).json({ error: { message: "MAIN account GL codes must end with 000000 (e.g., 1000000)", status: 400 } });
+      }
     } else {
       const parentAcc = await prisma.account.findUnique({ where: { glCode: parentCode } });
-      if (parentAcc && parentAcc.accountLevel === "MAIN") {
+      if (!parentAcc) {
+        return res.status(400).json({ error: { message: "Parent account not found", status: 400 } });
+      }
+      parentId = parentAcc.id;
+      if (parentAcc.accountLevel === "MAIN") {
         accountLevel = "PARENT";
+      } else if (parentAcc.accountLevel === "PARENT") {
+        accountLevel = "SUBSIDIARY";
+      } else {
+        return res.status(400).json({ error: { message: "Cannot create an account under a SUBSIDIARY account", status: 400 } });
       }
     }
     const newAccount = await prisma.account.create({
@@ -142,6 +152,9 @@ var accounts_default = makeHandler(async (req, res) => {
     }
     const { code, name, type, detailType, parentCode, currency, subsidiary, initialBalance, description, isLocked, isReserved } = req.body;
     if (code !== void 0) {
+      if (!/^\d{7}$/.test(code)) {
+        return res.status(400).json({ error: { message: "GL Code must be exactly 7 digits (e.g., 1000000)", status: 400 } });
+      }
       if (isReserved !== true && existingAccount.isReserved !== true) {
         const reservedMatch = await prisma.reservedCode.findFirst({
           where: {
@@ -175,14 +188,30 @@ var accounts_default = makeHandler(async (req, res) => {
     }
     if (parentCode !== void 0) {
       if (!parentCode || parentCode === "none") {
+        if (updateData.glCode && !updateData.glCode.endsWith("000000")) {
+          return res.status(400).json({ error: { message: "MAIN account GL codes must end with 000000 (e.g., 1000000)", status: 400 } });
+        } else if (!updateData.glCode && !existingAccount.glCode.endsWith("000000")) {
+          return res.status(400).json({ error: { message: "Cannot move to MAIN level without a valid GL code ending in 000000", status: 400 } });
+        }
         updateData.parentId = null;
         updateData.accountLevel = "MAIN";
       } else {
         const parentAcc = await prisma.account.findUnique({ where: { glCode: parentCode } });
-        if (parentAcc) {
-          updateData.parentId = parentAcc.id;
-          updateData.accountLevel = parentAcc.accountLevel === "MAIN" ? "PARENT" : "SUBSIDIARY";
+        if (!parentAcc) {
+          return res.status(400).json({ error: { message: "Parent account not found", status: 400 } });
         }
+        updateData.parentId = parentAcc.id;
+        if (parentAcc.accountLevel === "MAIN") {
+          updateData.accountLevel = "PARENT";
+        } else if (parentAcc.accountLevel === "PARENT") {
+          updateData.accountLevel = "SUBSIDIARY";
+        } else {
+          return res.status(400).json({ error: { message: "Cannot move account under a SUBSIDIARY account", status: 400 } });
+        }
+      }
+    } else if (updateData.glCode && existingAccount.accountLevel === "MAIN") {
+      if (!updateData.glCode.endsWith("000000")) {
+        return res.status(400).json({ error: { message: "MAIN account GL codes must end with 000000 (e.g., 1000000)", status: 400 } });
       }
     }
     const updatedAccount = await prisma.account.update({

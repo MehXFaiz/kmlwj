@@ -392,15 +392,32 @@ export function SplashScreen({ onComplete }) {
             >
               KMLWJ
             </h1>
+            <div
+              style={{
+                marginTop: 12,
+                fontSize: 'clamp(18px, 5vw, 22px)',
+                fontWeight: 600,
+                background: 'linear-gradient(135deg, #a5b4fc 0%, #818cf8 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                opacity: titleVisible ? 1 : 0,
+                transform: titleVisible ? 'translateY(0)' : 'translateY(15px)',
+                transition: 'opacity 0.8s cubic-bezier(0.16,1,0.3,1) 0.4s, transform 0.8s cubic-bezier(0.16,1,0.3,1) 0.4s',
+                fontFamily: "'Noto Naskh Arabic', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+              }}
+            >
+              کچھی مسلم لوہار واڈہ ویلفیئر جماعت
+            </div>
             <p
               style={{
-                marginTop: 10,
+                marginTop: 12,
                 fontSize: 13,
                 color: 'rgba(148,163,184,0.8)',
                 letterSpacing: '0.04em',
                 fontWeight: 400,
                 opacity: titleVisible ? 1 : 0,
-                transition: 'opacity 0.8s ease 0.55s',
+                transition: 'opacity 0.8s ease 0.5s',
               }}
             >
               Chart of Accounts · General Ledger · Journal Engine

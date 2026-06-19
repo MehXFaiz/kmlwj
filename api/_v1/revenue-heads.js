@@ -27,7 +27,7 @@ var revenue_heads_default = makeHandler(async (req, res) => {
     if (!checkPerm("CREATE_ACCOUNT")) {
       return res.status(403).json({ error: { message: "Forbidden: Insufficient permissions", status: 403 } });
     }
-    const { name, category, accountId, isActive } = req.body;
+    const { name, category, hall, amount, accountId, isActive } = req.body;
     if (!name || !category) {
       return res.status(400).json({ error: { message: "Name and Category are required", status: 400 } });
     }
@@ -35,6 +35,8 @@ var revenue_heads_default = makeHandler(async (req, res) => {
       data: {
         name,
         category,
+        hall: category === "Hall Bookings" ? hall || null : null,
+        amount: amount !== void 0 ? parseFloat(amount) : 0,
         accountId: accountId || null,
         isActive: isActive !== void 0 ? Boolean(isActive) : true
       }
@@ -53,12 +55,14 @@ var revenue_heads_default = makeHandler(async (req, res) => {
     if (!existingHead) {
       return res.status(404).json({ error: { message: "Revenue Head not found", status: 404 } });
     }
-    const { name, category, accountId, isActive } = req.body;
+    const { name, category, hall, amount, accountId, isActive } = req.body;
     const updatedHead = await prisma.revenueHead.update({
       where: { id },
       data: {
         name: name !== void 0 ? name : void 0,
         category: category !== void 0 ? category : void 0,
+        hall: category === "Hall Bookings" ? hall !== void 0 ? hall : void 0 : null,
+        amount: amount !== void 0 ? parseFloat(amount) : void 0,
         accountId: accountId !== void 0 ? accountId || null : void 0,
         isActive: isActive !== void 0 ? Boolean(isActive) : void 0
       }
