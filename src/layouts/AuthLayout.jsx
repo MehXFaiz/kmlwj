@@ -34,7 +34,16 @@ export const AuthLayout = ({ children }) => {
               <span className="text-lg font-black tracking-[0.18em] bg-gradient-to-r from-indigo-300 via-blue-300 to-emerald-300 bg-clip-text text-transparent">KMLWJ</span>
             </div>
           </div>
-          <p className="text-slate-400 text-sm font-medium mt-1 max-w-xs">
+          <div
+            className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-blue-200 to-emerald-200 mt-2"
+            style={{
+              fontFamily: "'Noto Naskh Arabic', sans-serif",
+              fontSize: '1.2rem',
+            }}
+          >
+            کچھی مسلم لوہار واڈہ ویلفیئر جماعت
+          </div>
+          <p className="text-slate-400 text-sm font-medium mt-2 max-w-xs">
             Enterprise Resource Planning for modern finance teams
           </p>
         </div>
@@ -77,9 +86,18 @@ export const AuthLayout = ({ children }) => {
         <div className="hidden sm:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(500px,100vw)] h-[min(500px,100vh)] bg-indigo-500/[0.04] rounded-full blur-[120px] pointer-events-none" />
 
         <div className="w-full max-w-[420px] mx-auto px-4 sm:px-6 py-5 sm:py-8 lg:py-12 relative z-10 min-h-[100dvh] lg:min-h-0 flex flex-col justify-start sm:justify-center box-border">
-          <div className="lg:hidden flex items-center justify-center mb-4 sm:mb-6 shrink-0">
+          <div className="lg:hidden flex flex-col items-center justify-center mb-4 sm:mb-6 shrink-0 gap-2.5">
             <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-900/80 to-slate-900/80 border border-indigo-500/30 shadow-lg shadow-indigo-500/20">
               <span className="text-base sm:text-lg font-black tracking-[0.18em] bg-gradient-to-r from-indigo-300 via-blue-300 to-emerald-300 bg-clip-text text-transparent">KMLWJ</span>
+            </div>
+            <div
+              className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-blue-200 to-emerald-200 text-center"
+              style={{
+                fontFamily: "'Noto Naskh Arabic', sans-serif",
+                fontSize: '0.95rem',
+              }}
+            >
+              کچھی مسلم لوہار واڈہ ویلفیئر جماعت
             </div>
           </div>
 
