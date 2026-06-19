@@ -78,7 +78,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
         <img
           src={logoImg}
           alt="KMLWJ Logo"
-          className="w-9 h-9 object-contain filter drop-shadow(0 0 6px rgba(99,102,241,0.3))"
+          className="w-12 h-12 object-contain filter drop-shadow(0 0 6px rgba(99,102,241,0.3))"
         />
         <button
           onClick={() => setIsMobileOpen(false)}
