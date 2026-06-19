@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useEffect } from 'react';
+import logoImg from '../../assets/logo.png';
 import { useAuthStore } from '../../store/authStore';
 import { 
   LayoutDashboard, 
@@ -73,17 +74,19 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
       `}
     >
       {/* Top Section - Brand */}
-      <div className="h-16 flex-shrink-0 flex items-center px-4 border-b border-slate-800/80 justify-between bg-slate-900/60">
-        <div className="flex items-center gap-3 overflow-hidden">
-          <div className={`flex items-center px-2.5 py-1 rounded-lg bg-gradient-to-r from-indigo-900/80 to-slate-900 border border-indigo-500/30 shadow-md shadow-indigo-500/10 ${showFullBrand ? '' : 'lg:hidden'}`}>
-            <span className="font-black text-sm tracking-[0.2em] bg-gradient-to-r from-indigo-300 via-blue-300 to-emerald-300 bg-clip-text text-transparent whitespace-nowrap">
-              KMLWJ
-            </span>
-          </div>
-          {isCollapsed && (
-            <span className="hidden lg:inline font-black text-sm tracking-widest bg-gradient-to-r from-indigo-300 via-blue-300 to-emerald-300 bg-clip-text text-transparent whitespace-nowrap">
-              K
-            </span>
+      <div className={`h-16 flex-shrink-0 flex items-center border-b border-slate-800/80 justify-between bg-slate-900/60 ${isCollapsed ? 'px-4 justify-center' : 'px-3.5'}`}>
+        <div className="flex items-center gap-2 overflow-hidden">
+          <img
+            src={logoImg}
+            alt="KMLWJ Logo"
+            className="w-8 h-8 object-contain shrink-0 filter drop-shadow(0 0 4px rgba(99,102,241,0.3))"
+          />
+          {!isCollapsed && (
+            <div className="flex items-center px-2.5 py-1 rounded-lg bg-gradient-to-r from-indigo-900/80 to-slate-900 border border-indigo-500/30 shadow-md shadow-indigo-500/10">
+              <span className="font-black text-sm tracking-[0.2em] bg-gradient-to-r from-indigo-300 via-blue-300 to-emerald-300 bg-clip-text text-transparent whitespace-nowrap">
+                KMLWJ
+              </span>
+            </div>
           )}
         </div>
         <button

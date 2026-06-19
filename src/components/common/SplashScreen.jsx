@@ -1,4 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
+import logoImg from '../../assets/logo.png';
+
 
 /* ─────────────────────────────────────────────
    Animated SVG Logo Mark
@@ -44,37 +46,19 @@ function LogoMark({ visible }) {
           animation: 'splash-pulse 2s ease-in-out infinite',
         }}
       />
-      {/* KMLWJ Text Logo */}
-      <div
+      {/* Welfare Jamaat Custom Emblem Logo */}
+      <img
+        src={logoImg}
+        alt="KMLWJ Logo"
         style={{
           position: 'relative',
           zIndex: 10,
           width: 110,
-          height: 88,
-          borderRadius: 16,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'linear-gradient(135deg, rgba(30,27,75,0.9) 0%, rgba(15,23,42,0.95) 100%)',
-          border: '1.5px solid rgba(129,140,248,0.35)',
-          boxShadow: '0 0 40px rgba(99,102,241,0.45)',
+          height: 110,
+          objectFit: 'contain',
+          filter: 'drop-shadow(0 0 15px rgba(99,102,241,0.5))',
         }}
-      >
-        <span
-          style={{
-            fontSize: 15,
-            fontWeight: 900,
-            letterSpacing: '0.22em',
-            background: 'linear-gradient(135deg, #a5b4fc 0%, #60a5fa 50%, #34d399 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
-          }}
-        >
-          KMLWJ
-        </span>
-      </div>
+      />
     </div>
   );
 }
