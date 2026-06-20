@@ -122,9 +122,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     email: log.user ? log.user.email : null,
   }));
 
-  // Also include original total counts in case frontend still needs them before we fully rip them out
-  const totalAccounts = await prisma.account.count();
-  const activeUsers = await prisma.user.count({ where: { isActive: true } });
+  // The original total counts are already fetched at the top of this file.
 
   return res.status(200).json({
     status: 200,

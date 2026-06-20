@@ -28,6 +28,10 @@ const Donations = lazy(() => import('./views/Donations').then(m => ({ default: m
 const DonationReports = lazy(() => import('./views/DonationReports').then(m => ({ default: m.DonationReports })));
 const Invoices = lazy(() => import('./views/Invoices').then(m => ({ default: m.Invoices })));
 
+// Operation Module Views
+const Income = lazy(() => import('./views/Income').then(m => ({ default: m.Income })));
+const Expenses = lazy(() => import('./views/Expenses').then(m => ({ default: m.Expenses })));
+
 // Auth Views (also lazy-loaded)
 const Login = lazy(() => import('./views/Login').then(m => ({ default: m.Login })));
 const Signup = lazy(() => import('./views/Signup').then(m => ({ default: m.Signup })));
@@ -198,6 +202,16 @@ function App() {
             <Route path="/reports" element={
               <PermissionGuard requiredPerms={['VIEW_REPORTS']}>
                 <Reports />
+              </PermissionGuard>
+            } />
+            <Route path="/income" element={
+              <PermissionGuard requiredPerms={['RECORD_INCOME', 'CREATE_ACCOUNT']}>
+                <Income />
+              </PermissionGuard>
+            } />
+            <Route path="/expenses" element={
+              <PermissionGuard requiredPerms={['RECORD_EXPENSE', 'CREATE_ACCOUNT']}>
+                <Expenses />
               </PermissionGuard>
             } />
             <Route path="/trial-balance-sheet" element={
