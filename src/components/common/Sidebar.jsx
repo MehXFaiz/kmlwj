@@ -206,27 +206,9 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
           ))}
         </nav>
 
-        {/* Bottom Section - User Session & Settings */}
+        {/* Bottom Section - Settings */}
         <div className="flex-shrink-0 p-3 border-t border-slate-800/80 bg-slate-950/20">
           
-          {/* User profile section */}
-          <div className="mb-3 p-3 rounded-xl bg-slate-950/45 border border-slate-800/80 flex items-center justify-between gap-2 overflow-hidden">
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-slate-200 truncate">{user?.fullName || 'Operator'}</p>
-              <p className="text-[10px] text-slate-500 truncate">{user?.email}</p>
-              <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-800/40 text-[9px] font-bold text-emerald-400 uppercase tracking-wider">
-                {user?.role}
-              </span>
-            </div>
-            <button
-              onClick={logout}
-              title="Logout"
-              className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-950/30 border border-transparent hover:border-red-900/40 transition-all cursor-pointer flex-shrink-0"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          </div>
-
           {/* System Settings link */}
           <NavLink
             to="/settings"
