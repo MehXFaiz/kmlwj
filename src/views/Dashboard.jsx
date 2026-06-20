@@ -14,7 +14,7 @@ import {
   Lock, Unlock, Layers, BookOpen, Zap, Plus, FileText,
   RefreshCw, Download, Bell, ChevronRight, CheckCircle2,
   AlertTriangle, Clock, Users, PieChart as PieIcon,
-  Calendar, PlusCircle, MinusCircle, CheckSquare,
+  Calendar, PlusCircle, MinusCircle, CheckSquare, Heart
 } from 'lucide-react';
 
 /* ─────────────────────────────────────────────
