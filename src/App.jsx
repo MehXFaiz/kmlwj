@@ -26,6 +26,7 @@ const TrialBalanceSheet = lazy(() => import('./views/TrialBalanceSheet').then(m 
 const Beneficiaries = lazy(() => import('./views/Beneficiaries').then(m => ({ default: m.Beneficiaries })));
 const Donations = lazy(() => import('./views/Donations').then(m => ({ default: m.Donations })));
 const DonationReports = lazy(() => import('./views/DonationReports').then(m => ({ default: m.DonationReports })));
+const Invoices = lazy(() => import('./views/Invoices').then(m => ({ default: m.Invoices })));
 
 // Auth Views (also lazy-loaded)
 const Login = lazy(() => import('./views/Login').then(m => ({ default: m.Login })));
@@ -203,6 +204,7 @@ function App() {
             <Route path="/beneficiaries" element={<Beneficiaries />} />
             <Route path="/donations" element={<Donations />} />
             <Route path="/donation-reports" element={<DonationReports />} />
+            <Route path="/invoices" element={<Invoices />} />
             <Route path="/users-roles" element={
               <PermissionGuard requiredPerms={['MANAGE_USERS', 'MANAGE_ROLES']}>
                 <UsersRoles />

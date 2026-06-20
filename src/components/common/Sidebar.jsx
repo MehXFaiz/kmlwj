@@ -19,7 +19,8 @@ import {
   LogOut,
   X,
   Heart,
-  FileText
+  FileText,
+  Receipt,
 } from 'lucide-react';
 
 export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }) => {
@@ -47,6 +48,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
     { name: 'Beneficiaries', icon: Users, path: '/beneficiaries' },
     { name: 'Donations', icon: Heart, path: '/donations' },
     { name: 'Donation Reports', icon: FileText, path: '/donation-reports' },
+    { name: 'Invoice System', icon: Receipt, path: '/invoices' },
     { name: 'Reports', icon: BarChart3, path: '/reports', perms: ['VIEW_REPORTS'] },
     { name: 'Users & Roles', icon: Users, path: '/users-roles', perms: ['MANAGE_USERS', 'MANAGE_ROLES'] },
     { name: 'General Ledger', icon: BookOpen, path: '/ledger' },
