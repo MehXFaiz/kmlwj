@@ -41,10 +41,11 @@ export const AuthLayout = ({ children }) => {
             </div>
           </div>
           <div
-            className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-blue-200 to-emerald-200 mt-2"
+            className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-blue-200 to-emerald-200 mt-2"
             style={{
-              fontFamily: "'Noto Naskh Arabic', sans-serif",
-              fontSize: '1.2rem',
+              fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif",
+              fontSize: '1.25rem',
+              lineHeight: 2,
             }}
           >
             کچھی مسلم لوہار واڈہ ویلفیئر جماعت
@@ -104,10 +105,11 @@ export const AuthLayout = ({ children }) => {
               </div>
             </div>
             <div
-              className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-blue-200 to-emerald-200 text-center"
+              className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-blue-200 to-emerald-200 text-center"
               style={{
-                fontFamily: "'Noto Naskh Arabic', sans-serif",
-                fontSize: '0.95rem',
+                fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif",
+                fontSize: '1rem',
+                lineHeight: 2,
               }}
             >
               کچھی مسلم لوہار واڈہ ویلفیئر جماعت
