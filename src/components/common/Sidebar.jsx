@@ -74,11 +74,11 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
       `}
     >
       {/* Top Section - Brand */}
-      <div className="h-16 flex-shrink-0 flex items-center justify-center border-b border-slate-800/80 bg-slate-900/60 px-4 relative">
+      <div className={`flex-shrink-0 flex items-center justify-center border-b border-slate-800/80 bg-slate-900/60 px-4 relative transition-all duration-300 ${isCollapsed ? 'h-16' : 'h-28'}`}>
         <img
           src={logoImg}
           alt="KMLWJ Logo"
-          className="w-12 h-12 object-contain filter drop-shadow(0 0 6px rgba(99,102,241,0.3))"
+          className={`object-contain filter drop-shadow(0 0 8px rgba(99,102,241,0.3)) transition-all duration-300 ${isCollapsed ? 'w-10 h-10' : 'w-20 h-20'}`}
         />
         <button
           onClick={() => setIsMobileOpen(false)}
