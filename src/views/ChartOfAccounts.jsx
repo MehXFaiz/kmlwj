@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useCoaStore } from '../store/coaStore';
 import { useJournalStore, calculateAccountBalances } from '../store/journalStore';
 import { useReservedCodeStore } from '../store/reservedCodeStore';
@@ -24,9 +25,18 @@ export const ChartOfAccounts = () => {
   const { journals } = useJournalStore();
   const { codes: reservedCodes, fetchCodes: fetchReservedCodes } = useReservedCodeStore();
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [typeFilter, setTypeFilter] = useState('All');
-  const [viewMode, setViewMode] = useState('tree'); // tree or table
+  const [viewMode, setViewMode] = useState(searchParams.get('search') ? 'table' : 'tree'); // tree or table
+
+  useEffect(() => {
+    const q = searchParams.get('search') || '';
+    if (q) {
+      setSearchQuery(q);
+      setViewMode('table');
+    }
+  }, [searchParams]);
   
   // Pagination State for Table View
   const [page, setPage] = useState(1);

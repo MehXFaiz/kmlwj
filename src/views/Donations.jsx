@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useDonationStore } from '../store/donationStore';
 import { useBeneficiaryStore } from '../store/beneficiaryStore';
 import { useCoaStore } from '../store/coaStore';
@@ -139,7 +140,8 @@ export const Donations = () => {
   const { beneficiaries, fetchBeneficiaries } = useBeneficiaryStore();
   const { flatAccounts, fetchAccountsList } = useCoaStore();
 
-  const [search, setSearch] = useState('');
+  const [searchParams] = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get('search') || '');
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [approveId, setApproveId] = useState(null);
@@ -149,6 +151,13 @@ export const Donations = () => {
     fetchBeneficiaries();
     fetchAccountsList();
   }, [fetchDonations, fetchBeneficiaries, fetchAccountsList]);
+
+  useEffect(() => {
+    const q = searchParams.get('search') || '';
+    if (q) {
+      setSearch(q);
+    }
+  }, [searchParams]);
 
   const bankAccounts = useMemo(() => {
     return flatAccounts.filter(a => (a.name || '').toLowerCase().includes('bank') || (a.type || '').toLowerCase().includes('bank'));

@@ -70,7 +70,7 @@ class ChunkErrorBoundary extends Component {
 }
 
 // Protected Routes Shell
-const ProtectedRoutesWrapper = ({ isCollapsed, setIsCollapsed }) => {
+const ProtectedRoutesWrapper = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const { isAuthenticated } = useAuthStore();
   const location = useLocation();
@@ -86,7 +86,7 @@ const ProtectedRoutesWrapper = ({ isCollapsed, setIsCollapsed }) => {
   return (
     <div className="flex h-[100dvh] w-full overflow-hidden bg-slate-950 text-slate-100 font-sans">
       {/* Navigation Sidebar */}
-      <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} isMobileOpen={isMobileOpen} setIsMobileOpen={setIsMobileOpen} />
+      <Sidebar isMobileOpen={isMobileOpen} setIsMobileOpen={setIsMobileOpen} />
 
       {/* Core Workspace Layout */}
       <div className="flex-1 flex flex-col min-w-0 w-full overflow-hidden relative">
@@ -133,7 +133,6 @@ const PermissionGuard = ({ requiredPerms, children }) => {
 
 function App() {
   const [splashDone, setSplashDone] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const { restoreSession } = useAuthStore();
   const [restoring, setRestoring] = useState(true);
 
@@ -172,7 +171,7 @@ function App() {
           <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Secure ERP Interface */}
-          <Route element={<ProtectedRoutesWrapper isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />}>
+          <Route element={<ProtectedRoutesWrapper />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/coa" element={
               <PermissionGuard requiredPerms={['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT', 'LOCK_ACCOUNT']}>

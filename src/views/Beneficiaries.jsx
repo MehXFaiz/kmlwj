@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useBeneficiaryStore } from '../store/beneficiaryStore';
 import { Users, Search, Plus, ChevronDown, ChevronUp, Edit2, Trash2, X, AlertTriangle } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
@@ -94,7 +95,9 @@ function BeneficiaryModal({ isOpen, onClose, onSave, initial }) {
 
 export const Beneficiaries = () => {
   const { beneficiaries, fetchBeneficiaries, addBeneficiary, updateBeneficiary, deleteBeneficiary } = useBeneficiaryStore();
-  const [search, setSearch] = useState('');
+  
+  const [searchParams] = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get('search') || '');
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
@@ -105,6 +108,13 @@ export const Beneficiaries = () => {
   useEffect(() => {
     fetchBeneficiaries();
   }, [fetchBeneficiaries]);
+
+  useEffect(() => {
+    const q = searchParams.get('search') || '';
+    if (q) {
+      setSearch(q);
+    }
+  }, [searchParams]);
 
   const filtered = useMemo(() => {
     return beneficiaries.filter(b => 

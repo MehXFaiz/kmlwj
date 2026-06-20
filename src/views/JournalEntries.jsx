@@ -1,11 +1,12 @@
 import { useState, useMemo, Fragment, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useJournalStore } from '../store/journalStore';
 import { useCoaStore } from '../store/coaStore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { JournalEntryModal } from '../components/ledger/JournalEntryModal';
-import { Plus, Calendar, ChevronDown, ChevronUp, FileSpreadsheet, Check, X } from 'lucide-react';
+import { Plus, Calendar, ChevronDown, ChevronUp, FileSpreadsheet, Check, X, Search } from 'lucide-react';
 import { MobileOnly, DesktopOnly } from '../components/common/responsive';
 
 export const JournalEntries = () => {
@@ -14,10 +15,20 @@ export const JournalEntries = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedJeId, setExpandedJeId] = useState(null);
 
+  const [searchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
+
   useEffect(() => {
     fetchJournals(selectedSubsidiary);
     useCoaStore.getState().fetchAccounts();
   }, [fetchJournals, selectedSubsidiary]);
+
+  useEffect(() => {
+    const q = searchParams.get('search') || '';
+    if (q) {
+      setSearchQuery(q);
+    }
+  }, [searchParams]);
 
   const toggleExpand = (id) => {
     setExpandedJeId(expandedJeId === id ? null : id);
@@ -34,10 +45,18 @@ export const JournalEntries = () => {
 
   const filteredJournals = useMemo(() => {
     return journals.filter((je) => {
-      if (selectedSubsidiary === 'Global') return true;
-      return je.subsidiary === selectedSubsidiary;
+      const matchesSubsidiary = selectedSubsidiary === 'Global' || je.subsidiary === selectedSubsidiary;
+      if (!matchesSubsidiary) return false;
+
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        je.voucherNo.toLowerCase().includes(q) ||
+        (je.reference || '').toLowerCase().includes(q) ||
+        (je.description || '').toLowerCase().includes(q)
+      );
     });
-  }, [journals, selectedSubsidiary]);
+  }, [journals, selectedSubsidiary, searchQuery]);
 
   const getStatusBadge = (status) => {
     switch(status) {
@@ -69,14 +88,26 @@ export const JournalEntries = () => {
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
               <CardTitle>Transaction Books</CardTitle>
               <CardDescription>Double-entry balancing ledger vouchers.</CardDescription>
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono">
-              <Calendar className="h-4 w-4" />
-              <span>Current Term</span>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="Search journals..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full sm:w-64 pl-9 pr-4 py-1.5 bg-slate-950/40 border border-slate-800 rounded-lg text-slate-200 text-xs focus:outline-none focus:border-indigo-600/60 transition-all placeholder-slate-500"
+                />
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono self-end sm:self-auto">
+                <Calendar className="h-4 w-4" />
+                <span>Current Term</span>
+              </div>
             </div>
           </div>
         </CardHeader>

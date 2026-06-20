@@ -60,3 +60,7 @@ export const reportsService = {
     return api.get(`/api/v1/general-ledger${qs ? `?${qs}` : ''}`).then((r) => r.data.data);
   }
 };
+
+export const searchService = {
+  search: (q) => api.get(`/api/v1/search?q=${encodeURIComponent(q)}`).then((r) => r.data.data),
+};

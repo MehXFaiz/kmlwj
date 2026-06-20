@@ -31,6 +31,7 @@ import journalEntriesHandler from './_v1/journal-entries.js';
 import trialBalanceHandler from './_v1/reports/trial-balance.js';
 import incomeStatementHandler from './_v1/reports/income-statement.js';
 import balanceSheetHandler from './_v1/reports/balance-sheet.js';
+import searchHandler from './_v1/search.js';
 
 const app = express();
 
@@ -108,6 +109,9 @@ app.get('/api/v1/journal-entries', makeExpress(journalEntriesHandler));
 app.post('/api/v1/journal-entries', makeExpress(journalEntriesHandler));
 app.put('/api/v1/journal-entries', makeExpress(journalEntriesHandler));
 app.delete('/api/v1/journal-entries', makeExpress(journalEntriesHandler));
+
+// Global Search Route
+app.get('/api/v1/search', makeExpress(searchHandler));
 
 // Financial Reports
 app.get('/api/v1/reports/trial-balance', makeExpress(trialBalanceHandler));
