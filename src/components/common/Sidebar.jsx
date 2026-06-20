@@ -150,45 +150,68 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isSidebarHidden, setIsS
       )}
       <div
         className={`
-          h-screen bg-slate-900 flex flex-col justify-between transition-all duration-300 relative z-50
-          ${isSidebarHidden ? 'w-0 border-r-0' : 'w-64 border-r border-slate-800'}
+          h-screen bg-slate-900 border-r border-slate-800 flex flex-col justify-between transition-all duration-300 relative z-50
+          ${isCollapsed ? 'lg:w-16 w-64' : 'w-64'}
           fixed lg:relative
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
         {/* Toggle Arrow Button (Visible on Desktop) */}
         <button
-          onClick={() => setIsSidebarHidden(!isSidebarHidden)}
-          className="hidden lg:flex absolute top-5 -right-3 h-6 w-6 rounded-full bg-slate-900 border border-slate-800 items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-slate-850 transition-all cursor-pointer shadow-md shadow-black/40 z-[60]"
-          title={isSidebarHidden ? "Show Sidebar" : "Hide Sidebar"}
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="hidden lg:flex absolute top-5 -right-3 h-6 w-6 rounded-full bg-slate-900 border border-slate-800 items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-slate-855 transition-all cursor-pointer shadow-md shadow-black/40 z-[60]"
+          title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
-          {isSidebarHidden ? (
+          {isCollapsed ? (
             <ChevronRight className="h-3.5 w-3.5" />
           ) : (
             <ChevronLeft className="h-3.5 w-3.5" />
           )}
         </button>
 
-        {/* Content Wrapper (Clipped when collapsed) */}
-        <div className={`flex flex-col h-full transition-all duration-300 overflow-hidden ${isSidebarHidden ? 'w-0 opacity-0 pointer-events-none' : 'w-64 opacity-100'}`}>
-          {/* Top Section - Brand */}
-          <div className="h-16 flex-shrink-0 flex items-center justify-center border-b border-slate-800/80 bg-slate-900/60 px-4 relative">
-            <img
-              src={logoImg}
-              alt="KMLWJ Logo"
-              className="w-12 h-12 object-contain filter drop-shadow(0 0 6px rgba(99,102,241,0.3))"
-            />
-            <button
-              onClick={() => setIsMobileOpen(false)}
-              className="absolute right-4 p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 transition-colors lg:hidden"
-              aria-label="Close navigation menu"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+        {/* Top Section - Brand */}
+        <div className={`h-16 flex-shrink-0 flex items-center justify-center border-b border-slate-800/80 bg-slate-900/60 relative ${isCollapsed ? 'lg:px-0' : 'px-4'}`}>
+          <img
+            src={logoImg}
+            alt="KMLWJ Logo"
+            className="w-12 h-12 object-contain filter drop-shadow(0 0 6px rgba(99,102,241,0.3))"
+          />
+          <button
+            onClick={() => setIsMobileOpen(false)}
+            className="absolute right-4 p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 transition-colors lg:hidden"
+            aria-label="Close navigation menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
-          {/* Global Search Input Button */}
-          <div className="px-3 pt-3 pb-1 shrink-0">
+        {/* Global Search Input Button */}
+        <div className="px-3 pt-3 pb-1 shrink-0 flex justify-center">
+          {isCollapsed ? (
+            <>
+              {/* Collapsed view search icon button */}
+              <button
+                onClick={() => setIsSearchOpen(true)}
+                className="hidden lg:flex p-2.5 bg-slate-950/45 hover:bg-slate-950/70 border border-slate-800/85 hover:border-slate-700/80 rounded-lg text-slate-400 hover:text-slate-200 transition-all cursor-pointer"
+                title="Search project (Ctrl+K)"
+              >
+                <Search className="h-4 w-4" />
+              </button>
+              {/* Expanded view fallback for mobile */}
+              <button
+                onClick={() => setIsSearchOpen(true)}
+                className="lg:hidden w-full flex items-center justify-between gap-2 px-3 py-2 bg-slate-950/45 hover:bg-slate-950/70 border border-slate-800/85 hover:border-slate-700/80 rounded-lg text-slate-400 hover:text-slate-200 transition-all text-xs cursor-pointer select-none"
+              >
+                <div className="flex items-center gap-2">
+                  <Search className="h-4 w-4 text-slate-500" />
+                  <span>Search project...</span>
+                </div>
+                <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[9px] font-bold text-slate-500 bg-slate-900 border border-slate-800 rounded uppercase tracking-wider select-none">
+                  Ctrl K
+                </kbd>
+              </button>
+            </>
+          ) : (
             <button
               onClick={() => setIsSearchOpen(true)}
               className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-slate-950/45 hover:bg-slate-950/70 border border-slate-800/85 hover:border-slate-700/80 rounded-lg text-slate-400 hover:text-slate-200 transition-all text-xs cursor-pointer select-none"
@@ -201,29 +224,35 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isSidebarHidden, setIsS
                 Ctrl K
               </kbd>
             </button>
-          </div>
-
-          {/* Navigation Items */}
-          <nav className="flex-1 min-h-0 px-3 py-3 space-y-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-700 hover:scrollbar-thumb-slate-600">
-            {menuItems.filter(item => !item.perms || hasPerm(item.perms)).map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={({ isActive }) => `
-                  flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative
-                  ${isActive 
-                    ? 'bg-brand-600/15 text-brand-300 border-l-2 border-brand-500 font-semibold' 
-                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
-                  }
-                `}
-                onClick={() => setIsMobileOpen && setIsMobileOpen(false)}
-              >
-                <item.icon className="h-5 w-5 flex-shrink-0" />
-                <span className="truncate">{item.name}</span>
-              </NavLink>
-            ))}
-          </nav>
+          )}
         </div>
+
+        {/* Navigation Items */}
+        <nav className={`flex-1 min-h-0 py-3 space-y-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-700 hover:scrollbar-thumb-slate-600 ${isCollapsed ? 'px-1.5' : 'px-3'}`}>
+          {menuItems.filter(item => !item.perms || hasPerm(item.perms)).map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) => `
+                flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative
+                ${isCollapsed ? 'lg:justify-center lg:px-2' : ''}
+                ${isActive 
+                  ? 'bg-brand-600/15 text-brand-300 border-l-2 border-brand-500 font-semibold' 
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+                }
+              `}
+              onClick={() => setIsMobileOpen && setIsMobileOpen(false)}
+            >
+              <item.icon className="h-5 w-5 flex-shrink-0" />
+              <span className={`truncate ${isCollapsed ? 'lg:hidden' : ''}`}>{item.name}</span>
+              {isCollapsed && (
+                <div className="absolute left-16 bg-slate-950 text-slate-200 border border-slate-800 text-xs px-2.5 py-1.5 rounded-md shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 hidden lg:block">
+                  {item.name}
+                </div>
+              )}
+            </NavLink>
+          ))}
+        </nav>
       </div>
 
       {/* Global Search Overlay Modal */}

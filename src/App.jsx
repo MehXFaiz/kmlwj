@@ -72,7 +72,7 @@ class ChunkErrorBoundary extends Component {
 // Protected Routes Shell
 const ProtectedRoutesWrapper = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [isSidebarHidden, setIsSidebarHidden] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const { isAuthenticated } = useAuthStore();
   const location = useLocation();
 
@@ -90,8 +90,8 @@ const ProtectedRoutesWrapper = () => {
       <Sidebar 
         isMobileOpen={isMobileOpen} 
         setIsMobileOpen={setIsMobileOpen} 
-        isSidebarHidden={isSidebarHidden} 
-        setIsSidebarHidden={setIsSidebarHidden} 
+        isCollapsed={isCollapsed} 
+        setIsCollapsed={setIsCollapsed} 
       />
 
       {/* Core Workspace Layout */}
