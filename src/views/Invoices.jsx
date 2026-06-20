@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   FileText, Plus, Search, Edit2, Trash2, X, CheckCircle2, Ban,
   ChevronDown, AlertTriangle, Printer, Download, Eye, Calendar,
@@ -368,8 +368,190 @@ function DeleteModal({ invoice, onConfirm, onCancel }) {
   );
 }
 
+// ─── Print Invoice Modal ─────────────────────────────────────────────────────
+function PrintInvoiceModal({ invoice, onClose }) {
+  const printRef = useRef(null);
+
+  if (!invoice) return null;
+
+  const total = invoice.lines?.reduce((s, l) => s + (l.total || 0), 0) || invoice.amount || 0;
+  const typeCfg = TYPE_CONFIG[invoice.type] || TYPE_CONFIG.MEMBER;
+  const statusCfg = STATUS_CONFIG[invoice.status] || STATUS_CONFIG.DRAFT;
+
+  const handlePrint = () => {
+    const style = document.createElement('style');
+    style.id = '__inv_print_style';
+    style.innerHTML = `
+      @media print {
+        body > *:not(#__inv_print_root) { display: none !important; }
+        #__inv_print_root { display: block !important; position: fixed; inset: 0; z-index: 99999; background: white; }
+        #__inv_print_root .no-print { display: none !important; }
+        @page { margin: 12mm 14mm; size: A4; }
+      }
+    `;
+    document.head.appendChild(style);
+    const root = document.createElement('div');
+    root.id = '__inv_print_root';
+    root.style.display = 'none';
+    root.innerHTML = printRef.current.innerHTML;
+    document.body.appendChild(root);
+    window.print();
+    setTimeout(() => {
+      document.head.removeChild(style);
+      document.body.removeChild(root);
+    }, 800);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-2xl rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl flex flex-col max-h-[95dvh]">
+
+        {/* Modal header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-sky-950/70 border border-sky-800/40 flex items-center justify-center">
+              <Printer className="h-4 w-4 text-sky-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-200">Print Invoice</h3>
+              <p className="text-[11px] text-slate-500">{invoice.invoiceNo}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold transition-all shadow-lg shadow-sky-900/30">
+              <Printer className="h-3.5 w-3.5" /> Print
+            </button>
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Print preview */}
+        <div className="overflow-y-auto flex-1 p-4">
+          <div
+            ref={printRef}
+            className="bg-white text-gray-900 rounded-xl shadow-inner p-8 font-sans text-sm"
+            style={{ fontFamily: "'Inter', 'Segoe UI', sans-serif", minHeight: '29.7cm' }}
+          >
+            {/* Letterhead */}
+            <div className="flex items-start justify-between mb-8 pb-6 border-b-2 border-indigo-600">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center">
+                    <span className="text-white font-black text-xs tracking-wider">KW</span>
+                  </div>
+                  <div>
+                    <h1 className="text-base font-black text-gray-900 tracking-tight">KMLWJ</h1>
+                    <p
+                      className="text-xs text-indigo-600 font-semibold"
+                      style={{ fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif", lineHeight: 2 }}
+                    >
+                      کچھی مسلم لوہار واڈہ ویلفیئر جماعت
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500">Enterprise Financial Suite</p>
+              </div>
+              <div className="text-right">
+                <div
+                  className="inline-block px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider mb-2"
+                  style={{
+                    background: invoice.status === 'PAID' ? '#dcfce7' : invoice.status === 'OVERDUE' ? '#fee2e2' : invoice.status === 'VOID' ? '#f1f5f9' : '#eff6ff',
+                    color: invoice.status === 'PAID' ? '#166534' : invoice.status === 'OVERDUE' ? '#991b1b' : invoice.status === 'VOID' ? '#94a3b8' : '#1d4ed8',
+                  }}
+                >
+                  {statusCfg.label}
+                </div>
+                <div className="text-xs text-gray-500 space-y-0.5">
+                  <p><span className="font-semibold text-gray-700">Invoice No:</span> {invoice.invoiceNo}</p>
+                  <p><span className="font-semibold text-gray-700">Issued:</span> {fmtDate(invoice.issueDate)}</p>
+                  {invoice.dueDate && <p><span className="font-semibold text-gray-700">Due:</span> {fmtDate(invoice.dueDate)}</p>}
+                  <p><span className="font-semibold text-gray-700">Type:</span> {typeCfg.label}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Bill To */}
+            <div className="mb-8">
+              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-2">
+                {invoice.type === 'VENDOR' ? 'Vendor / Supplier' : 'Bill To'}
+              </p>
+              <p className="font-bold text-gray-900 text-base">{invoice.partyName || '—'}</p>
+              {invoice.partyEmail && <p className="text-xs text-gray-500 mt-0.5">{invoice.partyEmail}</p>}
+              {invoice.partyPhone && <p className="text-xs text-gray-500">{invoice.partyPhone}</p>}
+            </div>
+
+            {/* Line Items */}
+            <table className="w-full mb-6 border-collapse">
+              <thead>
+                <tr style={{ background: '#312e81' }}>
+                  <th className="text-left px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-white rounded-tl-lg">#</th>
+                  <th className="text-left px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-white">Description</th>
+                  <th className="text-right px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-white">Qty</th>
+                  <th className="text-right px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-white">Unit Price</th>
+                  <th className="text-right px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-white rounded-tr-lg">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(invoice.lines?.length ? invoice.lines : [{ description: invoice.notes || 'Service / Contribution', qty: 1, unitPrice: total, total }]).map((line, i) => (
+                  <tr key={i} style={{ background: i % 2 === 0 ? '#f8fafc' : '#fff', borderBottom: '1px solid #e2e8f0' }}>
+                    <td className="px-3 py-2.5 text-xs text-gray-400">{i + 1}</td>
+                    <td className="px-3 py-2.5 text-xs text-gray-800 font-medium">{line.description || '—'}</td>
+                    <td className="px-3 py-2.5 text-xs text-gray-700 text-right">{line.qty || 1}</td>
+                    <td className="px-3 py-2.5 text-xs text-gray-700 text-right">{fmt(line.unitPrice)}</td>
+                    <td className="px-3 py-2.5 text-xs font-bold text-gray-900 text-right">{fmt(line.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr style={{ borderTop: '2px solid #312e81' }}>
+                  <td colSpan={3} />
+                  <td className="px-3 py-3 text-xs font-black uppercase tracking-wider text-gray-600 text-right">Grand Total</td>
+                  <td className="px-3 py-3 text-base font-black text-indigo-700 text-right">{fmt(total)}</td>
+                </tr>
+              </tfoot>
+            </table>
+
+            {/* Payment + Notes */}
+            <div className="grid grid-cols-2 gap-6 mt-2">
+              <div>
+                {invoice.paymentMethod && (
+                  <div className="mb-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Payment Method</p>
+                    <p className="text-sm font-semibold text-gray-800">{invoice.paymentMethod.replace('_', ' ')}</p>
+                  </div>
+                )}
+                {invoice.notes && (
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Notes</p>
+                    <p className="text-xs text-gray-600 leading-relaxed">{invoice.notes}</p>
+                  </div>
+                )}
+              </div>
+              <div className="text-right">
+                <div className="inline-block border-t-2 border-gray-300 pt-2 mt-8 min-w-[140px]">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Authorised Signature</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="mt-10 pt-4 border-t border-gray-200 text-center">
+              <p className="text-[10px] text-gray-400">Generated by KMLWJ Enterprise Financial Suite · {new Date().toLocaleDateString('en-PK', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Invoice Row ──────────────────────────────────────────────────────────────
-function InvoiceRow({ inv, onEdit, onDelete, onMarkPaid, onVoid }) {
+function InvoiceRow({ inv, onEdit, onDelete, onMarkPaid, onVoid, onPrint }) {
   const TypeIcon = TYPE_CONFIG[inv.type]?.icon || User;
   const typeCfg = TYPE_CONFIG[inv.type] || TYPE_CONFIG.MEMBER;
   const canMarkPaid = ['ISSUED', 'OVERDUE'].includes(inv.status);
@@ -402,6 +584,11 @@ function InvoiceRow({ inv, onEdit, onDelete, onMarkPaid, onVoid }) {
       <td className="px-4 py-3"><StatusBadge status={inv.status} /></td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Print — always available */}
+          <button onClick={() => onPrint(inv)} title="Print Invoice"
+            className="p-1.5 rounded-lg text-sky-400 hover:bg-sky-950/40 hover:text-sky-300 transition-all">
+            <Printer className="h-3.5 w-3.5" />
+          </button>
           {canMarkPaid && (
             <button onClick={() => onMarkPaid(inv.id)} title="Mark as Paid"
               className="p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-950/40 hover:text-emerald-400 transition-all">
@@ -443,6 +630,7 @@ export function Invoices() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [printTarget, setPrintTarget] = useState(null);
 
   useEffect(() => {
     fetchInvoices();
@@ -663,6 +851,7 @@ export function Invoices() {
                     onDelete={setDeleteTarget}
                     onMarkPaid={handleMarkPaid}
                     onVoid={handleVoid}
+                    onPrint={setPrintTarget}
                   />
                 ))}
               </tbody>
@@ -690,6 +879,10 @@ export function Invoices() {
         invoice={deleteTarget}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
+      />
+      <PrintInvoiceModal
+        invoice={printTarget}
+        onClose={() => setPrintTarget(null)}
       />
     </div>
   );
