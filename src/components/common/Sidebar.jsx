@@ -26,7 +26,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 
-export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isSidebarHidden, setIsSidebarHidden }) => {
+export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsCollapsed }) => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
 
