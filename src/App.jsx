@@ -46,10 +46,11 @@ class ChunkErrorBoundary extends Component {
   }
 
   static getDerivedStateFromError(error) {
-    return { hasError: true };
+    return { hasError: true, error };
   }
 
   componentDidCatch(error, errorInfo) {
+    console.error('App Error Boundary Caught:', error, errorInfo);
     const isChunkLoadError = 
       error?.name === 'ChunkLoadError' || 
       error?.message?.includes('Failed to fetch dynamically imported module') || 
@@ -62,11 +63,34 @@ class ChunkErrorBoundary extends Component {
 
   render() {
     if (this.state.hasError) {
+      const isChunkLoadError = 
+        this.state.error?.name === 'ChunkLoadError' || 
+        this.state.error?.message?.includes('Failed to fetch dynamically imported module');
+        
+      if (isChunkLoadError) {
+        return (
+          <div className="flex flex-col items-center justify-center h-screen w-screen bg-slate-950 text-center px-4">
+            <div className="h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
+            <h3 className="text-lg font-bold text-slate-200">Applying latest updates...</h3>
+            <p className="text-sm text-slate-500 mt-2">Loading the newest version of the application.</p>
+          </div>
+        );
+      }
+      
+      // Real runtime error
       return (
         <div className="flex flex-col items-center justify-center h-screen w-screen bg-slate-950 text-center px-4">
-          <div className="h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
-          <h3 className="text-lg font-bold text-slate-200">Applying latest updates...</h3>
-          <p className="text-sm text-slate-500 mt-2">Loading the newest version of the application.</p>
+          <div className="p-6 bg-red-950/30 border border-red-900 rounded-xl max-w-xl w-full">
+            <h3 className="text-lg font-bold text-red-400 mb-2">Application Error</h3>
+            <div className="p-4 bg-black/40 rounded bg-slate-900 overflow-auto text-left text-red-300 font-mono text-sm max-h-[50vh]">
+              {this.state.error?.toString()}
+              <br/><br/>
+              {this.state.error?.stack}
+            </div>
+            <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded">
+              Reload Page
+            </button>
+          </div>
         </div>
       );
     }
