@@ -14,6 +14,7 @@ import {
   Lock, Unlock, Layers, BookOpen, Zap, Plus, FileText,
   RefreshCw, Download, Bell, ChevronRight, CheckCircle2,
   AlertTriangle, Clock, Users, PieChart as PieIcon,
+  Calendar, PlusCircle, MinusCircle, CheckSquare,
 } from 'lucide-react';
 
 /* ─────────────────────────────────────────────
@@ -266,6 +267,7 @@ export const Dashboard = () => {
   // Financial stats
   const stats = useMemo(() => {
     let assets = 0, liabilities = 0, equity = 0, revenue = 0, expenses = 0;
+    let cashBalance = 0, bankBalance = 0;
     accounts.forEach((acc) => {
       if (acc.parentCode === null) {
         const bal = rollupBalances[acc.code] || 0;
@@ -275,9 +277,17 @@ export const Dashboard = () => {
         else if (acc.type === 'Revenue') revenue += bal;
         else if (acc.type === 'Expense') expenses += bal;
       }
+      // Calculate Cash and Bank
+      const isLeaf = !accounts.some(a => a.parentCode === acc.code);
+      if (acc.type === 'Asset' && isLeaf) {
+        const bal = rollupBalances[acc.code] || 0;
+        const name = acc.name.toLowerCase();
+        if (name.includes('cash') && !name.includes('bank')) cashBalance += bal;
+        if (name.includes('bank')) bankBalance += bal;
+      }
     });
     return {
-      assets, liabilities, equity, revenue, expenses,
+      assets, liabilities, equity, revenue, expenses, cashBalance, bankBalance,
       netIncome: revenue - expenses,
       grossMargin: revenue > 0 ? ((revenue - expenses) / revenue * 100) : 0,
       isEquationBalanced: Math.abs(assets - (liabilities + equity)) < 0.01,
@@ -365,55 +375,48 @@ export const Dashboard = () => {
         </div>
       </div>
 
-      {/* ── KPI Cards Row ── */}
-      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-        <KpiCard title="Total Accounts" value={dbStats?.totalAccounts || 0} icon={Layers}
-          iconBg="bg-indigo-950/60" iconColor="text-indigo-400"
-          trend="neutral" trendLabel={`${acctStats.byType.Asset} asset types`} delay={0} />
-        <KpiCard title="Active Users" value={dbStats?.activeUsers || 0} icon={Users}
-          iconBg="bg-emerald-950/60" iconColor="text-emerald-400"
-          trend="up" trendLabel="Operational" delay={80} />
-        <KpiCard title="Locked Accounts" value={dbStats?.lockedAccounts || 0} icon={Lock}
-          iconBg="bg-red-950/60" iconColor="text-red-400"
-          trend="neutral" trendLabel="Restricted" delay={160} />
-        <KpiCard title="Revenue Heads" value={dbStats?.revenueHeads || 0} icon={TrendingUp}
-          iconBg="bg-green-950/60" iconColor="text-green-400"
-          trend="up" trendLabel="Income streams" delay={240} />
-        <KpiCard title="Expense Heads" value={dbStats?.expenseHeads || 0} icon={TrendingDown}
-          iconBg="bg-orange-950/60" iconColor="text-orange-400"
-          trend="neutral" trendLabel="Cost centers" delay={320} />
-        <KpiCard title="Journal Entries" value={dbStats?.totalJournalEntries || 0} icon={BookOpen}
-          iconBg="bg-violet-950/60" iconColor="text-violet-400"
-          trend="up" trendLabel="Total records" delay={400} />
+      {/* ── Financial KPI Cards Row 1 ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard title="Cash Balance" value={stats.cashBalance} prefix="Rs " decimals={0}
+          icon={Banknote} iconBg="bg-blue-950/60" iconColor="text-blue-400"
+          trend="neutral" trendLabel="Ready Funds"
+          accent="border-blue-900/40 bg-gradient-to-br from-blue-950/30 to-slate-900/60"
+          delay={0} />
+        <KpiCard title="Bank Balance" value={stats.bankBalance} prefix="Rs " decimals={0}
+          icon={Activity} iconBg="bg-amber-950/60" iconColor="text-amber-400"
+          trend="neutral" trendLabel="Bank Accounts"
+          accent="border-amber-900/30 bg-gradient-to-br from-amber-950/20 to-slate-900/60"
+          delay={80} />
+        <KpiCard title="This Month's Income" value={stats.revenue} prefix="Rs " decimals={0}
+          icon={TrendingUp} iconBg="bg-emerald-950/60" iconColor="text-emerald-400"
+          trend="up" trendLabel="All Income Streams"
+          accent="border-emerald-900/30 bg-gradient-to-br from-emerald-950/20 to-slate-900/60"
+          delay={160} />
+        <KpiCard title="This Month's Expenses" value={stats.expenses} prefix="Rs " decimals={0}
+          icon={TrendingDown} iconBg="bg-red-950/60" iconColor="text-red-400"
+          trend="down" trendLabel="Operating Costs"
+          accent="border-red-900/30 bg-gradient-to-br from-red-950/20 to-slate-900/60"
+          delay={240} />
       </div>
 
-      {/* ── Financial KPI Cards ── */}
+      {/* ── Operations KPI Cards Row 2 ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard title="Total Assets" value={stats.assets} prefix="Rs " decimals={2}
-          icon={Banknote} iconBg="bg-blue-950/60" iconColor="text-blue-400"
-          trend="up" trendLabel="Liquid + Fixed"
-          accent="border-blue-900/40 bg-gradient-to-br from-blue-950/30 to-slate-900/60"
-          delay={100} />
-        <KpiCard title="Total Liabilities" value={stats.liabilities} prefix="Rs " decimals={2}
-          icon={Activity} iconBg="bg-amber-950/60" iconColor="text-amber-400"
-          trend="neutral" trendLabel="Payables + Debt"
-          accent="border-amber-900/30 bg-gradient-to-br from-amber-950/20 to-slate-900/60"
-          delay={180} />
-        <KpiCard title="Total Equity" value={stats.equity} prefix="Rs " decimals={2}
-          icon={Scale} iconBg="bg-violet-950/60" iconColor="text-violet-400"
-          trend="up" trendLabel="Shareholder value"
-          accent="border-violet-900/30 bg-gradient-to-br from-violet-950/20 to-slate-900/60"
-          delay={260} />
-        <KpiCard title="Net Income" value={stats.netIncome} prefix="Rs " decimals={2}
-          icon={stats.netIncome >= 0 ? TrendingUp : TrendingDown}
-          iconBg={stats.netIncome >= 0 ? "bg-emerald-950/60" : "bg-red-950/60"}
-          iconColor={stats.netIncome >= 0 ? "text-emerald-400" : "text-red-400"}
-          trend={stats.netIncome >= 0 ? "up" : "down"}
-          trendLabel={stats.netIncome >= 0 ? `${stats.grossMargin.toFixed(1)}% margin` : "Operating deficit"}
-          accent={stats.netIncome >= 0
-            ? "border-emerald-900/30 bg-gradient-to-br from-emerald-950/20 to-slate-900/60"
-            : "border-red-900/30 bg-gradient-to-br from-red-950/20 to-slate-900/60"}
-          delay={340} />
+        <KpiCard title="Donations This Month" value={dbStats?.donationsAmountThisMonth || 0} prefix="Rs " decimals={0}
+          icon={Heart} iconBg="bg-pink-950/60" iconColor="text-pink-400"
+          trend="up" trendLabel={`${dbStats?.donationsThisMonth || 0} donations`}
+          delay={320} />
+        <KpiCard title="Hall Bookings This Month" value={dbStats?.hallBookingsThisMonth || 0}
+          icon={Calendar} iconBg="bg-indigo-950/60" iconColor="text-indigo-400"
+          trend="up" trendLabel="Bookings"
+          delay={400} />
+        <KpiCard title="Pending Approvals" value={dbStats?.pendingDonations || 0}
+          icon={Clock} iconBg="bg-orange-950/60" iconColor="text-orange-400"
+          trend="neutral" trendLabel="Requires Action"
+          delay={480} />
+        <KpiCard title="Outstanding Invoices" value={dbStats?.outstandingInvoices || 0}
+          icon={FileText} iconBg="bg-violet-950/60" iconColor="text-violet-400"
+          trend="neutral" trendLabel="Unpaid / Overdue"
+          delay={560} />
       </div>
 
       {/* ── Balance Equation Banner ── */}
@@ -497,28 +500,41 @@ export const Dashboard = () => {
           </div>
         </div>
 
-        {/* Pie Chart: Account type distribution */}
+        {/* Pie Chart: Donation Breakdown */}
         <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5 shadow-none">
-          <SectionHeader title="Account Distribution" subtitle="By account type" />
+          <SectionHeader title="Donation Breakdown" subtitle="By category" />
           <div className="h-36 sm:h-40 mb-3">
             <ResponsiveContainer width="100%" height="100%" minWidth={1}>
               <PieChart>
-                <Pie data={typeDistData} cx="50%" cy="50%" innerRadius={40} outerRadius={68}
-                  paddingAngle={3} dataKey="value" strokeWidth={0}>
-                  {typeDistData.map((entry, i) => (
-                    <Cell key={i} fill={entry.fill} />
-                  ))}
+                <Pie 
+                  data={dbStats?.donationBreakdown?.map(d => ({ name: d.donationType, value: d._sum.amount })) || []} 
+                  cx="50%" cy="50%" innerRadius={40} outerRadius={68}
+                  paddingAngle={3} dataKey="value" strokeWidth={0}
+                >
+                  {(dbStats?.donationBreakdown || []).map((entry, i) => {
+                    const colors = ['#f43f5e', '#ec4899', '#d946ef', '#a855f7', '#8b5cf6', '#6366f1'];
+                    return <Cell key={i} fill={colors[i % colors.length]} />;
+                  })}
                 </Pie>
                 <ChartTooltip content={<DarkTooltip />} />
               </PieChart>
             </ResponsiveContainer>
           </div>
           <div className="space-y-0.5">
-            {Object.entries(acctStats.byType).map(([type, count]) => {
-              const pct = acctStats.total > 0 ? (count / acctStats.total) * 100 : 0;
-              const c = typeColors[type] || { dot: 'bg-slate-500', bar: 'bg-slate-500' };
+            {(dbStats?.donationBreakdown || []).map((entry, i) => {
+              const total = dbStats.donationsAmountThisMonth || 1; // avoid / 0
+              const pct = (entry._sum.amount / total) * 100;
+              const colors = [
+                { dot: 'bg-rose-500', bar: 'bg-rose-500' },
+                { dot: 'bg-pink-500', bar: 'bg-pink-500' },
+                { dot: 'bg-fuchsia-500', bar: 'bg-fuchsia-500' },
+                { dot: 'bg-purple-500', bar: 'bg-purple-500' },
+                { dot: 'bg-violet-500', bar: 'bg-violet-500' },
+                { dot: 'bg-indigo-500', bar: 'bg-indigo-500' },
+              ];
+              const c = colors[i % colors.length];
               return (
-                <AccountTypeStat key={type} label={type} count={count} pct={pct}
+                <AccountTypeStat key={entry.donationType} label={entry.donationType} count={`Rs ${entry._sum.amount.toLocaleString()}`} pct={pct}
                   color={c.bar} dotColor={c.dot} />
               );
             })}
@@ -526,82 +542,77 @@ export const Dashboard = () => {
         </div>
       </div>
 
-      {/* ── Balance Sheet + Quick Actions ── */}
+      {/* ── Pending Approvals + Quick Actions ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Balance Sheet Bar */}
-        <div className="lg:col-span-2 rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5 shadow-none">
+        {/* Pending Approvals Widget */}
+        <div className="lg:col-span-2 rounded-xl border border-orange-800/40 bg-orange-950/10 p-4 sm:p-5 shadow-none flex flex-col">
           <SectionHeader
-            title="Balance Sheet Overview"
-            subtitle="Assets vs Liabilities vs Equity"
+            title="Pending Approvals"
+            subtitle="Donations requiring your approval"
             action={
-              <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${
-                stats.isEquationBalanced
-                  ? 'text-emerald-400 bg-emerald-950/50 border-emerald-900/50'
-                  : 'text-red-400 bg-red-950/50 border-red-900/50'
-              }`}>
-                {stats.isEquationBalanced ? '✓ Balanced' : '✗ Check'}
+              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full border text-orange-400 bg-orange-950/50 border-orange-900/50">
+                {dbStats?.pendingDonations || 0} Pending
               </span>
             }
           />
-          <div className="h-48 sm:h-56">
-            <ResponsiveContainer width="100%" height="100%" minWidth={1}>
-              <BarChart data={balSheetData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barSize={32}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
-                <XAxis dataKey="name" stroke="var(--chart-axis)" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="var(--chart-axis)" fontSize={11} tickLine={false} axisLine={false}
-                  tickFormatter={(v) => `Rs ${(v / 1000).toFixed(0)}k`} />
-                <ChartTooltip content={<DarkTooltip />} />
-                <Bar dataKey="value" name="Balance" radius={[6, 6, 0, 0]}>
-                  {balSheetData.map((entry, i) => (
-                    <Cell key={i} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="flex-1 mt-2">
+            {dbStats?.pendingApprovalsList?.length > 0 ? (
+              <div className="space-y-2">
+                {dbStats.pendingApprovalsList.map(donation => (
+                  <div key={donation.id} className="flex items-center justify-between p-3 rounded-lg border border-slate-800/60 bg-slate-900/40 hover:bg-slate-800/60 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-300">
+                        <Users className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-200">{donation.beneficiary?.name || 'Unknown'}</p>
+                        <p className="text-xs text-slate-500">{donation.donationType} • via {donation.paymentMethod}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right hidden sm:block">
+                        <p className="text-sm font-bold text-emerald-400">Rs {donation.amount.toLocaleString()}</p>
+                        <p className="text-[10px] text-slate-500">{new Date(donation.createdAt).toLocaleDateString()}</p>
+                      </div>
+                      <button onClick={() => navigate('/donations')} className="px-3 py-1.5 text-xs font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-900/50 rounded-lg hover:bg-emerald-900/60 transition-colors">
+                        Review
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-slate-500 text-sm py-10">
+                <CheckCircle2 className="w-10 h-10 text-slate-700 mb-2" />
+                No pending approvals
+              </div>
+            )}
           </div>
         </div>
 
         {/* Quick Actions */}
         <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5 shadow-none">
-          <SectionHeader title="Quick Actions" subtitle="Common ERP operations" />
+          <SectionHeader title="Quick Actions" subtitle="Common daily operations" />
           <div className="space-y-2">
-            <QuickAction icon={Plus} label="New Journal Entry"
-              color="bg-indigo-950/60 border border-indigo-800/40 text-indigo-400"
-              onClick={() => navigate('/journals')} />
-            <QuickAction icon={Layers} label="Manage Chart of Accounts"
-              color="bg-blue-950/60 border border-blue-800/40 text-blue-400"
-              onClick={() => navigate('/coa')} />
-            <QuickAction icon={BookOpen} label="View General Ledger"
-              color="bg-violet-950/60 border border-violet-800/40 text-violet-400"
-              onClick={() => navigate('/ledger')} />
-            <QuickAction icon={BarChart3} label="Run Financial Reports"
+            <QuickAction icon={PlusCircle} label="Add Income"
               color="bg-emerald-950/60 border border-emerald-800/40 text-emerald-400"
-              onClick={() => navigate('/reports')} />
-            <QuickAction icon={Users} label="User Permissions"
-              color="bg-amber-950/60 border border-amber-800/40 text-amber-400"
-              onClick={() => navigate('/users-roles')} />
-            <QuickAction icon={ShieldCheck} label="View Audit Trail"
-              color="bg-slate-800/60 border border-slate-700/40 text-slate-400"
-              onClick={() => navigate('/audit')} />
-          </div>
-
-          {/* System status */}
-          <div className="mt-4 pt-4 border-t border-slate-800/60">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">System Status</p>
-            {[
-              { label: 'GAAP Compliance', ok: true },
-              { label: 'Double-Entry Valid', ok: true },
-              { label: 'Balance Sheet', ok: stats.isEquationBalanced },
-            ].map(({ label, ok }) => (
-              <div key={label} className="flex items-center justify-between py-1">
-                <span className="text-[11px] text-slate-500">{label}</span>
-                <span className={`flex items-center gap-1 text-[10px] font-bold ${ok ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {ok ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
-                  {ok ? 'OK' : 'Alert'}
-                </span>
-              </div>
-            ))}
+              onClick={() => navigate('/income')} />
+            <QuickAction icon={MinusCircle} label="Add Expense"
+              color="bg-red-950/60 border border-red-800/40 text-red-400"
+              onClick={() => navigate('/expenses')} />
+            <QuickAction icon={Heart} label="Receive Donation"
+              color="bg-pink-950/60 border border-pink-800/40 text-pink-400"
+              onClick={() => navigate('/donations')} />
+            <QuickAction icon={Calendar} label="Book Hall"
+              color="bg-indigo-950/60 border border-indigo-800/40 text-indigo-400"
+              onClick={() => navigate('/hall-bookings')} />
+            <QuickAction icon={Receipt} label="Create Invoice"
+              color="bg-blue-950/60 border border-blue-800/40 text-blue-400"
+              onClick={() => navigate('/invoices')} />
+            <QuickAction icon={Users} label="Add Beneficiary"
+              color="bg-violet-950/60 border border-violet-800/40 text-violet-400"
+              onClick={() => navigate('/beneficiaries')} />
           </div>
         </div>
       </div>

@@ -63,9 +63,48 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
   }
 
-  // 3. Recent activities from audit logs
+  // 1. New Business KPIs
+  const startOfMonth = new Date(currentYear, new Date().getMonth(), 1);
+  
+  const pendingDonations = await prisma.donation.count({
+    where: { status: 'PENDING' }
+  });
+
+  const donationsThisMonthRaw = await prisma.donation.aggregate({
+    _sum: { amount: true },
+    _count: true,
+    where: {
+      status: 'APPROVED',
+      createdAt: { gte: startOfMonth }
+    }
+  });
+  
+  const hallBookingsThisMonth = await prisma.hallBooking.count({
+    where: { createdAt: { gte: startOfMonth } }
+  });
+
+  const outstandingInvoices = await prisma.invoice.count({
+    where: { status: { in: ['ISSUED', 'OVERDUE'] } }
+  });
+
+  const pendingApprovalsList = await prisma.donation.findMany({
+    where: { status: 'PENDING' },
+    take: 5,
+    orderBy: { createdAt: 'desc' },
+    include: { beneficiary: true }
+  });
+  
+  const donationBreakdown = await prisma.donation.groupBy({
+    by: ['donationType'],
+    _sum: { amount: true },
+    where: { status: 'APPROVED' }
+  });
+
+  // 2. Keep the Revenue vs Expenses Chart Data (this uses the ledgerEntries already fetched)
+
+  // 3. Recent activities from audit logs (keep this but maybe operators want to see recent donations/incomes)
   const rawLogs = await prisma.auditLog.findMany({
-    take: 10,
+    take: 8,
     orderBy: { createdAt: 'desc' },
     include: {
       user: {
@@ -83,17 +122,27 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     email: log.user ? log.user.email : null,
   }));
 
+  // Also include original total counts in case frontend still needs them before we fully rip them out
+  const totalAccounts = await prisma.account.count();
+  const activeUsers = await prisma.user.count({ where: { isActive: true } });
+
   return res.status(200).json({
     status: 200,
     data: {
+      // old stats
       totalAccounts,
-      revenueHeads,
-      expenseHeads,
-      totalJournalEntries,
-      lockedAccounts,
       activeUsers,
       monthlyData,
       recentActivities,
+      
+      // new business stats
+      pendingDonations,
+      donationsThisMonth: donationsThisMonthRaw._count,
+      donationsAmountThisMonth: donationsThisMonthRaw._sum.amount || 0,
+      hallBookingsThisMonth,
+      outstandingInvoices,
+      pendingApprovalsList,
+      donationBreakdown
     }
   });
 });

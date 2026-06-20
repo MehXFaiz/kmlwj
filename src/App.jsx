@@ -200,18 +200,38 @@ function App() {
                 <Reports />
               </PermissionGuard>
             } />
-            <Route path="/trial-balance-sheet" element={<TrialBalanceSheet />} />
+            <Route path="/trial-balance-sheet" element={
+              <PermissionGuard requiredPerms={['VIEW_REPORTS']}>
+                <TrialBalanceSheet />
+              </PermissionGuard>
+            } />
             <Route path="/beneficiaries" element={<Beneficiaries />} />
             <Route path="/donations" element={<Donations />} />
-            <Route path="/donation-reports" element={<DonationReports />} />
-            <Route path="/invoices" element={<Invoices />} />
+            <Route path="/donation-reports" element={
+              <PermissionGuard requiredPerms={['VIEW_REPORTS']}>
+                <DonationReports />
+              </PermissionGuard>
+            } />
+            <Route path="/invoices" element={
+              <PermissionGuard requiredPerms={['VIEW_INVOICES']}>
+                <Invoices />
+              </PermissionGuard>
+            } />
             <Route path="/users-roles" element={
               <PermissionGuard requiredPerms={['MANAGE_USERS', 'MANAGE_ROLES']}>
                 <UsersRoles />
               </PermissionGuard>
             } />
-            <Route path="/ledger" element={<GeneralLedger />} />
-            <Route path="/journals" element={<JournalEntries />} />
+            <Route path="/ledger" element={
+              <PermissionGuard requiredPerms={['VIEW_REPORTS']}>
+                <GeneralLedger />
+              </PermissionGuard>
+            } />
+            <Route path="/journals" element={
+              <PermissionGuard requiredPerms={['POST_JOURNAL']}>
+                <JournalEntries />
+              </PermissionGuard>
+            } />
             <Route path="/audit" element={
               <PermissionGuard requiredPerms={['VIEW_REPORTS', 'MANAGE_USERS']}>
                 <AuditTrail />
