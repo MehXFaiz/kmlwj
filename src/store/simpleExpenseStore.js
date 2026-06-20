@@ -1,31 +1,31 @@
 import { create } from 'zustand';
 import api from '../services/api';
-import toast from 'react-hot-toast';
 
 export const useSimpleExpenseStore = create((set, get) => ({
   expenses: [],
   isLoading: false,
+  error: null,
 
   fetchExpenses: async () => {
-    set({ isLoading: true });
+    set({ isLoading: true, error: null });
     try {
       const { data } = await api.get('/v1/simple-expense');
       set({ expenses: data.data || [] });
     } catch (error) {
-      toast.error(error.response?.data?.error?.message || 'Failed to fetch expenses');
+      set({ error: error.response?.data?.error?.message || 'Failed to fetch expenses' });
     } finally {
       set({ isLoading: false });
     }
   },
 
   createExpense: async (expenseData) => {
+    set({ error: null });
     try {
       const { data } = await api.post('/v1/simple-expense', expenseData);
       set(state => ({ expenses: [data.data, ...state.expenses] }));
-      toast.success('Expense recorded successfully');
       return true;
     } catch (error) {
-      toast.error(error.response?.data?.error?.message || 'Failed to record expense');
+      set({ error: error.response?.data?.error?.message || 'Failed to record expense' });
       return false;
     }
   }
