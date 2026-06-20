@@ -8,7 +8,6 @@ import {
   BookOpen, 
   FileSpreadsheet, 
   History, 
-  Settings, 
   ChevronLeft, 
   ChevronRight,
   TrendingDown,
@@ -16,7 +15,6 @@ import {
   ShieldCheck,
   BarChart3,
   Users,
-  LogOut,
   X,
   Heart,
   FileText,
@@ -24,7 +22,7 @@ import {
 } from 'lucide-react';
 
 export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }) => {
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const showFullBrand = !isCollapsed;
 
   useEffect(() => {
@@ -117,73 +115,17 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
           ))}
       </nav>
 
-      {/* Bottom Section - User Session, Settings & Toggle */}
-      <div className="flex-shrink-0 p-3 border-t border-slate-800/80 bg-slate-950/20">
-        
-        {/* User profile section */}
-        <div className={`mb-3 p-3 rounded-xl bg-slate-950/45 border border-slate-800/80 flex items-center justify-between gap-2 overflow-hidden ${isCollapsed ? 'lg:hidden' : ''}`}>
-          <div className="min-w-0">
-            <p className="text-xs font-bold text-slate-200 truncate">{user?.fullName || 'Operator'}</p>
-            <p className="text-[10px] text-slate-500 truncate">{user?.email}</p>
-            <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-800/40 text-[9px] font-bold text-emerald-400 uppercase tracking-wider">
-              {user?.role}
-            </span>
-          </div>
-          <button
-            onClick={logout}
-            title="Logout"
-            className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-950/30 border border-transparent hover:border-red-900/40 transition-all cursor-pointer flex-shrink-0"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
-        </div>
-        {isCollapsed && (
-          <div className="group relative hidden lg:flex justify-center mb-3">
-            <button
-              onClick={logout}
-              className="p-2.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-950/30 border border-slate-800/80 hover:border-red-900/40 transition-all cursor-pointer"
-            >
-              <LogOut className="h-4.5 w-4.5" />
-            </button>
-            <div className="absolute left-16 bg-slate-950 text-slate-200 border border-slate-800 text-xs px-2.5 py-1.5 rounded-md shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-              Logout ({user?.fullName || 'Operator'})
-            </div>
-          </div>
-        )}
-
-        {/* System Settings link */}
-        <NavLink
-          to="/settings"
-          className={({ isActive }) => `
-            flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative mb-2
-            ${isActive 
-              ? 'bg-slate-800 text-white font-semibold' 
-              : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
-            }
-          `}
-          onClick={() => setIsMobileOpen && setIsMobileOpen(false)}
-        >
-          <Settings className="h-5 w-5 flex-shrink-0" />
-          <span className={`truncate ${isCollapsed ? 'lg:hidden' : ''}`}>System Settings</span>
-          {isCollapsed && (
-            <div className="absolute left-16 bg-slate-950 text-slate-200 border border-slate-800 text-xs px-2.5 py-1.5 rounded-md shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 hidden lg:block">
-              System Settings
-            </div>
-          )}
-        </NavLink>
-
-        {/* Collapsible toggle trigger */}
+      {/* Bottom Section - Collapse toggle only */}
+      <div className="flex-shrink-0 border-t border-slate-800/80">
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="w-full hidden lg:flex items-center justify-center p-2 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800/40 border border-slate-800/60 cursor-pointer"
+          className="w-full hidden lg:flex items-center justify-center p-3 text-slate-600 hover:text-slate-300 hover:bg-slate-800/30 transition-all cursor-pointer"
+          title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {isCollapsed ? (
             <ChevronRight className="h-4 w-4" />
           ) : (
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider">
-              <ChevronLeft className="h-4 w-4" />
-              <span>Collapse Menu</span>
-            </div>
+            <ChevronLeft className="h-4 w-4" />
           )}
         </button>
       </div>
