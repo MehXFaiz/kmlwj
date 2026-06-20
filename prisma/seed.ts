@@ -166,6 +166,28 @@ async function main() {
     },
   });
 
+  // Seed Guest User
+  console.log('Seeding Guest User...');
+  const guestEmail = 'guest@erp.com';
+  const hashedGuestPassword = await bcrypt.hash('guest123', 12);
+  
+  await prisma.user.upsert({
+    where: { email: guestEmail },
+    update: {
+      fullName: 'Guest Visitor',
+      password: hashedGuestPassword,
+      roleId: seededRoles['Auditor'].id,
+      isActive: true,
+    },
+    create: {
+      fullName: 'Guest Visitor',
+      email: guestEmail,
+      password: hashedGuestPassword,
+      roleId: seededRoles['Auditor'].id,
+      isActive: true,
+    },
+  });
+
   // 5. Seed AccountTypes
   const accountTypesList = [
     { name: 'ASSET', description: 'Economic resources owned or controlled' },

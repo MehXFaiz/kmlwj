@@ -69,6 +69,10 @@ export const useAuthStore = create((set, get) => {
       }
     },
 
+    loginAsGuest: async () => {
+      return get().login('guest@erp.com', 'guest123');
+    },
+
     register: async (email, password, name, role) => {
       set({ loading: true, error: null });
       try {
