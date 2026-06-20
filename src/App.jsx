@@ -72,6 +72,7 @@ class ChunkErrorBoundary extends Component {
 // Protected Routes Shell
 const ProtectedRoutesWrapper = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isSidebarHidden, setIsSidebarHidden] = useState(false);
   const { isAuthenticated } = useAuthStore();
   const location = useLocation();
 
@@ -86,7 +87,12 @@ const ProtectedRoutesWrapper = () => {
   return (
     <div className="flex h-[100dvh] w-full overflow-hidden bg-slate-950 text-slate-100 font-sans">
       {/* Navigation Sidebar */}
-      <Sidebar isMobileOpen={isMobileOpen} setIsMobileOpen={setIsMobileOpen} />
+      <Sidebar 
+        isMobileOpen={isMobileOpen} 
+        setIsMobileOpen={setIsMobileOpen} 
+        isSidebarHidden={isSidebarHidden} 
+        setIsSidebarHidden={setIsSidebarHidden} 
+      />
 
       {/* Core Workspace Layout */}
       <div className="flex-1 flex flex-col min-w-0 w-full overflow-hidden relative">

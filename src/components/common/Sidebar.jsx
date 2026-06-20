@@ -21,10 +21,12 @@ import {
   FileText,
   Search,
   ArrowRight,
-  HelpCircle
+  HelpCircle,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
-export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
+export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isSidebarHidden, setIsSidebarHidden }) => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
 
@@ -148,82 +150,79 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
       )}
       <div
         className={`
-          h-screen bg-slate-900 border-r border-slate-800 flex flex-col justify-between transition-all duration-300
-          w-64 fixed lg:relative z-50
+          h-screen bg-slate-900 flex flex-col justify-between transition-all duration-300 relative z-50
+          ${isSidebarHidden ? 'w-0 border-r-0' : 'w-64 border-r border-slate-800'}
+          fixed lg:relative
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
-        {/* Top Section - Brand */}
-        <div className="h-16 flex-shrink-0 flex items-center justify-center border-b border-slate-800/80 bg-slate-900/60 px-4 relative">
-          <img
-            src={logoImg}
-            alt="KMLWJ Logo"
-            className="w-12 h-12 object-contain filter drop-shadow(0 0 6px rgba(99,102,241,0.3))"
-          />
-          <button
-            onClick={() => setIsMobileOpen(false)}
-            className="absolute right-4 p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 transition-colors lg:hidden"
-            aria-label="Close navigation menu"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+        {/* Toggle Arrow Button (Visible on Desktop) */}
+        <button
+          onClick={() => setIsSidebarHidden(!isSidebarHidden)}
+          className="hidden lg:flex absolute top-5 -right-3 h-6 w-6 rounded-full bg-slate-900 border border-slate-800 items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-slate-850 transition-all cursor-pointer shadow-md shadow-black/40 z-[60]"
+          title={isSidebarHidden ? "Show Sidebar" : "Hide Sidebar"}
+        >
+          {isSidebarHidden ? (
+            <ChevronRight className="h-3.5 w-3.5" />
+          ) : (
+            <ChevronLeft className="h-3.5 w-3.5" />
+          )}
+        </button>
 
-        {/* Global Search Input Button */}
-        <div className="px-3 pt-3 pb-1 shrink-0">
-          <button
-            onClick={() => setIsSearchOpen(true)}
-            className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-slate-950/45 hover:bg-slate-950/70 border border-slate-800/85 hover:border-slate-700/80 rounded-lg text-slate-400 hover:text-slate-200 transition-all text-xs cursor-pointer select-none"
-          >
-            <div className="flex items-center gap-2">
-              <Search className="h-4 w-4 text-slate-500" />
-              <span>Search project...</span>
-            </div>
-            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[9px] font-bold text-slate-500 bg-slate-900 border border-slate-800 rounded uppercase tracking-wider select-none">
-              Ctrl K
-            </kbd>
-          </button>
-        </div>
-
-        {/* Navigation Items */}
-        <nav className="flex-1 min-h-0 px-3 py-3 space-y-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-700 hover:scrollbar-thumb-slate-600">
-          {menuItems.filter(item => !item.perms || hasPerm(item.perms)).map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) => `
-                flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative
-                ${isActive 
-                  ? 'bg-brand-600/15 text-brand-300 border-l-2 border-brand-500 font-semibold' 
-                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
-                }
-              `}
-              onClick={() => setIsMobileOpen && setIsMobileOpen(false)}
+        {/* Content Wrapper (Clipped when collapsed) */}
+        <div className={`flex flex-col h-full transition-all duration-300 overflow-hidden ${isSidebarHidden ? 'w-0 opacity-0 pointer-events-none' : 'w-64 opacity-100'}`}>
+          {/* Top Section - Brand */}
+          <div className="h-16 flex-shrink-0 flex items-center justify-center border-b border-slate-800/80 bg-slate-900/60 px-4 relative">
+            <img
+              src={logoImg}
+              alt="KMLWJ Logo"
+              className="w-12 h-12 object-contain filter drop-shadow(0 0 6px rgba(99,102,241,0.3))"
+            />
+            <button
+              onClick={() => setIsMobileOpen(false)}
+              className="absolute right-4 p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 transition-colors lg:hidden"
+              aria-label="Close navigation menu"
             >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              <span className="truncate">{item.name}</span>
-            </NavLink>
-          ))}
-        </nav>
+              <X className="h-5 w-5" />
+            </button>
+          </div>
 
-        {/* Bottom Section - Settings */}
-        <div className="flex-shrink-0 p-3 border-t border-slate-800/80 bg-slate-950/20">
-          
-          {/* System Settings link */}
-          <NavLink
-            to="/settings"
-            className={({ isActive }) => `
-              flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative
-              ${isActive 
-                ? 'bg-slate-800 text-white font-semibold' 
-                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
-              }
-            `}
-            onClick={() => setIsMobileOpen && setIsMobileOpen(false)}
-          >
-            <Settings className="h-5 w-5 flex-shrink-0" />
-            <span className="truncate">System Settings</span>
-          </NavLink>
+          {/* Global Search Input Button */}
+          <div className="px-3 pt-3 pb-1 shrink-0">
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-slate-950/45 hover:bg-slate-950/70 border border-slate-800/85 hover:border-slate-700/80 rounded-lg text-slate-400 hover:text-slate-200 transition-all text-xs cursor-pointer select-none"
+            >
+              <div className="flex items-center gap-2">
+                <Search className="h-4 w-4 text-slate-500" />
+                <span>Search project...</span>
+              </div>
+              <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[9px] font-bold text-slate-500 bg-slate-900 border border-slate-800 rounded uppercase tracking-wider select-none">
+                Ctrl K
+              </kbd>
+            </button>
+          </div>
+
+          {/* Navigation Items */}
+          <nav className="flex-1 min-h-0 px-3 py-3 space-y-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-700 hover:scrollbar-thumb-slate-600">
+            {menuItems.filter(item => !item.perms || hasPerm(item.perms)).map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) => `
+                  flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative
+                  ${isActive 
+                    ? 'bg-brand-600/15 text-brand-300 border-l-2 border-brand-500 font-semibold' 
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+                  }
+                `}
+                onClick={() => setIsMobileOpen && setIsMobileOpen(false)}
+              >
+                <item.icon className="h-5 w-5 flex-shrink-0" />
+                <span className="truncate">{item.name}</span>
+              </NavLink>
+            ))}
+          </nav>
         </div>
       </div>
 
