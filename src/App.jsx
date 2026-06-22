@@ -33,6 +33,10 @@ const Invoices = lazy(() => import('./views/Invoices').then(m => ({ default: m.I
 const InvoiceForm = lazy(() => import('./views/InvoiceForm').then(m => ({ default: m.InvoiceForm })));
 const InvoiceDetail = lazy(() => import('./views/InvoiceDetail').then(m => ({ default: m.InvoiceDetail })));
 
+// Bank Voucher Module Views
+const BankVouchers = lazy(() => import('./views/BankVouchers').then(m => ({ default: m.BankVouchers })));
+const BankVoucherForm = lazy(() => import('./views/BankVoucherForm').then(m => ({ default: m.BankVoucherForm })));
+
 // Auth Views (also lazy-loaded)
 const Login = lazy(() => import('./views/Login').then(m => ({ default: m.Login })));
 const Signup = lazy(() => import('./views/Signup').then(m => ({ default: m.Signup })));
@@ -219,6 +223,8 @@ function App() {
             <Route path="/invoices/new" element={<InvoiceForm />} />
             <Route path="/invoices/edit/:id" element={<InvoiceForm />} />
             <Route path="/invoices/:id" element={<InvoiceDetail />} />
+            <Route path="/bank-vouchers" element={<BankVouchers />} />
+            <Route path="/bank-vouchers/new" element={<BankVoucherForm />} />
             <Route path="/users-roles" element={
               <PermissionGuard requiredPerms={['MANAGE_USERS', 'MANAGE_ROLES']}>
                 <UsersRoles />

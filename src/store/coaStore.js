@@ -101,15 +101,33 @@ export const useCoaStore = create((set, get) => ({
   },
 
   toggleAccountStatus: async (id) => {
-    const acc = get().accounts.find(a => a.id === id);
+    const flatten = (nodes) => nodes.reduce((acc, node) => {
+      acc.push(node);
+      if (node.children) acc.push(...flatten(node.children));
+      return acc;
+    }, []);
+    const all = [
+      ...(get().accounts || []),
+      ...(get().flatAccounts || []),
+      ...flatten(get().treeAccounts || [])
+    ];
+    const acc = all.find(a => a.id === id);
     if (!acc) return;
     
+    if (acc.level === 'MAIN') {
+      alert('MAIN accounts are permanent and cannot be deactivated.');
+      return;
+    }
+
     set({ loading: true, error: null });
     try {
       await accountService.update(id, {
         isLocked: acc.status === 'Active',
       });
-      await get().fetchAccountsTree();
+      await Promise.all([
+        get().fetchAccountsTree(),
+        get().fetchAccountsList()
+      ]);
       set({ loading: false });
     } catch (err) {
       set({ error: err.message || 'Failed to toggle status', loading: false });

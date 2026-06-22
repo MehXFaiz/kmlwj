@@ -203,17 +203,24 @@ export const CoaTreeView = ({
 
                   {/* Status Toggle */}
                   <td className="py-3.5 px-4 text-center">
-                    <button
-                      onClick={() => onToggleStatus(account.id)}
-                      className="cursor-pointer"
-                      title={account.status === 'Active' ? 'Deactivate account' : 'Activate account'}
-                    >
-                      {account.status === 'Active' ? (
-                        <ToggleRight className="h-5 w-5 text-emerald-400 hover:text-emerald-300" />
-                      ) : (
-                        <ToggleLeft className="h-5 w-5 text-slate-600 hover:text-slate-400" />
-                      )}
-                    </button>
+                    {account.level === 'MAIN' ? (
+                      <span className="inline-flex items-center justify-center gap-1 text-slate-500 cursor-default" title="MAIN accounts are permanent and cannot be deactivated">
+                        <Lock className="h-3.5 w-3.5 text-slate-500" />
+                        <span className="text-[11px] font-semibold uppercase tracking-wider">Locked</span>
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => onToggleStatus(account.id)}
+                        className="cursor-pointer"
+                        title={account.status === 'Active' ? 'Deactivate account' : 'Activate account'}
+                      >
+                        {account.status === 'Active' ? (
+                          <ToggleRight className="h-5 w-5 text-emerald-400 hover:text-emerald-300" />
+                        ) : (
+                          <ToggleLeft className="h-5 w-5 text-slate-600 hover:text-slate-400" />
+                        )}
+                      </button>
+                    )}
                   </td>
 
                   {/* Inline Actions */}
@@ -244,15 +251,17 @@ export const CoaTreeView = ({
                       </Button>
 
                       {/* Edit */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 cursor-pointer"
-                        onClick={() => onEditAccount(account)}
-                        title="Edit Account Details"
-                      >
-                        <Edit2 className="h-3.5 w-3.5 text-slate-400 hover:text-amber-400" />
-                      </Button>
+                      {account.level !== 'MAIN' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 cursor-pointer"
+                          onClick={() => onEditAccount(account)}
+                          title="Edit Account Details"
+                        >
+                          <Edit2 className="h-3.5 w-3.5 text-slate-400 hover:text-amber-400" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>

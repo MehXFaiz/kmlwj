@@ -11,7 +11,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const { method } = req;
 
   if (method === 'GET') {
-    const { subsidiary, limit = '100', page = '1' } = req.query as any;
+    const { subsidiary, limit = '100', page = '1', type } = req.query as any;
 
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
@@ -20,6 +20,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const whereClause: any = {};
     if (subsidiary && subsidiary !== 'Global') {
       whereClause.subsidiary = subsidiary;
+    }
+    if (type) {
+      whereClause.voucherType = type;
     }
 
     const [entries, total] = await Promise.all([
@@ -47,6 +50,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       description: je.description,
       postedBy: je.postedBy,
       status: je.status,
+      voucherType: je.voucherType,
       lines: je.lines.map(line => ({
         id: line.id,
         accountCode: line.account.glCode,
@@ -60,7 +64,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'POST') {
-    const { postingDate, subsidiary, reference, description, status = 'Draft', lines } = req.body;
+    const { postingDate, subsidiary, reference, description, status = 'Draft', lines, voucherType = 'JV' } = req.body;
 
     if (!lines || !Array.isArray(lines) || lines.length === 0) {
       return res.status(400).json({ error: { message: 'Lines are required', status: 400 } });
@@ -92,6 +96,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             description: description || null,
             postedBy,
             status,
+            voucherType,
           }
         });
 

@@ -217,8 +217,9 @@ async function main() {
     { glCode: '4000000', accountName: 'Expenses', accountLevel: AccountLevel.MAIN, accountTypeName: 'EXPENSE', description: 'Control account for all Expense accounts' },
   ];
 
+  const seededMainAccounts: Record<string, any> = {};
   for (const acc of mainAccounts) {
-    await prisma.account.upsert({
+    const record = await prisma.account.upsert({
       where: { glCode: acc.glCode },
       update: {
         accountName: acc.accountName,
@@ -238,7 +239,50 @@ async function main() {
         isReserved: false,
       },
     });
+    seededMainAccounts[acc.glCode] = record;
   }
+
+  // Seeding Level 2 Parent Accounts
+  console.log('Seeding Level 2 Parent Accounts...');
+  const parentAccounts = [
+    { glCode: '1100000', accountName: 'Current Assets', parentCode: '1000000', accountTypeName: 'ASSET', description: 'Current Asset accounts' },
+    { glCode: '1200000', accountName: 'Non Current Assets', parentCode: '1000000', accountTypeName: 'ASSET', description: 'Non-Current Asset accounts' },
+    { glCode: '2100000', accountName: 'Current Liabilities', parentCode: '2000000', accountTypeName: 'LIABILITY', description: 'Current Liability accounts' },
+    { glCode: '2200000', accountName: 'Long Term Liabilities', parentCode: '2000000', accountTypeName: 'LIABILITY', description: 'Long Term Liability accounts' },
+    { glCode: '3100000', accountName: 'Hall Income', parentCode: '3000000', accountTypeName: 'REVENUE', description: 'Revenue from hall bookings' },
+    { glCode: '3200000', accountName: 'Donations', parentCode: '3000000', accountTypeName: 'REVENUE', description: 'Donation revenue' },
+    { glCode: '3300000', accountName: 'Other Income', parentCode: '3000000', accountTypeName: 'REVENUE', description: 'Other miscellaneous income' },
+    { glCode: '4100000', accountName: 'Administrative Expenses', parentCode: '4000000', accountTypeName: 'EXPENSE', description: 'Administrative and operational expenses' },
+    { glCode: '4200000', accountName: 'Utility Expenses', parentCode: '4000000', accountTypeName: 'EXPENSE', description: 'Utility bills and energy costs' },
+    { glCode: '4300000', accountName: 'Donation Expenses', parentCode: '4000000', accountTypeName: 'EXPENSE', description: 'Disbursement of donations and charity' },
+  ];
+
+  for (const acc of parentAccounts) {
+    const parentRecord = seededMainAccounts[acc.parentCode];
+    await prisma.account.upsert({
+      where: { glCode: acc.glCode },
+      update: {
+        accountName: acc.accountName,
+        accountLevel: AccountLevel.PARENT,
+        parentId: parentRecord.id,
+        accountTypeId: seededAccountTypes[acc.accountTypeName].id,
+        description: acc.description,
+        isSystemDefined: true,
+      },
+      create: {
+        glCode: acc.glCode,
+        accountName: acc.accountName,
+        accountLevel: AccountLevel.PARENT,
+        parentId: parentRecord.id,
+        accountTypeId: seededAccountTypes[acc.accountTypeName].id,
+        description: acc.description,
+        isSystemDefined: true,
+        isLocked: false,
+        isReserved: false,
+      },
+    });
+  }
+
 
   // 7. Seed Revenue Heads
   console.log('Seeding Revenue Heads...');

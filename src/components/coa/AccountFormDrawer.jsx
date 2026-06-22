@@ -67,8 +67,8 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
       name: '',
       type: 'Asset',
       detailType: 'Cash',
-      parentCode: 'none',
-      level: 'MAIN',
+      parentCode: '',
+      level: 'PARENT',
       isLocked: false,
       isReserved: false,
       currency: 'PKR',
@@ -79,15 +79,22 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
 
   const selectedType = watch('type');
 
-  // Fill detailType defaults when type changes
+  // Fill detailType and parentCode defaults when type changes
   useEffect(() => {
     if (!editingAccount) {
       const options = detailTypeOptions[selectedType] || [];
       if (options.length > 0) {
         setValue('detailType', options[0]);
       }
+      
+      const defaultParent = allAccounts.find(acc => acc.type === selectedType && acc.level !== 'SUBSIDIARY');
+      if (defaultParent) {
+        setValue('parentCode', defaultParent.code);
+      } else {
+        setValue('parentCode', '');
+      }
     }
-  }, [selectedType, setValue, editingAccount]);
+  }, [selectedType, setValue, editingAccount, allAccounts]);
 
   // Load account data for editing
   useEffect(() => {
@@ -97,26 +104,27 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
         name: editingAccount.name,
         type: editingAccount.type,
         detailType: editingAccount.detailType,
-        parentCode: editingAccount.parentCode || 'none',
-        level: editingAccount.level || 'MAIN',
+        parentCode: editingAccount.parentCode || '',
+        level: editingAccount.level || 'PARENT',
         isLocked: editingAccount.status === 'Inactive',
         currency: editingAccount.currency || 'PKR',
         description: editingAccount.description || '',
         initialBalance: editingAccount.initialBalance || 0,
       });
     } else {
+      const defaultParent = allAccounts.find(acc => acc.type === 'Asset' && acc.level !== 'SUBSIDIARY');
       reset({
         code: '',
         name: '',
         type: 'Asset',
         detailType: 'Cash',
-        parentCode: 'none',
+        parentCode: defaultParent ? defaultParent.code : '',
         currency: 'PKR',
         description: '',
         initialBalance: 0,
       });
     }
-  }, [editingAccount, reset, isOpen]);
+  }, [editingAccount, reset, isOpen, allAccounts]);
 
   // Filter possible parents: must be the same account type and not self, and cannot be a SUBSIDIARY
   const potentialParents = allAccounts.filter((acc) => {
@@ -269,7 +277,6 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
             disabled={!!(editingAccount && editingAccount.isLocked)}
             {...register('parentCode')}
           >
-            <option value="none">-- No Parent (Root Account) --</option>
             {potentialParents.map((parent) => (
               <option key={parent.code} value={parent.code}>
                 {parent.code} - {parent.name} ({parent.detailType})

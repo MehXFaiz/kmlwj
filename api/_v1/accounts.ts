@@ -95,6 +95,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'GL Code must be exactly 7 digits (e.g., 1000000)', status: 400 } });
     }
 
+    const codeExists = await prisma.account.findUnique({ where: { glCode: code } });
+    if (codeExists) {
+      return res.status(400).json({ error: { message: `Account code ${code} is already in use`, status: 400 } });
+    }
+
     // Reserved accounts cannot be assigned unless explicitly marked as reserved
     if (!isReserved) {
       const reservedMatch = await prisma.reservedCode.findFirst({
@@ -119,10 +124,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     let accountLevel = 'MAIN';
 
     if (!parentCode || parentCode === 'none') {
-      accountLevel = 'MAIN';
-      if (!code.endsWith('000000')) {
-        return res.status(400).json({ error: { message: 'MAIN account GL codes must end with 000000 (e.g., 1000000)', status: 400 } });
-      }
+      return res.status(400).json({ error: { message: 'Creation of Level 1 (MAIN) accounts is not allowed. Main accounts (1000000, 2000000, etc.) are permanent.', status: 400 } });
     } else {
       const parentAcc = await prisma.account.findUnique({ where: { glCode: parentCode } });
       if (!parentAcc) {
@@ -169,6 +171,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const existingAccount = await prisma.account.findUnique({ where: { id } });
     if (!existingAccount) {
       return res.status(404).json({ error: { message: 'Account not found', status: 404 } });
+    }
+
+    if (existingAccount.accountLevel === 'MAIN') {
+      return res.status(400).json({ error: { message: 'Level 1 (MAIN) accounts are permanent and cannot be modified.', status: 400 } });
     }
 
     // Locked accounts cannot be edited (unless it's just unlocking it)
@@ -226,13 +232,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     if (parentCode !== undefined) {
       if (!parentCode || parentCode === 'none') {
-        if (updateData.glCode && !updateData.glCode.endsWith('000000')) {
-          return res.status(400).json({ error: { message: 'MAIN account GL codes must end with 000000 (e.g., 1000000)', status: 400 } });
-        } else if (!updateData.glCode && !existingAccount.glCode.endsWith('000000')) {
-           return res.status(400).json({ error: { message: 'Cannot move to MAIN level without a valid GL code ending in 000000', status: 400 } });
-        }
-        updateData.parentId = null;
-        updateData.accountLevel = 'MAIN';
+        return res.status(400).json({ error: { message: 'Moving an account to Level 1 (MAIN) is not allowed.', status: 400 } });
       } else {
         const parentAcc = await prisma.account.findUnique({ where: { glCode: parentCode } });
         if (!parentAcc) {
@@ -248,10 +248,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           return res.status(400).json({ error: { message: 'Cannot move account under a SUBSIDIARY account', status: 400 } });
         }
       }
-    } else if (updateData.glCode && existingAccount.accountLevel === 'MAIN') {
-        if (!updateData.glCode.endsWith('000000')) {
-          return res.status(400).json({ error: { message: 'MAIN account GL codes must end with 000000 (e.g., 1000000)', status: 400 } });
-        }
     }
 
     const updatedAccount = await prisma.account.update({

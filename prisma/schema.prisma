@@ -164,6 +164,7 @@ model JournalEntry {
   description String?
   postedBy    String
   status      String             @default("Draft")
+  voucherType String             @default("JV")
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
   lines       JournalEntryLine[]

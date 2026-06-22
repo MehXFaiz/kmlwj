@@ -169,17 +169,24 @@ export const CoaTableView = ({
           const acc = row.original;
           return (
             <div className="text-center">
-              <button
-                onClick={() => onToggleStatus(acc.id)}
-                className="cursor-pointer"
-                title={acc.status === 'Active' ? 'Deactivate account' : 'Activate account'}
-              >
-                {acc.status === 'Active' ? (
-                  <ToggleRight className="h-5 w-5 text-emerald-400 hover:text-emerald-300" />
-                ) : (
-                  <ToggleLeft className="h-5 w-5 text-slate-600 hover:text-slate-400" />
-                )}
-              </button>
+              {acc.level === 'MAIN' ? (
+                <span className="inline-flex items-center justify-center gap-1 text-slate-500 cursor-default" title="MAIN accounts are permanent and cannot be deactivated">
+                  <Lock className="h-3.5 w-3.5 text-slate-500" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wider">Locked</span>
+                </span>
+              ) : (
+                <button
+                  onClick={() => onToggleStatus(acc.id)}
+                  className="cursor-pointer"
+                  title={acc.status === 'Active' ? 'Deactivate account' : 'Activate account'}
+                >
+                  {acc.status === 'Active' ? (
+                    <ToggleRight className="h-5 w-5 text-emerald-400 hover:text-emerald-300" />
+                  ) : (
+                    <ToggleLeft className="h-5 w-5 text-slate-600 hover:text-slate-400" />
+                  )}
+                </button>
+              )}
             </div>
           );
         },
@@ -200,15 +207,17 @@ export const CoaTableView = ({
               >
                 <BookOpen className="h-3.5 w-3.5 text-slate-400 hover:text-brand-300" />
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 cursor-pointer"
-                onClick={() => onEditAccount(acc)}
-                title="Edit Account"
-              >
-                <Edit2 className="h-3.5 w-3.5 text-slate-400 hover:text-amber-400" />
-              </Button>
+              {acc.level !== 'MAIN' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 cursor-pointer"
+                  onClick={() => onEditAccount(acc)}
+                  title="Edit Account"
+                >
+                  <Edit2 className="h-3.5 w-3.5 text-slate-400 hover:text-amber-400" />
+                </Button>
+              )}
             </div>
           );
         },

@@ -7,13 +7,16 @@ var journal_entries_default = makeHandler(async (req, res) => {
   if (!authenticated || !req.user) return;
   const { method } = req;
   if (method === "GET") {
-    const { subsidiary, limit = "100", page = "1" } = req.query;
+    const { subsidiary, limit = "100", page = "1", type } = req.query;
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
     const skip = (pageNum - 1) * limitNum;
     const whereClause = {};
     if (subsidiary && subsidiary !== "Global") {
       whereClause.subsidiary = subsidiary;
+    }
+    if (type) {
+      whereClause.voucherType = type;
     }
     const [entries, total] = await Promise.all([
       prisma.journalEntry.findMany({
@@ -39,6 +42,7 @@ var journal_entries_default = makeHandler(async (req, res) => {
       description: je.description,
       postedBy: je.postedBy,
       status: je.status,
+      voucherType: je.voucherType,
       lines: je.lines.map((line) => ({
         id: line.id,
         accountCode: line.account.glCode,
@@ -50,7 +54,7 @@ var journal_entries_default = makeHandler(async (req, res) => {
     return res.status(200).json({ status: 200, data: formatted, meta: { total, page: pageNum, limit: limitNum } });
   }
   if (method === "POST") {
-    const { postingDate, subsidiary, reference, description, status = "Draft", lines } = req.body;
+    const { postingDate, subsidiary, reference, description, status = "Draft", lines, voucherType = "JV" } = req.body;
     if (!lines || !Array.isArray(lines) || lines.length === 0) {
       return res.status(400).json({ error: { message: "Lines are required", status: 400 } });
     }
@@ -75,7 +79,8 @@ var journal_entries_default = makeHandler(async (req, res) => {
             reference: reference || "Journal Entry",
             description: description || null,
             postedBy,
-            status
+            status,
+            voucherType
           }
         });
         for (const line of lines) {

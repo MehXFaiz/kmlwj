@@ -128,6 +128,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
     { name: 'Donation Reports', icon: FileText, path: '/donation-reports' },
     { name: 'Customers', icon: Users, path: '/customers' },
     { name: 'Invoices', icon: FileSpreadsheet, path: '/invoices' },
+    { name: 'Bank Vouchers', icon: FileSpreadsheet, path: '/bank-vouchers' },
     { name: 'Reports', icon: BarChart3, path: '/reports', perms: ['VIEW_REPORTS'] },
     { name: 'Users & Roles', icon: Users, path: '/users-roles', perms: ['MANAGE_USERS', 'MANAGE_ROLES'] },
     { name: 'General Ledger', icon: BookOpen, path: '/ledger' },
