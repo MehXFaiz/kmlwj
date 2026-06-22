@@ -257,9 +257,10 @@ async function main() {
     { glCode: '4300000', accountName: 'Donation Expenses', parentCode: '4000000', accountTypeName: 'EXPENSE', description: 'Disbursement of donations and charity' },
   ];
 
+  const seededParentAccounts: Record<string, any> = {};
   for (const acc of parentAccounts) {
     const parentRecord = seededMainAccounts[acc.parentCode];
-    await prisma.account.upsert({
+    const record = await prisma.account.upsert({
       where: { glCode: acc.glCode },
       update: {
         accountName: acc.accountName,
@@ -275,6 +276,50 @@ async function main() {
         accountLevel: AccountLevel.PARENT,
         parentId: parentRecord.id,
         accountTypeId: seededAccountTypes[acc.accountTypeName].id,
+        description: acc.description,
+        isSystemDefined: true,
+        isLocked: false,
+        isReserved: false,
+      },
+    });
+    seededParentAccounts[acc.glCode] = record;
+  }
+
+  // Seeding Level 3 Subsidiary Accounts
+  console.log('Seeding Level 3 Subsidiary Accounts...');
+  const subsidiaryAccounts = [
+    // under Hall Income (3100000)
+    { glCode: '3100001', accountName: 'Bagh-e-Hajiani Garden', parentCode: '3100000', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Bagh-e-Hajiani Garden Hall Income' },
+    { glCode: '3100002', accountName: 'Sadaya Hall', parentCode: '3100000', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Sadaya Hall Income' },
+    { glCode: '3100003', accountName: 'Zikarya Hall', parentCode: '3100000', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Zikarya Hall Income' },
+    { glCode: '3100004', accountName: 'Annexy Hall', parentCode: '3100000', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Annexy Hall Income' },
+    // under Administrative Expenses (4100000)
+    { glCode: '4100001', accountName: 'Salary', parentCode: '4100000', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Staff salaries expense' },
+    { glCode: '4100002', accountName: 'Bonus', parentCode: '4100000', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Staff bonuses expense' },
+    { glCode: '4100003', accountName: 'Rent', parentCode: '4100000', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Office/Hall rent expense' },
+    { glCode: '4100004', accountName: 'Audit Fee', parentCode: '4100000', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Professional audit fees expense' },
+  ];
+
+  for (const acc of subsidiaryAccounts) {
+    const parentRecord = seededParentAccounts[acc.parentCode];
+    await prisma.account.upsert({
+      where: { glCode: acc.glCode },
+      update: {
+        accountName: acc.accountName,
+        accountLevel: AccountLevel.SUBSIDIARY,
+        parentId: parentRecord.id,
+        accountTypeId: seededAccountTypes[acc.accountTypeName].id,
+        detailType: acc.detailType,
+        description: acc.description,
+        isSystemDefined: true,
+      },
+      create: {
+        glCode: acc.glCode,
+        accountName: acc.accountName,
+        accountLevel: AccountLevel.SUBSIDIARY,
+        parentId: parentRecord.id,
+        accountTypeId: seededAccountTypes[acc.accountTypeName].id,
+        detailType: acc.detailType,
         description: acc.description,
         isSystemDefined: true,
         isLocked: false,
