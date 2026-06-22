@@ -119,7 +119,7 @@ export const InvoiceDetail = () => {
     switch (status) {
       case 'DRAFT':
         return (
-          <div className="flex items-center justify-between p-4 rounded-xl bg-slate-900 border border-slate-800 text-slate-300">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 gap-4">
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400">
                 <FileText className="h-5 w-5" />
@@ -137,7 +137,7 @@ export const InvoiceDetail = () => {
         );
       case 'POSTED':
         return (
-          <div className="flex items-center justify-between p-4 rounded-xl bg-indigo-950/20 border border-indigo-900/50 text-indigo-300">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl bg-indigo-950/20 border border-indigo-900/50 text-indigo-300 gap-4">
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-lg bg-indigo-950 border border-indigo-900 flex items-center justify-center text-indigo-400">
                 <CheckCircle className="h-5 w-5" />
@@ -155,7 +155,7 @@ export const InvoiceDetail = () => {
         );
       case 'PAID':
         return (
-          <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-950/20 border border-emerald-900/50 text-emerald-300">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl bg-emerald-950/20 border border-emerald-900/50 text-emerald-300 gap-4">
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-lg bg-emerald-950 border border-emerald-900 flex items-center justify-center text-emerald-400">
                 <CreditCard className="h-5 w-5" />
@@ -172,7 +172,7 @@ export const InvoiceDetail = () => {
         );
       case 'CANCELLED':
         return (
-          <div className="flex items-center justify-between p-4 rounded-xl bg-red-950/20 border border-red-900/50 text-red-300">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl bg-red-950/20 border border-red-900/50 text-red-300 gap-4">
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-lg bg-red-950 border border-red-900 flex items-center justify-center text-red-400">
                 <XCircle className="h-5 w-5" />
@@ -192,7 +192,7 @@ export const InvoiceDetail = () => {
   return (
     <div className="space-y-6 pb-12 print:p-0 print:space-y-0">
       {/* Back button & Action list */}
-      <div className="flex items-center justify-between print:hidden">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 print:hidden">
         <div className="flex items-center gap-3">
           <Link to="/invoices" className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 transition-colors">
             <ChevronLeft className="h-4 w-4" />

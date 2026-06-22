@@ -139,7 +139,7 @@ export const BankVoucherForm = () => {
         {/* Voucher Type selection */}
         <div>
           <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Voucher Classification</label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button type="button" onClick={() => setVoucherType('BP')}
               className={`py-3 rounded-lg border text-sm font-bold transition-all cursor-pointer ${voucherType === 'BP' ? 'bg-indigo-600/10 border-indigo-500 text-indigo-400' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'}`}>
               Bank Payment (BP) — Payout

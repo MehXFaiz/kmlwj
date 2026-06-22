@@ -132,8 +132,8 @@ export const TrialBalanceSheet = () => {
       <Card>
         <CardContent className="p-0">
           {/* Toolbar */}
-          <div className="p-4 border-b border-slate-800 flex items-center justify-between gap-4 bg-slate-900/50">
-            <div className="relative flex-1 max-w-md">
+          <div className="p-4 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/50">
+            <div className="relative flex-1 w-full md:max-w-md">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
               <input
                 type="text"
@@ -144,7 +144,7 @@ export const TrialBalanceSheet = () => {
               />
             </div>
             
-            <div className="flex items-center gap-3 text-xs font-medium">
+            <div className="flex flex-wrap items-center gap-3 text-xs font-medium">
               <div className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded-sm bg-amber-500/40 border border-amber-500/50"></div>
                 <span className="text-slate-400">Main</span>
