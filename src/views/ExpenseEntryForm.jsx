@@ -32,8 +32,8 @@ export const ExpenseEntryForm = () => {
   const bankAccounts = useMemo(() => {
     return flatAccounts.filter(acc => 
       acc.type === 'Asset' && 
-      acc.detailType === 'Subsidiary' &&
-      ((acc.name || '').toLowerCase().includes('bank') || (acc.name || '').toLowerCase().includes('cash'))
+      acc.level === 'SUBSIDIARY' &&
+      (acc.detailType === 'Cash' || (acc.name || '').toLowerCase().includes('bank') || (acc.name || '').toLowerCase().includes('cash'))
     );
   }, [flatAccounts]);
 
@@ -334,9 +334,13 @@ export const ExpenseEntryForm = () => {
               onChange={e => setBankAccountId(e.target.value)}
               className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-rose-600/50 transition-colors"
             >
-              {bankAccounts.map(acc => (
-                <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
-              ))}
+              {bankAccounts.length === 0 ? (
+                <option value="">-- No Cash/Bank Accounts Found --</option>
+              ) : (
+                bankAccounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
+                ))
+              )}
             </select>
           </div>
         </div>

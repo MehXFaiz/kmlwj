@@ -26,15 +26,15 @@ export const BankVoucherForm = () => {
   const bankAccounts = useMemo(() => {
     return flatAccounts.filter(acc => 
       acc.type === 'Asset' && 
-      acc.detailType === 'Subsidiary' &&
-      ((acc.name || '').toLowerCase().includes('bank') || (acc.name || '').toLowerCase().includes('cash'))
+      acc.level === 'SUBSIDIARY' &&
+      (acc.detailType === 'Cash' || (acc.name || '').toLowerCase().includes('bank') || (acc.name || '').toLowerCase().includes('cash'))
     );
   }, [flatAccounts]);
 
   // Offset accounts based on type
   const offsetAccounts = useMemo(() => {
     return flatAccounts.filter(acc => 
-      acc.detailType === 'Subsidiary' &&
+      acc.level === 'SUBSIDIARY' &&
       (voucherType === 'BP' ? acc.type === 'Expense' : acc.type === 'Revenue')
     );
   }, [flatAccounts, voucherType]);
@@ -171,9 +171,13 @@ export const BankVoucherForm = () => {
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Bank / Cash Account *</label>
             <select value={bankAccountId} onChange={e => setBankAccountId(e.target.value)}
               className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50 transition-colors">
-              {bankAccounts.map(acc => (
-                <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
-              ))}
+              {bankAccounts.length === 0 ? (
+                <option value="">-- No Cash/Bank Accounts Found --</option>
+              ) : (
+                bankAccounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
+                ))
+              )}
             </select>
           </div>
 

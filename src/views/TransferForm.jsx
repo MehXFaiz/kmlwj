@@ -25,8 +25,8 @@ export const TransferForm = () => {
   const bankAccounts = useMemo(() => {
     return flatAccounts.filter(acc => 
       acc.type === 'Asset' && 
-      acc.detailType === 'Subsidiary' &&
-      ((acc.name || '').toLowerCase().includes('bank') || (acc.name || '').toLowerCase().includes('cash'))
+      acc.level === 'SUBSIDIARY' &&
+      (acc.detailType === 'Cash' || (acc.name || '').toLowerCase().includes('bank') || (acc.name || '').toLowerCase().includes('cash'))
     );
   }, [flatAccounts]);
 

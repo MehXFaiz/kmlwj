@@ -37,8 +37,12 @@ export const InvoiceDetail = () => {
   }, [id, fetchInvoiceById, fetchAccountsList, navigate]);
 
   // Filters for dropdown selectors
-  const revenueAccounts = flatAccounts.filter(acc => acc.type === 'Revenue' && acc.detailType === 'Subsidiary');
-  const assetAccounts = flatAccounts.filter(acc => acc.type === 'Asset' && acc.detailType === 'Subsidiary');
+  const revenueAccounts = flatAccounts.filter(acc => acc.type === 'Revenue' && acc.level === 'SUBSIDIARY');
+  const assetAccounts = flatAccounts.filter(acc => 
+    acc.type === 'Asset' && 
+    acc.level === 'SUBSIDIARY' && 
+    (acc.detailType === 'Cash' || (acc.name || '').toLowerCase().includes('bank') || (acc.name || '').toLowerCase().includes('cash'))
+  );
 
   // Pre-fill selectors
   useEffect(() => {
