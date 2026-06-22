@@ -64,3 +64,6 @@ export const reportsService = {
 export const searchService = {
   search: (q) => api.get(`/api/v1/search?q=${encodeURIComponent(q)}`).then((r) => r.data.data),
 };
+
+export { customerService } from './customerService';
+export { invoiceService } from './invoiceService';

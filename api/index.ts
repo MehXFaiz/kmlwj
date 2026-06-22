@@ -26,6 +26,8 @@ import auditLogsHandler from './_v1/audit-logs.js';
 import reservedCodesHandler from './_v1/reserved-codes.js';
 import beneficiariesHandler from './_v1/beneficiaries.js';
 import donationsHandler from './_v1/donations.js';
+import customersHandler from './_v1/customers.js';
+import invoicesHandler from './_v1/invoices.js';
 import generalLedgerHandler from './_v1/general-ledger.js';
 import journalEntriesHandler from './_v1/journal-entries.js';
 import trialBalanceHandler from './_v1/reports/trial-balance.js';
@@ -102,6 +104,17 @@ app.delete('/api/v1/beneficiaries', makeExpress(beneficiariesHandler));
 app.get('/api/v1/donations', makeExpress(donationsHandler));
 app.post('/api/v1/donations', makeExpress(donationsHandler));
 app.put('/api/v1/donations', makeExpress(donationsHandler));
+
+// Invoice & Customer Management Routes
+app.get('/api/v1/customers', makeExpress(customersHandler));
+app.post('/api/v1/customers', makeExpress(customersHandler));
+app.put('/api/v1/customers', makeExpress(customersHandler));
+app.delete('/api/v1/customers', makeExpress(customersHandler));
+
+app.get('/api/v1/invoices', makeExpress(invoicesHandler));
+app.post('/api/v1/invoices', makeExpress(invoicesHandler));
+app.put('/api/v1/invoices', makeExpress(invoicesHandler));
+app.delete('/api/v1/invoices', makeExpress(invoicesHandler));
 
 // Ledger & Journals
 app.get('/api/v1/general-ledger', makeExpress(generalLedgerHandler));

@@ -72,13 +72,43 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     take: 10,
   });
 
+  // 5. Search Customers
+  const customers = await prisma.customer.findMany({
+    where: {
+      OR: [
+        { name: { contains: q, mode: 'insensitive' } },
+        { company: { contains: q, mode: 'insensitive' } },
+        { email: { contains: q, mode: 'insensitive' } },
+        { phone: { contains: q, mode: 'insensitive' } },
+      ],
+    },
+    take: 10,
+  });
+
+  // 6. Search Invoices
+  const invoices = await prisma.invoice.findMany({
+    where: {
+      OR: [
+        { invoiceNo: { contains: q, mode: 'insensitive' } },
+        { remarks: { contains: q, mode: 'insensitive' } },
+        { customer: { name: { contains: q, mode: 'insensitive' } } },
+      ],
+    },
+    include: {
+      customer: true,
+    },
+    take: 10,
+  });
+
   return res.status(200).json({
     status: 200,
     data: {
       accounts,
       beneficiaries,
       donations,
-      journalEntries
+      journalEntries,
+      customers,
+      invoices
     }
   });
 });

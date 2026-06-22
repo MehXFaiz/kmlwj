@@ -27,6 +27,12 @@ const Beneficiaries = lazy(() => import('./views/Beneficiaries').then(m => ({ de
 const Donations = lazy(() => import('./views/Donations').then(m => ({ default: m.Donations })));
 const DonationReports = lazy(() => import('./views/DonationReports').then(m => ({ default: m.DonationReports })));
 
+// Invoice Module Views
+const Customers = lazy(() => import('./views/Customers').then(m => ({ default: m.Customers })));
+const Invoices = lazy(() => import('./views/Invoices').then(m => ({ default: m.Invoices })));
+const InvoiceForm = lazy(() => import('./views/InvoiceForm').then(m => ({ default: m.InvoiceForm })));
+const InvoiceDetail = lazy(() => import('./views/InvoiceDetail').then(m => ({ default: m.InvoiceDetail })));
+
 // Auth Views (also lazy-loaded)
 const Login = lazy(() => import('./views/Login').then(m => ({ default: m.Login })));
 const Signup = lazy(() => import('./views/Signup').then(m => ({ default: m.Signup })));
@@ -208,6 +214,11 @@ function App() {
             <Route path="/beneficiaries" element={<Beneficiaries />} />
             <Route path="/donations" element={<Donations />} />
             <Route path="/donation-reports" element={<DonationReports />} />
+            <Route path="/customers" element={<Customers />} />
+            <Route path="/invoices" element={<Invoices />} />
+            <Route path="/invoices/new" element={<InvoiceForm />} />
+            <Route path="/invoices/edit/:id" element={<InvoiceForm />} />
+            <Route path="/invoices/:id" element={<InvoiceDetail />} />
             <Route path="/users-roles" element={
               <PermissionGuard requiredPerms={['MANAGE_USERS', 'MANAGE_ROLES']}>
                 <UsersRoles />

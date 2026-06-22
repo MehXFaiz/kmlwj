@@ -33,7 +33,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState({ accounts: [], beneficiaries: [], donations: [], journalEntries: [] });
+  const [results, setResults] = useState({ accounts: [], beneficiaries: [], donations: [], journalEntries: [], customers: [], invoices: [] });
   
   const inputRef = useRef(null);
   const modalRef = useRef(null);
@@ -59,7 +59,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
   useEffect(() => {
     if (isSearchOpen) {
       setQuery('');
-      setResults({ accounts: [], beneficiaries: [], donations: [], journalEntries: [] });
+      setResults({ accounts: [], beneficiaries: [], donations: [], journalEntries: [], customers: [], invoices: [] });
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [isSearchOpen]);
@@ -67,14 +67,14 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
   // Debounced API search query
   useEffect(() => {
     if (!query.trim()) {
-      setResults({ accounts: [], beneficiaries: [], donations: [], journalEntries: [] });
+      setResults({ accounts: [], beneficiaries: [], donations: [], journalEntries: [], customers: [], invoices: [] });
       return;
     }
     setLoading(true);
     const delay = setTimeout(async () => {
       try {
         const data = await searchService.search(query);
-        setResults(data || { accounts: [], beneficiaries: [], donations: [], journalEntries: [] });
+        setResults(data || { accounts: [], beneficiaries: [], donations: [], journalEntries: [], customers: [], invoices: [] });
       } catch (err) {
         console.error('Global search error:', err);
       } finally {
@@ -126,6 +126,8 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
     { name: 'Beneficiaries', icon: Users, path: '/beneficiaries' },
     { name: 'Donations', icon: Heart, path: '/donations' },
     { name: 'Donation Reports', icon: FileText, path: '/donation-reports' },
+    { name: 'Customers', icon: Users, path: '/customers' },
+    { name: 'Invoices', icon: FileSpreadsheet, path: '/invoices' },
     { name: 'Reports', icon: BarChart3, path: '/reports', perms: ['VIEW_REPORTS'] },
     { name: 'Users & Roles', icon: Users, path: '/users-roles', perms: ['MANAGE_USERS', 'MANAGE_ROLES'] },
     { name: 'General Ledger', icon: BookOpen, path: '/ledger' },
@@ -315,7 +317,9 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
                     results.accounts.length === 0 &&
                     results.beneficiaries.length === 0 &&
                     results.donations.length === 0 &&
-                    results.journalEntries.length === 0 && (
+                    results.journalEntries.length === 0 &&
+                    (!results.customers || results.customers.length === 0) &&
+                    (!results.invoices || results.invoices.length === 0) && (
                       <div className="text-center py-12 text-slate-500">
                         <HelpCircle className="h-10 w-10 mx-auto text-slate-750 mb-3" />
                         <p className="text-sm font-semibold text-slate-450">No results found</p>
@@ -480,6 +484,69 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
                                   <span className="text-xs font-bold text-slate-200">{je.reference}</span>
                                 </div>
                                 <p className="text-[10px] text-slate-550 mt-0.5">Posted by: {je.postedBy} • Status: {je.status} • Desc: {je.description || 'No description'}</p>
+                              </div>
+                            </div>
+                            <ArrowRight className="h-4 w-4 text-slate-600 group-hover:text-slate-355 transform group-hover:translate-x-0.5 transition-all" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Customers category */}
+                  {results.customers?.length > 0 && (
+                    <div>
+                      <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 px-1">Customers ({results.customers.length})</h4>
+                      <div className="space-y-1">
+                        {results.customers.map((c) => (
+                          <button
+                            key={c.id}
+                            onClick={() => {
+                              navigate(`/customers?search=${c.name}`);
+                              setIsSearchOpen(false);
+                            }}
+                            className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-800/60 border border-transparent hover:border-slate-800/40 text-left transition-all group cursor-pointer"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="h-8 w-8 rounded-lg bg-indigo-950/60 border border-indigo-900/40 flex items-center justify-center group-hover:bg-indigo-900/60 transition-colors">
+                                <Users className="h-4 w-4 text-indigo-400" />
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold text-slate-200">{c.name}</p>
+                                <p className="text-[10px] text-slate-550 mt-0.5">{c.company ? `Company: ${c.company}` : 'Private Customer'}</p>
+                              </div>
+                            </div>
+                            <ArrowRight className="h-4 w-4 text-slate-600 group-hover:text-slate-355 transform group-hover:translate-x-0.5 transition-all" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Invoices category */}
+                  {results.invoices?.length > 0 && (
+                    <div>
+                      <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 px-1">Sales Invoices ({results.invoices.length})</h4>
+                      <div className="space-y-1">
+                        {results.invoices.map((inv) => (
+                          <button
+                            key={inv.id}
+                            onClick={() => {
+                              navigate(`/invoices/${inv.id}`);
+                              setIsSearchOpen(false);
+                            }}
+                            className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-800/60 border border-transparent hover:border-slate-800/40 text-left transition-all group cursor-pointer"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="h-8 w-8 rounded-lg bg-teal-950/60 border border-teal-900/40 flex items-center justify-center group-hover:bg-teal-900/60 transition-colors">
+                                <FileSpreadsheet className="h-4 w-4 text-teal-400" />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] font-mono font-bold text-teal-450 bg-teal-950/70 border border-teal-900/65 px-1.5 py-0.2 rounded">{inv.invoiceNo}</span>
+                                  <span className="text-xs font-bold text-slate-200">PKR {inv.total.toLocaleString()}</span>
+                                </div>
+                                <p className="text-[10px] text-slate-550 mt-0.5">Billed to: {inv.customer?.name} • Status: {inv.status}</p>
                               </div>
                             </div>
                             <ArrowRight className="h-4 w-4 text-slate-600 group-hover:text-slate-355 transform group-hover:translate-x-0.5 transition-all" />

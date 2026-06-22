@@ -98,6 +98,7 @@ model Account {
   journalEntryLines JournalEntryLine[]
   ledgerEntries     LedgerEntry[]
   donations         Donation[]    @relation("DonationBankAccount")
+  invoices          Invoice[]     @relation("InvoiceBankAccount")
 }
 
 model AccountType {
@@ -245,4 +246,51 @@ model Donation {
   createdBy      User?          @relation("DonationCreatedBy", fields: [createdById], references: [id])
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+}
+
+model Customer {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  company   String?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  invoices  Invoice[]
+}
+
+model Invoice {
+  id            String        @id @default(uuid()) @db.Uuid
+  invoiceNo     String        @unique
+  customerId    String        @db.Uuid
+  customer      Customer      @relation(fields: [customerId], references: [id])
+  issueDate     DateTime
+  dueDate       DateTime
+  status        String        @default("DRAFT") // DRAFT, POSTED, PAID, CANCELLED
+  subtotal      Float
+  discount      Float         @default(0)
+  tax           Float         @default(0)
+  total         Float
+  paymentMethod String?       // CASH, BANK, CHEQUE
+  bankAccountId String?       @db.Uuid
+  bankAccount   Account?      @relation("InvoiceBankAccount", fields: [bankAccountId], references: [id])
+  chequeNumber  String?
+  remarks       String?
+  items         InvoiceItem[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  invoiceId   String   @db.Uuid
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Float
+  unitPrice   Float
+  amount      Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
