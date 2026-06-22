@@ -47,9 +47,10 @@ export const Topbar = ({ onMobileMenuToggle }) => {
         </button>
 
         {/* Welfare Jamaat Urdu Branding */}
-        <div className="flex-1 flex items-center justify-start lg:justify-center min-w-0 px-2 sm:px-4">
+        <div className="flex-1 flex items-center justify-center min-w-0 px-2 sm:px-4">
           <span
-            className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-blue-200 to-emerald-200 truncate select-none text-[15px] sm:text-xl"
+            dir="rtl"
+            className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-blue-200 to-emerald-200 truncate select-none text-[15px] sm:text-xl text-center w-full"
             style={{ fontFamily: "'Noto Naskh Arabic', sans-serif" }}
           >
             کچھی مسلم لوہار واڈہ ویلفیئر جماعت
