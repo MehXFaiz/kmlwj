@@ -228,29 +228,23 @@ export const ExpenseEntryForm = () => {
   };
 
   return (
-    <div className="space-y-6 pb-12">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link to="/bank-vouchers" className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 transition-colors">
-            <ChevronLeft className="h-4 w-4" />
-          </Link>
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.12em] text-rose-450 bg-rose-950/40 border border-rose-900/40 px-2 py-0.5 rounded-full">
-                <Sparkles className="h-3 w-3 text-rose-400" /> Quick Add
-              </span>
-            </div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">
-              Add Expense
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Record outgoing expenses directly into the ledger by type
-            </p>
+    <div className="max-w-2xl mx-auto space-y-6 pb-12">
+      <div className="flex items-center gap-3">
+        <Link to="/bank-vouchers" className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 transition-colors flex-shrink-0">
+          <ChevronLeft className="h-4 w-4" />
+        </Link>
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.12em] text-rose-450 bg-rose-950/40 border border-rose-900/40 px-2 py-0.5 rounded-full">
+              <Sparkles className="h-3 w-3 text-rose-400" /> Quick Add
+            </span>
           </div>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">Add Expense</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Record outgoing expenses directly into the ledger by type</p>
         </div>
       </div>
 
-      <form onSubmit={handleSave} className="max-w-2xl rounded-xl border border-slate-800/70 bg-slate-900/40 p-6 space-y-6">
+      <form onSubmit={handleSave} className="w-full rounded-xl border border-slate-800/70 bg-slate-900/40 p-4 sm:p-6 space-y-6">
         
         {/* Expense Type selection */}
         <div>

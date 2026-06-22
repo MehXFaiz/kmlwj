@@ -123,24 +123,18 @@ export const BankVoucherForm = () => {
   };
 
   return (
-    <div className="space-y-6 pb-12">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link to="/bank-vouchers" className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 transition-colors">
-            <ChevronLeft className="h-4 w-4" />
-          </Link>
-          <div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">
-              Create Bank Voucher
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Record payments out or receipts in to Cash/Bank ledger accounts
-            </p>
-          </div>
+    <div className="max-w-2xl mx-auto space-y-6 pb-12">
+      <div className="flex items-center gap-3">
+        <Link to="/bank-vouchers" className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 transition-colors flex-shrink-0">
+          <ChevronLeft className="h-4 w-4" />
+        </Link>
+        <div>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">Create Bank Voucher</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Record payments out or receipts in to Cash/Bank ledger accounts</p>
         </div>
       </div>
 
-      <form onSubmit={handleSave} className="max-w-2xl rounded-xl border border-slate-800/70 bg-slate-900/40 p-6 space-y-6">
+      <form onSubmit={handleSave} className="w-full rounded-xl border border-slate-800/70 bg-slate-900/40 p-4 sm:p-6 space-y-6">
         
         {/* Voucher Type selection */}
         <div>
