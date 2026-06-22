@@ -35,7 +35,7 @@ export const Topbar = ({ onMobileMenuToggle }) => {
   const fiscalYears = ['2025', '2026', '2027'];
 
   return (
-    <header className="bg-slate-900 border-b border-slate-800/80 z-20 shrink-0">
+    <header className="print-hidden bg-slate-900 border-b border-slate-800/80 z-20 shrink-0">
       <div className="flex items-center gap-2 px-3 py-2.5 md:px-6 md:py-0 md:h-16">
         {/* Mobile menu toggle */}
         <button

@@ -152,6 +152,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
       )}
       <div
         className={`
+          print-hidden
           h-screen bg-slate-900 border-r border-slate-800 flex flex-col justify-between transition-all duration-300 relative z-50
           ${isCollapsed ? 'lg:w-16 w-64' : 'w-64'}
           fixed lg:relative
