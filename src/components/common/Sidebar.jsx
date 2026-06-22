@@ -1,5 +1,5 @@
-import { NavLink, useNavigate } from 'react-router-dom';
-import { useEffect, useState, useRef } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import logoImg from '../../assets/logo.png';
 import { useAuthStore } from '../../store/authStore';
 import { searchService } from '../../services/apiServices';
@@ -23,12 +23,26 @@ import {
   ArrowRight,
   HelpCircle,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  PieChart,
+  Activity,
+  RefreshCw
 } from 'lucide-react';
 
 export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsCollapsed }) => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isPathActive = (path) => {
+    if (path === '/') {
+      return location.pathname === '/';
+    }
+    if (path.includes('?')) {
+      return (location.pathname + location.search) === path;
+    }
+    return location.pathname.startsWith(path.split('?')[0]);
+  };
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -117,25 +131,87 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
     return requiredPerms.some(p => user.permissions.includes(p));
   };
 
-  const menuItems = [
-    { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
-    { name: 'Chart of Accounts', icon: Layers, path: '/coa', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT', 'LOCK_ACCOUNT'] },
-    { name: 'Revenue Heads', icon: TrendingUp, path: '/revenue-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
-    { name: 'Expense Heads', icon: TrendingDown, path: '/expense-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
-    { name: 'Reserved Codes', icon: ShieldCheck, path: '/reserved', perms: ['MANAGE_RESERVED_CODES'] },
-    { name: 'Beneficiaries', icon: Users, path: '/beneficiaries' },
-    { name: 'Donations', icon: Heart, path: '/donations' },
-    { name: 'Donation Reports', icon: FileText, path: '/donation-reports' },
-    { name: 'Customers', icon: Users, path: '/customers' },
-    { name: 'Invoices', icon: FileSpreadsheet, path: '/invoices' },
-    { name: 'Bank Vouchers', icon: FileSpreadsheet, path: '/bank-vouchers' },
-    { name: 'Reports', icon: BarChart3, path: '/reports', perms: ['VIEW_REPORTS'] },
-    { name: 'Users & Roles', icon: Users, path: '/users-roles', perms: ['MANAGE_USERS', 'MANAGE_ROLES'] },
-    { name: 'General Ledger', icon: BookOpen, path: '/ledger' },
-    { name: 'Trial Balance Matrix', icon: Layers, path: '/trial-balance-sheet' },
-    { name: 'Journal Entries', icon: FileSpreadsheet, path: '/journals' },
-    { name: 'Audit Trail', icon: History, path: '/audit', perms: ['VIEW_REPORTS', 'MANAGE_USERS'] },
-  ];
+  const sidebarSections = useMemo(() => [
+    {
+      title: "Core Accounting",
+      items: [
+        { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
+        { 
+          name: 'Chart of Accounts', 
+          icon: Layers, 
+          path: '/coa', 
+          perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT', 'LOCK_ACCOUNT'],
+          subItems: [
+            { name: 'Assets', path: '/coa?type=Asset' },
+            { name: 'Liabilities', path: '/coa?type=Liability' },
+            { name: 'Revenue', path: '/coa?type=Revenue' },
+            { name: 'Expenses', path: '/coa?type=Expense' }
+          ]
+        },
+      ]
+    },
+    {
+      title: "Transactions",
+      items: [
+        { name: 'Add Revenue', icon: TrendingUp, path: '/bank-vouchers/revenue/new' },
+        { name: 'Add Expense', icon: TrendingDown, path: '/bank-vouchers/expense/new' },
+        { name: 'Journal Entry', icon: FileSpreadsheet, path: '/journals' },
+        { name: 'Transfer', icon: RefreshCw, path: '/bank-vouchers/transfer/new' },
+      ]
+    },
+    {
+      title: "Reports",
+      items: [
+        { name: 'Income Statement', icon: BarChart3, path: '/reports?tab=income-statement', perms: ['VIEW_REPORTS'] },
+        { name: 'Balance Sheet', icon: PieChart, path: '/reports?tab=balance-sheet', perms: ['VIEW_REPORTS'] },
+        { name: 'Cash Flow', icon: Activity, path: '/reports?tab=cash-flow', perms: ['VIEW_REPORTS'] },
+        { name: 'Ledger', icon: BookOpen, path: '/ledger' },
+        { name: 'Trial Balance', icon: Layers, path: '/reports?tab=trial-balance', perms: ['VIEW_REPORTS'] },
+      ]
+    },
+    {
+      title: "Welfare & Invoices",
+      items: [
+        { name: 'Beneficiaries', icon: Users, path: '/beneficiaries' },
+        { name: 'Donations', icon: Heart, path: '/donations' },
+        { name: 'Donation Reports', icon: FileText, path: '/donation-reports' },
+        { name: 'Customers', icon: Users, path: '/customers' },
+        { name: 'Invoices', icon: FileSpreadsheet, path: '/invoices' },
+      ]
+    },
+    {
+      title: "Administration",
+      items: [
+        { name: 'Bank Vouchers', icon: FileSpreadsheet, path: '/bank-vouchers' },
+        { name: 'Revenue Heads', icon: TrendingUp, path: '/revenue-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
+        { name: 'Expense Heads', icon: TrendingDown, path: '/expense-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
+        { name: 'Reserved Codes', icon: ShieldCheck, path: '/reserved', perms: ['MANAGE_RESERVED_CODES'] },
+        { name: 'Trial Balance Matrix', icon: Layers, path: '/trial-balance-sheet' },
+        { name: 'Users & Roles', icon: Users, path: '/users-roles', perms: ['MANAGE_USERS', 'MANAGE_ROLES'] },
+        { name: 'Audit Trail', icon: History, path: '/audit', perms: ['VIEW_REPORTS', 'MANAGE_USERS'] },
+      ]
+    }
+  ], []);
+
+  const menuItems = useMemo(() => {
+    const items = [];
+    sidebarSections.forEach(section => {
+      section.items.forEach(item => {
+        items.push(item);
+        if (item.subItems) {
+          item.subItems.forEach(sub => {
+            items.push({
+              name: `${item.name} > ${sub.name}`,
+              icon: item.icon,
+              path: sub.path,
+              perms: item.perms
+            });
+          });
+        }
+      });
+    });
+    return items;
+  }, [sidebarSections]);
 
   const filteredPages = query.trim()
     ? menuItems.filter(item => (!item.perms || hasPerm(item.perms)) && item.name.toLowerCase().includes(query.toLowerCase()))
@@ -232,30 +308,80 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
         </div>
 
         {/* Navigation Items */}
-        <nav className={`flex-1 min-h-0 py-3 space-y-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-700 hover:scrollbar-thumb-slate-600 ${isCollapsed ? 'px-1.5' : 'px-3'}`}>
-          {menuItems.filter(item => !item.perms || hasPerm(item.perms)).map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) => `
-                flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative
-                ${isCollapsed ? 'lg:justify-center lg:px-2' : ''}
-                ${isActive 
-                  ? 'bg-brand-600/15 text-brand-300 border-l-2 border-brand-500 font-semibold' 
-                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
-                }
-              `}
-              onClick={() => setIsMobileOpen && setIsMobileOpen(false)}
-            >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              <span className={`truncate ${isCollapsed ? 'lg:hidden' : ''}`}>{item.name}</span>
-              {isCollapsed && (
-                <div className="absolute left-16 bg-slate-950 text-slate-200 border border-slate-800 text-xs px-2.5 py-1.5 rounded-md shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 hidden lg:block">
-                  {item.name}
-                </div>
-              )}
-            </NavLink>
-          ))}
+        <nav className={`flex-1 min-h-0 py-3 space-y-4 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-700 hover:scrollbar-thumb-slate-600 ${isCollapsed ? 'px-1.5' : 'px-3'}`}>
+          {sidebarSections.map((section, secIdx) => {
+            const visibleItems = section.items.filter(item => !item.perms || hasPerm(item.perms));
+            if (visibleItems.length === 0) return null;
+
+            return (
+              <div key={secIdx} className="space-y-1">
+                {/* Section Title */}
+                {!isCollapsed && (
+                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-3 pt-2 pb-1 select-none">
+                    {section.title}
+                  </h4>
+                )}
+                {isCollapsed && secIdx > 0 && (
+                  <div className="border-t border-slate-800/40 my-2 mx-1" />
+                )}
+
+                {/* Section Items */}
+                {visibleItems.map((item) => {
+                  const active = isPathActive(item.path);
+                  return (
+                    <div key={item.path} className="space-y-1">
+                      <NavLink
+                        to={item.path}
+                        className={`
+                          flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative
+                          ${isCollapsed ? 'lg:justify-center lg:px-2' : ''}
+                          ${active 
+                            ? 'bg-brand-600/15 text-brand-300 border-l-2 border-brand-500 font-semibold' 
+                            : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+                          }
+                        `}
+                        onClick={() => setIsMobileOpen && setIsMobileOpen(false)}
+                      >
+                        <item.icon className="h-5 w-5 flex-shrink-0" />
+                        <span className={`truncate ${isCollapsed ? 'lg:hidden' : ''}`}>{item.name}</span>
+                        {isCollapsed && (
+                          <div className="absolute left-16 bg-slate-950 text-slate-200 border border-slate-800 text-xs px-2.5 py-1.5 rounded-md shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 hidden lg:block">
+                            {item.name}
+                          </div>
+                        )}
+                      </NavLink>
+
+                      {/* Sub-items (only visible if expanded) */}
+                      {item.subItems && !isCollapsed && (
+                        <div className="pl-8 space-y-1 mt-1 border-l border-slate-800/50 ml-5">
+                          {item.subItems.map((sub) => {
+                            const subActive = isPathActive(sub.path);
+                            return (
+                              <NavLink
+                                key={sub.path}
+                                to={sub.path}
+                                className={`
+                                  flex items-center gap-2 py-1.5 px-2.5 rounded-md text-xs transition-all duration-200 hover:text-slate-100
+                                  ${subActive 
+                                    ? 'text-brand-300 font-bold bg-brand-500/5' 
+                                    : 'text-slate-400 hover:bg-slate-800/30'
+                                  }
+                                `}
+                                onClick={() => setIsMobileOpen && setIsMobileOpen(false)}
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-slate-750" />
+                                <span>{sub.name}</span>
+                              </NavLink>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
         </nav>
       </div>
 

@@ -25,9 +25,9 @@ export const ChartOfAccounts = () => {
   const { journals } = useJournalStore();
   const { codes: reservedCodes, fetchCodes: fetchReservedCodes } = useReservedCodeStore();
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
-  const [typeFilter, setTypeFilter] = useState('All');
+  const [typeFilter, setTypeFilter] = useState(searchParams.get('type') || 'All');
   const [viewMode, setViewMode] = useState(searchParams.get('search') ? 'table' : 'tree'); // tree or table
   const [showReserved, setShowReserved] = useState(false);
 
@@ -36,7 +36,12 @@ export const ChartOfAccounts = () => {
     if (q) {
       setSearchQuery(q);
       setViewMode('table');
+    } else {
+      setSearchQuery('');
     }
+
+    const t = searchParams.get('type') || 'All';
+    setTypeFilter(t);
   }, [searchParams]);
   
   // Pagination State for Table View
@@ -148,7 +153,16 @@ export const ChartOfAccounts = () => {
             <div className="w-full md:w-48">
               <select
                 value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const newParams = new URLSearchParams(searchParams);
+                  if (val === 'All') {
+                    newParams.delete('type');
+                  } else {
+                    newParams.set('type', val);
+                  }
+                  setSearchParams(newParams);
+                }}
                 className="w-full bg-slate-900/60 border border-slate-800 text-sm py-2 px-3 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500/30 cursor-pointer"
               >
                 <option value="All">All Types</option>
