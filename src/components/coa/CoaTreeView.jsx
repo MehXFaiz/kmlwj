@@ -175,8 +175,9 @@ export const CoaTreeView = ({
                         <span className="w-6.5"></span> // spacer
                       )}
                       
-                      <span className={`${account.detailType === 'Header' ? 'text-slate-100' : 'text-slate-300'}`}>
-                        {account.name}
+                      <span className={`${account.detailType === 'Header' ? 'text-slate-100' : 'text-slate-300'} flex items-center gap-1.5`}>
+                        {account.level === 'MAIN' && <span title="This root category is permanent and locked" className="text-slate-400 select-none">🔒</span>}
+                        <span>{account.name}</span>
                       </span>
                     </div>
                   </td>
@@ -251,17 +252,20 @@ export const CoaTreeView = ({
                       </Button>
 
                       {/* Edit */}
-                      {account.level !== 'MAIN' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 cursor-pointer"
-                          onClick={() => onEditAccount(account)}
-                          title="Edit Account Details"
-                        >
-                          <Edit2 className="h-3.5 w-3.5 text-slate-400 hover:text-amber-400" />
-                        </Button>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`h-8 w-8 p-0 ${account.level === 'MAIN' ? 'opacity-35 cursor-not-allowed text-slate-600' : 'cursor-pointer text-slate-400 hover:text-amber-400'}`}
+                        onClick={account.level === 'MAIN' ? undefined : () => onEditAccount(account)}
+                        disabled={account.level === 'MAIN'}
+                        title={account.level === 'MAIN' ? "MAIN accounts are permanent and cannot be edited" : "Edit Account Details"}
+                      >
+                        {account.level === 'MAIN' ? (
+                          <Lock className="h-3.5 w-3.5" />
+                        ) : (
+                          <Edit2 className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
                     </div>
                   </td>
                 </tr>
