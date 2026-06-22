@@ -14,6 +14,7 @@ export const CoaTreeView = ({
   searchQuery,
   typeFilter,
   selectedSubsidiary,
+  showReserved = false,
 }) => {
   const navigate = useNavigate();
   
@@ -41,6 +42,11 @@ export const CoaTreeView = ({
       // Filter by subsidiary at the node level
       if (selectedSubsidiary !== 'Global' && !node.subsidiary.includes(selectedSubsidiary) && !node.subsidiary.includes('Global')) {
         return; // Skip if it doesn't match subsidiary
+      }
+
+      const isReservedNode = node.isReserved || reservedCodes.some(r => r.isActive && node.code >= r.reserveStart && node.code <= r.reserveEnd);
+      if (!showReserved && isReservedNode) {
+        return; // Skip if reserved and showReserved is false
       }
 
       const children = node.children || [];
@@ -177,7 +183,14 @@ export const CoaTreeView = ({
                       
                       <span className={`${account.detailType === 'Header' ? 'text-slate-100' : 'text-slate-300'} flex items-center gap-1.5`}>
                         {account.level === 'MAIN' && <span title="This root category is permanent and locked" className="text-slate-400 select-none">🔒</span>}
-                        <span>{account.name}</span>
+                        {account.isReserved || reservedCodes.some(r => r.isActive && account.code >= r.reserveStart && account.code <= r.reserveEnd) ? (
+                          <div className="flex flex-col select-none">
+                            <span className="text-slate-400 font-semibold italic text-xs">Reserved for Future Use</span>
+                            <span className="text-[10px] text-slate-500 font-semibold tracking-wide">(Not Available for Posting)</span>
+                          </div>
+                        ) : (
+                          <span>{account.name}</span>
+                        )}
                       </span>
                     </div>
                   </td>

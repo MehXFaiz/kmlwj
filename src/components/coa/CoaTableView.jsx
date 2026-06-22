@@ -43,6 +43,7 @@ export const CoaTableView = ({
   searchQuery,
   typeFilter,
   selectedSubsidiary,
+  showReserved = false,
 }) => {
   const navigate = useNavigate();
 
@@ -57,9 +58,14 @@ export const CoaTableView = ({
         selectedSubsidiary === 'Global' || 
         acc.subsidiary.includes(selectedSubsidiary) || 
         acc.subsidiary.includes('Global');
-      return matchesSubsidiary;
+      if (!matchesSubsidiary) return false;
+
+      const isReservedNode = acc.isReserved || reservedCodes.some(r => r.isActive && acc.code >= r.reserveStart && acc.code <= r.reserveEnd);
+      if (!showReserved && isReservedNode) return false;
+
+      return true;
     });
-  }, [accounts, selectedSubsidiary]);
+  }, [accounts, selectedSubsidiary, reservedCodes, showReserved]);
 
   const columns = useMemo(
     () => [
@@ -121,9 +127,18 @@ export const CoaTableView = ({
         ),
         cell: ({ row }) => {
           const acc = row.original;
+          const isReservedNode = acc.isReserved || reservedCodes.some(r => r.isActive && acc.code >= r.reserveStart && acc.code <= r.reserveEnd);
           return (
-            <span className={acc.detailType === 'Header' ? 'font-bold text-slate-100' : 'text-slate-300'}>
-              {acc.name}
+            <span className={`${acc.detailType === 'Header' ? 'font-bold text-slate-100' : 'text-slate-300'} flex items-center gap-1.5`}>
+              {acc.level === 'MAIN' && <span title="This root category is permanent and locked" className="text-slate-400 select-none">🔒</span>}
+              {isReservedNode ? (
+                <div className="flex flex-col select-none">
+                  <span className="text-slate-400 font-semibold italic text-xs">Reserved for Future Use</span>
+                  <span className="text-[10px] text-slate-500 font-semibold tracking-wide">(Not Available for Posting)</span>
+                </div>
+              ) : (
+                <span>{acc.name}</span>
+              )}
             </span>
           );
         },
@@ -207,17 +222,20 @@ export const CoaTableView = ({
               >
                 <BookOpen className="h-3.5 w-3.5 text-slate-400 hover:text-brand-300" />
               </Button>
-              {acc.level !== 'MAIN' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 cursor-pointer"
-                  onClick={() => onEditAccount(acc)}
-                  title="Edit Account"
-                >
-                  <Edit2 className="h-3.5 w-3.5 text-slate-400 hover:text-amber-400" />
-                </Button>
-              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`h-8 w-8 p-0 ${acc.level === 'MAIN' ? 'opacity-35 cursor-not-allowed text-slate-600' : 'cursor-pointer text-slate-400 hover:text-amber-400'}`}
+                onClick={acc.level === 'MAIN' ? undefined : () => onEditAccount(acc)}
+                disabled={acc.level === 'MAIN'}
+                title={acc.level === 'MAIN' ? "MAIN accounts are permanent and cannot be edited" : "Edit Account"}
+              >
+                {acc.level === 'MAIN' ? (
+                  <Lock className="h-3.5 w-3.5" />
+                ) : (
+                  <Edit2 className="h-3.5 w-3.5" />
+                )}
+              </Button>
             </div>
           );
         },

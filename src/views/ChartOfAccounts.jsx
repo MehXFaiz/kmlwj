@@ -29,6 +29,7 @@ export const ChartOfAccounts = () => {
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [typeFilter, setTypeFilter] = useState('All');
   const [viewMode, setViewMode] = useState(searchParams.get('search') ? 'table' : 'tree'); // tree or table
+  const [showReserved, setShowReserved] = useState(false);
 
   useEffect(() => {
     const q = searchParams.get('search') || '';
@@ -158,6 +159,19 @@ export const ChartOfAccounts = () => {
                 <option value="Expense">Expense</option>
               </select>
             </div>
+            {/* Show Reserved Accounts Checkbox */}
+            <div className="flex items-center gap-2 pl-2 select-none shrink-0">
+              <input
+                type="checkbox"
+                id="show-reserved-toggle"
+                checked={showReserved}
+                onChange={(e) => setShowReserved(e.target.checked)}
+                className="w-4 h-4 bg-slate-900 border border-slate-700 rounded text-brand-500 focus:ring-brand-500/30 cursor-pointer"
+              />
+              <label htmlFor="show-reserved-toggle" className="text-xs font-semibold text-slate-400 cursor-pointer hover:text-slate-300">
+                Show Reserved
+              </label>
+            </div>
           </div>
 
           {/* View Toggler (Tree vs Table) */}
@@ -208,6 +222,7 @@ export const ChartOfAccounts = () => {
               searchQuery={searchQuery}
               typeFilter={typeFilter}
               selectedSubsidiary={selectedSubsidiary}
+              showReserved={showReserved}
             />
           ) : (
             <CoaTableView
@@ -228,6 +243,7 @@ export const ChartOfAccounts = () => {
               searchQuery={searchQuery}
               typeFilter={typeFilter}
               selectedSubsidiary={selectedSubsidiary}
+              showReserved={showReserved}
             />
           )}
         </CardContent>
