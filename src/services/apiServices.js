@@ -55,6 +55,7 @@ export const reportsService = {
   getTrialBalance: () => api.get('/api/v1/reports/trial-balance').then((r) => r.data.data),
   getIncomeStatement: () => api.get('/api/v1/reports/income-statement').then((r) => r.data.data),
   getBalanceSheet: () => api.get('/api/v1/reports/balance-sheet').then((r) => r.data.data),
+  getCashFlow: () => api.get('/api/v1/reports/cash-flow').then((r) => r.data.data),
   getGeneralLedger: (params = {}) => {
     const qs = new URLSearchParams(params).toString();
     return api.get(`/api/v1/general-ledger${qs ? `?${qs}` : ''}`).then((r) => r.data.data);

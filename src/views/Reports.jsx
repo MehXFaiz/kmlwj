@@ -6,16 +6,32 @@ import { reportsService } from '../services/apiServices';
 import { showToast } from '../components/ui/Toast';
 import { FileText, Banknote, PieChart, Activity, RefreshCw, BookOpen } from 'lucide-react';
 import { DesktopOnly, MobileOnly } from '../components/common/responsive';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 export const Reports = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('trial-balance');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'trial-balance';
+  
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [isLoading, setIsLoading] = useState(false);
   
   const [trialBalanceData, setTrialBalanceData] = useState(null);
   const [incomeStatementData, setIncomeStatementData] = useState(null);
   const [balanceSheetData, setBalanceSheetData] = useState(null);
+  const [cashFlowData, setCashFlowData] = useState(null);
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams, activeTab]);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setSearchParams({ tab });
+  };
 
   const fetchReport = async (tab) => {
     setIsLoading(true);
@@ -29,6 +45,9 @@ export const Reports = () => {
       } else if (tab === 'balance-sheet') {
         const data = await reportsService.getBalanceSheet();
         setBalanceSheetData(data);
+      } else if (tab === 'cash-flow') {
+        const data = await reportsService.getCashFlow();
+        setCashFlowData(data);
       }
     } catch (err) {
       showToast('Failed to load report data');
@@ -67,7 +86,7 @@ export const Reports = () => {
       {/* Tabs */}
       <div className="flex border-b border-slate-800 gap-4 mb-6 overflow-x-auto pb-1 hide-scrollbar">
         <button
-          onClick={() => setActiveTab('trial-balance')}
+          onClick={() => handleTabChange('trial-balance')}
           className={`pb-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 whitespace-nowrap flex items-center gap-2 ${
             activeTab === 'trial-balance'
               ? 'border-indigo-500 text-indigo-400 font-extrabold'
@@ -77,7 +96,7 @@ export const Reports = () => {
           <Activity className="h-4 w-4" /> Trial Balance
         </button>
         <button
-          onClick={() => setActiveTab('income-statement')}
+          onClick={() => handleTabChange('income-statement')}
           className={`pb-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 whitespace-nowrap flex items-center gap-2 ${
             activeTab === 'income-statement'
               ? 'border-indigo-500 text-indigo-400 font-extrabold'
@@ -87,7 +106,7 @@ export const Reports = () => {
           <Banknote className="h-4 w-4" /> Income Statement
         </button>
         <button
-          onClick={() => setActiveTab('balance-sheet')}
+          onClick={() => handleTabChange('balance-sheet')}
           className={`pb-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 whitespace-nowrap flex items-center gap-2 ${
             activeTab === 'balance-sheet'
               ? 'border-indigo-500 text-indigo-400 font-extrabold'
@@ -95,6 +114,16 @@ export const Reports = () => {
           }`}
         >
           <PieChart className="h-4 w-4" /> Balance Sheet
+        </button>
+        <button
+          onClick={() => handleTabChange('cash-flow')}
+          className={`pb-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 whitespace-nowrap flex items-center gap-2 ${
+            activeTab === 'cash-flow'
+              ? 'border-indigo-500 text-indigo-400 font-extrabold'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <RefreshCw className="h-4 w-4" /> Cash Flow
         </button>
         <button
           onClick={() => navigate('/ledger')}
@@ -282,6 +311,79 @@ export const Reports = () => {
                   WARNING: The Balance Sheet is out of balance. Assets = {formatMoney(balanceSheetData.summary.totalAssets)} vs L+E = {formatMoney(balanceSheetData.summary.totalLiabilitiesAndEquity)}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* CASH FLOW */}
+          {!isLoading && activeTab === 'cash-flow' && cashFlowData && (
+            <div className="p-4 sm:p-8 max-w-4xl mx-auto space-y-8 animate-in fade-in duration-200">
+              <div className="text-center mb-8">
+                <h3 className="text-2xl font-bold text-slate-100 uppercase tracking-widest">Cash Flow Statement</h3>
+                <p className="text-sm text-slate-500 mt-1">As of {new Date().toLocaleDateString()}</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+                {/* Inflows */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-emerald-400 border-b border-slate-800 pb-2 flex justify-between">
+                    <span>Cash Inflows</span>
+                    <span>Amount</span>
+                  </h4>
+                  <div className="space-y-1">
+                    {cashFlowData.inflows.map((row, idx) => (
+                      <div key={idx} className="flex justify-between items-center py-2 text-sm">
+                        <span className="text-slate-300">{row.accountName}</span>
+                        <span className="font-mono text-slate-200">{formatMoney(row.amount)}</span>
+                      </div>
+                    ))}
+                    {cashFlowData.inflows.length === 0 && <p className="text-xs text-slate-500 italic py-2">No cash inflows recorded.</p>}
+                  </div>
+                  <div className="flex justify-between items-center py-3 border-t border-slate-800/60 font-bold text-sm">
+                    <span className="text-slate-100">Total Cash Inflows</span>
+                    <span className="font-mono text-emerald-400">{formatMoney(cashFlowData.summary.totalInflow)}</span>
+                  </div>
+                </div>
+
+                {/* Outflows */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-red-400 border-b border-slate-800 pb-2 flex justify-between">
+                    <span>Cash Outflows</span>
+                    <span>Amount</span>
+                  </h4>
+                  <div className="space-y-1">
+                    {cashFlowData.outflows.map((row, idx) => (
+                      <div key={idx} className="flex justify-between items-center py-2 text-sm">
+                        <span className="text-slate-300">{row.accountName}</span>
+                        <span className="font-mono text-slate-200">{formatMoney(row.amount)}</span>
+                      </div>
+                    ))}
+                    {cashFlowData.outflows.length === 0 && <p className="text-xs text-slate-500 italic py-2">No cash outflows recorded.</p>}
+                  </div>
+                  <div className="flex justify-between items-center py-3 border-t border-slate-800/60 font-bold text-sm">
+                    <span className="text-slate-100">Total Cash Outflows</span>
+                    <span className="font-mono text-red-400">{formatMoney(cashFlowData.summary.totalOutflow)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cash Summary */}
+              <div className="bg-slate-950/40 border border-slate-800/70 p-6 rounded-xl space-y-4 max-w-lg mx-auto">
+                <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Cash Balance Reconciliation</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between py-1 text-slate-350">
+                    <span>Beginning Cash Balance</span>
+                    <span className="font-mono text-slate-200">{formatMoney(cashFlowData.summary.beginningCash)}</span>
+                  </div>
+                  <div className="flex justify-between py-1 text-emerald-400">
+                    <span>Net Cash Increase/Decrease</span>
+                    <span className="font-mono">{cashFlowData.summary.netChange >= 0 ? `+${formatMoney(cashFlowData.summary.netChange)}` : formatMoney(cashFlowData.summary.netChange)}</span>
+                  </div>
+                  <div className="flex justify-between py-3 border-t border-slate-800 font-bold text-base text-slate-100">
+                    <span>Ending Cash Balance</span>
+                    <span className="font-mono text-brand-400">{formatMoney(cashFlowData.summary.endingCash)}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>

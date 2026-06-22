@@ -258,7 +258,7 @@ export const Dashboard = () => {
   }, [fetchAccounts, fetchStats]);
 
   // Live balances
-  const { rollupBalances } = useMemo(
+  const { rollupBalances, localBalances } = useMemo(
     () => calculateAccountBalances(accounts, journals, selectedSubsidiary),
     [accounts, journals, selectedSubsidiary, refreshKey]
   );
@@ -266,7 +266,22 @@ export const Dashboard = () => {
   // Financial stats
   const stats = useMemo(() => {
     let assets = 0, liabilities = 0, equity = 0, revenue = 0, expenses = 0;
+    let cashBalance = 0;
+    let bankBalance = 0;
+
     accounts.forEach((acc) => {
+      const isSub = acc.detailType === 'Subsidiary' || acc.level === 'SUBSIDIARY';
+      const localBal = localBalances?.[acc.code] || 0;
+
+      if (acc.type === 'Asset' && isSub) {
+        const nameLower = (acc.name || '').toLowerCase();
+        if (nameLower.includes('cash')) {
+          cashBalance += localBal;
+        } else if (nameLower.includes('bank')) {
+          bankBalance += localBal;
+        }
+      }
+
       if (acc.parentCode === null) {
         const bal = rollupBalances[acc.code] || 0;
         if (acc.type === 'Asset') assets += bal;
@@ -278,11 +293,12 @@ export const Dashboard = () => {
     });
     return {
       assets, liabilities, equity, revenue, expenses,
+      cashBalance, bankBalance,
       netIncome: revenue - expenses,
       grossMargin: revenue > 0 ? ((revenue - expenses) / revenue * 100) : 0,
       isEquationBalanced: Math.abs(assets - (liabilities + equity)) < 0.01,
     };
-  }, [accounts, rollupBalances]);
+  }, [accounts, rollupBalances, localBalances]);
 
   // Account counts
   const acctStats = useMemo(() => {
@@ -389,30 +405,25 @@ export const Dashboard = () => {
 
       {/* ── Financial KPI Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard title="Total Assets" value={stats.assets} prefix="Rs " decimals={2}
-          icon={Banknote} iconBg="bg-blue-950/60" iconColor="text-blue-400"
-          trend="up" trendLabel="Liquid + Fixed"
-          accent="border-blue-900/40 bg-gradient-to-br from-blue-950/30 to-slate-900/60"
+        <KpiCard title="Total Revenue" value={stats.revenue} prefix="Rs " decimals={2}
+          icon={TrendingUp} iconBg="bg-emerald-950/60" iconColor="text-emerald-400"
+          trend="up" trendLabel="Total Inflows"
+          accent="border-emerald-900/30 bg-gradient-to-br from-emerald-950/20 to-slate-900/60"
           delay={100} />
-        <KpiCard title="Total Liabilities" value={stats.liabilities} prefix="Rs " decimals={2}
-          icon={Activity} iconBg="bg-amber-950/60" iconColor="text-amber-400"
-          trend="neutral" trendLabel="Payables + Debt"
-          accent="border-amber-900/30 bg-gradient-to-br from-amber-950/20 to-slate-900/60"
+        <KpiCard title="Total Expenses" value={stats.expenses} prefix="Rs " decimals={2}
+          icon={TrendingDown} iconBg="bg-red-950/60" iconColor="text-red-400"
+          trend="down" trendLabel="Total Outflows"
+          accent="border-red-900/30 bg-gradient-to-br from-red-950/20 to-slate-900/60"
           delay={180} />
-        <KpiCard title="Total Equity" value={stats.equity} prefix="Rs " decimals={2}
-          icon={Scale} iconBg="bg-violet-950/60" iconColor="text-violet-400"
-          trend="up" trendLabel="Shareholder value"
-          accent="border-violet-900/30 bg-gradient-to-br from-violet-950/20 to-slate-900/60"
+        <KpiCard title="Cash Balance" value={stats.cashBalance} prefix="Rs " decimals={2}
+          icon={Banknote} iconBg="bg-blue-950/60" iconColor="text-blue-400"
+          trend="neutral" trendLabel="Cash on Hand"
+          accent="border-blue-900/40 bg-gradient-to-br from-blue-950/30 to-slate-900/60"
           delay={260} />
-        <KpiCard title="Net Income" value={stats.netIncome} prefix="Rs " decimals={2}
-          icon={stats.netIncome >= 0 ? TrendingUp : TrendingDown}
-          iconBg={stats.netIncome >= 0 ? "bg-emerald-950/60" : "bg-red-950/60"}
-          iconColor={stats.netIncome >= 0 ? "text-emerald-400" : "text-red-400"}
-          trend={stats.netIncome >= 0 ? "up" : "down"}
-          trendLabel={stats.netIncome >= 0 ? `${stats.grossMargin.toFixed(1)}% margin` : "Operating deficit"}
-          accent={stats.netIncome >= 0
-            ? "border-emerald-900/30 bg-gradient-to-br from-emerald-950/20 to-slate-900/60"
-            : "border-red-900/30 bg-gradient-to-br from-red-950/20 to-slate-900/60"}
+        <KpiCard title="Bank Balance" value={stats.bankBalance} prefix="Rs " decimals={2}
+          icon={Scale} iconBg="bg-violet-950/60" iconColor="text-violet-400"
+          trend="neutral" trendLabel="Bank Accounts"
+          accent="border-violet-900/30 bg-gradient-to-br from-violet-950/20 to-slate-900/60"
           delay={340} />
       </div>
 

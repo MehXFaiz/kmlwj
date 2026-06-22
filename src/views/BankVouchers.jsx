@@ -268,10 +268,16 @@ export const BankVouchers = () => {
               </Link>
             </>
           ) : (
-            <Link to="/bank-vouchers/new"
-              className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-900/40 transition-all flex-1 sm:flex-none">
-              <Plus className="h-4 w-4" /> Create Voucher
-            </Link>
+            <>
+              <Link to="/bank-vouchers/expense/new"
+                className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-lg shadow-rose-900/40 transition-all flex-1 sm:flex-none">
+                <Plus className="h-4 w-4" /> Add Expense
+              </Link>
+              <Link to="/bank-vouchers/new"
+                className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all text-xs font-semibold flex-1 sm:flex-none">
+                Advanced Payment
+              </Link>
+            </>
           )}
         </div>
       </div>

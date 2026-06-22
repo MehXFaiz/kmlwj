@@ -33,6 +33,7 @@ import journalEntriesHandler from './_v1/journal-entries.js';
 import trialBalanceHandler from './_v1/reports/trial-balance.js';
 import incomeStatementHandler from './_v1/reports/income-statement.js';
 import balanceSheetHandler from './_v1/reports/balance-sheet.js';
+import cashFlowHandler from './_v1/reports/cash-flow.js';
 import searchHandler from './_v1/search.js';
 
 const app = express();
@@ -130,5 +131,6 @@ app.get('/api/v1/search', makeExpress(searchHandler));
 app.get('/api/v1/reports/trial-balance', makeExpress(trialBalanceHandler));
 app.get('/api/v1/reports/income-statement', makeExpress(incomeStatementHandler));
 app.get('/api/v1/reports/balance-sheet', makeExpress(balanceSheetHandler));
+app.get('/api/v1/reports/cash-flow', makeExpress(cashFlowHandler));
 
 export default app;
