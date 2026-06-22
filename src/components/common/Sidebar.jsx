@@ -128,9 +128,10 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
     {
       title: 'Core Accounting',
       items: [
-        { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
+        { name: 'Dashboard', hint: 'Overview & summaries', icon: LayoutDashboard, path: '/' },
         {
           name: 'Chart of Accounts',
+          hint: 'All account categories',
           icon: Layers,
           path: '/coa',
           perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT', 'LOCK_ACCOUNT'],
@@ -146,42 +147,42 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
     {
       title: 'Transactions',
       items: [
-        { name: 'Add Revenue', icon: TrendingUp, path: '/bank-vouchers/revenue/new' },
-        { name: 'Add Expense', icon: TrendingDown, path: '/bank-vouchers/expense/new' },
-        { name: 'Journal Entry', icon: FileSpreadsheet, path: '/journals' },
-        { name: 'Transfer', icon: RefreshCw, path: '/bank-vouchers/transfer/new' },
+        { name: 'Add Income', hint: 'Record money received', icon: TrendingUp, path: '/bank-vouchers/revenue/new' },
+        { name: 'Add Expense', hint: 'Record money spent', icon: TrendingDown, path: '/bank-vouchers/expense/new' },
+        { name: 'Journal Entry', hint: 'Manual entry', icon: FileSpreadsheet, path: '/journals' },
+        { name: 'Transfer', hint: 'Move between accounts', icon: RefreshCw, path: '/bank-vouchers/transfer/new' },
       ],
     },
     {
       title: 'Reports',
       items: [
-        { name: 'Income Statement', icon: BarChart3, path: '/reports?tab=income-statement', perms: ['VIEW_REPORTS'] },
-        { name: 'Balance Sheet', icon: PieChart, path: '/reports?tab=balance-sheet', perms: ['VIEW_REPORTS'] },
-        { name: 'Cash Flow', icon: Activity, path: '/reports?tab=cash-flow', perms: ['VIEW_REPORTS'] },
-        { name: 'Ledger', icon: BookOpen, path: '/ledger' },
-        { name: 'Trial Balance', icon: Layers, path: '/reports?tab=trial-balance', perms: ['VIEW_REPORTS'] },
+        { name: 'Income Statement', hint: 'Profit & loss view', icon: BarChart3, path: '/reports?tab=income-statement', perms: ['VIEW_REPORTS'] },
+        { name: 'Balance Sheet', hint: 'Assets & liabilities', icon: PieChart, path: '/reports?tab=balance-sheet', perms: ['VIEW_REPORTS'] },
+        { name: 'Cash Flow', hint: 'Money movement', icon: Activity, path: '/reports?tab=cash-flow', perms: ['VIEW_REPORTS'] },
+        { name: 'Ledger', hint: 'All account entries', icon: BookOpen, path: '/ledger' },
+        { name: 'Trial Balance', hint: 'Debit & credit check', icon: Layers, path: '/reports?tab=trial-balance', perms: ['VIEW_REPORTS'] },
       ],
     },
     {
       title: 'Welfare & Invoices',
       items: [
-        { name: 'Beneficiaries', icon: Users, path: '/beneficiaries' },
-        { name: 'Donations', icon: Heart, path: '/donations' },
-        { name: 'Donation Reports', icon: FileText, path: '/donation-reports' },
-        { name: 'Customers', icon: Users, path: '/customers' },
-        { name: 'Invoices', icon: FileSpreadsheet, path: '/invoices' },
+        { name: 'Beneficiaries', hint: 'People receiving aid', icon: Users, path: '/beneficiaries' },
+        { name: 'Donations', hint: 'Received donations', icon: Heart, path: '/donations' },
+        { name: 'Donation Reports', hint: 'Donation summaries', icon: FileText, path: '/donation-reports' },
+        { name: 'Customers', hint: 'Client records', icon: Users, path: '/customers' },
+        { name: 'Invoices', hint: 'Bills & receipts', icon: FileSpreadsheet, path: '/invoices' },
       ],
     },
     {
       title: 'Administration',
       items: [
-        { name: 'Bank Vouchers', icon: Wallet, path: '/bank-vouchers' },
-        { name: 'Revenue Heads', icon: TrendingUp, path: '/revenue-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
-        { name: 'Expense Heads', icon: TrendingDown, path: '/expense-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
-        { name: 'Reserved Codes', icon: ShieldCheck, path: '/reserved', perms: ['MANAGE_RESERVED_CODES'] },
-        { name: 'Trial Balance Matrix', icon: Layers, path: '/trial-balance-sheet' },
-        { name: 'Users & Roles', icon: BadgeCheck, path: '/users-roles', perms: ['MANAGE_USERS', 'MANAGE_ROLES'] },
-        { name: 'Audit Trail', icon: History, path: '/audit', perms: ['VIEW_REPORTS', 'MANAGE_USERS'] },
+        { name: 'Bank Vouchers', hint: 'All voucher records', icon: Wallet, path: '/bank-vouchers' },
+        { name: 'Revenue Heads', hint: 'Income categories', icon: TrendingUp, path: '/revenue-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
+        { name: 'Expense Heads', hint: 'Expense categories', icon: TrendingDown, path: '/expense-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
+        { name: 'Reserved Codes', hint: 'Protected GL codes', icon: ShieldCheck, path: '/reserved', perms: ['MANAGE_RESERVED_CODES'] },
+        { name: 'Trial Balance Matrix', hint: 'Advanced ledger view', icon: Layers, path: '/trial-balance-sheet' },
+        { name: 'Users & Roles', hint: 'Manage access', icon: BadgeCheck, path: '/users-roles', perms: ['MANAGE_USERS', 'MANAGE_ROLES'] },
+        { name: 'Audit Trail', hint: 'Who did what', icon: History, path: '/audit', perms: ['VIEW_REPORTS', 'MANAGE_USERS'] },
       ],
     },
   ], []);
@@ -339,7 +340,17 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
                         }}
                       >
                         <item.icon className="h-5 w-5 flex-shrink-0" />
-                        <span className={`flex-1 truncate ${isCollapsed ? 'lg:hidden' : ''}`}>{item.name}</span>
+                        {!isCollapsed && (
+                          <div className="flex-1 min-w-0">
+                            <span className="block text-[13px] font-semibold truncate leading-tight">{item.name}</span>
+                            {item.hint && (
+                              <span className="block text-[10px] text-slate-600 truncate mt-0.5 leading-none">{item.hint}</span>
+                            )}
+                          </div>
+                        )}
+                        {isCollapsed && (
+                          <span className="truncate lg:hidden">{item.name}</span>
+                        )}
 
                         {/* Caret toggle for items with sub-items */}
                         {hasSubItems && !isCollapsed && (

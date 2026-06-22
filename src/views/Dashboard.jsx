@@ -11,9 +11,9 @@ import {
 import {
   TrendingUp, TrendingDown, Banknote, Activity, BarChart3,
   ArrowUpRight, ArrowDownRight, Scale, ShieldCheck, ShieldAlert,
-  Lock, Unlock, Layers, BookOpen, Zap, Plus, FileText,
-  RefreshCw, Download, Bell, ChevronRight, CheckCircle2,
-  AlertTriangle, Clock, Users, PieChart as PieIcon,
+  Lock, Layers, BookOpen, Plus, FileText,
+  RefreshCw, Bell, ChevronRight, CheckCircle2,
+  AlertTriangle, Clock, Users, ArrowRight, Wallet, RepeatIcon,
 } from 'lucide-react';
 
 /* ─────────────────────────────────────────────
@@ -348,10 +348,10 @@ export const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-7 pb-10">
+    <div className="space-y-6 pb-10">
 
       {/* ── Page Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-indigo-400 bg-indigo-950/50 border border-indigo-900/60 px-2.5 py-0.5 rounded-full">
@@ -359,110 +359,91 @@ export const Dashboard = () => {
               Live Data
             </span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">Financial Command Center</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Consolidated real-time analytics · {selectedSubsidiary} · FY 2026</p>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">Dashboard</h2>
+          <p className="text-xs text-slate-500 mt-0.5">{selectedSubsidiary} · FY 2026</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={handleRefresh}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all text-xs font-semibold"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-            <span className="hidden xs:inline">Refresh</span>
-          </button>
-          <button className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all text-xs font-semibold">
-            <Download className="h-3.5 w-3.5" />
-            <span className="hidden xs:inline">Export</span>
-          </button>
-          <button className="relative p-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all">
-            <Bell className="h-4 w-4" />
-            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-indigo-500 border border-slate-900" />
-          </button>
+        <button
+          onClick={handleRefresh}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all text-xs font-semibold self-start sm:self-auto"
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+          Refresh
+        </button>
+      </div>
+
+      {/* ── Quick Actions ── PRIMARY for non-technical users ── */}
+      <div>
+        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3">What would you like to do?</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { label: 'Add Income', desc: 'Record money received', icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-950/40 border-emerald-900/40 hover:bg-emerald-950/60 hover:border-emerald-800/60', path: '/bank-vouchers/revenue/new' },
+            { label: 'Add Expense', desc: 'Record money spent', icon: TrendingDown, color: 'text-red-400', bg: 'bg-red-950/40 border-red-900/40 hover:bg-red-950/60 hover:border-red-800/60', path: '/bank-vouchers/expense/new' },
+            { label: 'Journal Entry', desc: 'Manual accounting entry', icon: FileText, color: 'text-indigo-400', bg: 'bg-indigo-950/40 border-indigo-900/40 hover:bg-indigo-950/60 hover:border-indigo-800/60', path: '/journals' },
+            { label: 'Transfer Money', desc: 'Move between accounts', icon: RefreshCw, color: 'text-violet-400', bg: 'bg-violet-950/40 border-violet-900/40 hover:bg-violet-950/60 hover:border-violet-800/60', path: '/bank-vouchers/transfer/new' },
+          ].map((action) => (
+            <button
+              key={action.path}
+              onClick={() => navigate(action.path)}
+              className={`group flex flex-col items-start gap-2 p-4 sm:p-5 rounded-xl border transition-all duration-200 cursor-pointer text-left ${action.bg}`}
+            >
+              <div className={`h-10 w-10 rounded-xl flex items-center justify-center bg-slate-900/60 border border-slate-800/60 group-hover:scale-110 transition-transform duration-200`}>
+                <action.icon className={`h-5 w-5 ${action.color}`} />
+              </div>
+              <div>
+                <p className={`text-sm font-bold ${action.color}`}>{action.label}</p>
+                <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{action.desc}</p>
+              </div>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* ── KPI Cards Row ── */}
-      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-        <KpiCard title="Total Accounts" value={dbStats?.totalAccounts || 0} icon={Layers}
-          iconBg="bg-indigo-950/60" iconColor="text-indigo-400"
-          trend="neutral" trendLabel={`${acctStats.byType.Asset} asset types`} delay={0} />
-        <KpiCard title="Active Users" value={dbStats?.activeUsers || 0} icon={Users}
-          iconBg="bg-emerald-950/60" iconColor="text-emerald-400"
-          trend="up" trendLabel="Operational" delay={80} />
-        <KpiCard title="Locked Accounts" value={dbStats?.lockedAccounts || 0} icon={Lock}
-          iconBg="bg-red-950/60" iconColor="text-red-400"
-          trend="neutral" trendLabel="Restricted" delay={160} />
-        <KpiCard title="Revenue Heads" value={dbStats?.revenueHeads || 0} icon={TrendingUp}
-          iconBg="bg-green-950/60" iconColor="text-green-400"
-          trend="up" trendLabel="Income streams" delay={240} />
-        <KpiCard title="Expense Heads" value={dbStats?.expenseHeads || 0} icon={TrendingDown}
-          iconBg="bg-orange-950/60" iconColor="text-orange-400"
-          trend="neutral" trendLabel="Cost centers" delay={320} />
-        <KpiCard title="Journal Entries" value={dbStats?.totalJournalEntries || 0} icon={BookOpen}
-          iconBg="bg-violet-950/60" iconColor="text-violet-400"
-          trend="up" trendLabel="Total records" delay={400} />
-      </div>
-
-      {/* ── Financial KPI Cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard title="Total Revenue" value={stats.revenue} prefix="Rs " decimals={2}
+      {/* ── Financial KPI Cards ── simplified labels ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <KpiCard title="Total Income" value={stats.revenue} prefix="Rs " decimals={2}
           icon={TrendingUp} iconBg="bg-emerald-950/60" iconColor="text-emerald-400"
-          trend="up" trendLabel="Total Inflows"
+          trend="up" trendLabel="Money received"
           accent="border-emerald-900/30 bg-gradient-to-br from-emerald-950/20 to-slate-900/60"
-          delay={100} />
-        <KpiCard title="Total Expenses" value={stats.expenses} prefix="Rs " decimals={2}
+          delay={0} />
+        <KpiCard title="Total Spent" value={stats.expenses} prefix="Rs " decimals={2}
           icon={TrendingDown} iconBg="bg-red-950/60" iconColor="text-red-400"
-          trend="down" trendLabel="Total Outflows"
+          trend="down" trendLabel="Money paid out"
           accent="border-red-900/30 bg-gradient-to-br from-red-950/20 to-slate-900/60"
-          delay={180} />
-        <KpiCard title="Cash Balance" value={stats.cashBalance} prefix="Rs " decimals={2}
+          delay={80} />
+        <KpiCard title="Cash in Hand" value={stats.cashBalance} prefix="Rs " decimals={2}
           icon={Banknote} iconBg="bg-blue-950/60" iconColor="text-blue-400"
-          trend="neutral" trendLabel="Cash on Hand"
+          trend="neutral" trendLabel="Available cash"
           accent="border-blue-900/40 bg-gradient-to-br from-blue-950/30 to-slate-900/60"
-          delay={260} />
+          delay={160} />
         <KpiCard title="Bank Balance" value={stats.bankBalance} prefix="Rs " decimals={2}
-          icon={Scale} iconBg="bg-violet-950/60" iconColor="text-violet-400"
-          trend="neutral" trendLabel="Bank Accounts"
+          icon={Layers} iconBg="bg-violet-950/60" iconColor="text-violet-400"
+          trend="neutral" trendLabel="In bank accounts"
           accent="border-violet-900/30 bg-gradient-to-br from-violet-950/20 to-slate-900/60"
-          delay={340} />
+          delay={240} />
       </div>
 
-      {/* ── Balance Equation Banner ── */}
-      <div className={`rounded-xl border-l-4 px-5 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+      {/* ── Account Health Banner ── plain language ── */}
+      <div className={`rounded-xl border-l-4 px-4 py-3.5 flex items-center gap-3 ${
         stats.isEquationBalanced
-          ? 'border-l-emerald-500 border-t border-r border-b border-emerald-900/30 bg-emerald-950/10 shadow-none'
-          : 'border-l-red-500 border-t border-r border-b border-red-900/40 bg-red-950/10 shadow-none'
+          ? 'border-l-emerald-500 border-t border-r border-b border-emerald-900/30 bg-emerald-950/10'
+          : 'border-l-red-500 border-t border-r border-b border-red-900/40 bg-red-950/10'
       }`}>
-        <div className="flex items-center gap-3">
-          <div className={`h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 border ${
-            stats.isEquationBalanced
-              ? 'bg-emerald-100 border-emerald-200 bg-emerald-950 border-emerald-800/50'
-              : 'bg-red-100 border-red-200 bg-red-950 border-red-800/50 animate-pulse'
-          }`}>
-            {stats.isEquationBalanced
-              ? <ShieldCheck className="h-4.5 w-4.5 text-emerald-400" />
-              : <ShieldAlert className="h-4.5 w-4.5 text-red-400" />}
-          </div>
-          <div>
-            <p className="text-sm font-bold text-slate-200 uppercase tracking-wider">
-              {stats.isEquationBalanced ? 'Balance Sheet Equation Verified' : 'Balance Sheet Out of Balance'}
-            </p>
-            <p className="text-[11px] text-slate-500">
-              Fundamental accounting equation: <span className="font-semibold text-slate-400 font-mono">Assets = Liabilities + Equity</span>
-            </p>
-          </div>
+        <div className={`h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 border ${
+          stats.isEquationBalanced ? 'bg-emerald-950 border-emerald-800/50' : 'bg-red-950 border-red-800/50 animate-pulse'
+        }`}>
+          {stats.isEquationBalanced
+            ? <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" />
+            : <AlertTriangle className="h-4.5 w-4.5 text-red-400" />}
         </div>
-        <div className="flex flex-wrap items-center gap-2 font-mono text-xs sm:text-sm font-bold overflow-x-auto pb-1">
-          <span className="text-blue-400">PKR {stats.assets.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-          <span className="text-slate-600">=</span>
-          <span className="text-amber-400">PKR {stats.liabilities.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-          <span className="text-slate-600">+</span>
-          <span className="text-violet-400">PKR {stats.equity.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
-            stats.isEquationBalanced
-              ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-900/50'
-              : 'bg-red-950/60 text-red-400 border border-red-900/50'
-          }`}>{stats.isEquationBalanced ? '✓ Balanced' : '✗ Unbalanced'}</span>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm font-bold ${stats.isEquationBalanced ? 'text-emerald-300' : 'text-red-300'}`}>
+            {stats.isEquationBalanced ? '✓ All accounts are balanced — records are correct' : '⚠ Warning: Accounts may have an error — please contact admin'}
+          </p>
+          <p className="text-[11px] text-slate-500 mt-0.5">
+            Assets: Rs {stats.assets.toLocaleString(undefined, { maximumFractionDigits: 0 })} &nbsp;·&nbsp;
+            Liabilities: Rs {stats.liabilities.toLocaleString(undefined, { maximumFractionDigits: 0 })} &nbsp;·&nbsp;
+            Equity: Rs {stats.equity.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          </p>
         </div>
       </div>
 
@@ -577,39 +558,39 @@ export const Dashboard = () => {
         <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5 shadow-none">
           <SectionHeader title="Quick Actions" subtitle="Common ERP operations" />
           <div className="space-y-2">
-            <QuickAction icon={Plus} label="New Journal Entry"
+            <QuickAction icon={FileText} label="Journal Entry"
               color="bg-indigo-950/60 border border-indigo-800/40 text-indigo-400"
               onClick={() => navigate('/journals')} />
-            <QuickAction icon={Layers} label="Manage Chart of Accounts"
+            <QuickAction icon={Layers} label="Chart of Accounts"
               color="bg-blue-950/60 border border-blue-800/40 text-blue-400"
               onClick={() => navigate('/coa')} />
-            <QuickAction icon={BookOpen} label="View General Ledger"
+            <QuickAction icon={BookOpen} label="View Ledger"
               color="bg-violet-950/60 border border-violet-800/40 text-violet-400"
               onClick={() => navigate('/ledger')} />
-            <QuickAction icon={BarChart3} label="Run Financial Reports"
+            <QuickAction icon={BarChart3} label="Financial Reports"
               color="bg-emerald-950/60 border border-emerald-800/40 text-emerald-400"
               onClick={() => navigate('/reports')} />
-            <QuickAction icon={Users} label="User Permissions"
+            <QuickAction icon={Users} label="Users & Roles"
               color="bg-amber-950/60 border border-amber-800/40 text-amber-400"
               onClick={() => navigate('/users-roles')} />
-            <QuickAction icon={ShieldCheck} label="View Audit Trail"
+            <QuickAction icon={ShieldCheck} label="Audit Trail"
               color="bg-slate-800/60 border border-slate-700/40 text-slate-400"
               onClick={() => navigate('/audit')} />
           </div>
 
-          {/* System status */}
+          {/* Account health */}
           <div className="mt-4 pt-4 border-t border-slate-800/60">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">System Status</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">Account Health</p>
             {[
-              { label: 'GAAP Compliance', ok: true },
-              { label: 'Double-Entry Valid', ok: true },
-              { label: 'Balance Sheet', ok: stats.isEquationBalanced },
+              { label: 'Records are valid', ok: true },
+              { label: 'All entries balanced', ok: true },
+              { label: 'Balance sheet correct', ok: stats.isEquationBalanced },
             ].map(({ label, ok }) => (
-              <div key={label} className="flex items-center justify-between py-1">
+              <div key={label} className="flex items-center justify-between py-1.5">
                 <span className="text-[11px] text-slate-500">{label}</span>
-                <span className={`flex items-center gap-1 text-[10px] font-bold ${ok ? 'text-emerald-400' : 'text-red-400'}`}>
+                <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${ok ? 'text-emerald-400 bg-emerald-950/40' : 'text-red-400 bg-red-950/40'}`}>
                   {ok ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
-                  {ok ? 'OK' : 'Alert'}
+                  {ok ? 'Good' : 'Check'}
                 </span>
               </div>
             ))}

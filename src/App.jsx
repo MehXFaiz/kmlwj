@@ -1,5 +1,6 @@
 import React, { useState, lazy, Suspense, useEffect, Component } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { TrendingUp, TrendingDown, FileText, RefreshCw, Plus, X } from 'lucide-react';
 import { SplashScreen } from './components/common/SplashScreen';
 import { Sidebar } from './components/common/Sidebar';
 import { Topbar } from './components/common/Topbar';
@@ -82,6 +83,74 @@ class ChunkErrorBoundary extends Component {
   }
 }
 
+/* ──────────────────────────────────────────────────
+   Mobile Floating Action Button
+   Visible only on small screens (hidden on lg+)
+───────────────────────────────────────────────── */
+const MobileFab = () => {
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+
+  const actions = [
+    { label: 'Add Income', desc: 'Record money received', icon: TrendingUp, color: 'text-emerald-400 bg-emerald-950/80 border-emerald-800/60', path: '/bank-vouchers/revenue/new' },
+    { label: 'Add Expense', desc: 'Record money spent', icon: TrendingDown, color: 'text-red-400 bg-red-950/80 border-red-800/60', path: '/bank-vouchers/expense/new' },
+    { label: 'Journal Entry', desc: 'Manual entry', icon: FileText, color: 'text-indigo-400 bg-indigo-950/80 border-indigo-800/60', path: '/journals' },
+    { label: 'Transfer', desc: 'Move between accounts', icon: RefreshCw, color: 'text-violet-400 bg-violet-950/80 border-violet-800/60', path: '/bank-vouchers/transfer/new' },
+  ];
+
+  return (
+    <>
+      {/* Backdrop */}
+      {open && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[80] lg:hidden"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
+      {/* Action sheet */}
+      {open && (
+        <div className="fixed bottom-24 left-4 right-4 z-[90] lg:hidden">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-800/80">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Quick Action</p>
+              <p className="text-[11px] text-slate-600 mt-0.5">What would you like to do?</p>
+            </div>
+            <div className="p-3 space-y-2">
+              {actions.map((action) => (
+                <button
+                  key={action.path}
+                  onClick={() => { navigate(action.path); setOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border transition-all active:scale-[0.98] ${action.color}`}
+                >
+                  <div className="h-10 w-10 rounded-xl bg-slate-900/60 flex items-center justify-center flex-shrink-0">
+                    <action.icon className="h-5 w-5" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-bold">{action.label}</p>
+                    <p className="text-[11px] opacity-70 mt-0.5">{action.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FAB Button */}
+      <button
+        onClick={() => setOpen(prev => !prev)}
+        className="fixed bottom-6 right-5 z-[90] lg:hidden w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-500 active:scale-95 shadow-2xl shadow-indigo-900/60 flex items-center justify-center text-white transition-all duration-200"
+        aria-label="Quick actions"
+      >
+        {open
+          ? <X className="h-6 w-6" />
+          : <Plus className="h-6 w-6" />}
+      </button>
+    </>
+  );
+};
+
 // Protected Routes Shell
 const ProtectedRoutesWrapper = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -100,11 +169,11 @@ const ProtectedRoutesWrapper = () => {
   return (
     <div className="flex h-[100dvh] w-full overflow-hidden bg-slate-950 text-slate-100 font-sans">
       {/* Navigation Sidebar */}
-      <Sidebar 
-        isMobileOpen={isMobileOpen} 
-        setIsMobileOpen={setIsMobileOpen} 
-        isCollapsed={isCollapsed} 
-        setIsCollapsed={setIsCollapsed} 
+      <Sidebar
+        isMobileOpen={isMobileOpen}
+        setIsMobileOpen={setIsMobileOpen}
+        isCollapsed={isCollapsed}
+        setIsCollapsed={setIsCollapsed}
       />
 
       {/* Core Workspace Layout */}
@@ -125,6 +194,9 @@ const ProtectedRoutesWrapper = () => {
           </div>
         </main>
       </div>
+
+      {/* Mobile FAB — quick actions floating button */}
+      <MobileFab />
     </div>
   );
 };
@@ -133,16 +205,17 @@ const PermissionGuard = ({ requiredPerms, children }) => {
   const { user } = useAuthStore();
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === 'Super Admin') return children;
-  
+
   const hasPerm = requiredPerms.some((p) => user.permissions?.includes(p));
   if (!hasPerm) {
     return (
-      <div className="flex flex-col items-center justify-center h-[50vh] text-center">
-        <h3 className="text-lg font-bold text-red-500 uppercase tracking-widest">
-          403 — Access Denied
-        </h3>
-        <p className="text-xs text-slate-500 mt-2">
-          Your credentials do not permit viewing this financial classification path.
+      <div className="flex flex-col items-center justify-center h-[50vh] text-center px-4">
+        <div className="w-16 h-16 rounded-full bg-red-950/40 border border-red-900/40 flex items-center justify-center mb-4">
+          <span className="text-3xl">🔒</span>
+        </div>
+        <h3 className="text-base font-bold text-slate-200">You don't have access to this page</h3>
+        <p className="text-sm text-slate-500 mt-2 max-w-xs">
+          Please contact your administrator to request access.
         </p>
       </div>
     );
@@ -247,13 +320,12 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/account" element={<MyAccount />} />
             <Route path="*" element={
-              <div className="flex flex-col items-center justify-center h-[50vh] text-center">
-                <h3 className="text-lg font-bold text-slate-200 uppercase tracking-widest">
-                  404 — Ledger Entry Not Found
-                </h3>
-                <p className="text-xs text-slate-500 mt-2">
-                  The financial view path you requested does not exist in this ERP terminal.
-                </p>
+              <div className="flex flex-col items-center justify-center h-[50vh] text-center px-4">
+                <div className="w-16 h-16 rounded-full bg-slate-800/60 border border-slate-700/40 flex items-center justify-center mb-4">
+                  <span className="text-3xl">🔍</span>
+                </div>
+                <h3 className="text-base font-bold text-slate-200">Page not found</h3>
+                <p className="text-sm text-slate-500 mt-2">This page doesn't exist. Go back and try again.</p>
               </div>
             } />
           </Route>
