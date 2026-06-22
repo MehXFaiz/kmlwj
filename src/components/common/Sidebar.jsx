@@ -224,7 +224,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
       {/* ── Sidebar Panel ── */}
       <div
         className={`
-          print-hidden h-screen bg-slate-900 border-r border-slate-800 flex flex-col transition-all duration-300 relative z-50
+          print-hidden h-screen bg-slate-900 border-r border-slate-800 flex flex-col transition-all duration-300 z-50
           ${isCollapsed ? 'lg:w-16 w-64' : 'w-64'}
           fixed lg:relative
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
