@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as zod from 'zod';
@@ -8,6 +8,7 @@ import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { useCoaStore } from '../../store/coaStore';
 import { useJournalStore } from '../../store/journalStore';
+import { ArrowLeft, ArrowRight, Check, Coins, CreditCard, Receipt, TrendingUp, Sparkles, Lock } from 'lucide-react';
 
 // Zod validation schema
 const accountSchema = zod.object({
@@ -39,22 +40,21 @@ const detailTypeOptions = {
 export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
   const { treeAccounts, flatAccounts, addAccount, updateAccount } = useCoaStore();
   const { logActivity } = useJournalStore();
+  const [step, setStep] = useState(1);
 
-  // Create a flat list of accounts for searching/filtering
+  // Flatten nested tree for searching/filtering
   const allAccounts = useMemo(() => {
     const flatten = (nodes) => nodes.reduce((acc, node) => {
       acc.push(node);
       if (node.children) acc.push(...flatten(node.children));
       return acc;
     }, []);
-    // if treeAccounts is populated use it, else fallback to flatAccounts
     return treeAccounts.length > 0 ? flatten(treeAccounts) : flatAccounts;
   }, [treeAccounts, flatAccounts]);
 
   const {
     register,
     handleSubmit,
-    control,
     setValue,
     watch,
     reset,
@@ -78,90 +78,83 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
   });
 
   const selectedType = watch('type');
+  const parentCodeVal = watch('parentCode');
+  const accountNameVal = watch('name');
 
-  // Fill detailType and parentCode defaults when type changes
+  // Filter possible parents: must be Level 2 PARENT level accounts of same type
+  const potentialParents = useMemo(() => {
+    return allAccounts.filter((acc) => {
+      return acc.type === selectedType && acc.level === 'PARENT';
+    });
+  }, [allAccounts, selectedType]);
+
+  // Auto-suggest / generate a GL code based on selected parent and siblings
+  const generatedCode = useMemo(() => {
+    if (!parentCodeVal) return '';
+    const siblings = allAccounts.filter(a => a.parentCode === parentCodeVal);
+    const sibNumeric = siblings.map(a => parseInt(a.code, 10)).filter(Number.isFinite);
+    const sibMax = sibNumeric.length ? Math.max(...sibNumeric) : parseInt(parentCodeVal, 10);
+    return String(sibMax + 1).padStart(7, '0');
+  }, [parentCodeVal, allAccounts]);
+
+  // Update form fields when category changes
   useEffect(() => {
-    if (!editingAccount) {
+    if (!editingAccount && isOpen) {
       const options = detailTypeOptions[selectedType] || [];
       if (options.length > 0) {
         setValue('detailType', options[0]);
       }
       
-      const defaultParent = allAccounts.find(acc => acc.type === selectedType && acc.level !== 'SUBSIDIARY');
-      if (defaultParent) {
-        setValue('parentCode', defaultParent.code);
+      // Auto-select first parent under new type
+      const firstParent = allAccounts.find(acc => acc.type === selectedType && acc.level === 'PARENT');
+      if (firstParent) {
+        setValue('parentCode', firstParent.code);
       } else {
         setValue('parentCode', '');
       }
     }
-  }, [selectedType, setValue, editingAccount, allAccounts]);
+  }, [selectedType, setValue, editingAccount, allAccounts, isOpen]);
 
-  // Load account data for editing
+  // Load account data for editing or reset for creation
   useEffect(() => {
-    if (editingAccount) {
-      reset({
-        code: editingAccount.code,
-        name: editingAccount.name,
-        type: editingAccount.type,
-        detailType: editingAccount.detailType,
-        parentCode: editingAccount.parentCode || '',
-        level: editingAccount.level || 'PARENT',
-        isLocked: editingAccount.status === 'Inactive',
-        currency: editingAccount.currency || 'PKR',
-        description: editingAccount.description || '',
-        initialBalance: editingAccount.initialBalance || 0,
-      });
-    } else {
-      const defaultParent = allAccounts.find(acc => acc.type === 'Asset' && acc.level !== 'SUBSIDIARY');
-      reset({
-        code: '',
-        name: '',
-        type: 'Asset',
-        detailType: 'Cash',
-        parentCode: defaultParent ? defaultParent.code : '',
-        currency: 'PKR',
-        description: '',
-        initialBalance: 0,
-      });
+    if (isOpen) {
+      if (editingAccount) {
+        setStep(1); // not used in editing, but resets wizard step state
+        reset({
+          code: editingAccount.code,
+          name: editingAccount.name,
+          type: editingAccount.type,
+          detailType: editingAccount.detailType,
+          parentCode: editingAccount.parentCode || '',
+          level: editingAccount.level || 'PARENT',
+          isLocked: editingAccount.status === 'Inactive',
+          currency: editingAccount.currency || 'PKR',
+          description: editingAccount.description || '',
+          initialBalance: editingAccount.initialBalance || 0,
+        });
+      } else {
+        setStep(1);
+        const defaultParent = allAccounts.find(acc => acc.type === 'Asset' && acc.level === 'PARENT');
+        reset({
+          code: '',
+          name: '',
+          type: 'Asset',
+          detailType: 'Cash',
+          parentCode: defaultParent ? defaultParent.code : '',
+          currency: 'PKR',
+          description: '',
+          initialBalance: 0,
+        });
+      }
     }
   }, [editingAccount, reset, isOpen, allAccounts]);
 
-  // Filter possible parents: must be the same account type and not self, and cannot be a SUBSIDIARY
-  const potentialParents = allAccounts.filter((acc) => {
-    if (editingAccount && acc.id === editingAccount.id) return false; // cannot be own parent
-    return acc.type === selectedType && acc.level !== 'SUBSIDIARY';
-  });
-
-  const parentCodeVal = watch('parentCode');
-  const derivedLevel = useMemo(() => {
-    if (!parentCodeVal || parentCodeVal === 'none') return 'MAIN';
-    const parentAcc = allAccounts.find(a => a.code === parentCodeVal);
-    if (!parentAcc) return 'SUBSIDIARY';
-    return parentAcc.level === 'MAIN' ? 'PARENT' : 'SUBSIDIARY';
-  }, [parentCodeVal, allAccounts]);
-
-  // Auto-suggest a GL code based on parent and siblings
-  const suggestCode = () => {
-    if (!parentCodeVal || parentCodeVal === 'none') {
-      const mainAccounts = allAccounts.filter((a) => a.level === 'MAIN' && a.type === watch('type'));
-      const numericCodes = mainAccounts.map((a) => parseInt(a.code, 10)).filter(Number.isFinite);
-      const max = numericCodes.length ? Math.max(...numericCodes) : null;
-      let suggestion = max ? String(max + 1000000).substring(0, 1) + '000000' : '';
-      if (!suggestion) {
-        if (watch('type') === 'Asset') suggestion = '1000000';
-        else if (watch('type') === 'Liability') suggestion = '2000000';
-        else if (watch('type') === 'Equity') suggestion = '3000000';
-        else if (watch('type') === 'Revenue') suggestion = '4000000';
-        else suggestion = '5000000';
-      }
-      setValue('code', suggestion.padEnd(7, '0'));
-    } else {
-      const siblings = allAccounts.filter(a => a.parentCode === parentCodeVal);
-      const sibNumeric = siblings.map(a => parseInt(a.code, 10)).filter(Number.isFinite);
-      const sibMax = sibNumeric.length ? Math.max(...sibNumeric) : parseInt(parentCodeVal, 10);
-      setValue('code', String(sibMax + 1).padStart(7, '0'));
+  // Apply code selection when stepping into summary
+  useEffect(() => {
+    if (step === 4 && generatedCode) {
+      setValue('code', generatedCode);
     }
-  };
+  }, [step, generatedCode, setValue]);
 
   const onSubmitForm = async (data) => {
     // Check code uniqueness
@@ -171,27 +164,26 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
 
     if (codeExists) {
       setError('code', { type: 'manual', message: 'Account code is already in use' });
+      alert('Account code is already in use');
       return;
     }
 
-    const formattedData = {
-      ...data,
-      parentCode: data.parentCode === 'none' ? null : data.parentCode,
-    };
-
     try {
       if (editingAccount) {
-        await updateAccount(editingAccount.id, formattedData);
+        await updateAccount(editingAccount.id, data);
         logActivity(
           'Modify Account',
           `Modified Account ${editingAccount.code} - ${editingAccount.name}.`
         );
         alert('Account updated successfully');
       } else {
-        const created = await addAccount(formattedData);
+        const created = await addAccount({
+          ...data,
+          level: 'SUBSIDIARY', // always subsidiary from wizard
+        });
         logActivity(
           'Create Account',
-          `Created Account ${created.glCode || formattedData.code} - ${created.accountName || formattedData.name}.`
+          `Created Account ${created.glCode || data.code} - ${created.accountName || data.name}.`
         );
         alert('Account created successfully');
       }
@@ -201,170 +193,415 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
     }
   };
 
+  const handleSelectType = (value) => {
+    setValue('type', value);
+    // Automatically select the first parent matching the selected type
+    const firstParent = allAccounts.find(acc => acc.type === value && acc.level === 'PARENT');
+    if (firstParent) {
+      setValue('parentCode', firstParent.code);
+    } else {
+      setValue('parentCode', '');
+    }
+    setStep(2);
+  };
+
+  const handleSelectParent = (code) => {
+    setValue('parentCode', code);
+    setStep(3);
+  };
+
+  const mainCategories = [
+    { name: 'Assets', value: 'Asset', icon: Coins, desc: 'Economic resources owned or controlled.', style: 'hover:border-brand-500/50 hover:bg-brand-500/5 border-slate-800 bg-slate-900/40 text-brand-400' },
+    { name: 'Liabilities', value: 'Liability', icon: CreditCard, desc: 'Present financial obligations of the business.', style: 'hover:border-red-500/50 hover:bg-red-500/5 border-slate-800 bg-slate-900/40 text-red-400' },
+    { name: 'Revenue', value: 'Revenue', icon: TrendingUp, desc: 'Inflow of economic benefits from operations.', style: 'hover:border-emerald-500/50 hover:bg-emerald-500/5 border-slate-800 bg-slate-900/40 text-emerald-400' },
+    { name: 'Expenses', value: 'Expense', icon: Receipt, desc: 'Outflows or depletion of assets for operations.', style: 'hover:border-amber-500/50 hover:bg-amber-500/5 border-slate-800 bg-slate-900/40 text-amber-400' },
+  ];
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={editingAccount ? `Edit Account: ${editingAccount.code}` : "Create New Account"}
+      title={editingAccount ? `Edit Account: ${editingAccount.code}` : `Create Account Wizard (Step ${step} of 4)`}
       size="md"
     >
-      <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-5">
-        
-        {/* Row 1: Code and Name */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
+      {editingAccount ? (
+        /* ==================== EDIT MODE (SIMPLE FORM) ==================== */
+        <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Input
+                label="Account Code (Permanent)"
+                disabled
+                {...register('code')}
+              />
+            </div>
             <Input
-              label="Account Code"
+              label="Account Name"
               required
-              error={errors.code?.message}
-              placeholder="e.g. 1115"
-              disabled={!!(editingAccount && editingAccount.isLocked)}
-              {...register('code')}
+              error={errors.name?.message}
+              placeholder="e.g. Current Account - PKR"
+              disabled={!!editingAccount.isLocked}
+              {...register('name')}
             />
-            {!editingAccount && (
-              <div className="flex items-center gap-2 mt-2">
-                <button type="button" onClick={suggestCode} className="text-xs text-slate-400 hover:text-slate-200">Suggest Code</button>
-                <span className="text-[11px] text-slate-500">or enter manually</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Select
+              label="Account Type"
+              disabled
+              {...register('type')}
+            >
+              <option value="Asset">Asset</option>
+              <option value="Liability">Liability</option>
+              <option value="Equity">Equity</option>
+              <option value="Revenue">Revenue</option>
+              <option value="Expense">Expense</option>
+            </Select>
+
+            <Select
+              label="Detail Type (Subtype)"
+              disabled
+              {...register('detailType')}
+            >
+              {(detailTypeOptions[selectedType] || []).map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Select
+              label="Currency"
+              required
+              error={errors.currency?.message}
+              disabled={!!editingAccount.isLocked}
+              {...register('currency')}
+            >
+              <option value="PKR">PKR - Pakistani Rupee</option>
+              <option value="EUR">EUR - Euro</option>
+              <option value="GBP">GBP - British Pound</option>
+              <option value="CAD">CAD - Canadian Dollar</option>
+              <option value="JPY">JPY - Japanese Yen</option>
+              <option value="AUD">AUD - Australian Dollar</option>
+            </Select>
+
+            <div className="flex items-center gap-4 mt-8">
+              <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                <input type="checkbox" disabled={!!editingAccount.isLocked} {...register('isLocked')} />
+                <span className="text-sm text-slate-400">Is Locked</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                <input type="checkbox" disabled={!!editingAccount.isLocked} {...register('isReserved')} />
+                <span className="text-sm text-slate-400">Is Reserved</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5 w-full">
+            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Description
+            </label>
+            <textarea
+              rows="3"
+              disabled={!!editingAccount.isLocked}
+              placeholder="Add detailed explanation of this account's purpose..."
+              className={`
+                w-full px-3 py-2 bg-slate-900/60 border border-slate-800 rounded-md text-sm text-slate-100 placeholder:text-slate-500
+                focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all duration-200
+                ${errors.description ? 'border-red-500/50' : ''}
+                ${editingAccount.isLocked ? 'cursor-not-allowed opacity-70' : ''}
+              `}
+              {...register('description')}
+            />
+            {errors.description && (
+              <span className="text-xs text-red-400">⚠️ {errors.description.message}</span>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-800/80">
+            <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" disabled={isSubmitting}>
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      ) : (
+        /* ==================== CREATE FLOW (WIZARD) ==================== */
+        <div className="space-y-6">
+          {/* Progress dots bar */}
+          <div className="flex items-center justify-between px-6 pb-2 border-b border-slate-800/50">
+            {[1, 2, 3, 4].map((stepNum) => (
+              <div key={stepNum} className="flex items-center flex-1 last:flex-none">
+                <div 
+                  className={`
+                    w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-250
+                    ${step === stepNum 
+                      ? 'bg-brand-500 text-slate-950 scale-110 shadow-[0_0_12px_rgba(var(--color-brand-500),0.3)]' 
+                      : step > stepNum 
+                        ? 'bg-slate-800 text-brand-400' 
+                        : 'bg-slate-900 border border-slate-800 text-slate-500'
+                    }
+                  `}
+                >
+                  {step > stepNum ? <Check className="h-4 w-4" /> : stepNum}
+                </div>
+                {stepNum < 4 && (
+                  <div 
+                    className={`
+                      h-0.5 flex-1 mx-2 transition-all duration-300
+                      ${step > stepNum ? 'bg-brand-500/50' : 'bg-slate-900'}
+                    `}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Wizard step panels */}
+          <div>
+            {step === 1 && (
+              /* --- Step 1: Main Category --- */
+              <div className="space-y-4">
+                <div className="text-center">
+                  <h4 className="text-base font-bold text-slate-100">Select Main Category</h4>
+                  <p className="text-xs text-slate-500 mt-1">Choose the root section of your general ledger chart.</p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+                  {mainCategories.map((cat) => {
+                    const Icon = cat.icon;
+                    const isSelected = selectedType === cat.value;
+                    return (
+                      <button
+                        key={cat.value}
+                        type="button"
+                        onClick={() => handleSelectType(cat.value)}
+                        className={`
+                          flex flex-col items-start p-4 text-left rounded-xl border transition-all duration-200 cursor-pointer group
+                          ${isSelected 
+                            ? 'border-brand-500 bg-brand-950/20 shadow-[0_0_15px_rgba(99,102,241,0.05)]' 
+                            : cat.style
+                          }
+                        `}
+                      >
+                        <div className={`p-2 rounded-lg mb-3 ${isSelected ? 'bg-brand-500 text-slate-950' : 'bg-slate-900 text-slate-400 group-hover:text-slate-200'}`}>
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <span className="text-sm font-bold text-slate-200 group-hover:text-slate-100">{cat.name}</span>
+                        <span className="text-xs text-slate-500 mt-1 leading-normal">{cat.desc}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {step === 2 && (
+              /* --- Step 2: Parent Category --- */
+              <div className="space-y-4">
+                <div className="text-center">
+                  <h4 className="text-base font-bold text-slate-100">Select Parent Category</h4>
+                  <p className="text-xs text-slate-500 mt-1">Choose the Level 2 node where this subsidiary ledger account belongs.</p>
+                </div>
+
+                <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                  {potentialParents.length === 0 ? (
+                    <div className="py-6 text-center text-slate-500 text-xs">
+                      No Level 2 parent categories defined for {selectedType} yet.
+                    </div>
+                  ) : (
+                    potentialParents.map((parent) => {
+                      const isSelected = parentCodeVal === parent.code;
+                      return (
+                        <button
+                          key={parent.code}
+                          type="button"
+                          onClick={() => handleSelectParent(parent.code)}
+                          className={`
+                            w-full flex items-center justify-between p-3.5 rounded-lg border text-left transition-all duration-150 cursor-pointer
+                            ${isSelected 
+                              ? 'border-brand-500/80 bg-brand-950/15 text-slate-200' 
+                              : 'border-slate-800 bg-slate-900/30 hover:border-slate-700 hover:bg-slate-900/65 text-slate-400 hover:text-slate-300'
+                            }
+                          `}
+                        >
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold font-mono tracking-wide text-brand-400">{parent.code}</span>
+                            <span className="text-sm font-medium mt-0.5">{parent.name}</span>
+                          </div>
+                          {isSelected && (
+                            <div className="w-5 h-5 rounded-full bg-brand-500 flex items-center justify-center text-slate-950">
+                              <Check className="h-3.5 w-3.5 stroke-[3]" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+
+                <div className="flex justify-between items-center pt-2">
+                  <Button variant="ghost" onClick={() => setStep(1)} className="gap-1.5 cursor-pointer">
+                    <ArrowLeft className="h-4 w-4" />
+                    <span>Back</span>
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {step === 3 && (
+              /* --- Step 3: Account Name & Details --- */
+              <div className="space-y-4">
+                <div className="text-center">
+                  <h4 className="text-base font-bold text-slate-100">Account Details</h4>
+                  <p className="text-xs text-slate-500 mt-1">Specify your new ledger account name and metadata fields.</p>
+                </div>
+
+                <div className="space-y-4 pt-1">
+                  <Input
+                    label="Account Name"
+                    required
+                    placeholder="e.g. Bagh-e-Hajiani Garden"
+                    error={errors.name?.message}
+                    {...register('name')}
+                  />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Select
+                      label="Detail Subtype"
+                      required
+                      error={errors.detailType?.message}
+                      {...register('detailType')}
+                    >
+                      {(detailTypeOptions[selectedType] || []).map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </Select>
+
+                    <Select
+                      label="Currency"
+                      required
+                      error={errors.currency?.message}
+                      {...register('currency')}
+                    >
+                      <option value="PKR">PKR - Pakistani Rupee</option>
+                      <option value="EUR">EUR - Euro</option>
+                      <option value="GBP">GBP - British Pound</option>
+                      <option value="CAD">CAD - Canadian Dollar</option>
+                      <option value="JPY">JPY - Japanese Yen</option>
+                      <option value="AUD">AUD - Australian Dollar</option>
+                    </Select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5 w-full">
+                    <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                      Description
+                    </label>
+                    <textarea
+                      rows="2"
+                      placeholder="Add brief explanation of this account's purpose..."
+                      className="w-full px-3 py-2 bg-slate-900/60 border border-slate-800 rounded-md text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all duration-200"
+                      {...register('description')}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center pt-2 border-t border-slate-800/40">
+                  <Button variant="ghost" onClick={() => setStep(2)} className="gap-1.5 cursor-pointer">
+                    <ArrowLeft className="h-4 w-4" />
+                    <span>Back</span>
+                  </Button>
+                  <Button 
+                    variant="primary" 
+                    onClick={() => {
+                      if (!accountNameVal || accountNameVal.length < 3) {
+                        alert('Account name must be at least 3 characters');
+                        return;
+                      }
+                      setStep(4);
+                    }} 
+                    className="gap-1.5 cursor-pointer"
+                  >
+                    <span>Next</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {step === 4 && (
+              /* --- Step 4: Auto-Generate & Review --- */
+              <div className="space-y-4">
+                <div className="text-center">
+                  <h4 className="text-base font-bold text-slate-100">Review & Confirm</h4>
+                  <p className="text-xs text-slate-500 mt-1">Please verify the generated account details before committing to ledger.</p>
+                </div>
+
+                {/* Generated Code callout */}
+                <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 text-center space-y-2 relative overflow-hidden group">
+                  <div className="absolute top-2 right-2 text-brand-500/10 group-hover:text-brand-500/20 transition-colors">
+                    <Sparkles className="h-10 w-10" />
+                  </div>
+                  <span className="text-slate-500 text-[10px] font-semibold uppercase tracking-wider flex items-center justify-center gap-1">
+                    <Lock className="h-3 w-3" />
+                    <span>System Auto-Generated GL Code</span>
+                  </span>
+                  <h2 className="text-2xl sm:text-3xl font-mono font-bold tracking-widest text-slate-100 bg-slate-900/60 py-1.5 rounded-lg border border-slate-800/50 w-56 mx-auto">
+                    {generatedCode}
+                  </h2>
+                </div>
+
+                {/* Summary panel */}
+                <div className="bg-slate-900/20 border border-slate-800/60 rounded-xl p-4 space-y-3">
+                  <div className="grid grid-cols-2 gap-y-2.5 text-sm">
+                    <span className="text-slate-500">Account Name</span>
+                    <span className="text-slate-200 font-bold text-right truncate">{accountNameVal}</span>
+
+                    <span className="text-slate-500">Category Type</span>
+                    <span className="text-slate-200 font-semibold text-right">{selectedType}</span>
+
+                    <span className="text-slate-500">Parent Category</span>
+                    <span className="text-slate-200 font-medium text-right truncate">
+                      {allAccounts.find(a => a.code === parentCodeVal)?.name || parentCodeVal}
+                    </span>
+
+                    <span className="text-slate-500">Detail Subtype</span>
+                    <span className="text-slate-300 text-right">{watch('detailType')}</span>
+
+                    <span className="text-slate-500">Currency</span>
+                    <span className="text-slate-300 font-semibold text-right">{watch('currency')}</span>
+
+                    <span className="text-slate-500">Account Level</span>
+                    <span className="text-brand-400 font-bold text-right">SUBSIDIARY</span>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center pt-2">
+                  <Button variant="ghost" onClick={() => setStep(3)} className="gap-1.5 cursor-pointer" disabled={isSubmitting}>
+                    <ArrowLeft className="h-4 w-4" />
+                    <span>Back</span>
+                  </Button>
+                  <Button 
+                    variant="primary" 
+                    onClick={handleSubmit(onSubmitForm)} 
+                    disabled={isSubmitting}
+                    className="gap-1.5 cursor-pointer bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold"
+                  >
+                    <span>Confirm & Create</span>
+                    <Check className="h-4 w-4 stroke-[3]" />
+                  </Button>
+                </div>
               </div>
             )}
           </div>
-          <Input
-            label="Account Name"
-            required
-            error={errors.name?.message}
-            placeholder="e.g. Petty Cash - Marketing"
-            disabled={!!(editingAccount && editingAccount.isLocked)}
-            {...register('name')}
-          />
         </div>
-
-        {/* Row 2: Type and Subtype */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Select
-            label="Account Type"
-            required
-            error={errors.type?.message}
-            disabled={!!(editingAccount && editingAccount.isLocked)}
-            {...register('type')}
-          >
-            <option value="Asset">Asset</option>
-            <option value="Liability">Liability</option>
-            <option value="Equity">Equity</option>
-            <option value="Revenue">Revenue</option>
-            <option value="Expense">Expense</option>
-          </Select>
-
-          <Select
-            label="Detail Type (Subtype)"
-            required
-            error={errors.detailType?.message}
-            disabled={!!(editingAccount && editingAccount.isLocked)}
-            {...register('detailType')}
-          >
-            {(detailTypeOptions[selectedType] || []).map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </Select>
-        </div>
-
-        {/* Row 3: Parent Account and Currency */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Select
-            label="Parent Account"
-            error={errors.parentCode?.message}
-            disabled={!!(editingAccount && editingAccount.isLocked)}
-            {...register('parentCode')}
-          >
-            {potentialParents.map((parent) => (
-              <option key={parent.code} value={parent.code}>
-                {parent.code} - {parent.name} ({parent.detailType})
-              </option>
-            ))}
-          </Select>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Account Level</label>
-            <input 
-              value={derivedLevel}
-              disabled
-              className="w-full px-3 py-2 rounded-lg bg-slate-900/40 border border-slate-800 text-slate-500 text-sm cursor-not-allowed font-semibold"
-            />
-          </div>
-
-          <Select
-            label="Currency"
-            required
-            error={errors.currency?.message}
-            disabled={!!(editingAccount && editingAccount.isLocked)}
-            {...register('currency')}
-          >
-            <option value="PKR">PKR - Pakistani Rupee</option>
-            <option value="EUR">EUR - Euro</option>
-            <option value="GBP">GBP - British Pound</option>
-            <option value="CAD">CAD - Canadian Dollar</option>
-            <option value="JPY">JPY - Japanese Yen</option>
-            <option value="AUD">AUD - Australian Dollar</option>
-          </Select>
-        </div>
-
-        {/* Row 4: Initial Balance (only show on new account creation) */}
-        {!editingAccount && (
-          <Input
-            label="Initial Balance"
-            type="number"
-            step="0.01"
-            error={errors.initialBalance?.message}
-            description="If you are transitioning ledger balances, enter the starting balance."
-            {...register('initialBalance')}
-          />
-        )}
-
-        {/* Locked / Reserved toggles */}
-        <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" disabled={!!(editingAccount && editingAccount.isLocked)} {...register('isLocked')} />
-            <span className="text-sm text-slate-400">Is Locked</span>
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" disabled={!!(editingAccount && editingAccount.isLocked)} {...register('isReserved')} />
-            <span className="text-sm text-slate-400">Is Reserved</span>
-          </label>
-        </div>
-
-        {/* Description */}
-        <div className="flex flex-col gap-1.5 w-full">
-          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            Description
-          </label>
-          <textarea
-            rows="3"
-            disabled={!!(editingAccount && editingAccount.isLocked)}
-            placeholder="Add detailed explanation of this account's purpose..."
-            className={`
-              w-full px-3 py-2 bg-slate-900/60 border border-slate-800 rounded-md text-sm text-slate-100 placeholder:text-slate-500
-              focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all duration-200
-              ${errors.description ? 'border-red-500/50' : ''}
-              ${editingAccount && editingAccount.isLocked ? 'cursor-not-allowed opacity-70' : ''}
-            `}
-            {...register('description')}
-          />
-          {errors.description && (
-            <span className="text-xs text-red-400">⚠️ {errors.description.message}</span>
-          )}
-        </div>
-
-        {/* Buttons */}
-        <div className="flex justify-end gap-3 pt-3 border-t border-slate-800/80">
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="primary" disabled={isSubmitting}>
-            {editingAccount ? 'Save Changes' : 'Create Account'}
-          </Button>
-        </div>
-      </form>
+      )}
     </Modal>
   );
 };
