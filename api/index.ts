@@ -122,6 +122,7 @@ app.get('/api/v1/general-ledger', makeExpress(generalLedgerHandler));
 app.get('/api/v1/journal-entries', makeExpress(journalEntriesHandler));
 app.post('/api/v1/journal-entries', makeExpress(journalEntriesHandler));
 app.put('/api/v1/journal-entries', makeExpress(journalEntriesHandler));
+app.patch('/api/v1/journal-entries', makeExpress(journalEntriesHandler));
 app.delete('/api/v1/journal-entries', makeExpress(journalEntriesHandler));
 
 // Global Search Route
