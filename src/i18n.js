@@ -25,11 +25,10 @@ i18n
     }
   });
 
-// Listen to language changes to update document direction (RTL/LTR) and global fonts
+// Listen to language changes to update global fonts (keeping layout LTR as requested)
 i18n.on('languageChanged', (lng) => {
-  const dir = i18n.dir(lng);
-  document.documentElement.dir = dir;
   document.documentElement.lang = lng;
+  document.documentElement.dir = 'ltr'; // Force LTR even for Urdu
   
   if (lng === 'ur') {
     document.documentElement.style.fontFamily = "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif";
@@ -38,7 +37,7 @@ i18n.on('languageChanged', (lng) => {
   }
 });
 
-// Set initial direction based on detected language
-document.documentElement.dir = i18n.dir();
+// Set initial direction to ltr
+document.documentElement.dir = 'ltr';
 
 export default i18n;
