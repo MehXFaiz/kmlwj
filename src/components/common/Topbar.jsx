@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useCoaStore } from '../../store/coaStore';
 import { useAuthStore } from '../../store/authStore';
-import { Menu, User, Settings, LogOut, ChevronDown } from 'lucide-react';
+import { Menu, User, Settings, LogOut, ChevronDown, Globe } from 'lucide-react';
 
 export const Topbar = ({ onMobileMenuToggle }) => {
   const { user, loading, logout } = useAuthStore();
@@ -15,11 +15,18 @@ export const Topbar = ({ onMobileMenuToggle }) => {
 
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
+  
+  const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
+  const languageMenuRef = useRef(null);
+  const [language, setLanguage] = useState('en');
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
         setUserMenuOpen(false);
+      }
+      if (languageMenuRef.current && !languageMenuRef.current.contains(event.target)) {
+        setLanguageMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -57,8 +64,39 @@ export const Topbar = ({ onMobileMenuToggle }) => {
           </span>
         </div>
 
-        {/* Right side - User Menu */}
+        {/* Right side - Actions & User Menu */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+
+          {/* Language Menu */}
+          <div className="relative" ref={languageMenuRef}>
+            <button 
+              onClick={() => setLanguageMenuOpen(!languageMenuOpen)}
+              className="flex items-center gap-1.5 hover:bg-slate-800/50 p-2 rounded-lg transition-colors cursor-pointer text-slate-300 hover:text-slate-100"
+            >
+              <Globe className="h-4 w-4" />
+              <span className="hidden sm:inline text-xs font-semibold">{language === 'en' ? 'EN' : 'UR'}</span>
+              <ChevronDown className="h-3 w-3 text-slate-500" />
+            </button>
+
+            {languageMenuOpen && (
+              <div className="absolute right-0 mt-2 w-32 bg-slate-900 border border-slate-800 rounded-md shadow-lg z-50 py-1">
+                <button
+                  onClick={() => { setLanguage('en'); setLanguageMenuOpen(false); }}
+                  className={`w-full text-left px-4 py-2 text-sm transition-colors ${language === 'en' ? 'bg-slate-800 text-indigo-400 font-bold' : 'text-slate-300 hover:bg-slate-800/50 hover:text-slate-100'}`}
+                >
+                  English
+                </button>
+                <button
+                  onClick={() => { setLanguage('ur'); setLanguageMenuOpen(false); }}
+                  className={`w-full text-right px-4 py-2 text-sm transition-colors ${language === 'ur' ? 'bg-slate-800 text-indigo-400 font-bold' : 'text-slate-300 hover:bg-slate-800/50 hover:text-slate-100'}`}
+                  style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
+                  dir="rtl"
+                >
+                  اردو
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* User menu */}
           <div className="relative" ref={userMenuRef}>
