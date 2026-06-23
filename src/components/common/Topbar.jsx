@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useCoaStore } from '../../store/coaStore';
 import { useAuthStore } from '../../store/authStore';
 import { Menu, User, Settings, LogOut, ChevronDown, Globe } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const Topbar = ({ onMobileMenuToggle }) => {
   const { user, loading, logout } = useAuthStore();
@@ -18,7 +19,8 @@ export const Topbar = ({ onMobileMenuToggle }) => {
   
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const languageMenuRef = useRef(null);
-  const [language, setLanguage] = useState('en');
+  const { i18n } = useTranslation();
+  const language = i18n.language || 'en';
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -81,13 +83,13 @@ export const Topbar = ({ onMobileMenuToggle }) => {
             {languageMenuOpen && (
               <div className="absolute right-0 mt-2 w-32 bg-slate-900 border border-slate-800 rounded-md shadow-lg z-50 py-1">
                 <button
-                  onClick={() => { setLanguage('en'); setLanguageMenuOpen(false); }}
+                  onClick={() => { i18n.changeLanguage('en'); setLanguageMenuOpen(false); }}
                   className={`w-full text-left px-4 py-2 text-sm transition-colors ${language === 'en' ? 'bg-slate-800 text-indigo-400 font-bold' : 'text-slate-300 hover:bg-slate-800/50 hover:text-slate-100'}`}
                 >
                   English
                 </button>
                 <button
-                  onClick={() => { setLanguage('ur'); setLanguageMenuOpen(false); }}
+                  onClick={() => { i18n.changeLanguage('ur'); setLanguageMenuOpen(false); }}
                   className={`w-full text-right px-4 py-2 text-sm transition-colors ${language === 'ur' ? 'bg-slate-800 text-indigo-400 font-bold' : 'text-slate-300 hover:bg-slate-800/50 hover:text-slate-100'}`}
                   style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
                   dir="rtl"
