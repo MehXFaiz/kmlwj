@@ -23,6 +23,7 @@ model User {
   refreshTokens        RefreshToken[]
   auditLogs            AuditLog[]
   donationsCreated     Donation[]     @relation("DonationCreatedBy")
+  hallBookingsCreated  HallBooking[]  @relation("HallBookingCreatedBy")
 }
 
 model Role {
@@ -99,6 +100,8 @@ model Account {
   ledgerEntries     LedgerEntry[]
   donations         Donation[]    @relation("DonationBankAccount")
   invoices          Invoice[]     @relation("InvoiceBankAccount")
+  hallBookings      HallBooking[] @relation("HallBookingAccount")
+  hallBookingBanks  HallBooking[] @relation("HallBookingBankAccount")
 }
 
 model AccountType {
@@ -168,6 +171,7 @@ model JournalEntry {
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
   lines       JournalEntryLine[]
+  hallBooking HallBooking?       @relation("HallBookingJournalEntry")
 }
 
 model JournalEntryLine {
@@ -247,6 +251,33 @@ model Donation {
   createdBy      User?          @relation("DonationCreatedBy", fields: [createdById], references: [id])
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+}
+
+model HallBooking {
+  id              String         @id @default(uuid()) @db.Uuid
+  bookingDate     DateTime       @default(now())
+  receiptNo       Int            @default(autoincrement())
+  bookerName      String
+  address         String?
+  mobile          String?
+  programDate     DateTime
+  programType     String?
+  timings         String?
+  hallId          String?        @db.Uuid
+  hallAccount     Account?       @relation("HallBookingAccount", fields: [hallId], references: [id])
+  isForJamaat     Boolean        @default(false)
+  amount          Float
+  paymentMethod   PaymentMethod
+  bankAccountId   String?        @db.Uuid
+  bankAccount     Account?       @relation("HallBookingBankAccount", fields: [bankAccountId], references: [id])
+  status          String         @default("Confirmed")
+  remarks         String?
+  createdById     String?        @db.Uuid
+  createdBy       User?          @relation("HallBookingCreatedBy", fields: [createdById], references: [id])
+  journalEntryId  String?        @unique @db.Uuid
+  journalEntry    JournalEntry?  @relation("HallBookingJournalEntry", fields: [journalEntryId], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 }
 
 model Customer {

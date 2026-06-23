@@ -30,6 +30,7 @@ import {
   LogOut,
   Wallet,
   BadgeCheck,
+  Calendar,
 } from 'lucide-react';
 
 export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsCollapsed }) => {
@@ -140,6 +141,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
         { name: t('sidebar.addExpense'), hint: t('sidebar.addExpenseHint'), icon: TrendingDown, path: '/bank-vouchers/expense/new' },
         { name: t('sidebar.transferMoney'), hint: t('sidebar.transferMoneyHint'), icon: RefreshCw, path: '/bank-vouchers/transfer/new' },
         { name: t('sidebar.allTransactions'), hint: t('sidebar.allTransactionsHint'), icon: Wallet, path: '/bank-vouchers' },
+        { name: t('sidebar.hallBookings', 'Hall Bookings'), hint: t('sidebar.hallBookingsHint', 'Manage hall reservations'), icon: Calendar, path: '/hall-bookings' },
       ],
     },
     {

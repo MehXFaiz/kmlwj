@@ -117,7 +117,6 @@
     "allEntriesBalanced": "تمام اندراجات متوازن ہیں",
     "balanceSheetCorrect": "بیلنس شیٹ درست ہے",
     "good": "بہتر",
-    "good": "بہتر",
     "revenue": "آمدنی",
     "expense": "اخراجات"
   },
@@ -160,7 +159,6 @@
       "fuel": "ایندھن",
       "busRepair": "بس کی مرمت",
       "generatorRepair": "جنریٹر کی مرمت",
-      "legalFee": "قانونی فیس",
       "legalFee": "قانونی فیس",
       "medicalDonation": "طبی عطیہ"
     },
@@ -221,6 +219,34 @@
       "draft": "ڈرافٹ",
       "posted": "پوسٹڈ",
       "cancelled": "منسوخ شدہ"
+    },
+    "hallBookings": {
+      "title": "ہال بکنگ",
+      "desc": "تمام ہال ریزرویشنز کا انتظام اور رسید پرنٹ کریں",
+      "newBooking": "نئی بکنگ",
+      "newBookingDesc": "نئی ہال بکنگ کی تفصیلات درج کریں",
+      "searchPlaceholder": "بکنگ تلاش کریں...",
+      "noBookingsFound": "آپ کی تلاش کے مطابق کوئی بکنگ نہیں ملی۔"
     }
+  },
+  "receipt": {
+    "bookingReceipt": "بکنگ رسید",
+    "bookingDate": "بکنگ تاریخ",
+    "receiptNo": "نمبر",
+    "bookerName": "نام بکنگ کنندہ",
+    "mobile": "موبائل",
+    "address": "پتہ",
+    "programDate": "پروگرام کی تاریخ",
+    "bookingDay": "بکنگ بروز",
+    "programType": "پروگرام کی نوعیت",
+    "timings": "اوقات",
+    "hall": "ہال",
+    "forJamaat": "بکنگ برائے جماعت",
+    "yes": "ہاں",
+    "no": "نہیں",
+    "totalAmount": "کل وصولیابی رقم",
+    "amountInWords": "مبلغ",
+    "signatureClerk": "دستخط بکنگ کلرک",
+    "rulesNote": "پشت پر لکھی ہوئی ہدایات کی پابندی لازمی ہوگی، بصورت دیگر بکنگ منسوخ کر دی جائے گی۔"
   }
 }

@@ -23,6 +23,8 @@ const ReservedCodes = lazy(() => import('./views/ReservedCodes').then(m => ({ de
 const UsersRoles = lazy(() => import('./views/UsersRoles').then(m => ({ default: m.UsersRoles })));
 const Reports = lazy(() => import('./views/Reports').then(m => ({ default: m.Reports })));
 const TrialBalanceSheet = lazy(() => import('./views/TrialBalanceSheet').then(m => ({ default: m.TrialBalanceSheet })));
+const HallBookings = lazy(() => import('./views/HallBookings').then(m => ({ default: m.HallBookings })));
+const HallBookingForm = lazy(() => import('./views/HallBookingForm').then(m => ({ default: m.HallBookingForm })));
 
 // Donation Module Views
 const Beneficiaries = lazy(() => import('./views/Beneficiaries').then(m => ({ default: m.Beneficiaries })));
@@ -295,6 +297,8 @@ function App() {
               </PermissionGuard>
             } />
             <Route path="/trial-balance-sheet" element={<TrialBalanceSheet />} />
+            <Route path="/hall-bookings" element={<HallBookings />} />
+            <Route path="/hall-bookings/new" element={<HallBookingForm />} />
             <Route path="/beneficiaries" element={<Beneficiaries />} />
             <Route path="/donations" element={<Donations />} />
             <Route path="/donation-reports" element={<DonationReports />} />

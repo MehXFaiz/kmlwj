@@ -117,7 +117,6 @@
     "allEntriesBalanced": "All entries balanced",
     "balanceSheetCorrect": "Balance sheet correct",
     "good": "Good",
-    "good": "Good",
     "revenue": "Revenue",
     "expense": "Expense"
   },
@@ -160,7 +159,6 @@
       "fuel": "Fuel",
       "busRepair": "Bus Repair",
       "generatorRepair": "Generator Repair",
-      "legalFee": "Legal Fee",
       "legalFee": "Legal Fee",
       "medicalDonation": "Medical Donation"
     },
@@ -221,6 +219,34 @@
       "draft": "Draft",
       "posted": "Posted",
       "cancelled": "Cancelled"
+    },
+    "hallBookings": {
+      "title": "Hall Bookings",
+      "desc": "Manage and print receipts for all hall reservations",
+      "newBooking": "New Booking",
+      "newBookingDesc": "Enter details for a new hall booking",
+      "searchPlaceholder": "Search bookings...",
+      "noBookingsFound": "No bookings found matching your search."
     }
+  },
+  "receipt": {
+    "bookingReceipt": "Booking Receipt",
+    "bookingDate": "Booking Date",
+    "receiptNo": "Receipt No",
+    "bookerName": "Name of Booker",
+    "mobile": "Mobile",
+    "address": "Address",
+    "programDate": "Program Date",
+    "bookingDay": "Booking Day",
+    "programType": "Type of Program",
+    "timings": "Timings",
+    "hall": "Hall",
+    "forJamaat": "Booking for Jamaat",
+    "yes": "Yes",
+    "no": "No",
+    "totalAmount": "Total Received Amount",
+    "amountInWords": "Amount in Words",
+    "signatureClerk": "Signature Booking Clerk",
+    "rulesNote": "Booking will be cancelled if rules written on the back are not followed."
   }
 }
