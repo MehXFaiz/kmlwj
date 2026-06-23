@@ -99,6 +99,25 @@
     "accountDistribution": "Account Distribution",
     "breakdownByAccountType": "Breakdown by account type",
     "recentActivity": "Recent Activity",
-    "latestTransactions": "Latest transactions and logs"
+    "latestTransactions": "Latest transactions and logs",
+    "revenueVsExpensesTrend": "Revenue vs Expenses Trend",
+    "monthlyOperatingPerformance": "Monthly operating performance (YTD FY 2026)",
+    "balanceSheetOverview": "Balance Sheet Overview",
+    "assetsVsLiabilitiesVsEquity": "Assets vs Liabilities vs Equity",
+    "balanced": "Balanced",
+    "check": "Check",
+    "commonERPOperations": "Common ERP operations",
+    "chartOfAccounts": "Chart of Accounts",
+    "viewLedger": "View Ledger",
+    "financialReports": "Financial Reports",
+    "usersAndRoles": "Users & Roles",
+    "auditTrail": "Audit Trail",
+    "accountHealth": "Account Health",
+    "recordsAreValid": "Records are valid",
+    "allEntriesBalanced": "All entries balanced",
+    "balanceSheetCorrect": "Balance sheet correct",
+    "good": "Good",
+    "revenue": "Revenue",
+    "expense": "Expense"
   }
 }

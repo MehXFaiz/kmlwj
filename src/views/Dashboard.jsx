@@ -455,8 +455,8 @@ export const Dashboard = () => {
         {/* Area Chart: Revenue vs Expenses Trend */}
         <div className="lg:col-span-2 rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5 shadow-none">
           <SectionHeader
-            title="Revenue vs Expenses Trend"
-            subtitle="Monthly operating performance (YTD FY 2026)"
+            title={t('dashboard.revenueVsExpensesTrend')}
+            subtitle={t('dashboard.monthlyOperatingPerformance')}
             action={
               <span className="text-[10px] font-bold text-slate-500 bg-slate-800/60 border border-slate-700/50 px-2.5 py-1 rounded-full">
                 YTD 2026
@@ -481,9 +481,9 @@ export const Dashboard = () => {
                 <YAxis stroke="var(--chart-axis)" fontSize={11} tickLine={false} axisLine={false}
                   tickFormatter={(v) => `Rs ${(v / 1000).toFixed(0)}k`} />
                 <ChartTooltip content={<DarkTooltip />} />
-                <Area type="monotone" dataKey="Revenue" stroke="var(--chart-revenue)" strokeWidth={2}
+                <Area type="monotone" name={t('dashboard.revenue')} dataKey="Revenue" stroke="var(--chart-revenue)" strokeWidth={2}
                   fill="url(#gRevenue)" dot={false} activeDot={{ r: 4, strokeWidth: 0, fill: 'var(--chart-revenue)' }} />
-                <Area type="monotone" dataKey="Expenses" stroke="var(--chart-expense)" strokeWidth={2}
+                <Area type="monotone" name={t('dashboard.expense')} dataKey="Expenses" stroke="var(--chart-expense)" strokeWidth={2}
                   fill="url(#gExpenses)" dot={false} activeDot={{ r: 4, strokeWidth: 0, fill: 'var(--chart-expense)' }} />
                 <Legend wrapperStyle={{ fontSize: '11px', color: '#64748b', paddingTop: '12px' }} />
               </AreaChart>
@@ -493,7 +493,7 @@ export const Dashboard = () => {
 
         {/* Pie Chart: Account type distribution */}
         <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5 shadow-none">
-          <SectionHeader title="Account Distribution" subtitle="By account type" />
+          <SectionHeader title={t('dashboard.accountDistribution')} subtitle={t('dashboard.breakdownByAccountType')} />
           <div className="h-36 sm:h-40 mb-3">
             <ResponsiveContainer width="100%" height="100%" minWidth={1}>
               <PieChart>
@@ -526,15 +526,15 @@ export const Dashboard = () => {
         {/* Balance Sheet Bar */}
         <div className="lg:col-span-2 rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5 shadow-none">
           <SectionHeader
-            title="Balance Sheet Overview"
-            subtitle="Assets vs Liabilities vs Equity"
+            title={t('dashboard.balanceSheetOverview')}
+            subtitle={t('dashboard.assetsVsLiabilitiesVsEquity')}
             action={
               <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${
                 stats.isEquationBalanced
                   ? 'text-emerald-400 bg-emerald-950/50 border-emerald-900/50'
                   : 'text-red-400 bg-red-950/50 border-red-900/50'
               }`}>
-                {stats.isEquationBalanced ? '✓ Balanced' : '✗ Check'}
+                {stats.isEquationBalanced ? `✓ ${t('dashboard.balanced')}` : `✗ ${t('dashboard.check')}`}
               </span>
             }
           />
@@ -558,41 +558,41 @@ export const Dashboard = () => {
 
         {/* Quick Actions */}
         <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5 shadow-none">
-          <SectionHeader title="Quick Actions" subtitle="Common ERP operations" />
+          <SectionHeader title={t('dashboard.quickActions')} subtitle={t('dashboard.commonERPOperations')} />
           <div className="space-y-2">
-            <QuickAction icon={FileText} label="Journal Entry"
+            <QuickAction icon={FileText} label={t('dashboard.journalEntry')}
               color="bg-indigo-950/60 border border-indigo-800/40 text-indigo-400"
               onClick={() => navigate('/journals')} />
-            <QuickAction icon={Layers} label="Chart of Accounts"
+            <QuickAction icon={Layers} label={t('dashboard.chartOfAccounts')}
               color="bg-blue-950/60 border border-blue-800/40 text-blue-400"
               onClick={() => navigate('/coa')} />
-            <QuickAction icon={BookOpen} label="View Ledger"
+            <QuickAction icon={BookOpen} label={t('dashboard.viewLedger')}
               color="bg-violet-950/60 border border-violet-800/40 text-violet-400"
               onClick={() => navigate('/ledger')} />
-            <QuickAction icon={BarChart3} label="Financial Reports"
+            <QuickAction icon={BarChart3} label={t('dashboard.financialReports')}
               color="bg-emerald-950/60 border border-emerald-800/40 text-emerald-400"
               onClick={() => navigate('/reports')} />
-            <QuickAction icon={Users} label="Users & Roles"
+            <QuickAction icon={Users} label={t('dashboard.usersAndRoles')}
               color="bg-amber-950/60 border border-amber-800/40 text-amber-400"
               onClick={() => navigate('/users-roles')} />
-            <QuickAction icon={ShieldCheck} label="Audit Trail"
+            <QuickAction icon={ShieldCheck} label={t('dashboard.auditTrail')}
               color="bg-slate-800/60 border border-slate-700/40 text-slate-400"
               onClick={() => navigate('/audit')} />
           </div>
 
           {/* Account health */}
           <div className="mt-4 pt-4 border-t border-slate-800/60">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">Account Health</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">{t('dashboard.accountHealth')}</p>
             {[
-              { label: 'Records are valid', ok: true },
-              { label: 'All entries balanced', ok: true },
-              { label: 'Balance sheet correct', ok: stats.isEquationBalanced },
+              { label: t('dashboard.recordsAreValid'), ok: true },
+              { label: t('dashboard.allEntriesBalanced'), ok: true },
+              { label: t('dashboard.balanceSheetCorrect'), ok: stats.isEquationBalanced },
             ].map(({ label, ok }) => (
               <div key={label} className="flex items-center justify-between py-1.5">
                 <span className="text-[11px] text-slate-500">{label}</span>
                 <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${ok ? 'text-emerald-400 bg-emerald-950/40' : 'text-red-400 bg-red-950/40'}`}>
                   {ok ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
-                  {ok ? 'Good' : 'Check'}
+                  {ok ? t('dashboard.good') : t('dashboard.check')}
                 </span>
               </div>
             ))}

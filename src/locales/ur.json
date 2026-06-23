@@ -99,6 +99,25 @@
     "accountDistribution": "اکاؤنٹ کی تقسیم",
     "breakdownByAccountType": "اکاؤنٹ کی قسم کے لحاظ سے تفصیل",
     "recentActivity": "حالیہ سرگرمی",
-    "latestTransactions": "تازہ ترین لین دین اور لاگز"
+    "latestTransactions": "تازہ ترین لین دین اور لاگز",
+    "revenueVsExpensesTrend": "آمدنی بمقابلہ اخراجات کا رجحان",
+    "monthlyOperatingPerformance": "ماہانہ آپریٹنگ کارکردگی (YTD FY 2026)",
+    "balanceSheetOverview": "بیلنس شیٹ کا جائزہ",
+    "assetsVsLiabilitiesVsEquity": "اثاثے بمقابلہ واجبات بمقابلہ ایکویٹی",
+    "balanced": "متوازن",
+    "check": "چیک کریں",
+    "commonERPOperations": "عام ERP آپریشنز",
+    "chartOfAccounts": "چارٹ آف اکاؤنٹس",
+    "viewLedger": "لیجر دیکھیں",
+    "financialReports": "مالیاتی رپورٹس",
+    "usersAndRoles": "صارفین اور کردار",
+    "auditTrail": "آڈٹ ٹریل",
+    "accountHealth": "اکاؤنٹ کی صحت",
+    "recordsAreValid": "ریکارڈز درست ہیں",
+    "allEntriesBalanced": "تمام اندراجات متوازن ہیں",
+    "balanceSheetCorrect": "بیلنس شیٹ درست ہے",
+    "good": "بہتر",
+    "revenue": "آمدنی",
+    "expense": "اخراجات"
   }
 }
