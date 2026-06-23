@@ -240,7 +240,7 @@ function AccountTypeStat({ label, count, pct, color, dotColor }) {
 /* ─────────────────────────────────────────────
    Main Dashboard
 ───────────────────────────────────────────── */
-export default function Dashboard() {
+export const Dashboard = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { accounts, fetchAccounts, selectedSubsidiary } = useCoaStore();
