@@ -381,14 +381,13 @@ export function SplashScreen({ onComplete }) {
                 marginTop: 12,
                 fontSize: 'clamp(18px, 5vw, 22px)',
                 fontWeight: 600,
-                background: 'linear-gradient(135deg, #a5b4fc 0%, #818cf8 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
+                background: 'transparent',
+                color: '#a5b4fc',
                 opacity: titleVisible ? 1 : 0,
                 transform: titleVisible ? 'translateY(0)' : 'translateY(15px)',
                 transition: 'opacity 0.8s cubic-bezier(0.16,1,0.3,1) 0.4s, transform 0.8s cubic-bezier(0.16,1,0.3,1) 0.4s',
                 fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
+                padding: '10px 0'
               }}
             >
               کچھی مسلم لوہار واڈہ ویلفیئر جماعت

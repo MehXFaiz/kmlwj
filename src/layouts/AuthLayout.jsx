@@ -41,7 +41,7 @@ export const AuthLayout = ({ children }) => {
             </div>
           </div>
           <div
-            className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-blue-200 to-emerald-200 mt-2"
+            className="font-bold text-indigo-200 mt-2"
             style={{
               fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
               fontSize: '1.2rem',
@@ -104,7 +104,7 @@ export const AuthLayout = ({ children }) => {
               </div>
             </div>
             <div
-              className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-blue-200 to-emerald-200 text-center"
+              className="font-bold text-indigo-200 text-center"
               style={{
                 fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
                 fontSize: '0.95rem',
