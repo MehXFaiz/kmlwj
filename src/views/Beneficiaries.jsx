@@ -143,10 +143,16 @@ export const Beneficiaries = () => {
 
   const handleDelete = async (id) => {
     setIsDeleting(true);
-    await deleteBeneficiary(id);
-    setSelectedIds(p => p.filter(i => i !== id));
-    setDeleteId(null);
-    setIsDeleting(false);
+    try {
+      await deleteBeneficiary(id);
+      showToast('Beneficiary deleted successfully', 'success');
+      setSelectedIds(p => p.filter(i => i !== id));
+      setDeleteId(null);
+    } catch (err) {
+      showToast(err.response?.data?.error?.message || err.message || 'Error deleting beneficiary', 'error');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleBulkDelete = async () => {
@@ -157,7 +163,7 @@ export const Beneficiaries = () => {
       setShowBulkConfirm(false);
       showToast(`${selectedIds.length} records removed successfully.`, 'success');
     } catch (err) {
-      showToast('Some records could not be removed. Please try again.', 'error');
+      showToast(err.response?.data?.error?.message || 'Some records could not be removed. Please try again.', 'error');
     }
     setIsDeleting(false);
   };
