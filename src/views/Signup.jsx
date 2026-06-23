@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { User, Lock, Mail, Loader2, ArrowLeft, Eye, EyeOff, ChevronDown, ShieldCheck, BarChart3, BookOpen } from 'lucide-react';
+import { User, Lock, Mail, Loader2, ArrowLeft, Eye, EyeOff, ChevronDown, ShieldCheck, BarChart3, BookOpen, HeartHandshake } from 'lucide-react';
 import { AuthLayout } from '../layouts/AuthLayout';
 
 const roleOptions = [
   { value: 'ACCOUNTANT', label: 'Accountant', desc: 'Read & write access', icon: BookOpen },
   { value: 'ADMIN', label: 'Administrator', desc: 'Full system access', icon: ShieldCheck },
   { value: 'VIEWER', label: 'Viewer / Auditor', desc: 'Read-only access', icon: BarChart3 },
+  { value: 'DONATION_MANAGER', label: 'Donation & Zakat Manager', desc: 'Manage donations and Zakat', icon: HeartHandshake },
 ];
 
 export const Signup = () => {

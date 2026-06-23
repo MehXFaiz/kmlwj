@@ -57,6 +57,7 @@ async function main() {
     { name: 'Accountant', description: 'Manage charts of accounts and view reports' },
     { name: 'Auditor', description: 'Read-only access to reports and audit logs' },
     { name: 'Data Entry Operator', description: 'Create and update accounts but cannot delete or lock' },
+    { name: 'Donation and Zakat Manager', description: 'Manage donations and Zakat distributions' },
   ];
 
   console.log('Seeding Roles...');

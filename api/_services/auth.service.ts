@@ -43,6 +43,9 @@ function mapRoleName(input?: string): string {
   if (roleUpper === 'DATA_ENTRY' || roleUpper === 'DATA ENTRY OPERATOR') {
     return 'Data Entry Operator';
   }
+  if (roleUpper === 'DONATION_MANAGER') {
+    return 'Donation and Zakat Manager';
+  }
   return input;
 }
 
