@@ -85,7 +85,7 @@ function KpiCard({ title, value, prefix = '', suffix = '', decimals = 0, icon: I
       <div className="relative flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500 mb-2">{title}</p>
-          <p className={`text-xl sm:text-2xl font-extrabold font-mono leading-none ${iconColor || 'text-slate-100'}`}>
+          <p className="text-xl sm:text-2xl font-extrabold font-mono leading-none text-slate-100">
             {animated}
           </p>
           {trendLabel && (
@@ -373,13 +373,13 @@ export const Dashboard = () => {
 
       {/* ── Quick Actions ── PRIMARY for non-technical users ── */}
       <div>
-        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3">What would you like to do?</p>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Quick Actions</h3>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {[
-            { label: 'Add Income', desc: 'Record money received', icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-950/40 border-emerald-900/40 hover:bg-emerald-950/60 hover:border-emerald-800/60', path: '/bank-vouchers/revenue/new' },
-            { label: 'Add Expense', desc: 'Record money spent', icon: TrendingDown, color: 'text-red-400', bg: 'bg-red-950/40 border-red-900/40 hover:bg-red-950/60 hover:border-red-800/60', path: '/bank-vouchers/expense/new' },
-            { label: 'Journal Entry', desc: 'Manual accounting entry', icon: FileText, color: 'text-indigo-400', bg: 'bg-indigo-950/40 border-indigo-900/40 hover:bg-indigo-950/60 hover:border-indigo-800/60', path: '/journals' },
-            { label: 'Transfer Money', desc: 'Move between accounts', icon: RefreshCw, color: 'text-violet-400', bg: 'bg-violet-950/40 border-violet-900/40 hover:bg-violet-950/60 hover:border-violet-800/60', path: '/bank-vouchers/transfer/new' },
+            { label: 'Add Income', desc: 'Record money received', icon: TrendingUp, iconColor: 'text-emerald-400', iconBg: 'bg-emerald-950/40 border-emerald-900/40', path: '/bank-vouchers/revenue/new' },
+            { label: 'Add Expense', desc: 'Record money spent', icon: TrendingDown, iconColor: 'text-red-400', iconBg: 'bg-red-950/40 border-red-900/40', path: '/bank-vouchers/expense/new' },
+            { label: 'Journal Entry', desc: 'Manual accounting entry', icon: FileText, iconColor: 'text-indigo-400', iconBg: 'bg-indigo-950/40 border-indigo-900/40', path: '/journals' },
+            { label: 'Transfer Money', desc: 'Move between accounts', icon: RefreshCw, iconColor: 'text-violet-400', iconBg: 'bg-violet-950/40 border-violet-900/40', path: '/bank-vouchers/transfer/new' },
           ].map((action) => (
             <button
               key={action.path}
@@ -422,21 +422,21 @@ export const Dashboard = () => {
           delay={240} />
       </div>
 
-      {/* ── Account Health Banner ── plain language ── */}
-      <div className={`rounded-xl border-l-4 px-4 py-3.5 flex items-center gap-3 ${
+      {/* ── Account Health Banner ── */}
+      <div className={`rounded-xl border px-4 py-3.5 flex items-center gap-3 ${
         stats.isEquationBalanced
-          ? 'border-l-emerald-500 border-t border-r border-b border-emerald-900/30 bg-emerald-950/10'
-          : 'border-l-red-500 border-t border-r border-b border-red-900/40 bg-red-950/10'
+          ? 'border-slate-800/60 bg-slate-900/40'
+          : 'border-red-900/50 bg-red-950/20'
       }`}>
         <div className={`h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 border ${
-          stats.isEquationBalanced ? 'bg-emerald-950 border-emerald-800/50' : 'bg-red-950 border-red-800/50 animate-pulse'
+          stats.isEquationBalanced ? 'bg-slate-800/50 border-slate-700/50' : 'bg-red-950 border-red-800/50 animate-pulse'
         }`}>
           {stats.isEquationBalanced
-            ? <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" />
+            ? <CheckCircle2 className="h-4.5 w-4.5 text-slate-400" />
             : <AlertTriangle className="h-4.5 w-4.5 text-red-400" />}
         </div>
         <div className="flex-1 min-w-0">
-          <p className={`text-sm font-bold ${stats.isEquationBalanced ? 'text-emerald-300' : 'text-red-300'}`}>
+          <p className={`text-sm font-bold ${stats.isEquationBalanced ? 'text-slate-200' : 'text-red-300'}`}>
             {stats.isEquationBalanced ? '✓ All accounts are balanced — records are correct' : '⚠ Warning: Accounts may have an error — please contact admin'}
           </p>
           <p className="text-[11px] text-slate-500 mt-0.5">
