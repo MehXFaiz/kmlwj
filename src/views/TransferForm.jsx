@@ -3,8 +3,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useCoaStore } from '../store/coaStore';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
 import { ChevronLeft, Save, Sparkles, RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const TransferForm = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { flatAccounts, fetchAccountsList } = useCoaStore();
   const { addVoucher } = useBankVoucherStore();
@@ -110,11 +112,11 @@ export const TransferForm = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.12em] text-violet-400 bg-violet-950/40 border border-violet-900/40 px-2 py-0.5 rounded-full">
-              <Sparkles className="h-3 w-3 text-violet-450" /> Fund Transfer
+              <Sparkles className="h-3 w-3 text-violet-450" /> {t('forms.fundTransfer')}
             </span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">Transfer Funds</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Record a transfer of money between cash or bank accounts</p>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">{t('forms.transferFunds')}</h2>
+          <p className="text-xs text-slate-500 mt-0.5">{t('forms.transferFundsDesc')}</p>
         </div>
       </div>
 
@@ -129,40 +131,40 @@ export const TransferForm = () => {
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-550 mb-2">Source Account (From) *</label>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-550 mb-2">{t('forms.sourceAccountFrom')}</label>
             <select 
               value={fromBankAccountId} 
               onChange={e => setFromBankAccountId(e.target.value)}
               className="w-full px-3 py-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-250 text-sm focus:outline-none focus:border-violet-600/50 transition-all font-semibold"
             >
-              <option value="">Select source account...</option>
+              <option value="">{t('forms.selectSourceAccount')}</option>
               {bankAccounts.map(acc => (
                 <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
               ))}
             </select>
-            <p className="text-[10px] text-slate-500 mt-1.5">Funds will be credited (deducted) from here</p>
+            <p className="text-[10px] text-slate-500 mt-1.5">{t('forms.fundsDeductedFromHere')}</p>
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-555 mb-2">Target Account (To) *</label>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-555 mb-2">{t('forms.targetAccountTo')}</label>
             <select 
               value={toBankAccountId} 
               onChange={e => setToBankAccountId(e.target.value)}
               className="w-full px-3 py-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-250 text-sm focus:outline-none focus:border-violet-600/50 transition-all font-semibold"
             >
-              <option value="">Select target account...</option>
+              <option value="">{t('forms.selectTargetAccount')}</option>
               {bankAccounts.filter(acc => acc.id !== fromBankAccountId).map(acc => (
                 <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
               ))}
             </select>
-            <p className="text-[10px] text-slate-500 mt-1.5">Funds will be debited (added) to here</p>
+            <p className="text-[10px] text-slate-500 mt-1.5">{t('forms.fundsAddedToHere')}</p>
           </div>
         </div>
 
         {/* Transaction Details */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Transaction Date *</label>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('forms.transactionDate')}</label>
             <input 
               type="date" 
               value={postingDate} 
@@ -172,18 +174,18 @@ export const TransferForm = () => {
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Ref / Cheque Number</label>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('forms.refChequeNumber')}</label>
             <input 
               value={reference} 
               onChange={e => setReference(e.target.value)} 
-              placeholder="e.g. TRF-10294"
+              placeholder={t('forms.trfPlaceholder')}
               className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-violet-600/50 transition-colors placeholder-slate-600" 
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Transfer Amount (PKR) *</label>
+          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('forms.transferAmount')}</label>
           <input 
             type="number" 
             min="0" 
@@ -196,11 +198,11 @@ export const TransferForm = () => {
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Voucher Description / Memo</label>
+          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('forms.voucherDescription')}</label>
           <textarea 
             value={description} 
             onChange={e => setDescription(e.target.value)} 
-            placeholder="Details about this transfer..."
+            placeholder={t('forms.voucherDescription')}
             className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-violet-600/50 transition-colors h-24 resize-none placeholder-slate-650" 
           />
         </div>
@@ -209,12 +211,12 @@ export const TransferForm = () => {
         <div className="flex gap-3 justify-end pt-2 border-t border-slate-800/80">
           <Link to="/bank-vouchers"
             className="px-5 py-2.5 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-800 text-sm font-semibold transition-all">
-            Cancel
+            {t('forms.cancel')}
           </Link>
           <button type="submit" disabled={loading}
             className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold shadow-lg shadow-violet-950/40 transition-all disabled:opacity-50 cursor-pointer">
             <Save className="h-4 w-4" />
-            {loading ? 'Posting...' : 'Save & Post'}
+            {loading ? t('forms.posting') : t('forms.saveAndPost')}
           </button>
         </div>
       </form>

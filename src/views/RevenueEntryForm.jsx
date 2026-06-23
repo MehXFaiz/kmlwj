@@ -4,8 +4,10 @@ import { useCoaStore } from '../store/coaStore';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
 import { ChevronLeft, Save, Sparkles, Plus, AlertCircle, CheckCircle } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
+import { useTranslation } from 'react-i18next';
 
 export const RevenueEntryForm = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { flatAccounts, fetchAccountsList, addAccount } = useCoaStore();
   const { addVoucher } = useBankVoucherStore();
@@ -234,11 +236,11 @@ export const RevenueEntryForm = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-400 bg-emerald-950/40 border border-emerald-900/40 px-2 py-0.5 rounded-full">
-              <Sparkles className="h-3 w-3" /> Quick Add
+              <Sparkles className="h-3 w-3" /> {t('forms.quickAdd')}
             </span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">Add Revenue</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Record incoming revenue directly into the ledger by source</p>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">{t('forms.addRevenue')}</h2>
+          <p className="text-xs text-slate-500 mt-0.5">{t('forms.addRevenueDesc')}</p>
         </div>
       </div>
 
@@ -246,20 +248,27 @@ export const RevenueEntryForm = () => {
         
         {/* Revenue Source selection */}
         <div>
-          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Revenue Source</label>
+          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">{t('forms.revenueSource')}</label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {['Hall Booking', 'Donation', 'Membership Fee', 'Bus Booking', 'Zakat', 'Fitra'].map(src => (
+            {[
+              { key: 'Hall Booking', label: t('forms.sources.hallBooking') },
+              { key: 'Donation', label: t('forms.sources.donation') },
+              { key: 'Membership Fee', label: t('forms.sources.membershipFee') },
+              { key: 'Bus Booking', label: t('forms.sources.busBooking') },
+              { key: 'Zakat', label: t('forms.sources.zakat') },
+              { key: 'Fitra', label: t('forms.sources.fitra') }
+            ].map(src => (
               <button
-                key={src}
+                key={src.key}
                 type="button"
-                onClick={() => setRevenueSource(src)}
+                onClick={() => setRevenueSource(src.key)}
                 className={`py-3 px-2 rounded-lg border text-xs font-bold transition-all cursor-pointer text-center ${
-                  revenueSource === src
+                  revenueSource === src.key
                     ? 'bg-emerald-600/10 border-emerald-500 text-emerald-400 shadow-md shadow-emerald-950/20'
                     : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
                 }`}
               >
-                {src}
+                {src.label}
               </button>
             ))}
           </div>
@@ -267,7 +276,7 @@ export const RevenueEntryForm = () => {
 
         {/* Dynamic Mapping Info / Sub-Selectors */}
         <div className="p-4 rounded-lg bg-slate-950/30 border border-slate-850 space-y-3">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-550 block">Ledger Posting Mapping</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-550 block">{t('forms.ledgerMapping')}</span>
           
           {matchedAccounts.length > 0 ? (
             <div>
@@ -275,13 +284,13 @@ export const RevenueEntryForm = () => {
                 <div className="flex items-center gap-2 text-xs text-slate-350">
                   <CheckCircle className="h-4 w-4 text-emerald-500 flex-shrink-0" />
                   <span>
-                    Auto-linked to: <strong className="text-slate-200">{matchedAccounts[0].code} - {matchedAccounts[0].name}</strong>
+                    {t('forms.autoLinkedTo')} <strong className="text-slate-200">{matchedAccounts[0].code} - {matchedAccounts[0].name}</strong>
                   </span>
                 </div>
               ) : (
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-bold uppercase text-slate-500">
-                    {revenueSource === 'Hall Booking' ? 'Select Hall *' : 'Select Target Ledger Account *'}
+                    {revenueSource === 'Hall Booking' ? t('forms.selectHall') : t('forms.selectTargetLedger')}
                   </label>
                   <select
                     value={selectedSubAccountId}
@@ -302,7 +311,7 @@ export const RevenueEntryForm = () => {
               <div className="flex items-start gap-3 p-3 rounded bg-amber-950/20 border border-amber-900/30 text-xs text-amber-300">
                 <AlertCircle className="h-4 w-4 mt-0.5 text-amber-400 flex-shrink-0" />
                 <div className="space-y-1">
-                  <p className="font-semibold text-amber-200">Missing Sub-account in COA</p>
+                  <p className="font-semibold text-amber-200">{t('forms.missingSubAccount')}</p>
                   <p className="text-amber-400/90 leading-relaxed">
                     No ledger account exists for <strong className="text-white">"{revenueSource}"</strong>. 
                     The system will automatically generate it under <strong className="text-white">{autoCreationDetails.parentName}</strong> with code <strong className="font-mono text-white">{autoCreationDetails.nextCode}</strong> upon saving.
@@ -316,7 +325,7 @@ export const RevenueEntryForm = () => {
         {/* Transaction Details */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Transaction Date *</label>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('forms.transactionDate')}</label>
             <input 
               type="date" 
               value={postingDate} 
@@ -326,14 +335,14 @@ export const RevenueEntryForm = () => {
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Deposit Bank / Cash Account *</label>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('forms.depositBankCash')}</label>
             <select 
               value={bankAccountId} 
               onChange={e => setBankAccountId(e.target.value)}
               className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-emerald-600/50 transition-colors"
             >
               {bankAccounts.length === 0 ? (
-                <option value="">-- No Cash/Bank Accounts Found --</option>
+                <option value="">{t('forms.noBankAccountsFound')}</option>
               ) : (
                 bankAccounts.map(acc => (
                   <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
@@ -345,7 +354,7 @@ export const RevenueEntryForm = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Revenue Amount (PKR) *</label>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('forms.revenueAmount')}</label>
             <input 
               type="number" 
               min="0" 
@@ -358,18 +367,18 @@ export const RevenueEntryForm = () => {
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Ref / Cheque / Receipt No</label>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('forms.refChequeReceipt')}</label>
             <input 
               value={reference} 
               onChange={e => setReference(e.target.value)} 
-              placeholder="e.g. REC-8910"
+              placeholder={t('forms.refPlaceholder')}
               className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-emerald-600/50 transition-colors placeholder-slate-600" 
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Voucher Description / Memo</label>
+          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('forms.voucherDescription')}</label>
           <textarea 
             value={description} 
             onChange={e => setDescription(e.target.value)} 
@@ -387,12 +396,12 @@ export const RevenueEntryForm = () => {
           )}
           <Link to="/bank-vouchers"
             className="px-5 py-2.5 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-800 text-sm font-semibold transition-all">
-            Cancel
+            {t('forms.cancel')}
           </Link>
           <button type="submit" disabled={loading}
             className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold shadow-lg shadow-emerald-950/40 transition-all disabled:opacity-50 cursor-pointer">
             <Save className="h-4 w-4" />
-            {loading ? 'Processing...' : 'Save & Post'}
+            {loading ? t('forms.processing') : t('forms.saveAndPost')}
           </button>
         </div>
       </form>
