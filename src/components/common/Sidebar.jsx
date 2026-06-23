@@ -3,6 +3,7 @@ import { useEffect, useState, useRef, useMemo } from 'react';
 import logoImg from '../../assets/logo.png';
 import { useAuthStore } from '../../store/authStore';
 import { searchService } from '../../services/apiServices';
+import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
   Layers,
@@ -35,6 +36,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
 
   // Track which items with subItems are expanded
   const [expandedItems, setExpandedItems] = useState({ '/coa': true });
@@ -126,78 +128,78 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
 
   const sidebarSections = useMemo(() => [
     {
-      title: 'Home',
+      title: t('sidebar.home'),
       items: [
-        { name: 'Dashboard', hint: 'At a glance overview', icon: LayoutDashboard, path: '/' },
+        { name: t('sidebar.dashboard'), hint: t('sidebar.dashboardHint'), icon: LayoutDashboard, path: '/' },
       ],
     },
     {
-      title: 'Money In & Out',
+      title: t('sidebar.moneyInOut'),
       items: [
-        { name: 'Add Income', hint: 'Record money received', icon: TrendingUp, path: '/bank-vouchers/revenue/new' },
-        { name: 'Add Expense', hint: 'Record money spent', icon: TrendingDown, path: '/bank-vouchers/expense/new' },
-        { name: 'Transfer Money', hint: 'Move between accounts', icon: RefreshCw, path: '/bank-vouchers/transfer/new' },
-        { name: 'All Transactions', hint: 'View every entry', icon: Wallet, path: '/bank-vouchers' },
+        { name: t('sidebar.addIncome'), hint: t('sidebar.addIncomeHint'), icon: TrendingUp, path: '/bank-vouchers/revenue/new' },
+        { name: t('sidebar.addExpense'), hint: t('sidebar.addExpenseHint'), icon: TrendingDown, path: '/bank-vouchers/expense/new' },
+        { name: t('sidebar.transferMoney'), hint: t('sidebar.transferMoneyHint'), icon: RefreshCw, path: '/bank-vouchers/transfer/new' },
+        { name: t('sidebar.allTransactions'), hint: t('sidebar.allTransactionsHint'), icon: Wallet, path: '/bank-vouchers' },
       ],
     },
     {
-      title: 'Welfare',
+      title: t('sidebar.welfare'),
       items: [
-        { name: 'People We Help', hint: 'Beneficiary list', icon: Users, path: '/beneficiaries' },
-        { name: 'Donations Received', hint: 'All donation records', icon: Heart, path: '/donations' },
-        { name: 'Donation Reports', hint: 'Monthly summaries', icon: FileText, path: '/donation-reports' },
+        { name: t('sidebar.peopleWeHelp'), hint: t('sidebar.peopleWeHelpHint'), icon: Users, path: '/beneficiaries' },
+        { name: t('sidebar.donationsReceived'), hint: t('sidebar.donationsReceivedHint'), icon: Heart, path: '/donations' },
+        { name: t('sidebar.donationReports'), hint: t('sidebar.donationReportsHint'), icon: FileText, path: '/donation-reports' },
       ],
     },
     {
-      title: 'Invoices & Clients',
+      title: t('sidebar.invoicesClients'),
       items: [
-        { name: 'Customers', hint: 'Client records', icon: Users, path: '/customers' },
-        { name: 'Invoices', hint: 'Bills & receipts', icon: FileSpreadsheet, path: '/invoices' },
+        { name: t('sidebar.customers'), hint: t('sidebar.customersHint'), icon: Users, path: '/customers' },
+        { name: t('sidebar.invoices'), hint: t('sidebar.invoicesHint'), icon: FileSpreadsheet, path: '/invoices' },
       ],
     },
     {
-      title: 'Reports',
+      title: t('sidebar.reports'),
       items: [
-        { name: 'Income Statement', hint: 'Revenue vs expenses', icon: BarChart3, path: '/reports?tab=income-statement', perms: ['VIEW_REPORTS'] },
-        { name: 'Balance Sheet', hint: 'Assets & liabilities', icon: PieChart, path: '/reports?tab=balance-sheet', perms: ['VIEW_REPORTS'] },
-        { name: 'Cash Flow', hint: 'Money movement', icon: Activity, path: '/reports?tab=cash-flow', perms: ['VIEW_REPORTS'] },
-        { name: 'General Ledger', hint: 'All account entries', icon: BookOpen, path: '/ledger' },
-        { name: 'Trial Balance', hint: 'Balancing check', icon: Layers, path: '/reports?tab=trial-balance', perms: ['VIEW_REPORTS'] },
+        { name: t('sidebar.incomeStatement'), hint: t('sidebar.incomeStatementHint'), icon: BarChart3, path: '/reports?tab=income-statement', perms: ['VIEW_REPORTS'] },
+        { name: t('sidebar.balanceSheet'), hint: t('sidebar.balanceSheetHint'), icon: PieChart, path: '/reports?tab=balance-sheet', perms: ['VIEW_REPORTS'] },
+        { name: t('sidebar.cashFlow'), hint: t('sidebar.cashFlowHint'), icon: Activity, path: '/reports?tab=cash-flow', perms: ['VIEW_REPORTS'] },
+        { name: t('sidebar.generalLedger'), hint: t('sidebar.generalLedgerHint'), icon: BookOpen, path: '/ledger' },
+        { name: t('sidebar.trialBalance'), hint: t('sidebar.trialBalanceHint'), icon: Layers, path: '/reports?tab=trial-balance', perms: ['VIEW_REPORTS'] },
       ],
     },
     {
-      title: 'Manual Records',
+      title: t('sidebar.manualRecords'),
       items: [
-        { name: 'Journal Entries', hint: 'Advanced manual entry', icon: FileSpreadsheet, path: '/journals' },
+        { name: t('sidebar.journalEntries'), hint: t('sidebar.journalEntriesHint'), icon: FileSpreadsheet, path: '/journals' },
       ],
     },
     {
-      // Admin-only section — visible to Super Admin only; others see nothing here
-      title: 'Settings & Admin',
+      // Admin-only section
+      title: t('sidebar.settingsAdmin'),
       adminOnly: true,
       items: [
         {
-          name: 'Account Structure',
-          hint: 'Chart of accounts setup',
+          name: t('sidebar.accountStructure'),
+          hint: t('sidebar.accountStructureHint'),
           icon: Layers,
           path: '/coa',
           perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT', 'LOCK_ACCOUNT'],
           subItems: [
-            { name: 'Assets', path: '/coa?type=Asset' },
-            { name: 'Liabilities', path: '/coa?type=Liability' },
-            { name: 'Revenue', path: '/coa?type=Revenue' },
-            { name: 'Expenses', path: '/coa?type=Expense' },
+            { name: t('sidebar.assets'), path: '/coa?type=Asset' },
+            { name: t('sidebar.liabilities'), path: '/coa?type=Liability' },
+            { name: t('sidebar.revenue'), path: '/coa?type=Revenue' },
+            { name: t('sidebar.expenses'), path: '/coa?type=Expense' },
           ],
         },
-        { name: 'Income Categories', hint: 'Revenue account heads', icon: TrendingUp, path: '/revenue-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
-        { name: 'Expense Categories', hint: 'Expense account heads', icon: TrendingDown, path: '/expense-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
-        { name: 'System Accounts', hint: 'Reserved GL codes', icon: ShieldCheck, path: '/reserved', perms: ['MANAGE_RESERVED_CODES'] },
-        { name: 'Trial Balance Matrix', hint: 'Advanced ledger view', icon: Layers, path: '/trial-balance-sheet', perms: ['VIEW_REPORTS'] },
-        { name: 'Users & Access', hint: 'Manage who can login', icon: BadgeCheck, path: '/users-roles', perms: ['MANAGE_USERS', 'MANAGE_ROLES'] },
-        { name: 'Audit Trail', hint: 'Who did what & when', icon: History, path: '/audit', perms: ['VIEW_REPORTS', 'MANAGE_USERS'] },
+        { name: t('sidebar.incomeCategories'), hint: t('sidebar.incomeCategoriesHint'), icon: TrendingUp, path: '/revenue-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
+        { name: t('sidebar.expenseCategories'), hint: t('sidebar.expenseCategoriesHint'), icon: TrendingDown, path: '/expense-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
+        { name: t('sidebar.systemAccounts'), hint: t('sidebar.systemAccountsHint'), icon: ShieldCheck, path: '/reserved', perms: ['MANAGE_RESERVED_CODES'] },
+        { name: t('sidebar.trialBalanceMatrix'), hint: t('sidebar.trialBalanceMatrixHint'), icon: Layers, path: '/trial-balance-sheet', perms: ['VIEW_REPORTS'] },
+        { name: t('sidebar.usersAccess'), hint: t('sidebar.usersAccessHint'), icon: BadgeCheck, path: '/users-roles', perms: ['MANAGE_USERS', 'MANAGE_ROLES'] },
+        { name: t('sidebar.auditTrail'), hint: t('sidebar.auditTrailHint'), icon: History, path: '/audit', perms: ['VIEW_REPORTS', 'MANAGE_USERS'] },
       ],
     },
-  ], []);
+  ], [t]);
 
   const menuItems = useMemo(() => {
     const items = [];
@@ -465,7 +467,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
               <input
                 ref={inputRef}
                 type="text"
-                placeholder="Search accounts, beneficiaries, donations, journals or views..."
+                placeholder={t('sidebar.search')}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 className="w-full bg-transparent py-4 pl-12 pr-12 text-slate-200 placeholder-slate-500 focus:outline-none text-sm"

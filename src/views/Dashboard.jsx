@@ -15,6 +15,7 @@ import {
   RefreshCw, Bell, ChevronRight, CheckCircle2,
   AlertTriangle, Clock, Users, ArrowRight, Wallet, RepeatIcon,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 /* ─────────────────────────────────────────────
    Animated Counter Hook
@@ -239,7 +240,8 @@ function AccountTypeStat({ label, count, pct, color, dotColor }) {
 /* ─────────────────────────────────────────────
    Main Dashboard
 ───────────────────────────────────────────── */
-export const Dashboard = () => {
+export default function Dashboard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { accounts, fetchAccounts, selectedSubsidiary } = useCoaStore();
   const { journals, auditLogs } = useJournalStore();
@@ -359,7 +361,7 @@ export const Dashboard = () => {
               Live Data
             </span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">Dashboard</h2>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">{t('dashboard.title')}</h2>
           <p className="text-xs text-slate-500 mt-0.5">{selectedSubsidiary} · FY 2026</p>
         </div>
         <button
@@ -373,13 +375,13 @@ export const Dashboard = () => {
 
       {/* ── Quick Actions ── PRIMARY for non-technical users ── */}
       <div>
-        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Quick Actions</h3>
+        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">{t('dashboard.quickActions')}</h3>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {[
-            { label: 'Add Income', desc: 'Record money received', icon: TrendingUp, iconColor: 'text-emerald-400', iconBg: 'bg-emerald-950/40 border-emerald-900/40', path: '/bank-vouchers/revenue/new' },
-            { label: 'Add Expense', desc: 'Record money spent', icon: TrendingDown, iconColor: 'text-red-400', iconBg: 'bg-red-950/40 border-red-900/40', path: '/bank-vouchers/expense/new' },
-            { label: 'Journal Entry', desc: 'Manual accounting entry', icon: FileText, iconColor: 'text-indigo-400', iconBg: 'bg-indigo-950/40 border-indigo-900/40', path: '/journals' },
-            { label: 'Transfer Money', desc: 'Move between accounts', icon: RefreshCw, iconColor: 'text-violet-400', iconBg: 'bg-violet-950/40 border-violet-900/40', path: '/bank-vouchers/transfer/new' },
+            { label: t('dashboard.addIncome'), desc: t('dashboard.addIncomeDesc'), icon: TrendingUp, iconColor: 'text-emerald-400', iconBg: 'bg-emerald-950/40 border-emerald-900/40', path: '/bank-vouchers/revenue/new' },
+            { label: t('dashboard.addExpense'), desc: t('dashboard.addExpenseDesc'), icon: TrendingDown, iconColor: 'text-red-400', iconBg: 'bg-red-950/40 border-red-900/40', path: '/bank-vouchers/expense/new' },
+            { label: t('dashboard.journalEntry'), desc: t('dashboard.journalEntryDesc'), icon: FileText, iconColor: 'text-indigo-400', iconBg: 'bg-indigo-950/40 border-indigo-900/40', path: '/journals' },
+            { label: t('dashboard.transferMoney'), desc: t('dashboard.transferMoneyDesc'), icon: RefreshCw, iconColor: 'text-violet-400', iconBg: 'bg-violet-950/40 border-violet-900/40', path: '/bank-vouchers/transfer/new' },
           ].map((action) => (
             <button
               key={action.path}
@@ -400,24 +402,24 @@ export const Dashboard = () => {
 
       {/* ── Financial KPI Cards ── simplified labels ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <KpiCard title="Total Income" value={stats.revenue} prefix="Rs " decimals={2}
+        <KpiCard title={t('dashboard.totalIncome')} value={stats.revenue} prefix="Rs " decimals={2}
           icon={TrendingUp} iconBg="bg-emerald-950/60" iconColor="text-emerald-400"
-          trend="up" trendLabel="Money received"
+          trend="up" trendLabel={t('dashboard.moneyReceived')}
           accent="border-emerald-900/30 bg-gradient-to-br from-emerald-950/20 to-slate-900/60"
           delay={0} />
-        <KpiCard title="Total Spent" value={stats.expenses} prefix="Rs " decimals={2}
+        <KpiCard title={t('dashboard.totalSpent')} value={stats.expenses} prefix="Rs " decimals={2}
           icon={TrendingDown} iconBg="bg-red-950/60" iconColor="text-red-400"
-          trend="down" trendLabel="Money paid out"
+          trend="down" trendLabel={t('dashboard.moneyPaidOut')}
           accent="border-red-900/30 bg-gradient-to-br from-red-950/20 to-slate-900/60"
           delay={80} />
-        <KpiCard title="Cash in Hand" value={stats.cashBalance} prefix="Rs " decimals={2}
+        <KpiCard title={t('dashboard.cashInHand')} value={stats.cashBalance} prefix="Rs " decimals={2}
           icon={Banknote} iconBg="bg-blue-950/60" iconColor="text-blue-400"
-          trend="neutral" trendLabel="Available cash"
+          trend="neutral" trendLabel={t('dashboard.availableCash')}
           accent="border-blue-900/40 bg-gradient-to-br from-blue-950/30 to-slate-900/60"
           delay={160} />
-        <KpiCard title="Bank Balance" value={stats.bankBalance} prefix="Rs " decimals={2}
+        <KpiCard title={t('dashboard.bankBalance')} value={stats.bankBalance} prefix="Rs " decimals={2}
           icon={Layers} iconBg="bg-violet-950/60" iconColor="text-violet-400"
-          trend="neutral" trendLabel="In bank accounts"
+          trend="neutral" trendLabel={t('dashboard.inBankAccounts')}
           accent="border-violet-900/30 bg-gradient-to-br from-violet-950/20 to-slate-900/60"
           delay={240} />
       </div>
@@ -437,12 +439,12 @@ export const Dashboard = () => {
         </div>
         <div className="flex-1 min-w-0">
           <p className={`text-sm font-bold ${stats.isEquationBalanced ? 'text-slate-200' : 'text-red-300'}`}>
-            {stats.isEquationBalanced ? '✓ All accounts are balanced — records are correct' : '⚠ Warning: Accounts may have an error — please contact admin'}
+            {stats.isEquationBalanced ? t('dashboard.accountsBalanced') : t('dashboard.accountsError')}
           </p>
           <p className="text-[11px] text-slate-500 mt-0.5">
-            Assets: Rs {stats.assets.toLocaleString(undefined, { maximumFractionDigits: 0 })} &nbsp;·&nbsp;
-            Liabilities: Rs {stats.liabilities.toLocaleString(undefined, { maximumFractionDigits: 0 })} &nbsp;·&nbsp;
-            Equity: Rs {stats.equity.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            {t('dashboard.assets')}: Rs {stats.assets.toLocaleString(undefined, { maximumFractionDigits: 0 })} &nbsp;·&nbsp;
+            {t('dashboard.liabilities')}: Rs {stats.liabilities.toLocaleString(undefined, { maximumFractionDigits: 0 })} &nbsp;·&nbsp;
+            {t('dashboard.equity')}: Rs {stats.equity.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </p>
         </div>
       </div>
