@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useBeneficiaryStore } from '../store/beneficiaryStore';
-import { Users, Search, Plus, ChevronDown, ChevronUp, Edit2, Trash2, X, AlertTriangle } from 'lucide-react';
+import { Users, Search, Plus, Edit2, Trash2, X, AlertTriangle } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
+import { showToast } from '../components/ui/Toast';
+import { EmptyState } from '../components/ui/EmptyState';
 
 function BeneficiaryModal({ isOpen, onClose, onSave, initial }) {
   const [form, setForm] = useState(
@@ -33,8 +35,8 @@ function BeneficiaryModal({ isOpen, onClose, onSave, initial }) {
               <Users className="h-4 w-4 text-indigo-400" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-200">{initial ? 'Edit Beneficiary' : 'New Beneficiary'}</h3>
-              <p className="text-[11px] text-slate-500">Manage beneficiary details</p>
+              <h3 className="text-sm font-bold text-slate-200">{initial ? 'Update Person\'s Details' : 'Add Person to Welfare List'}</h3>
+              <p className="text-[11px] text-slate-500">{initial ? 'Update contact and status information' : 'Register a new beneficiary'}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-300">
@@ -42,34 +44,35 @@ function BeneficiaryModal({ isOpen, onClose, onSave, initial }) {
           </button>
         </div>
 
-        <div className="p-6 space-y-4 overflow-y-auto flex-1">
+          <div className="p-6 space-y-4 overflow-y-auto flex-1">
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Name *</label>
+            <label className="block text-xs font-bold text-slate-400 mb-1">Full Name *</label>
             <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              placeholder="Full Name" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm placeholder-slate-600 focus:border-indigo-600/60 focus:outline-none transition-all" />
+              placeholder="e.g. Ahmed Khan" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm placeholder-slate-600 focus:border-indigo-600/60 focus:outline-none transition-all" />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">CNIC</label>
+              <label className="block text-xs font-bold text-slate-400 mb-1">ID Card Number (CNIC)</label>
               <input value={form.cnic} onChange={e => setForm(f => ({ ...f, cnic: e.target.value }))}
-                placeholder="00000-0000000-0" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/60 transition-all" />
+                placeholder="42101-1234567-8" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/60 transition-all" />
+              <p className="text-[10px] text-slate-600 mt-1">Format: 00000-0000000-0</p>
             </div>
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Mobile</label>
+              <label className="block text-xs font-bold text-slate-400 mb-1">Mobile Number</label>
               <input value={form.mobile} onChange={e => setForm(f => ({ ...f, mobile: e.target.value }))}
                 placeholder="0300-0000000" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/60 transition-all" />
             </div>
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Address</label>
+            <label className="block text-xs font-bold text-slate-400 mb-1">Home Address</label>
             <textarea value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
               className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/60 transition-all h-20 resize-none" />
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Remarks</label>
+            <label className="block text-xs font-bold text-slate-400 mb-1">Notes / Remarks</label>
             <input value={form.remarks} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))}
               className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/60 transition-all" />
           </div>
@@ -77,7 +80,7 @@ function BeneficiaryModal({ isOpen, onClose, onSave, initial }) {
           <div className="flex items-center gap-3 pt-2">
             <input type="checkbox" id="isActive" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
               className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-indigo-600 focus:ring-indigo-600 focus:ring-offset-slate-900 cursor-pointer" />
-            <label htmlFor="isActive" className="text-sm font-medium text-slate-300 cursor-pointer">Active</label>
+            <label htmlFor="isActive" className="text-sm font-medium text-slate-300 cursor-pointer">This person is currently receiving aid</label>
           </div>
         </div>
 
@@ -152,8 +155,9 @@ export const Beneficiaries = () => {
       await Promise.all(selectedIds.map(id => deleteBeneficiary(id)));
       setSelectedIds([]);
       setShowBulkConfirm(false);
+      showToast(`${selectedIds.length} records removed successfully.`, 'success');
     } catch (err) {
-      alert("Failed to delete some items");
+      showToast('Some records could not be removed. Please try again.', 'error');
     }
     setIsDeleting(false);
   };
@@ -197,6 +201,15 @@ export const Beneficiaries = () => {
 
       <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 overflow-hidden">
         <DesktopOnly>
+          {filtered.length === 0 ? (
+            <EmptyState
+              emoji="👤"
+              title={search ? 'No results found' : 'No beneficiaries yet'}
+              description={search ? `No one matches "${search}". Try a different name or CNIC.` : 'Start by adding the first person to your welfare list.'}
+              actionLabel={!search ? 'Add First Person' : undefined}
+              onAction={!search ? () => { setEditItem(null); setModalOpen(true); } : undefined}
+            />
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left min-w-[800px]">
               <thead>
@@ -251,6 +264,7 @@ export const Beneficiaries = () => {
               </tbody>
             </table>
           </div>
+          )}
         </DesktopOnly>
         <MobileOnly className="p-3 space-y-3">
             {filtered.map(b => (
@@ -280,11 +294,12 @@ export const Beneficiaries = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setDeleteId(null)} />
           <div className="relative z-10 w-full max-w-sm rounded-2xl border border-red-900/50 bg-slate-900 p-6 shadow-2xl">
-            <h4 className="text-sm font-bold text-slate-200 mb-4">Confirm Delete</h4>
+            <h4 className="text-sm font-bold text-slate-200 mb-2">Remove from Welfare List?</h4>
+            <p className="text-xs text-slate-400 mb-4">This will remove the person from your records. Their donation history will not be deleted.</p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteId(null)} disabled={isDeleting} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-sm font-semibold">Cancel</button>
+              <button onClick={() => setDeleteId(null)} disabled={isDeleting} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-sm font-semibold">Go Back</button>
               <button onClick={() => handleDelete(deleteId)} disabled={isDeleting} className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-bold">
-                {isDeleting ? 'Deleting...' : 'Delete'}
+                {isDeleting ? 'Removing...' : 'Remove'}
               </button>
             </div>
           </div>

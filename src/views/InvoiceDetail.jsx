@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useInvoiceStore } from '../store/invoiceStore';
 import { useCoaStore } from '../store/coaStore';
+import { useAuthStore } from '../store/authStore';
 import { FileSpreadsheet, ChevronLeft, Calendar, FileText, CheckCircle, CreditCard, DollarSign, XCircle, Printer, Book } from 'lucide-react';
+import { showToast } from '../components/ui/Toast';
+import { StatusStepper } from '../components/ui/StatusStepper';
 
 export const InvoiceDetail = () => {
   const { id } = useParams();
@@ -30,7 +33,7 @@ export const InvoiceDetail = () => {
   useEffect(() => {
     fetchInvoiceById(id).catch(err => {
       console.error(err);
-      alert("Invoice not found");
+      showToast("This invoice doesn't exist or may have been deleted.", 'error');
       navigate('/invoices');
     });
     fetchAccountsList();
@@ -57,15 +60,16 @@ export const InvoiceDetail = () => {
 
   const handlePost = async () => {
     if (!revenueAccountId) {
-      alert("Please select a Revenue account");
+      showToast('Please choose an income category first.', 'warning');
       return;
     }
     setActionLoading(true);
     try {
       await postInvoice(id, revenueAccountId);
+      showToast('Invoice confirmed and added to records!', 'success');
       setShowPostModal(false);
     } catch (err) {
-      alert(err.message || "Failed to post invoice");
+      showToast(err.message || "Couldn't confirm the invoice. Please try again.", 'error');
     } finally {
       setActionLoading(false);
     }
@@ -73,15 +77,16 @@ export const InvoiceDetail = () => {
 
   const handlePay = async () => {
     if (!bankAccountId) {
-      alert("Please select a Cash/Bank account");
+      showToast('Please choose where this payment will be received.', 'warning');
       return;
     }
     setActionLoading(true);
     try {
       await payInvoice(id, { paymentMethod, bankAccountId, chequeNumber });
+      showToast('Payment recorded successfully!', 'success');
       setShowPayModal(false);
     } catch (err) {
-      alert(err.message || "Failed to record payment");
+      showToast(err.message || "Couldn't record the payment. Please try again.", 'error');
     } finally {
       setActionLoading(false);
     }
@@ -89,15 +94,16 @@ export const InvoiceDetail = () => {
 
   const handleCancel = async () => {
     if ((currentInvoice.status === 'POSTED' || currentInvoice.status === 'PAID') && !cancelRevenueAccountId) {
-      alert("Please select the original Revenue account to reverse ledger entries");
+      showToast('Please choose the income category used for this invoice.', 'warning');
       return;
     }
     setActionLoading(true);
     try {
       await cancelInvoice(id, cancelRevenueAccountId);
+      showToast('Invoice has been voided and reversed.', 'success');
       setShowCancelModal(false);
     } catch (err) {
-      alert(err.message || "Failed to cancel invoice");
+      showToast(err.message || "Couldn't void the invoice. Please try again.", 'error');
     } finally {
       setActionLoading(false);
     }
@@ -125,13 +131,13 @@ export const InvoiceDetail = () => {
                 <FileText className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-sm font-bold">Draft Invoice</p>
-                <p className="text-[11px] text-slate-500">This invoice has not been posted to the general ledger yet. Edit is allowed.</p>
+                <p className="text-sm font-bold">📝 Draft — Not yet confirmed</p>
+                <p className="text-[11px] text-slate-500">This invoice has not been saved to financial records yet. You can still edit it.</p>
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setShowCancelModal(true)} className="px-3 py-1.5 rounded border border-slate-700 text-slate-400 hover:text-slate-200 text-xs font-semibold">Cancel</button>
-              <button onClick={() => setShowPostModal(true)} className="px-4 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow shadow-indigo-900/40">Post Invoice</button>
+              <button onClick={() => setShowCancelModal(true)} className="px-3 py-1.5 rounded border border-slate-700 text-slate-400 hover:text-slate-200 text-xs font-semibold">Void Invoice</button>
+              <button onClick={() => setShowPostModal(true)} className="px-4 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow shadow-indigo-900/40">Confirm Invoice</button>
             </div>
           </div>
         );
@@ -143,13 +149,13 @@ export const InvoiceDetail = () => {
                 <CheckCircle className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-sm font-bold">Posted & Outstanding</p>
-                <p className="text-[11px] text-indigo-400/70">A/R ledger records created. Waiting for client payment.</p>
+                <p className="text-sm font-bold">✉️ Invoice Sent — Awaiting Payment</p>
+                <p className="text-[11px] text-indigo-400/70">Invoice is confirmed in records. Payment is due from the client.</p>
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setShowCancelModal(true)} className="px-3 py-1.5 rounded border border-indigo-900/40 hover:bg-red-950/20 text-red-400 text-xs font-semibold">Cancel & Reverse</button>
-              <button onClick={() => setShowPayModal(true)} className="px-4 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow shadow-emerald-900/40">Record Payment</button>
+              <button onClick={() => setShowCancelModal(true)} className="px-3 py-1.5 rounded border border-indigo-900/40 hover:bg-red-950/20 text-red-400 text-xs font-semibold">Void Invoice</button>
+              <button onClick={() => setShowPayModal(true)} className="px-4 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow shadow-emerald-900/40">Mark as Paid</button>
             </div>
           </div>
         );
@@ -161,12 +167,12 @@ export const InvoiceDetail = () => {
                 <CreditCard className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-sm font-bold">Settled / Paid</p>
-                <p className="text-[11px] text-emerald-400/70">Payment received to cash/bank accounts. Invoice fully closed.</p>
+                <p className="text-sm font-bold">✅ Paid — Payment Received</p>
+                <p className="text-[11px] text-emerald-400/70">Payment has been received and recorded in your accounts. Invoice is closed.</p>
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setShowCancelModal(true)} className="px-3 py-1.5 rounded border border-emerald-900/40 hover:bg-red-950/20 text-red-400 text-xs font-semibold">Cancel & Reverse</button>
+              <button onClick={() => setShowCancelModal(true)} className="px-3 py-1.5 rounded border border-emerald-900/40 hover:bg-red-950/20 text-red-400 text-xs font-semibold">Void Invoice</button>
             </div>
           </div>
         );
@@ -178,8 +184,8 @@ export const InvoiceDetail = () => {
                 <XCircle className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-sm font-bold">Cancelled & Reversed</p>
-                <p className="text-[11px] text-red-400/70">This invoice has been voided. Any double-entry postings are completely reversed.</p>
+                <p className="text-sm font-bold">❌ Voided — Invoice Cancelled</p>
+                <p className="text-[11px] text-red-400/70">This invoice has been voided. All financial entries have been reversed.</p>
               </div>
             </div>
           </div>
@@ -199,7 +205,7 @@ export const InvoiceDetail = () => {
           </Link>
           <div>
             <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">Invoice Details</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Audit transaction logs and print physical copy</p>
+            <p className="text-xs text-slate-500 mt-0.5">View, confirm, and record payment for this invoice</p>
           </div>
         </div>
         <button onClick={handlePrint}
@@ -207,6 +213,26 @@ export const InvoiceDetail = () => {
           <Printer className="h-4 w-4" /> Print Invoice
         </button>
       </div>
+
+      {/* Invoice Progress Stepper */}
+      {currentInvoice.status !== 'CANCELLED' && (
+        <div className="print:hidden bg-slate-900/50 border border-slate-800/70 rounded-xl p-4">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Invoice Progress</p>
+          <StatusStepper
+            variant="indigo"
+            current={
+              currentInvoice.status === 'DRAFT' ? 0 :
+              currentInvoice.status === 'POSTED' ? 1 :
+              currentInvoice.status === 'PAID' ? 2 : 0
+            }
+            steps={[
+              { label: 'Draft', description: 'Being prepared' },
+              { label: 'Confirmed', description: 'Awaiting payment' },
+              { label: 'Paid', description: 'Payment received' },
+            ]}
+          />
+        </div>
+      )}
 
       {/* Action panel banner */}
       <div className="print:hidden">
@@ -324,116 +350,118 @@ export const InvoiceDetail = () => {
 
       {/* Modals for actions */}
       
-      {/* 1. Post/Approve Modal */}
+      {/* 1. Confirm Invoice Modal */}
       {showPostModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowPostModal(false)} />
           <div className="relative z-10 w-full max-w-sm rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl space-y-4">
             <div>
-              <h4 className="text-sm font-bold text-slate-200">Post Invoice to Ledger</h4>
-              <p className="text-xs text-slate-500 mt-1">This will lock the invoice, debit Accounts Receivable, and credit a Revenue account.</p>
+              <h4 className="text-sm font-bold text-slate-200">Confirm Invoice</h4>
+              <p className="text-xs text-slate-500 mt-1">This saves the invoice to your financial records. The client will owe this amount.</p>
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Credit Revenue Account</label>
+              <label className="block text-xs font-bold text-slate-400 mb-1.5">Select Income Category *</label>
+              <p className="text-[11px] text-slate-600 mb-2">Which type of income does this invoice represent?</p>
               <select value={revenueAccountId} onChange={e => setRevenueAccountId(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50">
                 {revenueAccounts.map(acc => (
-                  <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
+                  <option key={acc.id} value={acc.id}>{acc.name}</option>
                 ))}
                 {revenueAccounts.length === 0 && (
-                  <option value="">-- No Subsidiary Revenue Accounts --</option>
+                  <option value="">-- No income categories found --</option>
                 )}
               </select>
             </div>
 
             <div className="flex gap-3 pt-2">
-              <button onClick={() => setShowPostModal(false)} disabled={actionLoading} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-xs font-semibold">Cancel</button>
+              <button onClick={() => setShowPostModal(false)} disabled={actionLoading} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-xs font-semibold">Go Back</button>
               <button onClick={handlePost} disabled={actionLoading || !revenueAccountId} className="flex-1 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-900/30">
-                {actionLoading ? 'Posting...' : 'Post Invoice'}
+                {actionLoading ? 'Confirming...' : 'Confirm Invoice'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 2. Pay Modal */}
+      {/* 2. Mark as Paid Modal */}
       {showPayModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowPayModal(false)} />
           <div className="relative z-10 w-full max-w-sm rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl space-y-4">
             <div>
-              <h4 className="text-sm font-bold text-slate-200">Record Payment</h4>
-              <p className="text-xs text-slate-500 mt-1">Record receiving total billing amount to Cash or Bank accounts.</p>
+              <h4 className="text-sm font-bold text-slate-200">Mark as Paid</h4>
+              <p className="text-xs text-slate-500 mt-1">Record that you have received the full payment from the client.</p>
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Payment Method</label>
+              <label className="block text-xs font-bold text-slate-400 mb-1.5">How was payment received? *</label>
               <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50">
-                <option value="BANK">Bank Account / Transfer</option>
-                <option value="CASH">Cash Drawer</option>
-                <option value="CHEQUE">Cheque / Draft</option>
+                <option value="BANK">Bank Transfer</option>
+                <option value="CASH">Cash</option>
+                <option value="CHEQUE">Cheque</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Debit Cash/Bank Account</label>
+              <label className="block text-xs font-bold text-slate-400 mb-1.5">Payment goes to: *</label>
+              <p className="text-[11px] text-slate-600 mb-2">Which account should receive this payment?</p>
               <select value={bankAccountId} onChange={e => setBankAccountId(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50">
                 {assetAccounts.map(acc => (
-                  <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
+                  <option key={acc.id} value={acc.id}>{acc.name}</option>
                 ))}
                 {assetAccounts.length === 0 && (
-                  <option value="">-- No Subsidiary Cash/Bank Accounts --</option>
+                  <option value="">-- No Cash/Bank Accounts Found --</option>
                 )}
               </select>
             </div>
 
             {paymentMethod === 'CHEQUE' && (
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Cheque Reference Number</label>
+                <label className="block text-xs font-bold text-slate-400 mb-1.5">Cheque Number</label>
                 <input value={chequeNumber} onChange={e => setChequeNumber(e.target.value)} placeholder="e.g. CHQ-92841"
                   className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50 placeholder-slate-600" />
               </div>
             )}
 
             <div className="flex gap-3 pt-2">
-              <button onClick={() => setShowPayModal(false)} disabled={actionLoading} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-xs font-semibold">Cancel</button>
+              <button onClick={() => setShowPayModal(false)} disabled={actionLoading} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-xs font-semibold">Go Back</button>
               <button onClick={handlePay} disabled={actionLoading || !bankAccountId} className="flex-1 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md">
-                {actionLoading ? 'Recording...' : 'Record Payment'}
+                {actionLoading ? 'Recording...' : 'Mark as Paid'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 3. Cancel / Reversal Modal */}
+      {/* 3. Void Invoice Modal */}
       {showCancelModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowCancelModal(false)} />
           <div className="relative z-10 w-full max-w-sm rounded-2xl border border-red-900/50 bg-slate-900 p-6 shadow-2xl space-y-4">
             <div>
-              <h4 className="text-sm font-bold text-slate-200">Cancel & Void Invoice</h4>
-              <p className="text-xs text-slate-500 mt-1">This will change the status to CANCELLED. If already posted or paid, it generates a reversing double-entry ledger record to balance books.</p>
+              <h4 className="text-sm font-bold text-slate-200">Void This Invoice</h4>
+              <p className="text-xs text-slate-500 mt-1">This will mark the invoice as cancelled. If already confirmed or paid, this will also reverse the financial entries automatically.</p>
             </div>
 
             {(currentInvoice.status === 'POSTED' || currentInvoice.status === 'PAID') && (
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Select Original Revenue Account</label>
+                <label className="block text-xs font-bold text-slate-400 mb-1.5">Select the income category used for this invoice</label>
                 <select value={cancelRevenueAccountId} onChange={e => setCancelRevenueAccountId(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50">
                   {revenueAccounts.map(acc => (
-                    <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
+                    <option key={acc.id} value={acc.id}>{acc.name}</option>
                   ))}
                 </select>
               </div>
             )}
 
             <div className="flex gap-3 pt-2">
-              <button onClick={() => setShowCancelModal(false)} disabled={actionLoading} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-xs font-semibold">Cancel</button>
+              <button onClick={() => setShowCancelModal(false)} disabled={actionLoading} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-xs font-semibold">Go Back</button>
               <button onClick={handleCancel} disabled={actionLoading} className="flex-1 px-4 py-2 rounded-lg bg-red-650 hover:bg-red-600 text-white text-xs font-bold shadow-md">
-                {actionLoading ? 'Voiding...' : 'Void Invoice'}
+                {actionLoading ? 'Voiding...' : 'Yes, Cancel This Invoice'}
               </button>
             </div>
           </div>

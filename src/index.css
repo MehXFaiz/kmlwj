@@ -147,6 +147,26 @@
   ::-webkit-scrollbar-thumb:hover {
     background: rgba(156, 163, 175, 0.6);
   }
+
+  /* ── Keyboard Accessibility: Focus-visible rings ──
+     Ensures all interactive elements are keyboard-accessible
+     for elderly and low-vision users. */
+  :focus-visible {
+    outline: 2px solid hsl(224, 89%, 55%);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  /* Remove default outline only when NOT keyboard-navigating */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* ── Minimum touch targets for mobile / elderly users ──
+     All interactive elements should be at least 44x44px tappable area */
+  button, [role="button"], a, input[type="checkbox"], input[type="radio"] {
+    min-height: 1px; /* override only with explicit sizing in components */
+  }
 }
 
 /* Custom utility components */

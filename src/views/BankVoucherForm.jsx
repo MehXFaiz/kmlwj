@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCoaStore } from '../store/coaStore';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
-import { ChevronLeft, Save } from 'lucide-react';
+import { ChevronLeft, Save, TrendingDown, TrendingUp } from 'lucide-react';
+import { showToast } from '../components/ui/Toast';
 
 export const BankVoucherForm = () => {
   const navigate = useNavigate();
@@ -57,16 +58,16 @@ export const BankVoucherForm = () => {
   const handleSave = async (e) => {
     e.preventDefault();
     if (!bankAccountId) {
-      alert("Please select a Cash/Bank account");
+      showToast('Please select a cash or bank account first.', 'warning');
       return;
     }
     if (!offsetAccountId) {
-      alert("Please select an offset account");
+      showToast('Please select the account for this transaction.', 'warning');
       return;
     }
     const val = parseFloat(amount);
     if (!val || val <= 0) {
-      alert("Please enter a valid amount greater than 0");
+      showToast('Please enter a valid amount greater than zero.', 'warning');
       return;
     }
 
@@ -74,7 +75,7 @@ export const BankVoucherForm = () => {
     const offsetAcc = offsetAccounts.find(a => a.id === offsetAccountId);
 
     if (!bankAcc || !offsetAcc) {
-      alert("Selected accounts are invalid");
+      showToast('Selected accounts are invalid. Please try again.', 'error');
       return;
     }
 
@@ -114,9 +115,10 @@ export const BankVoucherForm = () => {
     setLoading(true);
     try {
       await addVoucher(payload);
+      showToast('Transaction saved and posted to records!', 'success');
       navigate('/bank-vouchers');
     } catch (err) {
-      alert(err.message || "Failed to create voucher");
+      showToast(err.message || "Couldn't save the transaction. Please try again.", 'error');
     } finally {
       setLoading(false);
     }
@@ -136,17 +138,20 @@ export const BankVoucherForm = () => {
 
       <form onSubmit={handleSave} className="w-full rounded-xl border border-slate-800/70 bg-slate-900/40 p-4 sm:p-6 space-y-6">
         
-        {/* Voucher Type selection */}
+        {/* Transaction Type selection */}
         <div>
-          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Voucher Classification</label>
+          <label className="block text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">What type of transaction is this? *</label>
+          <p className="text-[11px] text-slate-600 mb-2">Example: Paying rent or salaries = Money Going Out. Receiving hall fees = Money Coming In.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button type="button" onClick={() => setVoucherType('BP')}
-              className={`py-3 rounded-lg border text-sm font-bold transition-all cursor-pointer ${voucherType === 'BP' ? 'bg-indigo-600/10 border-indigo-500 text-indigo-400' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'}`}>
-              Bank Payment (BP) — Payout
+              className={`py-3.5 rounded-lg border text-sm font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${voucherType === 'BP' ? 'bg-red-600/10 border-red-500 text-red-400' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'}`}>
+              <TrendingDown className="h-4 w-4" />
+              💸 Money Going Out
             </button>
             <button type="button" onClick={() => setVoucherType('BR')}
-              className={`py-3 rounded-lg border text-sm font-bold transition-all cursor-pointer ${voucherType === 'BR' ? 'bg-indigo-600/10 border-indigo-500 text-indigo-400' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'}`}>
-              Bank Receipt (BR) — Deposit
+              className={`py-3.5 rounded-lg border text-sm font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${voucherType === 'BR' ? 'bg-emerald-600/10 border-emerald-500 text-emerald-400' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'}`}>
+              <TrendingUp className="h-4 w-4" />
+              💰 Money Coming In
             </button>
           </div>
         </div>
@@ -154,13 +159,13 @@ export const BankVoucherForm = () => {
         {/* Form Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Transaction Date *</label>
+            <label className="block text-xs font-bold text-slate-400 mb-1.5">Transaction Date *</label>
             <input type="date" value={postingDate} onChange={e => setPostingDate(e.target.value)}
               className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50 transition-colors" />
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Ref / Cheque Number</label>
+            <label className="block text-xs font-bold text-slate-400 mb-1.5">Cheque / Reference Number</label>
             <input value={reference} onChange={e => setReference(e.target.value)} placeholder="e.g. CHQ-82941"
               className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50 transition-colors placeholder-slate-650" />
           </div>
@@ -168,43 +173,45 @@ export const BankVoucherForm = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Bank / Cash Account *</label>
+            <label className="block text-xs font-bold text-slate-400 mb-1.5">Cash / Bank Account *</label>
+            <p className="text-[11px] text-slate-600 mb-1.5">{voucherType === 'BP' ? 'Money leaves from this account' : 'Money arrives in this account'}</p>
             <select value={bankAccountId} onChange={e => setBankAccountId(e.target.value)}
               className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50 transition-colors">
               {bankAccounts.length === 0 ? (
                 <option value="">-- No Cash/Bank Accounts Found --</option>
               ) : (
                 bankAccounts.map(acc => (
-                  <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
+                  <option key={acc.id} value={acc.id}>{acc.name}</option>
                 ))
               )}
             </select>
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-              {voucherType === 'BP' ? 'Expense Account (Debit) *' : 'Revenue Account (Credit) *'}
+            <label className="block text-xs font-bold text-slate-400 mb-1.5">
+              {voucherType === 'BP' ? 'Expense Category *' : 'Income Category *'}
             </label>
+            <p className="text-[11px] text-slate-600 mb-1.5">{voucherType === 'BP' ? 'What was this money spent on?' : 'What type of income is this?'}</p>
             <select value={offsetAccountId} onChange={e => setOffsetAccountId(e.target.value)}
               className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50 transition-colors">
               {offsetAccounts.map(acc => (
-                <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
+                <option key={acc.id} value={acc.id}>{acc.name}</option>
               ))}
               {offsetAccounts.length === 0 && (
-                <option value="">-- No Subsidiary Accounts Found --</option>
+                <option value="">-- No accounts found --</option>
               )}
             </select>
           </div>
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Voucher Amount (PKR) *</label>
+          <label className="block text-xs font-bold text-slate-400 mb-1.5">Amount (PKR) *</label>
           <input type="number" min="0" step="any" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00"
             className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50 transition-colors placeholder-slate-650" />
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Voucher Description / Memo</label>
+          <label className="block text-xs font-bold text-slate-400 mb-1.5">Notes / Description</label>
           <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Write details about this transaction..."
             className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50 transition-colors h-24 resize-none placeholder-slate-650" />
         </div>

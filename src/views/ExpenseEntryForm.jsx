@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useCoaStore } from '../store/coaStore';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
 import { ChevronLeft, Save, Sparkles, Plus, AlertCircle, CheckCircle } from 'lucide-react';
+import { showToast } from '../components/ui/Toast';
 
 export const ExpenseEntryForm = () => {
   const navigate = useNavigate();
@@ -145,13 +146,13 @@ export const ExpenseEntryForm = () => {
   const handleSave = async (e) => {
     e.preventDefault();
     if (!bankAccountId) {
-      alert("Please select a Cash/Bank account");
+      showToast('Please select a cash or bank account first.', 'warning');
       return;
     }
 
     const val = parseFloat(amount);
     if (!val || val <= 0) {
-      alert("Please enter a valid amount greater than 0");
+      showToast('Please enter a valid amount greater than zero.', 'warning');
       return;
     }
 
@@ -218,9 +219,10 @@ export const ExpenseEntryForm = () => {
       };
 
       await addVoucher(payload);
+      showToast('Expense recorded and posted to your accounts!', 'success');
       navigate('/bank-vouchers');
     } catch (err) {
-      alert(err.message || "Failed to save expense entry");
+      showToast(err.message || "Couldn't save the expense entry. Please try again.", 'error');
     } finally {
       setLoading(false);
       setCreationStatus('');
