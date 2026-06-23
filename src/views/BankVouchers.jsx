@@ -80,7 +80,7 @@ function BankVoucherPrintModal({ voucher, onClose }) {
           
           <div className="flex justify-between items-start border-b border-slate-800 pb-6 print:border-black print:pb-4">
             <div>
-              <h2 className="text-lg font-bold text-slate-100 print:text-black" style={{ fontFamily: "'Noto Naskh Arabic', sans-serif" }}>کچھی مسلم لوہار واڈہ ویلفیئر جماعت</h2>
+              <h2 className="text-lg font-bold text-slate-100 print:text-black" style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif", lineHeight: 1.6 }}>کچھی مسلم لوہار واڈہ ویلفیئر جماعت</h2>
               <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold print:text-black">Kutchi Muslim Loharwada Welfare Jamaat</p>
               <p className="text-xs text-slate-400 font-bold mt-1 print:text-black">
                 {voucher.voucherType === 'BP' ? 'BANK PAYMENT VOUCHER' : 'BANK RECEIPT VOUCHER'}

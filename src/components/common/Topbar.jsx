@@ -51,7 +51,7 @@ export const Topbar = ({ onMobileMenuToggle }) => {
           <span
             dir="rtl"
             className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-blue-200 to-emerald-200 truncate select-none text-[15px] sm:text-xl text-center w-full"
-            style={{ fontFamily: "'Noto Naskh Arabic', sans-serif" }}
+            style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
           >
             کچھی مسلم لوہار واڈہ ویلفیئر جماعت
           </span>

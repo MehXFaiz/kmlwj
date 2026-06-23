@@ -43,7 +43,7 @@ export const AuthLayout = ({ children }) => {
           <div
             className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-blue-200 to-emerald-200 mt-2"
             style={{
-              fontFamily: "'Noto Naskh Arabic', sans-serif",
+              fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
               fontSize: '1.2rem',
             }}
           >
@@ -106,7 +106,7 @@ export const AuthLayout = ({ children }) => {
             <div
               className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-blue-200 to-emerald-200 text-center"
               style={{
-                fontFamily: "'Noto Naskh Arabic', sans-serif",
+                fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
                 fontSize: '0.95rem',
               }}
             >
