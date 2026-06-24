@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useTransition } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCoaStore } from '../store/coaStore';
 import { useJournalStore, calculateAccountBalances } from '../store/journalStore';
@@ -24,6 +24,8 @@ export const ChartOfAccounts = () => {
   
   const { journals } = useJournalStore();
   const { codes: reservedCodes, fetchCodes: fetchReservedCodes } = useReservedCodeStore();
+
+  const [isPending, startTransition] = useTransition();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
@@ -191,7 +193,8 @@ export const ChartOfAccounts = () => {
           {/* View Toggler (Tree vs Table) */}
           <div className="flex items-center gap-1 p-0.5 bg-slate-950/60 border border-slate-800 rounded-lg w-full md:w-auto shrink-0">
             <button
-              onClick={() => setViewMode('tree')}
+              onClick={() => startTransition(() => setViewMode('tree'))}
+              disabled={isPending}
               className={`
                 flex-1 md:flex-none px-2 sm:px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5
                 ${viewMode === 'tree'
@@ -205,7 +208,8 @@ export const ChartOfAccounts = () => {
               <span className="xs:hidden">Tree</span>
             </button>
             <button
-              onClick={() => setViewMode('table')}
+              onClick={() => startTransition(() => setViewMode('table'))}
+              disabled={isPending}
               className={`
                 flex-1 md:flex-none px-2 sm:px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5
                 ${viewMode === 'table'
