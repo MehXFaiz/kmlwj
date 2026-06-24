@@ -1,0 +1,63 @@
+import { makeHandler } from "../../_utils/handler.js";
+import { verifyAuth } from "../../_middlewares/auth.middleware.js";
+import { prisma } from "../../_prisma.js";
+var tree_default = makeHandler(async (req, res) => {
+  const authenticated = await verifyAuth(req, res);
+  if (!authenticated || !req.user) return;
+  if (req.method === "GET") {
+    const dbAccounts = await prisma.account.findMany({
+      include: {
+        accountType: true
+      },
+      orderBy: { glCode: "asc" }
+    });
+    const formatAccount = (acc) => ({
+      id: acc.id,
+      code: acc.glCode,
+      name: acc.accountName,
+      type: acc.accountType ? acc.accountType.name.charAt(0) + acc.accountType.name.slice(1).toLowerCase() : "Asset",
+      level: acc.accountLevel,
+      detailType: acc.detailType,
+      parentCode: null,
+      // Will be filled logically below if needed, or by ID mapping
+      currency: acc.currency,
+      status: acc.isLocked ? "Inactive" : "Active",
+      description: acc.description,
+      subsidiary: acc.subsidiary,
+      initialBalance: acc.initialBalance,
+      isSystemDefined: acc.isSystemDefined,
+      isReserved: acc.isReserved,
+      children: []
+    });
+    const accountMap = /* @__PURE__ */ new Map();
+    const rootAccounts = [];
+    dbAccounts.forEach((acc) => {
+      accountMap.set(acc.id, { ...formatAccount(acc), _parentId: acc.parentId, _code: acc.glCode });
+    });
+    dbAccounts.forEach((acc) => {
+      const formattedNode = accountMap.get(acc.id);
+      if (acc.parentId && accountMap.has(acc.parentId)) {
+        const parentNode = accountMap.get(acc.parentId);
+        formattedNode.parentCode = parentNode._code;
+        parentNode.children.push(formattedNode);
+      } else {
+        rootAccounts.push(formattedNode);
+      }
+    });
+    const cleanTree = (nodes) => {
+      nodes.forEach((node) => {
+        delete node._parentId;
+        delete node._code;
+        if (node.children.length > 0) {
+          cleanTree(node.children);
+        }
+      });
+    };
+    cleanTree(rootAccounts);
+    return res.status(200).json({ status: 200, data: rootAccounts });
+  }
+  return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
+});
+export {
+  tree_default as default
+};

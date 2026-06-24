@@ -20,8 +20,8 @@ function collectSharedTsFiles(dir, insidePrivateFolder = false) {
     const stat = statSync(fullPath);
 
     if (stat.isDirectory()) {
-      if (entry.startsWith('_')) {
-        files.push(...collectSharedTsFiles(fullPath, true));
+      if (entry.startsWith('_') || insidePrivateFolder) {
+        files.push(...collectSharedTsFiles(fullPath, entry.startsWith('_') || insidePrivateFolder));
       }
       continue;
     }
