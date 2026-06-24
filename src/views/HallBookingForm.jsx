@@ -6,6 +6,7 @@ import { DashboardLayout } from '../layouts/DashboardLayout';
 import { useHallBookingStore } from '../store/hallBookingStore';
 import { useCoaStore } from '../store/coaStore';
 import { showToast } from '../components/ui/Toast';
+import { HallBookingReceiptModal } from '../components/receipts/HallBookingReceiptModal';
 
 export const HallBookingForm = () => {
   const { t } = useTranslation();
@@ -13,6 +14,7 @@ export const HallBookingForm = () => {
   const { addBooking } = useHallBookingStore();
   const { flatAccounts, fetchAccountsList } = useCoaStore();
   const [loading, setLoading] = useState(false);
+  const [newlyCreatedBooking, setNewlyCreatedBooking] = useState(null);
 
   const [form, setForm] = useState({
     bookerName: '',
@@ -33,8 +35,6 @@ export const HallBookingForm = () => {
     fetchAccountsList();
   }, [fetchAccountsList]);
 
-  // Find all accounts that represent Halls (typically under Revenue -> Hall Income)
-  // For safety, we just look for detail type 'Revenue' and name includes 'Hall' or 'Garden'
   const hallAccounts = flatAccounts.filter(a => 
     (a.type === 'Revenue' || a.accountTypeName === 'REVENUE') &&
     a.level === 'SUBSIDIARY' && 
@@ -61,17 +61,22 @@ export const HallBookingForm = () => {
 
     setLoading(true);
     try {
-      await addBooking({
+      const savedBooking = await addBooking({
         ...form,
         amount: parseFloat(form.amount)
       });
       showToast('Booking saved successfully!', 'success');
-      navigate('/hall-bookings');
+      setNewlyCreatedBooking(savedBooking);
     } catch (err) {
       showToast(err.message || "Couldn't save booking. Try again.", 'error');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCloseReceipt = () => {
+    setNewlyCreatedBooking(null);
+    navigate('/hall-bookings');
   };
 
   return (
@@ -218,6 +223,13 @@ export const HallBookingForm = () => {
           </div>
         </form>
       </div>
+
+      {newlyCreatedBooking && (
+        <HallBookingReceiptModal 
+          booking={newlyCreatedBooking} 
+          onClose={handleCloseReceipt} 
+        />
+      )}
     </DashboardLayout>
   );
 };

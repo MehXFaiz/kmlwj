@@ -112,8 +112,10 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         paymentMethod,
         bankAccountId: bankAccountId || null,
         status: "Confirmed",
-        remarks: remarks || null,
-        createdById: req.user.id
+        remarks: remarks || null
+      },
+      include: {
+        hallAccount: true
       }
     });
     await logAudit(req.user.id, "Create Hall Booking", "REVENUE", null, newBooking, req.headers["x-forwarded-for"], req.headers["user-agent"]);

@@ -139,8 +139,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         bankAccountId: bankAccountId || null,
         status: 'Confirmed',
         remarks: remarks || null,
-        createdById: req.user.id,
       },
+      include: {
+        hallAccount: true
+      }
     });
 
     await logAudit(req.user.id, 'Create Hall Booking', 'REVENUE', null, newBooking, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
