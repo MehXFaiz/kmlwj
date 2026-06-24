@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { api } from '../lib/api';
+import api from '../services/api';
 
 export const useHallBookingStore = create((set) => ({
   bookings: [],
@@ -9,7 +9,7 @@ export const useHallBookingStore = create((set) => ({
   fetchBookings: async () => {
     set({ loading: true, error: null });
     try {
-      const response = await api.get('/v1/hall-bookings');
+      const response = await api.get('/api/v1/hall-bookings');
       set({ bookings: response.data.data, loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
@@ -18,7 +18,7 @@ export const useHallBookingStore = create((set) => ({
 
   addBooking: async (bookingData) => {
     try {
-      const response = await api.post('/v1/hall-bookings', bookingData);
+      const response = await api.post('/api/v1/hall-bookings', bookingData);
       set((state) => ({ bookings: [response.data.data, ...state.bookings] }));
       return response.data.data;
     } catch (error) {
@@ -28,7 +28,7 @@ export const useHallBookingStore = create((set) => ({
 
   postBooking: async (id) => {
     try {
-      const response = await api.post('/v1/hall-bookings?action=approve', { id });
+      const response = await api.post('/api/v1/hall-bookings?action=approve', { id });
       set((state) => ({
         bookings: state.bookings.map(b => b.id === id ? { ...b, ...response.data.data } : b)
       }));
@@ -40,7 +40,7 @@ export const useHallBookingStore = create((set) => ({
 
   deleteBooking: async (id) => {
     try {
-      await api.delete(`/v1/hall-bookings?id=${id}`);
+      await api.delete(`/api/v1/hall-bookings?id=${id}`);
       set((state) => ({ bookings: state.bookings.filter((b) => b.id !== id) }));
     } catch (error) {
       throw error;

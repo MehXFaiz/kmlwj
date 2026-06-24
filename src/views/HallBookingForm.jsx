@@ -4,14 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { Save, ChevronLeft, Calendar, User, Phone, MapPin, Clock, CreditCard, Landmark } from 'lucide-react';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { useHallBookingStore } from '../store/hallBookingStore';
-import { useAccountStore } from '../store/accountStore';
+import { useCoaStore } from '../store/coaStore';
 import { showToast } from '../components/ui/Toast';
 
 export const HallBookingForm = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { addBooking } = useHallBookingStore();
-  const { flatAccounts, fetchAccounts } = useAccountStore();
+  const { flatAccounts, fetchAccountsList } = useCoaStore();
   const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
@@ -30,8 +30,8 @@ export const HallBookingForm = () => {
   });
 
   useEffect(() => {
-    fetchAccounts();
-  }, [fetchAccounts]);
+    fetchAccountsList();
+  }, [fetchAccountsList]);
 
   // Find all accounts that represent Halls (typically under Revenue -> Hall Income)
   // For safety, we just look for detail type 'Revenue' and name includes 'Hall' or 'Garden'
