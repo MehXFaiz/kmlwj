@@ -225,7 +225,7 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
 
 
             {/* Footer */}
-            <div className="mt-8 pt-4 text-center font-bold text-sm text-slate-600 w-full">
+            <div className="mt-auto pt-4 mb-2 border-t border-slate-300 text-center font-bold text-sm text-slate-600 w-full">
               پشت پر لکھی ہوئی ہدایات کی پابندی لازمی ہوگی، بصورت دیگر بکنگ منسوخ کر دی جائے گی۔
             </div>
 
