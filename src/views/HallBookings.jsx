@@ -81,8 +81,8 @@ export const HallBookings = () => {
                     <th className="px-6 py-4">{t('receipt.programDate')}</th>
                     <th className="px-6 py-4">{t('receipt.hall')}</th>
                     <th className="px-6 py-4">{t('receipt.totalAmount')}</th>
-                    <th className="px-6 py-4">{t('tables.bankVouchers.status')}</th>
-                    <th className="px-6 py-4 text-right">{t('tables.bankVouchers.actions')}</th>
+                    <th className="px-6 py-4">{t('tables.status', 'STATUS')}</th>
+                    <th className="px-6 py-4 text-right">{t('tables.actions', 'ACTIONS')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/50 text-slate-300">
