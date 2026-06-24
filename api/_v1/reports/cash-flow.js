@@ -16,7 +16,7 @@ var cash_flow_default = makeHandler(async (req, res) => {
     }
     const cashBankAccounts = await prisma.account.findMany({
       where: {
-        type: "ASSET",
+        accountType: { name: "ASSET" },
         detailType: "Subsidiary",
         OR: [
           { accountName: { contains: "bank", mode: "insensitive" } },

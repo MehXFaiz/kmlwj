@@ -24,7 +24,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     // 1. Fetch cash and bank subsidiary accounts
     const cashBankAccounts = await prisma.account.findMany({
       where: {
-        type: 'ASSET',
+        accountType: { name: 'ASSET' },
         detailType: 'Subsidiary',
         OR: [
           { accountName: { contains: 'bank', mode: 'insensitive' } },

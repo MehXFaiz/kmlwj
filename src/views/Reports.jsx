@@ -50,7 +50,7 @@ export const Reports = () => {
         setCashFlowData(data);
       }
     } catch (err) {
-      showToast('Failed to load report data');
+      showToast('Failed to load report data', 'error');
       console.error(err);
     } finally {
       setIsLoading(false);
