@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { X, Printer } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import logoImg from '../../assets/logo.png';
 
 const numberToWords = (num) => {
   if (!num) return '';
@@ -91,9 +92,9 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
                 </div>
               </div>
 
-              {/* Left side (Logo Placeholder / Box) */}
-              <div className="w-24 h-24 flex items-center justify-center border-2 border-dashed border-gray-300 text-xs text-gray-400 rounded-full">
-                LOGO
+              {/* Left side (Logo) */}
+              <div className="w-24 h-24 flex items-center justify-center p-1">
+                <img src={logoImg} alt="Logo" className="w-full h-full object-contain" />
               </div>
             </div>
 
