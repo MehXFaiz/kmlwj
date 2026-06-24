@@ -67,9 +67,9 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
         </div>
 
         {/* Receipt Container */}
-        <div className="overflow-y-auto print:overflow-visible bg-white flex justify-center p-8 print:p-0">
+        <div className="overflow-y-auto print:overflow-visible bg-white flex justify-center p-4 sm:p-8 print:p-0">
           {/* A5 Landscape shape approx */}
-          <div className="w-[800px] h-[550px] bg-white border border-gray-300 print:border-none p-8 font-urdu relative text-slate-900 mx-auto" dir="rtl">
+          <div className="w-[800px] min-h-[550px] flex flex-col bg-white border border-gray-300 print:border-none p-8 font-urdu relative text-slate-900 mx-auto" dir="rtl">
             
             {/* Header */}
             <div className="flex items-start justify-between mb-2">
@@ -99,25 +99,25 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
 
             {/* Receipt Title */}
             <div className="text-center relative mt-0 mb-4">
-              <span className="inline-block text-3xl font-extrabold" style={{ WebkitTextStroke: '1.5px #ff0000', WebkitTextFillColor: 'transparent', letterSpacing: '2px' }}>
+              <span className="inline-block text-3xl font-extrabold" style={{ WebkitTextStroke: '1px #ff0000', WebkitTextFillColor: 'white', letterSpacing: '1px', textShadow: '1px 1px 0px rgba(255,0,0,0.2)' }}>
                 بکنگ رسید
               </span>
             </div>
 
             {/* Top Info (Date & No) */}
-            <div className="flex justify-between items-center mb-6 px-4">
-              <div className="flex items-end gap-2 text-lg">
-                <span className="font-bold text-[#ff0000]">نمبر</span>
-                <span className="w-24 border-b border-black text-center font-bold text-xl">{booking.receiptNo}</span>
-              </div>
+            <div className="flex justify-between items-center mb-4 px-4">
               <div className="flex items-end gap-2 text-lg">
                 <span className="font-bold">بکنگ تاریخ:</span>
                 <span className="w-32 border-b border-black text-center pb-1 font-sans">{bookingDateStr}</span>
               </div>
+              <div className="flex items-end gap-2 text-lg" dir="ltr">
+                <span className="w-24 border-b border-black text-center font-bold text-xl">{booking.receiptNo}</span>
+                <span className="font-bold text-[#ff0000] ml-2">نمبر</span>
+              </div>
             </div>
 
             {/* Form Fields Grid */}
-            <div className="space-y-[1.2rem] px-4 text-[1.1rem]">
+            <div className="space-y-4 px-4 text-base flex-1">
               
               {/* Row 1: Booker Name & Mobile */}
               <div className="flex gap-4">
@@ -222,8 +222,9 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
 
             </div>
 
+
             {/* Footer */}
-            <div className="absolute bottom-4 left-0 right-0 text-center font-bold text-sm text-slate-600">
+            <div className="mt-8 pt-4 text-center font-bold text-sm text-slate-600 w-full">
               پشت پر لکھی ہوئی ہدایات کی پابندی لازمی ہوگی، بصورت دیگر بکنگ منسوخ کر دی جائے گی۔
             </div>
 
