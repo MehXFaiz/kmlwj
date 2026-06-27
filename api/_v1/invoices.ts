@@ -26,22 +26,34 @@ async function getOrCreateAccountsReceivable(tx: any) {
   });
 
   if (!arAccount) {
-    const mainAsset = await tx.account.findFirst({
-      where: { glCode: '1000000' }
+    const currentAsset = await tx.account.findFirst({
+      where: { glCode: '1100000' }
     });
 
-    if (!mainAsset) {
-      throw new Error('Main Asset control account (1000000) not found in Chart of Accounts.');
+    if (!currentAsset) {
+      throw new Error('Current Asset account (1100000) not found in Chart of Accounts.');
+    }
+
+    // Find a unique GL code under Current Assets
+    let newGlCode = '1100100';
+    let codeExists = true;
+    while(codeExists) {
+      const existing = await tx.account.findFirst({ where: { glCode: newGlCode }});
+      if (existing) {
+        newGlCode = (parseInt(newGlCode) + 1).toString();
+      } else {
+        codeExists = false;
+      }
     }
 
     arAccount = await tx.account.create({
       data: {
-        glCode: '1200000',
+        glCode: newGlCode,
         accountName: 'Accounts Receivable',
-        accountLevel: 'PARENT',
-        parentId: mainAsset.id,
-        accountTypeId: mainAsset.accountTypeId,
-        detailType: 'Header',
+        accountLevel: 'SUBSIDIARY',
+        parentId: currentAsset.id,
+        accountTypeId: currentAsset.accountTypeId,
+        detailType: 'Accounts Receivable',
         description: 'Standard Accounts Receivable account',
         currency: 'PKR',
         subsidiary: ['Global'],
