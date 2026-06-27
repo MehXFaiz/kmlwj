@@ -104,7 +104,8 @@ var invoices_default = makeHandler(async (req, res) => {
         const arAccount = await getOrCreateAccountsReceivable(tx);
         const updatedInvoice = await tx.invoice.update({
           where: { id: invoiceId },
-          data: { status: "POSTED" }
+          data: { status: "POSTED" },
+          include: { customer: true, items: true, bankAccount: true }
         });
         const voucherNo = generateVoucherNumber("INV");
         const description = `Invoice posted to ${invoice.customer.name} - Inv #${invoice.invoiceNo}`;
@@ -161,7 +162,8 @@ var invoices_default = makeHandler(async (req, res) => {
             paymentMethod,
             bankAccountId,
             chequeNumber: chequeNumber || null
-          }
+          },
+          include: { customer: true, items: true, bankAccount: true }
         });
         const voucherNo = generateVoucherNumber("INVPAY");
         const description = `Invoice payment received from ${invoice.customer.name} - Inv #${invoice.invoiceNo}`;
@@ -212,7 +214,8 @@ var invoices_default = makeHandler(async (req, res) => {
         const arAccount = await getOrCreateAccountsReceivable(tx);
         const updatedInvoice = await tx.invoice.update({
           where: { id: invoiceId },
-          data: { status: "CANCELLED" }
+          data: { status: "CANCELLED" },
+          include: { customer: true, items: true, bankAccount: true }
         });
         if (prevStatus === "DRAFT") {
           return { updatedInvoice, journalEntry: null };

@@ -129,6 +129,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         const updatedInvoice = await tx.invoice.update({
           where: { id: invoiceId },
           data: { status: 'POSTED' },
+          include: { customer: true, items: true, bankAccount: true }
         });
 
         const voucherNo = generateVoucherNumber('INV');
@@ -205,6 +206,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             bankAccountId,
             chequeNumber: chequeNumber || null,
           },
+          include: { customer: true, items: true, bankAccount: true }
         });
 
         const voucherNo = generateVoucherNumber('INVPAY');
@@ -275,6 +277,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         const updatedInvoice = await tx.invoice.update({
           where: { id: invoiceId },
           data: { status: 'CANCELLED' },
+          include: { customer: true, items: true, bankAccount: true }
         });
 
         // If it was just a DRAFT, no journal reversal is needed.

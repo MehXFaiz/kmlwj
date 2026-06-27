@@ -41,6 +41,9 @@ import searchHandler from './_v1/search.js';
 
 const app = express();
 
+// Trust the reverse proxy (e.g. Vercel) so rate limiting uses the correct IP
+app.set('trust proxy', 1);
+
 // Security Headers (Helmet)
 app.use(helmet({
   contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
