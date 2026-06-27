@@ -2,11 +2,14 @@ import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useCoaStore } from '../../store/coaStore';
 import { useAuthStore } from '../../store/authStore';
+import { useThemeStore } from '../../store/themeStore';
 import { Menu, User, Settings, LogOut, ChevronDown, Globe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { ColorPalettePicker } from './ColorPalettePicker';
 
 export const Topbar = ({ onMobileMenuToggle }) => {
   const { user, loading, logout } = useAuthStore();
+  const { initPalette } = useThemeStore();
   const { 
     selectedSubsidiary, 
     setSelectedSubsidiary, 
@@ -21,6 +24,10 @@ export const Topbar = ({ onMobileMenuToggle }) => {
   const languageMenuRef = useRef(null);
   const { i18n } = useTranslation();
   const language = i18n.language || 'en';
+
+  useEffect(() => {
+    initPalette();
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -99,6 +106,9 @@ export const Topbar = ({ onMobileMenuToggle }) => {
               </div>
             )}
           </div>
+
+          {/* Color Palette Picker */}
+          <ColorPalettePicker />
 
           {/* User menu */}
           <div className="relative" ref={userMenuRef}>

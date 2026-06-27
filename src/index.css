@@ -29,6 +29,18 @@
   --chart-equity: #8b5cf6;
   --chart-grid: rgba(255, 255, 255, 0.04);
   --chart-axis: #475569;
+
+  /* Brand palette CSS variables (runtime-swappable by themeStore) */
+  --brand-50:  hsl(220, 100%, 97%);
+  --brand-100: hsl(220, 100%, 92%);
+  --brand-200: hsl(220, 100%, 84%);
+  --brand-300: hsl(220, 100%, 73%);
+  --brand-400: hsl(220, 100%, 61%);
+  --brand-500: hsl(224, 89%, 48%);
+  --brand-600: hsl(224, 89%, 40%);
+  --brand-700: hsl(224, 89%, 32%);
+  --brand-800: hsl(224, 89%, 24%);
+  --brand-900: hsl(224, 89%, 16%);
 }
 
 /* .dark block mirrors :root — ensures Tailwind dark: variants always work */
@@ -76,17 +88,17 @@
   --color-slate-100: var(--slate-100);
   --color-slate-50: var(--slate-50);
 
-  /* Brand color palette: Rich Royal Blue & Indigo (Enterprise aesthetic) */
-  --color-brand-50: hsl(220, 100%, 97%);
-  --color-brand-100: hsl(220, 100%, 92%);
-  --color-brand-200: hsl(220, 100%, 84%);
-  --color-brand-300: hsl(220, 100%, 73%);
-  --color-brand-400: hsl(220, 100%, 61%);
-  --color-brand-500: hsl(224, 89%, 48%);
-  --color-brand-600: hsl(224, 89%, 40%);
-  --color-brand-700: hsl(224, 89%, 32%);
-  --color-brand-800: hsl(224, 89%, 24%);
-  --color-brand-900: hsl(224, 89%, 16%);
+  /* Brand color palette — reads from runtime-swappable CSS vars on :root */
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
 
   /* Dashboard accent colors */
   --color-success-bg: hsl(142, 76%, 36%);
