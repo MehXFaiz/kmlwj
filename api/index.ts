@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { logger } from './_utils/logger.js';
 
 // Import Vercel serverless handlers from the hidden directories
@@ -39,6 +41,32 @@ import searchHandler from './_v1/search.js';
 
 const app = express();
 
+// Security Headers (Helmet)
+app.use(helmet({
+  contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
+}));
+
+// Global Rate Limiting
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200, // Limit each IP to 200 requests per `window` (here, per 15 minutes)
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { message: 'Too many requests from this IP, please try again after 15 minutes', status: 429 } }
+});
+
+// Apply global rate limiter to all /api/ routes
+app.use('/api/', globalLimiter);
+
+// Strict Rate Limiting for Authentication
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 authentication requests per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { message: 'Too many authentication attempts, please try again after 15 minutes', status: 429 } }
+});
+
 app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   credentials: true,
@@ -60,13 +88,13 @@ const makeExpress = (handler: any) => {
 };
 
 // API Routing matching Vercel Serverless Function architecture
-app.post('/api/auth/login', makeExpress(loginHandler));
-app.post('/api/auth/register', makeExpress(registerHandler));
+app.post('/api/auth/login', authLimiter, makeExpress(loginHandler));
+app.post('/api/auth/register', authLimiter, makeExpress(registerHandler));
 app.post('/api/auth/refresh', makeExpress(refreshHandler));
 app.post('/api/auth/logout', makeExpress(logoutHandler));
-app.post('/api/auth/forgot-password', makeExpress(forgotPasswordHandler));
-app.post('/api/auth/reset-password', makeExpress(resetPasswordHandler));
-app.post('/api/auth/change-password', makeExpress(changePasswordHandler));
+app.post('/api/auth/forgot-password', authLimiter, makeExpress(forgotPasswordHandler));
+app.post('/api/auth/reset-password', authLimiter, makeExpress(resetPasswordHandler));
+app.post('/api/auth/change-password', authLimiter, makeExpress(changePasswordHandler));
 app.all('/api/health', makeExpress(healthHandler));
 app.all('/api/v1/health', makeExpress(healthV1Handler));
 
