@@ -67,8 +67,8 @@ app.post('/api/auth/logout', makeExpress(logoutHandler));
 app.post('/api/auth/forgot-password', makeExpress(forgotPasswordHandler));
 app.post('/api/auth/reset-password', makeExpress(resetPasswordHandler));
 app.post('/api/auth/change-password', makeExpress(changePasswordHandler));
-app.get('/api/health', makeExpress(healthHandler));
-app.get('/api/v1/health', makeExpress(healthV1Handler));
+app.all('/api/health', makeExpress(healthHandler));
+app.all('/api/v1/health', makeExpress(healthV1Handler));
 
 // Register new API v1 route handlers
 app.get('/api/v1/auth/me', makeExpress(meHandler));
