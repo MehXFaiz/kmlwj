@@ -1,10 +1,23 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronRight, Edit2, ToggleLeft, ToggleRight, BookOpen, AlertCircle, Plus, Lock, Trash2 } from 'lucide-react';
 import { AccountTypeBadge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { useCoaStore } from '../../store/coaStore';
 import { showToast } from '../ui/Toast';
+
+// Recursively collect all codes at a given level to build initial collapse state
+function collectCodesByLevel(nodes, targetLevels) {
+  const codes = new Set();
+  const traverse = (nodeList) => {
+    for (const node of nodeList) {
+      if (targetLevels.includes(node.level)) codes.add(node.code);
+      if (node.children?.length) traverse(node.children);
+    }
+  };
+  traverse(nodes);
+  return codes;
+}
 
 export const CoaTreeView = ({
   accounts,
@@ -15,18 +28,32 @@ export const CoaTreeView = ({
   onCreateSubAccount,
   searchQuery,
   typeFilter,
+  levelFilter,
+  natureFilter,
+  reservedFilter,
   selectedSubsidiary,
-  showReserved = false,
 }) => {
   const navigate = useNavigate();
   const { deleteAccount } = useCoaStore();
   
-  // Track collapsed node codes
-  const [collapsedCodes, setCollapsedCodes] = useState(new Set());
-  // Fix 17 — Delete confirmation state
-  const [confirmDelete, setConfirmDelete] = useState(null); // holds account to delete
+  // All non-GL nodes start collapsed — user must expand level by level
+  const [collapsedCodes, setCollapsedCodes] = useState(() => {
+    return collectCodesByLevel(accounts, ['MAIN', 'PARENT', 'SUBSIDIARY']);
+  });
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
-  const toggleCollapse = (code) => {
+  // Re-initialize collapse state whenever the account tree changes (e.g. after seed/fetch)
+  useEffect(() => {
+    setCollapsedCodes(prev => {
+      // Only add newly loaded nodes — preserve any user expansions that are still valid
+      const newCodes = collectCodesByLevel(accounts, ['MAIN', 'PARENT', 'SUBSIDIARY']);
+      // Start fully collapsed on first load (when prev is empty)
+      if (prev.size === 0) return newCodes;
+      return prev;
+    });
+  }, [accounts]);
+
+  const toggleCollapse = useCallback((code) => {
     setCollapsedCodes((prev) => {
       const next = new Set(prev);
       if (next.has(code)) {
@@ -36,7 +63,7 @@ export const CoaTreeView = ({
       }
       return next;
     });
-  };
+  }, []);
 
   // Fix 17 — Handle delete with reserved check
   const handleDeleteConfirmed = useCallback(async () => {
@@ -71,11 +98,6 @@ export const CoaTreeView = ({
         return; // Skip if it doesn't match subsidiary
       }
 
-      const isReservedNode = node.isReserved || reservedCodes.some(r => r.isActive && node.code >= r.reserveStart && node.code <= r.reserveEnd);
-      if (!showReserved && isReservedNode) {
-        return; // Skip if reserved and showReserved is false
-      }
-
       const children = node.children || [];
       const hasChildren = children.length > 0;
       
@@ -107,18 +129,23 @@ export const CoaTreeView = ({
       traverse(root, 0, index === rootAccounts.length - 1, []);
     });
 
-    // Filter rows based on search and type filters
-    if (searchQuery || typeFilter !== 'All') {
+    // Filter rows based on search and filters
+    if (searchQuery || typeFilter !== 'All' || levelFilter !== 'All' || natureFilter !== 'All' || reservedFilter !== 'All') {
       const matches = new Set();
       
-      // Pass 1: Mark nodes that directly match
+      // Pass 1: Mark nodes that directly match ALL active filters
       result.forEach((row) => {
+        const isReservedNode = row.account.isReserved || reservedCodes.some(r => r.isActive && row.account.code >= r.reserveStart && row.account.code <= r.reserveEnd);
+
         const matchesSearch = searchQuery
           ? row.account.code.includes(searchQuery) || normalizeSearch(row.account.code).includes(normalizedQuery) || row.account.name.toLowerCase().includes(searchQuery.toLowerCase())
           : true;
         const matchesType = typeFilter !== 'All' ? row.account.type === typeFilter : true;
+        const matchesLevel = levelFilter !== 'All' ? row.account.level === levelFilter : true;
+        const matchesNature = natureFilter !== 'All' ? row.account.detailType === natureFilter : true;
+        const matchesReserved = reservedFilter !== 'All' ? (reservedFilter === 'Yes' ? isReservedNode : !isReservedNode) : true;
 
-        if (matchesSearch && matchesType) {
+        if (matchesSearch && matchesType && matchesLevel && matchesNature && matchesReserved) {
           matches.add(row.account.code);
           // Also mark all its ancestors so they are visible
           row.parentPath.forEach((ancestorCode) => matches.add(ancestorCode));
@@ -130,7 +157,7 @@ export const CoaTreeView = ({
     }
 
     return result;
-  }, [accounts, collapsedCodes, searchQuery, normalizedQuery, typeFilter, selectedSubsidiary]);
+  }, [accounts, collapsedCodes, searchQuery, normalizedQuery, typeFilter, levelFilter, natureFilter, reservedFilter, selectedSubsidiary, reservedCodes]);
 
   return (
     <div className="w-full overflow-x-auto">
@@ -180,24 +207,25 @@ export const CoaTreeView = ({
               const balance = balances[account.code] ?? 0;
               const isCollapsed = collapsedCodes.has(account.code) && !searchQuery;
               const isSystemLevel = account.level === 'MAIN' || account.level === 'PARENT' || account.level === 'SUBSIDIARY';
+              const isGLLevel = account.level === 'GL';
               const isReservedNode = account.isReserved || reservedCodes.some(r => r.isActive && account.code >= r.reserveStart && account.code <= r.reserveEnd);
 
-              // Fix 14 — Row background by level
+              // Fix 14 — Row background by level (4 levels)
               const levelBg = account.level === 'MAIN'
-                ? 'bg-slate-900/60 font-bold'
+                ? 'bg-slate-900/70'
                 : account.level === 'PARENT'
-                ? 'bg-slate-900/30 font-semibold'
+                ? 'bg-slate-900/40'
                 : account.level === 'SUBSIDIARY'
-                ? 'bg-slate-900/15'
-                : '';
+                ? 'bg-slate-900/20'
+                : ''; // GL = default white/clean
 
               return (
                 <tr 
                   key={account.code} 
                   className={`
-                    hover:bg-slate-900/35 transition-colors group
+                    hover:bg-slate-800/40 transition-colors duration-100 group border-b border-slate-800/30
                     ${levelBg}
-                    ${account.status === 'Inactive' ? 'opacity-55' : ''}
+                    ${account.status === 'Inactive' ? 'opacity-50' : ''}
                   `}
                 >
                   {/* Account Code */}
@@ -214,40 +242,68 @@ export const CoaTreeView = ({
                   </td>
 
                   {/* Account Name (with hierarchical indentation) */}
-                  <td className="py-3.5 px-4">
-                    <div className="flex items-center" style={{ paddingLeft: `${depth * 16}px` }}>
-                      {/* Tree Join lines indicator */}
+                  <td className="py-3 px-4">
+                    <div className="flex items-center" style={{ paddingLeft: `${depth * 20}px` }}>
+
+                      {/* Tree connector line */}
                       {depth > 0 && (
-                        <div className="flex items-center mr-2">
-                          <span className="text-slate-700 font-normal">└─</span>
-                        </div>
+                        <span className="text-slate-700 text-sm mr-1.5 select-none font-mono">{isCollapsed !== undefined && hasChildren ? '├─' : '└─'}</span>
                       )}
-                      
-                      {/* Collapse/Expand Toggle */}
+
+                      {/* Expand / Collapse toggle — only for nodes with children */}
                       {hasChildren ? (
                         <button
                           onClick={() => toggleCollapse(account.code)}
-                          className="mr-2 p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200 cursor-pointer"
+                          className={`
+                            mr-2 p-1 rounded transition-colors cursor-pointer
+                            ${account.level === 'MAIN' ? 'hover:bg-slate-800 text-slate-300 hover:text-white' : ''}
+                            ${account.level === 'PARENT' ? 'hover:bg-slate-800 text-slate-400 hover:text-slate-200' : ''}
+                            ${account.level === 'SUBSIDIARY' ? 'hover:bg-slate-800 text-slate-500 hover:text-slate-300' : ''}
+                            ${account.level === 'GL' ? 'hover:bg-slate-800 text-slate-500' : ''}
+                          `}
+                          title={isCollapsed ? `Expand ${account.name}` : `Collapse ${account.name}`}
+                          aria-label={isCollapsed ? 'Expand' : 'Collapse'}
                         >
-                          {isCollapsed ? (
-                            <ChevronRight className="h-3.5 w-3.5" />
-                          ) : (
-                            <ChevronDown className="h-3.5 w-3.5" />
-                          )}
+                          {isCollapsed
+                            ? <ChevronRight className="h-3.5 w-3.5" />
+                            : <ChevronDown className="h-3.5 w-3.5" />
+                          }
                         </button>
                       ) : (
-                        <span className="w-6.5"></span> // spacer
+                        <span className="w-7 inline-block" /> // spacer for leaf nodes
                       )}
-                      
-                      <span className={`${account.level === 'MAIN' ? 'text-slate-100 font-bold' : account.level === 'PARENT' ? 'text-slate-200 font-semibold' : 'text-slate-300'} flex items-center gap-1.5`}>
-                        {/* Fix 5/14 — Lock icon for Levels 1, 2, 3 */}
-                        {(account.level === 'MAIN' || account.level === 'PARENT' || account.level === 'SUBSIDIARY') && (
-                          <span title={`Level ${account.level === 'MAIN' ? '1' : account.level === 'PARENT' ? '2' : '3'} — system account`} className="text-slate-500 select-none">🔒</span>
+
+                      {/* Account name with level-aware styling */}
+                      <span className={`flex items-center gap-1.5 ${
+                        account.level === 'MAIN'       ? 'text-slate-100 font-bold text-[13px] tracking-wide' :
+                        account.level === 'PARENT'     ? 'text-slate-200 font-semibold text-[12.5px]' :
+                        account.level === 'SUBSIDIARY' ? 'text-slate-300 font-medium text-[12px]' :
+                                                         'text-slate-400 text-[12px]'
+                      }`}>
+
+                        {/* 🔒 Lock icon for Levels 1, 2, 3 */}
+                        {account.level === 'MAIN' && (
+                          <Lock className="h-3 w-3 text-slate-600 flex-shrink-0" title="Level 1 — Root account (permanent, cannot be edited or deleted)" />
                         )}
+                        {account.level === 'PARENT' && (
+                          <Lock className="h-3 w-3 text-slate-600 flex-shrink-0" title="Level 2 — Parent category (admin only)" />
+                        )}
+                        {account.level === 'SUBSIDIARY' && (
+                          <Lock className="h-3 w-3 text-slate-600 flex-shrink-0" title="Level 3 — Subsidiary header (admin only)" />
+                        )}
+
+                        {/* ✏️ Editable marker for Level 4 GL */}
+                        {account.level === 'GL' && (
+                          <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-emerald-500/10 flex-shrink-0" title="Level 4 — GL Account (user editable)">
+                            <Edit2 className="h-2.5 w-2.5 text-emerald-400" />
+                          </span>
+                        )}
+
+                        {/* Account name or Reserved placeholder */}
                         {isReservedNode ? (
                           <div className="flex flex-col select-none">
-                            <span className="text-slate-400 font-semibold italic text-xs">Reserved for Future Use</span>
-                            <span className="text-[10px] text-slate-500 font-semibold tracking-wide">(Not Available for Posting)</span>
+                            <span className="text-slate-500 italic text-[11px]">Reserved for Future Use</span>
+                            <span className="text-[10px] text-slate-600">(Not Available for Posting)</span>
                           </div>
                         ) : (
                           <span>{account.name}</span>
@@ -277,17 +333,19 @@ export const CoaTreeView = ({
                   </td>
 
                   {/* Status Toggle */}
-                  <td className="py-3.5 px-4 text-center">
-                    {account.level === 'MAIN' ? (
-                      <span className="inline-flex items-center justify-center gap-1 text-slate-500 cursor-default" title="MAIN accounts are permanent and cannot be deactivated">
-                        <Lock className="h-3.5 w-3.5 text-slate-500" />
-                        <span className="text-[11px] font-semibold uppercase tracking-wider">Locked</span>
+                  <td className="py-3 px-4 text-center">
+                    {account.level !== 'GL' ? (
+                      // L1/L2/L3 — always show locked status, no toggle
+                      <span className="inline-flex items-center justify-center gap-1 text-slate-600 cursor-default" title={`Level ${account.level === 'MAIN' ? '1' : account.level === 'PARENT' ? '2' : '3'} accounts cannot be deactivated`}>
+                        <Lock className="h-3 w-3" />
+                        <span className="text-[10px] font-semibold uppercase tracking-wider">Locked</span>
                       </span>
                     ) : (
+                      // GL level — toggleable
                       <button
                         onClick={() => onToggleStatus(account.id)}
                         className="cursor-pointer"
-                        title={account.status === 'Active' ? 'Deactivate account' : 'Activate account'}
+                        title={account.status === 'Active' ? 'Deactivate GL account' : 'Activate GL account'}
                       >
                         {account.status === 'Active' ? (
                           <ToggleRight className="h-5 w-5 text-emerald-400 hover:text-emerald-300" />
@@ -299,67 +357,68 @@ export const CoaTreeView = ({
                   </td>
 
                   {/* Inline Actions */}
-                  <td className="py-3.5 px-4 text-right opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                    <div className="inline-flex gap-1.5">
-                      {/* Create sub-account */}
-                      {account.detailType === 'Header' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 cursor-pointer"
-                          onClick={() => onCreateSubAccount(account.code)}
-                          title="Add sub-account under this header"
-                        >
-                          <Plus className="h-3.5 w-3.5 text-brand-400" />
-                        </Button>
-                      )}
-                      
-                      {/* View General Ledger */}
+                  <td className="py-3 px-4 text-right">
+                    <div className="inline-flex gap-1 items-center opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+
+                      {/* View General Ledger — available for all levels */}
                       <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 cursor-pointer"
+                        variant="ghost" size="sm"
+                        className="h-7 w-7 p-0 cursor-pointer"
                         onClick={() => navigate(`/ledger?account=${account.code}`)}
                         title="View Ledger Transactions"
                       >
-                        <BookOpen className="h-3.5 w-3.5 text-slate-400 hover:text-brand-300" />
+                        <BookOpen className="h-3.5 w-3.5 text-slate-500 hover:text-brand-300" />
                       </Button>
 
-                      {/* Edit — Fix 5: warn for system levels */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={`h-8 w-8 p-0 ${isSystemLevel ? 'text-slate-600 cursor-pointer hover:text-amber-400' : 'cursor-pointer text-slate-400 hover:text-amber-400'}`}
-                        onClick={() => {
-                          if (account.level === 'MAIN') return;
-                          if (account.level === 'PARENT' || account.level === 'SUBSIDIARY') {
-                            if (!window.confirm(`⚠️ Warning: This is a system-level account (${account.level}). Are you sure you want to edit it?`)) return;
-                          }
-                          onEditAccount(account);
-                        }}
-                        title={account.level === 'MAIN' ? 'MAIN accounts cannot be edited' : 'Edit Account'}
-                        disabled={account.level === 'MAIN'}
-                      >
-                        {account.level === 'MAIN' ? <Lock className="h-3.5 w-3.5" /> : <Edit2 className="h-3.5 w-3.5" />}
-                      </Button>
+                      {/* ——— LEVEL 4 GL ONLY: Edit + Delete ——— */}
+                      {isGLLevel && (
+                        <>
+                          <Button
+                            variant="ghost" size="sm"
+                            className="h-7 w-7 p-0 cursor-pointer text-slate-400 hover:text-amber-400"
+                            onClick={() => onEditAccount(account)}
+                            title="Edit GL Account"
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </Button>
 
-                      {/* Delete — Fix 7: blocked for reserved; Fix 17: confirmation */}
-                      {account.level !== 'MAIN' && account.level !== 'PARENT' && (
+                          <Button
+                            variant="ghost" size="sm"
+                            className={`h-7 w-7 p-0 ${isReservedNode ? 'opacity-30 cursor-not-allowed text-slate-600' : 'cursor-pointer text-slate-400 hover:text-red-400'}`}
+                            onClick={() => {
+                              if (isReservedNode) {
+                                showToast('Reserved codes cannot be deleted.', 'error');
+                              } else {
+                                setConfirmDelete(account);
+                              }
+                            }}
+                            title={isReservedNode ? "Reserved accounts cannot be deleted" : "Delete GL Account"}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
+
+                      {/* ——— LEVEL 2 / 3: Add sub-account (SUBSIDIARY level only adds GL) ——— */}
+                      {account.level === 'SUBSIDIARY' && (
                         <Button
-                          variant="ghost"
-                          size="sm"
-                          className={`h-8 w-8 p-0 ${isReservedNode ? 'opacity-35 cursor-not-allowed text-slate-600' : 'cursor-pointer text-slate-400 hover:text-red-400'}`}
-                          onClick={() => {
-                            if (isReservedNode) {
-                              showToast('This is a reserved code and cannot be deleted.', 'error');
-                              return;
-                            }
-                            setConfirmDelete(account);
-                          }}
-                          title={isReservedNode ? 'Reserved accounts cannot be deleted' : 'Delete Account'}
+                          variant="ghost" size="sm"
+                          className="h-7 w-7 p-0 cursor-pointer text-slate-500 hover:text-brand-400"
+                          onClick={() => onCreateSubAccount(account.code)}
+                          title={`Add GL account under ${account.name}`}
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Plus className="h-3.5 w-3.5" />
                         </Button>
+                      )}
+
+                      {/* ——— LEVELS 1/2/3: No edit or delete — just lock indicator ——— */}
+                      {!isGLLevel && (
+                        <span
+                          className="h-7 w-7 inline-flex items-center justify-center text-slate-700"
+                          title={`Level ${account.level === 'MAIN' ? '1' : account.level === 'PARENT' ? '2' : '3'} accounts are system-defined and cannot be edited or deleted`}
+                        >
+                          <Lock className="h-3 w-3" />
+                        </span>
                       )}
                     </div>
                   </td>
@@ -372,3 +431,4 @@ export const CoaTreeView = ({
     </div>
   );
 };
+

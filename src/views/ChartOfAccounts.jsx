@@ -30,8 +30,10 @@ export const ChartOfAccounts = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [typeFilter, setTypeFilter] = useState(searchParams.get('type') || 'All');
+  const [levelFilter, setLevelFilter] = useState(searchParams.get('level') || 'All');
+  const [natureFilter, setNatureFilter] = useState(searchParams.get('nature') || 'All');
+  const [reservedFilter, setReservedFilter] = useState(searchParams.get('reserved') || 'All');
   const [viewMode, setViewMode] = useState(searchParams.get('search') ? 'table' : 'tree'); // tree or table
-  const [showReserved, setShowReserved] = useState(false);
 
   useEffect(() => {
     const q = searchParams.get('search') || '';
@@ -42,8 +44,10 @@ export const ChartOfAccounts = () => {
       setSearchQuery('');
     }
 
-    const t = searchParams.get('type') || 'All';
-    setTypeFilter(t);
+    setTypeFilter(searchParams.get('type') || 'All');
+    setLevelFilter(searchParams.get('level') || 'All');
+    setNatureFilter(searchParams.get('nature') || 'All');
+    setReservedFilter(searchParams.get('reserved') || 'All');
   }, [searchParams]);
   
   // Pagination State for Table View
@@ -60,9 +64,16 @@ export const ChartOfAccounts = () => {
     if (viewMode === 'tree') {
       fetchAccountsTree();
     } else {
-      fetchAccountsList({ search: searchQuery, type: typeFilter, page, limit, sortBy, order });
+      fetchAccountsList({ 
+        search: searchQuery, 
+        type: typeFilter, 
+        level: levelFilter,
+        nature: natureFilter,
+        reserved: reservedFilter,
+        page, limit, sortBy, order 
+      });
     }
-  }, [fetchAccountsTree, fetchAccountsList, viewMode, searchQuery, typeFilter, page, limit, sortBy, order]);
+  }, [fetchAccountsTree, fetchAccountsList, viewMode, searchQuery, typeFilter, levelFilter, natureFilter, reservedFilter, page, limit, sortBy, order]);
 
   // Drawer states
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -150,43 +161,105 @@ export const ChartOfAccounts = () => {
                 className="w-full bg-slate-900/60 border border-slate-800 rounded-lg text-sm py-2 pl-10 pr-4 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/50"
               />
             </div>
+            <div className="flex flex-wrap items-center gap-3 w-full">
+              {/* Type filter */}
+              <div className="w-full sm:w-auto">
+                <select
+                  value={typeFilter}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const newParams = new URLSearchParams(searchParams);
+                    if (val === 'All') newParams.delete('type');
+                    else newParams.set('type', val);
+                    setSearchParams(newParams);
+                  }}
+                  className="w-full bg-slate-900/60 border border-slate-800 text-sm py-2 px-3 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500/30 cursor-pointer"
+                >
+                  <option value="All">All Categories</option>
+                  <option value="Asset">Asset</option>
+                  <option value="Liability">Liability</option>
+                  <option value="Equity">Equity</option>
+                  <option value="Revenue">Revenue</option>
+                  <option value="Expense">Expense</option>
+                </select>
+              </div>
 
-            {/* Type filter */}
-            <div className="w-full md:w-48">
-              <select
-                value={typeFilter}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const newParams = new URLSearchParams(searchParams);
-                  if (val === 'All') {
-                    newParams.delete('type');
-                  } else {
-                    newParams.set('type', val);
-                  }
-                  setSearchParams(newParams);
-                }}
-                className="w-full bg-slate-900/60 border border-slate-800 text-sm py-2 px-3 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500/30 cursor-pointer"
-              >
-                <option value="All">All Types</option>
-                <option value="Asset">Asset</option>
-                <option value="Liability">Liability</option>
-                <option value="Equity">Equity</option>
-                <option value="Revenue">Revenue</option>
-                <option value="Expense">Expense</option>
-              </select>
-            </div>
-            {/* Show Reserved Accounts Checkbox */}
-            <div className="flex items-center gap-2 pl-2 select-none shrink-0">
-              <input
-                type="checkbox"
-                id="show-reserved-toggle"
-                checked={showReserved}
-                onChange={(e) => setShowReserved(e.target.checked)}
-                className="w-4 h-4 bg-slate-900 border border-slate-700 rounded text-brand-500 focus:ring-brand-500/30 cursor-pointer"
-              />
-              <label htmlFor="show-reserved-toggle" className="text-xs font-semibold text-slate-400 cursor-pointer hover:text-slate-300">
-                Show Reserved
-              </label>
+              {/* Level filter */}
+              <div className="w-full sm:w-auto">
+                <select
+                  value={levelFilter}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const newParams = new URLSearchParams(searchParams);
+                    if (val === 'All') newParams.delete('level');
+                    else newParams.set('level', val);
+                    setSearchParams(newParams);
+                  }}
+                  className="w-full bg-slate-900/60 border border-slate-800 text-sm py-2 px-3 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500/30 cursor-pointer"
+                >
+                  <option value="All">All Levels</option>
+                  <option value="MAIN">Level 1 (Main)</option>
+                  <option value="PARENT">Level 2 (Parent)</option>
+                  <option value="SUBSIDIARY">Level 3 (Subsidiary)</option>
+                  <option value="GL">Level 4 (GL / Posting)</option>
+                </select>
+              </div>
+
+              {/* Nature filter */}
+              <div className="w-full sm:w-auto">
+                <select
+                  value={natureFilter}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const newParams = new URLSearchParams(searchParams);
+                    if (val === 'All') newParams.delete('nature');
+                    else newParams.set('nature', val);
+                    setSearchParams(newParams);
+                  }}
+                  className="w-full bg-slate-900/60 border border-slate-800 text-sm py-2 px-3 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500/30 cursor-pointer"
+                >
+                  <option value="All">All Natures</option>
+                  <option value="Header">Header</option>
+                  <option value="Cash">Cash</option>
+                  <option value="Receivable">Receivable</option>
+                  <option value="Inventory">Inventory</option>
+                  <option value="Prepayments">Prepayments</option>
+                  <option value="Fixed Asset">Fixed Asset</option>
+                  <option value="Accumulated Depreciation">Accumulated Depreciation</option>
+                  <option value="Payable">Payable</option>
+                  <option value="Credit Card">Credit Card</option>
+                  <option value="Accrued Expense">Accrued Expense</option>
+                  <option value="Long Term Loan">Long Term Loan</option>
+                  <option value="Equity">Equity</option>
+                  <option value="Retained Earnings">Retained Earnings</option>
+                  <option value="Capital">Capital</option>
+                  <option value="Revenue">Revenue</option>
+                  <option value="Other Revenue">Other Revenue</option>
+                  <option value="COGS">COGS</option>
+                  <option value="Expense">Expense</option>
+                  <option value="Tax Expense">Tax Expense</option>
+                  <option value="Other Expense">Other Expense</option>
+                </select>
+              </div>
+
+              {/* Reserved filter */}
+              <div className="w-full sm:w-auto">
+                <select
+                  value={reservedFilter}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const newParams = new URLSearchParams(searchParams);
+                    if (val === 'All') newParams.delete('reserved');
+                    else newParams.set('reserved', val);
+                    setSearchParams(newParams);
+                  }}
+                  className="w-full bg-slate-900/60 border border-slate-800 text-sm py-2 px-3 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500/30 cursor-pointer"
+                >
+                  <option value="All">Reserved: All</option>
+                  <option value="Yes">Reserved: Yes</option>
+                  <option value="No">Reserved: No</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -239,8 +312,10 @@ export const ChartOfAccounts = () => {
               onCreateSubAccount={handleCreateSubAccount}
               searchQuery={searchQuery}
               typeFilter={typeFilter}
+              levelFilter={levelFilter}
+              natureFilter={natureFilter}
+              reservedFilter={reservedFilter}
               selectedSubsidiary={selectedSubsidiary}
-              showReserved={showReserved}
             />
           ) : (
             <CoaTableView
@@ -260,8 +335,10 @@ export const ChartOfAccounts = () => {
               setOrder={setOrder}
               searchQuery={searchQuery}
               typeFilter={typeFilter}
+              levelFilter={levelFilter}
+              natureFilter={natureFilter}
+              reservedFilter={reservedFilter}
               selectedSubsidiary={selectedSubsidiary}
-              showReserved={showReserved}
             />
           )}
         </CardContent>

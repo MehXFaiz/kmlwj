@@ -45,8 +45,10 @@ export const CoaTableView = ({
   setOrder,
   searchQuery,
   typeFilter,
+  levelFilter,
+  natureFilter,
+  reservedFilter,
   selectedSubsidiary,
-  showReserved = false,
 }) => {
   const navigate = useNavigate();
   const { deleteAccount } = useCoaStore();
@@ -65,12 +67,9 @@ export const CoaTableView = ({
         acc.subsidiary.includes('Global');
       if (!matchesSubsidiary) return false;
 
-      const isReservedNode = acc.isReserved || reservedCodes.some(r => r.isActive && acc.code >= r.reserveStart && acc.code <= r.reserveEnd);
-      if (!showReserved && isReservedNode) return false;
-
       return true;
     });
-  }, [accounts, selectedSubsidiary, reservedCodes, showReserved]);
+  }, [accounts, selectedSubsidiary]);
 
   const columns = useMemo(
     () => [
@@ -221,28 +220,38 @@ export const CoaTableView = ({
         cell: ({ row }) => {
           const acc = row.original;
           const isReservedNode = acc.isReserved || reservedCodes.some(r => r.isActive && acc.code >= r.reserveStart && acc.code <= r.reserveEnd);
+          const isGLLevel = acc.level === 'GL';
           return (
             <div className="flex justify-end gap-1.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0 cursor-pointer" onClick={() => navigate(`/ledger?account=${acc.code}`)} title="View General Ledger">
                 <BookOpen className="h-3.5 w-3.5 text-slate-400 hover:text-brand-300" />
               </Button>
+
+              {/* Edit — Free for GL; confirmation for L2/L3; blocked for L1 */}
               <Button
                 variant="ghost" size="sm"
-                className={`h-8 w-8 p-0 ${acc.level === 'MAIN' ? 'opacity-35 cursor-not-allowed text-slate-600' : 'cursor-pointer text-slate-400 hover:text-amber-400'}`}
+                className={`h-8 w-8 p-0 ${
+                  acc.level === 'MAIN'
+                    ? 'opacity-25 cursor-not-allowed text-slate-600'
+                    : isGLLevel
+                    ? 'cursor-pointer text-slate-400 hover:text-amber-400'
+                    : 'text-slate-600 cursor-pointer hover:text-amber-400'
+                }`}
                 onClick={() => {
                   if (acc.level === 'MAIN') return;
                   if (acc.level === 'PARENT' || acc.level === 'SUBSIDIARY') {
-                    if (!window.confirm(`⚠️ Warning: This is a system-level account. Are you sure?`)) return;
+                    if (!window.confirm(`⚠️ Warning: "${acc.name}" is a system-level account (Level ${acc.level === 'PARENT' ? '2' : '3'}). Are you sure?`)) return;
                   }
                   onEditAccount(acc);
                 }}
                 disabled={acc.level === 'MAIN'}
-                title={acc.level === 'MAIN' ? 'MAIN accounts cannot be edited' : 'Edit Account'}
+                title={acc.level === 'MAIN' ? 'Level 1 accounts cannot be edited' : isGLLevel ? 'Edit GL Account' : `Edit ${acc.level} (system-level)`}
               >
                 {acc.level === 'MAIN' ? <Lock className="h-3.5 w-3.5" /> : <Edit2 className="h-3.5 w-3.5" />}
               </Button>
-              {/* Fix 7/17 — Delete with reserved guard and confirmation */}
-              {acc.level !== 'MAIN' && acc.level !== 'PARENT' && (
+
+              {/* Delete — Only for GL accounts */}
+              {isGLLevel && (
                 <Button
                   variant="ghost" size="sm"
                   className={`h-8 w-8 p-0 ${isReservedNode ? 'opacity-35 cursor-not-allowed text-slate-600' : 'cursor-pointer text-slate-400 hover:text-red-400'}`}
@@ -250,7 +259,7 @@ export const CoaTableView = ({
                     if (isReservedNode) { showToast('Reserved codes cannot be deleted.', 'error'); return; }
                     setConfirmDelete(acc);
                   }}
-                  title={isReservedNode ? 'Reserved accounts cannot be deleted' : 'Delete Account'}
+                  title={isReservedNode ? 'Reserved accounts cannot be deleted' : 'Delete GL Account'}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>

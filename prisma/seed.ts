@@ -209,13 +209,13 @@ async function main() {
     seededAccountTypes[type.name] = record;
   }
 
-  // 6. Seed Main Chart of Accounts
+  // 6. Seed Level 1 — MAIN Chart of Accounts
   console.log('Seeding Main Chart of Accounts...');
   const mainAccounts = [
-    { glCode: '1000000', accountName: 'Assets', accountLevel: AccountLevel.MAIN, accountTypeName: 'ASSET', description: 'Control account for all Asset accounts' },
-    { glCode: '2000000', accountName: 'Liabilities', accountLevel: AccountLevel.MAIN, accountTypeName: 'LIABILITY', description: 'Control account for all Liability accounts' },
-    { glCode: '3000000', accountName: 'Revenue', accountLevel: AccountLevel.MAIN, accountTypeName: 'REVENUE', description: 'Control account for all Revenue accounts' },
-    { glCode: '4000000', accountName: 'Expenses', accountLevel: AccountLevel.MAIN, accountTypeName: 'EXPENSE', description: 'Control account for all Expense accounts' },
+    { glCode: '1000000', accountName: 'Assets',      accountTypeName: 'ASSET',     description: 'Root control account for all Asset accounts' },
+    { glCode: '2000000', accountName: 'Liabilities', accountTypeName: 'LIABILITY', description: 'Root control account for all Liability accounts' },
+    { glCode: '3000000', accountName: 'Revenue',     accountTypeName: 'REVENUE',   description: 'Root control account for all Revenue accounts' },
+    { glCode: '4000000', accountName: 'Expenses',    accountTypeName: 'EXPENSE',   description: 'Root control account for all Expense accounts' },
   ];
 
   const seededMainAccounts: Record<string, any> = {};
@@ -224,7 +224,7 @@ async function main() {
       where: { glCode: acc.glCode },
       update: {
         accountName: acc.accountName,
-        accountLevel: acc.accountLevel,
+        accountLevel: AccountLevel.MAIN,
         accountTypeId: seededAccountTypes[acc.accountTypeName].id,
         description: acc.description,
         isSystemDefined: true,
@@ -232,7 +232,7 @@ async function main() {
       create: {
         glCode: acc.glCode,
         accountName: acc.accountName,
-        accountLevel: acc.accountLevel,
+        accountLevel: AccountLevel.MAIN,
         accountTypeId: seededAccountTypes[acc.accountTypeName].id,
         description: acc.description,
         isSystemDefined: true,
@@ -243,19 +243,22 @@ async function main() {
     seededMainAccounts[acc.glCode] = record;
   }
 
-  // Seeding Level 2 Parent Accounts
+  // 7. Seed Level 2 — PARENT Accounts
   console.log('Seeding Level 2 Parent Accounts...');
   const parentAccounts = [
-    { glCode: '1100000', accountName: 'Current Assets', parentCode: '1000000', accountTypeName: 'ASSET', description: 'Current Asset accounts' },
-    { glCode: '1200000', accountName: 'Non Current Assets', parentCode: '1000000', accountTypeName: 'ASSET', description: 'Non-Current Asset accounts' },
-    { glCode: '2100000', accountName: 'Current Liabilities', parentCode: '2000000', accountTypeName: 'LIABILITY', description: 'Current Liability accounts' },
-    { glCode: '2200000', accountName: 'Long Term Liabilities', parentCode: '2000000', accountTypeName: 'LIABILITY', description: 'Long Term Liability accounts' },
-    { glCode: '3100000', accountName: 'Hall Income', parentCode: '3000000', accountTypeName: 'REVENUE', description: 'Revenue from hall bookings' },
-    { glCode: '3200000', accountName: 'Donations', parentCode: '3000000', accountTypeName: 'REVENUE', description: 'Donation revenue' },
-    { glCode: '3300000', accountName: 'Other Income', parentCode: '3000000', accountTypeName: 'REVENUE', description: 'Other miscellaneous income' },
-    { glCode: '4100000', accountName: 'Administrative Expenses', parentCode: '4000000', accountTypeName: 'EXPENSE', description: 'Administrative and operational expenses' },
-    { glCode: '4200000', accountName: 'Utility Expenses', parentCode: '4000000', accountTypeName: 'EXPENSE', description: 'Utility bills and energy costs' },
-    { glCode: '4300000', accountName: 'Donation Expenses', parentCode: '4000000', accountTypeName: 'EXPENSE', description: 'Disbursement of donations and charity' },
+    // Under Assets (1000000)
+    { glCode: '1010000', accountName: 'Current Assets',         parentCode: '1000000', accountTypeName: 'ASSET',     description: 'Short-term assets convertible to cash within 12 months' },
+    { glCode: '1020000', accountName: 'Non-Current Assets',     parentCode: '1000000', accountTypeName: 'ASSET',     description: 'Long-term assets held for more than 12 months' },
+    // Under Liabilities (2000000)
+    { glCode: '2010000', accountName: 'Current Liabilities',    parentCode: '2000000', accountTypeName: 'LIABILITY', description: 'Obligations due within 12 months' },
+    { glCode: '2020000', accountName: 'Non-Current Liabilities',parentCode: '2000000', accountTypeName: 'LIABILITY', description: 'Long-term financial obligations' },
+    // Under Revenue (3000000)
+    { glCode: '3010000', accountName: 'Hall & Garden Income',   parentCode: '3000000', accountTypeName: 'REVENUE',   description: 'Revenue from hall and garden bookings' },
+    { glCode: '3020000', accountName: 'Donations',              parentCode: '3000000', accountTypeName: 'REVENUE',   description: 'Zakat, Fitra, Qurbani and other donations' },
+    // Under Expenses (4000000)
+    { glCode: '4010000', accountName: 'Salaries & Wages',       parentCode: '4000000', accountTypeName: 'EXPENSE',   description: 'All payroll related expenses' },
+    { glCode: '4020000', accountName: 'Hall Expenses',          parentCode: '4000000', accountTypeName: 'EXPENSE',   description: 'Operational costs for hall management' },
+    { glCode: '4030000', accountName: 'Transport',              parentCode: '4000000', accountTypeName: 'EXPENSE',   description: 'Transportation and vehicle expenses' },
   ];
 
   const seededParentAccounts: Record<string, any> = {};
@@ -286,27 +289,34 @@ async function main() {
     seededParentAccounts[acc.glCode] = record;
   }
 
-  // Seeding Level 3 Subsidiary Accounts
+  // 8. Seed Level 3 — SUBSIDIARY Header Accounts (locked, admin-only)
   console.log('Seeding Level 3 Subsidiary Accounts...');
   const subsidiaryAccounts = [
-    // under Current Assets (1100000)
-    { glCode: '1100001', accountName: 'Meezan Bank Account', parentCode: '1100000', accountTypeName: 'ASSET', detailType: 'Bank', description: 'Main Meezan checking account' },
-    { glCode: '1100002', accountName: 'HBL Bank Account', parentCode: '1100000', accountTypeName: 'ASSET', detailType: 'Bank', description: 'Secondary HBL account' },
-    // under Hall Income (3100000)
-    { glCode: '3100001', accountName: 'Bagh-e-Hajiani Garden', parentCode: '3100000', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Bagh-e-Hajiani Garden Hall Income' },
-    { glCode: '3100002', accountName: 'Sadaya Hall', parentCode: '3100000', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Sadaya Hall Income' },
-    { glCode: '3100003', accountName: 'Zikarya Hall', parentCode: '3100000', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Zikarya Hall Income' },
-    { glCode: '3100004', accountName: 'Annexy Hall', parentCode: '3100000', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Annexy Hall Income' },
-    // under Administrative Expenses (4100000)
-    { glCode: '4100001', accountName: 'Salary', parentCode: '4100000', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Staff salaries expense' },
-    { glCode: '4100002', accountName: 'Bonus', parentCode: '4100000', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Staff bonuses expense' },
-    { glCode: '4100003', accountName: 'Rent', parentCode: '4100000', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Office/Hall rent expense' },
-    { glCode: '4100004', accountName: 'Audit Fee', parentCode: '4100000', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Professional audit fees expense' },
+    // Under Current Assets (1010000)
+    { glCode: '1010100', accountName: 'Cash & Bank Balances', parentCode: '1010000', accountTypeName: 'ASSET',     detailType: 'Header', description: 'All cash and bank balance accounts' },
+    { glCode: '1010200', accountName: 'Accounts Receivable',  parentCode: '1010000', accountTypeName: 'ASSET',     detailType: 'Header', description: 'Amounts owed to the organization' },
+    // Under Non-Current Assets (1020000)
+    { glCode: '1020100', accountName: 'Fixed Assets',         parentCode: '1020000', accountTypeName: 'ASSET',     detailType: 'Header', description: 'Property, plant and equipment' },
+    // Under Current Liabilities (2010000)
+    { glCode: '2010100', accountName: 'Accounts Payable',     parentCode: '2010000', accountTypeName: 'LIABILITY', detailType: 'Header', description: 'Amounts owed to vendors and suppliers' },
+    // Under Non-Current Liabilities (2020000)
+    { glCode: '2020100', accountName: 'Long Term Loans',      parentCode: '2020000', accountTypeName: 'LIABILITY', detailType: 'Header', description: 'Loans repayable beyond 12 months' },
+    // Under Hall & Garden Income (3010000)
+    { glCode: '3010100', accountName: 'Hall Booking',         parentCode: '3010000', accountTypeName: 'REVENUE',   detailType: 'Header', description: 'Revenue categorized by individual hall' },
+    // Under Donations Income (3020000)
+    { glCode: '3020100', accountName: 'Zakat',                parentCode: '3020000', accountTypeName: 'REVENUE',   detailType: 'Header', description: 'Islamic charitable contribution income' },
+    // Under Salaries & Wages (4010000)
+    { glCode: '4010100', accountName: 'Salaries Expense',     parentCode: '4010000', accountTypeName: 'EXPENSE',   detailType: 'Header', description: 'Monthly payroll cost' },
+    // Under Hall Expenses (4020000)
+    { glCode: '4020100', accountName: 'Hall Operating Costs', parentCode: '4020000', accountTypeName: 'EXPENSE',   detailType: 'Header', description: 'Day-to-day operational costs for halls' },
+    // Under Transport (4030000)
+    { glCode: '4030100', accountName: 'Bus Expenses',         parentCode: '4030000', accountTypeName: 'EXPENSE',   detailType: 'Header', description: 'Bus maintenance and fuel' },
   ];
 
+  const seededSubsidiaryAccounts: Record<string, any> = {};
   for (const acc of subsidiaryAccounts) {
     const parentRecord = seededParentAccounts[acc.parentCode];
-    await prisma.account.upsert({
+    const record = await prisma.account.upsert({
       where: { glCode: acc.glCode },
       update: {
         accountName: acc.accountName,
@@ -330,7 +340,57 @@ async function main() {
         isReserved: false,
       },
     });
+    seededSubsidiaryAccounts[acc.glCode] = record;
   }
+
+  // 9. Seed Level 4 — GL Accounts (user-editable, posting-level)
+  console.log('Seeding Level 4 GL Accounts...');
+  const glAccounts = [
+    // Under Cash & Bank Balances (1010100)
+    { glCode: '1010101', accountName: 'Meezan Bank Account', parentCode: '1010100', accountTypeName: 'ASSET',   detailType: 'Cash', description: 'Main Meezan Islamic Bank current account' },
+    { glCode: '1010102', accountName: 'HBL Bank Account',    parentCode: '1010100', accountTypeName: 'ASSET',   detailType: 'Cash', description: 'HBL commercial current account' },
+    // Under Hall Booking (3010100)
+    { glCode: '3010101', accountName: 'Bagh-e-Hajiani Garden', parentCode: '3010100', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Bagh-e-Hajiani Garden booking income — rate: Rs 43,000' },
+    { glCode: '3010102', accountName: 'Sadaya Hall',           parentCode: '3010100', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Sadaya Hall booking income — rate: Rs 28,000' },
+    { glCode: '3010103', accountName: 'Zikarya Hall',          parentCode: '3010100', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Zikarya Hall booking income — rate: Rs 28,000' },
+    { glCode: '3010104', accountName: 'Annexy Hall',           parentCode: '3010100', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Annexy Hall booking income — rate: Rs 33,000' },
+    // Under Zakat (3020100)
+    { glCode: '3020101', accountName: 'Zakat 2024-25',         parentCode: '3020100', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Zakat collected for the year 2024-25' },
+    // Under Salaries Expense (4010100)
+    { glCode: '4010101', accountName: 'Staff Salary',         parentCode: '4010100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Monthly staff salary disbursement' },
+    // Under Bus Expenses (4030100)
+    { glCode: '4030101', accountName: 'Diesel - June',        parentCode: '4030100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Diesel cost for the month of June' },
+  ];
+
+  for (const acc of glAccounts) {
+    const parentRecord = seededSubsidiaryAccounts[acc.parentCode];
+    await prisma.account.upsert({
+      where: { glCode: acc.glCode },
+      update: {
+        accountName: acc.accountName,
+        accountLevel: AccountLevel.GL,
+        parentId: parentRecord.id,
+        accountTypeId: seededAccountTypes[acc.accountTypeName].id,
+        detailType: acc.detailType,
+        description: acc.description,
+        isSystemDefined: false,
+      },
+      create: {
+        glCode: acc.glCode,
+        accountName: acc.accountName,
+        accountLevel: AccountLevel.GL,
+        parentId: parentRecord.id,
+        accountTypeId: seededAccountTypes[acc.accountTypeName].id,
+        detailType: acc.detailType,
+        description: acc.description,
+        isSystemDefined: false,
+        isLocked: false,
+        isReserved: false,
+      },
+    });
+  }
+
+
 
 
   // 7. Seed Revenue Heads

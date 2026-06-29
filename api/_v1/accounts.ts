@@ -12,7 +12,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const id = req.query.id as string;
 
   if (method === 'GET') {
-    const { search, type, status, sortBy = 'glCode', order = 'asc', page = '1', limit = '100' } = req.query as any;
+    const { search, type, status, level, nature, reserved, sortBy = 'glCode', order = 'asc', page = '1', limit = '100' } = req.query as any;
 
     const whereClause: any = {};
     if (search) {
@@ -26,6 +26,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
     if (status && status !== 'All') {
       whereClause.isLocked = status === 'Inactive';
+    }
+    if (level && level !== 'All') {
+      whereClause.accountLevel = level; // e.g. MAIN, PARENT, SUBSIDIARY, GL
+    }
+    if (nature && nature !== 'All') {
+      whereClause.detailType = nature;
+    }
+    if (reserved && reserved !== 'All') {
+      whereClause.isReserved = reserved === 'Yes';
     }
 
     const pageNum = parseInt(page) || 1;
@@ -132,12 +141,16 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       }
       parentId = parentAcc.id;
 
+      // 4-level hierarchy: MAIN→PARENT→SUBSIDIARY→GL
       if (parentAcc.accountLevel === 'MAIN') {
         accountLevel = 'PARENT';
       } else if (parentAcc.accountLevel === 'PARENT') {
         accountLevel = 'SUBSIDIARY';
+      } else if (parentAcc.accountLevel === 'SUBSIDIARY') {
+        accountLevel = 'GL';  // Level 4 — user-editable posting accounts
       } else {
-        return res.status(400).json({ error: { message: 'Cannot create an account under a SUBSIDIARY account', status: 400 } });
+        // GL accounts are leaf nodes — no Level 5
+        return res.status(400).json({ error: { message: 'Cannot create an account under a Level 4 (GL) account. GL accounts are the deepest posting level.', status: 400 } });
       }
     }
 
@@ -240,12 +253,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         }
         updateData.parentId = parentAcc.id;
 
+        // 4-level hierarchy: MAIN→PARENT→SUBSIDIARY→GL
         if (parentAcc.accountLevel === 'MAIN') {
           updateData.accountLevel = 'PARENT';
         } else if (parentAcc.accountLevel === 'PARENT') {
           updateData.accountLevel = 'SUBSIDIARY';
+        } else if (parentAcc.accountLevel === 'SUBSIDIARY') {
+          updateData.accountLevel = 'GL';
         } else {
-          return res.status(400).json({ error: { message: 'Cannot move account under a SUBSIDIARY account', status: 400 } });
+          return res.status(400).json({ error: { message: 'Cannot move account under a GL account (no Level 5 allowed).', status: 400 } });
         }
       }
     }
@@ -274,8 +290,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(404).json({ error: { message: 'Account not found', status: 404 } });
     }
 
-    if (existingAccount.accountLevel === 'MAIN') {
-      return res.status(400).json({ error: { message: 'MAIN accounts cannot be deleted', status: 400 } });
+    // Only GL (Level 4) accounts can be deleted; MAIN/PARENT/SUBSIDIARY are system-locked
+    if (existingAccount.accountLevel !== 'GL') {
+      return res.status(400).json({ error: { message: `${existingAccount.accountLevel} accounts are system-defined and cannot be deleted. Only Level 4 (GL) accounts can be deleted.`, status: 400 } });
     }
 
     await prisma.account.delete({ where: { id } });
