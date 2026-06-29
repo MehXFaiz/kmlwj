@@ -20,10 +20,13 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  Lock
+  Lock,
+  Trash2
 } from 'lucide-react';
 import { AccountTypeBadge } from '../ui/Badge';
 import { Button } from '../ui/Button';
+import { useCoaStore } from '../../store/coaStore';
+import { showToast } from '../ui/Toast';
 
 export const CoaTableView = ({
   accounts,
@@ -46,6 +49,8 @@ export const CoaTableView = ({
   showReserved = false,
 }) => {
   const navigate = useNavigate();
+  const { deleteAccount } = useCoaStore();
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   // Filter subsidiary locally if it's not supported by API yet
   // However, API pagination is global. For now, we will just pass accounts directly
@@ -93,10 +98,14 @@ export const CoaTableView = ({
         ),
         cell: ({ row }) => {
           const account = row.original;
+          const isReservedNode = account.isReserved || reservedCodes.some(r => r.isActive && account.code >= r.reserveStart && account.code <= r.reserveEnd);
           return (
             <div className="flex items-center gap-1.5 font-mono font-medium text-slate-300">
               {account.code}
-              {(account.isReserved || reservedCodes.some(r => r.isActive && account.code >= r.reserveStart && account.code <= r.reserveEnd)) && (
+              {isReservedNode && (
+                <span className="text-[9px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded px-1.5 py-0.5">RESERVED</span>
+              )}
+              {isReservedNode && (
                 <Lock className="h-3 w-3 text-amber-500" title="This account code is system-reserved" />
               )}
             </div>
@@ -211,31 +220,41 @@ export const CoaTableView = ({
         header: () => <div className="text-right">Actions</div>,
         cell: ({ row }) => {
           const acc = row.original;
+          const isReservedNode = acc.isReserved || reservedCodes.some(r => r.isActive && acc.code >= r.reserveStart && acc.code <= r.reserveEnd);
           return (
             <div className="flex justify-end gap-1.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 cursor-pointer"
-                onClick={() => navigate(`/ledger?account=${acc.code}`)}
-                title="View General Ledger"
-              >
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 cursor-pointer" onClick={() => navigate(`/ledger?account=${acc.code}`)} title="View General Ledger">
                 <BookOpen className="h-3.5 w-3.5 text-slate-400 hover:text-brand-300" />
               </Button>
               <Button
-                variant="ghost"
-                size="sm"
+                variant="ghost" size="sm"
                 className={`h-8 w-8 p-0 ${acc.level === 'MAIN' ? 'opacity-35 cursor-not-allowed text-slate-600' : 'cursor-pointer text-slate-400 hover:text-amber-400'}`}
-                onClick={acc.level === 'MAIN' ? undefined : () => onEditAccount(acc)}
+                onClick={() => {
+                  if (acc.level === 'MAIN') return;
+                  if (acc.level === 'PARENT' || acc.level === 'SUBSIDIARY') {
+                    if (!window.confirm(`⚠️ Warning: This is a system-level account. Are you sure?`)) return;
+                  }
+                  onEditAccount(acc);
+                }}
                 disabled={acc.level === 'MAIN'}
-                title={acc.level === 'MAIN' ? "MAIN accounts are permanent and cannot be edited" : "Edit Account"}
+                title={acc.level === 'MAIN' ? 'MAIN accounts cannot be edited' : 'Edit Account'}
               >
-                {acc.level === 'MAIN' ? (
-                  <Lock className="h-3.5 w-3.5" />
-                ) : (
-                  <Edit2 className="h-3.5 w-3.5" />
-                )}
+                {acc.level === 'MAIN' ? <Lock className="h-3.5 w-3.5" /> : <Edit2 className="h-3.5 w-3.5" />}
               </Button>
+              {/* Fix 7/17 — Delete with reserved guard and confirmation */}
+              {acc.level !== 'MAIN' && acc.level !== 'PARENT' && (
+                <Button
+                  variant="ghost" size="sm"
+                  className={`h-8 w-8 p-0 ${isReservedNode ? 'opacity-35 cursor-not-allowed text-slate-600' : 'cursor-pointer text-slate-400 hover:text-red-400'}`}
+                  onClick={() => {
+                    if (isReservedNode) { showToast('Reserved codes cannot be deleted.', 'error'); return; }
+                    setConfirmDelete(acc);
+                  }}
+                  title={isReservedNode ? 'Reserved accounts cannot be deleted' : 'Delete Account'}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
             </div>
           );
         },
@@ -254,6 +273,34 @@ export const CoaTableView = ({
 
   return (
     <div className="space-y-4">
+      {/* Fix 17 — Delete confirmation dialog */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 max-w-sm w-full shadow-2xl space-y-4">
+            <h3 className="text-base font-bold text-slate-100">Confirm Deletion</h3>
+            <p className="text-sm text-slate-400">
+              Are you sure you want to delete <span className="font-semibold text-slate-200">{confirmDelete.name}</span>{' '}
+              (<span className="font-mono text-brand-400">{confirmDelete.code}</span>)? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" size="sm" onClick={() => setConfirmDelete(null)}>Cancel</Button>
+              <Button
+                variant="primary" size="sm"
+                className="bg-red-600 hover:bg-red-500 text-white"
+                onClick={async () => {
+                  try {
+                    await deleteAccount(confirmDelete.id);
+                    showToast(`✅ Account ${confirmDelete.code} deleted`, 'success');
+                  } catch (e) {
+                    showToast(e.message || 'Delete failed', 'error');
+                  }
+                  setConfirmDelete(null);
+                }}
+              >Delete</Button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Table grid */}
       <div className="w-full overflow-x-auto">
         <table className="w-full text-left border-collapse min-w-[800px]">

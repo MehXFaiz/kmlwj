@@ -19,16 +19,18 @@ export const CoaExportImport = () => {
     try {
       const response = await accountService.getAll({ limit: 100000 });
       const accountsToExport = response.data || [];
-      const headers = ['code', 'name', 'type', 'detailType', 'parentCode', 'currency', 'status', 'initialBalance', 'description', 'subsidiary'];
+      const headers = ['code', 'name', 'type', 'detailType', 'level', 'parentCode', 'currency', 'status', 'isReserved', 'initialBalance', 'description', 'subsidiary'];
       
       const rows = accountsToExport.map((acc) => [
         acc.code,
         `"${acc.name.replace(/"/g, '""')}"`,
         acc.type,
         acc.detailType,
+        acc.level,
         acc.parentCode || '',
         acc.currency,
         acc.status,
+        acc.isReserved ? 'true' : 'false',
         acc.initialBalance || 0,
         `"${(acc.description || '').replace(/"/g, '""')}"`,
         (acc.subsidiary || []).join(';'),

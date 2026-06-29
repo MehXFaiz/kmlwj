@@ -8,7 +8,22 @@ import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { useCoaStore } from '../../store/coaStore';
 import { useJournalStore } from '../../store/journalStore';
-import { ArrowLeft, ArrowRight, Check, Coins, CreditCard, Receipt, TrendingUp, Sparkles, Lock } from 'lucide-react';
+import { showToast } from '../ui/Toast';
+import { ArrowLeft, ArrowRight, Check, Coins, CreditCard, Receipt, TrendingUp, Sparkles, Lock, CheckCircle2, XCircle, AlertTriangle, ChevronRight } from 'lucide-react';
+
+// Maps account type to expected first digit of GL code
+const typePrefixMap = { Asset: '1', Liability: '2', Revenue: '3', Expense: '4' };
+
+// Build breadcrumb from parent chain
+function buildBreadcrumb(account, allAccounts) {
+  const crumbs = [];
+  let current = account;
+  while (current) {
+    crumbs.unshift(current.name);
+    current = allAccounts.find(a => a.code === current.parentCode);
+  }
+  return crumbs;
+}
 
 // Zod validation schema
 const accountSchema = zod.object({
@@ -41,6 +56,7 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
   const { treeAccounts, flatAccounts, addAccount, updateAccount } = useCoaStore();
   const { logActivity } = useJournalStore();
   const [step, setStep] = useState(1);
+  const [codeInputVal, setCodeInputVal] = useState('');
 
   // Flatten nested tree for searching/filtering
   const allAccounts = useMemo(() => {
@@ -59,6 +75,7 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
     watch,
     reset,
     setError,
+    clearErrors,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(accountSchema),
@@ -80,6 +97,45 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
   const selectedType = watch('type');
   const parentCodeVal = watch('parentCode');
   const accountNameVal = watch('name');
+  const watchedCode = watch('code');
+
+  // Real-time code validation (Fix 1, 3, 10)
+  const codeValidation = useMemo(() => {
+    const val = codeInputVal || watchedCode || '';
+    if (!val) return { status: 'empty', message: '' };
+    if (!/^\d{7}$/.test(val)) return { status: 'invalid', message: 'Code must be exactly 7 digits' };
+    const isDuplicate = allAccounts.some(
+      a => a.code === val && (!editingAccount || a.id !== editingAccount.id)
+    );
+    if (isDuplicate) return { status: 'duplicate', message: 'This code already exists. Use a unique code.' };
+    return { status: 'valid', message: 'Code is valid and unique ✅' };
+  }, [codeInputVal, watchedCode, allAccounts, editingAccount]);
+
+  // Nature mismatch warning (Fix 9)
+  const natureMismatchWarning = useMemo(() => {
+    const code = codeInputVal || watchedCode || '';
+    if (!code || !selectedType) return null;
+    const expectedPrefix = typePrefixMap[selectedType];
+    if (expectedPrefix && code[0] && code[0] !== expectedPrefix) {
+      return `⚠️ Code "${code}" starts with "${code[0]}" but ${selectedType} accounts should start with "${expectedPrefix}". Please verify.`;
+    }
+    return null;
+  }, [codeInputVal, watchedCode, selectedType]);
+
+  // Expense series warning (Fix 2)
+  const expenseSeriesWarning = useMemo(() => {
+    const code = codeInputVal || watchedCode || '';
+    if (selectedType === 'Expense' && code && !code.startsWith('4')) {
+      return 'Accounts under Expenses must start with 4.';
+    }
+    return null;
+  }, [codeInputVal, watchedCode, selectedType]);
+
+  // Breadcrumb for edit mode (Fix 20)
+  const breadcrumb = useMemo(() => {
+    if (!editingAccount) return [];
+    return buildBreadcrumb(editingAccount, allAccounts);
+  }, [editingAccount, allAccounts]);
 
   // Filter possible parents: must be Level 2 PARENT level accounts of same type
   const potentialParents = useMemo(() => {
@@ -118,8 +174,9 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
   // Load account data for editing or reset for creation
   useEffect(() => {
     if (isOpen) {
+      setCodeInputVal('');
       if (editingAccount) {
-        setStep(1); // not used in editing, but resets wizard step state
+        setStep(1);
         reset({
           code: editingAccount.code,
           name: editingAccount.name,
@@ -132,6 +189,7 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
           description: editingAccount.description || '',
           initialBalance: editingAccount.initialBalance || 0,
         });
+        setCodeInputVal(editingAccount.code);
       } else {
         setStep(1);
         const defaultParent = allAccounts.find(acc => acc.type === 'Asset' && acc.level === 'PARENT');
@@ -149,47 +207,45 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
     }
   }, [editingAccount, reset, isOpen, allAccounts]);
 
-  // Apply code selection when stepping into summary
+  // Apply code selection when stepping into summary (Fix 8)
   useEffect(() => {
     if (step === 4 && generatedCode) {
       setValue('code', generatedCode);
+      setCodeInputVal(generatedCode);
     }
   }, [step, generatedCode, setValue]);
 
   const onSubmitForm = async (data) => {
-    // Check code uniqueness
+    // Fix 6 — Require parent for new accounts
+    if (!editingAccount && !data.parentCode) {
+      setError('parentCode', { type: 'manual', message: 'Please select a valid parent account' });
+      showToast('Please select a valid parent account', 'warning');
+      return;
+    }
+
+    // Fix 3 — Duplicate code check
     const codeExists = allAccounts.some(
       (acc) => acc.code === data.code && (!editingAccount || acc.id !== editingAccount.id)
     );
-
     if (codeExists) {
-      setError('code', { type: 'manual', message: 'Account code is already in use' });
-      alert('Account code is already in use');
+      setError('code', { type: 'manual', message: 'This code already exists. Please use a unique code.' });
+      showToast('Account code is already in use', 'error');
       return;
     }
 
     try {
       if (editingAccount) {
         await updateAccount(editingAccount.id, data);
-        logActivity(
-          'Modify Account',
-          `Modified Account ${editingAccount.code} - ${editingAccount.name}.`
-        );
-        alert('Account updated successfully');
+        logActivity('Modify Account', `Modified Account ${editingAccount.code} - ${editingAccount.name}.`);
+        showToast('✅ Account updated successfully', 'success');
       } else {
-        const created = await addAccount({
-          ...data,
-          level: 'SUBSIDIARY', // always subsidiary from wizard
-        });
-        logActivity(
-          'Create Account',
-          `Created Account ${created.glCode || data.code} - ${created.accountName || data.name}.`
-        );
-        alert('Account created successfully');
+        const created = await addAccount({ ...data, level: 'SUBSIDIARY' });
+        logActivity('Create Account', `Created Account ${created.glCode || data.code} - ${created.accountName || data.name}.`);
+        showToast('✅ Account created successfully', 'success');
       }
       onClose();
     } catch (e) {
-      alert(e.message || "An error occurred");
+      showToast(e.message || 'An error occurred', 'error');
     }
   };
 
@@ -227,6 +283,19 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
       {editingAccount ? (
         /* ==================== EDIT MODE (SIMPLE FORM) ==================== */
         <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-5">
+
+          {/* Breadcrumb (Fix 20) */}
+          {breadcrumb.length > 1 && (
+            <div className="flex items-center flex-wrap gap-1 text-[11px] text-slate-500 bg-slate-950/60 border border-slate-800/50 rounded-lg px-3 py-2">
+              {breadcrumb.map((crumb, i) => (
+                <span key={i} className="flex items-center gap-1">
+                  <span className={i === breadcrumb.length - 1 ? 'text-slate-300 font-semibold' : 'text-slate-500'}>{crumb}</span>
+                  {i < breadcrumb.length - 1 && <ChevronRight className="h-3 w-3 text-slate-600" />}
+                </span>
+              ))}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Input
@@ -234,13 +303,19 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
                 disabled
                 {...register('code')}
               />
+              {/* Fix 7 — Reserved badge */}
+              {editingAccount.isReserved && (
+                <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded px-2 py-0.5">
+                  <Lock className="h-2.5 w-2.5" /> RESERVED
+                </span>
+              )}
             </div>
             <Input
               label="Account Name"
               required
               error={errors.name?.message}
               placeholder="e.g. Current Account - PKR"
-              disabled={!!editingAccount.isLocked}
+              disabled={!!editingAccount.isLocked || !!editingAccount.isReserved}
               {...register('name')}
             />
           </div>
@@ -276,7 +351,7 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
               label="Currency"
               required
               error={errors.currency?.message}
-              disabled={!!editingAccount.isLocked}
+              disabled={!!editingAccount.isLocked || !!editingAccount.isReserved}
               {...register('currency')}
             >
               <option value="PKR">PKR - Pakistani Rupee</option>
@@ -289,11 +364,11 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
 
             <div className="flex items-center gap-4 mt-8">
               <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-                <input type="checkbox" disabled={!!editingAccount.isLocked} {...register('isLocked')} />
+                <input type="checkbox" disabled={!!editingAccount.isLocked || !!editingAccount.isReserved} {...register('isLocked')} />
                 <span className="text-sm text-slate-400">Is Locked</span>
               </label>
               <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-                <input type="checkbox" disabled={!!editingAccount.isLocked} {...register('isReserved')} />
+                <input type="checkbox" disabled={!!editingAccount.isLocked || !!editingAccount.isReserved} {...register('isReserved')} />
                 <span className="text-sm text-slate-400">Is Reserved</span>
               </label>
             </div>
@@ -305,13 +380,13 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
             </label>
             <textarea
               rows="3"
-              disabled={!!editingAccount.isLocked}
+              disabled={!!editingAccount.isLocked || !!editingAccount.isReserved}
               placeholder="Add detailed explanation of this account's purpose..."
               className={`
                 w-full px-3 py-2 bg-slate-900/60 border border-slate-800 rounded-md text-sm text-slate-100 placeholder:text-slate-500
                 focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all duration-200
                 ${errors.description ? 'border-red-500/50' : ''}
-                ${editingAccount.isLocked ? 'cursor-not-allowed opacity-70' : ''}
+                ${(editingAccount.isLocked || editingAccount.isReserved) ? 'cursor-not-allowed opacity-70' : ''}
               `}
               {...register('description')}
             />
@@ -324,7 +399,13 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
             <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" disabled={isSubmitting}>
+            {/* Fix 7 — Block save for reserved */}
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={isSubmitting || !!editingAccount.isReserved}
+              title={editingAccount.isReserved ? 'Reserved accounts cannot be modified' : ''}
+            >
               Save Changes
             </Button>
           </div>
@@ -408,12 +489,15 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
                   <p className="text-xs text-slate-500 mt-1">Choose the Level 2 node where this subsidiary ledger account belongs.</p>
                 </div>
 
+                {/* Fix 6 — Warn if no parents found */}
+                {potentialParents.length === 0 && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs">
+                    <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                    No Level 2 parent categories defined for {selectedType} yet. Please create a parent account first.
+                  </div>
+                )}
                 <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
-                  {potentialParents.length === 0 ? (
-                    <div className="py-6 text-center text-slate-500 text-xs">
-                      No Level 2 parent categories defined for {selectedType} yet.
-                    </div>
-                  ) : (
+                  {potentialParents.length > 0 && (
                     potentialParents.map((parent) => {
                       const isSelected = parentCodeVal === parent.code;
                       return (
@@ -521,7 +605,7 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
                     variant="primary" 
                     onClick={() => {
                       if (!accountNameVal || accountNameVal.length < 3) {
-                        alert('Account name must be at least 3 characters');
+                        showToast('Account name must be at least 3 characters', 'warning');
                         return;
                       }
                       setStep(4);
@@ -543,19 +627,62 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
                   <p className="text-xs text-slate-500 mt-1">Please verify the generated account details before committing to ledger.</p>
                 </div>
 
-                {/* Generated Code callout */}
+                {/* Generated Code callout with real-time editable input (Fix 1, 10) */}
                 <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 text-center space-y-2 relative overflow-hidden group">
                   <div className="absolute top-2 right-2 text-brand-500/10 group-hover:text-brand-500/20 transition-colors">
                     <Sparkles className="h-10 w-10" />
                   </div>
                   <span className="text-slate-500 text-[10px] font-semibold uppercase tracking-wider flex items-center justify-center gap-1">
                     <Lock className="h-3 w-3" />
-                    <span>System Auto-Generated GL Code</span>
+                    <span>Auto-Generated GL Code — Override if needed</span>
                   </span>
-                  <h2 className="text-2xl sm:text-3xl font-mono font-bold tracking-widest text-slate-100 bg-slate-900/60 py-1.5 rounded-lg border border-slate-800/50 w-56 mx-auto">
-                    {generatedCode}
-                  </h2>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="relative w-56">
+                      <input
+                        type="text"
+                        maxLength={7}
+                        value={codeInputVal}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 7);
+                          setCodeInputVal(val);
+                          setValue('code', val);
+                          if (val.length === 7) clearErrors('code');
+                        }}
+                        className={`w-full text-center text-2xl font-mono font-bold tracking-widest py-1.5 rounded-lg border bg-slate-900/60
+                          ${codeValidation.status === 'valid' ? 'border-emerald-500/50 text-emerald-400' : ''}
+                          ${codeValidation.status === 'duplicate' ? 'border-red-500/50 text-red-400' : ''}
+                          ${codeValidation.status === 'invalid' ? 'border-amber-500/50 text-amber-400' : ''}
+                          ${codeValidation.status === 'empty' ? 'border-slate-800 text-slate-100' : ''}
+                          focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all`}
+                      />
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                        {codeValidation.status === 'valid' && <CheckCircle2 className="h-4 w-4 text-emerald-400" />}
+                        {(codeValidation.status === 'duplicate' || codeValidation.status === 'invalid') && <XCircle className="h-4 w-4 text-red-400" />}
+                      </div>
+                    </div>
+                    {codeValidation.message && (
+                      <span className={`text-xs font-medium ${codeValidation.status === 'valid' ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {codeValidation.message}
+                      </span>
+                    )}
+                  </div>
                 </div>
+
+                {/* Fix 2 — Expense series warning */}
+                {expenseSeriesWarning && (
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs">
+                    <XCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    {expenseSeriesWarning}
+                  </div>
+                )}
+
+                {/* Fix 9 — Nature/series mismatch warning */}
+                {natureMismatchWarning && !expenseSeriesWarning && (
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs">
+                    <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    {natureMismatchWarning}
+                  </div>
+                )}
 
                 {/* Summary panel */}
                 <div className="bg-slate-900/20 border border-slate-800/60 rounded-xl p-4 space-y-3">
@@ -590,10 +717,11 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
                   <Button 
                     variant="primary" 
                     onClick={handleSubmit(onSubmitForm)} 
-                    disabled={isSubmitting}
-                    className="gap-1.5 cursor-pointer bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold"
+                    disabled={isSubmitting || codeValidation.status !== 'valid'}
+                    className="gap-1.5 cursor-pointer bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold disabled:opacity-50"
+                    title={codeValidation.status !== 'valid' ? 'Fix code errors before saving' : ''}
                   >
-                    <span>Confirm & Create</span>
+                    <span>Confirm &amp; Create</span>
                     <Check className="h-4 w-4 stroke-[3]" />
                   </Button>
                 </div>

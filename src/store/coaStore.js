@@ -135,6 +135,24 @@ export const useCoaStore = create((set, get) => ({
   },
 
   deleteAccount: async (id) => {
+    // Fix 7 — Block reserved accounts from being deleted
+    const flatten = (nodes) => nodes.reduce((acc, node) => {
+      acc.push(node);
+      if (node.children) acc.push(...flatten(node.children));
+      return acc;
+    }, []);
+    const all = [
+      ...(get().accounts || []),
+      ...(get().flatAccounts || []),
+      ...flatten(get().treeAccounts || [])
+    ];
+    const acc = all.find(a => a.id === id);
+    if (acc?.isReserved) {
+      const err = new Error('This is a reserved code and cannot be deleted.');
+      set({ error: err.message, loading: false });
+      throw err;
+    }
+
     set({ loading: true, error: null });
     try {
       await accountService.delete(id);
