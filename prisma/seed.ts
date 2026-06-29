@@ -289,6 +289,9 @@ async function main() {
   // Seeding Level 3 Subsidiary Accounts
   console.log('Seeding Level 3 Subsidiary Accounts...');
   const subsidiaryAccounts = [
+    // under Current Assets (1100000)
+    { glCode: '1100001', accountName: 'Meezan Bank Account', parentCode: '1100000', accountTypeName: 'ASSET', detailType: 'Bank', description: 'Main Meezan checking account' },
+    { glCode: '1100002', accountName: 'HBL Bank Account', parentCode: '1100000', accountTypeName: 'ASSET', detailType: 'Bank', description: 'Secondary HBL account' },
     // under Hall Income (3100000)
     { glCode: '3100001', accountName: 'Bagh-e-Hajiani Garden', parentCode: '3100000', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Bagh-e-Hajiani Garden Hall Income' },
     { glCode: '3100002', accountName: 'Sadaya Hall', parentCode: '3100000', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Sadaya Hall Income' },
