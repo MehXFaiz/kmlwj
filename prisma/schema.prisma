@@ -270,6 +270,8 @@ model HallBooking {
   paymentMethod   PaymentMethod
   bankAccountId   String?        @db.Uuid
   bankAccount     Account?       @relation("HallBookingBankAccount", fields: [bankAccountId], references: [id])
+  chequeNumber    String?
+  chequeBankName  String?
   status          String         @default("Confirmed")
   remarks         String?
   createdById     String?        @db.Uuid

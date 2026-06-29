@@ -29,6 +29,8 @@ export const HallBookingForm = () => {
       amount: '',
       paymentMethod: 'CASH',
       bankAccountId: '',
+      chequeNumber: '',
+      chequeBankName: '',
       remarks: ''
     }
   });
@@ -233,6 +235,41 @@ export const HallBookingForm = () => {
                     </select>
                   </div>
                 </div>
+              )}
+
+              {paymentMethod === 'CHEQUE' && (
+                <>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Cheque Number *</label>
+                    <input type="text" {...register('chequeNumber')} required
+                      className="w-full px-3 py-2.5 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Drawn On Bank *</label>
+                    <div className="relative">
+                      <Landmark className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                      <select {...register('chequeBankName')} required
+                        className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors">
+                        <option value="">-- Select Bank --</option>
+                        <option value="Meezan Bank">Meezan Bank</option>
+                        <option value="Habib Bank Limited (HBL)">Habib Bank Limited (HBL)</option>
+                        <option value="United Bank Limited (UBL)">United Bank Limited (UBL)</option>
+                        <option value="MCB Bank">MCB Bank</option>
+                        <option value="Allied Bank Limited (ABL)">Allied Bank Limited (ABL)</option>
+                        <option value="Bank Alfalah">Bank Alfalah</option>
+                        <option value="Standard Chartered Bank">Standard Chartered Bank</option>
+                        <option value="Askari Bank">Askari Bank</option>
+                        <option value="Bank Al Habib">Bank Al Habib</option>
+                        <option value="Faysal Bank">Faysal Bank</option>
+                        <option value="Soneri Bank">Soneri Bank</option>
+                        <option value="JS Bank">JS Bank</option>
+                        <option value="Habib Metropolitan Bank">Habib Metropolitan Bank</option>
+                        <option value="Dubai Islamic Bank">Dubai Islamic Bank</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           </div>

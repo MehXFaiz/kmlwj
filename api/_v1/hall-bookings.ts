@@ -111,7 +111,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     // Action: Create Booking
-    const { bookingDate, bookerName, address, mobile, programDate, programType, timings, hallId, isForJamaat, amount, paymentMethod, bankAccountId, remarks } = req.body;
+    const { bookingDate, bookerName, address, mobile, programDate, programType, timings, hallId, isForJamaat, amount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
 
     if (!bookerName || !programDate || !hallId || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: 'Missing required fields', status: 400 } });
@@ -137,6 +137,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         amount: parseFloat(amount),
         paymentMethod,
         bankAccountId: bankAccountId || null,
+        chequeNumber: chequeNumber || null,
+        chequeBankName: chequeBankName || null,
         status: 'Confirmed',
         remarks: remarks || null,
       },
