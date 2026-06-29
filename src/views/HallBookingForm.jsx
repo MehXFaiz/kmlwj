@@ -16,7 +16,7 @@ export const HallBookingForm = () => {
   const { flatAccounts, fetchAccountsList } = useCoaStore();
   const [newlyCreatedBooking, setNewlyCreatedBooking] = useState(null);
 
-  const { register, handleSubmit, watch, formState: { isSubmitting } } = useForm({
+  const { register, handleSubmit, watch, setValue, formState: { isSubmitting } } = useForm({
     defaultValues: {
       bookerName: '',
       mobile: '',
@@ -34,6 +34,8 @@ export const HallBookingForm = () => {
   });
 
   const paymentMethod = watch('paymentMethod');
+  const hallId = watch('hallId');
+  const isForJamaat = watch('isForJamaat');
 
   useEffect(() => {
     fetchAccountsList();
@@ -50,6 +52,31 @@ export const HallBookingForm = () => {
     a.level === 'SUBSIDIARY' && 
     a.name.toLowerCase().includes('bank')
   );
+
+  useEffect(() => {
+    if (!hallId) return;
+
+    const hall = hallAccounts.find(h => h.id === hallId);
+    if (!hall) return;
+
+    const hallName = hall.name.toLowerCase();
+    let baseRate = 0;
+
+    if (hallName.includes('hajiyani')) {
+      baseRate = 43000;
+    } else if (hallName.includes('anxy') || hallName.includes('annexy') || hallName.includes('anexy')) {
+      baseRate = 33000;
+    } else if (hallName.includes('sadaya')) {
+      baseRate = 28000;
+    } else if (hallName.includes('zikriya') || hallName.includes('zakariya') || hallName.includes('zakriya')) {
+      baseRate = 28000;
+    }
+
+    if (baseRate > 0) {
+      const finalRate = isForJamaat ? baseRate * 0.5 : baseRate;
+      setValue('amount', finalRate);
+    }
+  }, [hallId, isForJamaat, hallAccounts, setValue]);
 
   const onSubmit = async (data) => {
     if (!data.bookerName || !data.programDate || !data.hallId || !data.amount) {
