@@ -62,13 +62,13 @@ export const HallBookingForm = () => {
     const hallName = hall.name.toLowerCase();
     let baseRate = 0;
 
-    if (hallName.includes('hajiyani')) {
+    if (hallName.includes('hajiani') || hallName.includes('hajiyani')) {
       baseRate = 43000;
     } else if (hallName.includes('anxy') || hallName.includes('annexy') || hallName.includes('anexy')) {
       baseRate = 33000;
     } else if (hallName.includes('sadaya')) {
       baseRate = 28000;
-    } else if (hallName.includes('zikriya') || hallName.includes('zakariya') || hallName.includes('zakriya')) {
+    } else if (hallName.includes('zikarya') || hallName.includes('zikriya') || hallName.includes('zakariya') || hallName.includes('zakriya')) {
       baseRate = 28000;
     }
 
