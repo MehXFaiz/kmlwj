@@ -104,6 +104,35 @@ export const TrialBalanceSheet = () => {
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleExportCSV = () => {
+    const headers = ['GL Code', 'Nature', 'Main Category Name', 'GL Name', 'Remarks'];
+    const csvContent = [
+      headers.join(','),
+      ...filteredData.map(row => 
+        [
+          row.code,
+          row.nature,
+          `"${row.mainCategory.replace(/"/g, '""')}"`,
+          `"${row.glName.replace(/"/g, '""')}"`,
+          row.remarks
+        ].join(',')
+      )
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `trial_balance_matrix_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Title & Action Buttons */}
@@ -114,15 +143,15 @@ export const TrialBalanceSheet = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2 cursor-pointer">
             <Printer className="h-4 w-4" />
             <span>Print</span>
           </Button>
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button variant="outline" size="sm" onClick={handleExportCSV} className="gap-2 cursor-pointer">
             <Download className="h-4 w-4" />
             <span>Export CSV</span>
           </Button>
-          <Button variant="primary" size="sm" onClick={handleCreateAccount} className="gap-2">
+          <Button variant="primary" size="sm" onClick={handleCreateAccount} className="gap-2 cursor-pointer">
             <Plus className="h-4 w-4" />
             <span>New Account</span>
           </Button>
