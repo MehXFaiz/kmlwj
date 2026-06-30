@@ -66,7 +66,7 @@ export const Topbar = ({ onMobileMenuToggle }) => {
         <div className="flex-1 flex items-center justify-center min-w-0 px-2 sm:px-4">
           <span
             dir="rtl"
-            className="font-bold text-indigo-200 whitespace-nowrap select-none text-[15px] sm:text-xl text-center w-full pb-2 pt-1"
+            className="font-bold text-indigo-200 truncate block select-none text-[15px] sm:text-xl text-center w-full pb-2 pt-1"
             style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
           >
             کچھی مسلم لوہار واڈہ ویلفیئر جماعت
