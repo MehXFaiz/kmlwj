@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useRef, useState, useCallback } from 'react';
+import { useMemo, useEffect, useRef, useState, useCallback, startTransition } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCoaStore } from '../store/coaStore';
 import { useDashboardStore } from '../store/dashboardStore';
@@ -432,7 +432,7 @@ export const Dashboard = () => {
           ].map((action) => (
             <button
               key={action.path}
-              onClick={() => navigate(action.path)}
+              onClick={() => startTransition(() => navigate(action.path))}
               className={`group relative flex-shrink-0 flex flex-col items-start gap-3 w-44 sm:w-48 p-4 rounded-2xl border border-slate-800/60 bg-slate-900/60 backdrop-blur-sm hover:bg-slate-800/60 hover:border-slate-700/80 hover:shadow-xl ${action.glow} hover:ring-1 ${action.ring} transition-all duration-300 cursor-pointer text-left overflow-hidden`}
             >
               {/* Accent line top */}
@@ -648,22 +648,22 @@ export const Dashboard = () => {
           <div className="space-y-2">
             <QuickAction icon={FileText} label={t('dashboard.journalEntry')}
               color="bg-indigo-950/60 border border-indigo-800/40 text-indigo-400"
-              onClick={() => navigate('/journals')} />
+              onClick={() => startTransition(() => navigate('/journals'))} />
             <QuickAction icon={Layers} label={t('dashboard.chartOfAccounts')}
               color="bg-blue-950/60 border border-blue-800/40 text-blue-400"
-              onClick={() => navigate('/coa')} />
+              onClick={() => startTransition(() => navigate('/coa'))} />
             <QuickAction icon={BookOpen} label={t('dashboard.viewLedger')}
               color="bg-violet-950/60 border border-violet-800/40 text-violet-400"
-              onClick={() => navigate('/ledger')} />
+              onClick={() => startTransition(() => navigate('/ledger'))} />
             <QuickAction icon={BarChart3} label={t('dashboard.financialReports')}
               color="bg-emerald-950/60 border border-emerald-800/40 text-emerald-400"
-              onClick={() => navigate('/reports')} />
+              onClick={() => startTransition(() => navigate('/reports'))} />
             <QuickAction icon={Users} label={t('dashboard.usersAndRoles')}
               color="bg-amber-950/60 border border-amber-800/40 text-amber-400"
-              onClick={() => navigate('/users-roles')} />
+              onClick={() => startTransition(() => navigate('/users-roles'))} />
             <QuickAction icon={ShieldCheck} label={t('dashboard.auditTrail')}
               color="bg-slate-800/60 border border-slate-700/40 text-slate-400"
-              onClick={() => navigate('/audit')} />
+              onClick={() => startTransition(() => navigate('/audit'))} />
           </div>
 
           {/* Account health */}

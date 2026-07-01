@@ -1,5 +1,5 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, startTransition } from 'react';
 import logoImg from '../../assets/logo.png';
 import { useAuthStore } from '../../store/authStore';
 import { searchService } from '../../services/apiServices';
@@ -50,9 +50,25 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
   const [expandedItems, setExpandedItems] = useState({ '/coa': true });
 
   const toggleExpand = (path, e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setExpandedItems(prev => ({ ...prev, [path]: !prev[path] }));
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    startTransition(() => {
+      setExpandedItems(prev => ({ ...prev, [path]: !prev[path] }));
+    });
+  };
+
+  const handleNavClick = (path, e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    startTransition(() => {
+      navigate(path);
+      if (setIsMobileOpen) setIsMobileOpen(false);
+      if (setIsSearchOpen) setIsSearchOpen(false);
+    });
   };
 
   const isPathActive = (path) => {
@@ -262,7 +278,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
       >
         {/* Collapse toggle */}
         <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={() => startTransition(() => setIsCollapsed(!isCollapsed))}
           className="hidden lg:flex absolute top-5 -right-3 h-6 w-6 rounded-full bg-slate-900 border border-slate-800 items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all cursor-pointer shadow-md shadow-black/40 z-[60]"
           title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
         >
@@ -368,8 +384,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
                           if (hasSubItems && !isCollapsed) {
                             toggleExpand(item.path, e);
                           } else {
-                            navigate(item.path);
-                            setIsMobileOpen && setIsMobileOpen(false);
+                            handleNavClick(item.path, e);
                           }
                         }}
                       >
@@ -414,7 +429,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
                               <NavLink
                                 key={sub.path}
                                 to={sub.path}
-                                onClick={() => setIsMobileOpen && setIsMobileOpen(false)}
+                                onClick={(e) => handleNavClick(sub.path, e)}
                                 className={`
                                   flex items-center gap-2.5 py-1.5 px-2.5 rounded-md text-xs font-medium transition-all duration-150 select-none
                                   ${subActive
@@ -443,7 +458,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
           {isCollapsed ? (
             <div className="flex justify-center">
               <button
-                onClick={() => { logout(); navigate('/login'); }}
+                onClick={() => startTransition(() => { logout(); navigate('/login'); })}
                 className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-red-950/40 text-slate-500 hover:text-red-400 transition-all cursor-pointer border border-transparent hover:border-red-900/40 group relative"
                 title="Sign Out"
               >
@@ -464,7 +479,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
                 <p className="text-[10px] text-slate-600 uppercase tracking-wider font-medium truncate">{userRole}</p>
               </div>
               <button
-                onClick={() => { logout(); navigate('/login'); }}
+                onClick={() => startTransition(() => { logout(); navigate('/login'); })}
                 className="flex-shrink-0 p-1.5 rounded-md hover:bg-red-950/40 text-slate-600 hover:text-red-400 transition-all cursor-pointer"
                 title="Sign Out"
               >
@@ -545,7 +560,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
                       <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 px-1">Navigation Pages ({filteredPages.length})</h4>
                       <div className="space-y-1">
                         {filteredPages.map((page) => (
-                          <button key={page.path} onClick={() => { navigate(page.path); setIsSearchOpen(false); }}
+                          <button key={page.path} onClick={() => handleNavClick(page.path)}
                             className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-800/60 border border-transparent hover:border-slate-800/40 text-left transition-all group cursor-pointer">
                             <div className="flex items-center gap-3">
                               <div className="h-8 w-8 rounded-lg bg-indigo-950/60 border border-indigo-900/40 flex items-center justify-center group-hover:bg-indigo-900/60 transition-colors">
@@ -568,7 +583,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
                       <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 px-1">Financial Accounts ({results.accounts.length})</h4>
                       <div className="space-y-1">
                         {results.accounts.map((acc) => (
-                          <button key={acc.id} onClick={() => { navigate(`/coa?search=${acc.glCode}`); setIsSearchOpen(false); }}
+                          <button key={acc.id} onClick={() => handleNavClick(`/coa?search=${acc.glCode}`)}
                             className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-800/60 border border-transparent hover:border-slate-800/40 text-left transition-all group cursor-pointer">
                             <div className="flex items-center gap-3">
                               <div className="h-8 w-8 rounded-lg bg-emerald-950/60 border border-emerald-900/40 flex items-center justify-center group-hover:bg-emerald-900/60 transition-colors">
@@ -594,7 +609,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
                       <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 px-1">Welfare Beneficiaries ({results.beneficiaries.length})</h4>
                       <div className="space-y-1">
                         {results.beneficiaries.map((b) => (
-                          <button key={b.id} onClick={() => { navigate(`/beneficiaries?search=${b.name}`); setIsSearchOpen(false); }}
+                          <button key={b.id} onClick={() => handleNavClick(`/beneficiaries?search=${b.name}`)}
                             className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-800/60 border border-transparent hover:border-slate-800/40 text-left transition-all group cursor-pointer">
                             <div className="flex items-center gap-3">
                               <div className="h-8 w-8 rounded-lg bg-blue-950/60 border border-blue-900/40 flex items-center justify-center group-hover:bg-blue-900/60 transition-colors">
@@ -617,7 +632,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
                       <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 px-1">Donation Vouchers ({results.donations.length})</h4>
                       <div className="space-y-1">
                         {results.donations.map((d) => (
-                          <button key={d.id} onClick={() => { navigate(`/donations?search=${d.remarks || d.amount}`); setIsSearchOpen(false); }}
+                          <button key={d.id} onClick={() => handleNavClick(`/donations?search=${d.remarks || d.amount}`)}
                             className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-800/60 border border-transparent hover:border-slate-800/40 text-left transition-all group cursor-pointer">
                             <div className="flex items-center gap-3">
                               <div className="h-8 w-8 rounded-lg bg-rose-950/60 border border-rose-900/40 flex items-center justify-center group-hover:bg-rose-900/60 transition-colors">
@@ -643,7 +658,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
                       <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 px-1">Journal Entries ({results.journalEntries.length})</h4>
                       <div className="space-y-1">
                         {results.journalEntries.map((je) => (
-                          <button key={je.id} onClick={() => { navigate(`/journals?search=${je.voucherNo}`); setIsSearchOpen(false); }}
+                          <button key={je.id} onClick={() => handleNavClick(`/journals?search=${je.voucherNo}`)}
                             className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-800/60 border border-transparent hover:border-slate-800/40 text-left transition-all group cursor-pointer">
                             <div className="flex items-center gap-3">
                               <div className="h-8 w-8 rounded-lg bg-amber-950/60 border border-amber-900/40 flex items-center justify-center group-hover:bg-amber-900/60 transition-colors">
@@ -669,7 +684,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
                       <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 px-1">Customers ({results.customers.length})</h4>
                       <div className="space-y-1">
                         {results.customers.map((c) => (
-                          <button key={c.id} onClick={() => { navigate(`/customers?search=${c.name}`); setIsSearchOpen(false); }}
+                          <button key={c.id} onClick={() => handleNavClick(`/customers?search=${c.name}`)}
                             className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-800/60 border border-transparent hover:border-slate-800/40 text-left transition-all group cursor-pointer">
                             <div className="flex items-center gap-3">
                               <div className="h-8 w-8 rounded-lg bg-indigo-950/60 border border-indigo-900/40 flex items-center justify-center group-hover:bg-indigo-900/60 transition-colors">
@@ -692,7 +707,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
                       <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 px-1">Sales Invoices ({results.invoices.length})</h4>
                       <div className="space-y-1">
                         {results.invoices.map((inv) => (
-                          <button key={inv.id} onClick={() => { navigate(`/invoices/${inv.id}`); setIsSearchOpen(false); }}
+                          <button key={inv.id} onClick={() => handleNavClick(`/invoices/${inv.id}`)}
                             className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-800/60 border border-transparent hover:border-slate-800/40 text-left transition-all group cursor-pointer">
                             <div className="flex items-center gap-3">
                               <div className="h-8 w-8 rounded-lg bg-teal-950/60 border border-teal-900/40 flex items-center justify-center group-hover:bg-teal-900/60 transition-colors">

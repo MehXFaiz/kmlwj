@@ -183,6 +183,7 @@ export const ReservedCodes = () => {
 
   const handleDelete = async (id) => {
     setIsDeleting(true);
+    await new Promise(resolve => setTimeout(resolve, 15));
     try {
       await deleteCode(id);
       setSelectedIds(p => p.filter(i => i !== id));
@@ -195,6 +196,7 @@ export const ReservedCodes = () => {
 
   const handleBulkDelete = async () => {
     setIsDeleting(true);
+    await new Promise(resolve => setTimeout(resolve, 15));
     try {
       await Promise.all(selectedIds.map(id => deleteCode(id)));
       setSelectedIds([]);

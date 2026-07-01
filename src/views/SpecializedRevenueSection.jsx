@@ -70,6 +70,7 @@ export const SpecializedRevenueSection = ({
   const handleDelete = async (id) => {
     if (window.confirm(`Are you sure you want to delete this ${category} record? If posted, its journal entries will be automatically reversed.`)) {
       try {
+        await new Promise(resolve => setTimeout(resolve, 15));
         await deleteCollection(id);
         setSelectedIds(prev => prev.filter(item => item !== id));
         showToast('Record deleted successfully', 'success');
@@ -96,6 +97,7 @@ export const SpecializedRevenueSection = ({
 
   const executeBulkDelete = async () => {
     setIsDeleting(true);
+    await new Promise(resolve => setTimeout(resolve, 15));
     const res = await bulkDeleteCollections(selectedIds);
     setIsDeleting(false);
     setShowBulkConfirm(false);
@@ -152,12 +154,15 @@ export const SpecializedRevenueSection = ({
     }
   };
 
-  const filtered = collections.filter(c => 
-    c.title?.toLowerCase().includes(search.toLowerCase()) ||
-    c.subTitle?.toLowerCase().includes(search.toLowerCase()) ||
-    c.mobile?.includes(search) ||
-    c.receiptNo?.toString().includes(search)
-  );
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return collections.filter(c => 
+      c.title?.toLowerCase().includes(q) ||
+      c.subTitle?.toLowerCase().includes(q) ||
+      c.mobile?.includes(search) ||
+      c.receiptNo?.toString().includes(search)
+    );
+  }, [collections, search]);
 
   return (
     <DashboardLayout breadcrumbs={['Revenue & Collections', title]}>
@@ -465,7 +470,17 @@ export const SpecializedRevenueSection = ({
                 onClick={executeBulkDelete}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-bold shadow-lg shadow-red-600/20 transition-all disabled:opacity-50"
               >
-                {isDeleting ? 'Deleting...' : `Delete ${selectedIds.length} Records`}
+                {isDeleting ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4" />
+                    Delete {selectedIds.length} Records
+                  </>
+                )}
               </button>
             </div>
           </div>

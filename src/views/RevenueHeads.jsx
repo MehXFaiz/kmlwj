@@ -316,6 +316,7 @@ export const RevenueHeads = () => {
 
   const handleDelete = async (id) => {
     setIsDeleting(true);
+    await new Promise(resolve => setTimeout(resolve, 15));
     await deleteHead(id);
     setSelectedIds(p => p.filter(i => i !== id));
     setDeleteId(null);
@@ -324,6 +325,7 @@ export const RevenueHeads = () => {
 
   const handleBulkDelete = async () => {
     setIsDeleting(true);
+    await new Promise(resolve => setTimeout(resolve, 15));
     try {
       await Promise.all(selectedIds.map(id => deleteHead(id)));
       setSelectedIds([]);

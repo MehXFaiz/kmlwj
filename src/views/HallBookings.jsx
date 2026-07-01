@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, Search, Printer, AlertTriangle, CheckCircle, X, Trash2 } from 'lucide-react';
@@ -35,6 +35,7 @@ export const HallBookings = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this booking? If posted, its journal entries will be automatically reversed.')) {
       try {
+        await new Promise(resolve => setTimeout(resolve, 15));
         await deleteBooking(id);
         setSelectedIds(prev => prev.filter(item => item !== id));
         showToast('Booking deleted successfully', 'success');
@@ -61,6 +62,7 @@ export const HallBookings = () => {
 
   const executeBulkDelete = async () => {
     setIsDeleting(true);
+    await new Promise(resolve => setTimeout(resolve, 15));
     const res = await bulkDeleteBookings(selectedIds);
     setIsDeleting(false);
     setShowBulkConfirm(false);
@@ -72,11 +74,14 @@ export const HallBookings = () => {
     }
   };
 
-  const filtered = bookings.filter(b => 
-    b.bookerName?.toLowerCase().includes(search.toLowerCase()) ||
-    b.mobile?.includes(search) ||
-    b.receiptNo?.toString().includes(search)
-  );
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return bookings.filter(b => 
+      b.bookerName?.toLowerCase().includes(q) ||
+      b.mobile?.includes(search) ||
+      b.receiptNo?.toString().includes(search)
+    );
+  }, [bookings, search]);
 
   return (
     <DashboardLayout breadcrumbs={['Revenue', t('tables.hallBookings.title')]}>

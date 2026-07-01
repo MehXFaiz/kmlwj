@@ -143,6 +143,7 @@ export const Beneficiaries = () => {
 
   const handleDelete = async (id) => {
     setIsDeleting(true);
+    await new Promise(resolve => setTimeout(resolve, 15));
     try {
       await deleteBeneficiary(id);
       showToast('Beneficiary deleted successfully', 'success');
@@ -157,6 +158,7 @@ export const Beneficiaries = () => {
 
   const handleBulkDelete = async () => {
     setIsDeleting(true);
+    await new Promise(resolve => setTimeout(resolve, 15));
     try {
       await Promise.all(selectedIds.map(id => deleteBeneficiary(id)));
       setSelectedIds([]);
