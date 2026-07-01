@@ -113,6 +113,52 @@ function KpiCard({ title, value, prefix = '', suffix = '', decimals = 0, icon: I
 }
 
 /* ─────────────────────────────────────────────
+   Stat Card — premium redesign
+───────────────────────────────────────────── */
+function StatCard({ title, value, icon: Icon, iconBg, iconColor, trend, trendLabel, trendColor, accentBar, delay = 0 }) {
+  const [visible, setVisible] = useState(false);
+  const animated = useAnimatedCounter(visible ? value : 0, 1100, 'Rs ', '', 2);
+
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), delay);
+    return () => clearTimeout(t);
+  }, [delay]);
+
+  return (
+    <div
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(18px)',
+        transition: `opacity 0.5s ease ${delay}ms, transform 0.55s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
+      }}
+      className="relative group rounded-2xl border border-slate-800/60 bg-slate-900/60 backdrop-blur-sm hover:border-slate-700/70 hover:bg-slate-800/40 transition-all duration-300 overflow-hidden"
+    >
+      <div className={`absolute inset-y-0 left-0 w-[3px] rounded-r-full bg-gradient-to-b ${accentBar} opacity-70 group-hover:opacity-100 transition-opacity duration-300`} />
+      <div className="absolute -top-6 -right-6 w-20 h-20 rounded-full bg-white/[0.02] group-hover:bg-white/[0.04] transition-all duration-500 blur-xl" />
+      <div className="relative px-5 pt-4 pb-5">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">{title}</p>
+          <div className={`h-8 w-8 rounded-xl flex items-center justify-center border ${iconBg} group-hover:scale-110 transition-transform duration-200`}>
+            <Icon className={`h-3.5 w-3.5 ${iconColor}`} />
+          </div>
+        </div>
+        <p className="text-xl sm:text-2xl font-extrabold font-mono text-slate-100 leading-none tracking-tight tabular-nums">
+          {animated}
+        </p>
+        {trendLabel && (
+          <div className={`flex items-center gap-1 mt-2.5 text-[10px] font-bold uppercase tracking-wider ${trendColor}`}>
+            {trend === 'up'      && <ArrowUpRight   className="h-3 w-3" />}
+            {trend === 'down'    && <ArrowDownRight  className="h-3 w-3" />}
+            {trend === 'neutral' && <Activity         className="h-3 w-3" />}
+            <span>{trendLabel}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
    Section Header
 ───────────────────────────────────────────── */
 function SectionHeader({ title, subtitle, action }) {
@@ -373,56 +419,95 @@ export const Dashboard = () => {
         </button>
       </div>
 
-      {/* ── Quick Actions ── PRIMARY for non-technical users ── */}
+      {/* ── Quick Actions ── horizontal pill-style row ── */}
       <div>
-        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">{t('dashboard.quickActions')}</h3>
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em] mb-3">{t('dashboard.quickActions')}</h3>
+        <div className="flex items-stretch gap-2 sm:gap-3 overflow-x-auto pb-1 scrollbar-none">
           {[
-            { label: t('dashboard.addIncome'), desc: t('dashboard.addIncomeDesc'), icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-950/40 border-emerald-900/40', path: '/bank-vouchers/revenue/new' },
-            { label: t('dashboard.addExpense'), desc: t('dashboard.addExpenseDesc'), icon: TrendingDown, color: 'text-red-400', bg: 'bg-red-950/40 border-red-900/40', path: '/bank-vouchers/expense/new' },
-            { label: t('dashboard.journalEntry'), desc: t('dashboard.journalEntryDesc'), icon: FileText, color: 'text-indigo-400', bg: 'bg-indigo-950/40 border-indigo-900/40', path: '/journals' },
-            { label: 'General Ledger', desc: 'View account ledgers & history', icon: BookOpen, color: 'text-cyan-400', bg: 'bg-cyan-950/40 border-cyan-900/40', path: '/ledger' },
-            { label: t('dashboard.transferMoney'), desc: t('dashboard.transferMoneyDesc'), icon: RefreshCw, color: 'text-violet-400', bg: 'bg-violet-950/40 border-violet-900/40', path: '/bank-vouchers/transfer/new' },
+            { label: t('dashboard.addIncome'),    desc: t('dashboard.addIncomeDesc'),    icon: TrendingUp,  color: 'text-emerald-400', ring: 'ring-emerald-500/20', glow: 'shadow-emerald-950/40', iconBg: 'bg-emerald-500/10 border-emerald-500/20', line: 'bg-emerald-500', path: '/bank-vouchers/revenue/new' },
+            { label: t('dashboard.addExpense'),   desc: t('dashboard.addExpenseDesc'),   icon: TrendingDown, color: 'text-red-400',    ring: 'ring-red-500/20',     glow: 'shadow-red-950/40',     iconBg: 'bg-red-500/10 border-red-500/20',         line: 'bg-red-500',     path: '/bank-vouchers/expense/new' },
+            { label: t('dashboard.journalEntry'), desc: t('dashboard.journalEntryDesc'), icon: FileText,     color: 'text-indigo-400', ring: 'ring-indigo-500/20',  glow: 'shadow-indigo-950/40',  iconBg: 'bg-indigo-500/10 border-indigo-500/20',   line: 'bg-indigo-500', path: '/journals' },
+            { label: 'General Ledger',            desc: 'View account ledgers & history',icon: BookOpen,     color: 'text-cyan-400',   ring: 'ring-cyan-500/20',    glow: 'shadow-cyan-950/40',    iconBg: 'bg-cyan-500/10 border-cyan-500/20',       line: 'bg-cyan-500',   path: '/ledger' },
+            { label: t('dashboard.transferMoney'),desc: t('dashboard.transferMoneyDesc'),icon: RefreshCw,    color: 'text-violet-400', ring: 'ring-violet-500/20',  glow: 'shadow-violet-950/40',  iconBg: 'bg-violet-500/10 border-violet-500/20',   line: 'bg-violet-500', path: '/bank-vouchers/transfer/new' },
           ].map((action) => (
             <button
               key={action.path}
               onClick={() => navigate(action.path)}
-              className={`group flex flex-col items-start gap-2 p-4 sm:p-5 rounded-xl border transition-all duration-200 cursor-pointer text-left ${action.bg}`}
+              className={`group relative flex-shrink-0 flex flex-col items-start gap-3 w-44 sm:w-48 p-4 rounded-2xl border border-slate-800/60 bg-slate-900/60 backdrop-blur-sm hover:bg-slate-800/60 hover:border-slate-700/80 hover:shadow-xl ${action.glow} hover:ring-1 ${action.ring} transition-all duration-300 cursor-pointer text-left overflow-hidden`}
             >
-              <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-slate-900/60 border border-slate-800/60 group-hover:scale-110 transition-transform duration-200">
-                <action.icon className={`h-5 w-5 ${action.color}`} />
+              {/* Accent line top */}
+              <div className={`absolute top-0 left-4 right-4 h-[2px] rounded-b-full ${action.line} opacity-60 group-hover:opacity-100 transition-opacity`} />
+              {/* Icon */}
+              <div className={`h-9 w-9 rounded-xl flex items-center justify-center border ${action.iconBg} group-hover:scale-105 transition-transform duration-200`}>
+                <action.icon className={`h-4 w-4 ${action.color}`} />
               </div>
-              <div>
-                <p className={`text-sm font-bold ${action.color}`}>{action.label}</p>
-                <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{action.desc}</p>
+              {/* Text */}
+              <div className="space-y-0.5">
+                <p className={`text-sm font-bold ${action.color} leading-tight`}>{action.label}</p>
+                <p className="text-[10px] text-slate-500 leading-snug">{action.desc}</p>
               </div>
+              {/* Arrow */}
+              <ChevronRight className={`absolute bottom-3.5 right-3.5 h-3.5 w-3.5 ${action.color} opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-0 group-hover:translate-x-0.5`} />
             </button>
           ))}
         </div>
       </div>
 
-      {/* ── Financial KPI Cards ── simplified labels ── */}
+
+      {/* ── Financial KPI Cards ── premium redesign ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <KpiCard title={t('dashboard.totalIncome')} value={stats.revenue} prefix="Rs " decimals={2}
-          icon={TrendingUp} iconBg="bg-emerald-950/60" iconColor="text-emerald-400"
-          trend="up" trendLabel={t('dashboard.moneyReceived')}
-          accent="border-emerald-900/30 bg-gradient-to-br from-emerald-950/20 to-slate-900/60"
-          delay={0} />
-        <KpiCard title={t('dashboard.totalSpent')} value={stats.expenses} prefix="Rs " decimals={2}
-          icon={TrendingDown} iconBg="bg-red-950/60" iconColor="text-red-400"
-          trend="down" trendLabel={t('dashboard.moneyPaidOut')}
-          accent="border-red-900/30 bg-gradient-to-br from-red-950/20 to-slate-900/60"
-          delay={80} />
-        <KpiCard title={t('dashboard.cashInHand')} value={stats.cashBalance} prefix="Rs " decimals={2}
-          icon={Banknote} iconBg="bg-blue-950/60" iconColor="text-blue-400"
-          trend="neutral" trendLabel={t('dashboard.availableCash')}
-          accent="border-blue-900/40 bg-gradient-to-br from-blue-950/30 to-slate-900/60"
-          delay={160} />
-        <KpiCard title={t('dashboard.bankBalance')} value={stats.bankBalance} prefix="Rs " decimals={2}
-          icon={Layers} iconBg="bg-violet-950/60" iconColor="text-violet-400"
-          trend="neutral" trendLabel={t('dashboard.inBankAccounts')}
-          accent="border-violet-900/30 bg-gradient-to-br from-violet-950/20 to-slate-900/60"
-          delay={240} />
+        {[
+          {
+            title: t('dashboard.totalIncome'),
+            value: stats.revenue,
+            icon: TrendingUp,
+            iconColor: 'text-emerald-400',
+            iconBg: 'bg-emerald-500/10 border-emerald-500/20',
+            trend: 'up',
+            trendLabel: t('dashboard.moneyReceived'),
+            trendColor: 'text-emerald-400',
+            accentBar: 'from-emerald-500 to-emerald-400',
+            delay: 0,
+          },
+          {
+            title: t('dashboard.totalSpent'),
+            value: stats.expenses,
+            icon: TrendingDown,
+            iconColor: 'text-red-400',
+            iconBg: 'bg-red-500/10 border-red-500/20',
+            trend: 'down',
+            trendLabel: t('dashboard.moneyPaidOut'),
+            trendColor: 'text-red-400',
+            accentBar: 'from-red-500 to-red-400',
+            delay: 80,
+          },
+          {
+            title: t('dashboard.cashInHand'),
+            value: stats.cashBalance,
+            icon: Banknote,
+            iconColor: 'text-blue-400',
+            iconBg: 'bg-blue-500/10 border-blue-500/20',
+            trend: 'neutral',
+            trendLabel: t('dashboard.availableCash'),
+            trendColor: 'text-slate-400',
+            accentBar: 'from-blue-500 to-blue-400',
+            delay: 160,
+          },
+          {
+            title: t('dashboard.bankBalance'),
+            value: stats.bankBalance,
+            icon: Layers,
+            iconColor: 'text-violet-400',
+            iconBg: 'bg-violet-500/10 border-violet-500/20',
+            trend: 'neutral',
+            trendLabel: t('dashboard.inBankAccounts'),
+            trendColor: 'text-slate-400',
+            accentBar: 'from-violet-500 to-violet-400',
+            delay: 240,
+          },
+        ].map((card) => (
+          <StatCard key={card.title} {...card} />
+        ))}
       </div>
 
       {/* ── Account Health Banner ── */}

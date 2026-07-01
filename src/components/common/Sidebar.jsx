@@ -34,6 +34,7 @@ import {
   Building,
   Gift,
   DollarSign,
+  BadgeCheck,
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
