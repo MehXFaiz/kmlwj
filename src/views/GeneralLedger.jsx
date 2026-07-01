@@ -4,6 +4,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { useLedgerStore } from '../store/ledgerStore';
 import { useCoaStore } from '../store/coaStore';
+import { useAuthStore } from '../store/authStore';
 import { Search, Calendar, Filter, Trash2, AlertCircle } from 'lucide-react';
 import { showToast, ToastPlaceholder } from '../components/ui/Toast';
 import { MobileOnly, DesktopOnly } from '../components/common/responsive';
@@ -11,6 +12,7 @@ import { MobileOnly, DesktopOnly } from '../components/common/responsive';
 export const GeneralLedger = () => {
   const { ledgerData, fetchLedger, isLoading } = useLedgerStore();
   const { accounts, fetchAccounts } = useCoaStore();
+  const { canEditOrDelete } = useAuthStore();
 
   const [filters, setFilters] = useState({
     startDate: '',
@@ -23,25 +25,35 @@ export const GeneralLedger = () => {
   const [selectedIds, setSelectedIds] = useState([]);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
 
+  const { accountInfo, entries, summary } = useMemo(() => {
+    if (!ledgerData) return { accountInfo: null, entries: [], summary: { totalDebit: 0, totalCredit: 0, openingBalance: 0, closingBalance: 0 } };
+    return {
+      accountInfo: ledgerData.account || null,
+      entries: ledgerData.entries || [],
+      summary: ledgerData.summary || { totalDebit: 0, totalCredit: 0, openingBalance: 0, closingBalance: 0 }
+    };
+  }, [ledgerData]);
+
   useEffect(() => {
     fetchAccounts();
-    // Fetch initial generic ledger view
-    fetchLedger({});
+    fetchLedger();
   }, [fetchAccounts, fetchLedger]);
 
   const handleFilterChange = (e) => {
-    setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
   };
 
   const applyFilters = () => {
     fetchLedger(filters);
+    setSelectedIds([]);
   };
 
   const clearFilters = () => {
-    const defaultFilters = { startDate: '', endDate: '', accountId: '' };
-    setFilters(defaultFilters);
+    const cleared = { startDate: '', endDate: '', accountId: '' };
+    setFilters(cleared);
+    fetchLedger(cleared);
     setSelectedIds([]);
-    fetchLedger({});
   };
 
   const handleDeleteEntry = (entry, e) => {
@@ -56,7 +68,7 @@ export const GeneralLedger = () => {
       setIsDeleting(false);
       setConfirmDelete(null);
       if (res.success) {
-        showToast('success', 'GL Entry deleted successfully');
+        showToast('success', 'General Ledger entry deleted successfully');
         setSelectedIds(prev => prev.filter(item => item !== id));
       } else {
         showToast('error', res.error || 'Failed to delete GL entry');
@@ -94,10 +106,6 @@ export const GeneralLedger = () => {
     });
   };
 
-  const summary = ledgerData?.summary || { openingBalance: 0, totalDebit: 0, totalCredit: 0, closingBalance: 0 };
-  const entries = ledgerData?.entries || [];
-  const accountInfo = ledgerData?.account;
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -107,7 +115,7 @@ export const GeneralLedger = () => {
           <p className="text-xs text-slate-400">View detailed transaction history and balances for specific accounts.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {selectedIds.length > 0 && (
+          {canEditOrDelete && selectedIds.length > 0 && (
             <button
               type="button"
               onClick={() => setShowBulkConfirm(true)}
@@ -139,24 +147,30 @@ export const GeneralLedger = () => {
           
           <div className="flex-1 space-y-1 w-full">
             <label className="text-xs text-slate-400">Start Date</label>
-            <input
-              type="date"
-              name="startDate"
-              value={filters.startDate}
-              onChange={handleFilterChange}
-              className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-sm rounded-md px-3 py-2"
-            />
+            <div className="relative">
+              <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+              <input
+                type="date"
+                name="startDate"
+                value={filters.startDate}
+                onChange={handleFilterChange}
+                className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-sm rounded-md pl-9 pr-3 py-2"
+              />
+            </div>
           </div>
-
+          
           <div className="flex-1 space-y-1 w-full">
             <label className="text-xs text-slate-400">End Date</label>
-            <input
-              type="date"
-              name="endDate"
-              value={filters.endDate}
-              onChange={handleFilterChange}
-              className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-sm rounded-md px-3 py-2"
-            />
+            <div className="relative">
+              <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+              <input
+                type="date"
+                name="endDate"
+                value={filters.endDate}
+                onChange={handleFilterChange}
+                className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-sm rounded-md pl-9 pr-3 py-2"
+              />
+            </div>
           </div>
 
           <div className="flex gap-2 w-full sm:w-auto">
@@ -213,35 +227,39 @@ export const GeneralLedger = () => {
               <table className="w-full text-left border-collapse min-w-[700px]">
                 <thead>
                   <tr className="border-b border-slate-800 text-xs font-semibold text-slate-400 uppercase bg-slate-900/10">
-                    <th className="py-3 px-4 w-10 text-center">
-                      <input
-                        type="checkbox"
-                        checked={entries.length > 0 && selectedIds.length === entries.length}
-                        onChange={handleSelectAll}
-                        className="w-4 h-4 rounded bg-slate-800 border-slate-700 text-brand-500 focus:ring-brand-500/50 cursor-pointer"
-                      />
-                    </th>
+                    {canEditOrDelete && (
+                      <th className="py-3 px-4 w-10 text-center">
+                        <input
+                          type="checkbox"
+                          checked={entries.length > 0 && selectedIds.length === entries.length}
+                          onChange={handleSelectAll}
+                          className="w-4 h-4 rounded bg-slate-800 border-slate-700 text-brand-500 focus:ring-brand-500/50 cursor-pointer"
+                        />
+                      </th>
+                    )}
                     <th className="py-3 px-4 w-32">Date</th>
                     <th className="py-3 px-4 w-28">Ref</th>
                     {!accountInfo && <th className="py-3 px-4 w-32">Account</th>}
                     <th className="py-3 px-4">Description</th>
                     <th className="py-3 px-4 w-32 text-right">Debit</th>
                     <th className="py-3 px-4 w-32 text-right">Credit</th>
-                    <th className="py-3 px-4 w-20 text-center">Actions</th>
+                    {canEditOrDelete && <th className="py-3 px-4 w-20 text-center">Actions</th>}
                   </tr>
                 </thead>
                 <tbody className="text-xs divide-y divide-slate-800/40">
                   {entries.map((entry) => (
                     <tr key={entry.id} className={`hover:bg-slate-900/20 transition-colors ${selectedIds.includes(entry.id) ? 'bg-slate-800/30' : ''}`}>
-                      <td className="py-3.5 px-4 text-center">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(entry.id)}
-                          onChange={(e) => handleSelectOne(entry.id, e)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="w-4 h-4 rounded bg-slate-800 border-slate-700 text-brand-500 focus:ring-brand-500/50 cursor-pointer"
-                        />
-                      </td>
+                      {canEditOrDelete && (
+                        <td className="py-3.5 px-4 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(entry.id)}
+                            onChange={(e) => handleSelectOne(entry.id, e)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-4 h-4 rounded bg-slate-800 border-slate-700 text-brand-500 focus:ring-brand-500/50 cursor-pointer"
+                          />
+                        </td>
+                      )}
                       <td className="py-3.5 px-4 text-slate-300 font-medium">{entry.date}</td>
                       <td className="py-3.5 px-4 font-mono text-brand-400">{entry.reference}</td>
                       {!accountInfo && (
@@ -256,24 +274,26 @@ export const GeneralLedger = () => {
                       <td className="py-3.5 px-4 text-right font-mono text-red-400">
                         {entry.credit > 0 ? `PKR ${entry.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
                       </td>
-                      <td className="py-3.5 px-4 text-center">
-                        <button
-                          type="button"
-                          onClick={(e) => handleDeleteEntry(entry, e)}
-                          title="Delete GL Entry"
-                          className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors inline-flex items-center justify-center cursor-pointer"
-                        >
-                          <Trash2 className="h-4 w-4 pointer-events-none" />
-                        </button>
-                      </td>
+                      {canEditOrDelete && (
+                        <td className="py-3.5 px-4 text-center">
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteEntry(entry, e)}
+                            title="Delete GL Entry"
+                            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors inline-flex items-center justify-center cursor-pointer"
+                          >
+                            <Trash2 className="h-4 w-4 pointer-events-none" />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                   {/* Totals Row */}
                   <tr className="bg-slate-900/40 font-bold border-t-2 border-slate-800">
-                    <td colSpan={!accountInfo ? 5 : 4} className="py-3.5 px-4 text-right text-slate-400 uppercase">Period Totals</td>
+                    <td colSpan={!accountInfo ? (canEditOrDelete ? 5 : 4) : (canEditOrDelete ? 4 : 3)} className="py-3.5 px-4 text-right text-slate-400 uppercase">Period Totals</td>
                     <td className="py-3.5 px-4 text-right font-mono text-emerald-400">PKR {summary.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     <td className="py-3.5 px-4 text-right font-mono text-red-400">PKR {summary.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                    <td className="py-3.5 px-4"></td>
+                    {canEditOrDelete && <td className="py-3.5 px-4"></td>}
                   </tr>
                 </tbody>
               </table>

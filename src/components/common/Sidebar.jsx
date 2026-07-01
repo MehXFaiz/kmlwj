@@ -29,8 +29,11 @@ import {
   RefreshCw,
   LogOut,
   Wallet,
-  BadgeCheck,
   Calendar,
+  Bus,
+  Building,
+  Gift,
+  DollarSign,
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -147,6 +150,8 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
         { name: t('sidebar.allTransactions'), hint: t('sidebar.allTransactionsHint'), icon: Wallet, path: '/bank-vouchers' },
         { name: t('sidebar.generalLedger', 'General Ledger'), hint: t('sidebar.generalLedgerHint', 'Account ledger activity & adjustment'), icon: BookOpen, path: '/ledger' },
         { name: t('sidebar.hallBookings', 'Hall Bookings'), hint: t('sidebar.hallBookingsHint', 'Manage hall reservations'), icon: Calendar, path: '/hall-bookings' },
+        { name: 'Bus Bookings', hint: 'Manage bus reservations and trips', icon: Bus, path: '/bus-bookings' },
+        { name: 'Membership Fees', hint: 'Manage member fees and renewals', icon: Building, path: '/membership-fees' },
       ],
     },
     {
@@ -154,6 +159,8 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
       items: [
         { name: t('sidebar.peopleWeHelp'), hint: t('sidebar.peopleWeHelpHint'), icon: Users, path: '/beneficiaries' },
         { name: t('sidebar.donationsReceived'), hint: t('sidebar.donationsReceivedHint'), icon: Heart, path: '/donations' },
+        { name: 'Zakat Collection', hint: 'Manage Zakat donors and receipts', icon: Gift, path: '/zakat' },
+        { name: 'Fitra Collection', hint: 'Manage Fitra head-count and receipts', icon: DollarSign, path: '/fitra' },
         { name: t('sidebar.donationReports'), hint: t('sidebar.donationReportsHint'), icon: FileText, path: '/donation-reports' },
       ],
     },

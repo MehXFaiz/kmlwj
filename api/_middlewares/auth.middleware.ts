@@ -22,6 +22,42 @@ export interface AuthenticatedRequest extends VercelRequest {
   };
 }
 
+export function isAdminOrSuperAdmin(role?: string): boolean {
+  if (!role) return false;
+  const r = role.toLowerCase().trim();
+  return r === 'admin' || r === 'super admin' || r === 'administrator';
+}
+
+export function isEditOrDeleteRequest(req: any): boolean {
+  const method = (req.method || '').toUpperCase();
+  if (method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
+    return true;
+  }
+  if (method === 'POST') {
+    const action = String(req.body?.action || req.query?.action || '').toLowerCase().trim();
+    if (['cancel', 'delete', 'edit', 'update', 'remove', 'bulk-delete', 'reverse'].includes(action)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function checkEditDeletePermission(req: any, res: any): boolean {
+  if (isEditOrDeleteRequest(req)) {
+    const role = req.user?.role;
+    if (!isAdminOrSuperAdmin(role)) {
+      res.status(403).json({
+        error: {
+          message: 'Forbidden: Only Admin and Super Admin roles are permitted to edit and delete data.',
+          status: 403,
+        },
+      });
+      return false;
+    }
+  }
+  return true;
+}
+
 /**
  * Serverless helper to authenticate requests.
  * Modifies the request object to include 'user' if successful, or returns false (and sends 401).
@@ -48,6 +84,9 @@ export async function verifyAuth(req: AuthenticatedRequest, res: VercelResponse)
       email: payload.email,
       role: payload.role,
     };
+    if (!checkEditDeletePermission(req, res)) {
+      return false;
+    }
     return true;
   } catch (error) {
     res.status(401).json({
@@ -85,6 +124,9 @@ export function requireAuth(req: any, res: any, next: any): void {
       email: payload.email,
       role: payload.role,
     };
+    if (!checkEditDeletePermission(req, res)) {
+      return;
+    }
     next();
   } catch (error) {
     res.status(401).json({

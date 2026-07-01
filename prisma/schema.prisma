@@ -22,8 +22,9 @@ model User {
   updatedAt            DateTime       @updatedAt
   refreshTokens        RefreshToken[]
   auditLogs            AuditLog[]
-  donationsCreated     Donation[]     @relation("DonationCreatedBy")
-  hallBookingsCreated  HallBooking[]  @relation("HallBookingCreatedBy")
+  donationsCreated     Donation[]          @relation("DonationCreatedBy")
+  hallBookingsCreated  HallBooking[]       @relation("HallBookingCreatedBy")
+  revenueCollections   RevenueCollection[] @relation("RevenueCollectionCreatedBy")
 }
 
 model Role {
@@ -101,9 +102,10 @@ model Account {
   journalEntryLines JournalEntryLine[]
   ledgerEntries     LedgerEntry[]
   donations         Donation[]    @relation("DonationBankAccount")
-  invoices          Invoice[]     @relation("InvoiceBankAccount")
-  hallBookings      HallBooking[] @relation("HallBookingAccount")
-  hallBookingBanks  HallBooking[] @relation("HallBookingBankAccount")
+  invoices          Invoice[]           @relation("InvoiceBankAccount")
+  hallBookings      HallBooking[]       @relation("HallBookingAccount")
+  hallBookingBanks  HallBooking[]       @relation("HallBookingBankAccount")
+  revenueCollections RevenueCollection[] @relation("RevenueCollectionBankAccount")
 }
 
 model AccountType {
@@ -174,6 +176,7 @@ model JournalEntry {
   updatedAt   DateTime           @updatedAt
   lines       JournalEntryLine[]
   hallBooking HallBooking?       @relation("HallBookingJournalEntry")
+  revenueCollection RevenueCollection? @relation("RevenueCollectionJournalEntry")
 }
 
 model JournalEntryLine {
@@ -329,4 +332,30 @@ model InvoiceItem {
   amount      Float
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model RevenueCollection {
+  id              String         @id @default(uuid()) @db.Uuid
+  category        String         // "Zakat", "Fitra", "Membership Fee", "Bus Booking"
+  receiptNo       Int            @default(autoincrement())
+  title           String         // Donor Name / Member Name / Booker Name
+  subTitle        String?        // CNIC / Member ID / Bus Number / Destination
+  mobile          String?
+  eventDate       DateTime?      // Trip Date / Fee Year / Collection Date
+  quantity        Int?           // Head Count / Seats
+  rate            Float?         // Rate per Head / Fee Rate
+  destination     String?
+  amount          Float
+  paymentMethod   PaymentMethod  @default(CASH)
+  bankAccountId   String?        @db.Uuid
+  bankAccount     Account?       @relation("RevenueCollectionBankAccount", fields: [bankAccountId], references: [id])
+  chequeNumber    String?
+  status          String         @default("Confirmed")
+  remarks         String?
+  createdById     String?        @db.Uuid
+  createdBy       User?          @relation("RevenueCollectionCreatedBy", fields: [createdById], references: [id])
+  journalEntryId  String?        @unique @db.Uuid
+  journalEntry    JournalEntry?  @relation("RevenueCollectionJournalEntry", fields: [journalEntryId], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 }

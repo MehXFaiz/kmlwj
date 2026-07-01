@@ -109,14 +109,52 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     return res.status(201).json({ status: 201, data: newBooking });
   }
   if (method === "DELETE") {
-    const id = req.query.id;
-    if (!id) return res.status(400).json({ error: { message: "Booking ID is required", status: 400 } });
-    const booking = await prisma.hallBooking.findUnique({ where: { id } });
-    if (!booking) return res.status(404).json({ error: { message: "Booking not found", status: 404 } });
-    if (booking.status === "POSTED") return res.status(400).json({ error: { message: "Cannot delete a posted booking. Void the voucher first.", status: 400 } });
-    await prisma.hallBooking.delete({ where: { id } });
-    await logAudit(req.user.id, "Delete Hall Booking", "REVENUE", booking, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    return res.status(200).json({ status: 200, message: "Booking deleted successfully" });
+    const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
+    if (!idsRaw) {
+      return res.status(400).json({ error: { message: "Booking ID(s) required", status: 400 } });
+    }
+    const ids = Array.isArray(idsRaw) ? idsRaw.map(String) : String(idsRaw).split(",").map((s) => s.trim()).filter(Boolean);
+    if (ids.length === 0) {
+      return res.status(400).json({ error: { message: "No valid booking ID provided", status: 400 } });
+    }
+    try {
+      const deletedBookings = await prisma.$transaction(async (tx) => {
+        const bookings = await tx.hallBooking.findMany({
+          where: { id: { in: ids } }
+        });
+        if (bookings.length === 0) {
+          throw new Error("No hall bookings found to delete");
+        }
+        for (const booking of bookings) {
+          if (booking.status === "POSTED" && booking.journalEntryId) {
+            try {
+              await AccountingService.reverseJournalEntry(tx, booking.journalEntryId, req.user.id, "Hall Booking Deleted");
+            } catch (e) {
+            }
+          }
+        }
+        await tx.hallBooking.deleteMany({
+          where: { id: { in: bookings.map((b) => b.id) } }
+        });
+        return bookings;
+      });
+      await logAudit(
+        req.user.id,
+        "Delete Hall Booking",
+        "REVENUE",
+        null,
+        { count: deletedBookings.length, ids: deletedBookings.map((b) => b.id) },
+        req.headers["x-forwarded-for"],
+        req.headers["user-agent"]
+      );
+      return res.status(200).json({
+        status: 200,
+        message: `${deletedBookings.length} hall booking(s) deleted successfully`,
+        data: deletedBookings
+      });
+    } catch (err) {
+      return res.status(400).json({ error: { message: err.message || "Failed to delete hall booking(s)", status: 400 } });
+    }
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
 });

@@ -274,6 +274,28 @@ export const RevenueEntryForm = () => {
           </div>
         </div>
 
+        {/* Dedicated Section Helper Link */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-300">
+          <div className="flex items-center gap-2">
+            <span className="text-base">💡</span>
+            <span>
+              <strong>Looking for detailed {revenueSource} records?</strong> Each category now has its own dedicated module with custom fields, receipt printing, and ledger automation!
+            </span>
+          </div>
+          <Link
+            to={
+              revenueSource === 'Donation' ? '/donations' :
+              revenueSource === 'Hall Booking' ? '/hall-bookings' :
+              revenueSource === 'Zakat' ? '/zakat' :
+              revenueSource === 'Fitra' ? '/fitra' :
+              revenueSource === 'Membership Fee' ? '/membership-fees' : '/bus-bookings'
+            }
+            className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-colors flex items-center gap-1 flex-shrink-0"
+          >
+            Go to {revenueSource} Section →
+          </Link>
+        </div>
+
         {/* Dynamic Mapping Info / Sub-Selectors */}
         <div className="p-4 rounded-lg bg-slate-950/30 border border-slate-850 space-y-3">
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-550 block">{t('forms.ledgerMapping')}</span>
