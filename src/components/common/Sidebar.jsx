@@ -253,11 +253,12 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
       {/* ── Sidebar Panel ── */}
       <div
         className={`
-          print-hidden h-screen bg-slate-900 border-r border-slate-800 flex flex-col transition-all duration-300 z-50
+          print-hidden h-screen bg-slate-900 border-r border-slate-800/60 flex flex-col transition-all duration-300 z-50
           ${isCollapsed ? 'lg:w-16 w-64' : 'w-64'}
           fixed lg:relative
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
+        style={{ boxShadow: '1px 0 0 0 rgba(255,255,255,0.03)' }}
       >
         {/* Collapse toggle */}
         <button
@@ -269,21 +270,21 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
         </button>
 
         {/* ── Brand Header ── */}
-        <div className={`h-16 flex-shrink-0 flex items-center border-b border-slate-800/80 relative ${isCollapsed ? 'lg:justify-center lg:px-0 px-4' : 'px-4 gap-3'}`}>
+        <div className={`h-14 flex-shrink-0 flex items-center border-b border-slate-800/60 relative ${isCollapsed ? 'lg:justify-center lg:px-0 px-4' : 'px-4 gap-3'}`}>
           <img
             src={logoImg}
             alt="KMLWJ Logo"
-            className="w-10 h-10 object-contain flex-shrink-0 filter drop-shadow(0 0 6px rgba(99,102,241,0.3))"
+            className="w-8 h-8 object-contain flex-shrink-0"
           />
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-slate-100 tracking-tight leading-none">KMLWJ</p>
-              <p className="text-[10px] text-slate-500 mt-0.5 font-medium">Finance ERP</p>
+              <p className="text-sm font-extrabold text-slate-50 tracking-tight leading-none">KMLWJ</p>
+              <p className="text-[10px] text-slate-500 mt-0.5 font-medium tracking-wide">Finance ERP</p>
             </div>
           )}
           <button
             onClick={() => setIsMobileOpen(false)}
-            className="absolute right-3 p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 transition-colors lg:hidden"
+            className="absolute right-3 p-1.5 rounded-lg text-slate-500 hover:text-slate-100 hover:bg-slate-800/50 transition-colors lg:hidden"
           >
             <X className="h-4 w-4" />
           </button>
@@ -337,7 +338,8 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
               <div key={secIdx} className={secIdx === 0 ? 'space-y-0.5' : 'mt-5 space-y-0.5'}>
                 {/* Section label */}
                 {!isCollapsed ? (
-                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-2 pb-1.5 pt-1 select-none">
+                  <h4 className="flex items-center gap-2 text-[9px] font-bold text-slate-600 uppercase tracking-[0.18em] px-2 pb-1 pt-1 select-none">
+                    <span className="w-1 h-1 rounded-full bg-slate-700 flex-shrink-0" />
                     {section.title}
                   </h4>
                 ) : (
@@ -355,11 +357,11 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
                       {/* Parent NavLink row */}
                       <div
                         className={`
-                          flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative cursor-pointer
+                          flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 group relative cursor-pointer
                           ${isCollapsed ? 'lg:justify-center lg:px-2' : ''}
                           ${active
-                            ? 'bg-brand-600/15 text-brand-300 border-l-2 border-brand-500 font-semibold'
-                            : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+                            ? 'bg-brand-600/12 text-brand-200 font-semibold'
+                            : 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/60'
                           }
                         `}
                         onClick={(e) => {
@@ -371,7 +373,11 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
                           }
                         }}
                       >
-                        <item.icon className="h-5 w-5 flex-shrink-0" />
+                        {/* Active left indicator */}
+                        {active && !isCollapsed && (
+                          <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-brand-400 rounded-r-full" />
+                        )}
+                        <item.icon className={`h-4 w-4 flex-shrink-0 ${active ? 'text-brand-300' : 'text-slate-500 group-hover:text-slate-300'}`} />
                         {!isCollapsed && (
                           <div className="flex-1 min-w-0">
                             <span className="block text-[13px] font-semibold truncate leading-tight">{item.name}</span>

@@ -65,8 +65,8 @@ export const Topbar = ({ onMobileMenuToggle }) => {
   const fiscalYears = ['2025', '2026', '2027'];
 
   return (
-    <header className="print-hidden bg-slate-900 border-b border-slate-800/80 z-20 shrink-0">
-      <div className="flex items-center gap-2 px-3 py-2.5 md:px-6 md:py-0 md:h-16">
+    <header className="print-hidden bg-slate-900 z-20 shrink-0 relative" style={{ boxShadow: '0 1px 0 0 rgba(255,255,255,0.04), 0 2px 12px 0 rgba(0,0,0,0.35)' }}>
+      <div className="flex items-center gap-2 px-3 py-2.5 md:px-6 md:py-0 md:h-14">
         {/* Mobile menu toggle */}
         <button
           onClick={onMobileMenuToggle}
@@ -80,8 +80,8 @@ export const Topbar = ({ onMobileMenuToggle }) => {
         <div className="flex-1 flex items-center justify-center min-w-0 px-2 sm:px-4">
           <span
             dir="rtl"
-            className="font-bold text-indigo-200 truncate block select-none text-[15px] sm:text-xl text-center w-full pb-2 pt-1"
-            style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
+            className="font-semibold text-slate-200 truncate block select-none text-[15px] sm:text-[18px] text-center w-full leading-relaxed"
+            style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif", letterSpacing: '0.02em' }}
           >
             کچھی مسلم لوہار واڈہ ویلفیئر جماعت
           </span>
@@ -94,28 +94,28 @@ export const Topbar = ({ onMobileMenuToggle }) => {
           <div className="relative" ref={languageMenuRef}>
             <button 
               onClick={() => setLanguageMenuOpen(!languageMenuOpen)}
-              className="flex items-center gap-1.5 hover:bg-slate-800/50 p-2 rounded-lg transition-colors cursor-pointer text-slate-300 hover:text-slate-100"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-slate-800 hover:border-slate-700 transition-all cursor-pointer text-slate-400 hover:text-slate-100"
             >
-              <Globe className="h-4 w-4" />
-              <span className="hidden sm:inline text-xs font-semibold">{language === 'en' ? 'EN' : 'UR'}</span>
-              <ChevronDown className="h-3 w-3 text-slate-500" />
+              <Globe className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline text-[11px] font-bold uppercase tracking-wider">{language === 'en' ? 'EN' : 'UR'}</span>
+              <ChevronDown className="h-3 w-3 text-slate-600" />
             </button>
 
             {languageMenuOpen && (
-              <div className="absolute right-0 mt-2 w-32 bg-slate-900 border border-slate-800 rounded-md shadow-lg z-50 py-1">
+              <div className="absolute right-0 mt-2 w-36 bg-slate-900 border border-slate-800/80 rounded-xl shadow-2xl shadow-black/50 z-50 p-1 overflow-hidden">
                 <button
                   onClick={() => { i18n.changeLanguage('en'); setLanguageMenuOpen(false); }}
-                  className={`w-full text-left px-4 py-2 text-sm transition-colors ${language === 'en' ? 'bg-slate-800 text-indigo-400 font-bold' : 'text-slate-300 hover:bg-slate-800/50 hover:text-slate-100'}`}
+                  className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-lg transition-all ${language === 'en' ? 'bg-slate-800 text-indigo-300' : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-100'}`}
                 >
-                  English
+                  🇺🇸 &nbsp;English
                 </button>
                 <button
                   onClick={() => { i18n.changeLanguage('ur'); setLanguageMenuOpen(false); }}
-                  className={`w-full text-right px-4 py-2 text-sm transition-colors ${language === 'ur' ? 'bg-slate-800 text-indigo-400 font-bold' : 'text-slate-300 hover:bg-slate-800/50 hover:text-slate-100'}`}
+                  className={`w-full text-right px-3 py-2 text-xs font-semibold rounded-lg transition-all ${language === 'ur' ? 'bg-slate-800 text-indigo-300' : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-100'}`}
                   style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
                   dir="rtl"
                 >
-                  اردو
+                  اردو 🇵🇰
                 </button>
               </div>
             )}
@@ -128,11 +128,11 @@ export const Topbar = ({ onMobileMenuToggle }) => {
           <div className="relative" ref={userMenuRef}>
             <button 
               onClick={() => setUserMenuOpen(!userMenuOpen)}
-              className="flex items-center gap-2 hover:bg-slate-800/50 p-1 pr-2 rounded-lg transition-colors cursor-pointer text-left"
+              className="flex items-center gap-2 px-1.5 py-1 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 hover:border-slate-700 transition-all cursor-pointer text-left"
             >
               {loading ? (
                 <>
-                  <div className="h-8 w-8 rounded-full bg-slate-800 animate-pulse"></div>
+                  <div className="h-7 w-7 rounded-full bg-slate-800 animate-pulse"></div>
                   <div className="hidden xl:flex flex-col gap-1">
                     <div className="h-3 w-20 bg-slate-800 animate-pulse rounded"></div>
                     <div className="h-2 w-12 bg-slate-800 animate-pulse rounded"></div>
@@ -140,46 +140,46 @@ export const Topbar = ({ onMobileMenuToggle }) => {
                 </>
               ) : (
                 <>
-                  <div className="h-8 w-8 rounded-full bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-400 font-bold text-xs select-none">
+                  <div className="h-7 w-7 rounded-full bg-brand-500/25 border-2 border-brand-500/40 flex items-center justify-center text-brand-300 font-bold text-[11px] select-none">
                     {getInitials(user?.name || user?.fullName)}
                   </div>
-                  <div className="hidden xl:flex flex-col text-left">
-                    <span className="text-xs font-semibold text-slate-200 leading-none">{user?.name || user?.fullName || 'Operator'}</span>
-                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">{user?.role || 'User'}</span>
+                  <div className="hidden xl:flex flex-col text-left pr-1">
+                    <span className="text-xs font-bold text-slate-100 leading-none">{user?.name || user?.fullName || 'Operator'}</span>
+                    <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-widest mt-0.5">{user?.role || 'User'}</span>
                   </div>
-                  <ChevronDown className="h-3 w-3 text-slate-400 ml-1 hidden xl:block" />
+                  <ChevronDown className="h-3 w-3 text-slate-500 hidden xl:block" />
                 </>
               )}
             </button>
 
             {userMenuOpen && !loading && (
-              <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-800 rounded-md shadow-lg z-50">
-                <div className="p-4 border-b border-slate-800 flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-400 font-bold text-sm select-none shrink-0">
+              <div className="absolute right-0 mt-2 w-60 bg-slate-900 border border-slate-800/80 rounded-2xl shadow-2xl shadow-black/60 z-50 overflow-hidden">
+                <div className="px-4 py-3.5 border-b border-slate-800/80 flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-full bg-brand-500/20 border-2 border-brand-500/40 flex items-center justify-center text-brand-300 font-bold text-sm select-none shrink-0">
                     {getInitials(user?.name || user?.fullName)}
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-sm font-semibold text-slate-200 truncate">{user?.name || user?.fullName || 'Operator'}</span>
-                    <span className="text-xs text-slate-400 truncate">{user?.email || 'operator@example.com'}</span>
+                    <span className="text-sm font-bold text-slate-100 truncate leading-none">{user?.name || user?.fullName || 'Operator'}</span>
+                    <span className="text-[11px] text-slate-500 truncate mt-0.5">{user?.email || 'operator@example.com'}</span>
                   </div>
                 </div>
                 <div className="p-1.5 flex flex-col gap-0.5">
-                  <Link to="/profile" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100 rounded-sm transition-colors w-full text-left">
-                    <User className="h-4 w-4" /> Profile
+                  <Link to="/profile" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-slate-400 hover:bg-slate-800/70 hover:text-slate-100 rounded-xl transition-all w-full text-left">
+                    <User className="h-3.5 w-3.5" /> Profile
                   </Link>
-                  <Link to="/account" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100 rounded-sm transition-colors w-full text-left">
-                    <User className="h-4 w-4" /> My Account
+                  <Link to="/account" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-slate-400 hover:bg-slate-800/70 hover:text-slate-100 rounded-xl transition-all w-full text-left">
+                    <User className="h-3.5 w-3.5" /> My Account
                   </Link>
-                  <Link to="/settings" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2 px-2.5 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-slate-100 rounded-sm transition-colors w-full text-left">
-                    <Settings className="h-4 w-4" /> Settings
+                  <Link to="/settings" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-slate-400 hover:bg-slate-800/70 hover:text-slate-100 rounded-xl transition-all w-full text-left">
+                    <Settings className="h-3.5 w-3.5" /> Settings
                   </Link>
                 </div>
-                <div className="p-1.5 border-t border-slate-800">
+                <div className="p-1.5 border-t border-slate-800/80">
                   <button
                     onClick={() => { logout(); setUserMenuOpen(false); }}
-                    className="flex items-center gap-2 px-2.5 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-sm transition-colors w-full text-left"
+                    className="flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-xl transition-all w-full text-left"
                   >
-                    <LogOut className="h-4 w-4" /> Logout
+                    <LogOut className="h-3.5 w-3.5" /> Sign Out
                   </button>
                 </div>
               </div>
