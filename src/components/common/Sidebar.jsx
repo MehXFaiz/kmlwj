@@ -32,9 +32,12 @@ import {
   BadgeCheck,
   Calendar,
 } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsCollapsed }) => {
-  const { user, logout } = useAuthStore();
+  const { user, logout } = useAuthStore(
+    useShallow((state) => ({ user: state.user, logout: state.logout }))
+  );
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
@@ -132,6 +135,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
       title: t('sidebar.home'),
       items: [
         { name: t('sidebar.dashboard'), hint: t('sidebar.dashboardHint'), icon: LayoutDashboard, path: '/' },
+        { name: t('sidebar.generalLedger', 'General Ledger'), hint: t('sidebar.generalLedgerHint', 'Account ledger activity & adjustment'), icon: BookOpen, path: '/ledger' },
       ],
     },
     {
@@ -141,6 +145,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
         { name: t('sidebar.addExpense'), hint: t('sidebar.addExpenseHint'), icon: TrendingDown, path: '/bank-vouchers/expense/new' },
         { name: t('sidebar.transferMoney'), hint: t('sidebar.transferMoneyHint'), icon: RefreshCw, path: '/bank-vouchers/transfer/new' },
         { name: t('sidebar.allTransactions'), hint: t('sidebar.allTransactionsHint'), icon: Wallet, path: '/bank-vouchers' },
+        { name: t('sidebar.generalLedger', 'General Ledger'), hint: t('sidebar.generalLedgerHint', 'Account ledger activity & adjustment'), icon: BookOpen, path: '/ledger' },
         { name: t('sidebar.hallBookings', 'Hall Bookings'), hint: t('sidebar.hallBookingsHint', 'Manage hall reservations'), icon: Calendar, path: '/hall-bookings' },
       ],
     },

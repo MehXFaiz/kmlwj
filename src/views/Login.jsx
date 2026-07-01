@@ -1,12 +1,24 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, startTransition } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { Lock, Mail, Loader2, ArrowRight, UserCircle, Eye, EyeOff } from 'lucide-react';
 import { AuthLayout } from '../layouts/AuthLayout';
+import { useShallow } from 'zustand/react/shallow';
 
 export const Login = () => {
   const navigate = useNavigate();
-  const { login, loginAsGuest, isAuthenticated, loading, error, successMessage, clearError, clearSuccess } = useAuthStore();
+  const { login, loginAsGuest, isAuthenticated, loading, error, successMessage, clearError, clearSuccess } = useAuthStore(
+    useShallow((state) => ({
+      login: state.login,
+      loginAsGuest: state.loginAsGuest,
+      isAuthenticated: state.isAuthenticated,
+      loading: state.loading,
+      error: state.error,
+      successMessage: state.successMessage,
+      clearError: state.clearError,
+      clearSuccess: state.clearSuccess,
+    }))
+  );
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,15 +28,19 @@ export const Login = () => {
   useEffect(() => {
     clearError();
     clearSuccess();
+  }, [clearError, clearSuccess]);
+
+  useEffect(() => {
     if (isAuthenticated) {
-      navigate('/');
+      startTransition(() => {
+        navigate('/', { replace: true });
+      });
     }
   }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLocalError('');
-    clearError();
+    if (localError) setLocalError('');
 
     if (!email || !password) {
       setLocalError('Please fill in all fields');
@@ -33,7 +49,9 @@ export const Login = () => {
 
     const success = await login(email, password);
     if (success) {
-      navigate('/');
+      startTransition(() => {
+        navigate('/', { replace: true });
+      });
     }
   };
 
@@ -164,9 +182,13 @@ export const Login = () => {
           <button
             type="button"
             id="guest-login"
-            onClick={() => {
-              loginAsGuest();
-              navigate('/');
+            onClick={async () => {
+              const success = await loginAsGuest();
+              if (success) {
+                startTransition(() => {
+                  navigate('/', { replace: true });
+                });
+              }
             }}
             className="w-full py-3 px-4 bg-white/[0.03] hover:bg-white/[0.06] border border-slate-800/80 hover:border-slate-700 text-slate-400 hover:text-slate-200 font-semibold text-sm rounded-xl focus:outline-none transition-all duration-200 flex items-center justify-center gap-2.5 cursor-pointer active:scale-[0.98]"
           >

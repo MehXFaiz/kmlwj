@@ -157,6 +157,8 @@ app.delete('/api/v1/invoices', makeExpress(invoicesHandler));
 
 // Ledger & Journals
 app.get('/api/v1/general-ledger', makeExpress(generalLedgerHandler));
+app.post('/api/v1/general-ledger', makeExpress(generalLedgerHandler));
+app.delete('/api/v1/general-ledger', makeExpress(generalLedgerHandler));
 app.get('/api/v1/journal-entries', makeExpress(journalEntriesHandler));
 app.post('/api/v1/journal-entries', makeExpress(journalEntriesHandler));
 app.put('/api/v1/journal-entries', makeExpress(journalEntriesHandler));

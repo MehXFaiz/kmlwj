@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
 import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
 import { prisma } from '../_prisma.js';
+import { logAudit } from '../_utils/audit.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
@@ -134,6 +135,107 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       },
       meta: { total, page: pageNum, limit: limitNum }
     });
+  }
+
+  if (req.method === 'POST') {
+    const { accountId, glCode, debit = 0, credit = 0, reference, description, postingDate } = req.body;
+
+    if (!accountId && !glCode) {
+      return res.status(400).json({ error: { message: 'accountId or glCode is required', status: 400 } });
+    }
+
+    const debitNum = Number(debit) || 0;
+    const creditNum = Number(credit) || 0;
+
+    if (debitNum <= 0 && creditNum <= 0) {
+      return res.status(400).json({ error: { message: 'Either debit or credit amount must be greater than 0', status: 400 } });
+    }
+
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        let account = null;
+        if (accountId) {
+          account = await tx.account.findUnique({ where: { id: accountId } });
+        } else if (glCode) {
+          account = await tx.account.findUnique({ where: { glCode } });
+        }
+
+        if (!account) {
+          throw new Error('Account not found');
+        }
+
+        const newEntry = await tx.ledgerEntry.create({
+          data: {
+            accountId: account.id,
+            debit: debitNum,
+            credit: creditNum,
+            reference: reference || `GL-${Date.now().toString().slice(-6)}`,
+            description: description || 'Manual GL Entry',
+            postingDate: new Date(postingDate || new Date()),
+          },
+          include: {
+            account: { select: { glCode: true, accountName: true } }
+          }
+        });
+
+        // Update Account Balance
+        await tx.account.update({
+          where: { id: account.id },
+          data: {
+            currentBalance: {
+              increment: debitNum - creditNum
+            }
+          }
+        });
+
+        return newEntry;
+      });
+
+      await logAudit(req.user.id, 'Create GL Entry', 'General Ledger', null, { id: result.id, debit: debitNum, credit: creditNum }, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+
+      return res.status(201).json({ status: 201, data: result });
+    } catch (err: any) {
+      return res.status(400).json({ error: { message: err.message, status: 400 } });
+    }
+  }
+
+  if (req.method === 'DELETE') {
+    const id = req.query.id || req.body?.id;
+    if (!id) {
+      return res.status(400).json({ error: { message: 'Ledger entry ID is required', status: 400 } });
+    }
+
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        const entry = await tx.ledgerEntry.findUnique({
+          where: { id: String(id) },
+          include: { account: true }
+        });
+
+        if (!entry) {
+          throw new Error('Ledger entry not found');
+        }
+
+        // Revert account balance change
+        await tx.account.update({
+          where: { id: entry.accountId },
+          data: {
+            currentBalance: {
+              increment: entry.credit - entry.debit
+            }
+          }
+        });
+
+        await tx.ledgerEntry.delete({ where: { id: String(id) } });
+        return entry;
+      });
+
+      await logAudit(req.user.id, 'Delete GL Entry', 'General Ledger', null, { id: result.id, debit: result.debit, credit: result.credit }, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+
+      return res.status(200).json({ status: 200, message: 'Ledger entry deleted successfully', data: result });
+    } catch (err: any) {
+      return res.status(400).json({ error: { message: err.message, status: 400 } });
+    }
   }
 
   return res.status(405).json({ error: { message: 'Method Not Allowed', status: 405 } });

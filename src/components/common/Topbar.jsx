@@ -6,16 +6,30 @@ import { useThemeStore } from '../../store/themeStore';
 import { Menu, User, Settings, LogOut, ChevronDown, Globe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ColorPalettePicker } from './ColorPalettePicker';
+import { useShallow } from 'zustand/react/shallow';
 
 export const Topbar = ({ onMobileMenuToggle }) => {
-  const { user, loading, logout } = useAuthStore();
-  const { initPalette } = useThemeStore();
+  const { user, loading, logout } = useAuthStore(
+    useShallow((state) => ({
+      user: state.user,
+      loading: state.loading,
+      logout: state.logout,
+    }))
+  );
+  const initPalette = useThemeStore((state) => state.initPalette);
   const { 
     selectedSubsidiary, 
     setSelectedSubsidiary, 
     fiscalYear, 
     setFiscalYear 
-  } = useCoaStore();
+  } = useCoaStore(
+    useShallow((state) => ({
+      selectedSubsidiary: state.selectedSubsidiary,
+      setSelectedSubsidiary: state.setSelectedSubsidiary,
+      fiscalYear: state.fiscalYear,
+      setFiscalYear: state.setFiscalYear,
+    }))
+  );
 
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);

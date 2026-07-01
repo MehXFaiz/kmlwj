@@ -1,6 +1,6 @@
 import React, { useState, lazy, Suspense, useEffect, Component } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { TrendingUp, TrendingDown, FileText, RefreshCw, Plus, X } from 'lucide-react';
+import { TrendingUp, TrendingDown, FileText, RefreshCw, Plus, X, BookOpen } from 'lucide-react';
 import { SplashScreen } from './components/common/SplashScreen';
 import { Sidebar } from './components/common/Sidebar';
 import { Topbar } from './components/common/Topbar';
@@ -98,6 +98,7 @@ const MobileFab = () => {
     { label: 'Add Income', desc: 'Record money received', icon: TrendingUp, color: 'text-emerald-400 bg-emerald-950/80 border-emerald-800/60', path: '/bank-vouchers/revenue/new' },
     { label: 'Add Expense', desc: 'Record money spent', icon: TrendingDown, color: 'text-red-400 bg-red-950/80 border-red-800/60', path: '/bank-vouchers/expense/new' },
     { label: 'Journal Entry', desc: 'Manual entry', icon: FileText, color: 'text-indigo-400 bg-indigo-950/80 border-indigo-800/60', path: '/journals' },
+    { label: 'General Ledger', desc: 'View account ledgers', icon: BookOpen, color: 'text-cyan-400 bg-cyan-950/80 border-cyan-800/60', path: '/ledger' },
     { label: 'Transfer', desc: 'Move between accounts', icon: RefreshCw, color: 'text-violet-400 bg-violet-950/80 border-violet-800/60', path: '/bank-vouchers/transfer/new' },
   ];
 
@@ -158,7 +159,7 @@ const MobileFab = () => {
 const ProtectedRoutesWrapper = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const { isAuthenticated } = useAuthStore();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const location = useLocation();
 
   useEffect(() => {
@@ -205,7 +206,7 @@ const ProtectedRoutesWrapper = () => {
 };
 
 const PermissionGuard = ({ requiredPerms, children }) => {
-  const { user } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === 'Super Admin') return children;
 
@@ -228,7 +229,7 @@ const PermissionGuard = ({ requiredPerms, children }) => {
 
 function App() {
   const [splashDone, setSplashDone] = useState(false);
-  const { restoreSession } = useAuthStore();
+  const restoreSession = useAuthStore((state) => state.restoreSession);
   const [restoring, setRestoring] = useState(true);
 
   useEffect(() => {

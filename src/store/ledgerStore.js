@@ -24,6 +24,32 @@ export const useLedgerStore = create((set, get) => ({
     }
   },
 
+  addLedgerEntry: async (entryData, currentFilters = {}) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.post('/api/v1/general-ledger', entryData);
+      await get().fetchLedger(currentFilters);
+      return { success: true, data: res.data.data };
+    } catch (err) {
+      const msg = err.response?.data?.error?.message || err.message || 'Failed to add GL entry';
+      set({ error: msg, isLoading: false });
+      return { success: false, error: msg };
+    }
+  },
+
+  deleteLedgerEntry: async (id, currentFilters = {}) => {
+    set({ isLoading: true, error: null });
+    try {
+      await api.delete(`/api/v1/general-ledger?id=${id}`, { data: { id } });
+      await get().fetchLedger(currentFilters);
+      return { success: true };
+    } catch (err) {
+      const msg = err.response?.data?.error?.message || err.message || 'Failed to delete GL entry';
+      set({ error: msg, isLoading: false });
+      return { success: false, error: msg };
+    }
+  },
+
   resetLedger: () => {
     set({ ledgerData: null, error: null });
   },
