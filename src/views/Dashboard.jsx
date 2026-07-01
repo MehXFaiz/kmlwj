@@ -376,19 +376,20 @@ export const Dashboard = () => {
       {/* ── Quick Actions ── PRIMARY for non-technical users ── */}
       <div>
         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">{t('dashboard.quickActions')}</h3>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
           {[
-            { label: t('dashboard.addIncome'), desc: t('dashboard.addIncomeDesc'), icon: TrendingUp, iconColor: 'text-emerald-400', iconBg: 'bg-emerald-950/40 border-emerald-900/40', path: '/bank-vouchers/revenue/new' },
-            { label: t('dashboard.addExpense'), desc: t('dashboard.addExpenseDesc'), icon: TrendingDown, iconColor: 'text-red-400', iconBg: 'bg-red-950/40 border-red-900/40', path: '/bank-vouchers/expense/new' },
-            { label: t('dashboard.journalEntry'), desc: t('dashboard.journalEntryDesc'), icon: FileText, iconColor: 'text-indigo-400', iconBg: 'bg-indigo-950/40 border-indigo-900/40', path: '/journals' },
-            { label: t('dashboard.transferMoney'), desc: t('dashboard.transferMoneyDesc'), icon: RefreshCw, iconColor: 'text-violet-400', iconBg: 'bg-violet-950/40 border-violet-900/40', path: '/bank-vouchers/transfer/new' },
+            { label: t('dashboard.addIncome'), desc: t('dashboard.addIncomeDesc'), icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-950/40 border-emerald-900/40', path: '/bank-vouchers/revenue/new' },
+            { label: t('dashboard.addExpense'), desc: t('dashboard.addExpenseDesc'), icon: TrendingDown, color: 'text-red-400', bg: 'bg-red-950/40 border-red-900/40', path: '/bank-vouchers/expense/new' },
+            { label: t('dashboard.journalEntry'), desc: t('dashboard.journalEntryDesc'), icon: FileText, color: 'text-indigo-400', bg: 'bg-indigo-950/40 border-indigo-900/40', path: '/journals' },
+            { label: 'General Ledger', desc: 'View account ledgers & history', icon: BookOpen, color: 'text-cyan-400', bg: 'bg-cyan-950/40 border-cyan-900/40', path: '/ledger' },
+            { label: t('dashboard.transferMoney'), desc: t('dashboard.transferMoneyDesc'), icon: RefreshCw, color: 'text-violet-400', bg: 'bg-violet-950/40 border-violet-900/40', path: '/bank-vouchers/transfer/new' },
           ].map((action) => (
             <button
               key={action.path}
               onClick={() => navigate(action.path)}
               className={`group flex flex-col items-start gap-2 p-4 sm:p-5 rounded-xl border transition-all duration-200 cursor-pointer text-left ${action.bg}`}
             >
-              <div className={`h-10 w-10 rounded-xl flex items-center justify-center bg-slate-900/60 border border-slate-800/60 group-hover:scale-110 transition-transform duration-200`}>
+              <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-slate-900/60 border border-slate-800/60 group-hover:scale-110 transition-transform duration-200">
                 <action.icon className={`h-5 w-5 ${action.color}`} />
               </div>
               <div>

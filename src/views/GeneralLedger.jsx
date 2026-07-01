@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, startTransition } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { useLedgerStore } from '../store/ledgerStore';
 import { useCoaStore } from '../store/coaStore';
-import { Search, Calendar, Filter, Plus, Trash2, X } from 'lucide-react';
+import { Search, Calendar, Filter, Trash2, AlertCircle } from 'lucide-react';
 import { showToast, ToastPlaceholder } from '../components/ui/Toast';
 import { MobileOnly, DesktopOnly } from '../components/common/responsive';
 
@@ -18,16 +18,10 @@ export const GeneralLedger = () => {
     accountId: ''
   });
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newEntry, setNewEntry] = useState({
-    accountId: '',
-    postingDate: new Date().toISOString().split('T')[0],
-    reference: '',
-    description: '',
-    type: 'Debit',
-    amount: ''
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
 
   useEffect(() => {
     fetchAccounts();
@@ -46,55 +40,58 @@ export const GeneralLedger = () => {
   const clearFilters = () => {
     const defaultFilters = { startDate: '', endDate: '', accountId: '' };
     setFilters(defaultFilters);
+    setSelectedIds([]);
     fetchLedger({});
   };
 
-  const handleAddSubmit = async (e) => {
-    e.preventDefault();
-    if (!newEntry.accountId || !newEntry.amount || Number(newEntry.amount) <= 0) {
-      showToast('error', 'Please select an account and enter a valid amount');
-      return;
-    }
-    setIsSubmitting(true);
-    const debit = newEntry.type === 'Debit' ? Number(newEntry.amount) : 0;
-    const credit = newEntry.type === 'Credit' ? Number(newEntry.amount) : 0;
-    
-    const res = await useLedgerStore.getState().addLedgerEntry({
-      accountId: newEntry.accountId,
-      postingDate: newEntry.postingDate,
-      reference: newEntry.reference,
-      description: newEntry.description,
-      debit,
-      credit
-    }, filters);
-
-    setIsSubmitting(false);
-    if (res.success) {
-      showToast('success', 'GL Entry added successfully');
-      setIsModalOpen(false);
-      setNewEntry({
-        accountId: '',
-        postingDate: new Date().toISOString().split('T')[0],
-        reference: '',
-        description: '',
-        type: 'Debit',
-        amount: ''
-      });
-    } else {
-      showToast('error', res.error || 'Failed to add GL entry');
-    }
+  const handleDeleteEntry = (entry, e) => {
+    e.stopPropagation();
+    setConfirmDelete(entry);
   };
 
-  const handleDeleteEntry = async (id, e) => {
-    e.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this General Ledger entry? This will reverse its effect on the account balance.')) {
-      const res = await useLedgerStore.getState().deleteLedgerEntry(id, filters);
+  const executeDelete = async (id) => {
+    setIsDeleting(true);
+    const res = await useLedgerStore.getState().deleteLedgerEntry(id, filters);
+    startTransition(() => {
+      setIsDeleting(false);
+      setConfirmDelete(null);
       if (res.success) {
         showToast('success', 'GL Entry deleted successfully');
+        setSelectedIds(prev => prev.filter(item => item !== id));
       } else {
         showToast('error', res.error || 'Failed to delete GL entry');
       }
+    });
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds(entries.map(ent => ent.id));
+    } else {
+      setSelectedIds([]);
     }
+  };
+
+  const handleSelectOne = (id, e) => {
+    e.stopPropagation();
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const executeBulkDelete = async () => {
+    setIsDeleting(true);
+    const res = await useLedgerStore.getState().bulkDeleteLedgerEntries(selectedIds, filters);
+    startTransition(() => {
+      setIsDeleting(false);
+      setShowBulkConfirm(false);
+      if (res.success) {
+        showToast('success', `${selectedIds.length} GL entries deleted successfully`);
+        setSelectedIds([]);
+      } else {
+        showToast('error', res.error || 'Failed to bulk delete GL entries');
+      }
+    });
   };
 
   const summary = ledgerData?.summary || { openingBalance: 0, totalDebit: 0, totalCredit: 0, closingBalance: 0 };
@@ -109,105 +106,18 @@ export const GeneralLedger = () => {
           <h2 className="text-lg sm:text-xl font-bold text-slate-100 uppercase tracking-wider">General Ledger</h2>
           <p className="text-xs text-slate-400">View detailed transaction history and balances for specific accounts.</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="primary" size="sm" onClick={() => setIsModalOpen(true)} className="gap-2 bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-400 hover:to-blue-500 text-white font-semibold shadow-lg shadow-emerald-500/10 cursor-pointer">
-            <Plus className="h-4 w-4" /> Add GL Entry
-          </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {selectedIds.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowBulkConfirm(true)}
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30 border border-red-900/50 transition-all text-xs font-semibold cursor-pointer shadow-sm"
+            >
+              <Trash2 className="h-3.5 w-3.5 pointer-events-none" /> Bulk Delete ({selectedIds.length})
+            </button>
+          )}
         </div>
       </div>
-
-      {/* Add GL Entry Modal / Drawer */}
-      {isModalOpen && (
-        <Card className="bg-slate-900/90 border-emerald-500/40 shadow-xl shadow-emerald-500/10 animate-in fade-in duration-200">
-          <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-slate-800/80">
-            <CardTitle className="text-base font-bold text-slate-100 flex items-center gap-2">
-              <Plus className="h-4 w-4 text-emerald-400" /> New General Ledger Entry
-            </CardTitle>
-            <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer">
-              <X className="h-4 w-4" />
-            </button>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <form onSubmit={handleAddSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Account <span className="text-red-400">*</span></label>
-                  <select
-                    value={newEntry.accountId}
-                    onChange={(e) => setNewEntry({ ...newEntry, accountId: e.target.value })}
-                    required
-                    className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="">Select Account...</option>
-                    {accounts.map(acc => (
-                      <option key={acc.id} value={acc.id}>{acc.code} - {acc.name} ({acc.type})</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Date <span className="text-red-400">*</span></label>
-                  <input
-                    type="date"
-                    value={newEntry.postingDate}
-                    onChange={(e) => setNewEntry({ ...newEntry, postingDate: e.target.value })}
-                    required
-                    className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Reference</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. GL-ADJ-001"
-                    value={newEntry.reference}
-                    onChange={(e) => setNewEntry({ ...newEntry, reference: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500 font-mono"
-                  />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="text-xs font-semibold text-slate-300">Description</label>
-                  <input
-                    type="text"
-                    placeholder="Brief details or justification for this adjustment"
-                    value={newEntry.description}
-                    onChange={(e) => setNewEntry({ ...newEntry, description: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Entry Type & Amount <span className="text-red-400">*</span></label>
-                  <div className="flex gap-2">
-                    <select
-                      value={newEntry.type}
-                      onChange={(e) => setNewEntry({ ...newEntry, type: e.target.value })}
-                      className="bg-slate-950 border border-slate-800 text-slate-200 text-sm rounded-lg px-2 py-2 focus:outline-none focus:border-emerald-500 font-semibold"
-                    >
-                      <option value="Debit">Debit (+)</option>
-                      <option value="Credit">Credit (-)</option>
-                    </select>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      placeholder="0.00"
-                      value={newEntry.amount}
-                      onChange={(e) => setNewEntry({ ...newEntry, amount: e.target.value })}
-                      required
-                      className="flex-1 bg-slate-950 border border-slate-800 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500 font-mono"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800/60">
-                <Button type="button" variant="outline" size="sm" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                <Button type="submit" variant="primary" size="sm" disabled={isSubmitting} className="gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold cursor-pointer">
-                  {isSubmitting ? 'Saving...' : 'Save Entry'}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Filters */}
       <Card className="bg-slate-900/50">
@@ -303,6 +213,14 @@ export const GeneralLedger = () => {
               <table className="w-full text-left border-collapse min-w-[700px]">
                 <thead>
                   <tr className="border-b border-slate-800 text-xs font-semibold text-slate-400 uppercase bg-slate-900/10">
+                    <th className="py-3 px-4 w-10 text-center">
+                      <input
+                        type="checkbox"
+                        checked={entries.length > 0 && selectedIds.length === entries.length}
+                        onChange={handleSelectAll}
+                        className="w-4 h-4 rounded bg-slate-800 border-slate-700 text-brand-500 focus:ring-brand-500/50 cursor-pointer"
+                      />
+                    </th>
                     <th className="py-3 px-4 w-32">Date</th>
                     <th className="py-3 px-4 w-28">Ref</th>
                     {!accountInfo && <th className="py-3 px-4 w-32">Account</th>}
@@ -314,7 +232,16 @@ export const GeneralLedger = () => {
                 </thead>
                 <tbody className="text-xs divide-y divide-slate-800/40">
                   {entries.map((entry) => (
-                    <tr key={entry.id} className="hover:bg-slate-900/20 transition-colors">
+                    <tr key={entry.id} className={`hover:bg-slate-900/20 transition-colors ${selectedIds.includes(entry.id) ? 'bg-slate-800/30' : ''}`}>
+                      <td className="py-3.5 px-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(entry.id)}
+                          onChange={(e) => handleSelectOne(entry.id, e)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-4 h-4 rounded bg-slate-800 border-slate-700 text-brand-500 focus:ring-brand-500/50 cursor-pointer"
+                        />
+                      </td>
                       <td className="py-3.5 px-4 text-slate-300 font-medium">{entry.date}</td>
                       <td className="py-3.5 px-4 font-mono text-brand-400">{entry.reference}</td>
                       {!accountInfo && (
@@ -332,18 +259,18 @@ export const GeneralLedger = () => {
                       <td className="py-3.5 px-4 text-center">
                         <button
                           type="button"
-                          onClick={(e) => handleDeleteEntry(entry.id, e)}
+                          onClick={(e) => handleDeleteEntry(entry, e)}
                           title="Delete GL Entry"
                           className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors inline-flex items-center justify-center cursor-pointer"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4 pointer-events-none" />
                         </button>
                       </td>
                     </tr>
                   ))}
                   {/* Totals Row */}
                   <tr className="bg-slate-900/40 font-bold border-t-2 border-slate-800">
-                    <td colSpan={!accountInfo ? 4 : 3} className="py-3.5 px-4 text-right text-slate-400 uppercase">Period Totals</td>
+                    <td colSpan={!accountInfo ? 5 : 4} className="py-3.5 px-4 text-right text-slate-400 uppercase">Period Totals</td>
                     <td className="py-3.5 px-4 text-right font-mono text-emerald-400">PKR {summary.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     <td className="py-3.5 px-4 text-right font-mono text-red-400">PKR {summary.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     <td className="py-3.5 px-4"></td>
@@ -354,6 +281,67 @@ export const GeneralLedger = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 max-w-sm w-full shadow-2xl space-y-4">
+            <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-400" /> Confirm Deletion
+            </h3>
+            <p className="text-sm text-slate-300">
+              Are you sure you want to delete General Ledger entry <span className="font-mono text-brand-400">{confirmDelete.reference}</span>?
+            </p>
+            <p className="text-xs text-slate-400 bg-slate-950/50 p-2.5 rounded-lg border border-slate-800">
+              This will automatically reverse its effect on the account balance. This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" size="sm" onClick={() => setConfirmDelete(null)} disabled={isDeleting} className="cursor-pointer">
+                Cancel
+              </Button>
+              <Button
+                variant="primary" size="sm"
+                className="bg-red-600 hover:bg-red-500 text-white font-semibold gap-1.5 cursor-pointer"
+                disabled={isDeleting}
+                onClick={() => executeDelete(confirmDelete.id)}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Entry'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {showBulkConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 max-w-sm w-full shadow-2xl space-y-4">
+            <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-400" /> Confirm Bulk Deletion
+            </h3>
+            <p className="text-sm text-slate-300">
+              Are you sure you want to delete <span className="font-bold text-red-400">{selectedIds.length}</span> selected General Ledger entries?
+            </p>
+            <p className="text-xs text-slate-400 bg-slate-950/50 p-2.5 rounded-lg border border-slate-800">
+              This will automatically reverse the financial effects of all selected entries on their respective account balances. This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" size="sm" onClick={() => setShowBulkConfirm(false)} disabled={isDeleting} className="cursor-pointer">
+                Cancel
+              </Button>
+              <Button
+                variant="primary" size="sm"
+                className="bg-red-600 hover:bg-red-500 text-white font-semibold gap-1.5 cursor-pointer"
+                disabled={isDeleting}
+                onClick={executeBulkDelete}
+              >
+                {isDeleting ? 'Deleting...' : `Delete ${selectedIds.length} Entries`}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ToastPlaceholder />
     </div>
   );

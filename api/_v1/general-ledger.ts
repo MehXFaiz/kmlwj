@@ -200,39 +200,48 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (req.method === 'DELETE') {
-    const id = req.query.id || req.body?.id;
-    if (!id) {
-      return res.status(400).json({ error: { message: 'Ledger entry ID is required', status: 400 } });
+    const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
+    if (!idsRaw) {
+      return res.status(400).json({ error: { message: 'Ledger entry ID(s) required', status: 400 } });
+    }
+
+    const ids: string[] = Array.isArray(idsRaw)
+      ? idsRaw.map(String)
+      : String(idsRaw).split(',').map(s => s.trim()).filter(Boolean);
+
+    if (ids.length === 0) {
+      return res.status(400).json({ error: { message: 'No valid ledger entry ID provided', status: 400 } });
     }
 
     try {
-      const result = await prisma.$transaction(async (tx) => {
-        const entry = await tx.ledgerEntry.findUnique({
-          where: { id: String(id) },
+      const deletedEntries = await prisma.$transaction(async (tx) => {
+        const entries = await tx.ledgerEntry.findMany({
+          where: { id: { in: ids } },
           include: { account: true }
         });
 
-        if (!entry) {
-          throw new Error('Ledger entry not found');
+        if (entries.length === 0) {
+          throw new Error('Ledger entries not found');
         }
 
-        // Revert account balance change
-        await tx.account.update({
-          where: { id: entry.accountId },
-          data: {
-            currentBalance: {
-              increment: entry.credit - entry.debit
+        for (const entry of entries) {
+          await tx.account.update({
+            where: { id: entry.accountId },
+            data: {
+              currentBalance: {
+                increment: entry.credit - entry.debit
+              }
             }
-          }
-        });
+          });
+        }
 
-        await tx.ledgerEntry.delete({ where: { id: String(id) } });
-        return entry;
+        await tx.ledgerEntry.deleteMany({ where: { id: { in: entries.map(e => e.id) } } });
+        return entries;
       });
 
-      await logAudit(req.user.id, 'Delete GL Entry', 'General Ledger', null, { id: result.id, debit: result.debit, credit: result.credit }, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      await logAudit(req.user.id, 'Delete GL Entry', 'General Ledger', null, { count: deletedEntries.length, ids: deletedEntries.map(e => e.id) }, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-      return res.status(200).json({ status: 200, message: 'Ledger entry deleted successfully', data: result });
+      return res.status(200).json({ status: 200, message: `${deletedEntries.length} ledger entry(s) deleted successfully`, data: deletedEntries });
     } catch (err: any) {
       return res.status(400).json({ error: { message: err.message, status: 400 } });
     }

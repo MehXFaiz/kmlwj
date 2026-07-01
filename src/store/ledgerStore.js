@@ -50,6 +50,19 @@ export const useLedgerStore = create((set, get) => ({
     }
   },
 
+  bulkDeleteLedgerEntries: async (ids, currentFilters = {}) => {
+    set({ isLoading: true, error: null });
+    try {
+      await api.delete('/api/v1/general-ledger', { data: { ids } });
+      await get().fetchLedger(currentFilters);
+      return { success: true };
+    } catch (err) {
+      const msg = err.response?.data?.error?.message || err.message || 'Failed to bulk delete GL entries';
+      set({ error: msg, isLoading: false });
+      return { success: false, error: msg };
+    }
+  },
+
   resetLedger: () => {
     set({ ledgerData: null, error: null });
   },
