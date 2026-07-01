@@ -8,7 +8,7 @@ var accounts_default = makeHandler(async (req, res) => {
   const { method } = req;
   const id = req.query.id;
   if (method === "GET") {
-    const { search, type, status, sortBy = "glCode", order = "asc", page = "1", limit = "100" } = req.query;
+    const { search, type, status, level, nature, reserved, sortBy = "glCode", order = "asc", page = "1", limit = "100" } = req.query;
     const whereClause = {};
     if (search) {
       whereClause.OR = [
@@ -21,6 +21,15 @@ var accounts_default = makeHandler(async (req, res) => {
     }
     if (status && status !== "All") {
       whereClause.isLocked = status === "Inactive";
+    }
+    if (level && level !== "All") {
+      whereClause.accountLevel = level;
+    }
+    if (nature && nature !== "All") {
+      whereClause.detailType = nature;
+    }
+    if (reserved && reserved !== "All") {
+      whereClause.isReserved = reserved === "Yes";
     }
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
@@ -112,8 +121,10 @@ var accounts_default = makeHandler(async (req, res) => {
         accountLevel = "PARENT";
       } else if (parentAcc.accountLevel === "PARENT") {
         accountLevel = "SUBSIDIARY";
+      } else if (parentAcc.accountLevel === "SUBSIDIARY") {
+        accountLevel = "GL";
       } else {
-        return res.status(400).json({ error: { message: "Cannot create an account under a SUBSIDIARY account", status: 400 } });
+        return res.status(400).json({ error: { message: "Cannot create an account under a Level 4 (GL) account. GL accounts are the deepest posting level.", status: 400 } });
       }
     }
     const newAccount = await prisma.account.create({
@@ -203,8 +214,10 @@ var accounts_default = makeHandler(async (req, res) => {
           updateData.accountLevel = "PARENT";
         } else if (parentAcc.accountLevel === "PARENT") {
           updateData.accountLevel = "SUBSIDIARY";
+        } else if (parentAcc.accountLevel === "SUBSIDIARY") {
+          updateData.accountLevel = "GL";
         } else {
-          return res.status(400).json({ error: { message: "Cannot move account under a SUBSIDIARY account", status: 400 } });
+          return res.status(400).json({ error: { message: "Cannot move account under a GL account (no Level 5 allowed).", status: 400 } });
         }
       }
     }
@@ -226,8 +239,8 @@ var accounts_default = makeHandler(async (req, res) => {
     if (!existingAccount) {
       return res.status(404).json({ error: { message: "Account not found", status: 404 } });
     }
-    if (existingAccount.accountLevel === "MAIN") {
-      return res.status(400).json({ error: { message: "MAIN accounts cannot be deleted", status: 400 } });
+    if (existingAccount.accountLevel !== "GL") {
+      return res.status(400).json({ error: { message: `${existingAccount.accountLevel} accounts are system-defined and cannot be deleted. Only Level 4 (GL) accounts can be deleted.`, status: 400 } });
     }
     await prisma.account.delete({ where: { id } });
     await logAudit(req.user.id, "Delete Account", "COA", existingAccount, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);

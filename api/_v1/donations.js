@@ -2,6 +2,7 @@ import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
+import { AccountingService } from "../_services/accounting.service.js";
 function generateVoucherNumber() {
   const date = /* @__PURE__ */ new Date();
   const year = date.getFullYear().toString().slice(-2);
@@ -52,35 +53,18 @@ var donations_default = makeHandler(async (req, res) => {
           where: { id },
           data: { status: "APPROVED" }
         });
-        const voucherNo = generateVoucherNumber();
-        const description = `Donation to ${donation.beneficiary.name} - ${donation.donationType}`;
-        const postingDate = /* @__PURE__ */ new Date();
-        const journalEntry = await tx.journalEntry.create({
-          data: {
-            voucherNo,
-            postingDate,
-            subsidiary: "Global",
-            reference: `DON-${donation.id.substring(0, 8)}`,
-            description,
-            postedBy: req.user.id,
-            status: "Posted",
-            lines: {
-              create: [
-                { accountId: expenseAccount.id, debit: donation.amount, credit: 0, description: "Donation Expense" },
-                { accountId: creditAccountId, debit: 0, credit: donation.amount, description: "Donation Payment" }
-              ]
-            }
-          }
+        const postingResult = await AccountingService.postPayment(tx, {
+          amount: donation.amount,
+          cashOrBankAccountId: creditAccountId,
+          expenseAccountId: expenseAccount.id,
+          reference: `DON-${donation.id.substring(0, 8)}`,
+          description: `Donation to ${donation.beneficiary.name} - ${donation.donationType}`,
+          module: "Donations",
+          postedBy: req.user.id,
+          ipAddress: req.headers["x-forwarded-for"],
+          userAgent: req.headers["user-agent"]
         });
-        await tx.account.update({ where: { id: expenseAccount.id }, data: { currentBalance: { increment: donation.amount } } });
-        await tx.account.update({ where: { id: creditAccountId }, data: { currentBalance: { decrement: donation.amount } } });
-        await tx.ledgerEntry.createMany({
-          data: [
-            { accountId: expenseAccount.id, debit: donation.amount, credit: 0, reference: voucherNo, description, postingDate },
-            { accountId: creditAccountId, debit: 0, credit: donation.amount, reference: voucherNo, description, postingDate }
-          ]
-        });
-        return { approvedDonation, journalEntry };
+        return { approvedDonation, journalEntry: postingResult.journalEntry };
       });
       await logAudit(req.user.id, "Approve Donation", "DONATION", donation, result.approvedDonation, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, data: result.approvedDonation, message: "Donation approved and journal entries created successfully" });

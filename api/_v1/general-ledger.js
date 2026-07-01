@@ -1,6 +1,8 @@
 import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
+import { logAudit } from "../_utils/audit.js";
+import { AccountingService } from "../_services/accounting.service.js";
 var general_ledger_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -103,6 +105,58 @@ var general_ledger_default = makeHandler(async (req, res) => {
       },
       meta: { total, page: pageNum, limit: limitNum }
     });
+  }
+  if (req.method === "POST") {
+    return res.status(400).json({
+      error: {
+        message: "Manual General Ledger entries are strictly prohibited. All General Ledger entries must be automatically generated from Journal Entries.",
+        status: 400
+      }
+    });
+  }
+  if (req.method === "DELETE") {
+    const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
+    if (!idsRaw) {
+      return res.status(400).json({ error: { message: "Ledger entry ID(s) required", status: 400 } });
+    }
+    const ids = Array.isArray(idsRaw) ? idsRaw.map(String) : String(idsRaw).split(",").map((s) => s.trim()).filter(Boolean);
+    if (ids.length === 0) {
+      return res.status(400).json({ error: { message: "No valid ledger entry ID provided", status: 400 } });
+    }
+    try {
+      const deletedEntries = await prisma.$transaction(async (tx) => {
+        const entries = await tx.ledgerEntry.findMany({
+          where: { id: { in: ids } },
+          include: { account: true }
+        });
+        if (entries.length === 0) {
+          throw new Error("Ledger entries not found");
+        }
+        const accountIds = Array.from(new Set(entries.map((e) => e.accountId)));
+        for (const entry of entries) {
+          await tx.account.update({
+            where: { id: entry.accountId },
+            data: {
+              currentBalance: {
+                increment: entry.credit - entry.debit
+              }
+            }
+          });
+        }
+        await tx.ledgerEntry.deleteMany({ where: { id: { in: entries.map((e) => e.id) } } });
+        for (const accId of accountIds) {
+          try {
+            await AccountingService.recalculateAccountBalance(tx, accId);
+          } catch (e) {
+          }
+        }
+        return entries;
+      });
+      await logAudit(req.user.id, "Delete GL Entry", "General Ledger", null, { count: deletedEntries.length, ids: deletedEntries.map((e) => e.id) }, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      return res.status(200).json({ status: 200, message: `${deletedEntries.length} ledger entry(s) deleted successfully`, data: deletedEntries });
+    } catch (err) {
+      return res.status(400).json({ error: { message: err.message, status: 400 } });
+    }
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
 });

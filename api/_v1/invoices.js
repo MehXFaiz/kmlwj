@@ -2,6 +2,7 @@ import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
+import { AccountingService } from "../_services/accounting.service.js";
 function generateInvoiceNumber() {
   const date = /* @__PURE__ */ new Date();
   const year = date.getFullYear().toString().slice(-2);
@@ -107,35 +108,20 @@ var invoices_default = makeHandler(async (req, res) => {
           data: { status: "POSTED" },
           include: { customer: true, items: true, bankAccount: true }
         });
-        const voucherNo = generateVoucherNumber("INV");
-        const description = `Invoice posted to ${invoice.customer.name} - Inv #${invoice.invoiceNo}`;
-        const postingDate = /* @__PURE__ */ new Date();
-        const journalEntry = await tx.journalEntry.create({
-          data: {
-            voucherNo,
-            postingDate,
-            subsidiary: "Global",
-            reference: `POST-${invoice.invoiceNo}`,
-            description,
-            postedBy: req.user.id,
-            status: "Posted",
-            lines: {
-              create: [
-                { accountId: arAccount.id, debit: invoice.total, credit: 0, description: "Accounts Receivable Debit" },
-                { accountId: revenueAccount.id, debit: 0, credit: invoice.total, description: "Sales/Revenue Credit" }
-              ]
-            }
-          }
+        const postingResult = await AccountingService.postTransaction(tx, {
+          voucherType: "JV",
+          reference: `POST-${invoice.invoiceNo}`,
+          description: `Invoice posted to ${invoice.customer.name} - Inv #${invoice.invoiceNo}`,
+          module: "Invoices",
+          postedBy: req.user.id,
+          lines: [
+            { accountId: arAccount.id, debit: invoice.total, credit: 0, description: "Accounts Receivable Debit" },
+            { accountId: revenueAccount.id, debit: 0, credit: invoice.total, description: "Sales/Revenue Credit" }
+          ],
+          ipAddress: req.headers["x-forwarded-for"],
+          userAgent: req.headers["user-agent"]
         });
-        await tx.account.update({ where: { id: arAccount.id }, data: { currentBalance: { increment: invoice.total } } });
-        await tx.account.update({ where: { id: revenueAccount.id }, data: { currentBalance: { decrement: invoice.total } } });
-        await tx.ledgerEntry.createMany({
-          data: [
-            { accountId: arAccount.id, debit: invoice.total, credit: 0, reference: voucherNo, description, postingDate },
-            { accountId: revenueAccount.id, debit: 0, credit: invoice.total, reference: voucherNo, description, postingDate }
-          ]
-        });
-        return { updatedInvoice, journalEntry };
+        return { updatedInvoice, journalEntry: postingResult.journalEntry };
       });
       await logAudit(req.user.id, "Post Invoice", "INVOICE", invoice, result.updatedInvoice, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, data: result.updatedInvoice, message: "Invoice posted and ledger transactions logged successfully" });
@@ -165,35 +151,19 @@ var invoices_default = makeHandler(async (req, res) => {
           },
           include: { customer: true, items: true, bankAccount: true }
         });
-        const voucherNo = generateVoucherNumber("INVPAY");
-        const description = `Invoice payment received from ${invoice.customer.name} - Inv #${invoice.invoiceNo}`;
-        const postingDate = /* @__PURE__ */ new Date();
-        const journalEntry = await tx.journalEntry.create({
-          data: {
-            voucherNo,
-            postingDate,
-            subsidiary: "Global",
-            reference: `PAY-${invoice.invoiceNo}`,
-            description,
-            postedBy: req.user.id,
-            status: "Posted",
-            lines: {
-              create: [
-                { accountId: destAccount.id, debit: invoice.total, credit: 0, description: "Cash/Bank Debit" },
-                { accountId: arAccount.id, debit: 0, credit: invoice.total, description: "Accounts Receivable Credit" }
-              ]
-            }
-          }
+        const postingResult = await AccountingService.postReceipt(tx, {
+          amount: invoice.total,
+          cashOrBankAccountId: destAccount.id,
+          incomeAccountId: arAccount.id,
+          reference: `PAY-${invoice.invoiceNo}`,
+          description: `Invoice payment received from ${invoice.customer.name} - Inv #${invoice.invoiceNo}`,
+          module: "Invoices",
+          voucherType: "BR",
+          postedBy: req.user.id,
+          ipAddress: req.headers["x-forwarded-for"],
+          userAgent: req.headers["user-agent"]
         });
-        await tx.account.update({ where: { id: destAccount.id }, data: { currentBalance: { increment: invoice.total } } });
-        await tx.account.update({ where: { id: arAccount.id }, data: { currentBalance: { decrement: invoice.total } } });
-        await tx.ledgerEntry.createMany({
-          data: [
-            { accountId: destAccount.id, debit: invoice.total, credit: 0, reference: voucherNo, description, postingDate },
-            { accountId: arAccount.id, debit: 0, credit: invoice.total, reference: voucherNo, description, postingDate }
-          ]
-        });
-        return { updatedInvoice, journalEntry };
+        return { updatedInvoice, journalEntry: postingResult.journalEntry };
       });
       await logAudit(req.user.id, "Pay Invoice", "INVOICE", invoice, result.updatedInvoice, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, data: result.updatedInvoice, message: "Payment recorded and ledger transactions logged successfully" });
@@ -220,9 +190,6 @@ var invoices_default = makeHandler(async (req, res) => {
         if (prevStatus === "DRAFT") {
           return { updatedInvoice, journalEntry: null };
         }
-        const voucherNo = generateVoucherNumber("INVRVS");
-        const description = `REVERSAL: Invoice #${invoice.invoiceNo} cancelled`;
-        const postingDate = /* @__PURE__ */ new Date();
         const linesToCreate = [];
         if (prevStatus === "PAID") {
           if (!invoice.bankAccountId) {
@@ -232,14 +199,6 @@ var invoices_default = makeHandler(async (req, res) => {
             { accountId: arAccount.id, debit: invoice.total, credit: 0, description: "Reverse Payment - A/R Debit" },
             { accountId: invoice.bankAccountId, debit: 0, credit: invoice.total, description: "Reverse Payment - Cash/Bank Credit" }
           );
-          await tx.account.update({ where: { id: arAccount.id }, data: { currentBalance: { increment: invoice.total } } });
-          await tx.account.update({ where: { id: invoice.bankAccountId }, data: { currentBalance: { decrement: invoice.total } } });
-          await tx.ledgerEntry.createMany({
-            data: [
-              { accountId: arAccount.id, debit: invoice.total, credit: 0, reference: voucherNo, description: "Reverse Payment - A/R", postingDate },
-              { accountId: invoice.bankAccountId, debit: 0, credit: invoice.total, reference: voucherNo, description: "Reverse Payment - Bank/Cash", postingDate }
-            ]
-          });
         }
         const activeRevAccId = revenueAccountId;
         if (!activeRevAccId) {
@@ -249,29 +208,17 @@ var invoices_default = makeHandler(async (req, res) => {
           { accountId: activeRevAccId, debit: invoice.total, credit: 0, description: "Reverse Posting - Revenue Debit" },
           { accountId: arAccount.id, debit: 0, credit: invoice.total, description: "Reverse Posting - A/R Credit" }
         );
-        await tx.account.update({ where: { id: activeRevAccId }, data: { currentBalance: { increment: invoice.total } } });
-        await tx.account.update({ where: { id: arAccount.id }, data: { currentBalance: { decrement: invoice.total } } });
-        await tx.ledgerEntry.createMany({
-          data: [
-            { accountId: activeRevAccId, debit: invoice.total, credit: 0, reference: voucherNo, description: "Reverse Posting - Revenue", postingDate },
-            { accountId: arAccount.id, debit: 0, credit: invoice.total, reference: voucherNo, description: "Reverse Posting - A/R", postingDate }
-          ]
+        const postingResult = await AccountingService.postTransaction(tx, {
+          voucherType: "JV",
+          reference: `RVS-${invoice.invoiceNo}`,
+          description: `REVERSAL: Invoice #${invoice.invoiceNo} cancelled`,
+          module: "Invoices",
+          postedBy: req.user.id,
+          lines: linesToCreate,
+          ipAddress: req.headers["x-forwarded-for"],
+          userAgent: req.headers["user-agent"]
         });
-        const journalEntry = await tx.journalEntry.create({
-          data: {
-            voucherNo,
-            postingDate,
-            subsidiary: "Global",
-            reference: `RVS-${invoice.invoiceNo}`,
-            description,
-            postedBy: req.user.id,
-            status: "Posted",
-            lines: {
-              create: linesToCreate
-            }
-          }
-        });
-        return { updatedInvoice, journalEntry };
+        return { updatedInvoice, journalEntry: postingResult.journalEntry };
       });
       await logAudit(req.user.id, "Cancel Invoice", "INVOICE", invoice, result.updatedInvoice, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, data: result.updatedInvoice, message: "Invoice cancelled and reversing journal entries logged" });

@@ -3,6 +3,7 @@ import { makeHandler } from '../_utils/handler.js';
 import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
+import { AccountingService } from '../_services/accounting.service.js';
 
 function generateVoucherNumber() {
   const date = new Date();
@@ -58,51 +59,29 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       // Perform the transaction
       const result = await prisma.$transaction(async (tx) => {
-        const voucherNo = generateVoucherNumber();
-        const description = `Hall Booking Receipt for ${booking.bookerName} - ${booking.hallAccount?.accountName}`;
-        const postingDate = booking.bookingDate || new Date();
-
-        // Create Journal Entry
-        const journalEntry = await tx.journalEntry.create({
-          data: {
-            voucherNo,
-            postingDate,
-            subsidiary: 'Global',
-            reference: `HB-${booking.receiptNo}`,
-            description,
-            postedBy: req.user!.id,
-            status: 'Posted',
-            voucherType: 'BR',
-            lines: {
-              create: [
-                { accountId: debitAccountId!, debit: booking.amount, credit: 0, description: 'Bank Receipt' },
-                { accountId: revenueAccountId, debit: 0, credit: booking.amount, description: 'Hall Revenue' }
-              ]
-            }
-          }
+        const postingResult = await AccountingService.postReceipt(tx, {
+          amount: booking.amount,
+          cashOrBankAccountId: debitAccountId!,
+          incomeAccountId: revenueAccountId,
+          reference: `HB-${booking.receiptNo}`,
+          description: `Hall Booking Receipt for ${booking.bookerName} - ${booking.hallAccount?.accountName}`,
+          module: 'Hall Booking',
+          voucherType: 'BR',
+          postedBy: req.user!.id,
+          postingDate: booking.bookingDate || new Date(),
+          ipAddress: req.headers['x-forwarded-for'] as string,
+          userAgent: req.headers['user-agent']
         });
 
         const approvedBooking = await tx.hallBooking.update({
           where: { id },
           data: { 
             status: 'POSTED',
-            journalEntryId: journalEntry.id 
+            journalEntryId: postingResult.journalEntry.id 
           }
         });
 
-        // Update Account Balances
-        await tx.account.update({ where: { id: debitAccountId! }, data: { currentBalance: { increment: booking.amount } } });
-        await tx.account.update({ where: { id: revenueAccountId }, data: { currentBalance: { decrement: booking.amount } } });
-
-        // Create Ledger Entries
-        await tx.ledgerEntry.createMany({
-          data: [
-            { accountId: debitAccountId!, debit: booking.amount, credit: 0, reference: voucherNo, description, postingDate },
-            { accountId: revenueAccountId, debit: 0, credit: booking.amount, reference: voucherNo, description, postingDate }
-          ]
-        });
-
-        return { approvedBooking, journalEntry };
+        return { approvedBooking, journalEntry: postingResult.journalEntry };
       });
 
       await logAudit(req.user.id, 'Post Hall Booking', 'REVENUE', booking, result.approvedBooking, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
