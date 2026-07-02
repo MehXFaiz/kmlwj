@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useRef, useState, useCallback, startTransition } from 'react';
+import { useMemo, useEffect, useRef, useState, useCallback, startTransition, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCoaStore } from '../store/coaStore';
 import { useDashboardStore } from '../store/dashboardStore';
@@ -173,7 +173,7 @@ function SectionHeader({ title, subtitle, action }) {
 /* ─────────────────────────────────────────────
    Custom Chart Tooltip
 ───────────────────────────────────────────── */
-function DarkTooltip({ active, payload, label }) {
+const DarkTooltip = memo(function DarkTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="glass-panel rounded-lg px-3 py-2.5 text-xs shadow-2xl border border-slate-700/60">
@@ -189,7 +189,71 @@ function DarkTooltip({ active, payload, label }) {
       ))}
     </div>
   );
-}
+});
+
+const MemoizedAreaChart = memo(function MemoizedAreaChart({ data, tRevenue, tExpense }) {
+  return (
+    <ResponsiveContainer width="100%" height="100%" minWidth={1}>
+      <AreaChart data={data || []} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <defs>
+          <linearGradient id="gRevenue" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="var(--chart-revenue)" stopOpacity={0.25} />
+            <stop offset="95%" stopColor="var(--chart-revenue)" stopOpacity={0} />
+          </linearGradient>
+          <linearGradient id="gExpenses" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="var(--chart-expense)" stopOpacity={0.2} />
+            <stop offset="95%" stopColor="var(--chart-expense)" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
+        <XAxis dataKey="month" stroke="var(--chart-axis)" fontSize={11} tickLine={false} axisLine={false} />
+        <YAxis stroke="var(--chart-axis)" fontSize={11} tickLine={false} axisLine={false}
+          tickFormatter={(v) => `Rs ${(v / 1000).toFixed(0)}k`} />
+        <ChartTooltip content={DarkTooltip} />
+        <Area type="monotone" name={tRevenue} dataKey="Revenue" stroke="var(--chart-revenue)" strokeWidth={2}
+          fill="url(#gRevenue)" dot={false} activeDot={{ r: 4, strokeWidth: 0, fill: 'var(--chart-revenue)' }} isAnimationActive={false} />
+        <Area type="monotone" name={tExpense} dataKey="Expenses" stroke="var(--chart-expense)" strokeWidth={2}
+          fill="url(#gExpenses)" dot={false} activeDot={{ r: 4, strokeWidth: 0, fill: 'var(--chart-expense)' }} isAnimationActive={false} />
+        <Legend wrapperStyle={{ fontSize: '11px', color: '#64748b', paddingTop: '12px' }} />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+});
+
+const MemoizedPieChart = memo(function MemoizedPieChart({ data }) {
+  return (
+    <ResponsiveContainer width="100%" height="100%" minWidth={1}>
+      <PieChart>
+        <Pie data={data} cx="50%" cy="50%" innerRadius={40} outerRadius={68}
+          paddingAngle={3} dataKey="value" strokeWidth={0} isAnimationActive={false}>
+          {data.map((entry, i) => (
+            <Cell key={i} fill={entry.fill} />
+          ))}
+        </Pie>
+        <ChartTooltip content={DarkTooltip} />
+      </PieChart>
+    </ResponsiveContainer>
+  );
+});
+
+const MemoizedBarChart = memo(function MemoizedBarChart({ data }) {
+  return (
+    <ResponsiveContainer width="100%" height="100%" minWidth={1}>
+      <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barSize={32}>
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
+        <XAxis dataKey="name" stroke="var(--chart-axis)" fontSize={12} tickLine={false} axisLine={false} />
+        <YAxis stroke="var(--chart-axis)" fontSize={11} tickLine={false} axisLine={false}
+          tickFormatter={(v) => `Rs ${(v / 1000).toFixed(0)}k`} />
+        <ChartTooltip content={DarkTooltip} />
+        <Bar dataKey="value" name="Balance" radius={[6, 6, 0, 0]} isAnimationActive={false}>
+          {data.map((entry, i) => (
+            <Cell key={i} fill={entry.fill} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+});
 
 /* ─────────────────────────────────────────────
    Quick Action Button
@@ -550,30 +614,7 @@ export const Dashboard = () => {
             }
           />
           <div className="h-48 sm:h-56">
-            <ResponsiveContainer width="100%" height="100%" minWidth={1}>
-              <AreaChart data={dbStats?.monthlyData || []} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--chart-revenue)" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="var(--chart-revenue)" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="gExpenses" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--chart-expense)" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="var(--chart-expense)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
-                <XAxis dataKey="month" stroke="var(--chart-axis)" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="var(--chart-axis)" fontSize={11} tickLine={false} axisLine={false}
-                  tickFormatter={(v) => `Rs ${(v / 1000).toFixed(0)}k`} />
-                <ChartTooltip content={<DarkTooltip />} />
-                <Area type="monotone" name={t('dashboard.revenue')} dataKey="Revenue" stroke="var(--chart-revenue)" strokeWidth={2}
-                  fill="url(#gRevenue)" dot={false} activeDot={{ r: 4, strokeWidth: 0, fill: 'var(--chart-revenue)' }} />
-                <Area type="monotone" name={t('dashboard.expense')} dataKey="Expenses" stroke="var(--chart-expense)" strokeWidth={2}
-                  fill="url(#gExpenses)" dot={false} activeDot={{ r: 4, strokeWidth: 0, fill: 'var(--chart-expense)' }} />
-                <Legend wrapperStyle={{ fontSize: '11px', color: '#64748b', paddingTop: '12px' }} />
-              </AreaChart>
-            </ResponsiveContainer>
+            <MemoizedAreaChart data={dbStats?.monthlyData || []} tRevenue={t('dashboard.revenue')} tExpense={t('dashboard.expense')} />
           </div>
         </div>
 
@@ -581,17 +622,7 @@ export const Dashboard = () => {
         <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5 shadow-none">
           <SectionHeader title={t('dashboard.accountDistribution')} subtitle={t('dashboard.breakdownByAccountType')} />
           <div className="h-36 sm:h-40 mb-3">
-            <ResponsiveContainer width="100%" height="100%" minWidth={1}>
-              <PieChart>
-                <Pie data={typeDistData} cx="50%" cy="50%" innerRadius={40} outerRadius={68}
-                  paddingAngle={3} dataKey="value" strokeWidth={0}>
-                  {typeDistData.map((entry, i) => (
-                    <Cell key={i} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <ChartTooltip content={<DarkTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
+            <MemoizedPieChart data={typeDistData} />
           </div>
           <div className="space-y-0.5">
             {Object.entries(acctStats.byType).map(([type, count]) => {
@@ -625,20 +656,7 @@ export const Dashboard = () => {
             }
           />
           <div className="h-48 sm:h-56">
-            <ResponsiveContainer width="100%" height="100%" minWidth={1}>
-              <BarChart data={balSheetData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barSize={32}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
-                <XAxis dataKey="name" stroke="var(--chart-axis)" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="var(--chart-axis)" fontSize={11} tickLine={false} axisLine={false}
-                  tickFormatter={(v) => `Rs ${(v / 1000).toFixed(0)}k`} />
-                <ChartTooltip content={<DarkTooltip />} />
-                <Bar dataKey="value" name="Balance" radius={[6, 6, 0, 0]}>
-                  {balSheetData.map((entry, i) => (
-                    <Cell key={i} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <MemoizedBarChart data={balSheetData} />
           </div>
         </div>
 
