@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Search, Printer, AlertTriangle, CheckCircle, X, Trash2 } from 'lucide-react';
+import { Plus, Search, Printer, AlertTriangle, CheckCircle, X, Trash2, Edit2 } from 'lucide-react';
 import { useHallBookingStore } from '../store/hallBookingStore';
 import { useAuthStore } from '../store/authStore';
 import { DashboardLayout } from '../layouts/DashboardLayout';
@@ -198,6 +198,13 @@ export const HallBookings = () => {
                           title="Print Receipt">
                           <Printer className="h-4 w-4" />
                         </button>
+                        {booking.status === 'Confirmed' && canEditOrDelete && (
+                          <Link to={`/hall-bookings/edit/${booking.id}`}
+                            className="p-1.5 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded transition-colors inline-flex ml-1"
+                            title="Edit Booking">
+                            <Edit2 className="h-4 w-4" />
+                          </Link>
+                        )}
                         {canEditOrDelete && (
                           <button onClick={() => handleDelete(booking.id)}
                             className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors inline-flex ml-1"

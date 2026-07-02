@@ -307,6 +307,7 @@ function App() {
             <Route path="/trial-balance-sheet" element={<TrialBalanceSheet />} />
             <Route path="/hall-bookings" element={<HallBookings />} />
             <Route path="/hall-bookings/new" element={<HallBookingForm />} />
+            <Route path="/hall-bookings/edit/:id" element={<HallBookingForm />} />
             <Route path="/beneficiaries" element={<Beneficiaries />} />
             <Route path="/donations" element={<Donations />} />
             <Route path="/donation-reports" element={<DonationReports />} />

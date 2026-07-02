@@ -26,6 +26,27 @@ export const useHallBookingStore = create((set) => ({
     }
   },
 
+  fetchBookingById: async (id) => {
+    try {
+      const response = await api.get(`/api/v1/hall-bookings?id=${id}`);
+      return response.data.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  updateBooking: async (id, bookingData) => {
+    try {
+      const response = await api.put(`/api/v1/hall-bookings?id=${id}`, bookingData);
+      set((state) => ({
+        bookings: state.bookings.map(b => b.id === id ? response.data.data : b)
+      }));
+      return response.data.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   postBooking: async (id) => {
     try {
       const response = await api.post('/api/v1/hall-bookings?action=approve', { id });

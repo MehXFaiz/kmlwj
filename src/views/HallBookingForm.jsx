@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { Save, ChevronLeft, Calendar, User, Phone, MapPin, Clock, CreditCard, Landmark } from 'lucide-react';
@@ -11,12 +11,14 @@ import { HallBookingReceiptModal } from '../components/receipts/HallBookingRecei
 
 export const HallBookingForm = () => {
   const { t } = useTranslation();
+  const { id } = useParams();
   const navigate = useNavigate();
-  const { addBooking } = useHallBookingStore();
+  const { addBooking, updateBooking, fetchBookingById } = useHallBookingStore();
   const { flatAccounts, fetchAccountsList } = useCoaStore();
   const [newlyCreatedBooking, setNewlyCreatedBooking] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const { register, handleSubmit, watch, setValue, formState: { isSubmitting } } = useForm({
+  const { register, handleSubmit, watch, setValue, reset, formState: { isSubmitting, dirtyFields } } = useForm({
     defaultValues: {
       bookerName: '',
       mobile: '',
@@ -43,6 +45,43 @@ export const HallBookingForm = () => {
     fetchAccountsList();
   }, [fetchAccountsList]);
 
+  useEffect(() => {
+    if (!id) return;
+
+    const loadBooking = async () => {
+      setLoading(true);
+      try {
+        const booking = await fetchBookingById(id);
+        if (booking) {
+          const formattedDate = booking.programDate ? new Date(booking.programDate).toISOString().split('T')[0] : '';
+          reset({
+            bookerName: booking.bookerName || '',
+            mobile: booking.mobile || '',
+            address: booking.address || '',
+            programDate: formattedDate,
+            programType: booking.programType || '',
+            timings: booking.timings || 'Evening',
+            hallId: booking.hallId || '',
+            isForJamaat: booking.isForJamaat || false,
+            amount: booking.amount || '',
+            paymentMethod: booking.paymentMethod || 'CASH',
+            bankAccountId: booking.bankAccountId || '',
+            chequeNumber: booking.chequeNumber || '',
+            chequeBankName: booking.chequeBankName || '',
+            remarks: booking.remarks || ''
+          });
+        }
+      } catch (err) {
+        showToast(err.message || 'Failed to load booking details', 'error');
+        navigate('/hall-bookings');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadBooking();
+  }, [id, fetchBookingById, reset, navigate]);
+
   const hallAccounts = flatAccounts.filter(a => 
     (a.type === 'Revenue' || a.accountTypeName === 'REVENUE') &&
     a.level === 'SUBSIDIARY' && 
@@ -56,6 +95,10 @@ export const HallBookingForm = () => {
   );
 
   useEffect(() => {
+    // Only auto-calculate amount if hallId or isForJamaat was touched/modified by the user
+    // or if it's a new booking
+    if (id && !dirtyFields.hallId && !dirtyFields.isForJamaat) return;
+
     if (!hallId) return;
 
     const hall = hallAccounts.find(h => h.id === hallId);
@@ -78,7 +121,7 @@ export const HallBookingForm = () => {
       const finalRate = isForJamaat ? baseRate * 0.5 : baseRate;
       setValue('amount', finalRate);
     }
-  }, [hallId, isForJamaat, hallAccounts, setValue]);
+  }, [id, hallId, isForJamaat, hallAccounts, setValue, dirtyFields.hallId, dirtyFields.isForJamaat]);
 
   const onSubmit = async (data) => {
     if (!data.bookerName || !data.programDate || !data.hallId || !data.amount) {
@@ -87,11 +130,20 @@ export const HallBookingForm = () => {
     }
 
     try {
-      const savedBooking = await addBooking({
-        ...data,
-        amount: parseFloat(data.amount)
-      });
-      showToast('Booking saved successfully!', 'success');
+      let savedBooking;
+      if (id) {
+        savedBooking = await updateBooking(id, {
+          ...data,
+          amount: parseFloat(data.amount)
+        });
+        showToast('Booking updated successfully!', 'success');
+      } else {
+        savedBooking = await addBooking({
+          ...data,
+          amount: parseFloat(data.amount)
+        });
+        showToast('Booking saved successfully!', 'success');
+      }
       setNewlyCreatedBooking(savedBooking);
     } catch (err) {
       showToast(err.message || "Couldn't save booking. Try again.", 'error');
@@ -103,16 +155,31 @@ export const HallBookingForm = () => {
     navigate('/hall-bookings');
   };
 
+  if (loading) {
+    return (
+      <DashboardLayout breadcrumbs={['Revenue', t('tables.hallBookings.title'), id ? 'Edit Booking' : 'New Booking']}>
+        <div className="max-w-3xl mx-auto py-16 flex flex-col items-center justify-center gap-3 text-slate-400">
+          <div className="h-6 w-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm">Loading booking details...</span>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
-    <DashboardLayout breadcrumbs={['Revenue', t('tables.hallBookings.title'), 'New Booking']}>
+    <DashboardLayout breadcrumbs={['Revenue', t('tables.hallBookings.title'), id ? 'Edit Booking' : 'New Booking']}>
       <div className="max-w-3xl mx-auto space-y-6 pb-12">
         <div className="flex items-center gap-3">
           <Link to="/hall-bookings" className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 transition-colors flex-shrink-0">
             <ChevronLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">{t('tables.hallBookings.newBooking')}</h2>
-            <p className="text-xs text-slate-500 mt-0.5">{t('tables.hallBookings.newBookingDesc')}</p>
+            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">
+              {id ? 'Edit Booking' : t('tables.hallBookings.newBooking')}
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {id ? 'Edit details for this hall booking' : t('tables.hallBookings.newBookingDesc')}
+            </p>
           </div>
         </div>
 
@@ -277,7 +344,7 @@ export const HallBookingForm = () => {
           <div className="pt-4 border-t border-slate-800/80 flex justify-end">
             <button type="submit" disabled={isSubmitting}
               className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-lg shadow-indigo-900/20 transition-all disabled:opacity-50">
-              <Save className="h-4 w-4" /> {isSubmitting ? 'Saving...' : 'Save Booking'}
+              <Save className="h-4 w-4" /> {isSubmitting ? 'Saving...' : id ? 'Update Booking' : 'Save Booking'}
             </button>
           </div>
         </form>

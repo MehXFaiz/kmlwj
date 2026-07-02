@@ -21,6 +21,19 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const action = req.query.action as string;
 
   if (method === 'GET') {
+    const id = req.query.id as string;
+    if (id) {
+      const booking = await prisma.hallBooking.findUnique({
+        where: { id },
+        include: {
+          hallAccount: true,
+          bankAccount: true,
+          createdBy: { select: { id: true, fullName: true, email: true } },
+        },
+      });
+      if (!booking) return res.status(404).json({ error: { message: 'Booking not found', status: 404 } });
+      return res.status(200).json({ status: 200, data: booking });
+    }
     const bookings = await prisma.hallBooking.findMany({
       include: {
         hallAccount: true,
@@ -190,6 +203,61 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     } catch (err: any) {
       return res.status(400).json({ error: { message: err.message || 'Failed to delete hall booking(s)', status: 400 } });
     }
+  }
+
+  if (method === 'PUT') {
+    const id = req.query.id as string;
+    if (!id) {
+      return res.status(400).json({ error: { message: 'Booking ID is required', status: 400 } });
+    }
+
+    const existingBooking = await prisma.hallBooking.findUnique({ where: { id } });
+    if (!existingBooking) {
+      return res.status(404).json({ error: { message: 'Booking not found', status: 404 } });
+    }
+    if (existingBooking.status === 'POSTED') {
+      return res.status(400).json({ error: { message: 'Cannot edit a posted booking', status: 400 } });
+    }
+
+    const { bookingDate, bookerName, address, mobile, programDate, programType, timings, hallId, isForJamaat, amount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
+
+    if (!bookerName || !programDate || !hallId || !amount || !paymentMethod) {
+      return res.status(400).json({ error: { message: 'Missing required fields', status: 400 } });
+    }
+    if (amount <= 0) {
+      return res.status(400).json({ error: { message: 'Amount must be greater than 0', status: 400 } });
+    }
+    if ((paymentMethod === 'BANK' || paymentMethod === 'CHEQUE') && !bankAccountId) {
+      return res.status(400).json({ error: { message: 'Bank account is required for Bank/Cheque payment methods', status: 400 } });
+    }
+
+    const updatedBooking = await prisma.hallBooking.update({
+      where: { id },
+      data: {
+        bookingDate: bookingDate ? new Date(bookingDate) : undefined,
+        bookerName,
+        address: address || null,
+        mobile: mobile || null,
+        programDate: new Date(programDate),
+        programType: programType || null,
+        timings: timings || null,
+        hallId,
+        isForJamaat: Boolean(isForJamaat),
+        amount: parseFloat(amount),
+        paymentMethod,
+        bankAccountId: bankAccountId || null,
+        chequeNumber: chequeNumber || null,
+        chequeBankName: chequeBankName || null,
+        remarks: remarks || null,
+      },
+      include: {
+        hallAccount: true
+      }
+    });
+
+    await logAudit(req.user.id, 'Update Hall Booking', 'REVENUE', existingBooking, updatedBooking, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+
+    return res.status(200).json({ status: 200, data: updatedBooking });
   }
 
   return res.status(405).json({ error: { message: 'Method Not Allowed', status: 405 } });
