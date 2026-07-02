@@ -29,6 +29,7 @@ import reservedCodesHandler from './_v1/reserved-codes.js';
 import beneficiariesHandler from './_v1/beneficiaries.js';
 import donationsHandler from './_v1/donations.js';
 import hallBookingsHandler from './_v1/hall-bookings.js';
+import revenueCollectionsHandler from './_v1/revenue-collections.js';
 import customersHandler from './_v1/customers.js';
 import invoicesHandler from './_v1/invoices.js';
 import generalLedgerHandler from './_v1/general-ledger.js';
@@ -137,6 +138,11 @@ app.delete('/api/v1/beneficiaries', makeExpress(beneficiariesHandler));
 app.get('/api/v1/donations', makeExpress(donationsHandler));
 app.post('/api/v1/donations', makeExpress(donationsHandler));
 app.delete('/api/v1/donations', makeExpress(donationsHandler));
+
+// Revenue Collection Routes (Zakat, Fitra, Membership Fee, Bus Booking)
+app.get('/api/v1/revenue-collections', makeExpress(revenueCollectionsHandler));
+app.post('/api/v1/revenue-collections', makeExpress(revenueCollectionsHandler));
+app.delete('/api/v1/revenue-collections', makeExpress(revenueCollectionsHandler));
 
 // Hall Booking Routes
 app.get('/api/v1/hall-bookings', makeExpress(hallBookingsHandler));
