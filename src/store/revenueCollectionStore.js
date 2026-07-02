@@ -27,6 +27,18 @@ export const useRevenueCollectionStore = create((set, get) => ({
     }
   },
 
+  updateCollection: async (id, data) => {
+    try {
+      const response = await api.put(`/api/v1/revenue-collections?id=${id}`, data);
+      set((state) => ({
+        collections: state.collections.map(c => c.id === id ? response.data.data : c)
+      }));
+      return response.data.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   postCollection: async (id) => {
     try {
       const response = await api.post('/api/v1/revenue-collections?action=approve', { id });

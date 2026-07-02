@@ -142,6 +142,7 @@ app.delete('/api/v1/donations', makeExpress(donationsHandler));
 // Revenue Collection Routes (Zakat, Fitra, Membership Fee, Bus Booking)
 app.get('/api/v1/revenue-collections', makeExpress(revenueCollectionsHandler));
 app.post('/api/v1/revenue-collections', makeExpress(revenueCollectionsHandler));
+app.put('/api/v1/revenue-collections', makeExpress(revenueCollectionsHandler));
 app.delete('/api/v1/revenue-collections', makeExpress(revenueCollectionsHandler));
 
 // Hall Booking Routes

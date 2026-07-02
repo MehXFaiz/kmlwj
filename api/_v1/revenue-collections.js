@@ -178,6 +178,52 @@ var revenue_collections_default = makeHandler(async (req, res) => {
       return res.status(400).json({ error: { message: err.message || "Failed to delete record(s)", status: 400 } });
     }
   }
+  if (method === "PUT") {
+    const id = req.query.id;
+    if (!id) {
+      return res.status(400).json({ error: { message: "Record ID is required", status: 400 } });
+    }
+    const existingItem = await prisma.revenueCollection.findUnique({ where: { id } });
+    if (!existingItem) {
+      return res.status(404).json({ error: { message: "Record not found", status: 404 } });
+    }
+    if (existingItem.status === "POSTED") {
+      return res.status(400).json({ error: { message: "Cannot edit a posted record", status: 400 } });
+    }
+    const { category, title, subTitle, mobile, eventDate, quantity, rate, destination, amount, paymentMethod, bankAccountId, chequeNumber, remarks } = req.body;
+    if (!category || !title || !amount || !paymentMethod) {
+      return res.status(400).json({ error: { message: "Missing required fields (category, title, amount, paymentMethod)", status: 400 } });
+    }
+    if (amount <= 0) {
+      return res.status(400).json({ error: { message: "Amount must be greater than 0", status: 400 } });
+    }
+    if ((paymentMethod === "BANK" || paymentMethod === "CHEQUE") && !bankAccountId) {
+      return res.status(400).json({ error: { message: "Bank account is required for Bank/Cheque payment methods", status: 400 } });
+    }
+    const updatedItem = await prisma.revenueCollection.update({
+      where: { id },
+      data: {
+        category,
+        title,
+        subTitle: subTitle || null,
+        mobile: mobile || null,
+        eventDate: eventDate ? new Date(eventDate) : /* @__PURE__ */ new Date(),
+        quantity: quantity ? parseInt(quantity, 10) : null,
+        rate: rate ? parseFloat(rate) : null,
+        destination: destination || null,
+        amount: parseFloat(amount),
+        paymentMethod,
+        bankAccountId: bankAccountId || null,
+        chequeNumber: chequeNumber || null,
+        remarks: remarks || null
+      },
+      include: {
+        bankAccount: true
+      }
+    });
+    await logAudit(req.user.id, `Update ${category}`, "REVENUE", existingItem, updatedItem, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    return res.status(200).json({ status: 200, data: updatedItem });
+  }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
 });
 export {
