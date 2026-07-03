@@ -361,3 +361,27 @@ model RevenueCollection {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 }
+
+model Member {
+  id              String         @id @default(uuid()) @db.Uuid
+  memberNo        String?        @unique
+  fullName        String
+  fatherName      String?
+  cnic            String?        @unique
+  dob             String?
+  address         String?
+  mobile          String?
+  email           String?
+  city            String?
+  area            String?
+  ghamName        String?
+  education       String?
+  profession      String?
+  company         String?
+  doi             String?
+  photoUrl        String?        @db.Text
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+

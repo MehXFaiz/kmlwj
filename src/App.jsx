@@ -43,6 +43,8 @@ const Customers = lazy(() => import('./views/Customers').then(m => ({ default: m
 const Invoices = lazy(() => import('./views/Invoices').then(m => ({ default: m.Invoices })));
 const InvoiceForm = lazy(() => import('./views/InvoiceForm').then(m => ({ default: m.InvoiceForm })));
 const InvoiceDetail = lazy(() => import('./views/InvoiceDetail').then(m => ({ default: m.InvoiceDetail })));
+const Members = lazy(() => import('./views/Members').then(m => ({ default: m.Members })));
+const MemberForm = lazy(() => import('./views/MemberForm').then(m => ({ default: m.MemberForm })));
 
 // Bank Voucher Module Views
 const BankVouchers = lazy(() => import('./views/BankVouchers').then(m => ({ default: m.BankVouchers })));
@@ -316,6 +318,9 @@ function App() {
             <Route path="/membership-fees" element={<MembershipFeeSection />} />
             <Route path="/bus-bookings" element={<BusBookingSection />} />
             <Route path="/customers" element={<Customers />} />
+            <Route path="/members" element={<Members />} />
+            <Route path="/members/new" element={<MemberForm />} />
+            <Route path="/members/edit/:id" element={<MemberForm />} />
             <Route path="/invoices" element={<Invoices />} />
             <Route path="/invoices/new" element={<InvoiceForm />} />
             <Route path="/invoices/edit/:id" element={<InvoiceForm />} />

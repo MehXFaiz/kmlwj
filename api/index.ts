@@ -31,6 +31,7 @@ import donationsHandler from './_v1/donations.js';
 import hallBookingsHandler from './_v1/hall-bookings.js';
 import revenueCollectionsHandler from './_v1/revenue-collections.js';
 import customersHandler from './_v1/customers.js';
+import membersHandler from './_v1/members.js';
 import invoicesHandler from './_v1/invoices.js';
 import generalLedgerHandler from './_v1/general-ledger.js';
 import journalEntriesHandler from './_v1/journal-entries.js';
@@ -156,6 +157,11 @@ app.get('/api/v1/customers', makeExpress(customersHandler));
 app.post('/api/v1/customers', makeExpress(customersHandler));
 app.put('/api/v1/customers', makeExpress(customersHandler));
 app.delete('/api/v1/customers', makeExpress(customersHandler));
+
+app.get('/api/v1/members', makeExpress(membersHandler));
+app.post('/api/v1/members', makeExpress(membersHandler));
+app.put('/api/v1/members', makeExpress(membersHandler));
+app.delete('/api/v1/members', makeExpress(membersHandler));
 
 app.get('/api/v1/invoices', makeExpress(invoicesHandler));
 app.post('/api/v1/invoices', makeExpress(invoicesHandler));

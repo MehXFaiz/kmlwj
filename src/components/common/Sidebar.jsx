@@ -195,7 +195,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
       items: [
         { name: t('sidebar.customers'), hint: t('sidebar.customersHint'), icon: Users, path: '/customers' },
         { name: t('sidebar.invoices'), hint: t('sidebar.invoicesHint'), icon: FileSpreadsheet, path: '/invoices' },
-        { name: t('sidebar.members', 'Members / Membership Fee'), hint: t('sidebar.membersHint', 'Manage member fees and renewals'), icon: Building, path: '/membership-fees' },
+        { name: t('sidebar.members', 'Community Members'), hint: t('sidebar.membersHint', 'Manage Jamia member registrations & records'), icon: Users, path: '/members' },
       ],
     },
     {
