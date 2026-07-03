@@ -96,7 +96,7 @@ function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Donation Type *</label>
               <select value={form.donationType} onChange={e => setForm(f => ({ ...f, donationType: e.target.value }))}
                 className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-pink-600/60 transition-all">
-                {['ZAKAT', 'SADQAH', 'FITRAH', 'DONATION', 'WELFARE', 'GENERAL', 'CUSTOM'].map(t => (
+                {['MONTHLY', 'MARRIAGE', 'MEDICAL', 'EMERGENCY', 'EDUCATION', 'CUSTOM'].map(t => (
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>
