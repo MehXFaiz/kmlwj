@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useCoaStore } from '../store/coaStore';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
 import { ChevronLeft, Save, Sparkles, Plus, AlertCircle, CheckCircle } from 'lucide-react';
@@ -17,8 +17,20 @@ export const ExpenseEntryForm = () => {
   const [description, setDescription] = useState('');
   const [bankAccountId, setBankAccountId] = useState('');
   
+  const [searchParams] = useSearchParams();
+  const typeParam = searchParams.get('type');
+
   // Selected high-level expense type
   const [expenseType, setExpenseType] = useState('Salary');
+
+  useEffect(() => {
+    if (typeParam) {
+      const allowedTypes = ['Salary', 'Rent', 'Fuel', 'Bus Repair', 'Generator Repair', 'Legal Fee', 'Medical Donation', 'Zakat Distribution', 'Other'];
+      if (allowedTypes.includes(typeParam)) {
+        setExpenseType(typeParam);
+      }
+    }
+  }, [typeParam]);
   
   // Selected subsidiary account (when matched accounts exist)
   const [selectedSubAccountId, setSelectedSubAccountId] = useState('');
@@ -70,6 +82,10 @@ export const ExpenseEntryForm = () => {
           return nameLower.includes('legal') || nameLower.includes('lawyer') || nameLower.includes('professional fee') || nameLower.includes('audit');
         case 'Medical Donation':
           return nameLower.includes('medical donation') || nameLower.includes('medical expense') || (nameLower.includes('donation') && nameLower.includes('medical'));
+        case 'Zakat Distribution':
+          return nameLower.includes('zakat distribution') || nameLower.includes('zakat expense') || (nameLower.includes('zakat') && nameLower.includes('distrib'));
+        case 'Other':
+          return nameLower.includes('other expense') || nameLower.includes('miscellaneous') || nameLower.includes('misc') || nameLower.includes('general expense');
         default:
           return false;
       }
@@ -131,6 +147,16 @@ export const ExpenseEntryForm = () => {
         parentCode = '4300000';
         parentName = 'Donation Expenses';
         name = 'Medical Donation Expense';
+        break;
+      case 'Zakat Distribution':
+        parentCode = '4300000';
+        parentName = 'Donation Expenses';
+        name = 'Zakat Distribution Expense';
+        break;
+      case 'Other':
+        parentCode = '4100000';
+        parentName = 'Administrative Expenses';
+        name = 'Miscellaneous Expense';
         break;
       default:
         return null;
@@ -260,13 +286,15 @@ export const ExpenseEntryForm = () => {
           <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">{t('forms.expenseType')}</label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {[
-              { key: 'Salary', label: t('forms.sources.salary') },
-              { key: 'Rent', label: t('forms.sources.rent') },
-              { key: 'Fuel', label: t('forms.sources.fuel') },
-              { key: 'Bus Repair', label: t('forms.sources.busRepair') },
-              { key: 'Generator Repair', label: t('forms.sources.generatorRepair') },
-              { key: 'Legal Fee', label: t('forms.sources.legalFee') },
-              { key: 'Medical Donation', label: t('forms.sources.medicalDonation') }
+              { key: 'Salary', label: t('forms.sources.salary', 'Salary') },
+              { key: 'Rent', label: t('forms.sources.rent', 'Rent') },
+              { key: 'Fuel', label: t('forms.sources.fuel', 'Fuel') },
+              { key: 'Bus Repair', label: t('forms.sources.busRepair', 'Bus Repair') },
+              { key: 'Generator Repair', label: t('forms.sources.generatorRepair', 'Generator Repair') },
+              { key: 'Legal Fee', label: t('forms.sources.legalFee', 'Legal Fee') },
+              { key: 'Medical Donation', label: t('forms.sources.medicalDonation', 'Medical Donation') },
+              { key: 'Zakat Distribution', label: t('forms.sources.zakatDistribution', 'Zakat Distribution') },
+              { key: 'Other', label: t('forms.sources.other', 'Other') }
             ].map(type => (
               <button
                 key={type.key}

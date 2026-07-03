@@ -152,33 +152,42 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
 
   const sidebarSections = useMemo(() => [
     {
-      title: t('sidebar.home'),
+      title: t('sidebar.home', 'Home'),
       items: [
-        { name: t('sidebar.dashboard'), hint: t('sidebar.dashboardHint'), icon: LayoutDashboard, path: '/' },
-        { name: t('sidebar.generalLedger', 'General Ledger'), hint: t('sidebar.generalLedgerHint', 'Account ledger activity & adjustment'), icon: BookOpen, path: '/ledger' },
+        { name: t('sidebar.dashboard', 'Dashboard'), hint: t('sidebar.dashboardHint', 'At a glance overview'), icon: LayoutDashboard, path: '/' },
+        { name: t('sidebar.generalLedger', 'General Ledger'), hint: t('sidebar.generalLedgerHint', 'All account entries'), icon: BookOpen, path: '/ledger' },
       ],
     },
     {
-      title: t('sidebar.moneyInOut'),
+      title: t('sidebar.moneyIn', 'Money In'),
       items: [
-        { name: t('sidebar.addIncome'), hint: t('sidebar.addIncomeHint'), icon: TrendingUp, path: '/bank-vouchers/revenue/new' },
-        { name: t('sidebar.addExpense'), hint: t('sidebar.addExpenseHint'), icon: TrendingDown, path: '/bank-vouchers/expense/new' },
-        { name: t('sidebar.transferMoney'), hint: t('sidebar.transferMoneyHint'), icon: RefreshCw, path: '/bank-vouchers/transfer/new' },
-        { name: t('sidebar.allTransactions'), hint: t('sidebar.allTransactionsHint'), icon: Wallet, path: '/bank-vouchers' },
-        { name: t('sidebar.generalLedger', 'General Ledger'), hint: t('sidebar.generalLedgerHint', 'Account ledger activity & adjustment'), icon: BookOpen, path: '/ledger' },
         { name: t('sidebar.hallBookings', 'Hall Bookings'), hint: t('sidebar.hallBookingsHint', 'Manage hall reservations'), icon: Calendar, path: '/hall-bookings' },
-        { name: 'Bus Bookings', hint: 'Manage bus reservations and trips', icon: Bus, path: '/bus-bookings' },
-        { name: 'Membership Fees', hint: 'Manage member fees and renewals', icon: Building, path: '/membership-fees' },
+        { name: t('sidebar.donationsReceived', 'Donation Received'), hint: t('sidebar.donationsReceivedHint', 'All donation records'), icon: Heart, path: '/donations' },
+        { name: t('sidebar.membershipFee', 'Membership Fee'), hint: 'Manage member fees and renewals', icon: Building, path: '/membership-fees' },
+        { name: t('sidebar.busBooking', 'Bus Booking'), hint: 'Manage bus reservations and trips', icon: Bus, path: '/bus-bookings' },
+        { name: t('sidebar.zakatCollection', 'Zakat Collection'), hint: 'Manage Zakat donors and receipts', icon: Gift, path: '/zakat' },
+        { name: t('sidebar.fitraCollection', 'Fitra Collection'), hint: 'Manage Fitra head-count and receipts', icon: DollarSign, path: '/fitra' },
       ],
     },
     {
-      title: t('sidebar.welfare'),
+      title: t('sidebar.moneyOut', 'Money Out'),
       items: [
-        { name: t('sidebar.peopleWeHelp'), hint: t('sidebar.peopleWeHelpHint'), icon: Users, path: '/beneficiaries' },
-        { name: t('sidebar.donationsReceived'), hint: t('sidebar.donationsReceivedHint'), icon: Heart, path: '/donations' },
-        { name: 'Zakat Collection', hint: 'Manage Zakat donors and receipts', icon: Gift, path: '/zakat' },
-        { name: 'Fitra Collection', hint: 'Manage Fitra head-count and receipts', icon: DollarSign, path: '/fitra' },
-        { name: t('sidebar.donationReports'), hint: t('sidebar.donationReportsHint'), icon: FileText, path: '/donation-reports' },
+        { name: t('sidebar.salaries', 'Salaries'), hint: 'Log salary payouts', icon: Users, path: '/bank-vouchers/expense/new?type=Salary' },
+        { name: t('sidebar.rent', 'Rent'), hint: 'Log rent payments', icon: Building, path: '/bank-vouchers/expense/new?type=Rent' },
+        { name: t('sidebar.fuel', 'Fuel'), hint: 'Log fuel expenses', icon: Bus, path: '/bank-vouchers/expense/new?type=Fuel' },
+        { name: t('sidebar.busRepair', 'Bus Repair'), hint: 'Log bus maintenance costs', icon: Bus, path: '/bank-vouchers/expense/new?type=Bus Repair' },
+        { name: t('sidebar.generatorRepair', 'Generator Repair'), hint: 'Log generator maintenance costs', icon: Activity, path: '/bank-vouchers/expense/new?type=Generator Repair' },
+        { name: t('sidebar.legalFee', 'Legal Fee'), hint: 'Log legal & professional fees', icon: FileText, path: '/bank-vouchers/expense/new?type=Legal Fee' },
+        { name: t('sidebar.medicalDonationDistribution', 'Medical Donation Distribution'), hint: 'Log medical distribution expenses', icon: Heart, path: '/bank-vouchers/expense/new?type=Medical Donation' },
+        { name: t('sidebar.zakatDistribution', 'Zakat Distribution'), hint: 'Log Zakat distribution payouts', icon: Gift, path: '/bank-vouchers/expense/new?type=Zakat Distribution' },
+        { name: t('sidebar.other', 'Other'), hint: 'Log other miscellaneous payouts', icon: TrendingDown, path: '/bank-vouchers/expense/new?type=Other' },
+      ],
+    },
+    {
+      title: t('sidebar.welfare', 'Welfare'),
+      items: [
+        { name: t('sidebar.peopleWeHelp', 'People We Help'), hint: t('sidebar.peopleWeHelpHint', 'Beneficiary list'), icon: Users, path: '/beneficiaries' },
+        { name: t('sidebar.donationReports', 'Donation Reports'), hint: t('sidebar.donationReportsHint', 'Monthly summaries'), icon: FileText, path: '/donation-reports' },
       ],
     },
     {
