@@ -85,7 +85,7 @@ class ChunkErrorBoundary extends Component {
     if (this.state.hasError) {
       return (
         <div className="flex flex-col items-center justify-center h-screen w-screen bg-slate-950 text-center px-4">
-          <div className="h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
+          <div className="h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mb-4" />
           <h3 className="text-lg font-bold text-slate-200">Applying latest updates...</h3>
           <p className="text-sm text-slate-500 mt-2">Loading the newest version of the application.</p>
         </div>
@@ -106,7 +106,7 @@ const MobileFab = () => {
   const actions = [
     { label: 'Add Income', desc: 'Record money received', icon: TrendingUp, color: 'text-emerald-400 bg-emerald-950/80 border-emerald-800/60', path: '/bank-vouchers/revenue/new' },
     { label: 'Add Expense', desc: 'Record money spent', icon: TrendingDown, color: 'text-red-400 bg-red-950/80 border-red-800/60', path: '/bank-vouchers/expense/new' },
-    { label: 'Journal Entry', desc: 'Manual entry', icon: FileText, color: 'text-indigo-400 bg-indigo-950/80 border-indigo-800/60', path: '/journals' },
+    { label: 'Journal Entry', desc: 'Manual entry', icon: FileText, color: 'text-amber-400 bg-amber-950/80 border-amber-800/60', path: '/journals' },
     { label: 'General Ledger', desc: 'View account ledgers', icon: BookOpen, color: 'text-cyan-400 bg-cyan-950/80 border-cyan-800/60', path: '/ledger' },
     { label: 'Transfer', desc: 'Move between accounts', icon: RefreshCw, color: 'text-violet-400 bg-violet-950/80 border-violet-800/60', path: '/bank-vouchers/transfer/new' },
   ];
@@ -153,7 +153,7 @@ const MobileFab = () => {
       {/* FAB Button */}
       <button
         onClick={() => setOpen(prev => !prev)}
-        className="fixed bottom-6 right-5 z-[90] lg:hidden w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-500 active:scale-95 shadow-2xl shadow-indigo-900/60 flex items-center justify-center text-white transition-all duration-200"
+        className="fixed bottom-6 right-5 z-[90] lg:hidden w-14 h-14 rounded-full bg-amber-600 hover:bg-amber-500 active:scale-95 shadow-2xl shadow-amber-900/60 flex items-center justify-center text-white transition-all duration-200"
         aria-label="Quick actions"
       >
         {open
@@ -199,7 +199,7 @@ const ProtectedRoutesWrapper = () => {
           <div className="max-w-7xl mx-auto space-y-6">
             <Suspense fallback={
               <div className="flex items-center justify-center h-[50vh]">
-                <div className="h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                <div className="h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
               </div>
             }>
               <Outlet />
@@ -250,7 +250,7 @@ function App() {
   if (restoring) {
     return (
       <div className="flex items-center justify-center h-screen w-screen bg-slate-950">
-        <div className="h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <div className="h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -268,7 +268,7 @@ function App() {
         <ChunkErrorBoundary>
           <Suspense fallback={
             <div className="flex items-center justify-center h-screen w-screen bg-slate-950">
-              <div className="h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+              <div className="h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
             </div>
           }>
           <Routes>

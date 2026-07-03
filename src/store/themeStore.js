@@ -4,6 +4,13 @@ import { persist } from 'zustand/middleware';
 // Available accent color palettes — each defines the full brand-* hue/sat
 export const COLOR_PALETTES = [
   {
+    id: 'amber',
+    name: 'Amber',
+    hue: 34,
+    saturation: 88,
+    swatch: 'hsl(34, 88%, 52%)',
+  },
+  {
     id: 'indigo',
     name: 'Indigo',
     hue: 224,
@@ -30,13 +37,6 @@ export const COLOR_PALETTES = [
     hue: 152,
     saturation: 72,
     swatch: 'hsl(152, 72%, 40%)',
-  },
-  {
-    id: 'amber',
-    name: 'Amber',
-    hue: 38,
-    saturation: 92,
-    swatch: 'hsl(38, 92%, 50%)',
   },
   {
     id: 'sky',
@@ -82,7 +82,7 @@ export const useThemeStore = create(
   persist(
     (set, get) => ({
       theme: 'dark',
-      activePaletteId: 'indigo',
+      activePaletteId: 'amber',
 
       setTheme: () => {}, // locked to dark
 
@@ -96,8 +96,13 @@ export const useThemeStore = create(
       /** Called once on app mount to restore the persisted palette */
       initPalette: () => {
         const { activePaletteId } = get();
-        const palette = COLOR_PALETTES.find((p) => p.id === activePaletteId);
-        if (palette) applyPalette(palette);
+        // If user had old 'indigo' persisted, upgrade them to 'amber'
+        const resolvedId = activePaletteId === 'indigo' ? 'amber' : activePaletteId;
+        const palette = COLOR_PALETTES.find((p) => p.id === resolvedId);
+        if (palette) {
+          applyPalette(palette);
+          if (resolvedId !== activePaletteId) set({ activePaletteId: resolvedId });
+        }
       },
     }),
     {
