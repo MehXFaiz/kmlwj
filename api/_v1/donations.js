@@ -33,32 +33,35 @@ var donations_default = makeHandler(async (req, res) => {
       const donation = await prisma.donation.findUnique({ where: { id }, include: { beneficiary: true } });
       if (!donation) return res.status(404).json({ error: { message: "Donation not found", status: 404 } });
       if (donation.status === "APPROVED") return res.status(400).json({ error: { message: "Donation is already approved", status: 400 } });
-      const expenseAccount = await prisma.account.findFirst({
-        where: { accountName: { contains: "Donation", mode: "insensitive" } }
+      const revenueAccount = await prisma.account.findFirst({
+        where: {
+          type: "Revenue",
+          accountName: { contains: "Donation", mode: "insensitive" }
+        }
       });
-      if (!expenseAccount) return res.status(400).json({ error: { message: "Donation Expense account not found in Chart of Accounts", status: 400 } });
-      let creditAccountId = null;
+      if (!revenueAccount) return res.status(400).json({ error: { message: "Donation Revenue account not found in Chart of Accounts", status: 400 } });
+      let debitAccountId = null;
       if (donation.paymentMethod === "CASH") {
         const cashAccount = await prisma.account.findFirst({
           where: { accountName: { contains: "Cash", mode: "insensitive" } }
         });
         if (!cashAccount) return res.status(400).json({ error: { message: "Cash account not found in Chart of Accounts", status: 400 } });
-        creditAccountId = cashAccount.id;
+        debitAccountId = cashAccount.id;
       } else {
         if (!donation.bankAccountId) return res.status(400).json({ error: { message: "Bank account is required for BANK/CHEQUE payments", status: 400 } });
-        creditAccountId = donation.bankAccountId;
+        debitAccountId = donation.bankAccountId;
       }
       const result = await prisma.$transaction(async (tx) => {
         const approvedDonation = await tx.donation.update({
           where: { id },
           data: { status: "APPROVED" }
         });
-        const postingResult = await AccountingService.postPayment(tx, {
+        const postingResult = await AccountingService.postReceipt(tx, {
           amount: donation.amount,
-          cashOrBankAccountId: creditAccountId,
-          expenseAccountId: expenseAccount.id,
+          cashOrBankAccountId: debitAccountId,
+          incomeAccountId: revenueAccount.id,
           reference: `DON-${donation.id.substring(0, 8)}`,
-          description: `Donation to ${donation.beneficiary.name} - ${donation.donationType}`,
+          description: `Donation Received from ${donation.donorName || "Donor"} - ${donation.donationType}`,
           module: "Donations",
           postedBy: req.user.id,
           ipAddress: req.headers["x-forwarded-for"],
@@ -69,8 +72,8 @@ var donations_default = makeHandler(async (req, res) => {
       await logAudit(req.user.id, "Approve Donation", "DONATION", donation, result.approvedDonation, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, data: result.approvedDonation, message: "Donation approved and journal entries created successfully" });
     }
-    const { beneficiaryId, donationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks } = req.body;
-    if (!beneficiaryId || !donationType || !amount || !paymentMethod) {
+    const { beneficiaryId, donorName, donorMobile, donationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks } = req.body;
+    if (!donorName || !donationType || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: "Missing required fields", status: 400 } });
     }
     if (amount <= 0) {
@@ -84,7 +87,9 @@ var donations_default = makeHandler(async (req, res) => {
     }
     const newDonation = await prisma.donation.create({
       data: {
-        beneficiaryId,
+        beneficiaryId: beneficiaryId || null,
+        donorName,
+        donorMobile: donorMobile || null,
         donationType,
         amount: parseFloat(amount),
         paymentMethod,
@@ -104,11 +109,13 @@ var donations_default = makeHandler(async (req, res) => {
     const existingDonation = await prisma.donation.findUnique({ where: { id } });
     if (!existingDonation) return res.status(404).json({ error: { message: "Donation not found", status: 404 } });
     if (existingDonation.status !== "PENDING") return res.status(400).json({ error: { message: "Only pending donations can be updated", status: 400 } });
-    const { beneficiaryId, donationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks, status } = req.body;
+    const { beneficiaryId, donorName, donorMobile, donationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks, status } = req.body;
     const updatedDonation = await prisma.donation.update({
       where: { id },
       data: {
-        beneficiaryId: beneficiaryId || void 0,
+        beneficiaryId: beneficiaryId !== void 0 ? beneficiaryId || null : void 0,
+        donorName: donorName || void 0,
+        donorMobile: donorMobile !== void 0 ? donorMobile || null : void 0,
         donationType: donationType || void 0,
         amount: amount !== void 0 ? parseFloat(amount) : void 0,
         paymentMethod: paymentMethod || void 0,

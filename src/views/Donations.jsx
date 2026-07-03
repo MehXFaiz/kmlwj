@@ -1,30 +1,55 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDonationStore } from '../store/donationStore';
-import { useBeneficiaryStore } from '../store/beneficiaryStore';
 import { useCoaStore } from '../store/coaStore';
 import { useAuthStore } from '../store/authStore';
 import { showToast } from '../components/ui/Toast';
 import { Heart, Search, Plus, Edit2, Trash2, CheckCircle2, X, AlertTriangle, Printer } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 
-function DonationModal({ isOpen, onClose, onSave, initial, beneficiaries, accounts }) {
+function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
   const [form, setForm] = useState(
-    initial || { beneficiaryId: '', donationType: 'MONTHLY', amount: '', paymentMethod: 'CASH', bankAccountId: '', chequeNumber: '', donorBankName: '', remarks: '' }
+    initial || { donorName: '', donorMobile: '', donationType: 'MONTHLY', amount: '', paymentMethod: 'CASH', bankAccountId: '', chequeNumber: '', donorBankName: '', remarks: '' }
   );
 
   useEffect(() => {
     if (isOpen) {
-      setForm(initial || { beneficiaryId: '', donationType: 'MONTHLY', amount: '', paymentMethod: 'CASH', bankAccountId: '', chequeNumber: '', donorBankName: '', remarks: '' });
+      setForm(initial || { donorName: '', donorMobile: '', donationType: 'MONTHLY', amount: '', paymentMethod: 'CASH', bankAccountId: '', chequeNumber: '', donorBankName: '', remarks: '' });
     }
   }, [isOpen, initial]);
 
   if (!isOpen) return null;
 
   const handleSave = () => {
-    if (!form.beneficiaryId || !form.amount || !form.paymentMethod) return;
+    if (!form.donorName || !form.amount || !form.paymentMethod) {
+      showToast('Please fill in all required fields.', 'warning');
+      return;
+    }
+    if (!/^[a-zA-Z\s.]{3,50}$/.test(form.donorName)) {
+      showToast('Donor Name must contain only letters, spaces and dots (3-50 characters).', 'warning');
+      return;
+    }
+    if (form.donorMobile && !/^((\+92|92|0)?3[0-9]{2}-?[0-9]{7})$/.test(form.donorMobile)) {
+      showToast('Invalid Mobile Number. E.g. 0300-1234567', 'warning');
+      return;
+    }
+    if (!/^[1-9]\d*(\.\d{1,2})?$/.test(form.amount)) {
+      showToast('Amount must be a positive number with up to 2 decimal places.', 'warning');
+      return;
+    }
+    if ((form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && !form.bankAccountId) {
+      showToast('Bank Account is required.', 'warning');
+      return;
+    }
+    if (form.paymentMethod === 'CHEQUE' && !form.chequeNumber) {
+      showToast('Cheque number is required.', 'warning');
+      return;
+    }
+    if (form.paymentMethod === 'CHEQUE' && form.chequeNumber && !/^[0-9]{6,20}$/.test(form.chequeNumber)) {
+      showToast('Cheque number must be between 6 and 20 digits.', 'warning');
+      return;
+    }
     onSave({ ...form });
-    onClose();
   };
 
   return (
@@ -47,15 +72,17 @@ function DonationModal({ isOpen, onClose, onSave, initial, beneficiaries, accoun
         </div>
 
         <div className="p-6 space-y-4 overflow-y-auto flex-1">
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Beneficiary *</label>
-            <select value={form.beneficiaryId} onChange={e => setForm(f => ({ ...f, beneficiaryId: e.target.value }))}
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-pink-600/60 transition-all">
-              <option value="">Select Beneficiary</option>
-              {beneficiaries.map(b => (
-                <option key={b.id} value={b.id}>{b.name} {b.cnic ? `(${b.cnic})` : ''}</option>
-              ))}
-            </select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Donor Name *</label>
+              <input type="text" value={form.donorName} onChange={e => setForm(f => ({ ...f, donorName: e.target.value }))}
+                placeholder="E.g. Muhammad Ali" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-pink-600/60 transition-all" />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Donor Mobile</label>
+              <input type="text" value={form.donorMobile} onChange={e => setForm(f => ({ ...f, donorMobile: e.target.value }))}
+                placeholder="E.g. 0300-1234567" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-pink-600/60 transition-all" />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -63,7 +90,7 @@ function DonationModal({ isOpen, onClose, onSave, initial, beneficiaries, accoun
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Donation Type *</label>
               <select value={form.donationType} onChange={e => setForm(f => ({ ...f, donationType: e.target.value }))}
                 className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-pink-600/60 transition-all">
-                {['MONTHLY', 'MARRIAGE', 'MEDICAL', 'EMERGENCY', 'EDUCATION', 'CUSTOM'].map(t => (
+                {['ZAKAT', 'SADQAH', 'FITRAH', 'DONATION', 'WELFARE', 'GENERAL', 'CUSTOM'].map(t => (
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>
@@ -98,7 +125,7 @@ function DonationModal({ isOpen, onClose, onSave, initial, beneficiaries, accoun
               </div>
               {form.paymentMethod === 'CHEQUE' && (
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Cheque Number *</label>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Cheque/Ref Number *</label>
                   <input value={form.chequeNumber} onChange={e => setForm(f => ({ ...f, chequeNumber: e.target.value }))}
                     placeholder="CHQ-001" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-pink-600/60 transition-all" />
                 </div>
@@ -127,8 +154,8 @@ function DonationModal({ isOpen, onClose, onSave, initial, beneficiaries, accoun
 
         <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 px-6 py-4 border-t border-slate-800 shrink-0">
           <button onClick={onClose} className="px-4 py-2 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-800 text-sm font-semibold transition-all">Cancel</button>
-          <button onClick={handleSave} disabled={!form.beneficiaryId || !form.amount || (form.paymentMethod !== 'CASH' && !form.bankAccountId) || (form.paymentMethod === 'CHEQUE' && !form.chequeNumber)}
-            className="px-5 py-2 rounded-lg bg-pink-600 hover:bg-pink-500 disabled:opacity-40 text-white text-sm font-bold transition-all shadow-lg shadow-pink-900/40">
+          <button onClick={handleSave}
+            className="px-5 py-2 rounded-lg bg-pink-600 hover:bg-pink-500 text-white text-sm font-bold transition-all shadow-lg shadow-pink-900/40">
             {initial ? 'Save Changes' : 'Create Donation'}
           </button>
         </div>
@@ -253,12 +280,10 @@ function DonationInvoiceModal({ donation, onClose }) {
           {/* Details Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 print:grid-cols-2 print:gap-4 print:grid">
             <div className="space-y-2">
-              <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider print:text-black">Beneficiary Details</h4>
+              <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider print:text-black">Donor Details</h4>
               <div className="bg-slate-950/40 border border-slate-850 p-3.5 rounded-xl space-y-1.5 print:bg-transparent print:border-black print:rounded-none">
-                <p className="text-xs font-bold text-slate-350 print:text-black">{donation.beneficiary?.name}</p>
-                <p className="text-[11px] text-slate-500 print:text-black">CNIC: {donation.beneficiary?.cnic || '—'}</p>
-                <p className="text-[11px] text-slate-500 print:text-black">Mobile: {donation.beneficiary?.mobile || '—'}</p>
-                <p className="text-[11px] text-slate-550 print:text-black truncate">Address: {donation.beneficiary?.address || '—'}</p>
+                <p className="text-xs font-bold text-slate-350 print:text-black">{donation.donorName || '—'}</p>
+                <p className="text-[11px] text-slate-500 print:text-black">Mobile: {donation.donorMobile || '—'}</p>
               </div>
             </div>
             <div className="space-y-2">
@@ -291,7 +316,7 @@ function DonationInvoiceModal({ donation, onClose }) {
                 <tbody className="divide-y divide-slate-850 print:divide-black">
                   <tr>
                     <td className="px-4 py-3.5 text-xs text-slate-350 print:text-black">
-                      Welfare distribution contribution allocated to {donation.donationType} fund.
+                      Charitable donation contribution received for {donation.donationType} fund.
                       {donation.remarks && <div className="text-[10px] text-slate-500 print:text-black mt-1">Memo: {donation.remarks}</div>}
                     </td>
                     <td className="px-4 py-3.5 text-xs font-bold text-right text-slate-200 print:text-black">PKR {donation.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
@@ -377,7 +402,6 @@ function DonationInvoiceModal({ donation, onClose }) {
 
 export const Donations = () => {
   const { donations, fetchDonations, addDonation, updateDonation, approveDonation, deleteDonation, bulkDeleteDonations } = useDonationStore();
-  const { beneficiaries, fetchBeneficiaries } = useBeneficiaryStore();
   const { flatAccounts, fetchAccountsList } = useCoaStore();
   const { canEditOrDelete } = useAuthStore();
 
@@ -393,9 +417,8 @@ export const Donations = () => {
 
   useEffect(() => {
     fetchDonations();
-    fetchBeneficiaries();
     fetchAccountsList();
-  }, [fetchDonations, fetchBeneficiaries, fetchAccountsList]);
+  }, [fetchDonations, fetchAccountsList]);
 
   useEffect(() => {
     const q = searchParams.get('search') || '';
@@ -410,7 +433,8 @@ export const Donations = () => {
 
   const filtered = useMemo(() => {
     return donations.filter(d => 
-      (d.beneficiary?.name || '').toLowerCase().includes(search.toLowerCase()) || 
+      (d.donorName || '').toLowerCase().includes(search.toLowerCase()) || 
+      (d.donorMobile || '').includes(search) || 
       (d.donationType || '').toLowerCase().includes(search.toLowerCase()) ||
       (d.paymentMethod || '').toLowerCase().includes(search.toLowerCase())
     );
@@ -536,7 +560,7 @@ export const Donations = () => {
                       />
                     </th>
                   )}
-                  <th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-500">Beneficiary</th>
+                  <th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-500">Donor Name</th>
                   <th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-500">Type</th>
                   <th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-500">Amount</th>
                   <th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-500">Method</th>
@@ -558,7 +582,12 @@ export const Donations = () => {
                         />
                       </td>
                     )}
-                    <td className="px-4 py-3.5"><p className="text-sm font-semibold text-slate-200">{d.beneficiary?.name}</p></td>
+                    <td className="px-4 py-3.5">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-200">{d.donorName || '—'}</p>
+                        {d.donorMobile && <p className="text-[10px] text-slate-500 mt-0.5">{d.donorMobile}</p>}
+                      </div>
+                    </td>
                     <td className="px-4 py-3.5"><span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-slate-800/50 text-slate-300 border-slate-700/40">{d.donationType}</span></td>
                     <td className="px-4 py-3.5 text-sm font-bold text-slate-200">{d.amount.toLocaleString()}</td>
                     <td className="px-4 py-3.5 text-xs text-slate-400">
@@ -621,7 +650,10 @@ export const Donations = () => {
                         className="rounded border-slate-700 bg-slate-800 text-pink-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
                       />
                     )}
-                    <h4 className="text-sm font-bold text-slate-200">{d.beneficiary?.name}</h4>
+                    <h4 className="text-sm font-bold text-slate-200">
+                      {d.donorName || '—'}
+                      {d.donorMobile && <span className="text-[10px] font-normal text-slate-550 block mt-0.5">{d.donorMobile}</span>}
+                    </h4>
                   </div>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${d.status === 'APPROVED' ? 'bg-emerald-950/60 text-emerald-400 border-emerald-900/50' : 'bg-amber-950/60 text-amber-400 border-amber-900/50'}`}>{d.status}</span>
                 </div>
@@ -708,7 +740,7 @@ export const Donations = () => {
         </div>
       )}
 
-      <DonationModal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditItem(null); }} onSave={handleSave} initial={editItem} beneficiaries={beneficiaries} accounts={bankAccounts} />
+      <DonationModal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditItem(null); }} onSave={handleSave} initial={editItem} accounts={bankAccounts} />
 
       {printDonation && (
         <DonationInvoiceModal

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Search, Printer, AlertTriangle, CheckCircle, Trash2, X, DollarSign, Calendar, Users, Building, Edit2 } from 'lucide-react';
+import { Plus, Search, Printer, AlertTriangle, CheckCircle, Trash2, X, DollarSign, Calendar, Users, Building, Edit2, CheckCircle2 } from 'lucide-react';
 import { useRevenueCollectionStore } from '../store/revenueCollectionStore';
 import { useAuthStore } from '../store/authStore';
 import { useCoaStore } from '../store/coaStore';
@@ -336,8 +336,9 @@ export const SpecializedRevenueSection = ({
                       <td className="px-6 py-4 text-right space-x-2">
                         {item.status === 'Confirmed' && (
                           <button onClick={() => handlePost(item.id)}
-                            className="text-xs font-bold text-indigo-400 hover:text-indigo-300 px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 transition-colors">
-                            Post to Ledger
+                            className="p-1.5 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-950/40 rounded transition-colors inline-flex"
+                            title="Post to Ledger">
+                            <CheckCircle2 className="h-4 w-4" />
                           </button>
                         )}
                         <button onClick={() => setPrintItem(item)}

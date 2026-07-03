@@ -241,8 +241,10 @@ model Beneficiary {
 
 model Donation {
   id             String         @id @default(uuid()) @db.Uuid
-  beneficiaryId  String         @db.Uuid
-  beneficiary    Beneficiary    @relation(fields: [beneficiaryId], references: [id])
+  beneficiaryId  String?        @db.Uuid
+  beneficiary    Beneficiary?   @relation(fields: [beneficiaryId], references: [id])
+  donorName      String?
+  donorMobile    String?
   donationType   DonationType
   amount         Float
   paymentMethod  PaymentMethod
