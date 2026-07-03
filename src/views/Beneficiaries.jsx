@@ -6,14 +6,20 @@ import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/
 import { showToast } from '../components/ui/Toast';
 import { EmptyState } from '../components/ui/EmptyState';
 
+// Replace null DB values with '' so controlled inputs stay controlled
+const nullsToEmpty = (obj) =>
+  Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === null ? '' : v]));
+
+const DEFAULT_BENEFICIARY = { name: '', cnic: '', mobile: '', address: '', remarks: '', isActive: true };
+
 function BeneficiaryModal({ isOpen, onClose, onSave, initial }) {
   const [form, setForm] = useState(
-    initial || { name: '', cnic: '', mobile: '', address: '', remarks: '', isActive: true }
+    initial ? nullsToEmpty(initial) : DEFAULT_BENEFICIARY
   );
 
   useEffect(() => {
     if (isOpen) {
-      setForm(initial || { name: '', cnic: '', mobile: '', address: '', remarks: '', isActive: true });
+      setForm(initial ? nullsToEmpty(initial) : DEFAULT_BENEFICIARY);
     }
   }, [isOpen, initial]);
 

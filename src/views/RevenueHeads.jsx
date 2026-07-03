@@ -9,15 +9,21 @@ import {
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 
+// Replace null DB values with '' so controlled inputs stay controlled
+const nullsToEmpty = (obj) =>
+  Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === null ? '' : v]));
+
+const DEFAULT_REVENUE_HEAD = { name: '', category: 'Hall Bookings', hall: '', amount: 0, accountId: '', isActive: true };
+
 /* ─── Add / Edit Modal ─── */
 function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
   const [form, setForm] = useState(
-    initial || { name: '', category: 'Hall Bookings', hall: '', amount: 0, accountId: '', isActive: true }
+    initial ? nullsToEmpty(initial) : DEFAULT_REVENUE_HEAD
   );
 
   useEffect(() => {
     if (isOpen) {
-      setForm(initial || { name: '', category: 'Hall Bookings', hall: '', amount: 0, accountId: '', isActive: true });
+      setForm(initial ? nullsToEmpty(initial) : DEFAULT_REVENUE_HEAD);
     }
   }, [isOpen, initial]);
 

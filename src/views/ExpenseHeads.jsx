@@ -33,15 +33,21 @@ function StatCard({ title, value, prefix = '', icon: Icon, iconBg, iconColor, su
   );
 }
 
+// Replace null DB values with '' so controlled inputs stay controlled
+const nullsToEmpty = (obj) =>
+  Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === null ? '' : v]));
+
+const DEFAULT_EXPENSE_HEAD = { name: '', category: 'Salary', accountId: '', isActive: true };
+
 /* ─── Modal ─── */
 function ExpenseHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
   const [form, setForm] = useState(
-    initial || { name: '', category: 'Salary', accountId: '', isActive: true }
+    initial ? nullsToEmpty(initial) : DEFAULT_EXPENSE_HEAD
   );
   
   useEffect(() => {
-    if (initial) setForm(initial);
-    else setForm({ name: '', category: 'Salary', accountId: '', isActive: true });
+    if (initial) setForm(nullsToEmpty(initial));
+    else setForm(DEFAULT_EXPENSE_HEAD);
   }, [initial, isOpen]);
 
   if (!isOpen) return null;

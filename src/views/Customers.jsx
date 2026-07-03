@@ -5,14 +5,20 @@ import { Users, Search, Plus, Edit2, Trash2, X, Building2, Mail, Phone } from 'l
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 
+// Replace null DB values with '' so controlled inputs stay controlled
+const nullsToEmpty = (obj) =>
+  Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === null ? '' : v]));
+
+const DEFAULT_CUSTOMER = { name: '', email: '', phone: '', address: '', company: '', isActive: true };
+
 function CustomerModal({ isOpen, onClose, onSave, initial }) {
   const [form, setForm] = useState(
-    initial || { name: '', email: '', phone: '', address: '', company: '', isActive: true }
+    initial ? nullsToEmpty(initial) : DEFAULT_CUSTOMER
   );
 
   useEffect(() => {
     if (isOpen) {
-      setForm(initial || { name: '', email: '', phone: '', address: '', company: '', isActive: true });
+      setForm(initial ? nullsToEmpty(initial) : DEFAULT_CUSTOMER);
     }
   }, [isOpen, initial]);
 

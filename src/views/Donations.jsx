@@ -7,14 +7,20 @@ import { showToast } from '../components/ui/Toast';
 import { Heart, Search, Plus, Edit2, Trash2, CheckCircle2, X, AlertTriangle, Printer } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 
+// Replace null DB values with '' so controlled inputs stay controlled
+const nullsToEmpty = (obj) =>
+  Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === null ? '' : v]));
+
+const DEFAULT_DONATION = { donorName: '', donorMobile: '', donationType: 'MONTHLY', amount: '', paymentMethod: 'CASH', bankAccountId: '', chequeNumber: '', donorBankName: '', remarks: '' };
+
 function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
   const [form, setForm] = useState(
-    initial || { donorName: '', donorMobile: '', donationType: 'MONTHLY', amount: '', paymentMethod: 'CASH', bankAccountId: '', chequeNumber: '', donorBankName: '', remarks: '' }
+    initial ? nullsToEmpty(initial) : DEFAULT_DONATION
   );
 
   useEffect(() => {
     if (isOpen) {
-      setForm(initial || { donorName: '', donorMobile: '', donationType: 'MONTHLY', amount: '', paymentMethod: 'CASH', bankAccountId: '', chequeNumber: '', donorBankName: '', remarks: '' });
+      setForm(initial ? nullsToEmpty(initial) : DEFAULT_DONATION);
     }
   }, [isOpen, initial]);
 
