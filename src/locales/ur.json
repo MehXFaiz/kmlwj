@@ -32,6 +32,8 @@
     "customersHint": "کلائنٹ کا ریکارڈ",
     "invoices": "رسیدیں",
     "invoicesHint": "بل اور رسیدیں",
+    "members": "ممبران / ممبرشپ فیس",
+    "membersHint": "ممبران کی فیس اور تجدید کا انتظام",
     "reports": "رپورٹس",
     "incomeStatement": "انکم اسٹیٹمنٹ",
     "incomeStatementHint": "آمدنی بمقابلہ اخراجات",

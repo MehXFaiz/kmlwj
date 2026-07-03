@@ -32,6 +32,8 @@
     "customersHint": "Client records",
     "invoices": "Invoices",
     "invoicesHint": "Bills & receipts",
+    "members": "Members / Membership Fee",
+    "membersHint": "Manage member fees and renewals",
     "reports": "Reports",
     "incomeStatement": "Income Statement",
     "incomeStatementHint": "Revenue vs expenses",
