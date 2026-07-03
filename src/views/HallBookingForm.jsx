@@ -13,10 +13,11 @@ export const HallBookingForm = () => {
   const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addBooking, updateBooking, fetchBookingById } = useHallBookingStore();
+  const { bookings, fetchBookings, addBooking, updateBooking, fetchBookingById } = useHallBookingStore();
   const { flatAccounts, fetchAccountsList } = useCoaStore();
   const [newlyCreatedBooking, setNewlyCreatedBooking] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showAllDates, setShowAllDates] = useState(false);
 
   const { register, handleSubmit, watch, setValue, reset, formState: { isSubmitting, dirtyFields, errors } } = useForm({
     defaultValues: {
@@ -40,10 +41,13 @@ export const HallBookingForm = () => {
   const paymentMethod = watch('paymentMethod');
   const hallId = watch('hallId');
   const isForJamaat = watch('isForJamaat');
+  const programDate = watch('programDate');
+  const timings = watch('timings');
 
   useEffect(() => {
     fetchAccountsList();
-  }, [fetchAccountsList]);
+    fetchBookings();
+  }, [fetchAccountsList, fetchBookings]);
 
   useEffect(() => {
     if (!id) return;
@@ -103,6 +107,28 @@ export const HallBookingForm = () => {
     a.level === 'SUBSIDIARY' && 
     a.name.toLowerCase().includes('bank')
   );
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const activeBookings = (bookings || [])
+    .filter(b => b.id !== id && b.status !== 'Cancelled' && b.status !== 'Rejected')
+    .filter(b => {
+      if (!b.programDate) return false;
+      if (showAllDates) return true;
+      const bDate = new Date(b.programDate).toISOString().split('T')[0];
+      return bDate >= todayStr;
+    })
+    .filter(b => !hallId || b.hallId === hallId || b.hallAccount?.id === hallId || b.hallAccount?.accountId === hallId)
+    .sort((a, b) => new Date(a.programDate) - new Date(b.programDate));
+
+  const conflictBooking = (bookings || []).find(b => {
+    if (b.id === id || b.status === 'Cancelled' || b.status === 'Rejected') return false;
+    if (!b.programDate || !programDate) return false;
+    const bDate = new Date(b.programDate).toISOString().split('T')[0];
+    if (bDate !== programDate) return false;
+    if (hallId && b.hallId !== hallId && b.hallAccount?.id !== hallId && b.hallAccount?.accountId !== hallId) return false;
+    if (b.timings === timings || b.timings === 'Full Day' || timings === 'Full Day' || !timings || !b.timings) return true;
+    return false;
+  });
 
   useEffect(() => {
     // Only auto-calculate amount if hallId or isForJamaat was touched/modified by the user
@@ -272,6 +298,14 @@ export const HallBookingForm = () => {
                 {errors.programDate && (
                   <span className="text-[11px] text-red-500 mt-1 block">⚠️ {errors.programDate.message}</span>
                 )}
+                {conflictBooking && (
+                  <div className="mt-1.5 p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-[11px] flex items-center gap-1.5 animate-pulse">
+                    <span>⚠️</span>
+                    <span>
+                      <strong>Booked:</strong> {conflictBooking.hallAccount?.accountName || 'This hall'} is already booked on this date ({conflictBooking.timings || 'Any time'}) by {conflictBooking.bookerName}.
+                    </span>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('receipt.programType')}</label>
@@ -333,6 +367,90 @@ export const HallBookingForm = () => {
                   <span className="text-sm font-bold text-slate-300">{t('receipt.forJamaat')}</span>
                 </label>
               </div>
+            </div>
+
+            {/* Reserved / Booked Dates Panel */}
+            <div className="rounded-xl border border-indigo-500/20 bg-gradient-to-br from-slate-900/90 to-slate-950 p-4 space-y-3 mt-4 shadow-lg shadow-black/20">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+                    <Calendar className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                      {hallId ? `Reserved Dates: ${hallAccounts.find(h => h.id === hallId)?.name || 'Selected Hall'}` : 'All Reserved Program Dates'}
+                    </h4>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      {hallId ? 'Showing booked programs for the selected hall' : 'Select a hall above to filter bookings specifically for that hall'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAllDates(!showAllDates)}
+                    className="px-2.5 py-1 text-[11px] font-medium rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition-colors"
+                  >
+                    {showAllDates ? 'Showing All Dates' : 'Showing Upcoming Only'}
+                  </button>
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                    {activeBookings.length} Booked
+                  </span>
+                </div>
+              </div>
+
+              {activeBookings.length === 0 ? (
+                <div className="text-center py-6 text-xs text-slate-500 italic bg-slate-950/40 rounded-lg border border-slate-800/60">
+                  No {showAllDates ? '' : 'upcoming'} bookings found {hallId ? 'for this hall' : ''}.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 max-h-56 overflow-y-auto pr-1">
+                  {activeBookings.map((b) => {
+                    const bDateStr = b.programDate ? new Date(b.programDate).toISOString().split('T')[0] : '';
+                    const isConflict = bDateStr && programDate && bDateStr === programDate &&
+                      (!hallId || b.hallId === hallId || b.hallAccount?.id === hallId || b.hallAccount?.accountId === hallId) &&
+                      (!timings || timings === 'Full Day' || b.timings === 'Full Day' || b.timings === timings);
+
+                    return (
+                      <div
+                        key={b.id}
+                        className={`p-3 rounded-xl border text-xs flex flex-col justify-between transition-all ${
+                          isConflict
+                            ? 'bg-red-500/10 border-red-500 text-red-200 shadow-md shadow-red-500/10 animate-pulse'
+                            : 'bg-slate-900/80 border-slate-800/80 hover:border-slate-700 text-slate-300'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-1 mb-1.5 border-b border-slate-800/60 pb-1.5">
+                            <span className="font-bold text-slate-200 flex items-center gap-1.5 text-[13px]">
+                              <Clock className="h-3.5 w-3.5 text-indigo-400" />
+                              {b.programDate ? new Date(b.programDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              isConflict ? 'bg-red-500 text-white font-black' : 'bg-slate-800 text-indigo-300 border border-slate-700'
+                            }`}>
+                              {b.timings || 'Any time'}
+                            </span>
+                          </div>
+                          <div className="text-xs font-semibold text-slate-300 truncate mt-1">
+                            {b.programType ? `${b.programType} • ` : ''}{b.bookerName}
+                          </div>
+                        </div>
+                        <div className="mt-2 pt-1.5 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-400">
+                          <span className="truncate flex items-center gap-1">
+                            📍 {b.hallAccount?.accountName || b.hallAccount?.name || 'Hall'}
+                          </span>
+                          {isConflict && (
+                            <span className="font-bold text-red-400 flex items-center gap-0.5">
+                              ⚠️ Conflict!
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
