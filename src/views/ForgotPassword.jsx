@@ -28,6 +28,10 @@ export const ForgotPassword = () => {
       setLocalError('Please fill in your email address');
       return;
     }
+    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+      setLocalError('Please enter a valid email address');
+      return;
+    }
 
     await forgotPassword(email);
   };
@@ -82,6 +86,8 @@ export const ForgotPassword = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+                  title="Please enter a valid email address (e.g. name@company.com)"
                   className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-sm transition-all"
                   placeholder="name@company.com"
                   required

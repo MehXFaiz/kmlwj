@@ -7,6 +7,7 @@ import {
   ArrowUpRight, Download, X, AlertTriangle, Layers
 } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
+import { showToast } from '../components/ui/Toast';
 
 /* ─── Add / Edit Modal ─── */
 function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
@@ -23,7 +24,18 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
   if (!isOpen) return null;
 
   const handleSave = () => {
-    if (!form.name.trim() || !form.category.trim()) return;
+    if (!form.name.trim()) {
+      showToast('Name is required', 'warning');
+      return;
+    }
+    if (!/^[a-zA-Z0-9\s.-]{3,50}$/.test(form.name)) {
+      showToast('Name should only contain letters, numbers, spaces, hyphens, and dots (3-50 chars)', 'warning');
+      return;
+    }
+    if (!form.category.trim()) {
+      showToast('Category is required', 'warning');
+      return;
+    }
     onSave({ ...form });
   };
 
@@ -309,30 +321,65 @@ export const RevenueHeads = () => {
       }
       setEditItem(null);
       setModalOpen(false);
+      showToast(editItem ? 'Revenue head updated successfully' : 'Revenue head created successfully', 'success');
     } catch (err) {
-      alert(err?.response?.data?.error?.message || err.message || 'Failed to save. Please ensure inputs are correct (e.g., valid UUID for Linked Account).');
+      showToast(err?.response?.data?.error?.message || err.message || 'Failed to save. Please ensure inputs are correct.', 'error');
     }
   };
 
   const handleDelete = async (id) => {
     setIsDeleting(true);
     await new Promise(resolve => setTimeout(resolve, 15));
-    await deleteHead(id);
-    setSelectedIds(p => p.filter(i => i !== id));
-    setDeleteId(null);
-    setIsDeleting(false);
+    try {
+      await deleteHead(id);
+      showToast('Revenue head deleted successfully', 'success');
+      setSelectedIds(p => p.filter(i => i !== id));
+      setDeleteId(null);
+    } catch (err) {
+      showToast(err?.response?.data?.error?.message || err.message || 'Error deleting revenue head', 'error');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleBulkDelete = async () => {
     setIsDeleting(true);
     await new Promise(resolve => setTimeout(resolve, 15));
-    try {
-      await Promise.all(selectedIds.map(id => deleteHead(id)));
-      setSelectedIds([]);
-      setShowBulkConfirm(false);
-    } catch (err) {
-      alert("Failed to delete some items");
+    
+    const results = await Promise.allSettled(
+      selectedIds.map(async (id) => {
+        await deleteHead(id);
+        return id;
+      })
+    );
+
+    const successfulIds = [];
+    const failedIds = [];
+    let lastError = null;
+
+    results.forEach((result, idx) => {
+      const id = selectedIds[idx];
+      if (result.status === 'fulfilled') {
+        successfulIds.push(id);
+      } else {
+        failedIds.push(id);
+        lastError = result.reason;
+      }
+    });
+
+    setSelectedIds(failedIds);
+    setShowBulkConfirm(false);
+
+    if (successfulIds.length > 0 && failedIds.length === 0) {
+      showToast(`${successfulIds.length} revenue heads removed successfully.`, 'success');
+    } else if (successfulIds.length > 0 && failedIds.length > 0) {
+      const errorMsg = lastError?.response?.data?.error?.message || lastError?.message || 'associated records';
+      showToast(`Removed ${successfulIds.length} head(s). ${failedIds.length} head(s) could not be removed: ${errorMsg}`, 'warning');
+    } else if (failedIds.length > 0) {
+      const errorMsg = lastError?.response?.data?.error?.message || lastError?.message || 'Some records could not be removed.';
+      showToast(errorMsg, 'error');
     }
+
     setIsDeleting(false);
   };
 

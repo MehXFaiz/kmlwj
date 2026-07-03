@@ -50,6 +50,16 @@ export const Signup = () => {
       return;
     }
 
+    if (!/^[a-zA-Z\s.-]{3,50}$/.test(name)) {
+      setLocalError('Name must contain only letters, spaces, hyphens, and dots (3-50 characters)');
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+      setLocalError('Please enter a valid email address');
+      return;
+    }
+
     if (password.length < 8) {
       setLocalError('Password must be at least 8 characters long');
       return;
@@ -133,6 +143,8 @@ export const Signup = () => {
                   id="signup-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  pattern="^[a-zA-Z\s.-]{3,50}$"
+                  title="Name must contain only letters, spaces, hyphens, and dots (3-50 characters)"
                   className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/50 border border-slate-800/80 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 text-sm transition-all duration-200"
                   placeholder="John Doe"
                   autoComplete="name"
@@ -155,6 +167,8 @@ export const Signup = () => {
                   id="signup-email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+                  title="Please enter a valid email address (e.g. name@company.com)"
                   className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/50 border border-slate-800/80 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 text-sm transition-all duration-200"
                   placeholder="name@company.com"
                   autoComplete="email"
@@ -177,6 +191,8 @@ export const Signup = () => {
                   id="signup-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  pattern="^.{8,}$"
+                  title="Password must be at least 8 characters long."
                   className="w-full pl-10 pr-11 py-3 rounded-xl bg-slate-950/50 border border-slate-800/80 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 text-sm transition-all duration-200"
                   placeholder="Min 8 characters"
                   autoComplete="new-password"

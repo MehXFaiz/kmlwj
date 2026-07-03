@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useCustomerStore } from '../store/customerStore';
 import { Users, Search, Plus, Edit2, Trash2, X, Building2, Mail, Phone } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
+import { showToast } from '../components/ui/Toast';
 
 function CustomerModal({ isOpen, onClose, onSave, initial }) {
   const [form, setForm] = useState(
@@ -18,7 +19,26 @@ function CustomerModal({ isOpen, onClose, onSave, initial }) {
   if (!isOpen) return null;
 
   const handleSave = () => {
-    if (!form.name.trim()) return;
+    if (!form.name.trim()) {
+      showToast('Name is required', 'warning');
+      return;
+    }
+    if (!/^[a-zA-Z\s.-]{3,50}$/.test(form.name)) {
+      showToast('Name should only contain letters, spaces, hyphens, and dots (3-50 chars)', 'warning');
+      return;
+    }
+    if (form.email && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(form.email)) {
+      showToast('Please enter a valid email address', 'warning');
+      return;
+    }
+    if (form.phone && !/^[0-9+\s-]{10,15}$/.test(form.phone)) {
+      showToast('Phone must contain only numbers, spaces, plus signs, or hyphens (10-15 chars)', 'warning');
+      return;
+    }
+    if (form.company && !/^[a-zA-Z0-9\s.-]{3,50}$/.test(form.company)) {
+      showToast('Company name should contain only letters, numbers, spaces, hyphens, and dots (3-50 chars)', 'warning');
+      return;
+    }
     onSave({ ...form });
     onClose();
   };
@@ -138,9 +158,10 @@ export const Customers = () => {
     setIsDeleting(true);
     try {
       await deleteCustomer(id);
+      showToast("Customer deleted successfully", "success");
       setDeleteId(null);
     } catch (err) {
-      alert(err.message || "Failed to delete customer. Ensure they have no registered invoices.");
+      showToast(err.message || "Failed to delete customer. Ensure they have no registered invoices.", "error");
     } finally {
       setIsDeleting(false);
     }

@@ -32,15 +32,16 @@ const accountSchema = zod.object({
     .regex(/^\d{7}$/, "GL Code must contain 7 numbers only"),
   name: zod.string()
     .min(3, "Account name must be at least 3 characters")
-    .max(80, "Account name is too long"),
+    .max(80, "Account name is too long")
+    .regex(/^[a-zA-Z0-9\s.()&-]+$/, "Account name should only contain letters, numbers, spaces, dots, hyphens, and parentheses"),
   type: zod.enum(['Asset', 'Liability', 'Equity', 'Revenue', 'Expense']),
   detailType: zod.string().min(1, "Detail type is required"),
   parentCode: zod.string().min(7, "Parent category is required"),
   level: zod.any().optional(),
   isLocked: zod.boolean().optional(),
   isReserved: zod.boolean().optional(),
-  currency: zod.string().min(3, "Select a valid 3-letter currency code"),
-  description: zod.string().max(200, "Description must be under 200 characters").optional(),
+  currency: zod.string().min(3, "Select a valid 3-letter currency code").regex(/^[A-Z]{3}$/, "Currency must be exactly 3 uppercase letters (e.g. PKR)"),
+  description: zod.string().max(200, "Description must be under 200 characters").regex(/^$|^[a-zA-Z0-9\s.,#\/-]+$/, "Description contains invalid characters").optional(),
   initialBalance: zod.preprocess((val) => Number(val), zod.number().default(0)),
 });
 

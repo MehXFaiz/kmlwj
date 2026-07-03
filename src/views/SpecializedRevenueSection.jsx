@@ -154,6 +154,30 @@ export const SpecializedRevenueSection = ({
       showToast('Please fill in all required fields.', 'warning');
       return;
     }
+    if (form.title && !/^[a-zA-Z0-9\s.-]{3,50}$/.test(form.title)) {
+      showToast('Title must contain only letters, numbers, spaces, hyphens, and dots (3-50 chars).', 'warning');
+      return;
+    }
+    if (form.subTitle && !/^[a-zA-Z0-9\s.-]{3,50}$/.test(form.subTitle)) {
+      showToast('Sub-title must contain only letters, numbers, spaces, hyphens, and dots (3-50 chars).', 'warning');
+      return;
+    }
+    if (form.mobile && !/^((\+92|92|0)?3[0-9]{2}-?[0-9]{7})$/.test(form.mobile)) {
+      showToast('Invalid mobile number. E.g. 0300-1234567', 'warning');
+      return;
+    }
+    if (form.destination && !/^[a-zA-Z0-9\s.,#\/-]{3,50}$/.test(form.destination)) {
+      showToast('Destination contains invalid characters.', 'warning');
+      return;
+    }
+    if (form.chequeNumber && !/^[0-9]{6,20}$/.test(form.chequeNumber)) {
+      showToast('Cheque number must be between 6 and 20 digits.', 'warning');
+      return;
+    }
+    if (form.amount && !/^[1-9]\d*(\.\d{1,2})?$/.test(form.amount)) {
+      showToast('Amount must be a positive number with up to 2 decimal places.', 'warning');
+      return;
+    }
     try {
       if (editingItem) {
         await updateCollection(editingItem.id, {
@@ -368,6 +392,7 @@ export const SpecializedRevenueSection = ({
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">{titleLabel} *</label>
                 <input required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
                   placeholder={`Enter ${titleLabel.toLowerCase()}...`}
+                  pattern="^[a-zA-Z0-9\s.-]{3,50}$" title="Letters, numbers, spaces, hyphens, and dots (3-50 characters)"
                   className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500" />
               </div>
 
@@ -376,6 +401,7 @@ export const SpecializedRevenueSection = ({
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">{subTitleLabel}</label>
                   <input value={form.subTitle} onChange={e => setForm({ ...form, subTitle: e.target.value })}
                     placeholder={`Enter ${subTitleLabel.toLowerCase()}...`}
+                    pattern="^[a-zA-Z0-9\s.-]{3,50}$" title="Letters, numbers, spaces, hyphens, and dots (3-50 characters)"
                     className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500" />
                 </div>
               )}
@@ -385,6 +411,7 @@ export const SpecializedRevenueSection = ({
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Mobile Phone</label>
                   <input value={form.mobile} onChange={e => setForm({ ...form, mobile: e.target.value })}
                     placeholder="0300-1234567"
+                    pattern="^((\+92|92|0)?3[0-9]{2}-?[0-9]{7})$" title="Valid mobile number (e.g. 0300-1234567)"
                     className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500" />
                 </div>
                 <div>
@@ -418,14 +445,16 @@ export const SpecializedRevenueSection = ({
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">{destLabel}</label>
                   <input value={form.destination} onChange={e => setForm({ ...form, destination: e.target.value })}
                     placeholder="e.g. Jamia Mosque to Airport"
+                    pattern="^[a-zA-Z0-9\s.,#\/-]{3,50}$" title="Only letters, numbers, spaces, and basic punctuation (3-50 characters)"
                     className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500" />
                 </div>
               )}
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Total Amount (PKR) *</label>
-                <input required type="number" min="1" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })}
+                <input required type="text" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })}
                   placeholder="e.g. 5000"
+                  pattern="^[1-9]\d*(\.\d{1,2})?$" title="Positive number with up to 2 decimal places"
                   className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm font-bold text-emerald-400 focus:outline-none focus:border-indigo-500" />
               </div>
 
@@ -458,6 +487,7 @@ export const SpecializedRevenueSection = ({
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Cheque Number</label>
                   <input value={form.chequeNumber} onChange={e => setForm({ ...form, chequeNumber: e.target.value })}
                     placeholder="CHQ-00123"
+                    pattern="^[0-9]{6,20}$" title="6-20 digit cheque number"
                     className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500" />
                 </div>
               )}
@@ -533,7 +563,23 @@ export const SpecializedRevenueSection = ({
       {/* Print Modal */}
       {printItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="bg-white text-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 print:p-0 print:shadow-none print:border-none">
+          <div id="print-receipt" className="bg-white text-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 print:p-0 print:shadow-none print:border-none">
+            <style>{`
+              @media print {
+                body * {
+                  visibility: hidden !important;
+                }
+                #print-receipt, #print-receipt * {
+                  visibility: visible !important;
+                }
+                #print-receipt {
+                  position: absolute;
+                  left: 0;
+                  top: 0;
+                  width: 100%;
+                }
+              }
+            `}</style>
             <div className="flex items-center justify-between border-b pb-3 print:hidden">
               <h3 className="font-bold text-base">Official Receipt Preview</h3>
               <button onClick={() => setPrintItem(null)} className="text-slate-400 hover:text-slate-600">

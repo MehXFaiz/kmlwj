@@ -47,6 +47,16 @@ export const Login = () => {
       return;
     }
 
+    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+      setLocalError('Please enter a valid email address');
+      return;
+    }
+
+    if (password.length < 6) {
+      setLocalError('Password must be at least 6 characters long');
+      return;
+    }
+
     const success = await login(email, password);
     if (success) {
       startTransition(() => {
@@ -107,6 +117,8 @@ export const Login = () => {
                   id="login-email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+                  title="Please enter a valid email address (e.g. name@company.com)"
                   className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/50 border border-slate-800/80 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 text-sm transition-all duration-200"
                   placeholder="name@company.com"
                   autoComplete="email"
@@ -137,6 +149,8 @@ export const Login = () => {
                   id="login-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  pattern="^.{6,}$"
+                  title="Password must be at least 6 characters long."
                   className="w-full pl-10 pr-11 py-3 rounded-xl bg-slate-950/50 border border-slate-800/80 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 text-sm transition-all duration-200"
                   placeholder="••••••••"
                   autoComplete="current-password"

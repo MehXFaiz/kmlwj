@@ -18,7 +18,7 @@ export const HallBookingForm = () => {
   const [newlyCreatedBooking, setNewlyCreatedBooking] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const { register, handleSubmit, watch, setValue, reset, formState: { isSubmitting, dirtyFields } } = useForm({
+  const { register, handleSubmit, watch, setValue, reset, formState: { isSubmitting, dirtyFields, errors } } = useForm({
     defaultValues: {
       bookerName: '',
       mobile: '',
@@ -195,25 +195,50 @@ export const HallBookingForm = () => {
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('receipt.bookerName')} *</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <input {...register('bookerName')} required
-                    className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors" />
+                  <input {...register('bookerName', {
+                    required: 'Booker name is required',
+                    pattern: {
+                      value: /^[a-zA-Z\s.-]{3,50}$/,
+                      message: 'Only letters, spaces, hyphens, and dots (3-50 chars)'
+                    }
+                  })} required
+                    className={`w-full pl-9 pr-3 py-2.5 rounded-lg bg-slate-950/50 border text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors ${errors.bookerName ? 'border-red-500/50' : 'border-slate-800'}`} />
                 </div>
+                {errors.bookerName && (
+                  <span className="text-[11px] text-red-500 mt-1 block">⚠️ {errors.bookerName.message}</span>
+                )}
               </div>
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('receipt.mobile')}</label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <input {...register('mobile')}
-                    className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors" />
+                  <input {...register('mobile', {
+                    pattern: {
+                      value: /^$|^((\+92|92|0)?3[0-9]{2}-?[0-9]{7})$/,
+                      message: 'Invalid mobile number. E.g. 0300-1234567'
+                    }
+                  })}
+                    className={`w-full pl-9 pr-3 py-2.5 rounded-lg bg-slate-950/50 border text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors ${errors.mobile ? 'border-red-500/50' : 'border-slate-800'}`} />
                 </div>
+                {errors.mobile && (
+                  <span className="text-[11px] text-red-500 mt-1 block">⚠️ {errors.mobile.message}</span>
+                )}
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('receipt.address')}</label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <input {...register('address')}
-                    className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors" />
+                  <input {...register('address', {
+                    pattern: {
+                      value: /^$|^[a-zA-Z0-9\s.,#\/-]{5,100}$/,
+                      message: 'Alphanumeric, spaces, and basic punctuation only (5-100 chars)'
+                    }
+                  })}
+                    className={`w-full pl-9 pr-3 py-2.5 rounded-lg bg-slate-950/50 border text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors ${errors.address ? 'border-red-500/50' : 'border-slate-800'}`} />
                 </div>
+                {errors.address && (
+                  <span className="text-[11px] text-red-500 mt-1 block">⚠️ {errors.address.message}</span>
+                )}
               </div>
             </div>
           </div>
@@ -226,20 +251,42 @@ export const HallBookingForm = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('receipt.programDate')} *</label>
-                <input type="date" {...register('programDate')} required
-                  className="w-full px-3 py-2.5 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors" />
+                <input type="date" {...register('programDate', {
+                  required: 'Program date is required',
+                  pattern: {
+                    value: /^\d{4}-\d{2}-\d{2}$/,
+                    message: 'Date must be in YYYY-MM-DD format'
+                  }
+                })} required
+                  className={`w-full px-3 py-2.5 rounded-lg bg-slate-950/50 border text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors ${errors.programDate ? 'border-red-500/50' : 'border-slate-800'}`} />
+                {errors.programDate && (
+                  <span className="text-[11px] text-red-500 mt-1 block">⚠️ {errors.programDate.message}</span>
+                )}
               </div>
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('receipt.programType')}</label>
-                <input {...register('programType')} placeholder="e.g. Wedding, Valima"
-                  className="w-full px-3 py-2.5 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors" />
+                <input {...register('programType', {
+                  pattern: {
+                    value: /^$|^[a-zA-Z\s.-]{3,30}$/,
+                    message: 'Only letters, spaces, hyphens, and dots (3-30 chars)'
+                  }
+                })} placeholder="e.g. Wedding, Valima"
+                  className={`w-full px-3 py-2.5 rounded-lg bg-slate-950/50 border text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors ${errors.programType ? 'border-red-500/50' : 'border-slate-800'}`} />
+                {errors.programType && (
+                  <span className="text-[11px] text-red-500 mt-1 block">⚠️ {errors.programType.message}</span>
+                )}
               </div>
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('receipt.timings')}</label>
                 <div className="relative">
                   <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <select {...register('timings')}
-                    className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors">
+                  <select {...register('timings', {
+                    pattern: {
+                      value: /^(Morning|Afternoon|Evening|Night|Full Day)$/,
+                      message: 'Invalid timing selected'
+                    }
+                  })}
+                    className={`w-full pl-9 pr-3 py-2.5 rounded-lg bg-slate-950/50 border text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors ${errors.timings ? 'border-red-500/50' : 'border-slate-800'}`}>
                     <option value="Morning">Morning</option>
                     <option value="Afternoon">Afternoon</option>
                     <option value="Evening">Evening</option>
@@ -247,16 +294,28 @@ export const HallBookingForm = () => {
                     <option value="Full Day">Full Day</option>
                   </select>
                 </div>
+                {errors.timings && (
+                  <span className="text-[11px] text-red-500 mt-1 block">⚠️ {errors.timings.message}</span>
+                )}
               </div>
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('receipt.hall')} *</label>
-                <select {...register('hallId')} required
-                  className="w-full px-3 py-2.5 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors">
+                <select {...register('hallId', {
+                  required: 'Hall selection is required',
+                  pattern: {
+                    value: /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
+                    message: 'Invalid Hall selection'
+                  }
+                })} required
+                  className={`w-full px-3 py-2.5 rounded-lg bg-slate-950/50 border text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors ${errors.hallId ? 'border-red-500/50' : 'border-slate-800'}`}>
                   <option value="">-- Select Hall --</option>
                   {hallAccounts.map(h => (
                     <option key={h.id} value={h.id}>{h.name}</option>
                   ))}
                 </select>
+                {errors.hallId && (
+                  <span className="text-[11px] text-red-500 mt-1 block">⚠️ {errors.hallId.message}</span>
+                )}
               </div>
               <div className="sm:col-span-2 pt-2">
                 <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-slate-800 transition-colors">
@@ -275,17 +334,35 @@ export const HallBookingForm = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('receipt.totalAmount')} (Rs) *</label>
-                <input type="number" {...register('amount')} required min="1" step="0.01"
-                  className="w-full px-3 py-2.5 rounded-lg bg-slate-950/50 border border-slate-800 text-lg font-bold text-emerald-400 focus:outline-none focus:border-indigo-500/50 transition-colors" />
+                <input type="text" {...register('amount', {
+                  required: 'Amount is required',
+                  pattern: {
+                    value: /^[1-9]\d*(\.\d{1,2})?$/,
+                    message: 'Positive decimal number up to 2 decimal places'
+                  }
+                })} required
+                  className={`w-full px-3 py-2.5 rounded-lg bg-slate-950/50 border text-lg font-bold text-emerald-400 focus:outline-none focus:border-indigo-500/50 transition-colors ${errors.amount ? 'border-red-500/50' : 'border-slate-800'}`} />
+                {errors.amount && (
+                  <span className="text-[11px] text-red-500 mt-1 block">⚠️ {errors.amount.message}</span>
+                )}
               </div>
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Payment Method *</label>
-                <select {...register('paymentMethod')}
-                  className="w-full px-3 py-2.5 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors">
+                <select {...register('paymentMethod', {
+                  required: 'Payment method is required',
+                  pattern: {
+                    value: /^(CASH|BANK|CHEQUE)$/,
+                    message: 'Invalid payment method selected'
+                  }
+                })}
+                  className={`w-full px-3 py-2.5 rounded-lg bg-slate-950/50 border text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors ${errors.paymentMethod ? 'border-red-500/50' : 'border-slate-800'}`}>
                   <option value="CASH">Cash</option>
                   <option value="BANK">Bank Transfer</option>
                   <option value="CHEQUE">Cheque</option>
                 </select>
+                {errors.paymentMethod && (
+                  <span className="text-[11px] text-red-500 mt-1 block">⚠️ {errors.paymentMethod.message}</span>
+                )}
               </div>
 
               {paymentMethod !== 'CASH' && (
@@ -293,14 +370,23 @@ export const HallBookingForm = () => {
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Select Receiving Bank Account *</label>
                   <div className="relative">
                     <Landmark className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                    <select {...register('bankAccountId')} required
-                      className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors">
+                    <select {...register('bankAccountId', {
+                      required: 'Bank account is required',
+                      pattern: {
+                        value: /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
+                        message: 'Invalid bank account selection'
+                      }
+                    })} required
+                      className={`w-full pl-9 pr-3 py-2.5 rounded-lg bg-slate-950/50 border text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors ${errors.bankAccountId ? 'border-red-500/50' : 'border-slate-800'}`}>
                       <option value="">-- Select Bank Account --</option>
                       {bankAccounts.map(b => (
                         <option key={b.id} value={b.id}>{b.name}</option>
                       ))}
                     </select>
                   </div>
+                  {errors.bankAccountId && (
+                    <span className="text-[11px] text-red-500 mt-1 block">⚠️ {errors.bankAccountId.message}</span>
+                  )}
                 </div>
               )}
 
@@ -308,15 +394,30 @@ export const HallBookingForm = () => {
                 <>
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Cheque Number *</label>
-                    <input type="text" {...register('chequeNumber')} required
-                      className="w-full px-3 py-2.5 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors" />
+                    <input type="text" {...register('chequeNumber', {
+                      required: 'Cheque number is required',
+                      pattern: {
+                        value: /^[0-9]{6,20}$/,
+                        message: 'Cheque number must contain only digits (6-20 digits)'
+                      }
+                    })} required
+                      className={`w-full px-3 py-2.5 rounded-lg bg-slate-950/50 border text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors ${errors.chequeNumber ? 'border-red-500/50' : 'border-slate-800'}`} />
+                    {errors.chequeNumber && (
+                      <span className="text-[11px] text-red-500 mt-1 block">⚠️ {errors.chequeNumber.message}</span>
+                    )}
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Drawn On Bank *</label>
                     <div className="relative">
                       <Landmark className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                      <select {...register('chequeBankName')} required
-                        className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors">
+                      <select {...register('chequeBankName', {
+                        required: 'Bank selection is required',
+                        pattern: {
+                          value: /^[a-zA-Z0-9\s.()&-]{3,50}$/,
+                          message: 'Invalid bank name selection'
+                        }
+                      })} required
+                        className={`w-full pl-9 pr-3 py-2.5 rounded-lg bg-slate-950/50 border text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors ${errors.chequeBankName ? 'border-red-500/50' : 'border-slate-800'}`}>
                         <option value="">-- Select Bank --</option>
                         <option value="Meezan Bank">Meezan Bank</option>
                         <option value="Habib Bank Limited (HBL)">Habib Bank Limited (HBL)</option>
@@ -335,6 +436,9 @@ export const HallBookingForm = () => {
                         <option value="Other">Other</option>
                       </select>
                     </div>
+                    {errors.chequeBankName && (
+                      <span className="text-[11px] text-red-500 mt-1 block">⚠️ {errors.chequeBankName.message}</span>
+                    )}
                   </div>
                 </>
               )}

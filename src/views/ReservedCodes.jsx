@@ -5,6 +5,7 @@ import {
   Lock, Hash, Edit2, Trash2, Download, Layers, CheckCircle2, Copy, Info,
 } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass, statGridClass } from '../components/common/responsive';
+import { showToast } from '../components/ui/Toast';
 
 /* ─── Stat Card ─── */
 function StatCard({ title, value, icon: Icon, iconBg, iconColor, sub, delay = 0 }) {
@@ -176,8 +177,10 @@ export const ReservedCodes = () => {
       }
       setModalOpen(false);
       setEditItem(null);
+      showToast(editItem ? 'Reserved code updated successfully' : 'Reserved code created successfully', 'success');
     } catch (err) {
       setApiError(err.response?.data?.error?.message || err.message || "Failed to save reserved code");
+      showToast(err.response?.data?.error?.message || err.message || "Failed to save reserved code", 'error');
     }
   };
 
@@ -186,10 +189,12 @@ export const ReservedCodes = () => {
     await new Promise(resolve => setTimeout(resolve, 15));
     try {
       await deleteCode(id);
+      showToast('Reserved code deleted successfully', 'success');
       setSelectedIds(p => p.filter(i => i !== id));
       setDeleteId(null);
     } catch (err) {
       console.error(err);
+      showToast(err.response?.data?.error?.message || err.message || 'Failed to delete reserved code', 'error');
     }
     setIsDeleting(false);
   };
@@ -197,13 +202,41 @@ export const ReservedCodes = () => {
   const handleBulkDelete = async () => {
     setIsDeleting(true);
     await new Promise(resolve => setTimeout(resolve, 15));
-    try {
-      await Promise.all(selectedIds.map(id => deleteCode(id)));
-      setSelectedIds([]);
-      setShowBulkConfirm(false);
-    } catch (err) {
-      alert("Failed to delete some items");
+    
+    const results = await Promise.allSettled(
+      selectedIds.map(async (id) => {
+        await deleteCode(id);
+        return id;
+      })
+    );
+
+    const successfulIds = [];
+    const failedIds = [];
+    let lastError = null;
+
+    results.forEach((result, idx) => {
+      const id = selectedIds[idx];
+      if (result.status === 'fulfilled') {
+        successfulIds.push(id);
+      } else {
+        failedIds.push(id);
+        lastError = result.reason;
+      }
+    });
+
+    setSelectedIds(failedIds);
+    setShowBulkConfirm(false);
+
+    if (successfulIds.length > 0 && failedIds.length === 0) {
+      showToast(`${successfulIds.length} reserved codes removed successfully.`, 'success');
+    } else if (successfulIds.length > 0 && failedIds.length > 0) {
+      const errorMsg = lastError?.response?.data?.error?.message || lastError?.message || 'associated records';
+      showToast(`Removed ${successfulIds.length} code(s). ${failedIds.length} code(s) could not be removed: ${errorMsg}`, 'warning');
+    } else if (failedIds.length > 0) {
+      const errorMsg = lastError?.response?.data?.error?.message || lastError?.message || 'Some records could not be removed.';
+      showToast(errorMsg, 'error');
     }
+
     setIsDeleting(false);
   };
 

@@ -117,6 +117,8 @@ export const Settings = () => {
                     type="password"
                     value={oldPassword}
                     onChange={(e) => setOldPassword(e.target.value)}
+                    pattern="^.{8,}$"
+                    title="Password must be at least 8 characters long."
                     className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 text-xs"
                     required
                   />
@@ -128,6 +130,8 @@ export const Settings = () => {
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
+                    pattern="^.{8,}$"
+                    title="Password must be at least 8 characters long."
                     className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 text-xs"
                     required
                   />
@@ -139,6 +143,8 @@ export const Settings = () => {
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
+                    pattern="^.{8,}$"
+                    title="Password must be at least 8 characters long."
                     className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 text-xs"
                     required
                   />

@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useCustomerStore } from '../store/customerStore';
 import { useInvoiceStore } from '../store/invoiceStore';
-import { FileSpreadsheet, Plus, Trash2, ChevronLeft, Save } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, Save } from 'lucide-react';
+import { showToast } from '../components/ui/Toast';
 
 export const InvoiceForm = () => {
   const { id } = useParams();
@@ -96,12 +97,21 @@ export const InvoiceForm = () => {
   const handleSave = async (e) => {
     e.preventDefault();
     if (!customerId) {
-      alert("Please select a customer");
+      showToast("Please select a customer", "warning");
       return;
     }
     const emptyDesc = items.some(item => !item.description.trim());
     if (emptyDesc) {
-      alert("Please provide a description for all items");
+      showToast("Please provide a description for all items", "warning");
+      return;
+    }
+    if (remarks && !/^[a-zA-Z0-9\s.,#\/-]{3,100}$/.test(remarks)) {
+      showToast('Remarks must contain only letters, numbers, spaces, and basic punctuation (3-100 chars).', 'warning');
+      return;
+    }
+    const invalidDesc = items.some(item => !/^[a-zA-Z0-9\s.,#\/-]{3,100}$/.test(item.description));
+    if (invalidDesc) {
+      showToast('Item descriptions must contain only letters, numbers, spaces, and basic punctuation (3-100 chars).', 'warning');
       return;
     }
 
@@ -126,7 +136,7 @@ export const InvoiceForm = () => {
       }
       navigate('/invoices');
     } catch (err) {
-      alert(err.message || "Failed to save invoice");
+      showToast(err.message || "Failed to save invoice", "error");
     } finally {
       setLoading(false);
     }
@@ -179,6 +189,7 @@ export const InvoiceForm = () => {
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Remarks / Memo</label>
                 <input value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="e.g. Project Phase 2 Billing"
+                  pattern="^[a-zA-Z0-9\s.,#\/-]{3,100}$" title="Only letters, numbers, spaces, and basic punctuation (3-100 characters)"
                   className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50 transition-colors placeholder-slate-600" />
               </div>
             </div>
@@ -212,6 +223,7 @@ export const InvoiceForm = () => {
                   <div className="flex-1 w-full">
                     <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1 sm:hidden">Description</label>
                     <input value={item.description} onChange={e => handleItemChange(idx, 'description', e.target.value)}
+                      pattern="^[a-zA-Z0-9\s.,#\/-]{3,100}$" title="Only letters, numbers, spaces, and basic punctuation (3-100 characters)"
                       placeholder="Item description" className="w-full px-3 py-2 rounded-lg bg-slate-800/40 border border-slate-700/50 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/40 transition-colors placeholder-slate-650" />
                   </div>
 

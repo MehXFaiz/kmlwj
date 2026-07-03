@@ -4,6 +4,7 @@ import { useCoaStore } from '../store/coaStore';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
 import { ChevronLeft, Save, Sparkles, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { showToast } from '../components/ui/Toast';
 
 export const TransferForm = () => {
   const { t } = useTranslation();
@@ -45,17 +46,22 @@ export const TransferForm = () => {
   const handleSave = async (e) => {
     e.preventDefault();
     if (!fromBankAccountId || !toBankAccountId) {
-      alert("Please select both source and target accounts");
+      showToast("Please select both source and target accounts", "warning");
       return;
     }
     if (fromBankAccountId === toBankAccountId) {
-      alert("Source and Target accounts cannot be the same");
+      showToast("Source and Target accounts cannot be the same", "warning");
+      return;
+    }
+
+    if (reference && !/^[a-zA-Z0-9\s.-]{3,30}$/.test(reference)) {
+      showToast('Reference must contain only letters, numbers, spaces, hyphens, and dots (3-30 chars).', 'warning');
       return;
     }
 
     const val = parseFloat(amount);
-    if (!val || val <= 0) {
-      alert("Please enter a valid amount greater than 0");
+    if (!val || val <= 0 || !/^[1-9]\d*(\.\d{1,2})?$/.test(amount)) {
+      showToast('Amount must be a positive number with up to 2 decimal places.', 'warning');
       return;
     }
 
@@ -63,7 +69,7 @@ export const TransferForm = () => {
     const toAcc = bankAccounts.find(a => a.id === toBankAccountId);
 
     if (!fromAcc || !toAcc) {
-      alert("Selected accounts are invalid");
+      showToast("Selected accounts are invalid", "error");
       return;
     }
 
@@ -97,7 +103,7 @@ export const TransferForm = () => {
       await addVoucher(payload);
       navigate('/bank-vouchers');
     } catch (err) {
-      alert(err.message || "Failed to post transfer");
+      showToast(err.message || "Failed to post transfer", "error");
     } finally {
       setLoading(false);
     }
@@ -179,6 +185,7 @@ export const TransferForm = () => {
               value={reference} 
               onChange={e => setReference(e.target.value)} 
               placeholder={t('forms.trfPlaceholder')}
+              pattern="^[a-zA-Z0-9\s.-]{3,30}$" title="Only letters, numbers, spaces, hyphens, and dots (3-30 characters)"
               className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-violet-600/50 transition-colors placeholder-slate-600" 
             />
           </div>
@@ -187,12 +194,11 @@ export const TransferForm = () => {
         <div>
           <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('forms.transferAmount')}</label>
           <input 
-            type="number" 
-            min="0" 
-            step="any" 
+            type="text" 
             value={amount} 
             onChange={e => setAmount(e.target.value)} 
             placeholder="0.00"
+            pattern="^[1-9]\d*(\.\d{1,2})?$" title="Positive number with up to 2 decimal places"
             className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-violet-600/50 transition-colors placeholder-slate-600 font-semibold text-base" 
           />
         </div>

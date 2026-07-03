@@ -65,9 +65,13 @@ export const BankVoucherForm = () => {
       showToast('Please select the account for this transaction.', 'warning');
       return;
     }
+    if (reference && !/^[a-zA-Z0-9\s.-]{3,30}$/.test(reference)) {
+      showToast('Reference must contain only letters, numbers, spaces, hyphens, and dots (3-30 chars).', 'warning');
+      return;
+    }
     const val = parseFloat(amount);
-    if (!val || val <= 0) {
-      showToast('Please enter a valid amount greater than zero.', 'warning');
+    if (!val || val <= 0 || !/^[1-9]\d*(\.\d{1,2})?$/.test(amount)) {
+      showToast('Amount must be a positive number with up to 2 decimal places.', 'warning');
       return;
     }
 
@@ -167,6 +171,7 @@ export const BankVoucherForm = () => {
           <div>
             <label className="block text-xs font-bold text-slate-400 mb-1.5">Cheque / Reference Number</label>
             <input value={reference} onChange={e => setReference(e.target.value)} placeholder="e.g. CHQ-82941"
+              pattern="^[a-zA-Z0-9\s.-]{3,30}$" title="Only letters, numbers, spaces, hyphens, and dots (3-30 characters)"
               className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50 transition-colors placeholder-slate-650" />
           </div>
         </div>
@@ -206,7 +211,8 @@ export const BankVoucherForm = () => {
 
         <div>
           <label className="block text-xs font-bold text-slate-400 mb-1.5">Amount (PKR) *</label>
-          <input type="number" min="0" step="any" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00"
+          <input type="text" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00"
+            pattern="^[1-9]\d*(\.\d{1,2})?$" title="Positive number with up to 2 decimal places"
             className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50 transition-colors placeholder-slate-650" />
         </div>
 

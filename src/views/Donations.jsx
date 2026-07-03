@@ -210,7 +210,23 @@ function DonationInvoiceModal({ donation, onClose }) {
         </div>
 
         {/* Printable content */}
-        <div className="p-8 space-y-6 overflow-y-auto flex-1 bg-slate-900 text-slate-300 print:bg-white print:text-black print:overflow-visible print:p-0 print:static print:w-full print:block">
+        <div id="print-receipt" className="p-8 space-y-6 overflow-y-auto flex-1 bg-slate-900 text-slate-300 print:bg-white print:text-black print:overflow-visible print:p-0 print:static print:w-full print:block">
+          <style>{`
+            @media print {
+              body * {
+                visibility: hidden !important;
+              }
+              #print-receipt, #print-receipt * {
+                visibility: visible !important;
+              }
+              #print-receipt {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+              }
+            }
+          `}</style>
           
           {/* Invoice Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-800 pb-6 gap-4 print:border-black print:pb-4 print:flex-row print:justify-between">

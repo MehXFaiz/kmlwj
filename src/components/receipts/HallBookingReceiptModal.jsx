@@ -70,7 +70,23 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
         {/* Receipt Container */}
         <div className="overflow-y-auto print:overflow-visible bg-white flex justify-center p-4 sm:p-8 print:p-0">
           {/* A5 Landscape shape approx */}
-          <div className="w-[800px] min-h-[550px] flex flex-col bg-white border border-gray-300 print:border-none p-8 font-urdu relative text-slate-900 mx-auto" dir="rtl">
+          <div id="print-receipt" className="w-[800px] min-h-[550px] flex flex-col bg-white border border-gray-300 print:border-none p-8 font-urdu relative text-slate-900 mx-auto" dir="rtl">
+            <style>{`
+              @media print {
+                body * {
+                  visibility: hidden !important;
+                }
+                #print-receipt, #print-receipt * {
+                  visibility: visible !important;
+                }
+                #print-receipt {
+                  position: absolute;
+                  left: 0;
+                  top: 0;
+                  width: 100%;
+                }
+              }
+            `}</style>
             
             {/* Header */}
             <div className="flex items-start justify-between mb-2">

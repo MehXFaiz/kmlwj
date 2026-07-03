@@ -20,7 +20,22 @@ function BeneficiaryModal({ isOpen, onClose, onSave, initial }) {
   if (!isOpen) return null;
 
   const handleSave = () => {
-    if (!form.name.trim()) return;
+    if (!form.name.trim()) {
+      showToast('Name is required', 'warning');
+      return;
+    }
+    if (!/^[a-zA-Z\s.-]{3,50}$/.test(form.name)) {
+      showToast('Name should only contain letters, spaces, hyphens, and dots (3-50 chars)', 'warning');
+      return;
+    }
+    if (form.cnic && !/^\d{5}-\d{7}-\d{1}$/.test(form.cnic)) {
+      showToast('CNIC must be in format: 00000-0000000-0', 'warning');
+      return;
+    }
+    if (form.mobile && !/^((\+92|92|0)?3[0-9]{2}-?[0-9]{7})$/.test(form.mobile)) {
+      showToast('Invalid mobile number. E.g. 0300-1234567', 'warning');
+      return;
+    }
     onSave({ ...form });
     onClose();
   };
@@ -159,13 +174,39 @@ export const Beneficiaries = () => {
   const handleBulkDelete = async () => {
     setIsDeleting(true);
     await new Promise(resolve => setTimeout(resolve, 15));
-    try {
-      await Promise.all(selectedIds.map(id => deleteBeneficiary(id)));
-      setSelectedIds([]);
-      setShowBulkConfirm(false);
-      showToast(`${selectedIds.length} records removed successfully.`, 'success');
-    } catch (err) {
-      showToast(err.response?.data?.error?.message || 'Some records could not be removed. Please try again.', 'error');
+    
+    const results = await Promise.allSettled(
+      selectedIds.map(async (id) => {
+        await deleteBeneficiary(id);
+        return id;
+      })
+    );
+
+    const successfulIds = [];
+    const failedIds = [];
+    let lastError = null;
+
+    results.forEach((result, idx) => {
+      const id = selectedIds[idx];
+      if (result.status === 'fulfilled') {
+        successfulIds.push(id);
+      } else {
+        failedIds.push(id);
+        lastError = result.reason;
+      }
+    });
+
+    setSelectedIds(failedIds);
+    setShowBulkConfirm(false);
+
+    if (successfulIds.length > 0 && failedIds.length === 0) {
+      showToast(`${successfulIds.length} records removed successfully.`, 'success');
+    } else if (successfulIds.length > 0 && failedIds.length > 0) {
+      const errorMsg = lastError?.response?.data?.error?.message || lastError?.message || 'associated records';
+      showToast(`Removed ${successfulIds.length} record(s). ${failedIds.length} record(s) could not be removed: ${errorMsg}`, 'warning');
+    } else if (failedIds.length > 0) {
+      const errorMsg = lastError?.response?.data?.error?.message || lastError?.message || 'Some records could not be removed.';
+      showToast(errorMsg, 'error');
     }
     setIsDeleting(false);
   };

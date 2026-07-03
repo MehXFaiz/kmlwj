@@ -68,10 +68,10 @@ export const GeneralLedger = () => {
       setIsDeleting(false);
       setConfirmDelete(null);
       if (res.success) {
-        showToast('success', 'General Ledger entry deleted successfully');
+        showToast('General Ledger entry deleted successfully', 'success');
         setSelectedIds(prev => prev.filter(item => item !== id));
       } else {
-        showToast('error', res.error || 'Failed to delete GL entry');
+        showToast(res.error || 'Failed to delete GL entry', 'error');
       }
     });
   };
@@ -98,10 +98,10 @@ export const GeneralLedger = () => {
       setIsDeleting(false);
       setShowBulkConfirm(false);
       if (res.success) {
-        showToast('success', `${selectedIds.length} GL entries deleted successfully`);
+        showToast(`${selectedIds.length} GL entries deleted successfully`, 'success');
         setSelectedIds([]);
       } else {
-        showToast('error', res.error || 'Failed to bulk delete GL entries');
+        showToast(res.error || 'Failed to bulk delete GL entries', 'error');
       }
     });
   };
