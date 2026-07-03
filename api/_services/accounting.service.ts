@@ -458,7 +458,10 @@ export class AccountingService {
    * Recalculates and updates an account's currentBalance based strictly on its historical Journal Entry Lines.
    */
   static async recalculateAccountBalance(tx: any, accountId: string): Promise<number> {
-    const account = await tx.account.findUnique({ where: { id: accountId } });
+    const account = await tx.account.findUnique({
+      where: { id: accountId },
+      include: { accountType: true }
+    });
     if (!account) {
       throw new Error(`Account not found for recalculation: ${accountId}`);
     }
@@ -480,7 +483,12 @@ export class AccountingService {
     const totalCredit = Number(aggregations._sum.credit) || 0;
     const initialBalance = Number(account.initialBalance) || 0;
 
-    const currentBalance = initialBalance + totalDebit - totalCredit;
+    const typeName = account.accountType?.name?.toUpperCase() || 'ASSET';
+    const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
+
+    const currentBalance = isDebitNormal
+      ? (initialBalance + totalDebit - totalCredit)
+      : (-initialBalance + totalDebit - totalCredit);
 
     await tx.account.update({
       where: { id: accountId },

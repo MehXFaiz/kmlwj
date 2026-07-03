@@ -122,6 +122,60 @@ var donations_default = makeHandler(async (req, res) => {
     await logAudit(req.user.id, "Update Donation", "DONATION", existingDonation, updatedDonation, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     return res.status(200).json({ status: 200, data: updatedDonation });
   }
+  if (method === "DELETE") {
+    const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
+    if (!idsRaw) {
+      return res.status(400).json({ error: { message: "Donation ID(s) required", status: 400 } });
+    }
+    const ids = Array.isArray(idsRaw) ? idsRaw.map(String) : String(idsRaw).split(",").map((s) => s.trim()).filter(Boolean);
+    if (ids.length === 0) {
+      return res.status(400).json({ error: { message: "No valid ID provided", status: 400 } });
+    }
+    try {
+      const deletedDonations = await prisma.$transaction(async (tx) => {
+        const donations = await tx.donation.findMany({
+          where: { id: { in: ids } }
+        });
+        if (donations.length === 0) {
+          throw new Error("No records found to delete");
+        }
+        for (const donation of donations) {
+          if (donation.status === "APPROVED") {
+            const ref = `DON-${donation.id.substring(0, 8)}`;
+            const je = await tx.journalEntry.findFirst({
+              where: { reference: ref }
+            });
+            if (je) {
+              try {
+                await AccountingService.reverseJournalEntry(tx, je.id, req.user.id, "Donation Deleted");
+              } catch (e) {
+              }
+            }
+          }
+        }
+        await tx.donation.deleteMany({
+          where: { id: { in: donations.map((d) => d.id) } }
+        });
+        return donations;
+      });
+      await logAudit(
+        req.user.id,
+        "Delete Donation",
+        "DONATION",
+        null,
+        { count: deletedDonations.length, ids: deletedDonations.map((d) => d.id) },
+        req.headers["x-forwarded-for"],
+        req.headers["user-agent"]
+      );
+      return res.status(200).json({
+        status: 200,
+        message: `${deletedDonations.length} donation(s) deleted successfully`,
+        data: deletedDonations
+      });
+    } catch (err) {
+      return res.status(400).json({ error: { message: err.message || "Failed to delete donation(s)", status: 400 } });
+    }
+  }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
 });
 export {

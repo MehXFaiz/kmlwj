@@ -106,6 +106,15 @@ export const GeneralLedger = () => {
     });
   };
 
+  const isAsset = accountInfo && ['ASSET'].includes(accountInfo.type.toUpperCase());
+  const debitLabel = isAsset ? "Period Debits (In)" : (accountInfo ? "Period Debits (Out)" : "Period Debits");
+  const creditLabel = isAsset ? "Period Credits (Out)" : (accountInfo ? "Period Credits (In)" : "Period Credits");
+
+  const debitColor = isAsset ? "text-emerald-400" : (accountInfo ? "text-red-400" : "text-emerald-400");
+  const creditColor = isAsset ? "text-red-400" : (accountInfo ? "text-emerald-400" : "text-red-400");
+  const tableDebitColor = isAsset ? "text-emerald-400" : (accountInfo ? "text-red-400" : "text-emerald-400");
+  const tableCreditColor = isAsset ? "text-red-400" : (accountInfo ? "text-emerald-400" : "text-red-400");
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -193,14 +202,14 @@ export const GeneralLedger = () => {
           </Card>
           <Card className="bg-slate-900/50">
             <CardContent className="p-4 flex flex-col items-center justify-center">
-              <span className="text-xs text-slate-400 uppercase tracking-wider mb-1">Period Debits</span>
-              <span className="text-xl font-mono font-semibold text-emerald-400">PKR {summary.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              <span className={`text-xs uppercase tracking-wider mb-1 ${debitColor}`}>{debitLabel}</span>
+              <span className={`text-xl font-mono font-semibold ${debitColor}`}>PKR {summary.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </CardContent>
           </Card>
           <Card className="bg-slate-900/50">
             <CardContent className="p-4 flex flex-col items-center justify-center">
-              <span className="text-xs text-slate-400 uppercase tracking-wider mb-1">Period Credits</span>
-              <span className="text-xl font-mono font-semibold text-red-400">PKR {summary.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              <span className={`text-xs uppercase tracking-wider mb-1 ${creditColor}`}>{creditLabel}</span>
+              <span className={`text-xl font-mono font-semibold ${creditColor}`}>PKR {summary.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </CardContent>
           </Card>
           <Card className="bg-slate-900/50 border-brand-500/30">
@@ -268,10 +277,10 @@ export const GeneralLedger = () => {
                         </td>
                       )}
                       <td className="py-3.5 px-4 text-slate-200">{entry.description || '—'}</td>
-                      <td className="py-3.5 px-4 text-right font-mono text-emerald-400">
+                      <td className={`py-3.5 px-4 text-right font-mono ${tableDebitColor}`}>
                         {entry.debit > 0 ? `PKR ${entry.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
                       </td>
-                      <td className="py-3.5 px-4 text-right font-mono text-red-400">
+                      <td className={`py-3.5 px-4 text-right font-mono ${tableCreditColor}`}>
                         {entry.credit > 0 ? `PKR ${entry.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
                       </td>
                       {canEditOrDelete && (
@@ -291,8 +300,8 @@ export const GeneralLedger = () => {
                   {/* Totals Row */}
                   <tr className="bg-slate-900/40 font-bold border-t-2 border-slate-800">
                     <td colSpan={!accountInfo ? (canEditOrDelete ? 5 : 4) : (canEditOrDelete ? 4 : 3)} className="py-3.5 px-4 text-right text-slate-400 uppercase">Period Totals</td>
-                    <td className="py-3.5 px-4 text-right font-mono text-emerald-400">PKR {summary.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                    <td className="py-3.5 px-4 text-right font-mono text-red-400">PKR {summary.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <td className={`py-3.5 px-4 text-right font-mono ${tableDebitColor}`}>PKR {summary.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <td className={`py-3.5 px-4 text-right font-mono ${tableCreditColor}`}>PKR {summary.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     {canEditOrDelete && <td className="py-3.5 px-4"></td>}
                   </tr>
                 </tbody>

@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { useDonationStore } from '../store/donationStore';
 import { useBeneficiaryStore } from '../store/beneficiaryStore';
 import { useCoaStore } from '../store/coaStore';
+import { useAuthStore } from '../store/authStore';
+import { showToast } from '../components/ui/Toast';
 import { Heart, Search, Plus, Edit2, Trash2, CheckCircle2, X, AlertTriangle, Printer } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 
@@ -374,9 +376,10 @@ function DonationInvoiceModal({ donation, onClose }) {
 }
 
 export const Donations = () => {
-  const { donations, fetchDonations, addDonation, updateDonation, approveDonation } = useDonationStore();
+  const { donations, fetchDonations, addDonation, updateDonation, approveDonation, deleteDonation, bulkDeleteDonations } = useDonationStore();
   const { beneficiaries, fetchBeneficiaries } = useBeneficiaryStore();
   const { flatAccounts, fetchAccountsList } = useCoaStore();
+  const { canEditOrDelete } = useAuthStore();
 
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get('search') || '');
@@ -384,6 +387,9 @@ export const Donations = () => {
   const [editItem, setEditItem] = useState(null);
   const [approveId, setApproveId] = useState(null);
   const [printDonation, setPrintDonation] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [deleteId, setDeleteId] = useState(null);
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
 
   useEffect(() => {
     fetchDonations();
@@ -411,17 +417,70 @@ export const Donations = () => {
   }, [donations, search]);
 
   const handleSave = async (data) => {
-    if (editItem) {
-      await updateDonation(editItem.id, data);
-    } else {
-      await addDonation(data);
+    try {
+      if (editItem) {
+        await updateDonation(editItem.id, data);
+        showToast('Donation updated successfully', 'success');
+      } else {
+        await addDonation(data);
+        showToast('Donation logged successfully', 'success');
+      }
+      setModalOpen(false);
+      setEditItem(null);
+    } catch (e) {
+      showToast(e.message || 'Failed to save donation', 'error');
     }
-    setEditItem(null);
   };
 
   const handleApprove = async (id) => {
-    await approveDonation(id);
-    setApproveId(null);
+    try {
+      await approveDonation(id);
+      showToast('Donation posted to ledger successfully', 'success');
+      setApproveId(null);
+    } catch (e) {
+      showToast(e.message || 'Failed to post donation', 'error');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await deleteDonation(id);
+      showToast('Donation deleted successfully', 'success');
+      setDeleteId(null);
+      setSelectedIds(prev => prev.filter(x => x !== id));
+    } catch (e) {
+      showToast(e.message || 'Failed to delete donation', 'error');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      const res = await bulkDeleteDonations(selectedIds);
+      if (res.success) {
+        showToast(`${selectedIds.length} donation(s) deleted successfully`, 'success');
+        setSelectedIds([]);
+      } else {
+        showToast(res.error || 'Failed to bulk delete donations', 'error');
+      }
+      setShowBulkConfirm(false);
+    } catch (e) {
+      showToast(e.message || 'Failed to bulk delete donations', 'error');
+    }
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds(filtered.map(d => d.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id, e) => {
+    e.stopPropagation();
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
   };
 
   return (
@@ -438,8 +497,16 @@ export const Donations = () => {
         </div>
 
         <div className={pageActionsClass}>
+          {canEditOrDelete && selectedIds.length > 0 && (
+            <button
+              onClick={() => setShowBulkConfirm(true)}
+              className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-red-650 hover:bg-red-550 text-white text-xs font-bold shadow-lg shadow-red-950/30 transition-all flex-1 sm:flex-none mr-2 cursor-pointer"
+            >
+              <Trash2 className="h-4 w-4" /> Bulk Delete ({selectedIds.length})
+            </button>
+          )}
           <button onClick={() => { setEditItem(null); setModalOpen(true); }}
-            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold shadow-lg shadow-pink-900/40 transition-all flex-1 sm:flex-none">
+            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold shadow-lg shadow-pink-900/40 transition-all flex-1 sm:flex-none cursor-pointer">
             <Plus className="h-4 w-4" /> Log Donation
           </button>
         </div>
@@ -456,21 +523,41 @@ export const Donations = () => {
       <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 overflow-hidden">
         <DesktopOnly>
           <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[900px]">
+            <table className="w-full text-left min-w-[950px]">
               <thead>
                 <tr className="border-b border-slate-800 bg-slate-900/80">
+                  {canEditOrDelete && (
+                    <th className="px-4 py-3 w-10">
+                      <input
+                        type="checkbox"
+                        checked={filtered.length > 0 && selectedIds.length === filtered.length}
+                        onChange={handleSelectAll}
+                        className="rounded border-slate-700 bg-slate-800 text-pink-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                      />
+                    </th>
+                  )}
                   <th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-500">Beneficiary</th>
                   <th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-500">Type</th>
                   <th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-500">Amount</th>
                   <th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-500">Method</th>
                   <th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-500">Status</th>
                   <th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-500">Created</th>
-                  <th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-500"></th>
+                  <th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-500 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/50">
                 {filtered.map(d => (
                   <tr key={d.id} className="hover:bg-slate-800/20 transition-colors group">
+                    {canEditOrDelete && (
+                      <td className="px-4 py-3.5 w-10">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(d.id)}
+                          onChange={(e) => handleSelectOne(d.id, e)}
+                          className="rounded border-slate-700 bg-slate-800 text-pink-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-3.5"><p className="text-sm font-semibold text-slate-200">{d.beneficiary?.name}</p></td>
                     <td className="px-4 py-3.5"><span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-slate-800/50 text-slate-300 border-slate-700/40">{d.donationType}</span></td>
                     <td className="px-4 py-3.5 text-sm font-bold text-slate-200">{d.amount.toLocaleString()}</td>
@@ -491,19 +578,27 @@ export const Donations = () => {
                     </td>
                     <td className="px-4 py-3.5 text-xs text-slate-400">{new Date(d.createdAt).toLocaleDateString()}</td>
                     <td className="px-4 py-3.5 text-right">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => setPrintDonation(d)} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer" title="Print Invoice / Receipt">
+                      <div className="flex items-center justify-end gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => setPrintDonation(d)} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-450 hover:text-slate-200 cursor-pointer" title="Print Invoice / Receipt">
                           <Printer className="h-3.5 w-3.5" />
                         </button>
-                        {d.status === 'PENDING' && (
+                        {d.status === 'PENDING' ? (
                           <>
-                            <button onClick={() => setApproveId(d.id)} className="p-1.5 rounded-lg hover:bg-emerald-950/40 text-emerald-500 hover:text-emerald-400 cursor-pointer" title="Approve">
+                            <button onClick={() => setApproveId(d.id)} className="p-1.5 rounded-lg hover:bg-emerald-950/40 text-emerald-500 hover:text-emerald-400 cursor-pointer" title="Post to Ledger (Approve)">
                               <CheckCircle2 className="h-4 w-4" />
                             </button>
-                            <button onClick={() => { setEditItem(d); setModalOpen(true); }} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-500 hover:text-slate-200 cursor-pointer">
+                            <button onClick={() => { setEditItem(d); setModalOpen(true); }} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-slate-200 cursor-pointer" title="Edit Donation">
                               <Edit2 className="h-3.5 w-3.5" />
                             </button>
                           </>
+                        ) : (
+                          // Allow editing approved donations by unlocking or editing in modal if allowed, but typically pending only. Let's make it consistent.
+                          null
+                        )}
+                        {canEditOrDelete && (
+                          <button onClick={() => setDeleteId(d.id)} className="p-1.5 rounded-lg hover:bg-red-950/40 text-red-500 hover:text-red-400 cursor-pointer" title="Delete Donation">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                         )}
                       </div>
                     </td>
@@ -517,7 +612,17 @@ export const Donations = () => {
             {filtered.map(d => (
               <div key={d.id} className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-3">
                 <div className="flex justify-between items-start mb-2">
-                  <h4 className="text-sm font-bold text-slate-200">{d.beneficiary?.name}</h4>
+                  <div className="flex items-center gap-2">
+                    {canEditOrDelete && (
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(d.id)}
+                        onChange={(e) => handleSelectOne(d.id, e)}
+                        className="rounded border-slate-700 bg-slate-800 text-pink-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                      />
+                    )}
+                    <h4 className="text-sm font-bold text-slate-200">{d.beneficiary?.name}</h4>
+                  </div>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${d.status === 'APPROVED' ? 'bg-emerald-950/60 text-emerald-400 border-emerald-900/50' : 'bg-amber-950/60 text-amber-400 border-amber-900/50'}`}>{d.status}</span>
                 </div>
                 <div className="text-xs text-slate-400 mb-2">{d.donationType} | {d.paymentMethod} | <span className="font-bold text-slate-200">{d.amount.toLocaleString()}</span></div>
@@ -526,12 +631,19 @@ export const Donations = () => {
                   <button onClick={() => setPrintDonation(d)} className="text-xs text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer">
                     <Printer className="h-3.5 w-3.5" /> Print Invoice
                   </button>
-                  {d.status === 'PENDING' && (
-                    <div className="flex gap-3">
-                       <button onClick={() => { setEditItem(d); setModalOpen(true); }} className="text-xs text-slate-400 hover:text-white cursor-pointer">Edit</button>
-                       <button onClick={() => setApproveId(d.id)} className="text-xs text-emerald-450 hover:text-emerald-400 font-bold flex items-center gap-1 cursor-pointer"><CheckCircle2 className="h-3 w-3" /> Approve</button>
-                    </div>
-                  )}
+                  <div className="flex gap-3 items-center">
+                    {d.status === 'PENDING' && (
+                      <>
+                        <button onClick={() => { setEditItem(d); setModalOpen(true); }} className="text-xs text-slate-400 hover:text-white cursor-pointer">Edit</button>
+                        <button onClick={() => setApproveId(d.id)} className="text-xs text-emerald-450 hover:text-emerald-400 font-bold flex items-center gap-1 cursor-pointer"><CheckCircle2 className="h-3 w-3" /> Approve</button>
+                      </>
+                    )}
+                    {canEditOrDelete && (
+                      <button onClick={() => setDeleteId(d.id)} className="text-xs text-red-400 hover:text-red-350 cursor-pointer flex items-center gap-1">
+                        <Trash2 className="h-3 w-3" /> Delete
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -542,11 +654,55 @@ export const Donations = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setApproveId(null)} />
           <div className="relative z-10 w-full max-w-sm rounded-2xl border border-emerald-900/50 bg-slate-900 p-6 shadow-2xl">
-            <h4 className="text-sm font-bold text-slate-200 mb-2">Approve Donation</h4>
+            <h4 className="text-sm font-bold text-slate-200 mb-2">Post to Ledger</h4>
             <p className="text-xs text-slate-400 mb-4">This will generate a Journal Entry and update Ledger balances automatically. Proceed?</p>
             <div className="flex gap-3">
               <button onClick={() => setApproveId(null)} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-sm font-semibold cursor-pointer">Cancel</button>
-              <button onClick={() => handleApprove(approveId)} className="flex-1 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-bold cursor-pointer">Approve</button>
+              <button onClick={() => handleApprove(approveId)} className="flex-1 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-bold cursor-pointer">Post to Ledger</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setDeleteId(null)} />
+          <div className="relative z-10 w-full max-w-sm rounded-2xl border border-red-900/50 bg-slate-900 p-6 shadow-2xl space-y-4">
+            <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-400" /> Confirm Deletion
+            </h3>
+            <p className="text-xs text-slate-400">
+              Are you sure you want to delete this donation record? If this donation has already been posted to the ledger, its corresponding journal entry will be automatically reversed.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => setDeleteId(null)} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-xs font-semibold cursor-pointer">
+                Cancel
+              </button>
+              <button onClick={() => handleDelete(deleteId)} className="flex-1 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold cursor-pointer">
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBulkConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowBulkConfirm(false)} />
+          <div className="relative z-10 w-full max-w-sm rounded-2xl border border-red-900/50 bg-slate-900 p-6 shadow-2xl space-y-4">
+            <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-400" /> Bulk Delete Donations
+            </h3>
+            <p className="text-xs text-slate-400">
+              Are you sure you want to delete <span className="font-bold text-slate-200">{selectedIds.length}</span> selected donation records? Posted entries will be automatically reversed.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => setShowBulkConfirm(false)} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-xs font-semibold cursor-pointer">
+                Cancel
+              </button>
+              <button onClick={handleBulkDelete} className="flex-1 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold cursor-pointer">
+                Delete All
+              </button>
             </div>
           </div>
         </div>

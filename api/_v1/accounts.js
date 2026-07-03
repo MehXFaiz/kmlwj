@@ -2,6 +2,7 @@ import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
+import { AccountingService } from "../_services/accounting.service.js";
 var accounts_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -143,6 +144,8 @@ var accounts_default = makeHandler(async (req, res) => {
         isReserved: !!isReserved
       }
     });
+    const finalBalance = await AccountingService.recalculateAccountBalance(prisma, newAccount.id);
+    newAccount.currentBalance = finalBalance;
     await logAudit(req.user.id, "Create Account", "COA", null, newAccount, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     return res.status(201).json({ status: 201, data: newAccount });
   }
@@ -225,6 +228,8 @@ var accounts_default = makeHandler(async (req, res) => {
       where: { id },
       data: updateData
     });
+    const finalBalance = await AccountingService.recalculateAccountBalance(prisma, id);
+    updatedAccount.currentBalance = finalBalance;
     await logAudit(req.user.id, isToggleLock ? "Toggle Lock Account" : "Modify Account", "COA", existingAccount, updatedAccount, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     return res.status(200).json({ status: 200, data: updatedAccount });
   }
