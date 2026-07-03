@@ -82,10 +82,20 @@ export const HallBookingForm = () => {
     loadBooking();
   }, [id, fetchBookingById, reset, navigate]);
 
+  const isOneOfFourHalls = (name) => {
+    if (!name) return false;
+    const n = name.toLowerCase();
+    return (
+      n.includes('bagh') || n.includes('hajiani') || n.includes('hajiyani') ||
+      n.includes('sadaya') || n.includes('sada') ||
+      n.includes('zikarya') || n.includes('zikriya') || n.includes('zakaria') || n.includes('zakriya') ||
+      n.includes('annexy') || n.includes('anexy') || n.includes('gosha') || n.includes('anxy')
+    );
+  };
+
   const hallAccounts = flatAccounts.filter(a => 
     (a.type === 'Revenue' || a.accountTypeName === 'REVENUE') &&
-    a.level === 'SUBSIDIARY' && 
-    (a.name.toLowerCase().includes('hall') || a.name.toLowerCase().includes('garden'))
+    isOneOfFourHalls(a.name)
   );
 
   const bankAccounts = flatAccounts.filter(a => 

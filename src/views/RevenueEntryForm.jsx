@@ -52,13 +52,17 @@ export const RevenueEntryForm = () => {
     if (!revenueSource) return [];
     
     return flatAccounts.filter(acc => {
-      if (acc.type !== 'Revenue' || acc.detailType !== 'Subsidiary') return false;
+      if ((acc.type !== 'Revenue' && acc.accountTypeName !== 'REVENUE') || (acc.level !== 'SUBSIDIARY' && acc.detailType !== 'Subsidiary' && acc.detailType !== 'Revenue')) return false;
       const nameLower = (acc.name || '').toLowerCase();
       
       switch (revenueSource) {
         case 'Hall Booking':
-          // parent is Hall Income (3100000) or contains Hall/Garden
-          return acc.parentCode === '3100000' || nameLower.includes('hall') || nameLower.includes('garden');
+          return (
+            nameLower.includes('bagh') || nameLower.includes('hajiani') || nameLower.includes('hajiyani') ||
+            nameLower.includes('sadaya') || nameLower.includes('sada') ||
+            nameLower.includes('zikarya') || nameLower.includes('zikriya') || nameLower.includes('zakaria') || nameLower.includes('zakriya') ||
+            nameLower.includes('annexy') || nameLower.includes('anexy') || nameLower.includes('gosha') || nameLower.includes('anxy')
+          );
         case 'Donation':
           // parent is Donations (3200000) or contains Donation (but try to avoid specific zakat/fitra if possible, or include all)
           return (acc.parentCode === '3200000' || nameLower.includes('donation')) && !nameLower.includes('zakat') && !nameLower.includes('fitra');

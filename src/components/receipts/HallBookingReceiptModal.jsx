@@ -45,10 +45,10 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
   
   // Identify hall
   const hallName = booking.hallAccount?.accountName?.toLowerCase() || '';
-  const isBagh = hallName.includes('bagh') || hallName.includes('باغ');
-  const isSadaBahar = hallName.includes('sada') || hallName.includes('سدا');
-  const isZakaria = hallName.includes('zakaria') || hallName.includes('زکریا');
-  const isGosha = hallName.includes('gosha') || hallName.includes('گوشہ');
+  const isBagh = hallName.includes('bagh') || hallName.includes('hajiani') || hallName.includes('hajiyani') || hallName.includes('باغ');
+  const isSadaBahar = hallName.includes('sada') || hallName.includes('sadaya') || hallName.includes('سدا');
+  const isZakaria = hallName.includes('zakaria') || hallName.includes('zikarya') || hallName.includes('zikriya') || hallName.includes('zakriya') || hallName.includes('zakariya') || hallName.includes('زکریا');
+  const isGosha = hallName.includes('gosha') || hallName.includes('annexy') || hallName.includes('anexy') || hallName.includes('anxy') || hallName.includes('گوشہ');
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm print:p-0 print:bg-white print:backdrop-blur-none">

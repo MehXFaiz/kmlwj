@@ -120,9 +120,9 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
                 >
                   <option value="">Select a hall...</option>
                   <option value="Bagh-e-Hajiani Garden">Bagh-e-Hajiani Garden</option>
-                  <option value="Sadaya-Hall">Sadaya-Hall</option>
-                  <option value="Zikarya-Hall">Zikarya-Hall</option>
-                  <option value="Anexy-Hall">Anexy-Hall</option>
+                  <option value="Sadaya Hall">Sadaya Hall</option>
+                  <option value="Zikarya Hall">Zikarya Hall</option>
+                  <option value="Annexy Hall">Annexy Hall</option>
                 </select>
               </div>
             </div>
