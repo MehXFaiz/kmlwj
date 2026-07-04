@@ -70,7 +70,7 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
         {/* Receipt Container */}
         <div className="overflow-y-auto print:overflow-visible bg-white flex justify-center p-4 sm:p-8 print:p-0">
           {/* A5 Landscape shape approx */}
-          <div id="print-receipt" className="w-[800px] min-h-[550px] flex flex-col bg-white border border-gray-300 print:border-none p-8 font-urdu relative text-slate-900 mx-auto" dir="rtl">
+          <div id="print-receipt" className="w-[800px] min-h-[550px] flex flex-col bg-white border border-gray-300 print:border-none p-8 font-urdu relative text-slate-900 mx-auto" style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Jameel Noori Nastaleeq Kasheeda', 'Noto Nastaliq Urdu', serif" }} dir="rtl">
             <style>{`
               @media print {
                 body * {
@@ -116,7 +116,7 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
 
             {/* Receipt Title */}
             <div className="text-center relative mt-0 mb-4">
-              <span className="inline-block text-3xl font-extrabold" style={{ WebkitTextStroke: '1px #ff0000', WebkitTextFillColor: 'white', letterSpacing: '1px', textShadow: '1px 1px 0px rgba(255,0,0,0.2)' }}>
+              <span className="inline-block text-3xl font-extrabold" style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Jameel Noori Nastaleeq Kasheeda', 'Noto Nastaliq Urdu', serif", WebkitTextStroke: '1px #ff0000', WebkitTextFillColor: 'white', letterSpacing: '1px', textShadow: '1px 1px 0px rgba(255,0,0,0.2)' }}>
                 بکنگ رسید
               </span>
             </div>
