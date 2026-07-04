@@ -2,68 +2,108 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Dark mode is the ONLY mode — set all CSS variables to dark values directly on :root */
+/* ═══════════════════════════════════════════════════════════════
+   KMLWJ DESIGN SYSTEM — "DARK NAVY + AMBER GOLD" THEME
+   Background: Deep navy-charcoal  |  Accent: Amber/Copper gold
+   ═══════════════════════════════════════════════════════════════ */
+
 :root {
-  --slate-950: #030712;
-  --slate-900: #0f172a;
-  --slate-800: #1e293b;
-  --slate-700: #334155;
-  --slate-600: #475569;
-  --slate-500: #64748b;
-  --slate-400: #94a3b8;
-  --slate-300: #cbd5e1;
-  --slate-200: #e2e8f0;
-  --slate-100: #f1f5f9;
-  --slate-50:  #f8fafc;
+  /* ── NEW THEME: Navy-dark base instead of blue-slate ── */
+  --slate-950: #0e1018;          /* deepest page background */
+  --slate-900: #13161f;          /* sidebar / nav */
+  --slate-800: #1c2030;          /* card / panel surfaces */
+  --slate-700: #252a3d;          /* elevated card, modals */
+  --slate-600: #303550;          /* input borders, dividers */
+  --slate-500: #5a6080;          /* muted text, placeholders */
+  --slate-400: #8b92ac;          /* secondary labels */
+  --slate-300: #b0b8d0;          /* body text */
+  --slate-200: #d4dae8;          /* primary labels */
+  --slate-100: #e8edf5;          /* headings / strong text */
+  --slate-50:  #f0f3f8;          /* inverse / bright white */
 
-  --glass-bg: rgba(17, 24, 39, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.06);
-  --glass-hover-bg: rgba(17, 24, 39, 0.85);
-  --glass-hover-border: rgba(255, 255, 255, 0.12);
+  --glass-bg:          rgba(19, 22, 31, 0.75);
+  --glass-border:      rgba(255, 255, 255, 0.05);
+  --glass-hover-bg:    rgba(19, 22, 31, 0.92);
+  --glass-hover-border:rgba(232, 160, 64, 0.15);   /* amber tint on hover */
 
-  /* Chart Colors */
-  --chart-revenue: #10b981;
-  --chart-expense: #ef4444;
-  --chart-asset: #3b82f6;
-  --chart-liability: #f59e0b;
-  --chart-equity: #8b5cf6;
-  --chart-grid: rgba(255, 255, 255, 0.04);
-  --chart-axis: #475569;
+  /* ── Amber / Copper Gold accent (replaces indigo) ── */
+  --brand-50:  hsl(38, 100%, 95%);
+  --brand-100: hsl(38, 100%, 88%);
+  --brand-200: hsl(38, 95%, 76%);
+  --brand-300: hsl(36, 90%, 63%);
+  --brand-400: hsl(34, 88%, 52%);   /* primary amber */
+  --brand-500: hsl(32, 85%, 43%);   /* hover darker amber */
+  --brand-600: hsl(30, 82%, 35%);
+  --brand-700: hsl(28, 78%, 27%);
+  --brand-800: hsl(26, 72%, 20%);
+  --brand-900: hsl(24, 65%, 14%);   /* copper-dark (System Integrity card) */
+
+  /* ── Copper tones for System Integrity / special cards ── */
+  --copper-900: #1e0f06;
+  --copper-800: #2e1608;
+  --copper-700: #3d1e0c;
+  --copper-600: #522a10;
+  --copper-500: #7a4320;
+  --copper-400: #b06a34;
+  --copper-300: #d48a50;
+  --copper-200: #e8b07a;
+  --copper-100: #f3d0b0;
+  --copper-50:  #faeee0;
+
+  /* Chart Colors — kept vivid for data clarity */
+  --chart-revenue:  #10b981;
+  --chart-expense:  #ef4444;
+  --chart-asset:    #f59e0b;
+  --chart-liability:#8b5cf6;
+  --chart-equity:   #3b82f6;
+  --chart-grid:     rgba(255, 255, 255, 0.03);
+  --chart-axis:     #3d4260;
 }
 
-/* .dark block mirrors :root — ensures Tailwind dark: variants always work */
+/* .dark mirrors :root */
 .dark {
-  --slate-950: #030712;
-  --slate-900: #0f172a;
-  --slate-800: #1e293b;
-  --slate-700: #334155;
-  --slate-600: #475569;
-  --slate-500: #64748b;
-  --slate-400: #94a3b8;
-  --slate-300: #cbd5e1;
-  --slate-200: #e2e8f0;
-  --slate-100: #f1f5f9;
-  --slate-50:  #f8fafc;
+  --slate-950: #0e1018;
+  --slate-900: #13161f;
+  --slate-800: #1c2030;
+  --slate-700: #252a3d;
+  --slate-600: #303550;
+  --slate-500: #5a6080;
+  --slate-400: #8b92ac;
+  --slate-300: #b0b8d0;
+  --slate-200: #d4dae8;
+  --slate-100: #e8edf5;
+  --slate-50:  #f0f3f8;
 
-  --glass-bg: rgba(17, 24, 39, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.06);
-  --glass-hover-bg: rgba(17, 24, 39, 0.85);
-  --glass-hover-border: rgba(255, 255, 255, 0.12);
+  --glass-bg:          rgba(19, 22, 31, 0.75);
+  --glass-border:      rgba(255, 255, 255, 0.05);
+  --glass-hover-bg:    rgba(19, 22, 31, 0.92);
+  --glass-hover-border:rgba(232, 160, 64, 0.15);
 
-  /* Chart Colors */
-  --chart-revenue: #10b981;
-  --chart-expense: #ef4444;
-  --chart-asset: #3b82f6;
-  --chart-liability: #f59e0b;
-  --chart-equity: #8b5cf6;
-  --chart-grid: rgba(255, 255, 255, 0.04);
-  --chart-axis: #475569;
+  --brand-50:  hsl(38, 100%, 95%);
+  --brand-100: hsl(38, 100%, 88%);
+  --brand-200: hsl(38, 95%, 76%);
+  --brand-300: hsl(36, 90%, 63%);
+  --brand-400: hsl(34, 88%, 52%);
+  --brand-500: hsl(32, 85%, 43%);
+  --brand-600: hsl(30, 82%, 35%);
+  --brand-700: hsl(28, 78%, 27%);
+  --brand-800: hsl(26, 72%, 20%);
+  --brand-900: hsl(24, 65%, 14%);
+
+  --chart-revenue:  #10b981;
+  --chart-expense:  #ef4444;
+  --chart-asset:    #f59e0b;
+  --chart-liability:#8b5cf6;
+  --chart-equity:   #3b82f6;
+  --chart-grid:     rgba(255, 255, 255, 0.03);
+  --chart-axis:     #3d4260;
 }
 
 @theme {
   --breakpoint-xs: 30rem;
   --font-sans: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  
+
+  /* ── Remap Tailwind slate to our new navy palette ── */
   --color-slate-950: var(--slate-950);
   --color-slate-900: var(--slate-900);
   --color-slate-800: var(--slate-800);
@@ -74,55 +114,73 @@
   --color-slate-300: var(--slate-300);
   --color-slate-200: var(--slate-200);
   --color-slate-100: var(--slate-100);
-  --color-slate-50: var(--slate-50);
+  --color-slate-50:  var(--slate-50);
 
-  /* Brand color palette: Rich Royal Blue & Indigo (Enterprise aesthetic) */
-  --color-brand-50: hsl(220, 100%, 97%);
-  --color-brand-100: hsl(220, 100%, 92%);
-  --color-brand-200: hsl(220, 100%, 84%);
-  --color-brand-300: hsl(220, 100%, 73%);
-  --color-brand-400: hsl(220, 100%, 61%);
-  --color-brand-500: hsl(224, 89%, 48%);
-  --color-brand-600: hsl(224, 89%, 40%);
-  --color-brand-700: hsl(224, 89%, 32%);
-  --color-brand-800: hsl(224, 89%, 24%);
-  --color-brand-900: hsl(224, 89%, 16%);
+  /* ── Brand = Amber/Gold ── */
+  --color-brand-50:  var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
 
-  /* Dashboard accent colors */
+  /* ── Expose copper as extra color tokens ── */
+  --color-copper-900: var(--copper-900);
+  --color-copper-800: var(--copper-800);
+  --color-copper-700: var(--copper-700);
+  --color-copper-600: var(--copper-600);
+  --color-copper-500: var(--copper-500);
+  --color-copper-400: var(--copper-400);
+  --color-copper-300: var(--copper-300);
+  --color-copper-200: var(--copper-200);
+  --color-copper-100: var(--copper-100);
+  --color-copper-50:  var(--copper-50);
+
+  /* Status colors */
   --color-success-bg: hsl(142, 76%, 36%);
   --color-warning-bg: hsl(38, 92%, 50%);
-  --color-error-bg: hsl(0, 84%, 60%);
+  --color-error-bg:   hsl(0, 84%, 60%);
 
-  /* Border radius */
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-2xl: 24px;
-  
-  /* System animations */
+  /* Border radius — more rounded per the UI design */
+  --radius-xs:  4px;
+  --radius-sm:  8px;
+  --radius-md:  12px;
+  --radius-lg:  16px;
+  --radius-xl:  20px;
+  --radius-2xl: 28px;
+
+  /* Animations */
   --animate-shimmer: shimmer 2.5s infinite linear;
   --animate-float: float 6s ease-in-out infinite;
-  
+
   @keyframes shimmer {
-    0% { background-position: -200% 0; }
+    0%   { background-position: -200% 0; }
     100% { background-position: 200% 0; }
   }
   @keyframes float {
     0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-6px); }
+    50%       { transform: translateY(-6px); }
   }
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(-4px); }
-    to { opacity: 1; transform: translateY(0); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to   { opacity: 1; transform: translateX(0); }
   }
 }
 
-/* Custom Base Utilities and Base Styles */
+/* ─────────────────────────────────────────
+   BASE
+───────────────────────────────────────── */
 @layer base {
   html {
-    background-color: #030712;
+    background-color: #0e1018;
     color-scheme: dark;
   }
 
@@ -132,28 +190,38 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
-  /* Custom scrollbar for high-end feel */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+  /* Custom scrollbar */
+  ::-webkit-scrollbar        { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track  { background: transparent; }
+  ::-webkit-scrollbar-thumb  { background: rgba(90, 96, 128, 0.35); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(176, 184, 208, 0.5); }
+
+  /* Focus rings — amber */
+  :focus-visible {
+    outline: 2px solid hsl(34, 88%, 52%);
+    outline-offset: 2px;
+    border-radius: 8px;
   }
-  ::-webkit-scrollbar-track {
-    background: rgba(3, 7, 18, 0.5);
+  :focus:not(:focus-visible) { outline: none; }
+
+  button, [role="button"], a, input[type="checkbox"], input[type="radio"] {
+    min-height: 1px;
   }
-  ::-webkit-scrollbar-thumb {
-    background: rgba(75, 85, 99, 0.4);
-    border-radius: 9999px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(156, 163, 175, 0.6);
+
+  /* Date input calendar icon — style for dark theme */
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.6) sepia(0.5) saturate(2) hue-rotate(10deg);
+    cursor: pointer;
   }
 }
 
-/* Custom utility components */
+/* ─────────────────────────────────────────
+   GLASS PANELS  (amber-tinted on hover)
+───────────────────────────────────────── */
 .glass-panel {
   background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--glass-border);
 }
 
@@ -164,18 +232,26 @@
 .glass-panel-hover:hover {
   background: var(--glass-hover-bg);
   border-color: var(--glass-hover-border);
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.6);
   transform: translateY(-2px);
 }
 
-.glow-indigo {
-  box-shadow: 0 0 40px -10px rgba(99, 102, 241, 0.15);
+/* ─────────────────────────────────────────
+   GLOW HELPERS
+───────────────────────────────────────── */
+.glow-amber {
+  box-shadow: 0 0 40px -10px rgba(232, 160, 64, 0.2);
 }
-
+.glow-indigo {
+  box-shadow: 0 0 40px -10px rgba(232, 160, 64, 0.12);
+}
 .glow-emerald {
   box-shadow: 0 0 40px -10px rgba(16, 185, 129, 0.15);
 }
 
+/* ─────────────────────────────────────────
+   TEXT GRADIENTS
+───────────────────────────────────────── */
 .text-gradient {
   background-clip: text;
   -webkit-background-clip: text;
@@ -187,40 +263,95 @@
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  background-image: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
+  background-image: linear-gradient(135deg, hsl(38,95%,70%) 0%, hsl(26,85%,52%) 100%);
 }
 
-/* Custom Table tree structures */
-.coa-tree-line {
-  position: relative;
+/* ─────────────────────────────────────────
+   COPPER / SYSTEM-INTEGRITY CARD
+───────────────────────────────────────── */
+.copper-card {
+  background: linear-gradient(135deg, #2e1608 0%, #1e0f06 100%);
+  border: 1px solid #522a10;
 }
+
+/* ─────────────────────────────────────────
+   INPUT BASE — pill-rounded, navy bg
+───────────────────────────────────────── */
+.input-navy {
+  background: #141720;
+  border: 1px solid #252a3d;
+  border-radius: 16px;
+  color: var(--slate-100);
+  transition: border-color 0.2s, background 0.2s;
+}
+.input-navy:focus {
+  border-color: hsl(34, 88%, 52%);
+  background: #181d2a;
+  outline: none;
+}
+.input-navy::placeholder {
+  color: var(--slate-500);
+}
+
+/* ─────────────────────────────────────────
+   COA TREE LINES
+───────────────────────────────────────── */
+.coa-tree-line           { position: relative; }
 .coa-tree-line::before {
-  content: '';
-  position: absolute;
-  left: -16px;
-  top: -12px;
-  bottom: 12px;
-  width: 1px;
-  border-left: 1px dashed rgba(75, 85, 99, 0.4);
+  content: '';  position: absolute; left: -16px; top: -12px;
+  bottom: 12px; width: 1px;
+  border-left: 1px dashed rgba(90, 96, 128, 0.35);
 }
 .coa-tree-line::after {
-  content: '';
-  position: absolute;
-  left: -16px;
-  top: 12px;
-  width: 12px;
-  height: 1px;
-  border-top: 1px dashed rgba(75, 85, 99, 0.4);
+  content: ''; position: absolute; left: -16px; top: 12px;
+  width: 12px; height: 1px;
+  border-top: 1px dashed rgba(90, 96, 128, 0.35);
 }
-.coa-tree-line-last::before {
-  bottom: auto;
-  height: 24px;
+.coa-tree-line-last::before { bottom: auto; height: 24px; }
+
+/* ─────────────────────────────────────────
+   SIDEBAR ACTIVE ITEM
+───────────────────────────────────────── */
+.nav-active {
+  background: linear-gradient(90deg, rgba(232,160,64,0.12) 0%, rgba(232,160,64,0.04) 100%);
+  border-left: 2px solid hsl(34, 88%, 52%);
+  color: hsl(38, 95%, 70%);
 }
 
+/* ─────────────────────────────────────────
+   SCROLLBAR UTILITY
+───────────────────────────────────────── */
 @utility scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
-  &::-webkit-scrollbar {
-    display: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+/* ─────────────────────────────────────────
+   PRINT RESET
+───────────────────────────────────────── */
+@media print {
+  .print-hidden,
+  .print\:hidden,
+  button, header, aside, nav, .lg\:flex { display: none !important; }
+
+  html, body, #root, div.flex.h-\[100dvh\].w-full {
+    background: white !important; color: black !important;
+    height: auto !important; min-height: auto !important;
+    overflow: visible !important; position: static !important;
+    display: block !important;
+  }
+
+  div.flex-1.flex.flex-col.min-w-0.w-full,
+  main.flex-1.overflow-y-auto.overflow-x-hidden {
+    display: block !important; height: auto !important;
+    overflow: visible !important; padding: 0 !important;
+    margin: 0 !important; background: white !important;
+    color: black !important; border: none !important;
+    position: static !important;
+  }
+
+  h1, h2, h3, h4, h5, h6, p, span, td, th, div, label, table, tr {
+    color: black !important; text-shadow: none !important;
   }
 }

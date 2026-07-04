@@ -2,11 +2,17 @@ import { create } from 'zustand';
 import { authService, tokenStorage } from '../services/authService';
 import api from '../services/api';
 
+export const canUserEditOrDelete = (role) => {
+  if (!role) return false;
+  const r = String(role).toLowerCase().trim();
+  return r === 'admin' || r === 'super admin' || r === 'administrator';
+};
+
 export const useAuthStore = create((set, get) => {
   // Listen for session expiry event from service layer
   if (typeof window !== 'undefined') {
     window.addEventListener('auth_session_expired', () => {
-      set({ user: null, role: null, permissions: [], isAuthenticated: false, loading: false, error: 'Your session has expired. Please log in again.' });
+      set({ user: null, role: null, permissions: [], canEditOrDelete: false, isAuthenticated: false, loading: false, error: 'Your session has expired. Please log in again.' });
     });
   }
 
@@ -14,10 +20,13 @@ export const useAuthStore = create((set, get) => {
     user: null,
     role: null,
     permissions: [],
+    canEditOrDelete: false,
     isAuthenticated: false,
     loading: false,
     error: null,
     successMessage: null,
+
+    checkCanEditOrDelete: () => canUserEditOrDelete(get().role),
 
     clearError: () => set({ error: null }),
     clearSuccess: () => set({ successMessage: null }),
@@ -34,6 +43,7 @@ export const useAuthStore = create((set, get) => {
           user: userData,
           role: userData.role,
           permissions: userData.permissions || [],
+          canEditOrDelete: canUserEditOrDelete(userData.role),
           isAuthenticated: true,
           loading: false,
         });
@@ -42,7 +52,7 @@ export const useAuthStore = create((set, get) => {
         if (err.response && (err.response.status === 401 || err.response.status === 403)) {
           tokenStorage.clear();
         }
-        set({ user: null, role: null, permissions: [], isAuthenticated: false, loading: false });
+        set({ user: null, role: null, permissions: [], canEditOrDelete: false, isAuthenticated: false, loading: false });
         return false;
       }
     },
@@ -59,6 +69,7 @@ export const useAuthStore = create((set, get) => {
           user: userData,
           role: userData.role,
           permissions: userData.permissions || [],
+          canEditOrDelete: canUserEditOrDelete(userData.role),
           isAuthenticated: true,
           loading: false
         });
@@ -67,6 +78,10 @@ export const useAuthStore = create((set, get) => {
         set({ error: err.message, loading: false });
         return false;
       }
+    },
+
+    loginAsGuest: async () => {
+      return get().login('guest@erp.com', 'guest123');
     },
 
     register: async (email, password, name, role) => {
@@ -86,7 +101,7 @@ export const useAuthStore = create((set, get) => {
       try {
         await authService.logout();
       } finally {
-        set({ user: null, role: null, permissions: [], isAuthenticated: false, loading: false, successMessage: 'Logged out successfully' });
+        set({ user: null, role: null, permissions: [], canEditOrDelete: false, isAuthenticated: false, loading: false, successMessage: 'Logged out successfully' });
       }
     },
 

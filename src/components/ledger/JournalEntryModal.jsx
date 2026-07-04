@@ -13,7 +13,7 @@ import { useJournalStore } from '../../store/journalStore';
 // Zod validation for single line
 const journalLineSchema = zod.object({
   accountCode: zod.string().min(1, "Select an account"),
-  description: zod.string().optional(),
+  description: zod.string().regex(/^$|^[a-zA-Z0-9\s.,#\/-]{3,200}$/, "Description can only contain letters, numbers, spaces, and basic punctuation (3-200 chars)").optional(),
   debit: zod.preprocess((val) => Number(val) || 0, zod.number().min(0)),
   credit: zod.preprocess((val) => Number(val) || 0, zod.number().min(0)),
 });
@@ -21,10 +21,10 @@ const journalLineSchema = zod.object({
 // Zod validation for whole journal
 const journalSchema = zod.object({
   postingDate: zod.string().min(1, "Date is required"),
-  voucherNo: zod.string().optional(),
+  voucherNo: zod.string().regex(/^$|^[a-zA-Z0-9\s.-]+$/, "Voucher number must contain only letters, numbers, spaces, dots, or hyphens").optional(),
   subsidiary: zod.string().min(1, "Subsidiary is required"),
-  reference: zod.string().min(3, "Reference must be at least 3 characters").max(100),
-  description: zod.string().optional(),
+  reference: zod.string().min(3, "Reference must be at least 3 characters").max(100).regex(/^[a-zA-Z0-9\s.-]+$/, "Reference must contain only letters, numbers, spaces, dots, or hyphens"),
+  description: zod.string().regex(/^$|^[a-zA-Z0-9\s.,#\/-]{3,200}$/, "Description can only contain letters, numbers, spaces, and basic punctuation (3-200 chars)").optional(),
   lines: zod.array(journalLineSchema).min(2, "Journal entry must have at least 2 lines"),
 });
 
@@ -277,7 +277,7 @@ export const JournalEntryModal = ({ isOpen, onClose }) => {
                               onClick={() => remove(index)}
                               className="text-slate-500 hover:text-red-400 p-1 rounded hover:bg-slate-800/40 cursor-pointer"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-4 w-4 pointer-events-none" />
                             </button>
                           )}
                         </td>

@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { logger } from './_utils/logger.js';
 
 // Import Vercel serverless handlers from the hidden directories
@@ -26,13 +28,51 @@ import auditLogsHandler from './_v1/audit-logs.js';
 import reservedCodesHandler from './_v1/reserved-codes.js';
 import beneficiariesHandler from './_v1/beneficiaries.js';
 import donationsHandler from './_v1/donations.js';
+import donorsHandler from './_v1/donors.js';
+import donationsReceivedHandler from './_v1/donations-received.js';
+import hallBookingsHandler from './_v1/hall-bookings.js';
+import revenueCollectionsHandler from './_v1/revenue-collections.js';
+import customersHandler from './_v1/customers.js';
+import membersHandler from './_v1/members.js';
+import invoicesHandler from './_v1/invoices.js';
 import generalLedgerHandler from './_v1/general-ledger.js';
 import journalEntriesHandler from './_v1/journal-entries.js';
 import trialBalanceHandler from './_v1/reports/trial-balance.js';
 import incomeStatementHandler from './_v1/reports/income-statement.js';
 import balanceSheetHandler from './_v1/reports/balance-sheet.js';
+import cashFlowHandler from './_v1/reports/cash-flow.js';
+import searchHandler from './_v1/search.js';
 
 const app = express();
+
+// Trust the reverse proxy (e.g. Vercel) so rate limiting uses the correct IP
+app.set('trust proxy', 1);
+
+// Security Headers (Helmet)
+app.use(helmet({
+  contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
+}));
+
+// Global Rate Limiting
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200, // Limit each IP to 200 requests per `window` (here, per 15 minutes)
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { message: 'Too many requests from this IP, please try again after 15 minutes', status: 429 } }
+});
+
+// Apply global rate limiter to all /api/ routes
+app.use('/api/', globalLimiter);
+
+// Strict Rate Limiting for Authentication
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 authentication requests per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { message: 'Too many authentication attempts, please try again after 15 minutes', status: 429 } }
+});
 
 app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
@@ -55,15 +95,15 @@ const makeExpress = (handler: any) => {
 };
 
 // API Routing matching Vercel Serverless Function architecture
-app.post('/api/auth/login', makeExpress(loginHandler));
-app.post('/api/auth/register', makeExpress(registerHandler));
+app.post('/api/auth/login', authLimiter, makeExpress(loginHandler));
+app.post('/api/auth/register', authLimiter, makeExpress(registerHandler));
 app.post('/api/auth/refresh', makeExpress(refreshHandler));
 app.post('/api/auth/logout', makeExpress(logoutHandler));
-app.post('/api/auth/forgot-password', makeExpress(forgotPasswordHandler));
-app.post('/api/auth/reset-password', makeExpress(resetPasswordHandler));
-app.post('/api/auth/change-password', makeExpress(changePasswordHandler));
-app.get('/api/health', makeExpress(healthHandler));
-app.get('/api/v1/health', makeExpress(healthV1Handler));
+app.post('/api/auth/forgot-password', authLimiter, makeExpress(forgotPasswordHandler));
+app.post('/api/auth/reset-password', authLimiter, makeExpress(resetPasswordHandler));
+app.post('/api/auth/change-password', authLimiter, makeExpress(changePasswordHandler));
+app.all('/api/health', makeExpress(healthHandler));
+app.all('/api/v1/health', makeExpress(healthV1Handler));
 
 // Register new API v1 route handlers
 app.get('/api/v1/auth/me', makeExpress(meHandler));
@@ -100,18 +140,65 @@ app.delete('/api/v1/beneficiaries', makeExpress(beneficiariesHandler));
 
 app.get('/api/v1/donations', makeExpress(donationsHandler));
 app.post('/api/v1/donations', makeExpress(donationsHandler));
-app.put('/api/v1/donations', makeExpress(donationsHandler));
+app.delete('/api/v1/donations', makeExpress(donationsHandler));
+
+app.get('/api/v1/donors', makeExpress(donorsHandler));
+app.post('/api/v1/donors', makeExpress(donorsHandler));
+app.put('/api/v1/donors', makeExpress(donorsHandler));
+app.delete('/api/v1/donors', makeExpress(donorsHandler));
+
+app.get('/api/v1/donations-received', makeExpress(donationsReceivedHandler));
+app.post('/api/v1/donations-received', makeExpress(donationsReceivedHandler));
+app.put('/api/v1/donations-received', makeExpress(donationsReceivedHandler));
+app.patch('/api/v1/donations-received', makeExpress(donationsReceivedHandler));
+app.delete('/api/v1/donations-received', makeExpress(donationsReceivedHandler));
+
+// Revenue Collection Routes (Zakat, Fitra, Membership Fee, Bus Booking)
+app.get('/api/v1/revenue-collections', makeExpress(revenueCollectionsHandler));
+app.post('/api/v1/revenue-collections', makeExpress(revenueCollectionsHandler));
+app.put('/api/v1/revenue-collections', makeExpress(revenueCollectionsHandler));
+app.delete('/api/v1/revenue-collections', makeExpress(revenueCollectionsHandler));
+
+// Hall Booking Routes
+app.get('/api/v1/hall-bookings/check-availability', makeExpress(hallBookingsHandler));
+app.get('/api/v1/hall-bookings', makeExpress(hallBookingsHandler));
+app.post('/api/v1/hall-bookings', makeExpress(hallBookingsHandler));
+app.put('/api/v1/hall-bookings', makeExpress(hallBookingsHandler));
+app.delete('/api/v1/hall-bookings', makeExpress(hallBookingsHandler));
+
+// Invoice & Customer Management Routes
+app.get('/api/v1/customers', makeExpress(customersHandler));
+app.post('/api/v1/customers', makeExpress(customersHandler));
+app.put('/api/v1/customers', makeExpress(customersHandler));
+app.delete('/api/v1/customers', makeExpress(customersHandler));
+
+app.get('/api/v1/members', makeExpress(membersHandler));
+app.post('/api/v1/members', makeExpress(membersHandler));
+app.put('/api/v1/members', makeExpress(membersHandler));
+app.delete('/api/v1/members', makeExpress(membersHandler));
+
+app.get('/api/v1/invoices', makeExpress(invoicesHandler));
+app.post('/api/v1/invoices', makeExpress(invoicesHandler));
+app.put('/api/v1/invoices', makeExpress(invoicesHandler));
+app.delete('/api/v1/invoices', makeExpress(invoicesHandler));
 
 // Ledger & Journals
 app.get('/api/v1/general-ledger', makeExpress(generalLedgerHandler));
+app.post('/api/v1/general-ledger', makeExpress(generalLedgerHandler));
+app.delete('/api/v1/general-ledger', makeExpress(generalLedgerHandler));
 app.get('/api/v1/journal-entries', makeExpress(journalEntriesHandler));
 app.post('/api/v1/journal-entries', makeExpress(journalEntriesHandler));
 app.put('/api/v1/journal-entries', makeExpress(journalEntriesHandler));
+app.patch('/api/v1/journal-entries', makeExpress(journalEntriesHandler));
 app.delete('/api/v1/journal-entries', makeExpress(journalEntriesHandler));
+
+// Global Search Route
+app.get('/api/v1/search', makeExpress(searchHandler));
 
 // Financial Reports
 app.get('/api/v1/reports/trial-balance', makeExpress(trialBalanceHandler));
 app.get('/api/v1/reports/income-statement', makeExpress(incomeStatementHandler));
 app.get('/api/v1/reports/balance-sheet', makeExpress(balanceSheetHandler));
+app.get('/api/v1/reports/cash-flow', makeExpress(cashFlowHandler));
 
 export default app;

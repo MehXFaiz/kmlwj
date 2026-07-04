@@ -5,6 +5,7 @@ import {
   Lock, Hash, Edit2, Trash2, Download, Layers, CheckCircle2, Copy, Info,
 } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass, statGridClass } from '../components/common/responsive';
+import { showToast } from '../components/ui/Toast';
 
 /* ─── Stat Card ─── */
 function StatCard({ title, value, icon: Icon, iconBg, iconColor, sub, delay = 0 }) {
@@ -75,22 +76,22 @@ function ReservedCodeModal({ isOpen, onClose, onSave, initial, apiError }) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Start Code *</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Start Code *</label>
               <input value={form.reserveStart} onChange={e => setForm(f => ({ ...f, reserveStart: e.target.value }))} placeholder="e.g. 8000"
-                className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm font-mono placeholder-slate-600 focus:outline-none focus:border-amber-600/60 transition-all" />
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-mono" />
             </div>
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">End Code *</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">End Code *</label>
               <input value={form.reserveEnd} onChange={e => setForm(f => ({ ...f, reserveEnd: e.target.value }))} placeholder="e.g. 8999"
-                className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm font-mono placeholder-slate-600 focus:outline-none focus:border-amber-600/60 transition-all" />
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-mono" />
             </div>
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Reason *</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Reason *</label>
             <textarea value={form.reserveReason} onChange={e => setForm(f => ({ ...f, reserveReason: e.target.value }))} rows={2}
               placeholder="Why is this code range being reserved..."
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm placeholder-slate-600 focus:outline-none focus:border-amber-600/60 transition-all resize-none" />
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium resize-none" />
           </div>
 
           <div>
@@ -103,9 +104,9 @@ function ReservedCodeModal({ isOpen, onClose, onSave, initial, apiError }) {
         </div>
 
         <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-4 border-t border-slate-800 shrink-0">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 text-sm font-semibold transition-all">Cancel</button>
+          <button onClick={onClose} className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">Cancel</button>
           <button onClick={handleSave} disabled={!form.reserveStart.trim() || !form.reserveEnd.trim() || !form.reserveReason.trim()}
-            className="px-5 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold transition-all shadow-lg shadow-amber-900/40">
+            className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50">
             {initial ? 'Save Changes' : 'Reserve Code Range'}
           </button>
         </div>
@@ -176,32 +177,66 @@ export const ReservedCodes = () => {
       }
       setModalOpen(false);
       setEditItem(null);
+      showToast(editItem ? 'Reserved code updated successfully' : 'Reserved code created successfully', 'success');
     } catch (err) {
       setApiError(err.response?.data?.error?.message || err.message || "Failed to save reserved code");
+      showToast(err.response?.data?.error?.message || err.message || "Failed to save reserved code", 'error');
     }
   };
 
   const handleDelete = async (id) => {
     setIsDeleting(true);
+    await new Promise(resolve => setTimeout(resolve, 15));
     try {
       await deleteCode(id);
+      showToast('Reserved code deleted successfully', 'success');
       setSelectedIds(p => p.filter(i => i !== id));
       setDeleteId(null);
     } catch (err) {
       console.error(err);
+      showToast(err.response?.data?.error?.message || err.message || 'Failed to delete reserved code', 'error');
     }
     setIsDeleting(false);
   };
 
   const handleBulkDelete = async () => {
     setIsDeleting(true);
-    try {
-      await Promise.all(selectedIds.map(id => deleteCode(id)));
-      setSelectedIds([]);
-      setShowBulkConfirm(false);
-    } catch (err) {
-      alert("Failed to delete some items");
+    await new Promise(resolve => setTimeout(resolve, 15));
+    
+    const results = await Promise.allSettled(
+      selectedIds.map(async (id) => {
+        await deleteCode(id);
+        return id;
+      })
+    );
+
+    const successfulIds = [];
+    const failedIds = [];
+    let lastError = null;
+
+    results.forEach((result, idx) => {
+      const id = selectedIds[idx];
+      if (result.status === 'fulfilled') {
+        successfulIds.push(id);
+      } else {
+        failedIds.push(id);
+        lastError = result.reason;
+      }
+    });
+
+    setSelectedIds(failedIds);
+    setShowBulkConfirm(false);
+
+    if (successfulIds.length > 0 && failedIds.length === 0) {
+      showToast(`${successfulIds.length} reserved codes removed successfully.`, 'success');
+    } else if (successfulIds.length > 0 && failedIds.length > 0) {
+      const errorMsg = lastError?.response?.data?.error?.message || lastError?.message || 'associated records';
+      showToast(`Removed ${successfulIds.length} code(s). ${failedIds.length} code(s) could not be removed: ${errorMsg}`, 'warning');
+    } else if (failedIds.length > 0) {
+      const errorMsg = lastError?.response?.data?.error?.message || lastError?.message || 'Some records could not be removed.';
+      showToast(errorMsg, 'error');
     }
+
     setIsDeleting(false);
   };
 

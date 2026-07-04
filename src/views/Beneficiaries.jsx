@@ -1,23 +1,47 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useBeneficiaryStore } from '../store/beneficiaryStore';
-import { Users, Search, Plus, ChevronDown, ChevronUp, Edit2, Trash2, X, AlertTriangle } from 'lucide-react';
+import { Users, Search, Plus, Edit2, Trash2, X, AlertTriangle } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
+import { showToast } from '../components/ui/Toast';
+import { EmptyState } from '../components/ui/EmptyState';
+
+// Replace null DB values with '' so controlled inputs stay controlled
+const nullsToEmpty = (obj) =>
+  Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === null ? '' : v]));
+
+const DEFAULT_BENEFICIARY = { name: '', cnic: '', mobile: '', address: '', remarks: '', isActive: true };
 
 function BeneficiaryModal({ isOpen, onClose, onSave, initial }) {
   const [form, setForm] = useState(
-    initial || { name: '', cnic: '', mobile: '', address: '', remarks: '', isActive: true }
+    initial ? nullsToEmpty(initial) : DEFAULT_BENEFICIARY
   );
 
   useEffect(() => {
     if (isOpen) {
-      setForm(initial || { name: '', cnic: '', mobile: '', address: '', remarks: '', isActive: true });
+      setForm(initial ? nullsToEmpty(initial) : DEFAULT_BENEFICIARY);
     }
   }, [isOpen, initial]);
 
   if (!isOpen) return null;
 
   const handleSave = () => {
-    if (!form.name.trim()) return;
+    if (!form.name.trim()) {
+      showToast('Name is required', 'warning');
+      return;
+    }
+    if (!/^[a-zA-Z\s.-]{3,50}$/.test(form.name)) {
+      showToast('Name should only contain letters, spaces, hyphens, and dots (3-50 chars)', 'warning');
+      return;
+    }
+    if (form.cnic && !/^\d{5}-\d{7}-\d{1}$/.test(form.cnic)) {
+      showToast('CNIC must be in format: 00000-0000000-0', 'warning');
+      return;
+    }
+    if (form.mobile && !/^((\+92|92|0)?3[0-9]{2}-?[0-9]{7})$/.test(form.mobile)) {
+      showToast('Invalid mobile number. E.g. 0300-1234567', 'warning');
+      return;
+    }
     onSave({ ...form });
     onClose();
   };
@@ -32,8 +56,8 @@ function BeneficiaryModal({ isOpen, onClose, onSave, initial }) {
               <Users className="h-4 w-4 text-indigo-400" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-200">{initial ? 'Edit Beneficiary' : 'New Beneficiary'}</h3>
-              <p className="text-[11px] text-slate-500">Manage beneficiary details</p>
+              <h3 className="text-sm font-bold text-slate-200">{initial ? 'Update Person\'s Details' : 'Add Person to Welfare List'}</h3>
+              <p className="text-[11px] text-slate-500">{initial ? 'Update contact and status information' : 'Register a new beneficiary'}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-300">
@@ -41,49 +65,50 @@ function BeneficiaryModal({ isOpen, onClose, onSave, initial }) {
           </button>
         </div>
 
-        <div className="p-6 space-y-4 overflow-y-auto flex-1">
+          <div className="p-6 space-y-4 overflow-y-auto flex-1">
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Name *</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Full Name *</label>
             <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              placeholder="Full Name" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm placeholder-slate-600 focus:border-indigo-600/60 focus:outline-none transition-all" />
+              placeholder="e.g. Ahmed Khan" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm placeholder-slate-600 focus:border-indigo-500/60 focus:outline-none transition-all font-medium" />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">CNIC</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">ID Card Number (CNIC)</label>
               <input value={form.cnic} onChange={e => setForm(f => ({ ...f, cnic: e.target.value }))}
-                placeholder="00000-0000000-0" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/60 transition-all" />
+                placeholder="42101-1234567-8" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-all font-medium" />
+              <p className="text-[10px] text-slate-600 mt-1">Format: 00000-0000000-0</p>
             </div>
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Mobile</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Mobile Number</label>
               <input value={form.mobile} onChange={e => setForm(f => ({ ...f, mobile: e.target.value }))}
-                placeholder="0300-0000000" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/60 transition-all" />
+                placeholder="0300-0000000" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-all font-medium" />
             </div>
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Address</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Home Address</label>
             <textarea value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/60 transition-all h-20 resize-none" />
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-all h-20 resize-none font-medium" />
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Remarks</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Notes / Remarks</label>
             <input value={form.remarks} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))}
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/60 transition-all" />
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-all font-medium" />
           </div>
 
           <div className="flex items-center gap-3 pt-2">
             <input type="checkbox" id="isActive" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
-              className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-indigo-600 focus:ring-indigo-600 focus:ring-offset-slate-900 cursor-pointer" />
-            <label htmlFor="isActive" className="text-sm font-medium text-slate-300 cursor-pointer">Active</label>
+              className="h-4 w-4 rounded border-slate-800 bg-slate-950/60 text-indigo-600 focus:ring-indigo-600 focus:ring-offset-slate-900 cursor-pointer" />
+            <label htmlFor="isActive" className="text-sm font-semibold text-slate-300 cursor-pointer">This person is currently receiving aid</label>
           </div>
         </div>
 
         <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 px-6 py-4 border-t border-slate-800 shrink-0">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-800 text-sm font-semibold transition-all">Cancel</button>
+          <button onClick={onClose} className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">Cancel</button>
           <button onClick={handleSave} disabled={!form.name.trim()}
-            className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-sm font-bold transition-all shadow-lg shadow-indigo-900/40">
+            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50 cursor-pointer">
             {initial ? 'Save Changes' : 'Create Beneficiary'}
           </button>
         </div>
@@ -94,7 +119,9 @@ function BeneficiaryModal({ isOpen, onClose, onSave, initial }) {
 
 export const Beneficiaries = () => {
   const { beneficiaries, fetchBeneficiaries, addBeneficiary, updateBeneficiary, deleteBeneficiary } = useBeneficiaryStore();
-  const [search, setSearch] = useState('');
+  
+  const [searchParams] = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get('search') || '');
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
@@ -105,6 +132,13 @@ export const Beneficiaries = () => {
   useEffect(() => {
     fetchBeneficiaries();
   }, [fetchBeneficiaries]);
+
+  useEffect(() => {
+    const q = searchParams.get('search') || '';
+    if (q) {
+      setSearch(q);
+    }
+  }, [searchParams]);
 
   const filtered = useMemo(() => {
     return beneficiaries.filter(b => 
@@ -130,20 +164,55 @@ export const Beneficiaries = () => {
 
   const handleDelete = async (id) => {
     setIsDeleting(true);
-    await deleteBeneficiary(id);
-    setSelectedIds(p => p.filter(i => i !== id));
-    setDeleteId(null);
-    setIsDeleting(false);
+    await new Promise(resolve => setTimeout(resolve, 15));
+    try {
+      await deleteBeneficiary(id);
+      showToast('Beneficiary deleted successfully', 'success');
+      setSelectedIds(p => p.filter(i => i !== id));
+      setDeleteId(null);
+    } catch (err) {
+      showToast(err.response?.data?.error?.message || err.message || 'Error deleting beneficiary', 'error');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleBulkDelete = async () => {
     setIsDeleting(true);
-    try {
-      await Promise.all(selectedIds.map(id => deleteBeneficiary(id)));
-      setSelectedIds([]);
-      setShowBulkConfirm(false);
-    } catch (err) {
-      alert("Failed to delete some items");
+    await new Promise(resolve => setTimeout(resolve, 15));
+    
+    const results = await Promise.allSettled(
+      selectedIds.map(async (id) => {
+        await deleteBeneficiary(id);
+        return id;
+      })
+    );
+
+    const successfulIds = [];
+    const failedIds = [];
+    let lastError = null;
+
+    results.forEach((result, idx) => {
+      const id = selectedIds[idx];
+      if (result.status === 'fulfilled') {
+        successfulIds.push(id);
+      } else {
+        failedIds.push(id);
+        lastError = result.reason;
+      }
+    });
+
+    setSelectedIds(failedIds);
+    setShowBulkConfirm(false);
+
+    if (successfulIds.length > 0 && failedIds.length === 0) {
+      showToast(`${successfulIds.length} records removed successfully.`, 'success');
+    } else if (successfulIds.length > 0 && failedIds.length > 0) {
+      const errorMsg = lastError?.response?.data?.error?.message || lastError?.message || 'associated records';
+      showToast(`Removed ${successfulIds.length} record(s). ${failedIds.length} record(s) could not be removed: ${errorMsg}`, 'warning');
+    } else if (failedIds.length > 0) {
+      const errorMsg = lastError?.response?.data?.error?.message || lastError?.message || 'Some records could not be removed.';
+      showToast(errorMsg, 'error');
     }
     setIsDeleting(false);
   };
@@ -187,6 +256,15 @@ export const Beneficiaries = () => {
 
       <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 overflow-hidden">
         <DesktopOnly>
+          {filtered.length === 0 ? (
+            <EmptyState
+              emoji="👤"
+              title={search ? 'No results found' : 'No beneficiaries yet'}
+              description={search ? `No one matches "${search}". Try a different name or CNIC.` : 'Start by adding the first person to your welfare list.'}
+              actionLabel={!search ? 'Add First Person' : undefined}
+              onAction={!search ? () => { setEditItem(null); setModalOpen(true); } : undefined}
+            />
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left min-w-[800px]">
               <thead>
@@ -241,6 +319,7 @@ export const Beneficiaries = () => {
               </tbody>
             </table>
           </div>
+          )}
         </DesktopOnly>
         <MobileOnly className="p-3 space-y-3">
             {filtered.map(b => (
@@ -270,11 +349,12 @@ export const Beneficiaries = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setDeleteId(null)} />
           <div className="relative z-10 w-full max-w-sm rounded-2xl border border-red-900/50 bg-slate-900 p-6 shadow-2xl">
-            <h4 className="text-sm font-bold text-slate-200 mb-4">Confirm Delete</h4>
+            <h4 className="text-sm font-bold text-slate-200 mb-2">Remove from Welfare List?</h4>
+            <p className="text-xs text-slate-400 mb-4">This will remove the person from your records. Their donation history will not be deleted.</p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteId(null)} disabled={isDeleting} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-sm font-semibold">Cancel</button>
+              <button onClick={() => setDeleteId(null)} disabled={isDeleting} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-sm font-semibold">Go Back</button>
               <button onClick={() => handleDelete(deleteId)} disabled={isDeleting} className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-bold">
-                {isDeleting ? 'Deleting...' : 'Delete'}
+                {isDeleting ? 'Removing...' : 'Remove'}
               </button>
             </div>
           </div>

@@ -104,6 +104,35 @@ export const TrialBalanceSheet = () => {
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleExportCSV = () => {
+    const headers = ['GL Code', 'Nature', 'Main Category Name', 'GL Name', 'Remarks'];
+    const csvContent = [
+      headers.join(','),
+      ...filteredData.map(row => 
+        [
+          row.code,
+          row.nature,
+          `"${row.mainCategory.replace(/"/g, '""')}"`,
+          `"${row.glName.replace(/"/g, '""')}"`,
+          row.remarks
+        ].join(',')
+      )
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `trial_balance_matrix_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Title & Action Buttons */}
@@ -114,15 +143,15 @@ export const TrialBalanceSheet = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2 cursor-pointer">
             <Printer className="h-4 w-4" />
             <span>Print</span>
           </Button>
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button variant="outline" size="sm" onClick={handleExportCSV} className="gap-2 cursor-pointer">
             <Download className="h-4 w-4" />
             <span>Export CSV</span>
           </Button>
-          <Button variant="primary" size="sm" onClick={handleCreateAccount} className="gap-2">
+          <Button variant="primary" size="sm" onClick={handleCreateAccount} className="gap-2 cursor-pointer">
             <Plus className="h-4 w-4" />
             <span>New Account</span>
           </Button>
@@ -132,8 +161,8 @@ export const TrialBalanceSheet = () => {
       <Card>
         <CardContent className="p-0">
           {/* Toolbar */}
-          <div className="p-4 border-b border-slate-800 flex items-center justify-between gap-4 bg-slate-900/50">
-            <div className="relative flex-1 max-w-md">
+          <div className="p-4 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/50">
+            <div className="relative flex-1 w-full md:max-w-md">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
               <input
                 type="text"
@@ -144,7 +173,7 @@ export const TrialBalanceSheet = () => {
               />
             </div>
             
-            <div className="flex items-center gap-3 text-xs font-medium">
+            <div className="flex flex-wrap items-center gap-3 text-xs font-medium">
               <div className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded-sm bg-amber-500/40 border border-amber-500/50"></div>
                 <span className="text-slate-400">Main</span>

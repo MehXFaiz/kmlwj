@@ -98,8 +98,8 @@ export const ResetPassword = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* New Password */}
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-300 tracking-wider uppercase">New Password</label>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">New Password</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
                   <Lock className="h-4 w-4" />
@@ -108,7 +108,9 @@ export const ResetPassword = () => {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 text-sm transition-all"
+                  pattern="^.{8,}$"
+                  title="Password must be at least 8 characters long."
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 text-sm transition-all font-medium"
                   placeholder="••••••••"
                   required
                   disabled={!token}
@@ -117,8 +119,8 @@ export const ResetPassword = () => {
             </div>
 
             {/* Confirm New Password */}
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-300 tracking-wider uppercase">Confirm New Password</label>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Confirm New Password</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
                   <Lock className="h-4 w-4" />
@@ -127,7 +129,9 @@ export const ResetPassword = () => {
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 text-sm transition-all"
+                  pattern="^.{8,}$"
+                  title="Password must be at least 8 characters long."
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 text-sm transition-all font-medium"
                   placeholder="••••••••"
                   required
                   disabled={!token}
@@ -139,7 +143,7 @@ export const ResetPassword = () => {
             <button
               type="submit"
               disabled={loading || !token}
-              className="w-full py-3 px-4 mt-2 bg-gradient-to-r from-emerald-500 to-indigo-600 hover:from-emerald-400 hover:to-indigo-500 active:scale-[0.98] text-white font-bold text-sm rounded-xl shadow-lg focus:outline-none transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="w-full py-3.5 px-4 mt-2 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-semibold text-sm rounded-xl shadow-lg shadow-indigo-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

@@ -3,6 +3,7 @@ import { makeHandler } from '../_utils/handler.js';
 import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
+import { AccountingService } from '../_services/accounting.service.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
@@ -11,7 +12,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const { method } = req;
 
   if (method === 'GET') {
-    const { subsidiary, limit = '100', page = '1' } = req.query as any;
+    const { subsidiary, limit = '100', page = '1', type } = req.query as any;
 
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
@@ -20,6 +21,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const whereClause: any = {};
     if (subsidiary && subsidiary !== 'Global') {
       whereClause.subsidiary = subsidiary;
+    }
+    if (type) {
+      whereClause.voucherType = type;
     }
 
     const [entries, total] = await Promise.all([
@@ -47,6 +51,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       description: je.description,
       postedBy: je.postedBy,
       status: je.status,
+      voucherType: je.voucherType,
       lines: je.lines.map(line => ({
         id: line.id,
         accountCode: line.account.glCode,
@@ -60,95 +65,48 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'POST') {
-    const { postingDate, subsidiary, reference, description, status = 'Draft', lines } = req.body;
+    const { postingDate, subsidiary, reference, description, status = 'Draft', lines, voucherType = 'JV' } = req.body;
 
     if (!lines || !Array.isArray(lines) || lines.length === 0) {
       return res.status(400).json({ error: { message: 'Lines are required', status: 400 } });
     }
 
-    // Check balance
-    let totalDebit = 0;
-    let totalCredit = 0;
-    for (const line of lines) {
-      totalDebit += Number(line.debit) || 0;
-      totalCredit += Number(line.credit) || 0;
-    }
-
-    if (Math.abs(totalDebit - totalCredit) > 0.001) {
-      return res.status(400).json({ error: { message: 'Journal entry must balance', status: 400 } });
-    }
-
-    const voucherNo = req.body.voucherNo || `JE-${Date.now()}`;
-    const postedBy = req.user.email || 'system';
+    const voucherNo = req.body.voucherNo;
+    const postedBy = req.user.id || req.user.email || 'system';
 
     try {
       const result = await prisma.$transaction(async (tx) => {
-        const je = await tx.journalEntry.create({
-          data: {
-            voucherNo,
-            postingDate: new Date(postingDate || new Date()),
-            subsidiary: subsidiary || 'Global',
-            reference: reference || 'Journal Entry',
-            description: description || null,
-            postedBy,
-            status,
-          }
+        const payloadLines = lines.map(l => ({
+          accountCode: l.accountCode,
+          accountId: l.accountId,
+          debit: Number(l.debit) || 0,
+          credit: Number(l.credit) || 0,
+          description: l.description || description || reference
+        }));
+
+        return await AccountingService.postTransaction(tx, {
+          voucherNo,
+          postingDate: postingDate ? new Date(postingDate) : new Date(),
+          subsidiary: subsidiary || 'Global',
+          reference: reference || 'Journal Entry',
+          description: description || 'Journal Entry',
+          module: 'Journal Entries',
+          voucherType,
+          postedBy,
+          status,
+          lines: payloadLines,
+          ipAddress: req.headers['x-forwarded-for'] as string,
+          userAgent: req.headers['user-agent']
         });
-
-        for (const line of lines) {
-          const account = await tx.account.findUnique({
-            where: { glCode: line.accountCode }
-          });
-
-          if (!account) {
-            throw new Error(`Account not found: ${line.accountCode}`);
-          }
-
-          await tx.journalEntryLine.create({
-            data: {
-              journalEntryId: je.id,
-              accountId: account.id,
-              description: line.description || null,
-              debit: Number(line.debit) || 0,
-              credit: Number(line.credit) || 0,
-            }
-          });
-
-          if (status === 'Posted') {
-            await tx.ledgerEntry.create({
-              data: {
-                accountId: account.id,
-                debit: Number(line.debit) || 0,
-                credit: Number(line.credit) || 0,
-                reference: je.voucherNo,
-                description: line.description || description || reference || 'Journal Entry',
-                postingDate: new Date(postingDate || new Date()),
-              }
-            });
-
-            await tx.account.update({
-               where: { id: account.id },
-               data: {
-                 currentBalance: {
-                   increment: Number(line.debit) - Number(line.credit)
-                 }
-               }
-            });
-          }
-        }
-
-        return je;
       });
 
-      await logAudit(req.user.id, 'Create Journal', 'Journal Entries', null, { voucherNo, reference, status, total: totalDebit }, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
-
-      return res.status(201).json({ status: 201, data: result });
+      return res.status(201).json({ status: 201, data: result.journalEntry });
     } catch (err: any) {
       return res.status(400).json({ error: { message: err.message, status: 400 } });
     }
   }
 
-  if (method === 'PATCH') {
+  if (method === 'PATCH' || method === 'PUT') {
     const { id, status } = req.body;
     
     if (!id || !status) {
@@ -166,54 +124,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
         if (je.status === status) return je;
 
-        // Draft -> Posted
         if (je.status === 'Draft' && status === 'Posted') {
-          for (const line of je.lines) {
-            await tx.ledgerEntry.create({
-              data: {
-                accountId: line.accountId,
-                debit: line.debit,
-                credit: line.credit,
-                reference: je.voucherNo,
-                description: line.description || je.description || je.reference || 'Journal Entry',
-                postingDate: je.postingDate,
-              }
-            });
-
-            await tx.account.update({
-               where: { id: line.accountId },
-               data: {
-                 currentBalance: {
-                   increment: line.debit - line.credit
-                 }
-               }
-            });
-          }
+          return await AccountingService.postDraft(tx, id, req.user!.id);
         }
         
-        // Posted -> Cancelled (Reversal)
         if (je.status === 'Posted' && status === 'Cancelled') {
-          for (const line of je.lines) {
-             await tx.ledgerEntry.create({
-              data: {
-                accountId: line.accountId,
-                debit: line.credit,
-                credit: line.debit,
-                reference: je.voucherNo + '-REV',
-                description: 'Reversal: ' + (line.description || je.description || je.reference),
-                postingDate: new Date(),
-              }
-            });
-
-            await tx.account.update({
-               where: { id: line.accountId },
-               data: {
-                 currentBalance: {
-                   increment: line.credit - line.debit
-                 }
-               }
-            });
-          }
+          return await AccountingService.reverseJournalEntry(tx, id, req.user!.id, req.body.reason);
         }
 
         const updatedJe = await tx.journalEntry.update({
@@ -232,5 +148,50 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
   }
 
+  if (method === 'DELETE') {
+    const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
+    if (!idsRaw) {
+      return res.status(400).json({ error: { message: 'Journal Entry ID(s) required', status: 400 } });
+    }
+
+    const ids: string[] = Array.isArray(idsRaw)
+      ? idsRaw.map(String)
+      : String(idsRaw).split(',').map(s => s.trim()).filter(Boolean);
+
+    if (ids.length === 0) {
+      return res.status(400).json({ error: { message: 'No valid ID provided', status: 400 } });
+    }
+
+    try {
+      const deletedEntries = await prisma.$transaction(async (tx) => {
+        const results = [];
+        for (const id of ids) {
+          const resJe = await AccountingService.deleteJournalEntry(tx, id, req.user!.id, 'Admin Deleted');
+          if (resJe) results.push(resJe);
+        }
+        return results;
+      });
+
+      await logAudit(
+        req.user.id,
+        'Delete Journal Entry',
+        'Journal Entries',
+        null,
+        { count: deletedEntries.length, ids: deletedEntries.map(e => e.id) },
+        req.headers['x-forwarded-for'] as string,
+        req.headers['user-agent']
+      );
+
+      return res.status(200).json({
+        status: 200,
+        message: `${deletedEntries.length} journal entry(s) deleted successfully`,
+        data: deletedEntries
+      });
+    } catch (err: any) {
+      return res.status(400).json({ error: { message: err.message, status: 400 } });
+    }
+  }
+
   return res.status(405).json({ error: { message: 'Method Not Allowed', status: 405 } });
 });
+

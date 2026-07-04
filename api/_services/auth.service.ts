@@ -43,6 +43,9 @@ function mapRoleName(input?: string): string {
   if (roleUpper === 'DATA_ENTRY' || roleUpper === 'DATA ENTRY OPERATOR') {
     return 'Data Entry Operator';
   }
+  if (roleUpper === 'DONATION_MANAGER') {
+    return 'Donation and Zakat Manager';
+  }
   return input;
 }
 
@@ -93,10 +96,27 @@ export async function register(data: any) {
 }
 
 export async function login(data: any) {
-  const user = await prisma.user.findUnique({
+  let user = await prisma.user.findUnique({
     where: { email: data.email },
     include: { role: true },
   });
+
+  if (!user && data.email === 'guest@erp.com') {
+    // Automatically register the guest user if they don't exist
+    const auditorRole = await prisma.role.findUnique({ where: { name: 'Auditor' } });
+    const hashedPassword = await bcrypt.hash('guest123', 12);
+    user = await prisma.user.create({
+      data: {
+        email: 'guest@erp.com',
+        password: hashedPassword,
+        fullName: 'Guest Visitor',
+        roleId: auditorRole?.id || (await prisma.role.findFirst())?.id || '',
+        isActive: true,
+      },
+      include: { role: true },
+    });
+  }
+
   if (!user) {
     throw { status: 401, message: 'Invalid credentials' };
   }

@@ -1,12 +1,24 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, startTransition } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { Lock, Mail, Loader2, ArrowRight, UserCircle, Eye, EyeOff } from 'lucide-react';
 import { AuthLayout } from '../layouts/AuthLayout';
+import { useShallow } from 'zustand/react/shallow';
 
 export const Login = () => {
   const navigate = useNavigate();
-  const { login, loginAsGuest, isAuthenticated, loading, error, successMessage, clearError, clearSuccess } = useAuthStore();
+  const { login, loginAsGuest, isAuthenticated, loading, error, successMessage, clearError, clearSuccess } = useAuthStore(
+    useShallow((state) => ({
+      login: state.login,
+      loginAsGuest: state.loginAsGuest,
+      isAuthenticated: state.isAuthenticated,
+      loading: state.loading,
+      error: state.error,
+      successMessage: state.successMessage,
+      clearError: state.clearError,
+      clearSuccess: state.clearSuccess,
+    }))
+  );
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,24 +28,40 @@ export const Login = () => {
   useEffect(() => {
     clearError();
     clearSuccess();
+  }, [clearError, clearSuccess]);
+
+  useEffect(() => {
     if (isAuthenticated) {
-      navigate('/');
+      startTransition(() => {
+        navigate('/', { replace: true });
+      });
     }
   }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLocalError('');
-    clearError();
+    if (localError) setLocalError('');
 
     if (!email || !password) {
       setLocalError('Please fill in all fields');
       return;
     }
 
+    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+      setLocalError('Please enter a valid email address');
+      return;
+    }
+
+    if (password.length < 6) {
+      setLocalError('Password must be at least 6 characters long');
+      return;
+    }
+
     const success = await login(email, password);
     if (success) {
-      navigate('/');
+      startTransition(() => {
+        navigate('/', { replace: true });
+      });
     }
   };
 
@@ -76,50 +104,52 @@ export const Login = () => {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email */}
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">
                 Email
               </label>
               <div className="relative group/input">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Mail className="h-[15px] w-[15px] text-slate-600 group-focus-within/input:text-emerald-400 transition-colors" />
+                  <Mail className="h-[15px] w-[15px] text-slate-600 group-focus-within/input:text-indigo-400 transition-colors" />
                 </div>
                 <input
                   type="email"
                   id="login-email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/50 border border-slate-800/80 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 text-sm transition-all duration-200"
+                  pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+                  title="Please enter a valid email address (e.g. name@company.com)"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 text-sm transition-all duration-200 font-medium"
                   placeholder="name@company.com"
                   autoComplete="email"
                   required
                 />
               </div>
-            </div>
-
-            {/* Password */}
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                <label className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">
+            </div>            {/* Password */}
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mb-1.5">
+                <label className="block text-xs font-semibold text-slate-400">
                   Password
                 </label>
                 <Link
                   to="/forgot-password"
-                  className="text-[11px] font-semibold text-slate-500 hover:text-emerald-400 transition-colors duration-200"
+                  className="text-[11px] font-semibold text-slate-500 hover:text-indigo-400 transition-colors duration-200"
                 >
                   Forgot?
                 </Link>
               </div>
               <div className="relative group/input">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Lock className="h-[15px] w-[15px] text-slate-600 group-focus-within/input:text-emerald-400 transition-colors" />
+                  <Lock className="h-[15px] w-[15px] text-slate-600 group-focus-within/input:text-indigo-400 transition-colors" />
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   id="login-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-11 py-3 rounded-xl bg-slate-950/50 border border-slate-800/80 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 text-sm transition-all duration-200"
+                  pattern="^.{6,}$"
+                  title="Password must be at least 6 characters long."
+                  className="w-full pl-10 pr-11 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 text-sm transition-all duration-200 font-medium"
                   placeholder="••••••••"
                   autoComplete="current-password"
                   required
@@ -140,7 +170,7 @@ export const Login = () => {
               type="submit"
               id="login-submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-400 hover:to-blue-500 active:scale-[0.98] text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+              className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-semibold text-sm rounded-xl shadow-lg shadow-indigo-600/25 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -164,9 +194,13 @@ export const Login = () => {
           <button
             type="button"
             id="guest-login"
-            onClick={() => {
-              loginAsGuest();
-              navigate('/');
+            onClick={async () => {
+              const success = await loginAsGuest();
+              if (success) {
+                startTransition(() => {
+                  navigate('/', { replace: true });
+                });
+              }
             }}
             className="w-full py-3 px-4 bg-white/[0.03] hover:bg-white/[0.06] border border-slate-800/80 hover:border-slate-700 text-slate-400 hover:text-slate-200 font-semibold text-sm rounded-xl focus:outline-none transition-all duration-200 flex items-center justify-center gap-2.5 cursor-pointer active:scale-[0.98]"
           >
@@ -182,7 +216,7 @@ export const Login = () => {
             <span className="text-slate-600 text-xs">New to AccuLedger? </span>
             <Link
               to="/signup"
-              className="text-emerald-400/80 hover:text-emerald-300 text-xs font-bold transition-colors duration-200"
+              className="text-indigo-400/80 hover:text-indigo-300 text-xs font-bold transition-colors duration-200"
             >
               Create an account
             </Link>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as zod from 'zod';
@@ -8,6 +8,22 @@ import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { useCoaStore } from '../../store/coaStore';
 import { useJournalStore } from '../../store/journalStore';
+import { showToast } from '../ui/Toast';
+import { ChevronRight, Lock, Sparkles, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+
+// Maps account type to expected first digit of GL code
+const typePrefixMap = { Asset: '1', Liability: '2', Revenue: '3', Expense: '4' };
+
+// Build breadcrumb from parent chain
+function buildBreadcrumb(account, allAccounts) {
+  const crumbs = [];
+  let current = account;
+  while (current) {
+    crumbs.unshift(current.name);
+    current = allAccounts.find(a => a.code === current.parentCode);
+  }
+  return crumbs;
+}
 
 // Zod validation schema
 const accountSchema = zod.object({
@@ -16,15 +32,16 @@ const accountSchema = zod.object({
     .regex(/^\d{7}$/, "GL Code must contain 7 numbers only"),
   name: zod.string()
     .min(3, "Account name must be at least 3 characters")
-    .max(80, "Account name is too long"),
+    .max(80, "Account name is too long")
+    .regex(/^[a-zA-Z0-9\s.()&-]+$/, "Account name should only contain letters, numbers, spaces, dots, hyphens, and parentheses"),
   type: zod.enum(['Asset', 'Liability', 'Equity', 'Revenue', 'Expense']),
   detailType: zod.string().min(1, "Detail type is required"),
-  parentCode: zod.string().nullable().optional(),
+  parentCode: zod.string().min(7, "Parent category is required"),
   level: zod.any().optional(),
   isLocked: zod.boolean().optional(),
   isReserved: zod.boolean().optional(),
-  currency: zod.string().min(3, "Select a valid 3-letter currency code"),
-  description: zod.string().max(200, "Description must be under 200 characters").optional(),
+  currency: zod.string().min(3, "Select a valid 3-letter currency code").regex(/^[A-Z]{3}$/, "Currency must be exactly 3 uppercase letters (e.g. PKR)"),
+  description: zod.string().max(200, "Description must be under 200 characters").regex(/^$|^[a-zA-Z0-9\s.,#\/-]+$/, "Description contains invalid characters").optional(),
   initialBalance: zod.preprocess((val) => Number(val), zod.number().default(0)),
 });
 
@@ -33,32 +50,32 @@ const detailTypeOptions = {
   Liability: ['Payable', 'Credit Card', 'Accrued Expense', 'Long Term Loan', 'Header'],
   Equity: ['Equity', 'Retained Earnings', 'Capital', 'Header'],
   Revenue: ['Revenue', 'Other Revenue', 'Header'],
-  Expense: ['COGS', 'Expense', 'Tax Expense', 'Other Expense', 'Header'],
+  Expense: ['Expense', 'COGS', 'Tax Expense', 'Other Expense', 'Header'],
 };
 
 export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
   const { treeAccounts, flatAccounts, addAccount, updateAccount } = useCoaStore();
   const { logActivity } = useJournalStore();
+  const [codeInputVal, setCodeInputVal] = useState('');
 
-  // Create a flat list of accounts for searching/filtering
+  // Flatten nested tree for searching/filtering
   const allAccounts = useMemo(() => {
     const flatten = (nodes) => nodes.reduce((acc, node) => {
       acc.push(node);
       if (node.children) acc.push(...flatten(node.children));
       return acc;
     }, []);
-    // if treeAccounts is populated use it, else fallback to flatAccounts
     return treeAccounts.length > 0 ? flatten(treeAccounts) : flatAccounts;
   }, [treeAccounts, flatAccounts]);
 
   const {
     register,
     handleSubmit,
-    control,
     setValue,
     watch,
     reset,
     setError,
+    clearErrors,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(accountSchema),
@@ -67,8 +84,8 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
       name: '',
       type: 'Asset',
       detailType: 'Cash',
-      parentCode: 'none',
-      level: 'MAIN',
+      parentCode: '',
+      level: 'GL',
       isLocked: false,
       isReserved: false,
       currency: 'PKR',
@@ -78,179 +95,260 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
   });
 
   const selectedType = watch('type');
+  const parentCodeVal = watch('parentCode');
+  const watchedCode = watch('code');
 
-  // Fill detailType defaults when type changes
+  // Filter possible parents: must be Level 3 SUBSIDIARY accounts across all types
+  const potentialParents = useMemo(() => {
+    return allAccounts.filter(acc => acc.level === 'SUBSIDIARY');
+  }, [allAccounts]);
+
+  // When parent changes (in Create mode), auto-update type and detailType
   useEffect(() => {
-    if (!editingAccount) {
-      const options = detailTypeOptions[selectedType] || [];
-      if (options.length > 0) {
-        setValue('detailType', options[0]);
+    if (!editingAccount && parentCodeVal) {
+      const parentAcc = allAccounts.find(a => a.code === parentCodeVal);
+      if (parentAcc) {
+        // Always auto-set Type based on parent
+        setValue('type', parentAcc.type);
+        
+        // Auto-set Nature (detailType) based on the first valid option for that Type
+        const options = detailTypeOptions[parentAcc.type] || [];
+        if (options.length > 0) {
+          setValue('detailType', options[0]);
+        }
       }
     }
-  }, [selectedType, setValue, editingAccount]);
+  }, [parentCodeVal, editingAccount, allAccounts, setValue]);
 
-  // Load account data for editing
-  useEffect(() => {
-    if (editingAccount) {
-      reset({
-        code: editingAccount.code,
-        name: editingAccount.name,
-        type: editingAccount.type,
-        detailType: editingAccount.detailType,
-        parentCode: editingAccount.parentCode || 'none',
-        level: editingAccount.level || 'MAIN',
-        isLocked: editingAccount.status === 'Inactive',
-        currency: editingAccount.currency || 'PKR',
-        description: editingAccount.description || '',
-        initialBalance: editingAccount.initialBalance || 0,
-      });
-    } else {
-      reset({
-        code: '',
-        name: '',
-        type: 'Asset',
-        detailType: 'Cash',
-        parentCode: 'none',
-        currency: 'PKR',
-        description: '',
-        initialBalance: 0,
-      });
-    }
-  }, [editingAccount, reset, isOpen]);
-
-  // Filter possible parents: must be the same account type and not self, and cannot be a SUBSIDIARY
-  const potentialParents = allAccounts.filter((acc) => {
-    if (editingAccount && acc.id === editingAccount.id) return false; // cannot be own parent
-    return acc.type === selectedType && acc.level !== 'SUBSIDIARY';
-  });
-
-  const parentCodeVal = watch('parentCode');
-  const derivedLevel = useMemo(() => {
-    if (!parentCodeVal || parentCodeVal === 'none') return 'MAIN';
-    const parentAcc = allAccounts.find(a => a.code === parentCodeVal);
-    if (!parentAcc) return 'SUBSIDIARY';
-    return parentAcc.level === 'MAIN' ? 'PARENT' : 'SUBSIDIARY';
+  // Auto-suggest / generate a GL code based on selected parent and siblings
+  const generatedCode = useMemo(() => {
+    if (!parentCodeVal) return '';
+    const siblings = allAccounts.filter(a => a.parentCode === parentCodeVal);
+    const sibNumeric = siblings.map(a => parseInt(a.code, 10)).filter(Number.isFinite);
+    const sibMax = sibNumeric.length ? Math.max(...sibNumeric) : parseInt(parentCodeVal, 10);
+    return String(sibMax + 1).padStart(7, '0');
   }, [parentCodeVal, allAccounts]);
 
-  // Auto-suggest a GL code based on parent and siblings
-  const suggestCode = () => {
-    if (!parentCodeVal || parentCodeVal === 'none') {
-      const mainAccounts = allAccounts.filter((a) => a.level === 'MAIN' && a.type === watch('type'));
-      const numericCodes = mainAccounts.map((a) => parseInt(a.code, 10)).filter(Number.isFinite);
-      const max = numericCodes.length ? Math.max(...numericCodes) : null;
-      let suggestion = max ? String(max + 1000000).substring(0, 1) + '000000' : '';
-      if (!suggestion) {
-        if (watch('type') === 'Asset') suggestion = '1000000';
-        else if (watch('type') === 'Liability') suggestion = '2000000';
-        else if (watch('type') === 'Equity') suggestion = '3000000';
-        else if (watch('type') === 'Revenue') suggestion = '4000000';
-        else suggestion = '5000000';
-      }
-      setValue('code', suggestion.padEnd(7, '0'));
-    } else {
-      const siblings = allAccounts.filter(a => a.parentCode === parentCodeVal);
-      const sibNumeric = siblings.map(a => parseInt(a.code, 10)).filter(Number.isFinite);
-      const sibMax = sibNumeric.length ? Math.max(...sibNumeric) : parseInt(parentCodeVal, 10);
-      setValue('code', String(sibMax + 1).padStart(7, '0'));
+  // Apply auto-suggested code when it changes (only in Create mode)
+  useEffect(() => {
+    if (!editingAccount && generatedCode) {
+      setValue('code', generatedCode);
+      setCodeInputVal(generatedCode);
+      clearErrors('code');
     }
-  };
+  }, [generatedCode, editingAccount, setValue, clearErrors]);
+
+  // Load account data for editing or reset for creation
+  useEffect(() => {
+    if (isOpen) {
+      setCodeInputVal('');
+      if (editingAccount) {
+        reset({
+          code: editingAccount.code,
+          name: editingAccount.name,
+          type: editingAccount.type,
+          detailType: editingAccount.detailType,
+          parentCode: editingAccount.parentCode || '',
+          level: editingAccount.level || 'GL',
+          isLocked: editingAccount.status === 'Inactive',
+          currency: editingAccount.currency || 'PKR',
+          description: editingAccount.description || '',
+          initialBalance: editingAccount.initialBalance || 0,
+        });
+        setCodeInputVal(editingAccount.code);
+      } else {
+        const defaultParent = potentialParents.length > 0 ? potentialParents[0] : null;
+        reset({
+          code: '',
+          name: '',
+          type: defaultParent ? defaultParent.type : 'Asset',
+          detailType: defaultParent ? (detailTypeOptions[defaultParent.type]?.[0] || 'Cash') : 'Cash',
+          parentCode: defaultParent ? defaultParent.code : '',
+          currency: 'PKR',
+          description: '',
+          initialBalance: 0,
+          level: 'GL'
+        });
+      }
+    }
+  }, [editingAccount, reset, isOpen, potentialParents]);
+
+  // Real-time code validation
+  const codeValidation = useMemo(() => {
+    const val = codeInputVal || watchedCode || '';
+    if (!val) return { status: 'empty', message: '' };
+    if (!/^\d{7}$/.test(val)) return { status: 'invalid', message: 'Code must be exactly 7 digits' };
+    const isDuplicate = allAccounts.some(
+      a => a.code === val && (!editingAccount || a.id !== editingAccount.id)
+    );
+    if (isDuplicate) return { status: 'duplicate', message: 'This code already exists.' };
+    return { status: 'valid', message: 'Code is valid and unique ✅' };
+  }, [codeInputVal, watchedCode, allAccounts, editingAccount]);
+
+  // Nature mismatch warning
+  const natureMismatchWarning = useMemo(() => {
+    const code = codeInputVal || watchedCode || '';
+    if (!code || !selectedType) return null;
+    const expectedPrefix = typePrefixMap[selectedType];
+    if (expectedPrefix && code[0] && code[0] !== expectedPrefix) {
+      return `⚠️ Code "${code}" starts with "${code[0]}" but ${selectedType} accounts should start with "${expectedPrefix}".`;
+    }
+    return null;
+  }, [codeInputVal, watchedCode, selectedType]);
+
+  // Expense series warning
+  const expenseSeriesWarning = useMemo(() => {
+    const code = codeInputVal || watchedCode || '';
+    if (selectedType === 'Expense' && code && !code.startsWith('4')) {
+      return 'Accounts under Expenses must start with 4.';
+    }
+    return null;
+  }, [codeInputVal, watchedCode, selectedType]);
+
+  // Breadcrumb for edit mode
+  const breadcrumb = useMemo(() => {
+    if (!editingAccount) return [];
+    return buildBreadcrumb(editingAccount, allAccounts);
+  }, [editingAccount, allAccounts]);
 
   const onSubmitForm = async (data) => {
-    // Check code uniqueness
+    // Duplicate code check
     const codeExists = allAccounts.some(
       (acc) => acc.code === data.code && (!editingAccount || acc.id !== editingAccount.id)
     );
-
     if (codeExists) {
-      setError('code', { type: 'manual', message: 'Account code is already in use' });
+      setError('code', { type: 'manual', message: 'This code already exists.' });
+      showToast('Account code is already in use', 'error');
       return;
     }
 
-    const formattedData = {
-      ...data,
-      parentCode: data.parentCode === 'none' ? null : data.parentCode,
-    };
-
     try {
       if (editingAccount) {
-        await updateAccount(editingAccount.id, formattedData);
-        logActivity(
-          'Modify Account',
-          `Modified Account ${editingAccount.code} - ${editingAccount.name}.`
-        );
-        alert('Account updated successfully');
+        await updateAccount(editingAccount.id, data);
+        logActivity('Modify Account', `Modified Account ${editingAccount.code} - ${editingAccount.name}.`);
+        showToast('✅ Account updated successfully', 'success');
       } else {
-        const created = await addAccount(formattedData);
-        logActivity(
-          'Create Account',
-          `Created Account ${created.glCode || formattedData.code} - ${created.accountName || formattedData.name}.`
-        );
-        alert('Account created successfully');
+        const created = await addAccount({ ...data, level: 'GL' });
+        logActivity('Create Account', `Created Account ${created.glCode || data.code} - ${created.accountName || data.name}.`);
+        showToast('✅ Account created successfully', 'success');
       }
       onClose();
     } catch (e) {
-      alert(e.message || "An error occurred");
+      showToast(e.message || 'An error occurred', 'error');
     }
   };
+
+  const isSaveDisabled = isSubmitting || codeValidation.status !== 'valid' || (editingAccount && editingAccount.isReserved);
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={editingAccount ? `Edit Account: ${editingAccount.code}` : "Create New Account"}
+      title={editingAccount ? `Edit Account: ${editingAccount.code}` : "Add GL Account"}
       size="md"
     >
-      <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-5">
+      <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-6">
         
-        {/* Row 1: Code and Name */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
+        {/* Breadcrumb (Edit Mode) */}
+        {breadcrumb.length > 1 && (
+          <div className="flex items-center flex-wrap gap-1 text-[11px] text-slate-500 bg-slate-950/60 border border-slate-800/50 rounded-lg px-3 py-2">
+            {breadcrumb.map((crumb, i) => (
+              <span key={i} className="flex items-center gap-1">
+                <span className={i === breadcrumb.length - 1 ? 'text-slate-300 font-semibold' : 'text-slate-500'}>{crumb}</span>
+                {i < breadcrumb.length - 1 && <ChevronRight className="h-3 w-3 text-slate-600" />}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Fix 7 — Reserved badge */}
+        {editingAccount?.isReserved && (
+          <div className="flex items-center justify-center p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold">
+            <Lock className="h-3.5 w-3.5 mr-2" /> This is a system-reserved account and cannot be modified.
+          </div>
+        )}
+
+        {/* Parent Selection */}
+        <Select
+          label="Parent L3 Category"
+          required
+          disabled={!!editingAccount} // Cannot change parent after creation
+          error={errors.parentCode?.message}
+          {...register('parentCode')}
+        >
+          <option value="" disabled>Select a Level 3 Parent...</option>
+          {potentialParents.map(parent => (
+            <option key={parent.code} value={parent.code}>
+              {parent.code} - {parent.name} ({parent.type})
+            </option>
+          ))}
+        </Select>
+
+        {/* Auto-suggested Code & Name Row */}
+        <div className="grid grid-cols-1 md:grid-cols-[160px_1fr] gap-4">
+          <div className="relative">
             <Input
               label="Account Code"
               required
-              error={errors.code?.message}
-              placeholder="e.g. 1115"
-              disabled={!!(editingAccount && editingAccount.isLocked)}
-              {...register('code')}
+              disabled={!!editingAccount?.isReserved}
+              maxLength={7}
+              {...register('code', {
+                onChange: (e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 7);
+                  setCodeInputVal(val);
+                  setValue('code', val);
+                  if (val.length === 7) clearErrors('code');
+                }
+              })}
+              className={`font-mono text-center tracking-widest bg-slate-900/60
+                ${codeValidation.status === 'valid' ? 'border-emerald-500/50 text-emerald-400' : ''}
+                ${codeValidation.status === 'duplicate' ? 'border-red-500/50 text-red-400' : ''}
+                ${codeValidation.status === 'invalid' ? 'border-amber-500/50 text-amber-400' : ''}
+              `}
             />
             {!editingAccount && (
-              <div className="flex items-center gap-2 mt-2">
-                <button type="button" onClick={suggestCode} className="text-xs text-slate-400 hover:text-slate-200">Suggest Code</button>
-                <span className="text-[11px] text-slate-500">or enter manually</span>
-              </div>
+              <Sparkles className="absolute right-2 top-[34px] h-4 w-4 text-brand-500/40 pointer-events-none" title="Auto-suggested" />
             )}
+            {/* Real-time Code Validation Feedback */}
+            <div className="mt-1 flex items-center justify-between text-[10px]">
+              <span className={codeValidation.status === 'valid' ? 'text-emerald-400' : 'text-red-400'}>
+                {codeValidation.message}
+              </span>
+              <span className="text-slate-500">{codeInputVal.length}/7</span>
+            </div>
           </div>
+          
           <Input
             label="Account Name"
             required
             error={errors.name?.message}
-            placeholder="e.g. Petty Cash - Marketing"
-            disabled={!!(editingAccount && editingAccount.isLocked)}
+            placeholder="e.g. Current Account - PKR"
+            disabled={!!editingAccount?.isLocked || !!editingAccount?.isReserved}
             {...register('name')}
           />
         </div>
 
-        {/* Row 2: Type and Subtype */}
+        {/* Warnings for Code series */}
+        {expenseSeriesWarning && (
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs">
+            <XCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+            {expenseSeriesWarning}
+          </div>
+        )}
+        {natureMismatchWarning && !expenseSeriesWarning && (
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs">
+            <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+            {natureMismatchWarning}
+          </div>
+        )}
+
+        {/* Nature & Currency Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Select
-            label="Account Type"
-            required
-            error={errors.type?.message}
-            disabled={!!(editingAccount && editingAccount.isLocked)}
-            {...register('type')}
-          >
-            <option value="Asset">Asset</option>
-            <option value="Liability">Liability</option>
-            <option value="Equity">Equity</option>
-            <option value="Revenue">Revenue</option>
-            <option value="Expense">Expense</option>
-          </Select>
-
-          <Select
-            label="Detail Type (Subtype)"
+            label="Nature (Detail Subtype)"
             required
             error={errors.detailType?.message}
-            disabled={!!(editingAccount && editingAccount.isLocked)}
+            disabled={!!editingAccount?.isLocked || !!editingAccount?.isReserved}
             {...register('detailType')}
           >
             {(detailTypeOptions[selectedType] || []).map((opt) => (
@@ -259,38 +357,12 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
               </option>
             ))}
           </Select>
-        </div>
-
-        {/* Row 3: Parent Account and Currency */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Select
-            label="Parent Account"
-            error={errors.parentCode?.message}
-            disabled={!!(editingAccount && editingAccount.isLocked)}
-            {...register('parentCode')}
-          >
-            <option value="none">-- No Parent (Root Account) --</option>
-            {potentialParents.map((parent) => (
-              <option key={parent.code} value={parent.code}>
-                {parent.code} - {parent.name} ({parent.detailType})
-              </option>
-            ))}
-          </Select>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Account Level</label>
-            <input 
-              value={derivedLevel}
-              disabled
-              className="w-full px-3 py-2 rounded-lg bg-slate-900/40 border border-slate-800 text-slate-500 text-sm cursor-not-allowed font-semibold"
-            />
-          </div>
 
           <Select
             label="Currency"
             required
             error={errors.currency?.message}
-            disabled={!!(editingAccount && editingAccount.isLocked)}
+            disabled={!!editingAccount?.isLocked || !!editingAccount?.isReserved}
             {...register('currency')}
           >
             <option value="PKR">PKR - Pakistani Rupee</option>
@@ -302,29 +374,19 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
           </Select>
         </div>
 
-        {/* Row 4: Initial Balance (only show on new account creation) */}
-        {!editingAccount && (
-          <Input
-            label="Initial Balance"
-            type="number"
-            step="0.01"
-            error={errors.initialBalance?.message}
-            description="If you are transitioning ledger balances, enter the starting balance."
-            {...register('initialBalance')}
-          />
+        {/* Edit mode: Locked / Reserved flags */}
+        {editingAccount && (
+          <div className="flex items-center gap-6 py-2">
+            <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+              <input type="checkbox" disabled={!!editingAccount.isLocked || !!editingAccount.isReserved} {...register('isLocked')} />
+              <span className="text-sm text-slate-400">Is Locked (Inactive)</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+              <input type="checkbox" disabled={!!editingAccount.isLocked || !!editingAccount.isReserved} {...register('isReserved')} />
+              <span className="text-sm text-slate-400">Is Reserved</span>
+            </label>
+          </div>
         )}
-
-        {/* Locked / Reserved toggles */}
-        <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" disabled={!!(editingAccount && editingAccount.isLocked)} {...register('isLocked')} />
-            <span className="text-sm text-slate-400">Is Locked</span>
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" disabled={!!(editingAccount && editingAccount.isLocked)} {...register('isReserved')} />
-            <span className="text-sm text-slate-400">Is Reserved</span>
-          </label>
-        </div>
 
         {/* Description */}
         <div className="flex flex-col gap-1.5 w-full">
@@ -332,14 +394,14 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
             Description
           </label>
           <textarea
-            rows="3"
-            disabled={!!(editingAccount && editingAccount.isLocked)}
+            rows="2"
+            disabled={!!editingAccount?.isLocked || !!editingAccount?.isReserved}
             placeholder="Add detailed explanation of this account's purpose..."
             className={`
               w-full px-3 py-2 bg-slate-900/60 border border-slate-800 rounded-md text-sm text-slate-100 placeholder:text-slate-500
               focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all duration-200
               ${errors.description ? 'border-red-500/50' : ''}
-              ${editingAccount && editingAccount.isLocked ? 'cursor-not-allowed opacity-70' : ''}
+              ${(editingAccount?.isLocked || editingAccount?.isReserved) ? 'cursor-not-allowed opacity-70' : ''}
             `}
             {...register('description')}
           />
@@ -348,15 +410,22 @@ export const AccountFormDrawer = ({ isOpen, onClose, editingAccount }) => {
           )}
         </div>
 
-        {/* Buttons */}
-        <div className="flex justify-end gap-3 pt-3 border-t border-slate-800/80">
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+        {/* Action Buttons */}
+        <div className="flex justify-end gap-3 pt-4 border-t border-slate-800/80">
+          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" disabled={isSubmitting}>
-            {editingAccount ? 'Save Changes' : 'Create Account'}
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={isSaveDisabled}
+            className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold"
+            title={codeValidation.status !== 'valid' ? 'Fix validation errors before saving' : ''}
+          >
+            {editingAccount ? 'Save Changes' : 'Save Account'}
           </Button>
         </div>
+
       </form>
     </Modal>
   );

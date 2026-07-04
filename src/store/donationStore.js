@@ -45,5 +45,26 @@ export const useDonationStore = create((set, get) => ({
       set({ error: err.message });
       throw err;
     }
+  },
+
+  deleteDonation: async (id) => {
+    try {
+      await donationService.delete(id);
+      await get().fetchDonations();
+    } catch (err) {
+      set({ error: err.message });
+      throw err;
+    }
+  },
+
+  bulkDeleteDonations: async (ids) => {
+    try {
+      await donationService.bulkDelete(ids);
+      await get().fetchDonations();
+      return { success: true };
+    } catch (err) {
+      set({ error: err.message });
+      return { success: false, error: err.message };
+    }
   }
 }));

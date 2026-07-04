@@ -10,45 +10,51 @@ export const CoaExportImport = () => {
   const { accounts, importAccounts } = useCoaStore();
   const { logActivity } = useJournalStore();
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [csvInput, setCsvInput] = useState('');
   const [importStatus, setImportStatus] = useState(null); // null, 'success', 'error'
   const [importedCount, setImportedCount] = useState(0);
 
-  // Export COA to CSV
-  const handleExport = async () => {
+  // Execute Export
+  const executeExport = async (format) => {
     try {
       const response = await accountService.getAll({ limit: 100000 });
       const accountsToExport = response.data || [];
-      const headers = ['code', 'name', 'type', 'detailType', 'parentCode', 'currency', 'status', 'initialBalance', 'description', 'subsidiary'];
+      const headers = ['Code', 'Level', 'Name', 'Nature', 'Parent', 'Reserved'];
       
       const rows = accountsToExport.map((acc) => [
         acc.code,
-        `"${acc.name.replace(/"/g, '""')}"`,
-        acc.type,
+        acc.level,
+        acc.name,
         acc.detailType,
-        acc.parentCode || '',
-        acc.currency,
-        acc.status,
-        acc.initialBalance || 0,
-        `"${(acc.description || '').replace(/"/g, '""')}"`,
-        (acc.subsidiary || []).join(';'),
+        acc.parentCode && acc.parentCode !== 'none' ? acc.parentCode : '',
+        acc.isReserved ? 'Yes' : 'No',
       ]);
 
-      const csvContent = [
-        headers.join(','),
-        ...rows.map((e) => e.join(',')),
-      ].join('\n');
+      if (format === 'csv') {
+        const csvContent = [
+          headers.join(','),
+          ...rows.map((e) => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(',')),
+        ].join('\n');
 
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `chart_of_accounts_${new Date().toISOString().split('T')[0]}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `chart_of_accounts_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else if (format === 'excel') {
+        const XLSX = await import('xlsx');
+        const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Chart of Accounts");
+        XLSX.writeFile(workbook, `chart_of_accounts_${new Date().toISOString().split('T')[0]}.xlsx`);
+      }
       
-      logActivity('Export Accounts', `Exported ${accountsToExport.length} accounts to CSV.`);
+      logActivity('Export Accounts', `Exported ${accountsToExport.length} accounts to ${format.toUpperCase()}.`);
+      setIsExportModalOpen(false);
     } catch (err) {
       alert('Failed to export accounts: ' + err.message);
     }
@@ -143,9 +149,9 @@ export const CoaExportImport = () => {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Button variant="outline" size="sm" onClick={handleExport} className="gap-2 cursor-pointer flex-1 sm:flex-none justify-center">
+      <Button variant="outline" size="sm" onClick={() => setIsExportModalOpen(true)} className="gap-2 cursor-pointer flex-1 sm:flex-none justify-center">
         <Download className="h-4 w-4 text-slate-400" />
-        <span className="hidden xs:inline">Export CSV</span>
+        <span className="hidden xs:inline">Export</span>
         <span className="xs:hidden">Export</span>
       </Button>
 
@@ -154,6 +160,28 @@ export const CoaExportImport = () => {
         <span className="hidden xs:inline">Import CSV</span>
         <span className="xs:hidden">Import</span>
       </Button>
+
+      {/* Export Modal */}
+      <Modal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        title="Export Chart of Accounts"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-400">Choose the format to export your Chart of Accounts.</p>
+          <div className="flex gap-4">
+            <Button variant="outline" className="flex-1 py-8 flex flex-col items-center gap-2 cursor-pointer" onClick={() => executeExport('csv')}>
+               <FileText className="h-8 w-8 text-slate-400" />
+               <span>CSV File</span>
+            </Button>
+            <Button variant="outline" className="flex-1 py-8 flex flex-col items-center gap-2 cursor-pointer" onClick={() => executeExport('excel')}>
+               <FileText className="h-8 w-8 text-emerald-400" />
+               <span>Excel (XLSX)</span>
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Import Modal */}
       <Modal

@@ -80,6 +80,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(404).json({ error: { message: 'Beneficiary not found', status: 404 } });
     }
 
+    // Prevent deletion if the beneficiary has associated donations
+    const donationsCount = await prisma.donation.count({ where: { beneficiaryId: id } });
+    if (donationsCount > 0) {
+      return res.status(400).json({ error: { message: 'Cannot delete beneficiary because they have associated donation records. Please remove the donations first.', status: 400 } });
+    }
+
     await prisma.beneficiary.delete({ where: { id } });
 
     await logAudit(req.user.id, 'Delete Beneficiary', 'DONATION', existingBeneficiary, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);

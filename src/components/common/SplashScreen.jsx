@@ -278,7 +278,7 @@ export function SplashScreen({ onComplete }) {
       <div
         className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden"
         style={{
-          background: 'radial-gradient(ellipse 80% 60% at 50% 40%, #0f0c2e 0%, #020617 60%, #000000 100%)',
+          background: 'radial-gradient(ellipse 80% 60% at 50% 40%, #1a0f06 0%, #0e1018 60%, #000000 100%)',
           opacity: fadingOut ? 0 : 1,
           transform: fadingOut ? 'scale(1.03)' : 'scale(1)',
           transition: 'opacity 0.65s ease, transform 0.65s ease',
@@ -294,7 +294,7 @@ export function SplashScreen({ onComplete }) {
             position: 'absolute', top: '10%', left: '15%',
             width: 500, height: 500,
             borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(79,70,229,0.12) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(232,160,64,0.12) 0%, transparent 70%)',
             filter: 'blur(40px)',
             animation: 'splash-grid-drift 18s ease-in-out infinite alternate',
           }} />
@@ -310,7 +310,7 @@ export function SplashScreen({ onComplete }) {
             position: 'absolute', top: '40%', right: '20%',
             width: 280, height: 280,
             borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(90,60,20,0.10) 0%, transparent 70%)',
             filter: 'blur(35px)',
           }} />
         </div>
@@ -340,9 +340,9 @@ export function SplashScreen({ onComplete }) {
               fontWeight: 700,
               letterSpacing: '0.15em',
               textTransform: 'uppercase',
-              color: '#a5b4fc',
-              background: 'rgba(99,102,241,0.12)',
-              border: '1px solid rgba(99,102,241,0.25)',
+              color: '#fcd34d',
+              background: 'rgba(232,160,64,0.12)',
+              border: '1px solid rgba(232,160,64,0.25)',
             }}>
               <span style={{
                 width: 6, height: 6, borderRadius: '50%',
@@ -365,7 +365,7 @@ export function SplashScreen({ onComplete }) {
                 fontWeight: 800,
                 letterSpacing: '-0.02em',
                 lineHeight: 1.1,
-                background: 'linear-gradient(135deg, #ffffff 0%, #e2e8f0 40%, #818cf8 100%)',
+                background: 'linear-gradient(135deg, #ffffff 0%, #e2e8f0 40%, #fbbf24 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
@@ -381,15 +381,18 @@ export function SplashScreen({ onComplete }) {
                 marginTop: 12,
                 fontSize: 'clamp(18px, 5vw, 22px)',
                 fontWeight: 600,
-                background: 'linear-gradient(135deg, #a5b4fc 0%, #818cf8 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
+                background: 'transparent',
+                color: '#fcd34d',
                 opacity: titleVisible ? 1 : 0,
                 transform: titleVisible ? 'translateY(0)' : 'translateY(15px)',
                 transition: 'opacity 0.8s cubic-bezier(0.16,1,0.3,1) 0.4s, transform 0.8s cubic-bezier(0.16,1,0.3,1) 0.4s',
+<<<<<<< HEAD
                 fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif",
                 lineHeight: 2,
+=======
+                fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
+                padding: '10px 0'
+>>>>>>> ba24d0d986ab9a65b77d214e666d9da4e92f8a83
               }}
             >
               کچھی مسلم لوہار واڈہ ویلفیئر جماعت
@@ -413,7 +416,7 @@ export function SplashScreen({ onComplete }) {
           <div style={{
             width: '100%',
             height: 1,
-            background: 'linear-gradient(90deg, transparent, rgba(99,102,241,0.4), rgba(59,130,246,0.4), transparent)',
+            background: 'linear-gradient(90deg, transparent, rgba(232,160,64,0.4), rgba(180,100,30,0.4), transparent)',
             marginTop: 36,
             marginBottom: 28,
             opacity: barVisible ? 1 : 0,
@@ -450,16 +453,16 @@ export function SplashScreen({ onComplete }) {
                   width: 7,
                   height: 7,
                   borderRadius: '50%',
-                  background: progress < 100 ? '#6366f1' : '#34d399',
+                  background: progress < 100 ? '#e8a040' : '#34d399',
                   animation: progress < 100 ? 'splash-blink 0.8s ease-in-out infinite' : 'none',
-                  boxShadow: '0 0 8px rgba(99,102,241,0.8)',
+                  boxShadow: '0 0 8px rgba(232,160,64,0.8)',
                 }} />
                 {stepLabel}
               </span>
               <span style={{
                 fontSize: 12,
                 fontWeight: 700,
-                color: progress < 100 ? '#818cf8' : '#34d399',
+                color: progress < 100 ? '#fbbf24' : '#34d399',
                 fontVariantNumeric: 'tabular-nums',
                 letterSpacing: '0.02em',
                 transition: 'color 0.4s ease',
@@ -473,8 +476,8 @@ export function SplashScreen({ onComplete }) {
               width: '100%',
               height: 5,
               borderRadius: 9999,
-              background: 'rgba(30,27,75,0.8)',
-              border: '1px solid rgba(99,102,241,0.15)',
+              background: 'rgba(30,20,8,0.8)',
+              border: '1px solid rgba(232,160,64,0.15)',
               overflow: 'hidden',
             }}>
               {/* Fill */}
@@ -483,7 +486,7 @@ export function SplashScreen({ onComplete }) {
                 width: `${progress}%`,
                 borderRadius: 9999,
                 background: progress < 100
-                  ? 'linear-gradient(90deg, #4f46e5, #6366f1, #60a5fa)'
+                  ? 'linear-gradient(90deg, #92400e, #d97706, #f59e0b)'
                   : 'linear-gradient(90deg, #059669, #34d399, #6ee7b7)',
                 transition: 'width 0.25s ease, background 0.5s ease',
                 animation: 'splash-bar-glow 2s ease-in-out infinite',
@@ -518,11 +521,11 @@ export function SplashScreen({ onComplete }) {
                     borderRadius: '50%',
                     transition: 'background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease',
                     background: i <= stepIndex
-                      ? (i === stepIndex ? '#6366f1' : '#1e1b4b')
+                      ? (i === stepIndex ? '#d97706' : '#3d1e0c')
                       : 'rgba(51,65,85,0.5)',
                     transform: i === stepIndex ? 'scale(1.5)' : 'scale(1)',
-                    boxShadow: i === stepIndex ? '0 0 10px rgba(99,102,241,0.9)' : 'none',
-                    border: i <= stepIndex ? '1px solid rgba(99,102,241,0.5)' : '1px solid rgba(51,65,85,0.3)',
+                    boxShadow: i === stepIndex ? '0 0 10px rgba(232,160,64,0.9)' : 'none',
+                    border: i <= stepIndex ? '1px solid rgba(232,160,64,0.5)' : '1px solid rgba(51,65,85,0.3)',
                   }}
                 />
               ))}

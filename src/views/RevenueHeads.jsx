@@ -7,23 +7,41 @@ import {
   ArrowUpRight, Download, X, AlertTriangle, Layers
 } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
+import { showToast } from '../components/ui/Toast';
+
+// Replace null DB values with '' so controlled inputs stay controlled
+const nullsToEmpty = (obj) =>
+  Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === null ? '' : v]));
+
+const DEFAULT_REVENUE_HEAD = { name: '', category: 'Hall Bookings', hall: '', amount: 0, accountId: '', isActive: true };
 
 /* ─── Add / Edit Modal ─── */
 function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
   const [form, setForm] = useState(
-    initial || { name: '', category: 'Hall Bookings', hall: '', amount: 0, accountId: '', isActive: true }
+    initial ? nullsToEmpty(initial) : DEFAULT_REVENUE_HEAD
   );
 
   useEffect(() => {
     if (isOpen) {
-      setForm(initial || { name: '', category: 'Hall Bookings', hall: '', amount: 0, accountId: '', isActive: true });
+      setForm(initial ? nullsToEmpty(initial) : DEFAULT_REVENUE_HEAD);
     }
   }, [isOpen, initial]);
 
   if (!isOpen) return null;
 
   const handleSave = () => {
-    if (!form.name.trim() || !form.category.trim()) return;
+    if (!form.name.trim()) {
+      showToast('Name is required', 'warning');
+      return;
+    }
+    if (!/^[a-zA-Z0-9\s.-]{3,50}$/.test(form.name)) {
+      showToast('Name should only contain letters, numbers, spaces, hyphens, and dots (3-50 chars)', 'warning');
+      return;
+    }
+    if (!form.category.trim()) {
+      showToast('Category is required', 'warning');
+      return;
+    }
     onSave({ ...form });
   };
 
@@ -49,33 +67,33 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
         <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Name *</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Name *</label>
               <input
                 value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                 placeholder="e.g. Zakat"
-                className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm placeholder-slate-600 focus:outline-none focus:border-emerald-600/60 focus:ring-1 focus:ring-emerald-600/30 transition-all"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Amount (PKR)</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Amount (PKR)</label>
               <input
                 type="number"
                 value={form.amount || ''}
                 onChange={e => setForm(f => ({ ...f, amount: parseFloat(e.target.value) || 0 }))}
                 placeholder="0.00"
-                className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm placeholder-slate-600 focus:outline-none focus:border-emerald-600/60 focus:ring-1 focus:ring-emerald-600/30 transition-all"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Category *</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Category *</label>
               <select
                 value={form.category}
                 onChange={e => setForm(f => ({ ...f, category: e.target.value, hall: e.target.value === 'Hall Bookings' ? '' : f.hall }))}
-                className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-emerald-600/60 transition-all"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
               >
                 {['Hall Bookings', 'Other Income'].map(c => (
                   <option key={c} value={c}>{c}</option>
@@ -83,11 +101,11 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
               </select>
             </div>
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Linked Account ID</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Linked Account ID</label>
               <select
                 value={form.accountId || ''}
                 onChange={e => setForm(f => ({ ...f, accountId: e.target.value }))}
-                className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-emerald-600/60 transition-all"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
               >
                 <option value="">No Linked Account (Optional)</option>
                 {accounts.map(a => (
@@ -100,17 +118,17 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
           {form.category === 'Hall Bookings' && (
             <div className="grid grid-cols-1 gap-4">
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Hall Name</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Hall Name</label>
                 <select
                   value={form.hall || ''}
                   onChange={e => setForm(f => ({ ...f, hall: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-emerald-600/60 transition-all"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
                 >
                   <option value="">Select a hall...</option>
                   <option value="Bagh-e-Hajiani Garden">Bagh-e-Hajiani Garden</option>
-                  <option value="Sadaya-Hall">Sadaya-Hall</option>
-                  <option value="Zikarya-Hall">Zikarya-Hall</option>
-                  <option value="Anexy-Hall">Anexy-Hall</option>
+                  <option value="Sadaya Hall">Sadaya Hall</option>
+                  <option value="Zikarya Hall">Zikarya Hall</option>
+                  <option value="Annexy Hall">Annexy Hall</option>
                 </select>
               </div>
             </div>
@@ -131,13 +149,13 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
         </div>
 
         <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-4 border-t border-slate-800 shrink-0">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-800 text-sm font-semibold transition-all">
+          <button onClick={onClose} className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={!form.name.trim() || !form.category.trim()}
-            className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold transition-all shadow-lg shadow-emerald-900/40"
+            className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95"
           >
             {initial ? 'Save Changes' : 'Create Revenue Head'}
           </button>
@@ -309,28 +327,65 @@ export const RevenueHeads = () => {
       }
       setEditItem(null);
       setModalOpen(false);
+      showToast(editItem ? 'Revenue head updated successfully' : 'Revenue head created successfully', 'success');
     } catch (err) {
-      alert(err?.response?.data?.error?.message || err.message || 'Failed to save. Please ensure inputs are correct (e.g., valid UUID for Linked Account).');
+      showToast(err?.response?.data?.error?.message || err.message || 'Failed to save. Please ensure inputs are correct.', 'error');
     }
   };
 
   const handleDelete = async (id) => {
     setIsDeleting(true);
-    await deleteHead(id);
-    setSelectedIds(p => p.filter(i => i !== id));
-    setDeleteId(null);
-    setIsDeleting(false);
+    await new Promise(resolve => setTimeout(resolve, 15));
+    try {
+      await deleteHead(id);
+      showToast('Revenue head deleted successfully', 'success');
+      setSelectedIds(p => p.filter(i => i !== id));
+      setDeleteId(null);
+    } catch (err) {
+      showToast(err?.response?.data?.error?.message || err.message || 'Error deleting revenue head', 'error');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleBulkDelete = async () => {
     setIsDeleting(true);
-    try {
-      await Promise.all(selectedIds.map(id => deleteHead(id)));
-      setSelectedIds([]);
-      setShowBulkConfirm(false);
-    } catch (err) {
-      alert("Failed to delete some items");
+    await new Promise(resolve => setTimeout(resolve, 15));
+    
+    const results = await Promise.allSettled(
+      selectedIds.map(async (id) => {
+        await deleteHead(id);
+        return id;
+      })
+    );
+
+    const successfulIds = [];
+    const failedIds = [];
+    let lastError = null;
+
+    results.forEach((result, idx) => {
+      const id = selectedIds[idx];
+      if (result.status === 'fulfilled') {
+        successfulIds.push(id);
+      } else {
+        failedIds.push(id);
+        lastError = result.reason;
+      }
+    });
+
+    setSelectedIds(failedIds);
+    setShowBulkConfirm(false);
+
+    if (successfulIds.length > 0 && failedIds.length === 0) {
+      showToast(`${successfulIds.length} revenue heads removed successfully.`, 'success');
+    } else if (successfulIds.length > 0 && failedIds.length > 0) {
+      const errorMsg = lastError?.response?.data?.error?.message || lastError?.message || 'associated records';
+      showToast(`Removed ${successfulIds.length} head(s). ${failedIds.length} head(s) could not be removed: ${errorMsg}`, 'warning');
+    } else if (failedIds.length > 0) {
+      const errorMsg = lastError?.response?.data?.error?.message || lastError?.message || 'Some records could not be removed.';
+      showToast(errorMsg, 'error');
     }
+
     setIsDeleting(false);
   };
 

@@ -1,23 +1,40 @@
 import { useState, useMemo, Fragment, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useJournalStore } from '../store/journalStore';
 import { useCoaStore } from '../store/coaStore';
+import { useAuthStore } from '../store/authStore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { JournalEntryModal } from '../components/ledger/JournalEntryModal';
-import { Plus, Calendar, ChevronDown, ChevronUp, FileSpreadsheet, Check, X } from 'lucide-react';
+import { Plus, Calendar, ChevronDown, ChevronUp, FileSpreadsheet, Check, X, Search, Trash2, AlertTriangle } from 'lucide-react';
 import { MobileOnly, DesktopOnly } from '../components/common/responsive';
+import { showToast } from '../components/ui/Toast';
 
 export const JournalEntries = () => {
-  const { journals, fetchJournals, isLoading, updateJournalStatus } = useJournalStore();
+  const { journals, fetchJournals, isLoading, updateJournalStatus, deleteJournalEntry, bulkDeleteJournalEntries } = useJournalStore();
   const { selectedSubsidiary } = useCoaStore();
+  const { canEditOrDelete } = useAuthStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedJeId, setExpandedJeId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const [searchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
 
   useEffect(() => {
     fetchJournals(selectedSubsidiary);
     useCoaStore.getState().fetchAccounts();
   }, [fetchJournals, selectedSubsidiary]);
+
+  useEffect(() => {
+    const q = searchParams.get('search') || '';
+    if (q) {
+      setSearchQuery(q);
+    }
+  }, [searchParams]);
 
   const toggleExpand = (id) => {
     setExpandedJeId(expandedJeId === id ? null : id);
@@ -32,12 +49,59 @@ export const JournalEntries = () => {
     }
   };
 
+  const handleDeleteJournal = async (dbId, voucherNo) => {
+    if (window.confirm(`Are you sure you want to permanently delete journal entry ${voucherNo}? This will remove it from the database and adjust account balances.`)) {
+      const res = await deleteJournalEntry(dbId);
+      if (res?.error) {
+        alert("Error deleting journal entry: " + res.error);
+      }
+    }
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds(filteredJournals.map(je => je.dbId || je.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id, e) => {
+    e.stopPropagation();
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const executeBulkDelete = async () => {
+    setIsDeleting(true);
+    await new Promise(resolve => setTimeout(resolve, 15));
+    try {
+      await bulkDeleteJournalEntries(selectedIds);
+      showToast(`${selectedIds.length} journal entry(s) deleted successfully`, 'success');
+      setSelectedIds([]);
+    } catch (err) {
+      showToast(err.message || 'Failed to bulk delete journal entries', 'error');
+    } finally {
+      setIsDeleting(false);
+      setShowBulkConfirm(false);
+    }
+  };
+
   const filteredJournals = useMemo(() => {
     return journals.filter((je) => {
-      if (selectedSubsidiary === 'Global') return true;
-      return je.subsidiary === selectedSubsidiary;
+      const matchesSubsidiary = selectedSubsidiary === 'Global' || je.subsidiary === selectedSubsidiary;
+      if (!matchesSubsidiary) return false;
+
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        je.voucherNo.toLowerCase().includes(q) ||
+        (je.reference || '').toLowerCase().includes(q) ||
+        (je.description || '').toLowerCase().includes(q)
+      );
     });
-  }, [journals, selectedSubsidiary]);
+  }, [journals, selectedSubsidiary, searchQuery]);
 
   const getStatusBadge = (status) => {
     switch(status) {
@@ -56,27 +120,52 @@ export const JournalEntries = () => {
           <p className="text-xs text-slate-400">Post manual adjustments, corrections, payroll, and asset depreciation logs.</p>
         </div>
 
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={() => setIsModalOpen(true)}
-          className="gap-1.5 cursor-pointer w-full sm:w-auto justify-center"
-        >
-          <Plus className="h-4 w-4" />
-          <span>New Journal Entry</span>
-        </Button>
+        <div className="flex items-center gap-3">
+          {selectedIds.length > 0 && canEditOrDelete && (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => setShowBulkConfirm(true)}
+              className="gap-1.5 cursor-pointer"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Bulk Delete ({selectedIds.length})</span>
+            </Button>
+          )}
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setIsModalOpen(true)}
+            className="gap-1.5 cursor-pointer w-full sm:w-auto justify-center"
+          >
+            <Plus className="h-4 w-4" />
+            <span>New Journal Entry</span>
+          </Button>
+        </div>
       </div>
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
               <CardTitle>Transaction Books</CardTitle>
               <CardDescription>Double-entry balancing ledger vouchers.</CardDescription>
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono">
-              <Calendar className="h-4 w-4" />
-              <span>Current Term</span>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="Search journals..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full sm:w-64 pl-9 pr-4 py-1.5 bg-slate-950/40 border border-slate-800 rounded-lg text-slate-200 text-xs focus:outline-none focus:border-indigo-600/60 transition-all placeholder-slate-500"
+                />
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono self-end sm:self-auto">
+                <Calendar className="h-4 w-4" />
+                <span>Current Term</span>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -116,10 +205,17 @@ export const JournalEntries = () => {
                         {line.description && <span className="col-span-2 text-slate-500 truncate">{line.description}</span>}
                       </div>
                     ))}
-                    {je.status === 'Draft' && (
+                    {(je.status === 'Draft' || canEditOrDelete) && (
                       <div className="flex gap-2 pt-2 border-t border-slate-800/60 mt-2">
-                        <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => handleUpdateStatus(je.dbId, 'Cancelled')}>Cancel Draft</Button>
-                        <Button size="sm" variant="primary" className="flex-1 text-xs" onClick={() => handleUpdateStatus(je.dbId, 'Posted')}>Post Now</Button>
+                        {je.status === 'Draft' && (
+                          <>
+                            <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => handleUpdateStatus(je.dbId, 'Cancelled')}>Cancel Draft</Button>
+                            <Button size="sm" variant="primary" className="flex-1 text-xs" onClick={() => handleUpdateStatus(je.dbId, 'Posted')}>Post Now</Button>
+                          </>
+                        )}
+                        {canEditOrDelete && (
+                          <Button size="sm" variant="danger" className="text-xs px-2" onClick={() => handleDeleteJournal(je.dbId || je.id, je.voucherNo)}>Delete</Button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -133,6 +229,16 @@ export const JournalEntries = () => {
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="border-b border-slate-800 text-xs font-semibold text-slate-400 uppercase bg-slate-900/10">
+                {canEditOrDelete && (
+                  <th className="py-3 px-3 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={filteredJournals.length > 0 && selectedIds.length === filteredJournals.length}
+                      onChange={handleSelectAll}
+                      className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                    />
+                  </th>
+                )}
                 <th className="py-3 px-4 w-12 text-center"></th>
                 <th className="py-3 px-4 w-28">Voucher No</th>
                 <th className="py-3 px-4 w-32">Post Date</th>
@@ -146,7 +252,7 @@ export const JournalEntries = () => {
             <tbody className="text-xs divide-y divide-slate-800/40">
               {filteredJournals.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="py-8 text-center text-slate-500 italic">
+                  <td colSpan={canEditOrDelete ? "9" : "8"} className="py-8 text-center text-slate-500 italic">
                     No journals found for the selected entity.
                   </td>
                 </tr>
@@ -163,6 +269,16 @@ export const JournalEntries = () => {
                         className={`hover:bg-slate-900/20 transition-colors cursor-pointer ${isExpanded ? 'bg-slate-900/15' : ''}`}
                         onClick={() => toggleExpand(je.id)}
                       >
+                        {canEditOrDelete && (
+                          <td className="py-3.5 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(je.dbId || je.id)}
+                              onChange={(e) => handleSelectOne(je.dbId || je.id, e)}
+                              className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                            />
+                          </td>
+                        )}
                         <td className="py-3.5 px-4 text-center">
                           <button className="text-slate-500 cursor-pointer">
                             {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -189,7 +305,7 @@ export const JournalEntries = () => {
 
                       {isExpanded && (
                         <tr>
-                          <td colSpan="8" className="bg-slate-950/50 p-4 border-l-2 border-brand-500">
+                          <td colSpan={canEditOrDelete ? "9" : "8"} className="bg-slate-950/50 p-4 border-l-2 border-brand-500">
                             <div className="space-y-3">
                               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
@@ -198,14 +314,23 @@ export const JournalEntries = () => {
                                 </span>
                                 <div className="flex items-center gap-3">
                                   <span className="text-[10px] text-slate-500">Posted by: <span className="font-semibold text-slate-400">{je.postedBy}</span></span>
-                                  {je.status === 'Draft' && (
+                                  {(je.status === 'Draft' || canEditOrDelete) && (
                                     <div className="flex gap-2 ml-4 border-l border-slate-800 pl-4">
-                                      <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 px-2" onClick={() => handleUpdateStatus(je.dbId, 'Cancelled')}>
-                                        <X className="h-3 w-3" /> Cancel
-                                      </Button>
-                                      <Button size="sm" variant="primary" className="h-6 text-[10px] gap-1 px-2" onClick={() => handleUpdateStatus(je.dbId, 'Posted')}>
-                                        <Check className="h-3 w-3" /> Post
-                                      </Button>
+                                      {je.status === 'Draft' && (
+                                        <>
+                                          <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 px-2" onClick={() => handleUpdateStatus(je.dbId, 'Cancelled')}>
+                                            <X className="h-3 w-3" /> Cancel
+                                          </Button>
+                                          <Button size="sm" variant="primary" className="h-6 text-[10px] gap-1 px-2" onClick={() => handleUpdateStatus(je.dbId, 'Posted')}>
+                                            <Check className="h-3 w-3" /> Post
+                                          </Button>
+                                        </>
+                                      )}
+                                      {canEditOrDelete && (
+                                        <Button size="sm" variant="danger" className="h-6 text-[10px] gap-1 px-2" onClick={() => handleDeleteJournal(je.dbId || je.id, je.voucherNo)}>
+                                          <Trash2 className="h-3 w-3" /> Delete
+                                        </Button>
+                                      )}
                                     </div>
                                   )}
                                 </div>
@@ -270,6 +395,53 @@ export const JournalEntries = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />
+
+      {showBulkConfirm && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-red-400">
+              <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-100">Confirm Bulk Deletion</h3>
+            </div>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              Are you sure you want to permanently delete <span className="font-bold text-white">{selectedIds.length}</span> selected journal entry(s)? Account balances will be automatically re-adjusted. This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isDeleting}
+                onClick={() => setShowBulkConfirm(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                disabled={isDeleting}
+                onClick={executeBulkDelete}
+                className="gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4" />
+                    Delete {selectedIds.length} Entry(s)
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
