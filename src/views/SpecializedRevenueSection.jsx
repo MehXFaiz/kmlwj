@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, Search, Printer, AlertTriangle, CheckCircle, Trash2, X, DollarSign, Calendar, Users, Building, Edit2, CheckCircle2, ChevronDown } from 'lucide-react';
 import { useRevenueCollectionStore } from '../store/revenueCollectionStore';
@@ -30,66 +31,17 @@ export const SpecializedRevenueSection = ({
 
   const isMembershipFee = category === 'Membership Fee';
 
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [modalOpen, setModalOpen] = useState(false);
   const [printItem, setPrintItem] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
 
-  // Member dropdown state
-  const [memberSearch, setMemberSearch] = useState('');
-  const [memberDropdownOpen, setMemberDropdownOpen] = useState(false);
-  const memberDropdownRef = useRef(null);
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handleOutside = (e) => {
-      if (memberDropdownRef.current && !memberDropdownRef.current.contains(e.target)) {
-        setMemberDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleOutside);
-    return () => document.removeEventListener('mousedown', handleOutside);
-  }, []);
-
-  const filteredMembersList = useMemo(() => {
-    if (!memberSearch.trim()) return members.slice(0, 30);
-    const q = memberSearch.toLowerCase();
-    return members.filter(m =>
-      (m.fullName && m.fullName.toLowerCase().includes(q)) ||
-      (m.cnic && m.cnic.includes(q)) ||
-      (m.mobile && m.mobile.includes(q))
-    ).slice(0, 20);
-  }, [members, memberSearch]);
-
-  const handleSelectMember = (member) => {
-    setForm(prev => ({
-      ...prev,
-      title: member.fullName || '',
-      subTitle: member.cnic || '',
-      mobile: member.mobile || ''
-    }));
-    setMemberSearch(member.fullName || '');
-    setMemberDropdownOpen(false);
+  const getBasePath = () => {
+    if (category === 'Bus Booking') return '/bus-bookings';
+    return '/membership-fees';
   };
-
-  // Form State
-  const [form, setForm] = useState({
-    title: '',
-    subTitle: '',
-    mobile: '',
-    eventDate: new Date().toISOString().split('T')[0],
-    quantity: showQty ? 1 : '',
-    rate: showRate ? 300 : '',
-    destination: '',
-    amount: '',
-    paymentMethod: 'CASH',
-    bankAccountId: '',
-    chequeNumber: '',
-    remarks: ''
-  });
 
   useEffect(() => {
     fetchCollections(category);
@@ -152,113 +104,6 @@ export const SpecializedRevenueSection = ({
     }
   };
 
-  const handleEditClick = (item) => {
-    setEditingItem(item);
-    setMemberSearch(item.title || '');
-    setForm({
-      title: item.title || '',
-      subTitle: item.subTitle || '',
-      mobile: item.mobile || '',
-      eventDate: item.eventDate ? new Date(item.eventDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-      quantity: item.quantity !== null && item.quantity !== undefined ? item.quantity : (showQty ? 1 : ''),
-      rate: item.rate !== null && item.rate !== undefined ? item.rate : (showRate ? 300 : ''),
-      destination: item.destination || '',
-      amount: item.amount !== null && item.amount !== undefined ? item.amount.toString() : '',
-      paymentMethod: item.paymentMethod || 'CASH',
-      bankAccountId: item.bankAccountId || '',
-      chequeNumber: item.chequeNumber || '',
-      remarks: item.remarks || ''
-    });
-    setModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setModalOpen(false);
-    setEditingItem(null);
-    setMemberSearch('');
-    setMemberDropdownOpen(false);
-    setForm({
-      title: '',
-      subTitle: '',
-      mobile: '',
-      eventDate: new Date().toISOString().split('T')[0],
-      quantity: showQty ? 1 : '',
-      rate: showRate ? 300 : '',
-      destination: '',
-      amount: '',
-      paymentMethod: 'CASH',
-      bankAccountId: '',
-      chequeNumber: '',
-      remarks: ''
-    });
-  };
-
-  const handleSave = async (e) => {
-    e.preventDefault();
-    if (!form.title || !form.amount) {
-      showToast('Please fill in all required fields.', 'warning');
-      return;
-    }
-    if (form.title && !/^[a-zA-Z0-9\s.-]{3,50}$/.test(form.title)) {
-      showToast('Title must contain only letters, numbers, spaces, hyphens, and dots (3-50 chars).', 'warning');
-      return;
-    }
-    if (form.subTitle && !/^[a-zA-Z0-9\s.-]{3,50}$/.test(form.subTitle)) {
-      showToast('Sub-title must contain only letters, numbers, spaces, hyphens, and dots (3-50 chars).', 'warning');
-      return;
-    }
-    if (form.mobile && !/^((\+92|92|0)?3[0-9]{2}-?[0-9]{7})$/.test(form.mobile)) {
-      showToast('Invalid mobile number. E.g. 0300-1234567', 'warning');
-      return;
-    }
-    if (form.destination && !/^[a-zA-Z0-9\s.,#\/-]{3,50}$/.test(form.destination)) {
-      showToast('Destination contains invalid characters.', 'warning');
-      return;
-    }
-    if (form.chequeNumber && !/^[0-9]{6,20}$/.test(form.chequeNumber)) {
-      showToast('Cheque number must be between 6 and 20 digits.', 'warning');
-      return;
-    }
-    if (form.amount && !/^[1-9]\d*(\.\d{1,2})?$/.test(form.amount)) {
-      showToast('Amount must be a positive number with up to 2 decimal places.', 'warning');
-      return;
-    }
-    try {
-      if (editingItem) {
-        await updateCollection(editingItem.id, {
-          ...form,
-          category,
-          amount: parseFloat(form.amount) || 0,
-          quantity: form.quantity ? parseInt(form.quantity, 10) : null,
-          rate: form.rate ? parseFloat(form.rate) : null,
-        });
-        showToast(`${category} record updated successfully`, 'success');
-      } else {
-        await addCollection({
-          ...form,
-          category,
-          amount: parseFloat(form.amount) || 0,
-          quantity: form.quantity ? parseInt(form.quantity, 10) : null,
-          rate: form.rate ? parseFloat(form.rate) : null,
-        });
-        showToast(`${category} record created successfully`, 'success');
-      }
-      handleCloseModal();
-    } catch (err) {
-      showToast(err.message || `Failed to save ${category}`, 'error');
-    }
-  };
-
-  const handleQtyOrRateChange = (qty, rate) => {
-    const q = parseFloat(qty) || 0;
-    const r = parseFloat(rate) || 0;
-    if (showQty && showRate && q > 0 && r > 0) {
-      setForm(prev => ({ ...prev, quantity: qty, rate: rate, amount: (q * r).toString() }));
-    } else {
-      setForm(prev => ({ ...prev, quantity: qty, rate: rate }));
-    }
-  };
-
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return collections.filter(c => 
@@ -288,13 +133,12 @@ export const SpecializedRevenueSection = ({
                 Bulk Delete ({selectedIds.length})
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => setModalOpen(true)}
+            <Link
+              to={`${getBasePath()}/new`}
               className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold shadow-lg shadow-indigo-900/20 transition-all cursor-pointer"
             >
               <Plus className="h-4 w-4" /> New {category} Entry
-            </button>
+            </Link>
           </div>
         </div>
 
@@ -392,7 +236,7 @@ export const SpecializedRevenueSection = ({
                           <Printer className="h-4 w-4" />
                         </button>
                         {canEditOrDelete && (
-                          <button onClick={() => handleEditClick(item)}
+                          <button onClick={() => navigate(`${getBasePath()}/edit/${item.id}`)}
                             className="p-1.5 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded transition-colors inline-flex ml-1"
                             title="Edit Record">
                             <Edit2 className="h-4 w-4" />
@@ -421,182 +265,6 @@ export const SpecializedRevenueSection = ({
           </div>
         </div>
       </div>
-
-      {/* New Modal */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <h3 className="text-lg font-bold text-slate-100">{editingItem ? `Edit ${category} Record` : `Add New ${category} Record`}</h3>
-              <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-200">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSave} className="space-y-4 text-left">
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">{titleLabel} *</label>
-                {isMembershipFee ? (
-                  <div className="relative" ref={memberDropdownRef}>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
-                      <input
-                        value={memberSearch}
-                        onChange={e => { setMemberSearch(e.target.value); setMemberDropdownOpen(true); setForm(prev => ({ ...prev, title: e.target.value })); }}
-                        onFocus={() => setMemberDropdownOpen(true)}
-                        placeholder="Search and select a member..."
-                        className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors font-medium"
-                      />
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
-                    </div>
-                    {memberDropdownOpen && filteredMembersList.length > 0 && (
-                      <div className="absolute z-50 w-full mt-1 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl overflow-hidden max-h-52 overflow-y-auto">
-                        {filteredMembersList.map(member => (
-                          <button
-                            key={member.id}
-                            type="button"
-                            onClick={() => handleSelectMember(member)}
-                            className="w-full text-left px-3.5 py-2.5 hover:bg-indigo-500/10 flex items-center gap-3 transition-colors border-b border-slate-800/60 last:border-0"
-                          >
-                            <div className="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-xs font-bold text-indigo-400 shrink-0">
-                              {member.fullName?.charAt(0) || 'M'}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold text-slate-200 truncate">{member.fullName}</p>
-                              <p className="text-xs text-slate-500 truncate">{member.cnic || member.mobile || 'No ID'}</p>
-                            </div>
-                          </button>
-                        ))}
-                        {members.length === 0 && (
-                          <div className="px-4 py-3 text-xs text-slate-500 text-center">No members registered yet.</div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <input required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
-                    placeholder={`Enter ${titleLabel.toLowerCase()}...`}
-                    pattern="^[a-zA-Z0-9\s.-]{3,50}$" title="Letters, numbers, spaces, hyphens, and dots (3-50 characters)"
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors font-medium" />
-                )}
-              </div>
-
-              {subTitleLabel && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">{subTitleLabel}</label>
-                  <input value={form.subTitle} onChange={e => setForm({ ...form, subTitle: e.target.value })}
-                    placeholder={`Enter ${subTitleLabel.toLowerCase()}...`}
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors font-medium" />
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Mobile Phone</label>
-                  <input value={form.mobile} onChange={e => setForm({ ...form, mobile: e.target.value })}
-                    placeholder="0300-1234567"
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors font-medium" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">{dateLabel}</label>
-                  <input type="date" value={form.eventDate} onChange={e => setForm({ ...form, eventDate: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors font-medium" />
-                </div>
-              </div>
-
-              {(showQty || showRate) && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {showQty && (
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-400 mb-1.5">{qtyLabel}</label>
-                      <input type="number" min="1" value={form.quantity} onChange={e => handleQtyOrRateChange(e.target.value, form.rate)}
-                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors font-medium" />
-                    </div>
-                  )}
-                  {showRate && (
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-400 mb-1.5">{rateLabel} (PKR)</label>
-                      <input type="number" min="0" value={form.rate} onChange={e => handleQtyOrRateChange(form.quantity, e.target.value)}
-                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors font-medium" />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {showDest && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">{destLabel}</label>
-                  <input value={form.destination} onChange={e => setForm({ ...form, destination: e.target.value })}
-                    placeholder="e.g. Jamia Mosque to Airport"
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors font-medium" />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Total Amount (PKR) *</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-semibold">PKR</span>
-                  <input required type="text" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })}
-                    placeholder="0.00"
-                    pattern="^[1-9]\d*(\.\d{1,2})?$" title="Positive number with up to 2 decimal places"
-                    className="w-full pl-11 pr-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-emerald-400 text-sm font-bold focus:outline-none focus:border-indigo-500/60 transition-colors" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Payment Method *</label>
-                  <select value={form.paymentMethod} onChange={e => setForm({ ...form, paymentMethod: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors font-medium">
-                    <option value="CASH">Cash</option>
-                    <option value="BANK">Bank Transfer</option>
-                    <option value="CHEQUE">Cheque</option>
-                  </select>
-                </div>
-                {(form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && (
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">Bank Account *</label>
-                    <select required value={form.bankAccountId} onChange={e => setForm({ ...form, bankAccountId: e.target.value })}
-                      className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors font-medium">
-                      <option value="">Select Bank</option>
-                      {bankAccounts.map(b => (
-                        <option key={b.id} value={b.id}>{b.accountName} ({b.glCode})</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              {form.paymentMethod === 'CHEQUE' && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cheque Number</label>
-                  <input value={form.chequeNumber} onChange={e => setForm({ ...form, chequeNumber: e.target.value })}
-                    placeholder="CHQ-00123"
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors font-medium" />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Remarks / Memo</label>
-                <textarea rows="2" value={form.remarks} onChange={e => setForm({ ...form, remarks: e.target.value })}
-                  placeholder="Optional notes or details..."
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors resize-none font-medium" />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
-                <button type="button" onClick={handleCloseModal}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">
-                  Cancel
-                </button>
-                <button type="submit"
-                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold shadow-lg shadow-indigo-600/25 active:scale-95 transition-all">
-                  {editingItem ? 'Update Entry' : `Save ${category}`}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Bulk Delete Confirm Modal */}
       {showBulkConfirm && (

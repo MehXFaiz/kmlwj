@@ -607,25 +607,6 @@ export const DonationsReceived = () => {
         </div>
       )}
 
-      <DonationReceiptModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSave={selectedReceipt ? handleUpdate : handleCreate}
-        initial={selectedReceipt}
-        donors={donors}
-        cashAccounts={cashAccounts}
-        bankAccounts={bankAccounts}
-        onOpenQuickDonor={() => setQuickDonorOpen(true)}
-      />
-
-      <QuickDonorModal
-        isOpen={quickDonorOpen}
-        onClose={() => setQuickDonorOpen(false)}
-        onCreated={(newDonor) => {
-          fetchDonors();
-        }}
-      />
-
       <PrintReceiptModal
         donation={printItem}
         onClose={() => setPrintItem(null)}

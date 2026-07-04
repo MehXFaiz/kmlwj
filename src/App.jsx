@@ -32,10 +32,15 @@ const Donations = lazy(() => import('./views/Donations').then(m => ({ default: m
 const Donors = lazy(() => import('./views/Donors').then(m => ({ default: m.Donors })));
 const DonationsReceived = lazy(() => import('./views/DonationsReceived').then(m => ({ default: m.DonationsReceived })));
 const DonationReports = lazy(() => import('./views/DonationReports').then(m => ({ default: m.DonationReports })));
+const DonorForm = lazy(() => import('./views/DonorForm').then(m => ({ default: m.DonorForm })));
+const DonationReceiptForm = lazy(() => import('./views/DonationReceiptForm').then(m => ({ default: m.DonationReceiptForm })));
 
 // Categorized Revenue Views
 const MembershipFeeSection = lazy(() => import('./views/CategorizedRevenues').then(m => ({ default: m.MembershipFeeSection })));
 const BusBookingSection = lazy(() => import('./views/CategorizedRevenues').then(m => ({ default: m.BusBookingSection })));
+const ZakatSection = lazy(() => import('./views/CategorizedRevenues').then(m => ({ default: m.ZakatSection })));
+const FitraSection = lazy(() => import('./views/CategorizedRevenues').then(m => ({ default: m.FitraSection })));
+const SpecializedRevenueForm = lazy(() => import('./views/SpecializedRevenueForm').then(m => ({ default: m.SpecializedRevenueForm })));
 
 
 // Invoice Module Views
@@ -313,10 +318,24 @@ function App() {
             <Route path="/beneficiaries" element={<Beneficiaries />} />
             <Route path="/donations" element={<Donations />} />
             <Route path="/donors" element={<Donors />} />
+            <Route path="/donors/new" element={<DonorForm />} />
+            <Route path="/donors/edit/:id" element={<DonorForm />} />
             <Route path="/donations-received" element={<DonationsReceived />} />
+            <Route path="/donations-received/new" element={<DonationReceiptForm />} />
+            <Route path="/donations-received/edit/:id" element={<DonationReceiptForm />} />
             <Route path="/donation-reports" element={<DonationReports />} />
             <Route path="/membership-fees" element={<MembershipFeeSection />} />
+            <Route path="/membership-fees/new" element={<SpecializedRevenueForm category="Membership Fee" title="Membership Fee Collection" desc="Manage member fee contributions and annual renewals" titleLabel="Member Name" subTitleLabel="Membership ID / CNIC" dateLabel="Fee Date" showRate={true} rateLabel="Fee Rate" backPath="/membership-fees" />} />
+            <Route path="/membership-fees/edit/:id" element={<SpecializedRevenueForm category="Membership Fee" title="Membership Fee Collection" desc="Manage member fee contributions and annual renewals" titleLabel="Member Name" subTitleLabel="Membership ID / CNIC" dateLabel="Fee Date" showRate={true} rateLabel="Fee Rate" backPath="/membership-fees" />} />
             <Route path="/bus-bookings" element={<BusBookingSection />} />
+            <Route path="/bus-bookings/new" element={<SpecializedRevenueForm category="Bus Booking" title="Bus Booking Receipt" desc="Manage Jamia bus reservations, trip schedules, and ledger receipts" titleLabel="Booker Name" subTitleLabel="Bus / Vehicle Number" dateLabel="Trip Date" showDest={true} destLabel="Trip Destination" backPath="/bus-bookings" />} />
+            <Route path="/bus-bookings/edit/:id" element={<SpecializedRevenueForm category="Bus Booking" title="Bus Booking Receipt" desc="Manage Jamia bus reservations, trip schedules, and ledger receipts" titleLabel="Booker Name" subTitleLabel="Bus / Vehicle Number" dateLabel="Trip Date" showDest={true} destLabel="Trip Destination" backPath="/bus-bookings" />} />
+            <Route path="/zakat" element={<ZakatSection />} />
+            <Route path="/zakat/new" element={<SpecializedRevenueForm category="Zakat" title="Zakat Collection" desc="Manage Zakat contributions, donor records, and ledger postings" titleLabel="Donor Name" subTitleLabel="CNIC / ID" dateLabel="Collection Date" backPath="/zakat" />} />
+            <Route path="/zakat/edit/:id" element={<SpecializedRevenueForm category="Zakat" title="Zakat Collection" desc="Manage Zakat contributions, donor records, and ledger postings" titleLabel="Donor Name" subTitleLabel="CNIC / ID" dateLabel="Collection Date" backPath="/zakat" />} />
+            <Route path="/fitra" element={<FitraSection />} />
+            <Route path="/fitra/new" element={<SpecializedRevenueForm category="Fitra" title="Fitra Collection" desc="Manage Eid Fitra collections and head-counts" titleLabel="Donor Name" subTitleLabel={null} dateLabel="Collection Date" showQty={true} qtyLabel="Head Count" showRate={true} rateLabel="Rate per Head" backPath="/fitra" />} />
+            <Route path="/fitra/edit/:id" element={<SpecializedRevenueForm category="Fitra" title="Fitra Collection" desc="Manage Eid Fitra collections and head-counts" titleLabel="Donor Name" subTitleLabel={null} dateLabel="Collection Date" showQty={true} qtyLabel="Head Count" showRate={true} rateLabel="Rate per Head" backPath="/fitra" />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/members" element={<Members />} />
             <Route path="/members/new" element={<MemberForm />} />
