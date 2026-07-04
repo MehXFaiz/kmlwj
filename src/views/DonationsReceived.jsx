@@ -111,6 +111,7 @@ function PrintReceiptModal({ donation, onClose }) {
 export const DonationsReceived = () => {
   const navigate = useNavigate();
   const { donations, stats, loading, fetchDonations, updateDonationStatus, deleteDonation, bulkDeleteDonations } = useDonationReceivedStore();
+  const { canEditOrDelete } = useAuthStore();
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [printItem, setPrintItem] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
