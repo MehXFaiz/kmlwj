@@ -140,39 +140,39 @@ function QuickDonorModal({ isOpen, onClose, onCreated }) {
         </h3>
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Donor Full Name *</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Donor Full Name *</label>
             <input
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Muhammad Ali"
-              className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Mobile Phone</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Mobile Phone</label>
             <input
               type="text"
               value={phone}
               onChange={e => setPhone(e.target.value)}
               placeholder="0300-1234567"
-              className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">CNIC / ID No</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">CNIC / ID No</label>
             <input
               type="text"
               value={cnic}
               onChange={e => setCnic(e.target.value)}
               placeholder="42101-1234567-1"
-              className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
             />
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-slate-800">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 text-sm">Cancel</button>
-          <button onClick={handleCreate} disabled={loading} className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold">
+          <button onClick={onClose} className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">Cancel</button>
+          <button onClick={handleCreate} disabled={loading} className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50">
             {loading ? 'Saving...' : 'Create & Select'}
           </button>
         </div>
@@ -271,7 +271,7 @@ function DonationReceiptModal({ isOpen, onClose, onSave, initial, donors, cashAc
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Receipt No (Auto)</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Receipt No (Auto)</label>
             <input
               type="text"
               disabled
@@ -281,18 +281,18 @@ function DonationReceiptModal({ isOpen, onClose, onSave, initial, donors, cashAc
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Receipt Date *</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Receipt Date *</label>
             <input
               type="date"
               value={form.receiptDate}
               onChange={e => setForm({ ...form, receiptDate: e.target.value })}
-              className="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
             />
           </div>
 
           <div className="md:col-span-2">
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-semibold text-slate-300">Donor *</label>
+              <label className="block text-xs font-semibold text-slate-400">Donor *</label>
               <button
                 type="button"
                 onClick={onOpenQuickDonor}
@@ -304,7 +304,7 @@ function DonationReceiptModal({ isOpen, onClose, onSave, initial, donors, cashAc
             <select
               value={form.donorId}
               onChange={e => setForm({ ...form, donorId: e.target.value })}
-              className="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
             >
               <option value="">-- Select Donor --</option>
               {donors.map(d => (
@@ -316,11 +316,11 @@ function DonationReceiptModal({ isOpen, onClose, onSave, initial, donors, cashAc
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Donation Type *</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Donation Type *</label>
             <select
               value={form.donationType}
               onChange={e => setForm({ ...form, donationType: e.target.value })}
-              className="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
             >
               {DONATION_TYPES.map(t => (
                 <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
@@ -329,7 +329,7 @@ function DonationReceiptModal({ isOpen, onClose, onSave, initial, donors, cashAc
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Amount (PKR) *</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Amount (PKR) *</label>
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">PKR</span>
               <input
@@ -338,17 +338,17 @@ function DonationReceiptModal({ isOpen, onClose, onSave, initial, donors, cashAc
                 value={form.amount}
                 onChange={e => setForm({ ...form, amount: e.target.value })}
                 placeholder="0.00"
-                className="w-full pl-12 pr-3.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 font-bold focus:outline-none focus:border-indigo-500"
+                className="w-full pl-12 pr-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-bold"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Payment Method *</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Payment Method *</label>
             <select
               value={form.paymentMethod}
               onChange={e => setForm({ ...form, paymentMethod: e.target.value })}
-              className="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
             >
               {PAYMENT_METHODS.map(m => (
                 <option key={m} value={m}>{m}</option>
@@ -358,11 +358,11 @@ function DonationReceiptModal({ isOpen, onClose, onSave, initial, donors, cashAc
 
           {form.paymentMethod === 'CASH' ? (
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Cash Account *</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cash Account *</label>
               <select
                 value={form.cashAccountId}
                 onChange={e => setForm({ ...form, cashAccountId: e.target.value })}
-                className="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
               >
                 <option value="">-- Select Cash Account --</option>
                 {cashAccounts.map(a => (
@@ -372,11 +372,11 @@ function DonationReceiptModal({ isOpen, onClose, onSave, initial, donors, cashAc
             </div>
           ) : (
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Bank / Online Account *</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Bank / Online Account *</label>
               <select
                 value={form.bankAccountId}
                 onChange={e => setForm({ ...form, bankAccountId: e.target.value })}
-                className="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
               >
                 <option value="">-- Select Bank Account --</option>
                 {bankAccounts.map(a => (
@@ -389,44 +389,44 @@ function DonationReceiptModal({ isOpen, onClose, onSave, initial, donors, cashAc
           {form.paymentMethod === 'CHEQUE' && (
             <>
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Cheque No</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cheque No</label>
                 <input
                   type="text"
                   value={form.chequeNo}
                   onChange={e => setForm({ ...form, chequeNo: e.target.value })}
                   placeholder="e.g. CHQ-987654"
-                  className="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Cheque Date</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cheque Date</label>
                 <input
                   type="date"
                   value={form.chequeDate}
                   onChange={e => setForm({ ...form, chequeDate: e.target.value })}
-                  className="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
                 />
               </div>
             </>
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Reference No</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Reference No</label>
             <input
               type="text"
               value={form.referenceNo}
               onChange={e => setForm({ ...form, referenceNo: e.target.value })}
               placeholder="e.g. Slip #123 / Transfer Ref"
-              className="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Status *</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Status *</label>
             <select
               value={form.status}
               onChange={e => setForm({ ...form, status: e.target.value })}
-              className="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm font-semibold text-slate-200 focus:outline-none focus:border-indigo-500"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-semibold"
             >
               <option value="POSTED">POSTED (Auto-post to Ledger)</option>
               <option value="DRAFT">DRAFT (Save for review)</option>
@@ -434,13 +434,13 @@ function DonationReceiptModal({ isOpen, onClose, onSave, initial, donors, cashAc
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Narration / Remarks</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Narration / Remarks</label>
             <textarea
               rows={2}
               value={form.narration}
               onChange={e => setForm({ ...form, narration: e.target.value })}
               placeholder="Enter receipt details, donor instructions, or zakat fund allocation note..."
-              className="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
             />
           </div>
         </div>
@@ -448,13 +448,13 @@ function DonationReceiptModal({ isOpen, onClose, onSave, initial, donors, cashAc
         <div className="flex items-center justify-end gap-3 mt-8 pt-4 border-t border-slate-800/80">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition-colors"
+            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
-            className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition-colors shadow-lg shadow-emerald-600/20"
+            className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition-all shadow-lg shadow-emerald-600/25 active:scale-95 disabled:opacity-50"
           >
             {initial ? 'Update Receipt' : 'Save & Post Receipt'}
           </button>

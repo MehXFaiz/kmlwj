@@ -361,10 +361,10 @@ export const InvoiceDetail = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1.5">Select Income Category *</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Select Income Category *</label>
               <p className="text-[11px] text-slate-600 mb-2">Which type of income does this invoice represent?</p>
               <select value={revenueAccountId} onChange={e => setRevenueAccountId(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50">
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-indigo-500/60 transition-all font-medium">
                 {revenueAccounts.map(acc => (
                   <option key={acc.id} value={acc.id}>{acc.name}</option>
                 ))}
@@ -375,8 +375,8 @@ export const InvoiceDetail = () => {
             </div>
 
             <div className="flex gap-3 pt-2">
-              <button onClick={() => setShowPostModal(false)} disabled={actionLoading} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-xs font-semibold">Go Back</button>
-              <button onClick={handlePost} disabled={actionLoading || !revenueAccountId} className="flex-1 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-900/30">
+              <button onClick={() => setShowPostModal(false)} disabled={actionLoading} className="flex-1 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">Go Back</button>
+              <button onClick={handlePost} disabled={actionLoading || !revenueAccountId} className="flex-1 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50">
                 {actionLoading ? 'Confirming...' : 'Confirm Invoice'}
               </button>
             </div>
@@ -395,9 +395,9 @@ export const InvoiceDetail = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1.5">How was payment received? *</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">How was payment received? *</label>
               <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50">
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-indigo-500/60 transition-all font-medium">
                 <option value="BANK">Bank Transfer</option>
                 <option value="CASH">Cash</option>
                 <option value="CHEQUE">Cheque</option>
@@ -405,10 +405,10 @@ export const InvoiceDetail = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1.5">Payment goes to: *</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Payment goes to: *</label>
               <p className="text-[11px] text-slate-600 mb-2">Which account should receive this payment?</p>
               <select value={bankAccountId} onChange={e => setBankAccountId(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50">
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-indigo-500/60 transition-all font-medium">
                 {assetAccounts.map(acc => (
                   <option key={acc.id} value={acc.id}>{acc.name}</option>
                 ))}
@@ -420,15 +420,15 @@ export const InvoiceDetail = () => {
 
             {paymentMethod === 'CHEQUE' && (
               <div>
-                <label className="block text-xs font-bold text-slate-400 mb-1.5">Cheque Number</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cheque Number</label>
                 <input value={chequeNumber} onChange={e => setChequeNumber(e.target.value)} placeholder="e.g. CHQ-92841"
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50 placeholder-slate-600" />
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium" />
               </div>
             )}
 
             <div className="flex gap-3 pt-2">
-              <button onClick={() => setShowPayModal(false)} disabled={actionLoading} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-xs font-semibold">Go Back</button>
-              <button onClick={handlePay} disabled={actionLoading || !bankAccountId} className="flex-1 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md">
+              <button onClick={() => setShowPayModal(false)} disabled={actionLoading} className="flex-1 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">Go Back</button>
+              <button onClick={handlePay} disabled={actionLoading || !bankAccountId} className="flex-1 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition-all shadow-lg shadow-emerald-600/25 active:scale-95 disabled:opacity-50">
                 {actionLoading ? 'Recording...' : 'Mark as Paid'}
               </button>
             </div>
@@ -448,9 +448,9 @@ export const InvoiceDetail = () => {
 
             {(currentInvoice.status === 'POSTED' || currentInvoice.status === 'PAID') && (
               <div>
-                <label className="block text-xs font-bold text-slate-400 mb-1.5">Select the income category used for this invoice</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Select the income category used for this invoice</label>
                 <select value={cancelRevenueAccountId} onChange={e => setCancelRevenueAccountId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50">
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-indigo-500/60 transition-all font-medium">
                   {revenueAccounts.map(acc => (
                     <option key={acc.id} value={acc.id}>{acc.name}</option>
                   ))}
@@ -459,8 +459,8 @@ export const InvoiceDetail = () => {
             )}
 
             <div className="flex gap-3 pt-2">
-              <button onClick={() => setShowCancelModal(false)} disabled={actionLoading} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-xs font-semibold">Go Back</button>
-              <button onClick={handleCancel} disabled={actionLoading} className="flex-1 px-4 py-2 rounded-lg bg-red-650 hover:bg-red-600 text-white text-xs font-bold shadow-md">
+              <button onClick={() => setShowCancelModal(false)} disabled={actionLoading} className="flex-1 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">Go Back</button>
+              <button onClick={handleCancel} disabled={actionLoading} className="flex-1 px-5 py-2.5 rounded-xl bg-red-650 hover:bg-red-600 text-white text-sm font-semibold transition-all shadow-lg shadow-red-600/25 active:scale-95 disabled:opacity-50">
                 {actionLoading ? 'Voiding...' : 'Yes, Cancel This Invoice'}
               </button>
             </div>

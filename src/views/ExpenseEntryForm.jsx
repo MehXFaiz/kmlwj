@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useCoaStore } from '../store/coaStore';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
-import { ChevronLeft, Save, Sparkles, AlertCircle, CheckCircle } from 'lucide-react';
+import { ChevronLeft, Save, Sparkles, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
 import { useTranslation } from 'react-i18next';
 
@@ -262,185 +262,218 @@ export const ExpenseEntryForm = () => {
         </span>
       </div>
 
-      <form onSubmit={handleSave} className="space-y-5">
-
-        {/* Card 01: Expense Type */}
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
-            <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
-              01
-            </span>
-            <h3 className="text-sm font-semibold text-slate-200">{t('forms.expenseType')}</h3>
-          </div>
-          <div className="p-5">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {[
-                { key: 'Salary', label: t('forms.sources.salary', 'Salary') },
-                { key: 'Rent', label: t('forms.sources.rent', 'Rent') },
-                { key: 'Fuel', label: t('forms.sources.fuel', 'Fuel') },
-                { key: 'Bus Repair', label: t('forms.sources.busRepair', 'Bus Repair') },
-                { key: 'Generator Repair', label: t('forms.sources.generatorRepair', 'Generator Repair') },
-                { key: 'Legal Fee', label: t('forms.sources.legalFee', 'Legal Fee') },
-                { key: 'Medical Donation', label: t('forms.sources.medicalDonation', 'Medical Donation') },
-                { key: 'Zakat Distribution', label: t('forms.sources.zakatDistribution', 'Zakat Distribution') },
-                { key: 'Other', label: t('forms.sources.other', 'Other') }
-              ].map(type => (
-                <button
-                  key={type.key}
-                  type="button"
-                  onClick={() => setExpenseType(type.key)}
-                  className={`py-3 px-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer text-center ${
-                    expenseType === type.key
-                      ? 'bg-rose-600/10 border-rose-500/60 text-rose-400'
-                      : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
-                  }`}
-                >
-                  {type.label}
-                </button>
-              ))}
+      <form onSubmit={handleSave}>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Column: Info Card */}
+          <div className="lg:col-span-4 space-y-5">
+            <div className="bg-indigo-500/5 rounded-2xl border border-indigo-500/20 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Info className="w-4 h-4 text-indigo-400" />
+                <h3 className="text-sm font-semibold text-indigo-300">Expense Information</h3>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                  </div>
+                  <span className="text-xs font-semibold text-slate-300">Smart Ledger Mapping</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
+                    <CheckCircle className="w-3.5 h-3.5 text-indigo-400" />
+                  </div>
+                  <span className="text-xs font-semibold text-slate-300">Auto Account Creation</span>
+                </div>
+              </div>
+              <div className="border-t border-indigo-500/20 my-4" />
+              <p className="text-xs text-slate-500 leading-relaxed">
+                If the selected expense category does not exist in the Chart of Accounts, the system will automatically create it for you.
+              </p>
             </div>
           </div>
-        </div>
 
-        {/* Card 02: Ledger Mapping */}
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
-            <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
-              02
-            </span>
-            <h3 className="text-sm font-semibold text-slate-200">{t('forms.ledgerMapping')}</h3>
-          </div>
-          <div className="p-5">
-            {matchedAccounts.length > 0 ? (
-              <div>
-                {matchedAccounts.length === 1 ? (
-                  <div className="flex items-center gap-2 text-xs text-slate-400">
-                    <CheckCircle className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                    <span>
-                      {t('forms.autoLinkedTo')} <strong className="text-slate-200">{matchedAccounts[0].code} - {matchedAccounts[0].name}</strong>
-                    </span>
+          {/* Right Column: Form Cards */}
+          <div className="lg:col-span-8 space-y-5">
+
+            {/* Card 01: Expense Type */}
+            <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
+                <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
+                  01
+                </span>
+                <h3 className="text-sm font-semibold text-slate-200">{t('forms.expenseType')}</h3>
+              </div>
+              <div className="p-5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {[
+                    { key: 'Salary', label: t('forms.sources.salary', 'Salary') },
+                    { key: 'Rent', label: t('forms.sources.rent', 'Rent') },
+                    { key: 'Fuel', label: t('forms.sources.fuel', 'Fuel') },
+                    { key: 'Bus Repair', label: t('forms.sources.busRepair', 'Bus Repair') },
+                    { key: 'Generator Repair', label: t('forms.sources.generatorRepair', 'Generator Repair') },
+                    { key: 'Legal Fee', label: t('forms.sources.legalFee', 'Legal Fee') },
+                    { key: 'Medical Donation', label: t('forms.sources.medicalDonation', 'Medical Donation') },
+                    { key: 'Zakat Distribution', label: t('forms.sources.zakatDistribution', 'Zakat Distribution') },
+                    { key: 'Other', label: t('forms.sources.other', 'Other') }
+                  ].map(type => (
+                    <button
+                      key={type.key}
+                      type="button"
+                      onClick={() => setExpenseType(type.key)}
+                      className={`py-3 px-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer text-center ${
+                        expenseType === type.key
+                          ? 'bg-rose-600/10 border-rose-500/60 text-rose-400'
+                          : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                      }`}
+                    >
+                      {type.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Card 02: Ledger Mapping */}
+            <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
+                <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
+                  02
+                </span>
+                <h3 className="text-sm font-semibold text-slate-200">{t('forms.ledgerMapping')}</h3>
+              </div>
+              <div className="p-5">
+                {matchedAccounts.length > 0 ? (
+                  <div>
+                    {matchedAccounts.length === 1 ? (
+                      <div className="flex items-center gap-2 text-xs text-slate-400">
+                        <CheckCircle className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                        <span>
+                          {t('forms.autoLinkedTo')} <strong className="text-slate-200">{matchedAccounts[0].code} - {matchedAccounts[0].name}</strong>
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <label className={labelClass}>{t('forms.selectTargetLedger')}</label>
+                        <select
+                          value={selectedSubAccountId}
+                          onChange={e => setSelectedSubAccountId(e.target.value)}
+                          className={inputClass + ' max-w-md'}
+                        >
+                          {matchedAccounts.map(acc => (
+                            <option key={acc.id} value={acc.id}>
+                              {acc.code} - {acc.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <div className="space-y-1.5">
-                    <label className={labelClass}>{t('forms.selectTargetLedger')}</label>
-                    <select
-                      value={selectedSubAccountId}
-                      onChange={e => setSelectedSubAccountId(e.target.value)}
-                      className={inputClass + ' max-w-md'}
-                    >
-                      {matchedAccounts.map(acc => (
-                        <option key={acc.id} value={acc.id}>
-                          {acc.code} - {acc.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  autoCreationDetails && (
+                    <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-950/20 border border-amber-900/30 text-xs text-amber-300">
+                      <AlertCircle className="h-4 w-4 mt-0.5 text-amber-400 flex-shrink-0" />
+                      <div className="space-y-1">
+                        <p className="font-semibold text-amber-200">{t('forms.missingSubAccount')}</p>
+                        <p className="text-amber-400/90 leading-relaxed">
+                          No ledger account exists for <strong className="text-white">"{expenseType}"</strong>.
+                          The system will automatically generate it under <strong className="text-white">{autoCreationDetails.parentName}</strong> with code <strong className="font-mono text-white">{autoCreationDetails.nextCode}</strong> upon saving.
+                        </p>
+                      </div>
+                    </div>
+                  )
                 )}
               </div>
-            ) : (
-              autoCreationDetails && (
-                <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-950/20 border border-amber-900/30 text-xs text-amber-300">
-                  <AlertCircle className="h-4 w-4 mt-0.5 text-amber-400 flex-shrink-0" />
-                  <div className="space-y-1">
-                    <p className="font-semibold text-amber-200">{t('forms.missingSubAccount')}</p>
-                    <p className="text-amber-400/90 leading-relaxed">
-                      No ledger account exists for <strong className="text-white">"{expenseType}"</strong>.
-                      The system will automatically generate it under <strong className="text-white">{autoCreationDetails.parentName}</strong> with code <strong className="font-mono text-white">{autoCreationDetails.nextCode}</strong> upon saving.
-                    </p>
-                  </div>
+            </div>
+
+            {/* Card 03: Transaction Details */}
+            <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
+                <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
+                  03
+                </span>
+                <h3 className="text-sm font-semibold text-slate-200">Transaction Details</h3>
+              </div>
+              <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClass}>{t('forms.transactionDate')}</label>
+                  <input
+                    type="date"
+                    value={postingDate}
+                    onChange={e => setPostingDate(e.target.value)}
+                    className={inputClass}
+                  />
                 </div>
-              )
-            )}
-          </div>
-        </div>
 
-        {/* Card 03: Transaction Details */}
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
-            <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
-              03
-            </span>
-            <h3 className="text-sm font-semibold text-slate-200">Transaction Details</h3>
-          </div>
-          <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className={labelClass}>{t('forms.transactionDate')}</label>
-              <input
-                type="date"
-                value={postingDate}
-                onChange={e => setPostingDate(e.target.value)}
-                className={inputClass}
-              />
+                <div>
+                  <label className={labelClass}>{t('forms.paidFromBankCash')}</label>
+                  <select
+                    value={bankAccountId}
+                    onChange={e => setBankAccountId(e.target.value)}
+                    className={inputClass}
+                  >
+                    {bankAccounts.length === 0 ? (
+                      <option value="">{t('forms.noBankAccountsFound')}</option>
+                    ) : (
+                      bankAccounts.map(acc => (
+                        <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <label className={labelClass}>{t('forms.voucherAmount')}</label>
+                  <input
+                    type="text"
+                    value={amount}
+                    onChange={e => setAmount(e.target.value)}
+                    placeholder="0.00"
+                    pattern="^[1-9]\d*(\.\d{1,2})?$" title="Positive number with up to 2 decimal places"
+                    className={inputClass}
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>{t('forms.refChequeNumber')}</label>
+                  <input
+                    value={reference}
+                    onChange={e => setReference(e.target.value)}
+                    placeholder={t('forms.chqPlaceholder')}
+                    pattern="^[a-zA-Z0-9\s.-]{3,30}$" title="Only letters, numbers, spaces, hyphens, and dots (3-30 characters)"
+                    className={inputClass}
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className={labelClass}>{t('forms.voucherDescription')}</label>
+                  <textarea
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
+                    placeholder={`Details about this ${expenseType.toLowerCase()} payout...`}
+                    className={inputClass + ' resize-none h-24'}
+                  />
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label className={labelClass}>{t('forms.paidFromBankCash')}</label>
-              <select
-                value={bankAccountId}
-                onChange={e => setBankAccountId(e.target.value)}
-                className={inputClass}
-              >
-                {bankAccounts.length === 0 ? (
-                  <option value="">{t('forms.noBankAccountsFound')}</option>
-                ) : (
-                  bankAccounts.map(acc => (
-                    <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
-                  ))
-                )}
-              </select>
-            </div>
-
-            <div>
-              <label className={labelClass}>{t('forms.voucherAmount')}</label>
-              <input
-                type="text"
-                value={amount}
-                onChange={e => setAmount(e.target.value)}
-                placeholder="0.00"
-                pattern="^[1-9]\d*(\.\d{1,2})?$" title="Positive number with up to 2 decimal places"
-                className={inputClass}
-              />
-            </div>
-
-            <div>
-              <label className={labelClass}>{t('forms.refChequeNumber')}</label>
-              <input
-                value={reference}
-                onChange={e => setReference(e.target.value)}
-                placeholder={t('forms.chqPlaceholder')}
-                pattern="^[a-zA-Z0-9\s.-]{3,30}$" title="Only letters, numbers, spaces, hyphens, and dots (3-30 characters)"
-                className={inputClass}
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className={labelClass}>{t('forms.voucherDescription')}</label>
-              <textarea
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                placeholder={`Details about this ${expenseType.toLowerCase()} payout...`}
-                className={inputClass + ' resize-none h-24'}
-              />
+            {/* Submit Bar */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              {creationStatus && (
+                <span className="text-xs text-slate-400 animate-pulse mr-auto">
+                  {creationStatus}
+                </span>
+              )}
+              <Link to="/bank-vouchers"
+                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">
+                {t('forms.cancel')}
+              </Link>
+              <button type="submit" disabled={loading}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50 cursor-pointer">
+                <Save className="h-4 w-4" />
+                {loading ? t('forms.processing') : t('forms.saveAndPost')}
+              </button>
             </div>
           </div>
-        </div>
-
-        {/* Submit Bar */}
-        <div className="flex items-center justify-end gap-3 pt-2">
-          {creationStatus && (
-            <span className="text-xs text-slate-400 animate-pulse mr-auto">
-              {creationStatus}
-            </span>
-          )}
-          <Link to="/bank-vouchers"
-            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">
-            {t('forms.cancel')}
-          </Link>
-          <button type="submit" disabled={loading}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50 cursor-pointer">
-            <Save className="h-4 w-4" />
-            {loading ? t('forms.processing') : t('forms.saveAndPost')}
-          </button>
         </div>
       </form>
     </div>

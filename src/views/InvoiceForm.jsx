@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useCustomerStore } from '../store/customerStore';
 import { useInvoiceStore } from '../store/invoiceStore';
-import { ChevronLeft, Plus, Trash2, Save } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, Save, Info } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
 
 export const InvoiceForm = () => {
@@ -176,11 +176,33 @@ export const InvoiceForm = () => {
         </span>
       </div>
 
-      <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main form area */}
-        <div className="lg:col-span-2 space-y-5">
+      <form onSubmit={handleSave}>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Column: Info Card */}
+          <div className="lg:col-span-4 space-y-5">
+            <div className="bg-indigo-500/5 rounded-2xl border border-indigo-500/20 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Info className="w-4 h-4 text-indigo-400" />
+                <h3 className="text-sm font-semibold text-indigo-300">Invoice Information</h3>
+              </div>
+              <div className="space-y-3">
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Provide customer details, line items, and applicable taxes or discounts to generate an invoice.
+                </p>
+                <div className="flex items-center gap-3 mt-2">
+                  <div className="w-7 h-7 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
+                    <Save className="w-3.5 h-3.5 text-indigo-400" />
+                  </div>
+                  <span className="text-xs font-semibold text-slate-300">Auto-saves calculations</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
-          {/* Card 01: Invoice Attributes */}
+          {/* Right Column: Form Cards */}
+          <div className="lg:col-span-8 space-y-5">
+
+            {/* Card 01: Invoice Attributes */}
           <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
             <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
               <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
@@ -275,11 +297,7 @@ export const InvoiceForm = () => {
               ))}
             </div>
           </div>
-        </div>
-
-        {/* Sidebar: Financial Computations & Actions */}
-        <div className="space-y-5">
-          {/* Card 03: Financial Computations */}
+            {/* Card 03: Financial Computations */}
           <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
             <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
               <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
@@ -315,13 +333,13 @@ export const InvoiceForm = () => {
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3">
+          <div className="flex items-center justify-end gap-3 pt-2">
             <button type="button" onClick={() => navigate('/invoices')}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">
+              className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">
               Cancel
             </button>
             <button type="submit" disabled={loading}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50 cursor-pointer">
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50 cursor-pointer">
               <Save className="h-4 w-4" />
               {loading ? 'Saving...' : 'Save Invoice'}
             </button>

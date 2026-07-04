@@ -67,33 +67,33 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
         <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Name *</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Name *</label>
               <input
                 value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                 placeholder="e.g. Zakat"
-                className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm placeholder-slate-600 focus:outline-none focus:border-emerald-600/60 focus:ring-1 focus:ring-emerald-600/30 transition-all"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Amount (PKR)</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Amount (PKR)</label>
               <input
                 type="number"
                 value={form.amount || ''}
                 onChange={e => setForm(f => ({ ...f, amount: parseFloat(e.target.value) || 0 }))}
                 placeholder="0.00"
-                className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm placeholder-slate-600 focus:outline-none focus:border-emerald-600/60 focus:ring-1 focus:ring-emerald-600/30 transition-all"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Category *</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Category *</label>
               <select
                 value={form.category}
                 onChange={e => setForm(f => ({ ...f, category: e.target.value, hall: e.target.value === 'Hall Bookings' ? '' : f.hall }))}
-                className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-emerald-600/60 transition-all"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
               >
                 {['Hall Bookings', 'Other Income'].map(c => (
                   <option key={c} value={c}>{c}</option>
@@ -101,11 +101,11 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
               </select>
             </div>
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Linked Account ID</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Linked Account ID</label>
               <select
                 value={form.accountId || ''}
                 onChange={e => setForm(f => ({ ...f, accountId: e.target.value }))}
-                className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-emerald-600/60 transition-all"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
               >
                 <option value="">No Linked Account (Optional)</option>
                 {accounts.map(a => (
@@ -118,11 +118,11 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
           {form.category === 'Hall Bookings' && (
             <div className="grid grid-cols-1 gap-4">
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Hall Name</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Hall Name</label>
                 <select
                   value={form.hall || ''}
                   onChange={e => setForm(f => ({ ...f, hall: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-emerald-600/60 transition-all"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
                 >
                   <option value="">Select a hall...</option>
                   <option value="Bagh-e-Hajiani Garden">Bagh-e-Hajiani Garden</option>
@@ -149,13 +149,13 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
         </div>
 
         <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-4 border-t border-slate-800 shrink-0">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-800 text-sm font-semibold transition-all">
+          <button onClick={onClose} className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={!form.name.trim() || !form.category.trim()}
-            className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold transition-all shadow-lg shadow-emerald-900/40"
+            className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95"
           >
             {initial ? 'Save Changes' : 'Create Revenue Head'}
           </button>

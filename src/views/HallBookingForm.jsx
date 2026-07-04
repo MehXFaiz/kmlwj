@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
-import { Save, ChevronLeft, Calendar, User, Phone, MapPin, Clock, CreditCard, Landmark } from 'lucide-react';
+import { Save, ChevronLeft, Calendar, User, Phone, MapPin, Clock, CreditCard, Landmark, Info } from 'lucide-react';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { useHallBookingStore } from '../store/hallBookingStore';
 import { useCoaStore } from '../store/coaStore';
@@ -234,171 +234,31 @@ export const HallBookingForm = () => {
           </span>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-
-          {/* Card 01: Booker Details */}
-          <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
-              <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
-                01
-              </span>
-              <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                <User className="h-4 w-4 text-indigo-400" /> {t('receipt.bookerName')} Details
-              </h3>
-            </div>
-            <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className={labelClass}>{t('receipt.bookerName')} *</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <input {...register('bookerName', {
-                    required: 'Booker name is required',
-                    pattern: {
-                      value: /^[a-zA-Z\s.-]{3,50}$/,
-                      message: 'Only letters, spaces, hyphens, and dots (3-50 chars)'
-                    }
-                  })} required
-                    className={inputWithIconClass(errors.bookerName)} />
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            {/* Left Column: Info & Reserved Dates */}
+            <div className="lg:col-span-4 space-y-5">
+              <div className="bg-indigo-500/5 rounded-2xl border border-indigo-500/20 p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <Info className="w-4 h-4 text-indigo-400" />
+                  <h3 className="text-sm font-semibold text-indigo-300">Booking Guidelines</h3>
                 </div>
-                {errors.bookerName && (
-                  <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.bookerName.message}</span>
-                )}
-              </div>
-
-              <div>
-                <label className={labelClass}>{t('receipt.mobile')}</label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <input {...register('mobile', {
-                    pattern: {
-                      value: /^$|^((\+92|92|0)?3[0-9]{2}-?[0-9]{7})$/,
-                      message: 'Invalid mobile number. E.g. 0300-1234567'
-                    }
-                  })}
-                    className={inputWithIconClass(errors.mobile)} />
-                </div>
-                {errors.mobile && (
-                  <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.mobile.message}</span>
-                )}
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className={labelClass}>{t('receipt.address')}</label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <input {...register('address', {
-                    pattern: {
-                      value: /^$|^[a-zA-Z0-9\s.,#\/-]{5,100}$/,
-                      message: 'Alphanumeric, spaces, and basic punctuation only (5-100 chars)'
-                    }
-                  })}
-                    className={inputWithIconClass(errors.address)} />
-                </div>
-                {errors.address && (
-                  <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.address.message}</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Card 02: Program Details */}
-          <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
-              <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
-                02
-              </span>
-              <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-indigo-400" /> Program Details
-              </h3>
-            </div>
-            <div className="p-5 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className={labelClass}>{t('receipt.programDate')} *</label>
-                  <input type="date" {...register('programDate', {
-                    required: 'Program date is required',
-                    pattern: {
-                      value: /^\d{4}-\d{2}-\d{2}$/,
-                      message: 'Date must be in YYYY-MM-DD format'
-                    }
-                  })} required
-                    className={inputClass(errors.programDate)} />
-                  {errors.programDate && (
-                    <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.programDate.message}</span>
-                  )}
-                  {conflictBooking && (
-                    <div className="mt-1.5 p-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-center gap-1.5 animate-pulse">
-                      <span>⚠️</span>
-                      <span>
-                        <strong>Booked:</strong> {conflictBooking.hallAccount?.accountName || 'This hall'} is already booked on this date ({conflictBooking.timings || 'Any time'}) by {conflictBooking.bookerName}.
-                      </span>
+                <div className="space-y-3">
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Check the <strong>Reserved Dates Panel</strong> below to avoid booking conflicts.
+                  </p>
+                  <div className="flex items-center gap-3 mt-2">
+                    <div className="w-7 h-7 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
+                      <Clock className="w-3.5 h-3.5 text-indigo-400" />
                     </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className={labelClass}>{t('receipt.programType')}</label>
-                  <input {...register('programType', {
-                    pattern: {
-                      value: /^$|^[a-zA-Z\s.-]{3,30}$/,
-                      message: 'Only letters, spaces, hyphens, and dots (3-30 chars)'
-                    }
-                  })} placeholder="e.g. Wedding, Valima"
-                    className={inputClass(errors.programType)} />
-                  {errors.programType && (
-                    <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.programType.message}</span>
-                  )}
-                </div>
-
-                <div>
-                  <label className={labelClass}>{t('receipt.timings')}</label>
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                    <select {...register('timings', {
-                      pattern: {
-                        value: /^(Morning|Afternoon|Evening|Night|Full Day)$/,
-                        message: 'Invalid timing selected'
-                      }
-                    })}
-                      className={inputWithIconClass(errors.timings)}>
-                      <option value="Morning">Morning</option>
-                      <option value="Afternoon">Afternoon</option>
-                      <option value="Evening">Evening</option>
-                      <option value="Night">Night</option>
-                      <option value="Full Day">Full Day</option>
-                    </select>
+                    <span className="text-xs font-semibold text-slate-300">Timings: Morning, Afternoon, Evening, Night</span>
                   </div>
-                  {errors.timings && (
-                    <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.timings.message}</span>
-                  )}
                 </div>
-
-                <div>
-                  <label className={labelClass}>{t('receipt.hall')} *</label>
-                  <select {...register('hallId', {
-                    required: 'Hall selection is required',
-                    pattern: {
-                      value: /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
-                      message: 'Invalid Hall selection'
-                    }
-                  })} required
-                    className={inputClass(errors.hallId)}>
-                    <option value="">-- Select Hall --</option>
-                    {hallAccounts.map(h => (
-                      <option key={h.id} value={h.id}>{h.name}</option>
-                    ))}
-                  </select>
-                  {errors.hallId && (
-                    <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.hallId.message}</span>
-                  )}
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="flex items-center gap-3 cursor-pointer p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:bg-slate-800/60 transition-colors">
-                    <input type="checkbox" {...register('isForJamaat')} className="w-4 h-4 accent-indigo-500" />
-                    <span className="text-sm font-semibold text-slate-300">{t('receipt.forJamaat')}</span>
-                  </label>
-                </div>
+                <div className="border-t border-indigo-500/20 my-4" />
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Fields marked with <span className="text-red-400 font-bold">*</span> are mandatory. Jamaat discounts apply automatically when checked.
+                </p>
               </div>
 
               {/* Reserved / Booked Dates Panel */}
@@ -436,7 +296,7 @@ export const HallBookingForm = () => {
                     No {showAllDates ? '' : 'upcoming'} bookings found {hallId ? 'for this hall' : ''}.
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 max-h-56 overflow-y-auto pr-1">
+                  <div className="grid grid-cols-1 gap-2.5 max-h-[400px] overflow-y-auto pr-1">
                     {activeBookings.map((b) => {
                       const bDateStr = b.programDate ? new Date(b.programDate).toISOString().split('T')[0] : '';
                       const isConflict = bDateStr && programDate && bDateStr === programDate &&
@@ -485,145 +345,315 @@ export const HallBookingForm = () => {
                 )}
               </div>
             </div>
-          </div>
 
-          {/* Card 03: Payment Details */}
-          <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
-              <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
-                03
-              </span>
-              <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                <CreditCard className="h-4 w-4 text-indigo-400" /> Payment Details
-              </h3>
-            </div>
-            <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className={labelClass}>{t('receipt.totalAmount')} (Rs) *</label>
-                <input type="text" {...register('amount', {
-                  required: 'Amount is required',
-                  pattern: {
-                    value: /^[1-9]\d*(\.\d{1,2})?$/,
-                    message: 'Positive decimal number up to 2 decimal places'
-                  }
-                })} required
-                  className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border text-lg font-bold text-emerald-400 focus:outline-none focus:border-indigo-500/60 transition-all ${errors.amount ? 'border-red-500/60' : 'border-slate-800'}`} />
-                {errors.amount && (
-                  <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.amount.message}</span>
-                )}
-              </div>
-
-              <div>
-                <label className={labelClass}>Payment Method *</label>
-                <select {...register('paymentMethod', {
-                  required: 'Payment method is required',
-                  pattern: {
-                    value: /^(CASH|BANK|CHEQUE)$/,
-                    message: 'Invalid payment method selected'
-                  }
-                })}
-                  className={inputClass(errors.paymentMethod)}>
-                  <option value="CASH">Cash</option>
-                  <option value="BANK">Bank Transfer</option>
-                  <option value="CHEQUE">Cheque</option>
-                </select>
-                {errors.paymentMethod && (
-                  <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.paymentMethod.message}</span>
-                )}
-              </div>
-
-              {paymentMethod !== 'CASH' && (
-                <div className="sm:col-span-2">
-                  <label className={labelClass}>Select Receiving Bank Account *</label>
-                  <div className="relative">
-                    <Landmark className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                    <select {...register('bankAccountId', {
-                      required: 'Bank account is required',
-                      pattern: {
-                        value: /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
-                        message: 'Invalid bank account selection'
-                      }
-                    })} required
-                      className={inputWithIconClass(errors.bankAccountId)}>
-                      <option value="">-- Select Bank Account --</option>
-                      {bankAccounts.map(b => (
-                        <option key={b.id} value={b.id}>{b.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  {errors.bankAccountId && (
-                    <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.bankAccountId.message}</span>
-                  )}
+            {/* Right Column: Form Cards */}
+            <div className="lg:col-span-8 space-y-5">
+              {/* Card 01: Booker Details */}
+              <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
+                  <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
+                    01
+                  </span>
+                  <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                    <User className="h-4 w-4 text-indigo-400" /> {t('receipt.bookerName')} Details
+                  </h3>
                 </div>
-              )}
-
-              {paymentMethod === 'CHEQUE' && (
-                <>
+                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelClass}>Cheque Number *</label>
-                    <input type="text" {...register('chequeNumber', {
-                      required: 'Cheque number is required',
-                      pattern: {
-                        value: /^[0-9]{6,20}$/,
-                        message: 'Cheque number must contain only digits (6-20 digits)'
-                      }
-                    })} required
-                      className={inputClass(errors.chequeNumber)} />
-                    {errors.chequeNumber && (
-                      <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.chequeNumber.message}</span>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>Drawn On Bank *</label>
+                    <label className={labelClass}>{t('receipt.bookerName')} *</label>
                     <div className="relative">
-                      <Landmark className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                      <select {...register('chequeBankName', {
-                        required: 'Bank selection is required',
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                      <input {...register('bookerName', {
+                        required: 'Booker name is required',
                         pattern: {
-                          value: /^[a-zA-Z0-9\s.()\&-]{3,50}$/,
-                          message: 'Invalid bank name selection'
+                          value: /^[a-zA-Z\s.-]{3,50}$/,
+                          message: 'Only letters, spaces, hyphens, and dots (3-50 chars)'
                         }
                       })} required
-                        className={inputWithIconClass(errors.chequeBankName)}>
-                        <option value="">-- Select Bank --</option>
-                        <option value="Meezan Bank">Meezan Bank</option>
-                        <option value="Habib Bank Limited (HBL)">Habib Bank Limited (HBL)</option>
-                        <option value="United Bank Limited (UBL)">United Bank Limited (UBL)</option>
-                        <option value="MCB Bank">MCB Bank</option>
-                        <option value="Allied Bank Limited (ABL)">Allied Bank Limited (ABL)</option>
-                        <option value="Bank Alfalah">Bank Alfalah</option>
-                        <option value="Standard Chartered Bank">Standard Chartered Bank</option>
-                        <option value="Askari Bank">Askari Bank</option>
-                        <option value="Bank Al Habib">Bank Al Habib</option>
-                        <option value="Faysal Bank">Faysal Bank</option>
-                        <option value="Soneri Bank">Soneri Bank</option>
-                        <option value="JS Bank">JS Bank</option>
-                        <option value="Habib Metropolitan Bank">Habib Metropolitan Bank</option>
-                        <option value="Dubai Islamic Bank">Dubai Islamic Bank</option>
-                        <option value="Other">Other</option>
-                      </select>
+                        className={inputWithIconClass(errors.bookerName)} />
                     </div>
-                    {errors.chequeBankName && (
-                      <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.chequeBankName.message}</span>
+                    {errors.bookerName && (
+                      <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.bookerName.message}</span>
                     )}
                   </div>
-                </>
-              )}
-            </div>
-          </div>
 
-          {/* Submit Bar */}
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <Link to="/hall-bookings"
-              className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">
-              Cancel
-            </Link>
-            <button type="submit" disabled={isSubmitting}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50 cursor-pointer">
-              <Save className="w-4 h-4" />
-              {isSubmitting ? 'Saving...' : id ? 'Update Booking' : 'Save Booking'}
-            </button>
+                  <div>
+                    <label className={labelClass}>{t('receipt.mobile')}</label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                      <input {...register('mobile', {
+                        pattern: {
+                          value: /^$|^((\+92|92|0)?3[0-9]{2}-?[0-9]{7})$/,
+                          message: 'Invalid mobile number. E.g. 0300-1234567'
+                        }
+                      })}
+                        className={inputWithIconClass(errors.mobile)} />
+                    </div>
+                    {errors.mobile && (
+                      <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.mobile.message}</span>
+                    )}
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className={labelClass}>{t('receipt.address')}</label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                      <input {...register('address', {
+                        pattern: {
+                          value: /^$|^[a-zA-Z0-9\s.,#\/-]{5,100}$/,
+                          message: 'Alphanumeric, spaces, and basic punctuation only (5-100 chars)'
+                        }
+                      })}
+                        className={inputWithIconClass(errors.address)} />
+                    </div>
+                    {errors.address && (
+                      <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.address.message}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 02: Program Details */}
+              <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
+                  <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
+                    02
+                  </span>
+                  <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-indigo-400" /> Program Details
+                  </h3>
+                </div>
+                <div className="p-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelClass}>{t('receipt.programDate')} *</label>
+                      <input type="date" {...register('programDate', {
+                        required: 'Program date is required',
+                        pattern: {
+                          value: /^\d{4}-\d{2}-\d{2}$/,
+                          message: 'Date must be in YYYY-MM-DD format'
+                        }
+                      })} required
+                        className={inputClass(errors.programDate)} />
+                      {errors.programDate && (
+                        <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.programDate.message}</span>
+                      )}
+                      {conflictBooking && (
+                        <div className="mt-1.5 p-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-center gap-1.5 animate-pulse">
+                          <span>⚠️</span>
+                          <span>
+                            <strong>Booked:</strong> {conflictBooking.hallAccount?.accountName || 'This hall'} is already booked on this date ({conflictBooking.timings || 'Any time'}) by {conflictBooking.bookerName}.
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>{t('receipt.programType')}</label>
+                      <input {...register('programType', {
+                        pattern: {
+                          value: /^$|^[a-zA-Z\s.-]{3,30}$/,
+                          message: 'Only letters, spaces, hyphens, and dots (3-30 chars)'
+                        }
+                      })} placeholder="e.g. Wedding, Valima"
+                        className={inputClass(errors.programType)} />
+                      {errors.programType && (
+                        <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.programType.message}</span>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>{t('receipt.timings')}</label>
+                      <div className="relative">
+                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                        <select {...register('timings', {
+                          pattern: {
+                            value: /^(Morning|Afternoon|Evening|Night|Full Day)$/,
+                            message: 'Invalid timing selected'
+                          }
+                        })}
+                          className={inputWithIconClass(errors.timings)}>
+                          <option value="Morning">Morning</option>
+                          <option value="Afternoon">Afternoon</option>
+                          <option value="Evening">Evening</option>
+                          <option value="Night">Night</option>
+                          <option value="Full Day">Full Day</option>
+                        </select>
+                      </div>
+                      {errors.timings && (
+                        <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.timings.message}</span>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>{t('receipt.hall')} *</label>
+                      <select {...register('hallId', {
+                        required: 'Hall selection is required',
+                        pattern: {
+                          value: /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
+                          message: 'Invalid Hall selection'
+                        }
+                      })} required
+                        className={inputClass(errors.hallId)}>
+                        <option value="">-- Select Hall --</option>
+                        {hallAccounts.map(h => (
+                          <option key={h.id} value={h.id}>{h.name}</option>
+                        ))}
+                      </select>
+                      {errors.hallId && (
+                        <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.hallId.message}</span>
+                      )}
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="flex items-center gap-3 cursor-pointer p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:bg-slate-800/60 transition-colors">
+                        <input type="checkbox" {...register('isForJamaat')} className="w-4 h-4 accent-indigo-500" />
+                        <span className="text-sm font-semibold text-slate-300">{t('receipt.forJamaat')}</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 03: Payment Details */}
+              <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
+                  <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
+                    03
+                  </span>
+                  <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-indigo-400" /> Payment Details
+                  </h3>
+                </div>
+                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelClass}>{t('receipt.totalAmount')} (Rs) *</label>
+                    <input type="text" {...register('amount', {
+                      required: 'Amount is required',
+                      pattern: {
+                        value: /^[1-9]\d*(\.\d{1,2})?$/,
+                        message: 'Positive decimal number up to 2 decimal places'
+                      }
+                    })} required
+                      className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border text-lg font-bold text-emerald-400 focus:outline-none focus:border-indigo-500/60 transition-all ${errors.amount ? 'border-red-500/60' : 'border-slate-800'}`} />
+                    {errors.amount && (
+                      <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.amount.message}</span>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Payment Method *</label>
+                    <select {...register('paymentMethod', {
+                      required: 'Payment method is required',
+                      pattern: {
+                        value: /^(CASH|BANK|CHEQUE)$/,
+                        message: 'Invalid payment method selected'
+                      }
+                    })}
+                      className={inputClass(errors.paymentMethod)}>
+                      <option value="CASH">Cash</option>
+                      <option value="BANK">Bank Transfer</option>
+                      <option value="CHEQUE">Cheque</option>
+                    </select>
+                    {errors.paymentMethod && (
+                      <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.paymentMethod.message}</span>
+                    )}
+                  </div>
+
+                  {paymentMethod !== 'CASH' && (
+                    <div className="sm:col-span-2">
+                      <label className={labelClass}>Select Receiving Bank Account *</label>
+                      <div className="relative">
+                        <Landmark className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                        <select {...register('bankAccountId', {
+                          required: 'Bank account is required',
+                          pattern: {
+                            value: /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
+                            message: 'Invalid bank account selection'
+                          }
+                        })} required
+                          className={inputWithIconClass(errors.bankAccountId)}>
+                          <option value="">-- Select Bank Account --</option>
+                          {bankAccounts.map(b => (
+                            <option key={b.id} value={b.id}>{b.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      {errors.bankAccountId && (
+                        <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.bankAccountId.message}</span>
+                      )}
+                    </div>
+                  )}
+
+                  {paymentMethod === 'CHEQUE' && (
+                    <>
+                      <div>
+                        <label className={labelClass}>Cheque Number *</label>
+                        <input type="text" {...register('chequeNumber', {
+                          required: 'Cheque number is required',
+                          pattern: {
+                            value: /^[0-9]{6,20}$/,
+                            message: 'Cheque number must contain only digits (6-20 digits)'
+                          }
+                        })} required
+                          className={inputClass(errors.chequeNumber)} />
+                        {errors.chequeNumber && (
+                          <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.chequeNumber.message}</span>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className={labelClass}>Drawn On Bank *</label>
+                        <div className="relative">
+                          <Landmark className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                          <select {...register('chequeBankName', {
+                            required: 'Bank selection is required',
+                            pattern: {
+                              value: /^[a-zA-Z0-9\s.()\&-]{3,50}$/,
+                              message: 'Invalid bank name selection'
+                            }
+                          })} required
+                            className={inputWithIconClass(errors.chequeBankName)}>
+                            <option value="">-- Select Bank --</option>
+                            <option value="Meezan Bank">Meezan Bank</option>
+                            <option value="Habib Bank Limited (HBL)">Habib Bank Limited (HBL)</option>
+                            <option value="United Bank Limited (UBL)">United Bank Limited (UBL)</option>
+                            <option value="MCB Bank">MCB Bank</option>
+                            <option value="Allied Bank Limited (ABL)">Allied Bank Limited (ABL)</option>
+                            <option value="Bank Alfalah">Bank Alfalah</option>
+                            <option value="Standard Chartered Bank">Standard Chartered Bank</option>
+                            <option value="Askari Bank">Askari Bank</option>
+                            <option value="Bank Al Habib">Bank Al Habib</option>
+                            <option value="Faysal Bank">Faysal Bank</option>
+                            <option value="Soneri Bank">Soneri Bank</option>
+                            <option value="JS Bank">JS Bank</option>
+                            <option value="Habib Metropolitan Bank">Habib Metropolitan Bank</option>
+                            <option value="Dubai Islamic Bank">Dubai Islamic Bank</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                        {errors.chequeBankName && (
+                          <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.chequeBankName.message}</span>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Submit Bar */}
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <Link to="/hall-bookings"
+                  className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">
+                  Cancel
+                </Link>
+                <button type="submit" disabled={isSubmitting}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50 cursor-pointer">
+                  <Save className="w-4 h-4" />
+                  {isSubmitting ? 'Saving...' : id ? 'Update Booking' : 'Save Booking'}
+                </button>
+              </div>
+            </div>
           </div>
         </form>
       </div>
