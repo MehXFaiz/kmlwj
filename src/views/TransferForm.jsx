@@ -26,8 +26,8 @@ export const TransferForm = () => {
 
   // Asset accounts containing 'bank' or 'cash'
   const bankAccounts = useMemo(() => {
-    return flatAccounts.filter(acc => 
-      acc.type === 'Asset' && 
+    return flatAccounts.filter(acc =>
+      acc.type === 'Asset' &&
       acc.level === 'SUBSIDIARY' &&
       (acc.detailType === 'Cash' || (acc.name || '').toLowerCase().includes('bank') || (acc.name || '').toLowerCase().includes('cash'))
     );
@@ -76,7 +76,7 @@ export const TransferForm = () => {
     setLoading(true);
     try {
       const memo = description || `Transfer from ${fromAcc.name} to ${toAcc.name}`;
-      
+
       // Build lines:
       // Debit: To Account (Asset increases)
       // Credit: From Account (Asset decreases)
@@ -95,7 +95,7 @@ export const TransferForm = () => {
         subsidiary: 'Global',
         reference: reference || 'Fund Transfer',
         description: memo,
-        status: 'Posted', // Post immediately to ledger
+        status: 'Posted',
         voucherType: 'JV', // Represented as Journal Entry
         lines
       };
@@ -109,124 +109,151 @@ export const TransferForm = () => {
     }
   };
 
+  const inputClass = 'w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium';
+  const labelClass = 'block text-xs font-semibold text-slate-400 mb-1.5';
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6 pb-12">
-      <div className="flex items-center gap-3">
-        <Link to="/bank-vouchers" className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 transition-colors flex-shrink-0">
-          <ChevronLeft className="h-4 w-4" />
-        </Link>
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.12em] text-violet-400 bg-violet-950/40 border border-violet-900/40 px-2 py-0.5 rounded-full">
-              <Sparkles className="h-3 w-3 text-violet-450" /> {t('forms.fundTransfer')}
-            </span>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <Link to="/bank-vouchers"
+            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700 transition-colors">
+            <ChevronLeft className="w-4 h-4" />
+          </Link>
+          <div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.12em] text-violet-400 bg-violet-950/40 border border-violet-900/40 px-2 py-0.5 rounded-full">
+                <Sparkles className="h-3 w-3 text-violet-400" /> {t('forms.fundTransfer')}
+              </span>
+            </div>
+            <h1 className="text-xl font-bold text-slate-100">{t('forms.transferFunds')}</h1>
+            <p className="text-xs text-slate-500 mt-0.5">{t('forms.transferFundsDesc')}</p>
           </div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">{t('forms.transferFunds')}</h2>
-          <p className="text-xs text-slate-500 mt-0.5">{t('forms.transferFundsDesc')}</p>
         </div>
+        <span className="text-xs font-semibold text-indigo-400 bg-indigo-500/10 px-3 py-1.5 rounded-full border border-indigo-500/20">
+          Fund Transfer
+        </span>
       </div>
 
-      <form onSubmit={handleSave} className="w-full rounded-xl border border-slate-800/70 bg-slate-900/40 p-4 sm:p-6 space-y-6">
-        
-        {/* Main account selection grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-5 rounded-xl bg-slate-950/30 border border-slate-850 relative">
-          
-          {/* Visual transfer indicator */}
-          <div className="hidden sm:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-slate-900 border border-slate-800 items-center justify-center text-violet-400 z-10">
-            <RefreshCw className="h-4 w-4 animate-spin-slow" />
-          </div>
+      <form onSubmit={handleSave} className="space-y-5">
 
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-550 mb-2">{t('forms.sourceAccountFrom')}</label>
-            <select 
-              value={fromBankAccountId} 
-              onChange={e => setFromBankAccountId(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-250 text-sm focus:outline-none focus:border-violet-600/50 transition-all font-semibold"
-            >
-              <option value="">{t('forms.selectSourceAccount')}</option>
-              {bankAccounts.map(acc => (
-                <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
-              ))}
-            </select>
-            <p className="text-[10px] text-slate-500 mt-1.5">{t('forms.fundsDeductedFromHere')}</p>
+        {/* Card 01: Account Selection */}
+        <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
+            <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
+              01
+            </span>
+            <h3 className="text-sm font-semibold text-slate-200">Account Selection</h3>
           </div>
+          <div className="p-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 relative">
+              {/* Visual transfer indicator */}
+              <div className="hidden sm:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-slate-800 border border-slate-700 items-center justify-center text-indigo-400 z-10">
+                <RefreshCw className="h-4 w-4 animate-spin-slow" />
+              </div>
 
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-555 mb-2">{t('forms.targetAccountTo')}</label>
-            <select 
-              value={toBankAccountId} 
-              onChange={e => setToBankAccountId(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-250 text-sm focus:outline-none focus:border-violet-600/50 transition-all font-semibold"
-            >
-              <option value="">{t('forms.selectTargetAccount')}</option>
-              {bankAccounts.filter(acc => acc.id !== fromBankAccountId).map(acc => (
-                <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
-              ))}
-            </select>
-            <p className="text-[10px] text-slate-500 mt-1.5">{t('forms.fundsAddedToHere')}</p>
-          </div>
-        </div>
+              <div>
+                <label className={labelClass}>{t('forms.sourceAccountFrom')}</label>
+                <select
+                  value={fromBankAccountId}
+                  onChange={e => setFromBankAccountId(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">{t('forms.selectSourceAccount')}</option>
+                  {bankAccounts.map(acc => (
+                    <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-600 mt-1.5">{t('forms.fundsDeductedFromHere')}</p>
+              </div>
 
-        {/* Transaction Details */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('forms.transactionDate')}</label>
-            <input 
-              type="date" 
-              value={postingDate} 
-              onChange={e => setPostingDate(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-violet-600/50 transition-colors" 
-            />
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('forms.refChequeNumber')}</label>
-            <input 
-              value={reference} 
-              onChange={e => setReference(e.target.value)} 
-              placeholder={t('forms.trfPlaceholder')}
-              pattern="^[a-zA-Z0-9\s.-]{3,30}$" title="Only letters, numbers, spaces, hyphens, and dots (3-30 characters)"
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-violet-600/50 transition-colors placeholder-slate-600" 
-            />
+              <div>
+                <label className={labelClass}>{t('forms.targetAccountTo')}</label>
+                <select
+                  value={toBankAccountId}
+                  onChange={e => setToBankAccountId(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">{t('forms.selectTargetAccount')}</option>
+                  {bankAccounts.filter(acc => acc.id !== fromBankAccountId).map(acc => (
+                    <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-600 mt-1.5">{t('forms.fundsAddedToHere')}</p>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div>
-          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('forms.transferAmount')}</label>
-          <input 
-            type="text" 
-            value={amount} 
-            onChange={e => setAmount(e.target.value)} 
-            placeholder="0.00"
-            pattern="^[1-9]\d*(\.\d{1,2})?$" title="Positive number with up to 2 decimal places"
-            className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-violet-600/50 transition-colors placeholder-slate-600 font-semibold text-base" 
-          />
+        {/* Card 02: Transaction Details */}
+        <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
+            <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
+              02
+            </span>
+            <h3 className="text-sm font-semibold text-slate-200">Transaction Details</h3>
+          </div>
+          <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>{t('forms.transactionDate')}</label>
+              <input
+                type="date"
+                value={postingDate}
+                onChange={e => setPostingDate(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>{t('forms.refChequeNumber')}</label>
+              <input
+                value={reference}
+                onChange={e => setReference(e.target.value)}
+                placeholder={t('forms.trfPlaceholder')}
+                pattern="^[a-zA-Z0-9\s.-]{3,30}$" title="Only letters, numbers, spaces, hyphens, and dots (3-30 characters)"
+                className={inputClass}
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>{t('forms.transferAmount')}</label>
+              <input
+                type="text"
+                value={amount}
+                onChange={e => setAmount(e.target.value)}
+                placeholder="0.00"
+                pattern="^[1-9]\d*(\.\d{1,2})?$" title="Positive number with up to 2 decimal places"
+                className={inputClass}
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>{t('forms.voucherDescription')}</label>
+              <textarea
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                placeholder={t('forms.voucherDescription')}
+                className={inputClass + ' resize-none h-24'}
+              />
+            </div>
+          </div>
         </div>
 
-        <div>
-          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('forms.voucherDescription')}</label>
-          <textarea 
-            value={description} 
-            onChange={e => setDescription(e.target.value)} 
-            placeholder={t('forms.voucherDescription')}
-            className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-violet-600/50 transition-colors h-24 resize-none placeholder-slate-650" 
-          />
-        </div>
-
-        {/* Buttons */}
-        <div className="flex gap-3 justify-end pt-2 border-t border-slate-800/80">
+        {/* Submit Bar */}
+        <div className="flex items-center justify-end gap-3 pt-2">
           <Link to="/bank-vouchers"
-            className="px-5 py-2.5 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-800 text-sm font-semibold transition-all">
+            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">
             {t('forms.cancel')}
           </Link>
           <button type="submit" disabled={loading}
-            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold shadow-lg shadow-violet-950/40 transition-all disabled:opacity-50 cursor-pointer">
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50 cursor-pointer">
             <Save className="h-4 w-4" />
             {loading ? t('forms.posting') : t('forms.saveAndPost')}
           </button>
         </div>
       </form>
-      
+
       <style>{`
         .animate-spin-slow {
           animation: spin 8s linear infinite;

@@ -25,8 +25,8 @@ export const BankVoucherForm = () => {
 
   // Asset accounts for bank selection
   const bankAccounts = useMemo(() => {
-    return flatAccounts.filter(acc => 
-      acc.type === 'Asset' && 
+    return flatAccounts.filter(acc =>
+      acc.type === 'Asset' &&
       acc.level === 'SUBSIDIARY' &&
       (acc.detailType === 'Cash' || (acc.name || '').toLowerCase().includes('bank') || (acc.name || '').toLowerCase().includes('cash'))
     );
@@ -34,7 +34,7 @@ export const BankVoucherForm = () => {
 
   // Offset accounts based on type
   const offsetAccounts = useMemo(() => {
-    return flatAccounts.filter(acc => 
+    return flatAccounts.filter(acc =>
       acc.level === 'SUBSIDIARY' &&
       (voucherType === 'BP' ? acc.type === 'Expense' : acc.type === 'Revenue')
     );
@@ -86,15 +86,11 @@ export const BankVoucherForm = () => {
     // Build the lines for the Journal Entry
     const lines = [];
     if (voucherType === 'BP') {
-      // Debit: Offset Account (e.g. Rent Expense)
-      // Credit: Bank Account (Asset)
       lines.push(
         { accountCode: offsetAcc.code, debit: val, credit: 0, description: `Bank Payout: ${description || reference || 'Payment'}` },
         { accountCode: bankAcc.code, debit: 0, credit: val, description: `Bank Payout: ${description || reference || 'Payment'}` }
       );
     } else {
-      // Debit: Bank Account (Asset)
-      // Credit: Offset Account (e.g. Booking Revenue)
       lines.push(
         { accountCode: bankAcc.code, debit: val, credit: 0, description: `Bank Receipt: ${description || reference || 'Receipt'}` },
         { accountCode: offsetAcc.code, debit: 0, credit: val, description: `Bank Receipt: ${description || reference || 'Receipt'}` }
@@ -111,7 +107,7 @@ export const BankVoucherForm = () => {
       subsidiary: 'Global',
       reference: reference || 'Bank Transaction',
       description: description || null,
-      status: 'Posted', // Post immediately to ledger
+      status: 'Posted',
       voucherType,
       lines
     };
@@ -128,108 +124,133 @@ export const BankVoucherForm = () => {
     }
   };
 
+  const inputClass = 'w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium';
+  const labelClass = 'block text-xs font-semibold text-slate-400 mb-1.5';
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6 pb-12">
-      <div className="flex items-center gap-3">
-        <Link to="/bank-vouchers" className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 transition-colors flex-shrink-0">
-          <ChevronLeft className="h-4 w-4" />
-        </Link>
-        <div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">Create Bank Voucher</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Record payments out or receipts in to Cash/Bank ledger accounts</p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <Link
+            to="/bank-vouchers"
+            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700 transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Link>
+          <div>
+            <h1 className="text-xl font-bold text-slate-100">Create Bank Voucher</h1>
+            <p className="text-xs text-slate-500 mt-0.5">Record payments out or receipts in to Cash/Bank ledger</p>
+          </div>
         </div>
+        <span className="text-xs font-semibold text-indigo-400 bg-indigo-500/10 px-3 py-1.5 rounded-full border border-indigo-500/20">
+          New Voucher
+        </span>
       </div>
 
-      <form onSubmit={handleSave} className="w-full rounded-xl border border-slate-800/70 bg-slate-900/40 p-4 sm:p-6 space-y-6">
-        
-        {/* Transaction Type selection */}
-        <div>
-          <label className="block text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">What type of transaction is this? *</label>
-          <p className="text-[11px] text-slate-600 mb-2">Example: Paying rent or salaries = Money Going Out. Receiving hall fees = Money Coming In.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <button type="button" onClick={() => setVoucherType('BP')}
-              className={`py-3.5 rounded-lg border text-sm font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${voucherType === 'BP' ? 'bg-red-600/10 border-red-500 text-red-400' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'}`}>
-              <TrendingDown className="h-4 w-4" />
-              💸 Money Going Out
-            </button>
-            <button type="button" onClick={() => setVoucherType('BR')}
-              className={`py-3.5 rounded-lg border text-sm font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${voucherType === 'BR' ? 'bg-emerald-600/10 border-emerald-500 text-emerald-400' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'}`}>
-              <TrendingUp className="h-4 w-4" />
-              💰 Money Coming In
-            </button>
+      <form onSubmit={handleSave} className="space-y-5">
+
+        {/* Card 01: Transaction Type */}
+        <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
+            <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
+              01
+            </span>
+            <h3 className="text-sm font-semibold text-slate-200">Transaction Type</h3>
+          </div>
+          <div className="p-5 space-y-3">
+            <p className="text-xs text-slate-500">Example: Paying rent or salaries = Money Going Out. Receiving hall fees = Money Coming In.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button type="button" onClick={() => setVoucherType('BP')}
+                className={`py-3.5 rounded-xl border text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${voucherType === 'BP' ? 'bg-red-600/10 border-red-500/60 text-red-400' : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'}`}>
+                <TrendingDown className="h-4 w-4" />
+                💸 Money Going Out
+              </button>
+              <button type="button" onClick={() => setVoucherType('BR')}
+                className={`py-3.5 rounded-xl border text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${voucherType === 'BR' ? 'bg-emerald-600/10 border-emerald-500/60 text-emerald-400' : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'}`}>
+                <TrendingUp className="h-4 w-4" />
+                💰 Money Coming In
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Form Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-400 mb-1.5">Transaction Date *</label>
-            <input type="date" value={postingDate} onChange={e => setPostingDate(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50 transition-colors" />
+        {/* Card 02: Transaction Details */}
+        <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
+            <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
+              02
+            </span>
+            <h3 className="text-sm font-semibold text-slate-200">Transaction Details</h3>
           </div>
+          <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Transaction Date *</label>
+              <input type="date" value={postingDate} onChange={e => setPostingDate(e.target.value)}
+                className={inputClass} />
+            </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-400 mb-1.5">Cheque / Reference Number</label>
-            <input value={reference} onChange={e => setReference(e.target.value)} placeholder="e.g. CHQ-82941"
-              pattern="^[a-zA-Z0-9\s.-]{3,30}$" title="Only letters, numbers, spaces, hyphens, and dots (3-30 characters)"
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50 transition-colors placeholder-slate-650" />
-          </div>
-        </div>
+            <div>
+              <label className={labelClass}>Cheque / Reference Number</label>
+              <input value={reference} onChange={e => setReference(e.target.value)} placeholder="e.g. CHQ-82941"
+                pattern="^[a-zA-Z0-9\s.-]{3,30}$" title="Only letters, numbers, spaces, hyphens, and dots (3-30 characters)"
+                className={inputClass} />
+            </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-400 mb-1.5">Cash / Bank Account *</label>
-            <p className="text-[11px] text-slate-600 mb-1.5">{voucherType === 'BP' ? 'Money leaves from this account' : 'Money arrives in this account'}</p>
-            <select value={bankAccountId} onChange={e => setBankAccountId(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50 transition-colors">
-              {bankAccounts.length === 0 ? (
-                <option value="">-- No Cash/Bank Accounts Found --</option>
-              ) : (
-                bankAccounts.map(acc => (
+            <div>
+              <label className={labelClass}>Cash / Bank Account *</label>
+              <p className="text-xs text-slate-600 mb-1.5">{voucherType === 'BP' ? 'Money leaves from this account' : 'Money arrives in this account'}</p>
+              <select value={bankAccountId} onChange={e => setBankAccountId(e.target.value)}
+                className={inputClass}>
+                {bankAccounts.length === 0 ? (
+                  <option value="">-- No Cash/Bank Accounts Found --</option>
+                ) : (
+                  bankAccounts.map(acc => (
+                    <option key={acc.id} value={acc.id}>{acc.name}</option>
+                  ))
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label className={labelClass}>
+                {voucherType === 'BP' ? 'Expense Category *' : 'Income Category *'}
+              </label>
+              <p className="text-xs text-slate-600 mb-1.5">{voucherType === 'BP' ? 'What was this money spent on?' : 'What type of income is this?'}</p>
+              <select value={offsetAccountId} onChange={e => setOffsetAccountId(e.target.value)}
+                className={inputClass}>
+                {offsetAccounts.map(acc => (
                   <option key={acc.id} value={acc.id}>{acc.name}</option>
-                ))
-              )}
-            </select>
+                ))}
+                {offsetAccounts.length === 0 && (
+                  <option value="">-- No accounts found --</option>
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label className={labelClass}>Amount (PKR) *</label>
+              <input type="text" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00"
+                pattern="^[1-9]\d*(\.\d{1,2})?$" title="Positive number with up to 2 decimal places"
+                className={inputClass} />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className={labelClass}>Notes / Description</label>
+              <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Write details about this transaction..."
+                className={inputClass + ' resize-none h-24'} />
+            </div>
           </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-400 mb-1.5">
-              {voucherType === 'BP' ? 'Expense Category *' : 'Income Category *'}
-            </label>
-            <p className="text-[11px] text-slate-600 mb-1.5">{voucherType === 'BP' ? 'What was this money spent on?' : 'What type of income is this?'}</p>
-            <select value={offsetAccountId} onChange={e => setOffsetAccountId(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50 transition-colors">
-              {offsetAccounts.map(acc => (
-                <option key={acc.id} value={acc.id}>{acc.name}</option>
-              ))}
-              {offsetAccounts.length === 0 && (
-                <option value="">-- No accounts found --</option>
-              )}
-            </select>
-          </div>
         </div>
 
-        <div>
-          <label className="block text-xs font-bold text-slate-400 mb-1.5">Amount (PKR) *</label>
-          <input type="text" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00"
-            pattern="^[1-9]\d*(\.\d{1,2})?$" title="Positive number with up to 2 decimal places"
-            className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50 transition-colors placeholder-slate-650" />
-        </div>
-
-        <div>
-          <label className="block text-xs font-bold text-slate-400 mb-1.5">Notes / Description</label>
-          <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Write details about this transaction..."
-            className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50 transition-colors h-24 resize-none placeholder-slate-650" />
-        </div>
-
-        {/* Buttons */}
-        <div className="flex gap-3 justify-end pt-2 border-t border-slate-800/80">
+        {/* Submit Bar */}
+        <div className="flex items-center justify-end gap-3 pt-2">
           <Link to="/bank-vouchers"
-            className="px-5 py-2.5 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-800 text-sm font-semibold transition-all">
+            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">
             Cancel
           </Link>
           <button type="submit" disabled={loading}
-            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold shadow-lg shadow-indigo-900/40 transition-all disabled:opacity-50">
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50 cursor-pointer">
             <Save className="h-4 w-4" />
             {loading ? 'Posting...' : 'Save & Post'}
           </button>

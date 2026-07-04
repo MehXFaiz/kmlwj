@@ -163,7 +163,7 @@ var donations_received_default = makeHandler(async (req, res) => {
       include: { donor: true }
     });
     if (!existing) return res.status(404).json({ error: { message: "Donation receipt not found", status: 404 } });
-    const { status, narration, referenceNo, chequeNo, chequeDate } = req.body;
+    const { status, narration, referenceNo, chequeNo, chequeDate, amount, donorId, donationType, paymentMethod, receiptDate, cashAccountId, bankAccountId } = req.body;
     const result = await prisma.$transaction(async (tx) => {
       let journalEntryId = existing.journalEntryId;
       let newStatus = status !== void 0 ? status : existing.status;
@@ -203,7 +203,14 @@ var donations_received_default = makeHandler(async (req, res) => {
           narration: narration !== void 0 ? narration || null : void 0,
           referenceNo: referenceNo !== void 0 ? referenceNo || null : void 0,
           chequeNo: chequeNo !== void 0 ? chequeNo || null : void 0,
-          chequeDate: chequeDate !== void 0 ? chequeDate ? new Date(chequeDate) : null : void 0
+          chequeDate: chequeDate !== void 0 ? chequeDate ? new Date(chequeDate) : null : void 0,
+          amount: amount !== void 0 ? Number(amount) : void 0,
+          donorId: donorId !== void 0 ? donorId : void 0,
+          donationType: donationType !== void 0 ? donationType : void 0,
+          paymentMethod: paymentMethod !== void 0 ? paymentMethod : void 0,
+          receiptDate: receiptDate !== void 0 ? receiptDate ? new Date(receiptDate) : void 0 : void 0,
+          cashAccountId: cashAccountId !== void 0 ? cashAccountId || null : void 0,
+          bankAccountId: bankAccountId !== void 0 ? bankAccountId || null : void 0
         },
         include: {
           donor: true,

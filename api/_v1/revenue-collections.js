@@ -6,25 +6,30 @@ import { AccountingService } from "../_services/accounting.service.js";
 async function getIncomeAccountForCategory(category, tx) {
   let acc = await tx.account.findFirst({
     where: {
-      type: "Revenue",
+      accountType: { name: { equals: "Revenue", mode: "insensitive" } },
       accountName: { contains: category, mode: "insensitive" },
-      detailType: "Subsidiary"
+      accountLevel: { in: ["SUBSIDIARY", "GL"] },
+      isLocked: false
     }
   });
   if (!acc) {
     let searchTerm = category;
-    if (category === "Zakat" || category === "Fitra") searchTerm = "Donation";
-    else if (category === "Membership Fee" || category === "Bus Booking") searchTerm = "Other Income";
+    if (category === "Membership Fee" || category === "Bus Booking") searchTerm = "Income";
     acc = await tx.account.findFirst({
       where: {
-        type: "Revenue",
-        accountName: { contains: searchTerm, mode: "insensitive" }
+        accountType: { name: { equals: "Revenue", mode: "insensitive" } },
+        accountName: { contains: searchTerm, mode: "insensitive" },
+        accountLevel: { in: ["SUBSIDIARY", "GL"] },
+        isLocked: false
       }
     });
   }
   if (!acc) {
     acc = await tx.account.findFirst({
-      where: { type: "Revenue" }
+      where: {
+        accountType: { name: { equals: "Revenue", mode: "insensitive" } },
+        isLocked: false
+      }
     });
   }
   return acc;
@@ -121,13 +126,13 @@ var revenue_collections_default = makeHandler(async (req, res) => {
       if (!incomeAccount) {
         throw new Error(`No revenue account found in Chart of Accounts for ${category}`);
       }
-      const count = await tx.revenueCollection.count();
-      const nextReceiptNo = count + 1;
+      const count = await tx.revenueCollection.count({ where: { category } });
+      const refNo = count + 1;
       const postingResult = await AccountingService.postReceipt(tx, {
         amount: parsedAmount,
         cashOrBankAccountId: debitAccountId,
         incomeAccountId: incomeAccount.id,
-        reference: `${category.slice(0, 3).toUpperCase()}-${nextReceiptNo}`,
+        reference: `${category.slice(0, 3).toUpperCase()}-${refNo}`,
         description: `${category} Receipt from ${title} ${subTitle ? `(${subTitle})` : ""}`,
         module: category,
         voucherType: "BR",
@@ -139,7 +144,7 @@ var revenue_collections_default = makeHandler(async (req, res) => {
       const newItem = await tx.revenueCollection.create({
         data: {
           category,
-          receiptNo: nextReceiptNo,
+          // receiptNo is autoincrement — do NOT set it manually
           title,
           subTitle: subTitle || null,
           mobile: mobile || null,

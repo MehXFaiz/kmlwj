@@ -142,6 +142,9 @@ export const InvoiceForm = () => {
     }
   };
 
+  const inputClass = 'w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium';
+  const labelClass = 'block text-xs font-semibold text-slate-400 mb-1.5';
+
   if (loading && id) {
     return (
       <div className="flex items-center justify-center h-[50vh]">
@@ -152,33 +155,44 @@ export const InvoiceForm = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
-          <Link to="/invoices" className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 transition-colors">
-            <ChevronLeft className="h-4 w-4" />
+          <Link to="/invoices"
+            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700 transition-colors">
+            <ChevronLeft className="w-4 h-4" />
           </Link>
           <div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">
+            <h1 className="text-xl font-bold text-slate-100">
               {id ? 'Edit Invoice' : 'Create Invoice'}
-            </h2>
+            </h1>
             <p className="text-xs text-slate-500 mt-0.5">
               {id ? 'Modify current draft billing parameters' : 'Generate a new invoice request'}
             </p>
           </div>
         </div>
+        <span className="text-xs font-semibold text-indigo-400 bg-indigo-500/10 px-3 py-1.5 rounded-full border border-indigo-500/20">
+          {id ? 'Editing Invoice' : 'New Invoice'}
+        </span>
       </div>
 
       <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main form details */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="rounded-xl border border-slate-800/70 bg-slate-900/40 p-6 space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800/80 pb-2">Invoice Attributes</h3>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Main form area */}
+        <div className="lg:col-span-2 space-y-5">
+
+          {/* Card 01: Invoice Attributes */}
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
+              <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
+                01
+              </span>
+              <h3 className="text-sm font-semibold text-slate-200">Invoice Attributes</h3>
+            </div>
+            <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Select Customer *</label>
+                <label className={labelClass}>Select Customer *</label>
                 <select value={customerId} onChange={e => setCustomerId(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50 transition-colors">
+                  className={inputClass}>
                   <option value="">-- Choose Customer --</option>
                   {customers.filter(c => c.isActive).map(c => (
                     <option key={c.id} value={c.id}>{c.name} {c.company ? `(${c.company})` : ''}</option>
@@ -187,68 +201,73 @@ export const InvoiceForm = () => {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Remarks / Memo</label>
+                <label className={labelClass}>Remarks / Memo</label>
                 <input value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="e.g. Project Phase 2 Billing"
                   pattern="^[a-zA-Z0-9\s.,#\/-]{3,100}$" title="Only letters, numbers, spaces, and basic punctuation (3-100 characters)"
-                  className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50 transition-colors placeholder-slate-600" />
+                  className={inputClass} />
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Issue Date *</label>
+                <label className={labelClass}>Issue Date *</label>
                 <input type="date" value={issueDate} onChange={e => setIssueDate(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50 transition-colors" />
+                  className={inputClass} />
               </div>
+
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Due Date *</label>
+                <label className={labelClass}>Due Date *</label>
                 <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/50 transition-colors" />
+                  className={inputClass} />
               </div>
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-800/70 bg-slate-900/40 p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Line Items</h3>
+          {/* Card 02: Line Items */}
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between gap-3 bg-slate-800/40">
+              <div className="flex items-center gap-3">
+                <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
+                  02
+                </span>
+                <h3 className="text-sm font-semibold text-slate-200">Line Items</h3>
+              </div>
               <button type="button" onClick={handleAddItem}
-                className="flex items-center gap-1.5 px-3 py-1 rounded bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600/20 border border-indigo-900/55 transition-all text-xs font-semibold">
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600/20 border border-indigo-500/20 transition-all text-xs font-semibold">
                 <Plus className="h-3.5 w-3.5" /> Add Row
               </button>
             </div>
-
-            <div className="space-y-3">
+            <div className="p-5 space-y-3">
               {items.map((item, idx) => (
-                <div key={idx} className="flex flex-col sm:flex-row gap-3 items-end sm:items-center bg-slate-900/60 p-3.5 rounded-xl border border-slate-800/60">
+                <div key={idx} className="flex flex-col sm:flex-row gap-3 items-end sm:items-center bg-slate-950/60 p-3.5 rounded-xl border border-slate-800">
                   <div className="flex-1 w-full">
-                    <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1 sm:hidden">Description</label>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1 sm:hidden">Description</label>
                     <input value={item.description} onChange={e => handleItemChange(idx, 'description', e.target.value)}
                       pattern="^[a-zA-Z0-9\s.,#\/-]{3,100}$" title="Only letters, numbers, spaces, and basic punctuation (3-100 characters)"
-                      placeholder="Item description" className="w-full px-3 py-2 rounded-lg bg-slate-800/40 border border-slate-700/50 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/40 transition-colors placeholder-slate-650" />
+                      placeholder="Item description"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-indigo-500/60 transition-all font-medium placeholder-slate-600" />
                   </div>
 
                   <div className="w-full sm:w-24">
-                    <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1 sm:hidden">Qty</label>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1 sm:hidden">Qty</label>
                     <input type="number" min="1" step="any" value={item.quantity} onChange={e => handleItemChange(idx, 'quantity', e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-slate-800/40 border border-slate-700/50 text-slate-200 text-sm text-center focus:outline-none focus:border-indigo-600/40 transition-colors" />
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 text-sm text-center focus:outline-none focus:border-indigo-500/60 transition-all font-medium" />
                   </div>
 
                   <div className="w-full sm:w-32">
-                    <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1 sm:hidden">Unit Price</label>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1 sm:hidden">Unit Price</label>
                     <input type="number" min="0" step="any" value={item.unitPrice} onChange={e => handleItemChange(idx, 'unitPrice', e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-slate-800/40 border border-slate-700/50 text-slate-200 text-sm text-right focus:outline-none focus:border-indigo-600/40 transition-colors" />
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 text-sm text-right focus:outline-none focus:border-indigo-500/60 transition-all font-medium" />
                   </div>
 
                   <div className="w-full sm:w-32">
-                    <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1 sm:hidden">Amount</label>
-                    <div className="px-3 py-2 rounded-lg bg-slate-800/10 border border-slate-800/60 text-slate-350 text-sm text-right font-semibold">
+                    <label className="block text-xs font-semibold text-slate-500 mb-1 sm:hidden">Amount</label>
+                    <div className="px-3.5 py-2.5 rounded-xl bg-slate-800/40 border border-slate-800 text-slate-400 text-sm text-right font-semibold">
                       PKR {item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                   </div>
 
                   {items.length > 1 && (
                     <button type="button" onClick={() => handleRemoveItem(idx)}
-                      className="p-2 rounded-lg bg-red-950/20 text-red-500 hover:bg-red-950/40 border border-red-900/30 transition-colors self-end sm:self-center">
+                      className="p-2 rounded-xl bg-red-950/20 text-red-500 hover:bg-red-950/40 border border-red-900/30 transition-colors self-end sm:self-center">
                       <Trash2 className="h-4 w-4" />
                     </button>
                   )}
@@ -258,31 +277,36 @@ export const InvoiceForm = () => {
           </div>
         </div>
 
-        {/* Sidebar calculations & action */}
-        <div className="space-y-6">
-          <div className="rounded-xl border border-slate-800/70 bg-slate-900/40 p-6 space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800/80 pb-2">Financial Computations</h3>
-            
-            <div className="space-y-3.5 text-sm text-slate-300">
-              <div className="flex justify-between">
-                <span className="text-slate-500 text-xs">Subtotal</span>
-                <span className="font-semibold text-slate-250">PKR {subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+        {/* Sidebar: Financial Computations & Actions */}
+        <div className="space-y-5">
+          {/* Card 03: Financial Computations */}
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
+              <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
+                03
+              </span>
+              <h3 className="text-sm font-semibold text-slate-200">Financial Computations</h3>
+            </div>
+            <div className="p-5 space-y-4 text-sm text-slate-300">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-semibold text-slate-500">Subtotal</span>
+                <span className="font-semibold text-slate-200">PKR {subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Tax Rate (%)</label>
+                <label className={labelClass}>Tax Rate (%)</label>
                 <input type="number" min="0" max="100" value={taxRate} onChange={e => setTaxRate(Math.max(0, parseInt(e.target.value) || 0))}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800/40 border border-slate-700/50 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/40 transition-colors text-right" />
+                  className={inputClass + ' text-right'} />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Flat Discount (PKR)</label>
+                <label className={labelClass}>Flat Discount (PKR)</label>
                 <input type="number" min="0" step="any" value={discount} onChange={e => setDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800/40 border border-slate-700/50 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/40 transition-colors text-right" />
+                  className={inputClass + ' text-right'} />
               </div>
 
-              <div className="border-t border-slate-800/85 pt-3.5 flex justify-between items-baseline">
-                <span className="text-slate-200 font-bold">Total Bill</span>
+              <div className="border-t border-slate-800 pt-4 flex justify-between items-baseline">
+                <span className="text-slate-200 font-bold text-sm">Total Bill</span>
                 <span className="text-xl font-extrabold text-indigo-400">
                   PKR {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
@@ -290,13 +314,14 @@ export const InvoiceForm = () => {
             </div>
           </div>
 
+          {/* Actions */}
           <div className="flex gap-3">
             <button type="button" onClick={() => navigate('/invoices')}
-              className="flex-1 px-4 py-3 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-800 text-sm font-semibold transition-all">
+              className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">
               Cancel
             </button>
             <button type="submit" disabled={loading}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold shadow-lg shadow-indigo-900/40 transition-all disabled:opacity-50">
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50 cursor-pointer">
               <Save className="h-4 w-4" />
               {loading ? 'Saving...' : 'Save Invoice'}
             </button>
