@@ -34,8 +34,6 @@ const DonationsReceived = lazy(() => import('./views/DonationsReceived').then(m 
 const DonationReports = lazy(() => import('./views/DonationReports').then(m => ({ default: m.DonationReports })));
 
 // Categorized Revenue Views
-const ZakatSection = lazy(() => import('./views/CategorizedRevenues').then(m => ({ default: m.ZakatSection })));
-const FitraSection = lazy(() => import('./views/CategorizedRevenues').then(m => ({ default: m.FitraSection })));
 const MembershipFeeSection = lazy(() => import('./views/CategorizedRevenues').then(m => ({ default: m.MembershipFeeSection })));
 const BusBookingSection = lazy(() => import('./views/CategorizedRevenues').then(m => ({ default: m.BusBookingSection })));
 
@@ -317,8 +315,6 @@ function App() {
             <Route path="/donors" element={<Donors />} />
             <Route path="/donations-received" element={<DonationsReceived />} />
             <Route path="/donation-reports" element={<DonationReports />} />
-            <Route path="/zakat" element={<ZakatSection />} />
-            <Route path="/fitra" element={<FitraSection />} />
             <Route path="/membership-fees" element={<MembershipFeeSection />} />
             <Route path="/bus-bookings" element={<BusBookingSection />} />
             <Route path="/customers" element={<Customers />} />

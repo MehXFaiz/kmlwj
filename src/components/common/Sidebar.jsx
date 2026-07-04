@@ -166,8 +166,6 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
         { name: 'Donors Directory', hint: 'Manage registered donors', icon: Users, path: '/donors' },
         { name: t('sidebar.membershipFee', 'Membership Fee'), hint: 'Manage member fees and renewals', icon: Building, path: '/membership-fees' },
         { name: t('sidebar.busBooking', 'Bus Booking'), hint: 'Manage bus reservations and trips', icon: Bus, path: '/bus-bookings' },
-        { name: t('sidebar.zakatCollection', 'Zakat Collection'), hint: 'Manage Zakat donors and receipts', icon: Gift, path: '/zakat' },
-        { name: t('sidebar.fitraCollection', 'Fitra Collection'), hint: 'Manage Fitra head-count and receipts', icon: DollarSign, path: '/fitra' },
       ],
     },
     {
