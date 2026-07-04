@@ -6,30 +6,41 @@ import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
 
 async function getIncomeAccountForCategory(category: string, tx: any) {
+  // First try: find a revenue account whose name contains the category
   let acc = await tx.account.findFirst({
     where: {
-      type: 'Revenue',
+      accountType: { name: { equals: 'Revenue', mode: 'insensitive' } },
       accountName: { contains: category, mode: 'insensitive' },
-      detailType: 'Subsidiary'
+      accountLevel: { in: ['SUBSIDIARY', 'GL'] },
+      isLocked: false
     }
   });
+
   if (!acc) {
+    // Fallback: map categories to broader search terms
     let searchTerm = category;
-    if (category === 'Zakat' || category === 'Fitra') searchTerm = 'Donation';
-    else if (category === 'Membership Fee' || category === 'Bus Booking') searchTerm = 'Other Income';
-    
+    if (category === 'Membership Fee' || category === 'Bus Booking') searchTerm = 'Income';
+
     acc = await tx.account.findFirst({
       where: {
-        type: 'Revenue',
-        accountName: { contains: searchTerm, mode: 'insensitive' }
+        accountType: { name: { equals: 'Revenue', mode: 'insensitive' } },
+        accountName: { contains: searchTerm, mode: 'insensitive' },
+        accountLevel: { in: ['SUBSIDIARY', 'GL'] },
+        isLocked: false
       }
     });
   }
+
+  // Last resort: any revenue account
   if (!acc) {
     acc = await tx.account.findFirst({
-      where: { type: 'Revenue' }
+      where: {
+        accountType: { name: { equals: 'Revenue', mode: 'insensitive' } },
+        isLocked: false
+      }
     });
   }
+
   return acc;
 }
 
@@ -143,14 +154,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         throw new Error(`No revenue account found in Chart of Accounts for ${category}`);
       }
 
-      const count = await tx.revenueCollection.count();
-      const nextReceiptNo = count + 1;
+      // Get a unique receipt number for reference (do not insert manually; let autoincrement handle it)
+      const count = await tx.revenueCollection.count({ where: { category } });
+      const refNo = count + 1;
 
       const postingResult = await AccountingService.postReceipt(tx, {
         amount: parsedAmount,
         cashOrBankAccountId: debitAccountId!,
         incomeAccountId: incomeAccount.id,
-        reference: `${category.slice(0, 3).toUpperCase()}-${nextReceiptNo}`,
+        reference: `${category.slice(0, 3).toUpperCase()}-${refNo}`,
         description: `${category} Receipt from ${title} ${subTitle ? `(${subTitle})` : ''}`,
         module: category,
         voucherType: 'BR',
@@ -163,7 +175,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       const newItem = await tx.revenueCollection.create({
         data: {
           category,
-          receiptNo: nextReceiptNo,
+          // receiptNo is autoincrement — do NOT set it manually
           title,
           subTitle: subTitle || null,
           mobile: mobile || null,
