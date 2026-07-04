@@ -141,7 +141,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         for (const booking of bookings) {
           if (booking.status === "POSTED" && booking.journalEntryId) {
             try {
-              await AccountingService.reverseJournalEntry(tx, booking.journalEntryId, req.user.id, "Hall Booking Deleted");
+              await AccountingService.deleteJournalEntry(tx, booking.journalEntryId, req.user.id, "Hall Booking Deleted");
             } catch (e) {
             }
           }

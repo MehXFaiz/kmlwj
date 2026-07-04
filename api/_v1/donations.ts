@@ -191,9 +191,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             });
             if (je) {
               try {
-                await AccountingService.reverseJournalEntry(tx, je.id, req.user!.id, 'Donation Deleted');
+                await AccountingService.deleteJournalEntry(tx, je.id, req.user!.id, 'Donation Deleted');
               } catch (e) {
-                // Ignore if already reversed
+                // Ignore if already deleted
               }
             }
           }

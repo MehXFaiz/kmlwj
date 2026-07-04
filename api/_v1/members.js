@@ -2,7 +2,6 @@ import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
-
 var members_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -134,7 +133,6 @@ var members_default = makeHandler(async (req, res) => {
   }
   return res.status(405).json({ error: { message: "Method not allowed", status: 405 } });
 });
-
 export {
   members_default as default
 };

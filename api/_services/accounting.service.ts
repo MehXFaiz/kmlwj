@@ -647,5 +647,66 @@ export class AccountingService {
 
     return updatedJe;
   }
+
+  /**
+   * Permanently deletes a Journal Entry, its lines, and associated Ledger Entries from the database,
+   * while recalculating account balances.
+   */
+  static async deleteJournalEntry(tx: any, journalEntryId: string, postedBy?: string, reason?: string) {
+    const je = await tx.journalEntry.findUnique({
+      where: { id: journalEntryId },
+      include: { lines: true }
+    });
+
+    if (!je) return null;
+
+    const accountIds = Array.from(new Set(je.lines.map((l: any) => l.accountId)));
+    const voucherRefs = [je.voucherNo, `${je.voucherNo}-REV`];
+    if (je.reference) {
+      voucherRefs.push(je.reference, `${je.reference}-REV`);
+    }
+
+    // Delete associated ledger entries
+    await tx.ledgerEntry.deleteMany({
+      where: {
+        reference: { in: voucherRefs }
+      }
+    });
+
+    // Delete journal entry lines
+    await tx.journalEntryLine.deleteMany({
+      where: { journalEntryId: je.id }
+    });
+
+    // Delete the journal entry
+    const deletedJe = await tx.journalEntry.delete({
+      where: { id: je.id }
+    });
+
+    // Recalculate account balances for all affected accounts
+    for (const accountId of accountIds) {
+      try {
+        await AccountingService.recalculateAccountBalance(tx, accountId as string);
+      } catch (e) {
+        // Ignore if account was already deleted
+      }
+    }
+
+    try {
+      await tx.auditLog.create({
+        data: {
+          userId: postedBy && postedBy !== 'system' && postedBy.length === 36 ? postedBy : null,
+          action: `Delete Journal (${je.voucherNo})`,
+          module: 'Journal Entries',
+          oldValues: { voucherNo: je.voucherNo, status: je.status, reference: je.reference },
+          newValues: { deleted: true, reason: reason || null },
+        }
+      });
+    } catch (e) {
+      // ignore non-uuid audit user
+    }
+
+    return deletedJe;
+  }
 }
 

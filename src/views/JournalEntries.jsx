@@ -2,16 +2,18 @@ import { useState, useMemo, Fragment, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useJournalStore } from '../store/journalStore';
 import { useCoaStore } from '../store/coaStore';
+import { useAuthStore } from '../store/authStore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { JournalEntryModal } from '../components/ledger/JournalEntryModal';
-import { Plus, Calendar, ChevronDown, ChevronUp, FileSpreadsheet, Check, X, Search } from 'lucide-react';
+import { Plus, Calendar, ChevronDown, ChevronUp, FileSpreadsheet, Check, X, Search, Trash2 } from 'lucide-react';
 import { MobileOnly, DesktopOnly } from '../components/common/responsive';
 
 export const JournalEntries = () => {
-  const { journals, fetchJournals, isLoading, updateJournalStatus } = useJournalStore();
+  const { journals, fetchJournals, isLoading, updateJournalStatus, deleteJournalEntry } = useJournalStore();
   const { selectedSubsidiary } = useCoaStore();
+  const { canEditOrDelete } = useAuthStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedJeId, setExpandedJeId] = useState(null);
 
@@ -39,6 +41,15 @@ export const JournalEntries = () => {
       const res = await updateJournalStatus(dbId, status);
       if (res?.error) {
         alert("Error updating status: " + res.error);
+      }
+    }
+  };
+
+  const handleDeleteJournal = async (dbId, voucherNo) => {
+    if (window.confirm(`Are you sure you want to permanently delete journal entry ${voucherNo}? This will remove it from the database and adjust account balances.`)) {
+      const res = await deleteJournalEntry(dbId);
+      if (res?.error) {
+        alert("Error deleting journal entry: " + res.error);
       }
     }
   };
@@ -147,10 +158,17 @@ export const JournalEntries = () => {
                         {line.description && <span className="col-span-2 text-slate-500 truncate">{line.description}</span>}
                       </div>
                     ))}
-                    {je.status === 'Draft' && (
+                    {(je.status === 'Draft' || canEditOrDelete) && (
                       <div className="flex gap-2 pt-2 border-t border-slate-800/60 mt-2">
-                        <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => handleUpdateStatus(je.dbId, 'Cancelled')}>Cancel Draft</Button>
-                        <Button size="sm" variant="primary" className="flex-1 text-xs" onClick={() => handleUpdateStatus(je.dbId, 'Posted')}>Post Now</Button>
+                        {je.status === 'Draft' && (
+                          <>
+                            <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => handleUpdateStatus(je.dbId, 'Cancelled')}>Cancel Draft</Button>
+                            <Button size="sm" variant="primary" className="flex-1 text-xs" onClick={() => handleUpdateStatus(je.dbId, 'Posted')}>Post Now</Button>
+                          </>
+                        )}
+                        {canEditOrDelete && (
+                          <Button size="sm" variant="danger" className="text-xs px-2" onClick={() => handleDeleteJournal(je.dbId || je.id, je.voucherNo)}>Delete</Button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -229,14 +247,23 @@ export const JournalEntries = () => {
                                 </span>
                                 <div className="flex items-center gap-3">
                                   <span className="text-[10px] text-slate-500">Posted by: <span className="font-semibold text-slate-400">{je.postedBy}</span></span>
-                                  {je.status === 'Draft' && (
+                                  {(je.status === 'Draft' || canEditOrDelete) && (
                                     <div className="flex gap-2 ml-4 border-l border-slate-800 pl-4">
-                                      <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 px-2" onClick={() => handleUpdateStatus(je.dbId, 'Cancelled')}>
-                                        <X className="h-3 w-3" /> Cancel
-                                      </Button>
-                                      <Button size="sm" variant="primary" className="h-6 text-[10px] gap-1 px-2" onClick={() => handleUpdateStatus(je.dbId, 'Posted')}>
-                                        <Check className="h-3 w-3" /> Post
-                                      </Button>
+                                      {je.status === 'Draft' && (
+                                        <>
+                                          <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 px-2" onClick={() => handleUpdateStatus(je.dbId, 'Cancelled')}>
+                                            <X className="h-3 w-3" /> Cancel
+                                          </Button>
+                                          <Button size="sm" variant="primary" className="h-6 text-[10px] gap-1 px-2" onClick={() => handleUpdateStatus(je.dbId, 'Posted')}>
+                                            <Check className="h-3 w-3" /> Post
+                                          </Button>
+                                        </>
+                                      )}
+                                      {canEditOrDelete && (
+                                        <Button size="sm" variant="danger" className="h-6 text-[10px] gap-1 px-2" onClick={() => handleDeleteJournal(je.dbId || je.id, je.voucherNo)}>
+                                          <Trash2 className="h-3 w-3" /> Delete
+                                        </Button>
+                                      )}
                                     </div>
                                   )}
                                 </div>

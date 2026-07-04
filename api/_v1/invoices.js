@@ -305,10 +305,24 @@ var invoices_default = makeHandler(async (req, res) => {
     if (!id) return res.status(400).json({ error: { message: "Invoice ID is required", status: 400 } });
     const existingInvoice = await prisma.invoice.findUnique({ where: { id } });
     if (!existingInvoice) return res.status(404).json({ error: { message: "Invoice not found", status: 404 } });
-    if (existingInvoice.status !== "DRAFT") {
-      return res.status(400).json({ error: { message: "Only DRAFT invoices can be deleted", status: 400 } });
-    }
-    await prisma.invoice.delete({ where: { id } });
+    await prisma.$transaction(async (tx) => {
+      const jes = await tx.journalEntry.findMany({
+        where: {
+          OR: [
+            { reference: { contains: existingInvoice.invoiceNo } },
+            { description: { contains: existingInvoice.invoiceNo } }
+          ]
+        }
+      });
+      for (const je of jes) {
+        try {
+          await AccountingService.deleteJournalEntry(tx, je.id, req.user.id, "Invoice Deleted");
+        } catch (e) {
+        }
+      }
+      await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
+      await tx.invoice.delete({ where: { id } });
+    });
     await logAudit(req.user.id, "Delete Invoice", "INVOICE", existingInvoice, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     return res.status(200).json({ status: 200, message: "Invoice deleted successfully" });
   }

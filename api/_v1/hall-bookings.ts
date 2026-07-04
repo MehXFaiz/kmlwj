@@ -171,9 +171,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         for (const booking of bookings) {
           if (booking.status === 'POSTED' && booking.journalEntryId) {
             try {
-              await AccountingService.reverseJournalEntry(tx, booking.journalEntryId, req.user!.id, 'Hall Booking Deleted');
+              await AccountingService.deleteJournalEntry(tx, booking.journalEntryId, req.user!.id, 'Hall Booking Deleted');
             } catch (e) {
-              // Ignore if already cancelled
+              // Ignore if already deleted
             }
           }
         }

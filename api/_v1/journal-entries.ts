@@ -106,7 +106,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
   }
 
-  if (method === 'PATCH') {
+  if (method === 'PATCH' || method === 'PUT') {
     const { id, status } = req.body;
     
     if (!id || !status) {
@@ -148,5 +148,50 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
   }
 
+  if (method === 'DELETE') {
+    const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
+    if (!idsRaw) {
+      return res.status(400).json({ error: { message: 'Journal Entry ID(s) required', status: 400 } });
+    }
+
+    const ids: string[] = Array.isArray(idsRaw)
+      ? idsRaw.map(String)
+      : String(idsRaw).split(',').map(s => s.trim()).filter(Boolean);
+
+    if (ids.length === 0) {
+      return res.status(400).json({ error: { message: 'No valid ID provided', status: 400 } });
+    }
+
+    try {
+      const deletedEntries = await prisma.$transaction(async (tx) => {
+        const results = [];
+        for (const id of ids) {
+          const resJe = await AccountingService.deleteJournalEntry(tx, id, req.user!.id, 'Admin Deleted');
+          if (resJe) results.push(resJe);
+        }
+        return results;
+      });
+
+      await logAudit(
+        req.user.id,
+        'Delete Journal Entry',
+        'Journal Entries',
+        null,
+        { count: deletedEntries.length, ids: deletedEntries.map(e => e.id) },
+        req.headers['x-forwarded-for'] as string,
+        req.headers['user-agent']
+      );
+
+      return res.status(200).json({
+        status: 200,
+        message: `${deletedEntries.length} journal entry(s) deleted successfully`,
+        data: deletedEntries
+      });
+    } catch (err: any) {
+      return res.status(400).json({ error: { message: err.message, status: 400 } });
+    }
+  }
+
   return res.status(405).json({ error: { message: 'Method Not Allowed', status: 405 } });
 });
+

@@ -180,9 +180,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         for (const item of items) {
           if (item.status === 'POSTED' && item.journalEntryId) {
             try {
-              await AccountingService.reverseJournalEntry(tx, item.journalEntryId, req.user!.id, `${item.category} Deleted`);
+              await AccountingService.deleteJournalEntry(tx, item.journalEntryId, req.user!.id, `${item.category} Deleted`);
             } catch (e) {
-              // Ignore if already cancelled
+              // Ignore if already deleted
             }
           }
         }

@@ -39,5 +39,18 @@ export const useBankVoucherStore = create((set, get) => ({
       set({ error: err.response?.data?.error?.message || err.message, loading: false });
       throw err;
     }
+  },
+
+  deleteVoucher: async (id, type) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await api.delete(`/api/v1/journal-entries?id=${id}`);
+      await get().fetchVouchers(type);
+      set({ loading: false });
+      return res.data;
+    } catch (err) {
+      set({ error: err.response?.data?.error?.message || err.message, loading: false });
+      throw err;
+    }
   }
 }));

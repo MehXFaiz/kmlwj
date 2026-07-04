@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
-import { FileSpreadsheet, Search, Plus, Printer, CheckCircle, XCircle, Eye, EyeOff } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
+import { FileSpreadsheet, Search, Plus, Printer, CheckCircle, XCircle, Eye, EyeOff, Trash2 } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { useTranslation } from 'react-i18next';
 
@@ -189,7 +190,8 @@ function BankVoucherPrintModal({ voucher, onClose }) {
 export const BankVouchers = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { vouchers, fetchVouchers, updateVoucherStatus, loading } = useBankVoucherStore();
+  const { vouchers, fetchVouchers, updateVoucherStatus, deleteVoucher, loading } = useBankVoucherStore();
+  const { canEditOrDelete } = useAuthStore();
   
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('BP'); // BP (Payments), BR (Receipts)
@@ -245,6 +247,18 @@ export const BankVouchers = () => {
       await updateVoucherStatus(id, 'Cancelled', activeTab);
     } catch (err) {
       alert(err.message || "Failed to cancel voucher");
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+
+  const handleDeleteVoucher = async (id, voucherNo) => {
+    if (!confirm(`Are you sure you want to permanently delete bank voucher ${voucherNo}? This will remove it from the database and adjust account balances.`)) return;
+    setStatusLoading(true);
+    try {
+      await deleteVoucher(id, activeTab);
+    } catch (err) {
+      alert(err.message || "Failed to delete voucher");
     } finally {
       setStatusLoading(false);
     }
@@ -381,6 +395,12 @@ export const BankVouchers = () => {
                                 <button onClick={() => handleCancel(v.dbId)} disabled={statusLoading}
                                   className="px-2 py-1 rounded bg-red-950/20 text-red-400 hover:bg-red-950/40 border border-red-900/30 text-[10px] font-bold">
                                   {t('tables.bankVouchers.void')}
+                                </button>
+                              )}
+                              {canEditOrDelete && (
+                                <button onClick={() => handleDeleteVoucher(v.dbId, v.voucherNo)} disabled={statusLoading}
+                                  className="px-2 py-1 rounded bg-red-950/40 text-red-300 hover:bg-red-900/60 border border-red-800/50 text-[10px] font-bold flex items-center gap-1" title="Delete from database">
+                                  <Trash2 className="h-3 w-3" /> Delete
                                 </button>
                               )}
                             </div>
