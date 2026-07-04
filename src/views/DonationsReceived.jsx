@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useDonationReceivedStore } from '../store/donationReceivedStore';
 import { useDonorStore } from '../store/donorStore';
 import { useCoaStore } from '../store/coaStore';
@@ -105,378 +106,11 @@ function PrintReceiptModal({ donation, onClose }) {
   );
 }
 
-function QuickDonorModal({ isOpen, onClose, onCreated }) {
-  const { addDonor } = useDonorStore();
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [cnic, setCnic] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  if (!isOpen) return null;
-
-  const handleCreate = async () => {
-    if (!name.trim()) {
-      showToast('Donor name is required', 'warning');
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await addDonor({ fullName: name, mobile: phone || null, cnic: cnic || null, isActive: true });
-      showToast('Donor registered successfully', 'success');
-      onCreated(res.data || res);
-      onClose();
-    } catch (err) {
-      showToast(err.message || 'Failed to create donor', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
-        <h3 className="text-lg font-bold text-slate-100 mb-4 flex items-center gap-2">
-          <UserPlus className="h-5 w-5 text-indigo-400" /> Quick Add Donor
-        </h3>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Donor Full Name *</label>
-            <input
-              type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="e.g. Muhammad Ali"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Mobile Phone</label>
-            <input
-              type="text"
-              value={phone}
-              onChange={e => setPhone(e.target.value)}
-              placeholder="0300-1234567"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">CNIC / ID No</label>
-            <input
-              type="text"
-              value={cnic}
-              onChange={e => setCnic(e.target.value)}
-              placeholder="42101-1234567-1"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
-            />
-          </div>
-        </div>
-        <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-slate-800">
-          <button onClick={onClose} className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">Cancel</button>
-          <button onClick={handleCreate} disabled={loading} className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50">
-            {loading ? 'Saving...' : 'Create & Select'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DonationReceiptModal({ isOpen, onClose, onSave, initial, donors, cashAccounts, bankAccounts, onOpenQuickDonor }) {
-  const [form, setForm] = useState({
-    receiptDate: new Date().toISOString().slice(0, 10),
-    donorId: '',
-    donationType: 'GENERAL_DONATION',
-    amount: '',
-    paymentMethod: 'CASH',
-    cashAccountId: '',
-    bankAccountId: '',
-    chequeNo: '',
-    chequeDate: '',
-    referenceNo: '',
-    narration: '',
-    status: 'POSTED'
-  });
-
-  useEffect(() => {
-    if (isOpen) {
-      if (initial) {
-        setForm({
-          ...nullsToEmpty(initial),
-          receiptDate: initial.receiptDate ? new Date(initial.receiptDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
-          chequeDate: initial.chequeDate ? new Date(initial.chequeDate).toISOString().slice(0, 10) : '',
-        });
-      } else {
-        setForm({
-          receiptDate: new Date().toISOString().slice(0, 10),
-          donorId: donors.length > 0 ? donors[0].id : '',
-          donationType: 'GENERAL_DONATION',
-          amount: '',
-          paymentMethod: 'CASH',
-          cashAccountId: cashAccounts.length > 0 ? cashAccounts[0].id : '',
-          bankAccountId: bankAccounts.length > 0 ? bankAccounts[0].id : '',
-          chequeNo: '',
-          chequeDate: '',
-          referenceNo: '',
-          narration: '',
-          status: 'POSTED'
-        });
-      }
-    }
-  }, [isOpen, initial, donors, cashAccounts, bankAccounts]);
-
-  if (!isOpen) return null;
-
-  const handleSubmit = () => {
-    if (!form.donorId) {
-      showToast('Please select a donor', 'warning');
-      return;
-    }
-    if (!form.amount || isNaN(form.amount) || Number(form.amount) <= 0) {
-      showToast('Please enter a valid positive donation amount', 'warning');
-      return;
-    }
-    if (form.paymentMethod === 'CASH' && !form.cashAccountId && cashAccounts.length === 0) {
-      showToast('No Cash account available in Chart of Accounts', 'warning');
-      return;
-    }
-    if (form.paymentMethod !== 'CASH' && !form.bankAccountId && bankAccounts.length === 0) {
-      showToast('No Bank account available in Chart of Accounts', 'warning');
-      return;
-    }
-    onSave({ ...form, amount: Number(form.amount) });
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
-        >
-          <X className="h-5 w-5" />
-        </button>
-
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <ArrowDownLeft className="h-6 w-6" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-slate-100">
-              {initial ? `Edit Donation Receipt (${initial.receiptNo})` : 'New Donation Received (Inflow)'}
-            </h3>
-            <p className="text-xs text-slate-400">Record charitable contribution and update ledger balances</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Receipt No (Auto)</label>
-            <input
-              type="text"
-              disabled
-              value={initial?.receiptNo || 'REC-YYYY-XXXX (Generated on Save)'}
-              className="w-full px-3.5 py-2 rounded-lg bg-slate-950/50 border border-slate-800 text-xs font-mono text-slate-400 cursor-not-allowed"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Receipt Date *</label>
-            <input
-              type="date"
-              value={form.receiptDate}
-              onChange={e => setForm({ ...form, receiptDate: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-semibold text-slate-400">Donor *</label>
-              <button
-                type="button"
-                onClick={onOpenQuickDonor}
-                className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
-              >
-                <UserPlus className="h-3.5 w-3.5" /> + Quick Add Donor
-              </button>
-            </div>
-            <select
-              value={form.donorId}
-              onChange={e => setForm({ ...form, donorId: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
-            >
-              <option value="">-- Select Donor --</option>
-              {donors.map(d => (
-                <option key={d.id} value={d.id}>
-                  {d.fullName} ({d.donorCode}){d.cnic ? ` - CNIC: ${d.cnic}` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Donation Type *</label>
-            <select
-              value={form.donationType}
-              onChange={e => setForm({ ...form, donationType: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
-            >
-              {DONATION_TYPES.map(t => (
-                <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Amount (PKR) *</label>
-            <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">PKR</span>
-              <input
-                type="number"
-                step="0.01"
-                value={form.amount}
-                onChange={e => setForm({ ...form, amount: e.target.value })}
-                placeholder="0.00"
-                className="w-full pl-12 pr-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-bold"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Payment Method *</label>
-            <select
-              value={form.paymentMethod}
-              onChange={e => setForm({ ...form, paymentMethod: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
-            >
-              {PAYMENT_METHODS.map(m => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
-          </div>
-
-          {form.paymentMethod === 'CASH' ? (
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cash Account *</label>
-              <select
-                value={form.cashAccountId}
-                onChange={e => setForm({ ...form, cashAccountId: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
-              >
-                <option value="">-- Select Cash Account --</option>
-                {cashAccounts.map(a => (
-                  <option key={a.id} value={a.id}>{a.accountName || a.name} ({a.glCode || a.code})</option>
-                ))}
-              </select>
-            </div>
-          ) : (
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Bank / Online Account *</label>
-              <select
-                value={form.bankAccountId}
-                onChange={e => setForm({ ...form, bankAccountId: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
-              >
-                <option value="">-- Select Bank Account --</option>
-                {bankAccounts.map(a => (
-                  <option key={a.id} value={a.id}>{a.accountName || a.name} ({a.glCode || a.code})</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {form.paymentMethod === 'CHEQUE' && (
-            <>
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cheque No</label>
-                <input
-                  type="text"
-                  value={form.chequeNo}
-                  onChange={e => setForm({ ...form, chequeNo: e.target.value })}
-                  placeholder="e.g. CHQ-987654"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cheque Date</label>
-                <input
-                  type="date"
-                  value={form.chequeDate}
-                  onChange={e => setForm({ ...form, chequeDate: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
-                />
-              </div>
-            </>
-          )}
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Reference No</label>
-            <input
-              type="text"
-              value={form.referenceNo}
-              onChange={e => setForm({ ...form, referenceNo: e.target.value })}
-              placeholder="e.g. Slip #123 / Transfer Ref"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Status *</label>
-            <select
-              value={form.status}
-              onChange={e => setForm({ ...form, status: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-semibold"
-            >
-              <option value="POSTED">POSTED (Auto-post to Ledger)</option>
-              <option value="DRAFT">DRAFT (Save for review)</option>
-            </select>
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Narration / Remarks</label>
-            <textarea
-              rows={2}
-              value={form.narration}
-              onChange={e => setForm({ ...form, narration: e.target.value })}
-              placeholder="Enter receipt details, donor instructions, or zakat fund allocation note..."
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-3 mt-8 pt-4 border-t border-slate-800/80">
-          <button
-            onClick={onClose}
-            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition-all shadow-lg shadow-emerald-600/25 active:scale-95 disabled:opacity-50"
-          >
-            {initial ? 'Update Receipt' : 'Save & Post Receipt'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export const DonationsReceived = () => {
-  const { donations, stats, loading, fetchDonations, addDonation, updateDonationStatus, deleteDonation, bulkDeleteDonations } = useDonationReceivedStore();
-  const { donors, fetchDonors } = useDonorStore();
-  const { flatAccounts, fetchAccountsList } = useCoaStore();
-  const { canEditOrDelete } = useAuthStore();
-
-  const [search, setSearch] = useState('');
-  const [filterType, setFilterType] = useState('');
-  const [filterMethod, setFilterMethod] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-
-  const [modalOpen, setModalOpen] = useState(false);
-  const [quickDonorOpen, setQuickDonorOpen] = useState(false);
+  const navigate = useNavigate();
+  const { donations, stats, loading, fetchDonations, updateDonationStatus, deleteDonation, bulkDeleteDonations } = useDonationReceivedStore();
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [printItem, setPrintItem] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -485,24 +119,9 @@ export const DonationsReceived = () => {
 
   useEffect(() => {
     fetchDonations();
-    fetchDonors();
-    fetchAccountsList();
-  }, [fetchDonations, fetchDonors, fetchAccountsList]);
+  }, [fetchDonations]);
 
-  const cashAccounts = useMemo(() => {
-    return flatAccounts.filter(a =>
-      (a.name || a.accountName || '').toLowerCase().includes('cash') ||
-      (a.type || '').toLowerCase().includes('cash')
-    );
-  }, [flatAccounts]);
 
-  const bankAccounts = useMemo(() => {
-    return flatAccounts.filter(a =>
-      (a.name || a.accountName || '').toLowerCase().includes('bank') ||
-      (a.type || '').toLowerCase().includes('bank') ||
-      (a.name || a.accountName || '').toLowerCase().includes('cheque')
-    );
-  }, [flatAccounts]);
 
   const filtered = useMemo(() => {
     return donations.filter(d => {
@@ -520,23 +139,7 @@ export const DonationsReceived = () => {
     });
   }, [donations, filterType, filterMethod, filterStatus, search]);
 
-  const handleCreate = async (data) => {
-    try {
-      await addDonation(data);
-      showToast('Donation receipt generated successfully', 'success');
-    } catch (err) {
-      showToast(err.message || 'Failed to create donation receipt', 'error');
-    }
-  };
 
-  const handleUpdate = async (data) => {
-    try {
-      await updateDonationStatus(selectedReceipt.id, data.status, data);
-      showToast('Donation receipt updated successfully', 'success');
-    } catch (err) {
-      showToast(err.message || 'Failed to update donation receipt', 'error');
-    }
-  };
 
   const handlePostDraft = async (item) => {
     if (!window.confirm(`Are you sure you want to post receipt "${item.receiptNo}" to the ledger?`)) return;
@@ -619,13 +222,13 @@ export const DonationsReceived = () => {
               <span>Bulk Delete ({selectedIds.length})</span>
             </button>
           )}
-          <button
-            onClick={() => { setSelectedReceipt(null); setModalOpen(true); }}
+          <Link
+            to="/donations-received/new"
             className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition-all shadow-lg shadow-emerald-600/25 active:scale-95 cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             <span>New Donation Receipt</span>
-          </button>
+          </Link>
         </div>
       </div>
 

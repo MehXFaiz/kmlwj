@@ -1,184 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useDonorStore } from '../store/donorStore';
 import { Users, Search, Plus, Edit2, Trash2, X, Mail, Phone, CreditCard, MapPin, AlertTriangle } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 
-const nullsToEmpty = (obj) =>
-  Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === null ? '' : v]));
-
-const DEFAULT_DONOR = {
-  fullName: '',
-  fatherName: '',
-  mobile: '',
-  cnic: '',
-  email: '',
-  address: '',
-  city: '',
-  isActive: true
-};
-
-function DonorModal({ isOpen, onClose, onSave, initial }) {
-  const [form, setForm] = useState(initial ? nullsToEmpty(initial) : DEFAULT_DONOR);
-
-  useEffect(() => {
-    if (isOpen) {
-      setForm(initial ? nullsToEmpty(initial) : DEFAULT_DONOR);
-    }
-  }, [isOpen, initial]);
-
-  if (!isOpen) return null;
-
-  const handleSave = () => {
-    if (!form.fullName.trim()) {
-      showToast('Donor Full Name is required', 'warning');
-      return;
-    }
-    if (form.cnic && !/^[0-9+-\s]{5,20}$/.test(form.cnic)) {
-      showToast('Please enter a valid CNIC / Identity Number', 'warning');
-      return;
-    }
-    onSave({ ...form });
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
-        >
-          <X className="h-5 w-5" />
-        </button>
-
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-            <Users className="h-6 w-6" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-slate-100">
-              {initial ? `Edit Donor (${initial.donorCode})` : 'Register New Donor'}
-            </h3>
-            <p className="text-xs text-slate-400">Enter donor contact and identity information</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
-          <div className="md:col-span-2">
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Full Name *</label>
-            <input
-              type="text"
-              value={form.fullName}
-              onChange={e => setForm({ ...form, fullName: e.target.value })}
-              placeholder="e.g. Muhammad Ali"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Father / Husband Name</label>
-            <input
-              type="text"
-              value={form.fatherName}
-              onChange={e => setForm({ ...form, fatherName: e.target.value })}
-              placeholder="e.g. Abdul Rahman"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">CNIC / ID No</label>
-            <input
-              type="text"
-              value={form.cnic}
-              onChange={e => setForm({ ...form, cnic: e.target.value })}
-              placeholder="e.g. 42101-1234567-1"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Mobile Phone</label>
-            <input
-              type="text"
-              value={form.mobile}
-              onChange={e => setForm({ ...form, mobile: e.target.value })}
-              placeholder="e.g. 0300-1234567"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Email Address</label>
-            <input
-              type="email"
-              value={form.email}
-              onChange={e => setForm({ ...form, email: e.target.value })}
-              placeholder="e.g. donor@example.com"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Address</label>
-            <input
-              type="text"
-              value={form.address}
-              onChange={e => setForm({ ...form, address: e.target.value })}
-              placeholder="Street address, house number, etc."
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">City</label>
-            <input
-              type="text"
-              value={form.city}
-              onChange={e => setForm({ ...form, city: e.target.value })}
-              placeholder="e.g. Karachi"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
-            />
-          </div>
-
-          <div className="flex items-center pt-5">
-            <label className="flex items-center gap-2.5 cursor-pointer text-sm text-slate-300 font-semibold">
-              <input
-                type="checkbox"
-                checked={form.isActive}
-                onChange={e => setForm({ ...form, isActive: e.target.checked })}
-                className="h-4 w-4 rounded border-slate-800 bg-slate-950/60 text-indigo-600 focus:ring-indigo-600 focus:ring-offset-slate-900 cursor-pointer"
-              />
-              Active Donor Account
-            </label>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-3 mt-8 pt-4 border-t border-slate-800/80">
-          <button
-            onClick={onClose}
-            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50 cursor-pointer"
-          >
-            {initial ? 'Update Donor' : 'Register Donor'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export const Donors = () => {
-  const { donors, loading, fetchDonors, addDonor, updateDonor, deleteDonor, bulkDeleteDonors } = useDonorStore();
+  const navigate = useNavigate();
+  const { donors, loading, fetchDonors, deleteDonor, bulkDeleteDonors } = useDonorStore();
   const [search, setSearch] = useState('');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedDonor, setSelectedDonor] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -197,24 +28,6 @@ export const Donors = () => {
       d.mobile?.toLowerCase().includes(q)
     );
   }, [donors, search]);
-
-  const handleCreate = async (data) => {
-    try {
-      await addDonor(data);
-      showToast('Donor registered successfully', 'success');
-    } catch (err) {
-      showToast(err.message || 'Failed to register donor', 'error');
-    }
-  };
-
-  const handleUpdate = async (data) => {
-    try {
-      await updateDonor(selectedDonor.id, data);
-      showToast('Donor updated successfully', 'success');
-    } catch (err) {
-      showToast(err.message || 'Failed to update donor', 'error');
-    }
-  };
 
   const handleDelete = async (donor) => {
     if (!window.confirm(`Are you sure you want to delete donor "${donor.fullName}" (${donor.donorCode})?`)) return;
@@ -277,13 +90,13 @@ export const Donors = () => {
               <span>Bulk Delete ({selectedIds.length})</span>
             </button>
           )}
-          <button
-            onClick={() => { setSelectedDonor(null); setModalOpen(true); }}
+          <Link
+            to="/donors/new"
             className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95"
           >
             <Plus className="h-4 w-4" />
             <span>Register Donor</span>
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -421,7 +234,7 @@ export const Donors = () => {
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
                           <button
-                            onClick={() => { setSelectedDonor(d); setModalOpen(true); }}
+                            onClick={() => navigate(`/donors/edit/${d.id}`)}
                             className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
                             title="Edit Donor"
                           >
@@ -485,7 +298,7 @@ export const Donors = () => {
 
                   <div className="flex items-center justify-end gap-2 pt-1">
                     <button
-                      onClick={() => { setSelectedDonor(d); setModalOpen(true); }}
+                      onClick={() => navigate(`/donors/edit/${d.id}`)}
                       className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs font-medium flex items-center gap-1.5"
                     >
                       <Edit2 className="h-3.5 w-3.5" /> Edit
@@ -548,12 +361,7 @@ export const Donors = () => {
         </div>
       )}
 
-      <DonorModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSave={selectedDonor ? handleUpdate : handleCreate}
-        initial={selectedDonor}
-      />
+
     </div>
   );
 };
