@@ -116,6 +116,10 @@ export const DonationsReceived = () => {
   const [selectedIds, setSelectedIds] = useState([]);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [filterType, setFilterType] = useState('');
+  const [filterMethod, setFilterMethod] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     fetchDonations();
