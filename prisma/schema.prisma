@@ -308,6 +308,8 @@ model HallBooking {
   journalEntry    JournalEntry?  @relation("HallBookingJournalEntry", fields: [journalEntryId], references: [id])
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+
+  @@unique([hallId, programDate], name: "hallId_programDate")
 }
 
 model Customer {

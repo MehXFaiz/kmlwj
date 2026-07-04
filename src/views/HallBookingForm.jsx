@@ -8,6 +8,9 @@ import { useHallBookingStore } from '../store/hallBookingStore';
 import { useCoaStore } from '../store/coaStore';
 import { showToast } from '../components/ui/Toast';
 import { HallBookingReceiptModal } from '../components/receipts/HallBookingReceiptModal';
+import api from '../services/api';
+import HallBookingConflictModal from '../components/common/HallBookingConflictModal';
+import HallBookingCalendar from '../components/common/HallBookingCalendar';
 
 export const HallBookingForm = () => {
   const { t } = useTranslation();
@@ -18,6 +21,9 @@ export const HallBookingForm = () => {
   const [newlyCreatedBooking, setNewlyCreatedBooking] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showAllDates, setShowAllDates] = useState(false);
+  const [activeTab, setActiveTab] = useState('list');
+  const [availability, setAvailability] = useState({ checking: false, available: true, conflict: null });
+  const [showConflictModal, setShowConflictModal] = useState(false);
 
   const { register, handleSubmit, watch, setValue, reset, formState: { isSubmitting, dirtyFields, errors } } = useForm({
     defaultValues: {
@@ -129,6 +135,39 @@ export const HallBookingForm = () => {
     if (b.timings === timings || b.timings === 'Full Day' || timings === 'Full Day' || !timings || !b.timings) return true;
     return false;
   });
+
+  useEffect(() => {
+    if (!hallId || !programDate) {
+      setAvailability({ checking: false, available: true, conflict: null });
+      return;
+    }
+    let isMounted = true;
+    setAvailability(prev => ({ ...prev, checking: true }));
+
+    api.get('/api/v1/hall-bookings/check-availability', {
+      params: {
+        hallId,
+        bookingDate: programDate,
+        excludeId: id || undefined
+      }
+    })
+    .then(res => {
+      if (!isMounted) return;
+      if (res.data && res.data.available === false) {
+        setAvailability({ checking: false, available: false, conflict: res.data });
+        setShowConflictModal(true);
+      } else {
+        setAvailability({ checking: false, available: true, conflict: null });
+      }
+    })
+    .catch(err => {
+      if (!isMounted) return;
+      console.error('Availability check error:', err);
+      setAvailability({ checking: false, available: true, conflict: null });
+    });
+
+    return () => { isMounted = false; };
+  }, [hallId, programDate, id]);
 
   useEffect(() => {
     // Only auto-calculate amount if hallId or isForJamaat was touched/modified by the user
@@ -278,20 +317,45 @@ export const HallBookingForm = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowAllDates(!showAllDates)}
-                      className="px-2.5 py-1 text-xs font-medium rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition-colors"
-                    >
-                      {showAllDates ? 'Showing All Dates' : 'Showing Upcoming Only'}
-                    </button>
+                    <div className="flex items-center bg-slate-800/80 rounded-xl p-0.5 border border-slate-700/80">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('list')}
+                        className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-all ${activeTab === 'list' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                      >
+                        List View
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('calendar')}
+                        className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-all ${activeTab === 'calendar' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                      >
+                        Calendar Grid
+                      </button>
+                    </div>
+                    {activeTab === 'list' && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllDates(!showAllDates)}
+                        className="px-2.5 py-1 text-xs font-medium rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition-colors"
+                      >
+                        {showAllDates ? 'Showing All Dates' : 'Showing Upcoming Only'}
+                      </button>
+                    )}
                     <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
                       {activeBookings.length} Booked
                     </span>
                   </div>
                 </div>
 
-                {activeBookings.length === 0 ? (
+                {activeTab === 'calendar' ? (
+                  <HallBookingCalendar
+                    bookings={bookings}
+                    selectedHallId={hallId}
+                    selectedDate={programDate}
+                    onSelectDate={(d) => setValue('programDate', d, { shouldValidate: true })}
+                  />
+                ) : activeBookings.length === 0 ? (
                   <div className="text-center py-6 text-xs text-slate-500 italic bg-slate-950/40 rounded-xl border border-slate-800/60">
                     No {showAllDates ? '' : 'upcoming'} bookings found {hallId ? 'for this hall' : ''}.
                   </div>
@@ -434,15 +498,15 @@ export const HallBookingForm = () => {
                           message: 'Date must be in YYYY-MM-DD format'
                         }
                       })} required
-                        className={inputClass(errors.programDate)} />
+                        className={`${inputClass(errors.programDate || !availability.available)} ${!availability.available ? '!border-red-500 !bg-red-950/30 !text-red-200 ring-2 ring-red-500/50' : ''}`} />
                       {errors.programDate && (
                         <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.programDate.message}</span>
                       )}
-                      {conflictBooking && (
-                        <div className="mt-1.5 p-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-center gap-1.5 animate-pulse">
-                          <span>⚠️</span>
+                      {(!availability.available || conflictBooking) && (
+                        <div className="mt-1.5 p-2.5 rounded-xl bg-red-500/15 border border-red-500/40 text-red-200 text-xs flex items-center gap-2 animate-pulse shadow-md shadow-red-500/10">
+                          <span className="text-sm">⚠️</span>
                           <span>
-                            <strong>Booked:</strong> {conflictBooking.hallAccount?.accountName || 'This hall'} is already booked on this date ({conflictBooking.timings || 'Any time'}) by {conflictBooking.bookerName}.
+                            <strong>Booked:</strong> {availability.conflict?.hallName || conflictBooking?.hallAccount?.accountName || 'This hall'} is already booked on this date by <strong>{availability.conflict?.bookedBy || conflictBooking?.bookerName || 'another customer'}</strong>. Please choose another date.
                           </span>
                         </div>
                       )}
@@ -647,8 +711,8 @@ export const HallBookingForm = () => {
                   className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">
                   Cancel
                 </Link>
-                <button type="submit" disabled={isSubmitting}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50 cursor-pointer">
+                <button type="submit" disabled={isSubmitting || !availability.available}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">
                   <Save className="w-4 h-4" />
                   {isSubmitting ? 'Saving...' : id ? 'Update Booking' : 'Save Booking'}
                 </button>
@@ -664,6 +728,16 @@ export const HallBookingForm = () => {
           onClose={handleCloseReceipt}
         />
       )}
+
+      <HallBookingConflictModal
+        isOpen={showConflictModal}
+        onClose={() => setShowConflictModal(false)}
+        onChooseAnotherDate={() => {
+          setValue('programDate', '', { shouldValidate: true });
+          setShowConflictModal(false);
+        }}
+        conflictInfo={availability.conflict}
+      />
     </DashboardLayout>
   );
 };

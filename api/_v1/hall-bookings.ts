@@ -21,6 +21,75 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const action = req.query.action as string;
 
   if (method === 'GET') {
+    if (req.url?.includes('/check-availability') || action === 'check-availability') {
+      const hallId = req.query.hallId as string;
+      const dateParam = (req.query.bookingDate || req.query.programDate) as string;
+      const excludeId = req.query.excludeId as string;
+
+      if (!hallId || !dateParam) {
+        return res.status(400).json({ error: { message: 'hallId and bookingDate (or programDate) are required parameters', status: 400 } });
+      }
+
+      const parsedDate = new Date(dateParam);
+      if (isNaN(parsedDate.getTime())) {
+        return res.status(400).json({ error: { message: 'Invalid date format', status: 400 } });
+      }
+
+      const startOfDay = new Date(parsedDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(parsedDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+
+      const conflictBooking = await prisma.hallBooking.findFirst({
+        where: {
+          hallId: hallId,
+          programDate: {
+            gte: startOfDay,
+            lte: endOfDay,
+          },
+          status: {
+            in: ['Confirmed', 'Pending', 'POSTED'],
+          },
+          id: excludeId ? { not: excludeId } : undefined,
+        },
+        include: {
+          hallAccount: true,
+          createdBy: true,
+        },
+      });
+
+      if (conflictBooking) {
+        const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress;
+        await logAudit(
+          req.user.id,
+          'Duplicate Booking Attempt',
+          'REVENUE',
+          null,
+          {
+            user: req.user.fullName || req.user.email,
+            hall: conflictBooking.hallAccount?.accountName || conflictBooking.hallAccount?.name || 'Selected Hall',
+            bookingDate: dateParam,
+            attemptedBy: req.user.id,
+            ipAddress: ipAddress,
+            timestamp: new Date().toISOString(),
+          },
+          ipAddress,
+          req.headers['user-agent']
+        );
+
+        return res.status(200).json({
+          available: false,
+          bookedBy: conflictBooking.bookerName,
+          bookingDate: conflictBooking.programDate.toISOString().split('T')[0],
+          hallName: conflictBooking.hallAccount?.accountName || conflictBooking.hallAccount?.name || 'Selected Hall',
+          receiptNo: conflictBooking.receiptNo,
+          status: conflictBooking.status,
+        });
+      }
+
+      return res.status(200).json({ available: true });
+    }
+
     const id = req.query.id as string;
     if (id) {
       const booking = await prisma.hallBooking.findUnique({
@@ -127,7 +196,56 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       debitAccountId = bankAccountId;
     }
 
-    const result = await prisma.$transaction(async (tx) => {
+    const eventDateStr = programDate || bookingDate;
+    const parsedProgDate = new Date(eventDateStr);
+    const startOfDay = new Date(parsedProgDate);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const endOfDay = new Date(parsedProgDate);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
+    const conflictBooking = await prisma.hallBooking.findFirst({
+      where: {
+        hallId: hallId,
+        programDate: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+        status: {
+          in: ['Confirmed', 'Pending', 'POSTED'],
+        },
+      },
+      include: {
+        hallAccount: true,
+      },
+    });
+
+    if (conflictBooking) {
+      const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress;
+      await logAudit(
+        req.user.id,
+        'Duplicate Booking Attempt',
+        'REVENUE',
+        null,
+        {
+          user: req.user.fullName || req.user.email,
+          hall: conflictBooking.hallAccount?.accountName || conflictBooking.hallAccount?.name || 'Selected Hall',
+          bookingDate: eventDateStr,
+          attemptedBy: req.user.id,
+          ipAddress: ipAddress,
+          timestamp: new Date().toISOString(),
+        },
+        ipAddress,
+        req.headers['user-agent']
+      );
+
+      return res.status(409).json({
+        success: false,
+        message: 'This hall is already booked on the selected date. Please choose another date.',
+      });
+    }
+
+    try {
+      const result = await prisma.$transaction(async (tx) => {
       const count = await tx.hallBooking.count();
       const nextReceiptNo = count + 1;
 
@@ -176,9 +294,35 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return newBooking;
     });
 
-    await logAudit(req.user.id, 'Create & Post Hall Booking', 'REVENUE', null, result, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      await logAudit(req.user.id, 'Create & Post Hall Booking', 'REVENUE', null, result, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-    return res.status(201).json({ status: 201, data: result });
+      return res.status(201).json({ status: 201, data: result });
+    } catch (err: any) {
+      if (err.code === 'P2002' || err.message?.includes('Unique constraint failed')) {
+        const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress;
+        await logAudit(
+          req.user.id,
+          'Duplicate Booking Attempt',
+          'REVENUE',
+          null,
+          {
+            user: req.user.fullName || req.user.email,
+            hall: hallId,
+            bookingDate: programDate || bookingDate,
+            attemptedBy: req.user.id,
+            ipAddress: ipAddress,
+            timestamp: new Date().toISOString(),
+          },
+          ipAddress,
+          req.headers['user-agent']
+        );
+        return res.status(409).json({
+          success: false,
+          message: 'This hall is already booked on the selected date. Please choose another date.',
+        });
+      }
+      throw err;
+    }
   }
 
   if (method === 'DELETE') {
@@ -265,8 +409,57 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if ((paymentMethod === 'BANK' || paymentMethod === 'CHEQUE') && !bankAccountId) {
       return res.status(400).json({ error: { message: 'Bank account is required for Bank/Cheque payment methods', status: 400 } });
     }
+    const eventDateStr = programDate || bookingDate;
+    const parsedProgDate = new Date(eventDateStr);
+    const startOfDay = new Date(parsedProgDate);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const endOfDay = new Date(parsedProgDate);
+    endOfDay.setUTCHours(23, 59, 59, 999);
 
-    const updatedBooking = await prisma.$transaction(async (tx) => {
+    const conflictBooking = await prisma.hallBooking.findFirst({
+      where: {
+        hallId: hallId,
+        programDate: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+        status: {
+          in: ['Confirmed', 'Pending', 'POSTED'],
+        },
+        id: { not: id },
+      },
+      include: {
+        hallAccount: true,
+      },
+    });
+
+    if (conflictBooking) {
+      const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress;
+      await logAudit(
+        req.user.id,
+        'Duplicate Booking Attempt',
+        'REVENUE',
+        null,
+        {
+          user: req.user.fullName || req.user.email,
+          hall: conflictBooking.hallAccount?.accountName || conflictBooking.hallAccount?.name || 'Selected Hall',
+          bookingDate: eventDateStr,
+          attemptedBy: req.user.id,
+          ipAddress: ipAddress,
+          timestamp: new Date().toISOString(),
+        },
+        ipAddress,
+        req.headers['user-agent']
+      );
+
+      return res.status(409).json({
+        success: false,
+        message: 'This hall is already booked on the selected date. Please choose another date.',
+      });
+    }
+
+    try {
+      const updatedBooking = await prisma.$transaction(async (tx) => {
       if (existingBooking.journalEntryId) {
         try {
           await AccountingService.deleteJournalEntry(tx, existingBooking.journalEntryId, req.user!.id, 'Reversing Hall Booking for update');
@@ -319,16 +512,75 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           remarks: remarks || null,
           journalEntryId: postingResult.journalEntry.id
         },
-        include: {
-          hallAccount: true,
-          journalEntry: true
-        }
+          cashOrBankAccountId: debitAccountId!,
+          incomeAccountId: hallId,
+          reference: `HB-${existingBooking.receiptNo}`,
+          description: `Hall Booking Receipt for ${bookerName}${programType ? ` (${programType})` : ''}`,
+          module: 'Hall Booking',
+          voucherType: 'BR',
+          postedBy: req.user!.id,
+          postingDate: bookingDate ? new Date(bookingDate) : new Date(),
+          ipAddress: req.headers['x-forwarded-for'] as string,
+          userAgent: req.headers['user-agent']
+        });
+
+        return await tx.hallBooking.update({
+          where: { id },
+          data: {
+            bookingDate: bookingDate ? new Date(bookingDate) : undefined,
+            bookerName,
+            address: address || null,
+            mobile: mobile || null,
+            programDate: new Date(programDate),
+            programType: programType || null,
+            timings: timings || null,
+            hallId,
+            isForJamaat: Boolean(isForJamaat),
+            amount: parsedAmount,
+            paymentMethod,
+            bankAccountId: bankAccountId || null,
+            chequeNumber: chequeNumber || null,
+            chequeBankName: chequeBankName || null,
+            status: 'POSTED',
+            remarks: remarks || null,
+            journalEntryId: postingResult.journalEntry.id
+          },
+          include: {
+            hallAccount: true,
+            journalEntry: true
+          }
+        });
       });
-    });
 
-    await logAudit(req.user.id, 'Update & Post Hall Booking', 'REVENUE', existingBooking, updatedBooking, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      await logAudit(req.user.id, 'Update & Post Hall Booking', 'REVENUE', existingBooking, updatedBooking, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-    return res.status(200).json({ status: 200, data: updatedBooking });
+      return res.status(200).json({ status: 200, data: updatedBooking });
+    } catch (err: any) {
+      if (err.code === 'P2002' || err.message?.includes('Unique constraint failed')) {
+        const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress;
+        await logAudit(
+          req.user.id,
+          'Duplicate Booking Attempt',
+          'REVENUE',
+          null,
+          {
+            user: req.user.fullName || req.user.email,
+            hall: hallId,
+            bookingDate: programDate || bookingDate,
+            attemptedBy: req.user.id,
+            ipAddress: ipAddress,
+            timestamp: new Date().toISOString(),
+          },
+          ipAddress,
+          req.headers['user-agent']
+        );
+        return res.status(409).json({
+          success: false,
+          message: 'This hall is already booked on the selected date. Please choose another date.',
+        });
+      }
+      throw err;
+    }
   }
 
   return res.status(405).json({ error: { message: 'Method Not Allowed', status: 405 } });

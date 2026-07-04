@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Search, Printer, AlertTriangle, CheckCircle, X, Trash2, Edit2, CheckCircle2 } from 'lucide-react';
+import { Plus, Search, Printer, AlertTriangle, CheckCircle, X, Trash2, Edit2, CheckCircle2, Calendar, Table as TableIcon } from 'lucide-react';
 import { useHallBookingStore } from '../store/hallBookingStore';
 import { useAuthStore } from '../store/authStore';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { showToast } from '../components/ui/Toast';
 import { HallBookingReceiptModal } from '../components/receipts/HallBookingReceiptModal';
+import HallBookingCalendar from '../components/common/HallBookingCalendar';
 
 export const HallBookings = () => {
   const { t, i18n } = useTranslation();
@@ -14,6 +15,7 @@ export const HallBookings = () => {
   const { canEditOrDelete } = useAuthStore();
   const [search, setSearch] = useState('');
   const [printItem, setPrintItem] = useState(null);
+  const [viewMode, setViewMode] = useState('table');
 
   const [selectedIds, setSelectedIds] = useState([]);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
@@ -111,14 +113,37 @@ export const HallBookings = () => {
 
         <div className="w-full rounded-2xl border border-slate-800/60 bg-slate-900/50 backdrop-blur-xl overflow-hidden shadow-xl">
           <div className="p-4 sm:p-5 border-b border-slate-800/80">
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('tables.hallBookings.searchPlaceholder')}
-                className="w-full pl-9 pr-4 py-2 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 transition-colors" />
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="relative max-w-md flex-1 min-w-[240px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('tables.hallBookings.searchPlaceholder')}
+                  className="w-full pl-9 pr-4 py-2 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 transition-colors" />
+              </div>
+              <div className="flex items-center bg-slate-950/80 rounded-xl p-1 border border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('table')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${viewMode === 'table' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  <TableIcon className="h-3.5 w-3.5" /> Table View
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('calendar')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${viewMode === 'calendar' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  <Calendar className="h-3.5 w-3.5" /> Calendar View
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          {viewMode === 'calendar' ? (
+            <div className="p-5">
+              <HallBookingCalendar bookings={bookings} />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400">
                 <div className="h-6 w-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
@@ -227,6 +252,7 @@ export const HallBookings = () => {
               </table>
             )}
           </div>
+          )}
         </div>
       </div>
       

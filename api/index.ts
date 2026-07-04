@@ -160,6 +160,7 @@ app.put('/api/v1/revenue-collections', makeExpress(revenueCollectionsHandler));
 app.delete('/api/v1/revenue-collections', makeExpress(revenueCollectionsHandler));
 
 // Hall Booking Routes
+app.get('/api/v1/hall-bookings/check-availability', makeExpress(hallBookingsHandler));
 app.get('/api/v1/hall-bookings', makeExpress(hallBookingsHandler));
 app.post('/api/v1/hall-bookings', makeExpress(hallBookingsHandler));
 app.put('/api/v1/hall-bookings', makeExpress(hallBookingsHandler));
