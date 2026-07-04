@@ -25,6 +25,7 @@ model User {
   donationsCreated     Donation[]          @relation("DonationCreatedBy")
   hallBookingsCreated  HallBooking[]       @relation("HallBookingCreatedBy")
   revenueCollections   RevenueCollection[] @relation("RevenueCollectionCreatedBy")
+  donationsReceivedCreated DonationReceived[] @relation("DonationReceivedCreatedBy")
 }
 
 model Role {
@@ -106,6 +107,8 @@ model Account {
   hallBookings      HallBooking[]       @relation("HallBookingAccount")
   hallBookingBanks  HallBooking[]       @relation("HallBookingBankAccount")
   revenueCollections RevenueCollection[] @relation("RevenueCollectionBankAccount")
+  donationsReceivedCash DonationReceived[] @relation("DonationReceivedCashAccount")
+  donationsReceivedBank DonationReceived[] @relation("DonationReceivedBankAccount")
 }
 
 model AccountType {
@@ -177,6 +180,7 @@ model JournalEntry {
   lines       JournalEntryLine[]
   hallBooking HallBooking?       @relation("HallBookingJournalEntry")
   revenueCollection RevenueCollection? @relation("RevenueCollectionJournalEntry")
+  donationReceived DonationReceived?   @relation("DonationReceivedJournalEntry")
 }
 
 model JournalEntryLine {
@@ -212,12 +216,29 @@ enum DonationType {
   EMERGENCY
   EDUCATION
   CUSTOM
+  GENERAL_DONATION
+  ZAKAT
+  FITRA
+  SADQA
+  QURBANI
+  HALL_DONATION
+  MARRIAGE_DONATION
+  BUILDING_FUND
+  MEDICAL_DONATION
+  EDUCATION_DONATION
 }
 
 enum PaymentMethod {
   CASH
   BANK
   CHEQUE
+  ONLINE
+}
+
+enum TransactionStatus {
+  DRAFT
+  POSTED
+  CANCELLED
 }
 
 enum DonationStatus {
@@ -383,5 +404,51 @@ model Member {
   isActive        Boolean        @default(true)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+}
+
+model Donor {
+  id              String   @id @default(uuid()) @db.Uuid
+  donorCode       String   @unique
+  fullName        String
+  fatherName      String?
+  mobile          String?
+  cnic            String?  @unique
+  email           String?
+  address         String?
+  city            String?
+  isActive        Boolean  @default(true)
+  donations       DonationReceived[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model DonationReceived {
+  id                String            @id @default(uuid()) @db.Uuid
+  receiptNo         String            @unique
+  receiptDate       DateTime          @default(now())
+  donorId           String            @db.Uuid
+  donor             Donor             @relation(fields: [donorId], references: [id])
+  donationType      DonationType
+  amount            Float
+  paymentMethod     PaymentMethod
+  cashAccountId     String?           @db.Uuid
+  cashAccount       Account?          @relation("DonationReceivedCashAccount", fields: [cashAccountId], references: [id])
+  bankAccountId     String?           @db.Uuid
+  bankAccount       Account?          @relation("DonationReceivedBankAccount", fields: [bankAccountId], references: [id])
+  chequeNo          String?
+  chequeDate        DateTime?
+  referenceNo       String?
+  narration         String?
+  journalEntryId    String?           @unique @db.Uuid
+  journalEntry      JournalEntry?     @relation("DonationReceivedJournalEntry", fields: [journalEntryId], references: [id])
+  status            TransactionStatus @default(POSTED)
+  createdById       String            @db.Uuid
+  createdBy         User              @relation("DonationReceivedCreatedBy", fields: [createdById], references: [id])
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([receiptDate])
+  @@index([donorId])
+  @@index([paymentMethod])
 }
 

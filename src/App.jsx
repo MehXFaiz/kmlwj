@@ -29,6 +29,8 @@ const HallBookingForm = lazy(() => import('./views/HallBookingForm').then(m => (
 // Donation Module Views
 const Beneficiaries = lazy(() => import('./views/Beneficiaries').then(m => ({ default: m.Beneficiaries })));
 const Donations = lazy(() => import('./views/Donations').then(m => ({ default: m.Donations })));
+const Donors = lazy(() => import('./views/Donors').then(m => ({ default: m.Donors })));
+const DonationsReceived = lazy(() => import('./views/DonationsReceived').then(m => ({ default: m.DonationsReceived })));
 const DonationReports = lazy(() => import('./views/DonationReports').then(m => ({ default: m.DonationReports })));
 
 // Categorized Revenue Views
@@ -312,6 +314,8 @@ function App() {
             <Route path="/hall-bookings/edit/:id" element={<HallBookingForm />} />
             <Route path="/beneficiaries" element={<Beneficiaries />} />
             <Route path="/donations" element={<Donations />} />
+            <Route path="/donors" element={<Donors />} />
+            <Route path="/donations-received" element={<DonationsReceived />} />
             <Route path="/donation-reports" element={<DonationReports />} />
             <Route path="/zakat" element={<ZakatSection />} />
             <Route path="/fitra" element={<FitraSection />} />

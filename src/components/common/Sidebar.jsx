@@ -162,7 +162,8 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
       title: t('sidebar.moneyIn', 'Money In'),
       items: [
         { name: t('sidebar.hallBookings', 'Hall Bookings'), hint: t('sidebar.hallBookingsHint', 'Manage hall reservations'), icon: Calendar, path: '/hall-bookings' },
-        { name: t('sidebar.donationsReceived', 'Donation Received'), hint: t('sidebar.donationsReceivedHint', 'All donation records'), icon: Heart, path: '/donations' },
+        { name: 'Donations Received', hint: 'Charitable inflow receipts', icon: Heart, path: '/donations-received' },
+        { name: 'Donors Directory', hint: 'Manage registered donors', icon: Users, path: '/donors' },
         { name: t('sidebar.membershipFee', 'Membership Fee'), hint: 'Manage member fees and renewals', icon: Building, path: '/membership-fees' },
         { name: t('sidebar.busBooking', 'Bus Booking'), hint: 'Manage bus reservations and trips', icon: Bus, path: '/bus-bookings' },
         { name: t('sidebar.zakatCollection', 'Zakat Collection'), hint: 'Manage Zakat donors and receipts', icon: Gift, path: '/zakat' },
@@ -187,6 +188,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
       title: t('sidebar.welfare', 'Welfare'),
       items: [
         { name: t('sidebar.peopleWeHelp', 'People We Help'), hint: t('sidebar.peopleWeHelpHint', 'Beneficiary list'), icon: Users, path: '/beneficiaries' },
+        { name: 'Donations Given (Disbursements)', hint: 'Financial aid disbursements', icon: Heart, path: '/donations' },
         { name: t('sidebar.donationReports', 'Donation Reports'), hint: t('sidebar.donationReportsHint', 'Monthly summaries'), icon: FileText, path: '/donation-reports' },
       ],
     },
