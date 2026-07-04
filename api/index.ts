@@ -28,6 +28,8 @@ import auditLogsHandler from './_v1/audit-logs.js';
 import reservedCodesHandler from './_v1/reserved-codes.js';
 import beneficiariesHandler from './_v1/beneficiaries.js';
 import donationsHandler from './_v1/donations.js';
+import donorsHandler from './_v1/donors.js';
+import donationsReceivedHandler from './_v1/donations-received.js';
 import hallBookingsHandler from './_v1/hall-bookings.js';
 import revenueCollectionsHandler from './_v1/revenue-collections.js';
 import customersHandler from './_v1/customers.js';
@@ -139,6 +141,17 @@ app.delete('/api/v1/beneficiaries', makeExpress(beneficiariesHandler));
 app.get('/api/v1/donations', makeExpress(donationsHandler));
 app.post('/api/v1/donations', makeExpress(donationsHandler));
 app.delete('/api/v1/donations', makeExpress(donationsHandler));
+
+app.get('/api/v1/donors', makeExpress(donorsHandler));
+app.post('/api/v1/donors', makeExpress(donorsHandler));
+app.put('/api/v1/donors', makeExpress(donorsHandler));
+app.delete('/api/v1/donors', makeExpress(donorsHandler));
+
+app.get('/api/v1/donations-received', makeExpress(donationsReceivedHandler));
+app.post('/api/v1/donations-received', makeExpress(donationsReceivedHandler));
+app.put('/api/v1/donations-received', makeExpress(donationsReceivedHandler));
+app.patch('/api/v1/donations-received', makeExpress(donationsReceivedHandler));
+app.delete('/api/v1/donations-received', makeExpress(donationsReceivedHandler));
 
 // Revenue Collection Routes (Zakat, Fitra, Membership Fee, Bus Booking)
 app.get('/api/v1/revenue-collections', makeExpress(revenueCollectionsHandler));
