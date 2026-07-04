@@ -435,7 +435,7 @@ export const SpecializedRevenueSection = ({
 
             <form onSubmit={handleSave} className="space-y-4 text-left">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">{titleLabel} *</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">{titleLabel} *</label>
                 {isMembershipFee ? (
                   <div className="relative" ref={memberDropdownRef}>
                     <div className="relative">
@@ -445,12 +445,12 @@ export const SpecializedRevenueSection = ({
                         onChange={e => { setMemberSearch(e.target.value); setMemberDropdownOpen(true); setForm(prev => ({ ...prev, title: e.target.value })); }}
                         onFocus={() => setMemberDropdownOpen(true)}
                         placeholder="Search and select a member..."
-                        className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-slate-950/60 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 transition-colors"
+                        className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors font-medium"
                       />
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
                     </div>
                     {memberDropdownOpen && filteredMembersList.length > 0 && (
-                      <div className="absolute z-50 w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden max-h-52 overflow-y-auto">
+                      <div className="absolute z-50 w-full mt-1 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl overflow-hidden max-h-52 overflow-y-auto">
                         {filteredMembersList.map(member => (
                           <button
                             key={member.id}
@@ -477,30 +477,30 @@ export const SpecializedRevenueSection = ({
                   <input required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
                     placeholder={`Enter ${titleLabel.toLowerCase()}...`}
                     pattern="^[a-zA-Z0-9\s.-]{3,50}$" title="Letters, numbers, spaces, hyphens, and dots (3-50 characters)"
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 transition-colors" />
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors font-medium" />
                 )}
               </div>
 
               {subTitleLabel && (
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">{subTitleLabel}</label>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">{subTitleLabel}</label>
                   <input value={form.subTitle} onChange={e => setForm({ ...form, subTitle: e.target.value })}
                     placeholder={`Enter ${subTitleLabel.toLowerCase()}...`}
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 transition-colors" />
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors font-medium" />
                 </div>
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Mobile Phone</label>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Mobile Phone</label>
                   <input value={form.mobile} onChange={e => setForm({ ...form, mobile: e.target.value })}
                     placeholder="0300-1234567"
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 transition-colors" />
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors font-medium" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">{dateLabel}</label>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">{dateLabel}</label>
                   <input type="date" value={form.eventDate} onChange={e => setForm({ ...form, eventDate: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 transition-colors" />
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors font-medium" />
                 </div>
               </div>
 
@@ -508,16 +508,16 @@ export const SpecializedRevenueSection = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {showQty && (
                     <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">{qtyLabel}</label>
+                      <label className="block text-xs font-semibold text-slate-400 mb-1.5">{qtyLabel}</label>
                       <input type="number" min="1" value={form.quantity} onChange={e => handleQtyOrRateChange(e.target.value, form.rate)}
-                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 transition-colors" />
+                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors font-medium" />
                     </div>
                   )}
                   {showRate && (
                     <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">{rateLabel} (PKR)</label>
+                      <label className="block text-xs font-semibold text-slate-400 mb-1.5">{rateLabel} (PKR)</label>
                       <input type="number" min="0" value={form.rate} onChange={e => handleQtyOrRateChange(form.quantity, e.target.value)}
-                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 transition-colors" />
+                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors font-medium" />
                     </div>
                   )}
                 </div>
@@ -525,29 +525,29 @@ export const SpecializedRevenueSection = ({
 
               {showDest && (
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">{destLabel}</label>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">{destLabel}</label>
                   <input value={form.destination} onChange={e => setForm({ ...form, destination: e.target.value })}
                     placeholder="e.g. Jamia Mosque to Airport"
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 transition-colors" />
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors font-medium" />
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Total Amount (PKR) *</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Total Amount (PKR) *</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-semibold">PKR</span>
                   <input required type="text" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })}
                     placeholder="0.00"
                     pattern="^[1-9]\d*(\.\d{1,2})?$" title="Positive number with up to 2 decimal places"
-                    className="w-full pl-11 pr-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-700 text-emerald-400 text-sm font-bold focus:outline-none focus:border-indigo-500 transition-colors" />
+                    className="w-full pl-11 pr-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-emerald-400 text-sm font-bold focus:outline-none focus:border-indigo-500/60 transition-colors" />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Payment Method *</label>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Payment Method *</label>
                   <select value={form.paymentMethod} onChange={e => setForm({ ...form, paymentMethod: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 transition-colors">
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors font-medium">
                     <option value="CASH">Cash</option>
                     <option value="BANK">Bank Transfer</option>
                     <option value="CHEQUE">Cheque</option>
@@ -555,9 +555,9 @@ export const SpecializedRevenueSection = ({
                 </div>
                 {(form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && (
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Bank Account *</label>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">Bank Account *</label>
                     <select required value={form.bankAccountId} onChange={e => setForm({ ...form, bankAccountId: e.target.value })}
-                      className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 transition-colors">
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors font-medium">
                       <option value="">Select Bank</option>
                       {bankAccounts.map(b => (
                         <option key={b.id} value={b.id}>{b.accountName} ({b.glCode})</option>
@@ -569,27 +569,27 @@ export const SpecializedRevenueSection = ({
 
               {form.paymentMethod === 'CHEQUE' && (
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Cheque Number</label>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cheque Number</label>
                   <input value={form.chequeNumber} onChange={e => setForm({ ...form, chequeNumber: e.target.value })}
                     placeholder="CHQ-00123"
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 transition-colors" />
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors font-medium" />
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Remarks / Memo</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Remarks / Memo</label>
                 <textarea rows="2" value={form.remarks} onChange={e => setForm({ ...form, remarks: e.target.value })}
                   placeholder="Optional notes or details..."
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950/60 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 transition-colors resize-none" />
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors resize-none font-medium" />
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
                 <button type="button" onClick={handleCloseModal}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold transition-all">
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">
                   Cancel
                 </button>
                 <button type="submit"
-                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold shadow-lg shadow-indigo-600/20 transition-all">
+                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold shadow-lg shadow-indigo-600/25 active:scale-95 transition-all">
                   {editingItem ? 'Update Entry' : `Save ${category}`}
                 </button>
               </div>

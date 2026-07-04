@@ -111,41 +111,41 @@ export const Settings = () => {
               )}
 
               <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Current Password</label>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Current Password</label>
                   <input
                     type="password"
                     value={oldPassword}
                     onChange={(e) => setOldPassword(e.target.value)}
                     pattern="^.{8,}$"
                     title="Password must be at least 8 characters long."
-                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 text-xs"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 text-sm transition-all font-medium"
                     required
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">New Password (Min 8 chars)</label>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">New Password (Min 8 chars)</label>
                   <input
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     pattern="^.{8,}$"
                     title="Password must be at least 8 characters long."
-                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 text-xs"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 text-sm transition-all font-medium"
                     required
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Confirm New Password</label>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Confirm New Password</label>
                   <input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     pattern="^.{8,}$"
                     title="Password must be at least 8 characters long."
-                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 text-xs"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 text-sm transition-all font-medium"
                     required
                   />
                 </div>

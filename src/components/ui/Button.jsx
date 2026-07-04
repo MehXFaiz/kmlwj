@@ -11,20 +11,20 @@ export const Button = forwardRef(({
   onClick,
   ...props
 }, ref) => {
-  const baseStyle = "inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/50 disabled:opacity-50 disabled:pointer-events-none rounded-md cursor-pointer";
+  const baseStyle = "inline-flex items-center justify-center font-semibold transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none rounded-xl cursor-pointer";
   
   const variants = {
-    primary: "bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-500/20 border border-brand-500/20",
-    secondary: "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/80",
-    outline: "bg-transparent hover:bg-slate-900 text-slate-300 border border-slate-700/80 hover:border-slate-600",
-    danger: "bg-red-950/40 hover:bg-red-900/60 text-red-200 border border-red-900/50 shadow-lg shadow-red-950/20",
-    success: "bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-200 border border-emerald-900/50 shadow-lg shadow-emerald-950/20",
-    ghost: "bg-transparent hover:bg-slate-900 text-slate-300 focus:ring-0",
+    primary: "bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/25",
+    secondary: "bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors",
+    outline: "bg-transparent hover:bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-600 transition-colors",
+    danger: "bg-red-950/40 hover:bg-red-900/60 text-red-200 border border-red-900/50 shadow-lg shadow-red-950/20 transition-colors",
+    success: "bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-200 border border-emerald-900/50 shadow-lg shadow-emerald-950/20 transition-colors",
+    ghost: "bg-transparent hover:bg-slate-900 text-slate-300 focus:ring-0 transition-colors",
   };
 
   const sizes = {
-    sm: "px-3 py-1.5 text-xs",
-    md: "px-4 py-2 text-sm",
+    sm: "px-3.5 py-2 text-xs",
+    md: "px-5 py-2.5 text-sm",
     lg: "px-6 py-3 text-base",
   };
 

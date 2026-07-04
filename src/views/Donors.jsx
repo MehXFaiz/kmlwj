@@ -64,91 +64,91 @@ function DonorModal({ isOpen, onClose, onSave, initial }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
           <div className="md:col-span-2">
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Full Name *</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Full Name *</label>
             <input
               type="text"
               value={form.fullName}
               onChange={e => setForm({ ...form, fullName: e.target.value })}
               placeholder="e.g. Muhammad Ali"
-              className="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Father / Husband Name</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Father / Husband Name</label>
             <input
               type="text"
               value={form.fatherName}
               onChange={e => setForm({ ...form, fatherName: e.target.value })}
               placeholder="e.g. Abdul Rahman"
-              className="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">CNIC / ID No</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">CNIC / ID No</label>
             <input
               type="text"
               value={form.cnic}
               onChange={e => setForm({ ...form, cnic: e.target.value })}
               placeholder="e.g. 42101-1234567-1"
-              className="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Mobile Phone</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Mobile Phone</label>
             <input
               type="text"
               value={form.mobile}
               onChange={e => setForm({ ...form, mobile: e.target.value })}
               placeholder="e.g. 0300-1234567"
-              className="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Email Address</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Email Address</label>
             <input
               type="email"
               value={form.email}
               onChange={e => setForm({ ...form, email: e.target.value })}
               placeholder="e.g. donor@example.com"
-              className="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
             />
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Address</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Address</label>
             <input
               type="text"
               value={form.address}
               onChange={e => setForm({ ...form, address: e.target.value })}
               placeholder="Street address, house number, etc."
-              className="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">City</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">City</label>
             <input
               type="text"
               value={form.city}
               onChange={e => setForm({ ...form, city: e.target.value })}
               placeholder="e.g. Karachi"
-              className="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
             />
           </div>
 
           <div className="flex items-center pt-5">
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-300 font-medium">
+            <label className="flex items-center gap-2.5 cursor-pointer text-sm text-slate-300 font-semibold">
               <input
                 type="checkbox"
                 checked={form.isActive}
                 onChange={e => setForm({ ...form, isActive: e.target.checked })}
-                className="rounded border-slate-800 bg-slate-950 text-indigo-600 focus:ring-0 focus:ring-offset-0"
+                className="h-4 w-4 rounded border-slate-800 bg-slate-950/60 text-indigo-600 focus:ring-indigo-600 focus:ring-offset-slate-900 cursor-pointer"
               />
               Active Donor Account
             </label>
@@ -158,13 +158,13 @@ function DonorModal({ isOpen, onClose, onSave, initial }) {
         <div className="flex items-center justify-end gap-3 mt-8 pt-4 border-t border-slate-800/80">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition-colors"
+            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors shadow-lg shadow-indigo-600/20"
+            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50 cursor-pointer"
           >
             {initial ? 'Update Donor' : 'Register Donor'}
           </button>

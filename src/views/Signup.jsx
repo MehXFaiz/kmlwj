@@ -130,8 +130,8 @@ export const Signup = () => {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Full Name */}
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">
                 Full Name
               </label>
               <div className="relative group/input">
@@ -145,7 +145,7 @@ export const Signup = () => {
                   onChange={(e) => setName(e.target.value)}
                   pattern="^[a-zA-Z\s.-]{3,50}$"
                   title="Name must contain only letters, spaces, hyphens, and dots (3-50 characters)"
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/50 border border-slate-800/80 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 text-sm transition-all duration-200"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 text-sm transition-all duration-200 font-medium"
                   placeholder="John Doe"
                   autoComplete="name"
                   required
@@ -154,8 +154,8 @@ export const Signup = () => {
             </div>
 
             {/* Email */}
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">
                 Email Address
               </label>
               <div className="relative group/input">
@@ -169,7 +169,7 @@ export const Signup = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
                   title="Please enter a valid email address (e.g. name@company.com)"
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/50 border border-slate-800/80 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 text-sm transition-all duration-200"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 text-sm transition-all duration-200 font-medium"
                   placeholder="name@company.com"
                   autoComplete="email"
                   required
@@ -178,8 +178,8 @@ export const Signup = () => {
             </div>
 
             {/* Password with strength meter */}
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">
                 Password
               </label>
               <div className="relative group/input">
@@ -193,7 +193,7 @@ export const Signup = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   pattern="^.{8,}$"
                   title="Password must be at least 8 characters long."
-                  className="w-full pl-10 pr-11 py-3 rounded-xl bg-slate-950/50 border border-slate-800/80 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 text-sm transition-all duration-200"
+                  className="w-full pl-10 pr-11 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 text-sm transition-all duration-200 font-medium"
                   placeholder="Min 8 characters"
                   autoComplete="new-password"
                   required
@@ -229,8 +229,8 @@ export const Signup = () => {
             </div>
 
             {/* Custom Role Selector */}
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">
                 System Role
               </label>
               <div className="relative">
@@ -241,13 +241,13 @@ export const Signup = () => {
                     e.stopPropagation();
                     setShowRoleDropdown(!showRoleDropdown);
                   }}
-                  className="w-full flex items-center justify-between gap-2 px-3 sm:px-4 py-3 rounded-xl bg-slate-950/50 border border-slate-800/80 text-sm transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 min-w-0"
+                  className="w-full flex items-center justify-between gap-2 px-3 sm:px-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-sm transition-all duration-200 cursor-pointer focus:outline-none focus:border-indigo-500/60 min-w-0 font-medium"
                 >
                   <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
                     {selectedRole && <selectedRole.icon className="h-4 w-4 text-indigo-400 shrink-0" />}
                     <div className="text-left min-w-0 flex-1">
-                      <span className="text-slate-100 font-medium block truncate">{selectedRole?.label}</span>
-                      <span className="text-slate-600 text-[11px] block truncate">{selectedRole?.desc}</span>
+                      <span className="text-slate-100 font-semibold block truncate">{selectedRole?.label}</span>
+                      <span className="text-slate-500 text-[11px] block truncate">{selectedRole?.desc}</span>
                     </div>
                   </div>
                   <ChevronDown className={`h-4 w-4 text-slate-500 shrink-0 transition-transform duration-200 ${showRoleDropdown ? 'rotate-180' : ''}`} />
@@ -297,7 +297,7 @@ export const Signup = () => {
               type="submit"
               id="signup-submit"
               disabled={loading}
-              className="w-full py-3 px-4 mt-2 bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-400 hover:to-blue-500 active:scale-[0.98] text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/20 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+              className="w-full py-3.5 px-4 mt-2 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-semibold text-sm rounded-xl shadow-lg shadow-indigo-600/25 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

@@ -67,48 +67,48 @@ function BeneficiaryModal({ isOpen, onClose, onSave, initial }) {
 
           <div className="p-6 space-y-4 overflow-y-auto flex-1">
           <div>
-            <label className="block text-xs font-bold text-slate-400 mb-1">Full Name *</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Full Name *</label>
             <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              placeholder="e.g. Ahmed Khan" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm placeholder-slate-600 focus:border-indigo-600/60 focus:outline-none transition-all" />
+              placeholder="e.g. Ahmed Khan" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm placeholder-slate-600 focus:border-indigo-500/60 focus:outline-none transition-all font-medium" />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1">ID Card Number (CNIC)</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">ID Card Number (CNIC)</label>
               <input value={form.cnic} onChange={e => setForm(f => ({ ...f, cnic: e.target.value }))}
-                placeholder="42101-1234567-8" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/60 transition-all" />
+                placeholder="42101-1234567-8" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-all font-medium" />
               <p className="text-[10px] text-slate-600 mt-1">Format: 00000-0000000-0</p>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1">Mobile Number</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Mobile Number</label>
               <input value={form.mobile} onChange={e => setForm(f => ({ ...f, mobile: e.target.value }))}
-                placeholder="0300-0000000" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/60 transition-all" />
+                placeholder="0300-0000000" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-all font-medium" />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-400 mb-1">Home Address</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Home Address</label>
             <textarea value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/60 transition-all h-20 resize-none" />
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-all h-20 resize-none font-medium" />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-400 mb-1">Notes / Remarks</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Notes / Remarks</label>
             <input value={form.remarks} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))}
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:outline-none focus:border-indigo-600/60 transition-all" />
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-all font-medium" />
           </div>
 
           <div className="flex items-center gap-3 pt-2">
             <input type="checkbox" id="isActive" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
-              className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-indigo-600 focus:ring-indigo-600 focus:ring-offset-slate-900 cursor-pointer" />
-            <label htmlFor="isActive" className="text-sm font-medium text-slate-300 cursor-pointer">This person is currently receiving aid</label>
+              className="h-4 w-4 rounded border-slate-800 bg-slate-950/60 text-indigo-600 focus:ring-indigo-600 focus:ring-offset-slate-900 cursor-pointer" />
+            <label htmlFor="isActive" className="text-sm font-semibold text-slate-300 cursor-pointer">This person is currently receiving aid</label>
           </div>
         </div>
 
         <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 px-6 py-4 border-t border-slate-800 shrink-0">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-800 text-sm font-semibold transition-all">Cancel</button>
+          <button onClick={onClose} className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">Cancel</button>
           <button onClick={handleSave} disabled={!form.name.trim()}
-            className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-sm font-bold transition-all shadow-lg shadow-indigo-900/40">
+            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50 cursor-pointer">
             {initial ? 'Save Changes' : 'Create Beneficiary'}
           </button>
         </div>

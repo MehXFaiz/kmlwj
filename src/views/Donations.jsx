@@ -77,40 +77,40 @@ function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
           </button>
         </div>
 
-        <div className="p-6 space-y-4 overflow-y-auto flex-1">
+        <div className="p-6 space-y-4 overflow-y-auto flex-1 text-left">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Donor Name *</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Donor Name *</label>
               <input type="text" value={form.donorName} onChange={e => setForm(f => ({ ...f, donorName: e.target.value }))}
-                placeholder="E.g. Muhammad Ali" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-pink-600/60 transition-all" />
+                placeholder="E.g. Muhammad Ali" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:border-indigo-500/60 transition-all font-medium placeholder-slate-600" />
             </div>
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Donor Mobile</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Donor Mobile</label>
               <input type="text" value={form.donorMobile} onChange={e => setForm(f => ({ ...f, donorMobile: e.target.value }))}
-                placeholder="E.g. 0300-1234567" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-pink-600/60 transition-all" />
+                placeholder="E.g. 0300-1234567" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:border-indigo-500/60 transition-all font-medium placeholder-slate-600" />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Donation Type *</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Donation Type *</label>
               <select value={form.donationType} onChange={e => setForm(f => ({ ...f, donationType: e.target.value }))}
-                className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-pink-600/60 transition-all">
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:border-indigo-500/60 transition-all font-medium">
                 {['MONTHLY', 'MARRIAGE', 'MEDICAL', 'EMERGENCY', 'EDUCATION', 'CUSTOM'].map(t => (
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Amount *</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Amount *</label>
               <input type="number" min="0" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
-                placeholder="10000" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-pink-600/60 transition-all" />
+                placeholder="10000" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:border-indigo-500/60 transition-all font-medium placeholder-slate-600" />
             </div>
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Payment Method *</label>
-            <select value={form.paymentMethod} onChange={e => setForm(f => ({ ...f, paymentMethod: e.target.value, bankAccountId: '', chequeNumber: '', donorBankName: '' }))} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all">
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Payment Method *</label>
+            <select value={form.paymentMethod} onChange={e => setForm(f => ({ ...f, paymentMethod: e.target.value, bankAccountId: '', chequeNumber: '', donorBankName: '' }))} className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-all font-medium">
               {['CASH', 'BANK', 'CHEQUE'].map(t => (
                 <option key={t} value={t}>{t}</option>
               ))}
@@ -120,9 +120,9 @@ function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
           {(form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Bank Account *</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Bank Account *</label>
                 <select value={form.bankAccountId} onChange={e => setForm(f => ({ ...f, bankAccountId: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-pink-600/60 transition-all">
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:border-indigo-500/60 transition-all font-medium">
                   <option value="">Select Bank Account</option>
                   {accounts.map(a => (
                     <option key={a.id} value={a.id}>{a.accountName}</option>
@@ -131,9 +131,9 @@ function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
               </div>
               {form.paymentMethod === 'CHEQUE' && (
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Cheque/Ref Number *</label>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cheque/Ref Number *</label>
                   <input value={form.chequeNumber} onChange={e => setForm(f => ({ ...f, chequeNumber: e.target.value }))}
-                    placeholder="CHQ-001" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-pink-600/60 transition-all" />
+                    placeholder="CHQ-001" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:border-indigo-500/60 transition-all font-medium placeholder-slate-600" />
                 </div>
               )}
             </div>
@@ -141,8 +141,8 @@ function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
 
           {(form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && (
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Donor Bank (Pakistani Banks)</label>
-              <select value={form.donorBankName} onChange={e => setForm(f => ({ ...f, donorBankName: e.target.value }))} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all">
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Donor Bank (Pakistani Banks)</label>
+              <select value={form.donorBankName} onChange={e => setForm(f => ({ ...f, donorBankName: e.target.value }))} className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-all font-medium">
                 <option value="">Select Bank (Optional)</option>
                 {['Habib Bank Limited (HBL)', 'National Bank of Pakistan (NBP)', 'Meezan Bank', 'United Bank Limited (UBL)', 'MCB Bank', 'Allied Bank Limited (ABL)', 'Bank Alfalah', 'Standard Chartered Bank', 'Askari Bank', 'Bank AL Habib', 'Faysal Bank', 'Soneri Bank', 'Bank of Punjab (BOP)', 'JS Bank', 'Dubai Islamic Bank', 'Al Baraka Bank', 'Bank Islami', 'Sindh Bank', 'Habib Metropolitan Bank', 'First Women Bank', 'Samba Bank', 'Silkbank', 'Summit Bank'].map(b => (
                   <option key={b} value={b}>{b}</option>
@@ -152,16 +152,16 @@ function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
           )}
 
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Remarks</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Remarks</label>
             <textarea value={form.remarks} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))}
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-pink-600/60 transition-all h-20 resize-none" />
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-all h-20 resize-none font-medium placeholder-slate-600" />
           </div>
         </div>
 
         <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 px-6 py-4 border-t border-slate-800 shrink-0">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-800 text-sm font-semibold transition-all">Cancel</button>
+          <button onClick={onClose} className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">Cancel</button>
           <button onClick={handleSave}
-            className="px-5 py-2 rounded-lg bg-pink-600 hover:bg-pink-500 text-white text-sm font-bold transition-all shadow-lg shadow-pink-900/40">
+            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50 cursor-pointer">
             {initial ? 'Save Changes' : 'Create Donation'}
           </button>
         </div>
