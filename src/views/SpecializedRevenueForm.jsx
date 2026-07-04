@@ -37,6 +37,8 @@ export const SpecializedRevenueForm = ({
   const activeDateLabel = isBusBooking ? 'Trip Date' : dateLabel;
   const activeShowDest = isBusBooking ? true : showDest;
   const activeDestLabel = isBusBooking ? 'Trip Destination' : destLabel;
+  const activeShowQty = isBusBooking ? false : showQty;
+  const activeQtyLabel = isBusBooking ? '' : qtyLabel;
   const activeShowRate = isBusBooking ? false : showRate;
   const activeRateLabel = isBusBooking ? '' : rateLabel;
   const activeBackPath = isBusBooking ? '/bus-bookings' : backPath;
@@ -384,7 +386,7 @@ export const SpecializedRevenueForm = ({
 
                 {activeShowQty && (
                   <div>
-                    <label className={labelClass}>{qtyLabel}</label>
+                    <label className={labelClass}>{activeQtyLabel}</label>
                     <input
                       type="number"
                       min="1"
