@@ -218,20 +218,33 @@ var donations_received_default = makeHandler(async (req, res) => {
     return res.status(200).json({ status: 200, data: result });
   }
   if (method === "DELETE") {
-    if (!id) return res.status(400).json({ error: { message: "Receipt ID is required", status: 400 } });
-    const existing = await prisma.donationReceived.findUnique({ where: { id } });
-    if (!existing) return res.status(404).json({ error: { message: "Donation receipt not found", status: 404 } });
+    const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
+    if (!idsRaw) {
+      return res.status(400).json({ error: { message: "Receipt ID(s) required", status: 400 } });
+    }
+    const ids = Array.isArray(idsRaw) ? idsRaw.map(String) : String(idsRaw).split(",").map((s) => s.trim()).filter(Boolean);
+    if (ids.length === 0) {
+      return res.status(400).json({ error: { message: "No valid ID provided", status: 400 } });
+    }
+    const existingItems = await prisma.donationReceived.findMany({ where: { id: { in: ids } } });
+    if (existingItems.length === 0) {
+      return res.status(404).json({ error: { message: "Donation receipt(s) not found", status: 404 } });
+    }
     await prisma.$transaction(async (tx) => {
-      if (existing.journalEntryId) {
-        try {
-          await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user.id, "Donation Receipt Deleted");
-        } catch (e) {
+      for (const item of existingItems) {
+        if (item.journalEntryId) {
+          try {
+            await AccountingService.deleteJournalEntry(tx, item.journalEntryId, req.user.id, "Donation Receipt Deleted");
+          } catch (e) {
+          }
         }
+        await tx.donationReceived.delete({ where: { id: item.id } });
       }
-      await tx.donationReceived.delete({ where: { id } });
     });
-    await logAudit(req.user.id, "Delete Donation Received", "DONATION_RECEIVED", existing, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    return res.status(200).json({ status: 200, message: "Donation receipt deleted successfully" });
+    for (const item of existingItems) {
+      await logAudit(req.user.id, "Delete Donation Received", "DONATION_RECEIVED", item, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    }
+    return res.status(200).json({ status: 200, message: `${existingItems.length} donation receipt(s) deleted successfully` });
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
 });

@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
 import { useAuthStore } from '../store/authStore';
-import { FileSpreadsheet, Search, Plus, Printer, CheckCircle, XCircle, Eye, EyeOff, Trash2 } from 'lucide-react';
+import { FileSpreadsheet, Search, Plus, Printer, CheckCircle, XCircle, Eye, EyeOff, Trash2, AlertTriangle } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
+import { showToast } from '../components/ui/Toast';
 import { useTranslation } from 'react-i18next';
 
 // Helper to render number to English words for standard printed receipt
@@ -190,7 +191,7 @@ function BankVoucherPrintModal({ voucher, onClose }) {
 export const BankVouchers = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { vouchers, fetchVouchers, updateVoucherStatus, deleteVoucher, loading } = useBankVoucherStore();
+  const { vouchers, fetchVouchers, updateVoucherStatus, deleteVoucher, bulkDeleteVouchers, loading } = useBankVoucherStore();
   const { canEditOrDelete } = useAuthStore();
   
   const [search, setSearch] = useState('');
@@ -198,6 +199,9 @@ export const BankVouchers = () => {
   const [printItem, setPrintItem] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [statusLoading, setStatusLoading] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchVouchers(activeTab);
@@ -264,6 +268,36 @@ export const BankVouchers = () => {
     }
   };
 
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds(filtered.map(v => v.dbId));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id, e) => {
+    e.stopPropagation();
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const executeBulkDelete = async () => {
+    setIsDeleting(true);
+    await new Promise(resolve => setTimeout(resolve, 15));
+    try {
+      await bulkDeleteVouchers(selectedIds, activeTab);
+      showToast(`${selectedIds.length} voucher(s) deleted successfully`, 'success');
+      setSelectedIds([]);
+    } catch (err) {
+      showToast(err.message || 'Failed to bulk delete vouchers', 'error');
+    } finally {
+      setIsDeleting(false);
+      setShowBulkConfirm(false);
+    }
+  };
+
   const getStatusBadge = (status) => {
     switch (status) {
       case 'Draft':
@@ -290,6 +324,16 @@ export const BankVouchers = () => {
           <p className="text-xs text-slate-500 mt-0.5">{t('tables.bankVouchers.bankVouchersDesc')}</p>
         </div>
         <div className={pageActionsClass}>
+          {selectedIds.length > 0 && canEditOrDelete && (
+            <button
+              type="button"
+              onClick={() => setShowBulkConfirm(true)}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-bold transition-all shadow-lg active:scale-95 flex-1 sm:flex-none cursor-pointer"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Bulk Delete ({selectedIds.length})</span>
+            </button>
+          )}
           {activeTab === 'BR' ? (
             <>
               <Link to="/bank-vouchers/revenue/new"
@@ -350,6 +394,16 @@ export const BankVouchers = () => {
                 <table className="w-full text-left min-w-[900px]">
                   <thead>
                     <tr className="border-b border-slate-800 bg-slate-900/80 text-[10px] font-bold uppercase text-slate-500">
+                      {canEditOrDelete && (
+                        <th className="px-4 py-3.5 w-10">
+                          <input
+                            type="checkbox"
+                            checked={filtered.length > 0 && selectedIds.length === filtered.length}
+                            onChange={handleSelectAll}
+                            className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                          />
+                        </th>
+                      )}
                       <th className="px-6 py-3.5 w-10"></th>
                       <th className="px-6 py-3.5">{t('tables.bankVouchers.voucherNo')}</th>
                       <th className="px-6 py-3.5">{t('tables.bankVouchers.date')}</th>
@@ -364,6 +418,16 @@ export const BankVouchers = () => {
                     {filtered.map(v => (
                       <optgroup key={v.dbId} label="" className="contents">
                         <tr className="hover:bg-slate-800/10 transition-colors group">
+                          {canEditOrDelete && (
+                            <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.includes(v.dbId)}
+                                onChange={(e) => handleSelectOne(v.dbId, e)}
+                                className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                              />
+                            </td>
+                          )}
                           <td className="px-6 py-4">
                             <button onClick={() => setExpandedId(expandedId === v.dbId ? null : v.dbId)}
                               className="p-1 rounded hover:bg-slate-800 text-slate-500">
@@ -409,7 +473,7 @@ export const BankVouchers = () => {
                         {/* Expanded details container */}
                         {expandedId === v.dbId && (
                           <tr className="bg-slate-950/30 border-y border-slate-850">
-                            <td colSpan="8" className="px-8 py-4 space-y-3">
+                            <td colSpan={canEditOrDelete ? "9" : "8"} className="px-8 py-4 space-y-3">
                               <div className="grid grid-cols-2 gap-4 text-xs text-slate-450 mb-2">
                                 <div><span className="font-bold text-slate-500">{t('tables.bankVouchers.referenceCheque')}</span> {v.reference}</div>
                                 <div><span className="font-bold text-slate-500">{t('tables.bankVouchers.postedBy')}</span> {v.postedBy}</div>
@@ -442,7 +506,7 @@ export const BankVouchers = () => {
                     ))}
                     {filtered.length === 0 && (
                       <tr>
-                        <td colSpan="8" className="text-center py-12 text-slate-500 text-sm">{t('tables.bankVouchers.noVouchersRecorded')}</td>
+                        <td colSpan={canEditOrDelete ? "9" : "8"} className="text-center py-12 text-slate-500 text-sm">{t('tables.bankVouchers.noVouchersRecorded')}</td>
                       </tr>
                     )}
                   </tbody>
@@ -480,6 +544,50 @@ export const BankVouchers = () => {
           voucher={printItem}
           onClose={() => setPrintItem(null)}
         />
+      )}
+
+      {showBulkConfirm && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-red-400">
+              <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-100">Confirm Bulk Deletion</h3>
+            </div>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              Are you sure you want to permanently delete <span className="font-bold text-white">{selectedIds.length}</span> selected bank voucher(s)? Any associated ledger entries and account balances will be automatically re-adjusted. This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setShowBulkConfirm(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={executeBulkDelete}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-bold shadow-lg shadow-red-600/20 transition-all disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4" />
+                    Delete {selectedIds.length} Voucher(s)
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -55,19 +55,35 @@ var customers_default = makeHandler(async (req, res) => {
     return res.status(200).json({ status: 200, data: updatedCustomer });
   }
   if (method === "DELETE") {
-    if (!id) {
-      return res.status(400).json({ error: { message: "Customer ID is required", status: 400 } });
+    const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
+    if (!idsRaw) {
+      return res.status(400).json({ error: { message: "Customer ID(s) required", status: 400 } });
     }
-    const existingCustomer = await prisma.customer.findUnique({ where: { id }, include: { invoices: true } });
-    if (!existingCustomer) {
-      return res.status(404).json({ error: { message: "Customer not found", status: 404 } });
+    const ids = Array.isArray(idsRaw) ? idsRaw.map(String) : String(idsRaw).split(",").map((s) => s.trim()).filter(Boolean);
+    if (ids.length === 0) {
+      return res.status(400).json({ error: { message: "No valid ID provided", status: 400 } });
     }
-    if (existingCustomer.invoices.length > 0) {
-      return res.status(400).json({ error: { message: "Cannot delete customer with existing invoices", status: 400 } });
+    const existingCustomers = await prisma.customer.findMany({
+      where: { id: { in: ids } },
+      include: { invoices: true }
+    });
+    if (existingCustomers.length === 0) {
+      return res.status(404).json({ error: { message: "No customers found to delete", status: 404 } });
     }
-    await prisma.customer.delete({ where: { id } });
-    await logAudit(req.user.id, "Delete Customer", "CUSTOMER", existingCustomer, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    return res.status(200).json({ status: 200, message: "Customer deleted successfully" });
+    const customersWithInvoices = existingCustomers.filter((c) => c.invoices.length > 0);
+    if (customersWithInvoices.length > 0) {
+      return res.status(400).json({
+        error: {
+          message: `Cannot delete customer(s) with existing invoices (${customersWithInvoices.map((c) => c.customerCode).join(", ")})`,
+          status: 400
+        }
+      });
+    }
+    await prisma.customer.deleteMany({ where: { id: { in: ids } } });
+    for (const c of existingCustomers) {
+      await logAudit(req.user.id, "Delete Customer", "CUSTOMER", c, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    }
+    return res.status(200).json({ status: 200, message: `${existingCustomers.length} customer(s) deleted successfully` });
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
 });

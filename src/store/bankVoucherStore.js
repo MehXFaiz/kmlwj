@@ -52,5 +52,18 @@ export const useBankVoucherStore = create((set, get) => ({
       set({ error: err.response?.data?.error?.message || err.message, loading: false });
       throw err;
     }
+  },
+
+  bulkDeleteVouchers: async (ids, type) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await api.delete('/api/v1/journal-entries', { data: { ids } });
+      await get().fetchVouchers(type);
+      set({ loading: false });
+      return res.data;
+    } catch (err) {
+      set({ error: err.response?.data?.error?.message || err.message, loading: false });
+      throw err;
+    }
   }
 }));

@@ -5,4 +5,5 @@ export const donorService = {
   create: (data) => api.post('/api/v1/donors', data).then(res => res.data),
   update: (id, data) => api.put(`/api/v1/donors?id=${id}`, data).then(res => res.data),
   delete: (id) => api.delete(`/api/v1/donors?id=${id}`).then(res => res.data),
+  bulkDelete: (ids) => api.delete('/api/v1/donors', { data: { ids } }).then(res => res.data),
 };

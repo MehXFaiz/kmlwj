@@ -65,6 +65,21 @@ export const useJournalStore = create((set, get) => ({
     }
   },
 
+  bulkDeleteJournalEntries: async (ids) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.delete('/api/v1/journal-entries', { data: { ids } });
+      set(state => ({
+        journals: state.journals.filter(j => !ids.includes(j.dbId) && !ids.includes(j.id)),
+        isLoading: false
+      }));
+      return { success: true, data: res.data };
+    } catch (err) {
+      set({ error: err.message || 'Failed to bulk delete journal entries', isLoading: false });
+      return { success: false, error: err.message || 'Failed to bulk delete journal entries' };
+    }
+  },
+
   logActivity: () => {
   },
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useDonorStore } from '../store/donorStore';
-import { Users, Search, Plus, Edit2, Trash2, X, Mail, Phone, CreditCard, MapPin } from 'lucide-react';
+import { Users, Search, Plus, Edit2, Trash2, X, Mail, Phone, CreditCard, MapPin, AlertTriangle } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 
@@ -175,10 +175,13 @@ function DonorModal({ isOpen, onClose, onSave, initial }) {
 }
 
 export const Donors = () => {
-  const { donors, loading, fetchDonors, addDonor, updateDonor, deleteDonor } = useDonorStore();
+  const { donors, loading, fetchDonors, addDonor, updateDonor, deleteDonor, bulkDeleteDonors } = useDonorStore();
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDonor, setSelectedDonor] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchDonors();
@@ -223,6 +226,36 @@ export const Donors = () => {
     }
   };
 
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds(filtered.map(d => d.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id, e) => {
+    e.stopPropagation();
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const executeBulkDelete = async () => {
+    setIsDeleting(true);
+    await new Promise(resolve => setTimeout(resolve, 15));
+    try {
+      await bulkDeleteDonors(selectedIds);
+      showToast(`${selectedIds.length} donor(s) deleted successfully`, 'success');
+      setSelectedIds([]);
+    } catch (err) {
+      showToast(err.message || 'Failed to bulk delete donors', 'error');
+    } finally {
+      setIsDeleting(false);
+      setShowBulkConfirm(false);
+    }
+  };
+
   const activeCount = useMemo(() => donors.filter(d => d.isActive).length, [donors]);
 
   return (
@@ -234,6 +267,16 @@ export const Donors = () => {
           <p className="text-xs text-slate-400 mt-1">Manage charitable donors, Zakat contributors, and welfare sponsors</p>
         </div>
         <div className={pageActionsClass}>
+          {selectedIds.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowBulkConfirm(true)}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-sm font-semibold transition-all shadow-lg active:scale-95"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Bulk Delete ({selectedIds.length})</span>
+            </button>
+          )}
           <button
             onClick={() => { setSelectedDonor(null); setModalOpen(true); }}
             className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95"
@@ -287,6 +330,14 @@ export const Donors = () => {
             <table className="w-full text-left min-w-[800px]">
               <thead>
                 <tr className="border-b border-slate-800 bg-slate-900/80">
+                  <th className="px-4 py-3.5 w-10">
+                    <input
+                      type="checkbox"
+                      checked={filtered.length > 0 && selectedIds.length === filtered.length}
+                      onChange={handleSelectAll}
+                      className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                    />
+                  </th>
                   <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">Donor Code</th>
                   <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">Donor Name</th>
                   <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">CNIC / ID</th>
@@ -299,19 +350,27 @@ export const Donors = () => {
               <tbody className="divide-y divide-slate-800/50">
                 {loading && donors.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center text-slate-500 text-sm">
+                    <td colSpan="8" className="px-6 py-12 text-center text-slate-500 text-sm">
                       Loading donors directory...
                     </td>
                   </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center text-slate-500 text-sm">
+                    <td colSpan="8" className="px-6 py-12 text-center text-slate-500 text-sm">
                       No donors found matching criteria.
                     </td>
                   </tr>
                 ) : (
                   filtered.map(d => (
                     <tr key={d.id} className="hover:bg-slate-800/20 transition-colors group">
+                      <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(d.id)}
+                          onChange={(e) => handleSelectOne(d.id, e)}
+                          className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                        />
+                      </td>
                       <td className="px-6 py-4">
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                           {d.donorCode}
@@ -444,6 +503,50 @@ export const Donors = () => {
           </div>
         </MobileOnly>
       </div>
+
+      {showBulkConfirm && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-red-400">
+              <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-100">Confirm Bulk Deletion</h3>
+            </div>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              Are you sure you want to delete <span className="font-bold text-white">{selectedIds.length}</span> selected donor(s)? This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setShowBulkConfirm(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={executeBulkDelete}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-bold shadow-lg shadow-red-600/20 transition-all disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4" />
+                    Delete {selectedIds.length} Donor(s)
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <DonorModal
         isOpen={modalOpen}

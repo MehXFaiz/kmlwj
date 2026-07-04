@@ -46,5 +46,16 @@ export const useCustomerStore = create((set, get) => ({
       set({ error: err.message });
       throw err;
     }
+  },
+
+  bulkDeleteCustomers: async (ids) => {
+    try {
+      const res = await customerService.bulkDelete(ids);
+      await get().fetchCustomers();
+      return res;
+    } catch (err) {
+      set({ error: err.message });
+      throw err;
+    }
   }
 }));

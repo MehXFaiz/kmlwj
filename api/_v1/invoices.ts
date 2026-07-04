@@ -376,37 +376,53 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'DELETE') {
-    if (!id) return res.status(400).json({ error: { message: 'Invoice ID is required', status: 400 } });
+    const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
+    if (!idsRaw) {
+      return res.status(400).json({ error: { message: 'Invoice ID(s) required', status: 400 } });
+    }
 
-    const existingInvoice = await prisma.invoice.findUnique({ where: { id } });
-    if (!existingInvoice) return res.status(404).json({ error: { message: 'Invoice not found', status: 404 } });
+    const ids: string[] = Array.isArray(idsRaw)
+      ? idsRaw.map(String)
+      : String(idsRaw).split(',').map(s => s.trim()).filter(Boolean);
+
+    if (ids.length === 0) {
+      return res.status(400).json({ error: { message: 'No valid ID provided', status: 400 } });
+    }
+
+    const existingInvoices = await prisma.invoice.findMany({ where: { id: { in: ids } } });
+    if (existingInvoices.length === 0) {
+      return res.status(404).json({ error: { message: 'Invoice(s) not found', status: 404 } });
+    }
 
     await prisma.$transaction(async (tx) => {
-      // Find and delete any associated journal entries for this invoice
-      const jes = await tx.journalEntry.findMany({
-        where: {
-          OR: [
-            { reference: { contains: existingInvoice.invoiceNo } },
-            { description: { contains: existingInvoice.invoiceNo } }
-          ]
-        }
-      });
+      for (const inv of existingInvoices) {
+        const jes = await tx.journalEntry.findMany({
+          where: {
+            OR: [
+              { reference: { contains: inv.invoiceNo } },
+              { description: { contains: inv.invoiceNo } }
+            ]
+          }
+        });
 
-      for (const je of jes) {
-        try {
-          await AccountingService.deleteJournalEntry(tx, je.id, req.user!.id, 'Invoice Deleted');
-        } catch (e) {
-          // Ignore if already deleted
+        for (const je of jes) {
+          try {
+            await AccountingService.deleteJournalEntry(tx, je.id, req.user!.id, 'Invoice Deleted');
+          } catch (e) {
+            // Ignore if already deleted
+          }
         }
+
+        await tx.invoiceItem.deleteMany({ where: { invoiceId: inv.id } });
+        await tx.invoice.delete({ where: { id: inv.id } });
       }
-
-      await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
-      await tx.invoice.delete({ where: { id } });
     });
 
-    await logAudit(req.user.id, 'Delete Invoice', 'INVOICE', existingInvoice, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+    for (const inv of existingInvoices) {
+      await logAudit(req.user.id, 'Delete Invoice', 'INVOICE', inv, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+    }
 
-    return res.status(200).json({ status: 200, message: 'Invoice deleted successfully' });
+    return res.status(200).json({ status: 200, message: `${existingInvoices.length} invoice(s) deleted successfully` });
   }
 
   return res.status(405).json({ error: { message: 'Method Not Allowed', status: 405 } });

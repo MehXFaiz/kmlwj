@@ -1,18 +1,21 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useInvoiceStore } from '../store/invoiceStore';
-import { FileSpreadsheet, Search, Plus, Edit2, Trash2, ChevronRight, Eye } from 'lucide-react';
+import { FileSpreadsheet, Search, Plus, Edit2, Trash2, ChevronRight, Eye, AlertTriangle } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
+import { showToast } from '../components/ui/Toast';
 
 export const Invoices = () => {
   const navigate = useNavigate();
-  const { invoices, fetchInvoices, deleteInvoice } = useInvoiceStore();
+  const { invoices, fetchInvoices, deleteInvoice, bulkDeleteInvoices } = useInvoiceStore();
   
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [statusFilter, setStatusFilter] = useState('ALL'); // ALL, DRAFT, POSTED, PAID, CANCELLED
   const [deleteId, setDeleteId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
 
   useEffect(() => {
     fetchInvoices();
@@ -47,6 +50,36 @@ export const Invoices = () => {
       alert(err.message || "Failed to delete invoice");
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds(filtered.map(inv => inv.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id, e) => {
+    e.stopPropagation();
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const executeBulkDelete = async () => {
+    setIsDeleting(true);
+    await new Promise(resolve => setTimeout(resolve, 15));
+    try {
+      await bulkDeleteInvoices(selectedIds);
+      showToast(`${selectedIds.length} invoice(s) deleted successfully`, 'success');
+      setSelectedIds([]);
+    } catch (err) {
+      showToast(err.message || 'Failed to bulk delete invoices', 'error');
+    } finally {
+      setIsDeleting(false);
+      setShowBulkConfirm(false);
     }
   };
 
@@ -86,6 +119,16 @@ export const Invoices = () => {
           <p className="text-xs text-slate-500 mt-0.5">Manage customer billing documentation and general ledger postings</p>
         </div>
         <div className={pageActionsClass}>
+          {selectedIds.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowBulkConfirm(true)}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-bold transition-all shadow-lg active:scale-95 flex-1 sm:flex-none cursor-pointer"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Bulk Delete ({selectedIds.length})</span>
+            </button>
+          )}
           <Link to="/invoices/new"
             className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-900/40 transition-all flex-1 sm:flex-none">
             <Plus className="h-4 w-4" /> Create Invoice
@@ -121,6 +164,14 @@ export const Invoices = () => {
             <table className="w-full text-left min-w-[900px]">
               <thead>
                 <tr className="border-b border-slate-800 bg-slate-900/80">
+                  <th className="px-4 py-3.5 w-10">
+                    <input
+                      type="checkbox"
+                      checked={filtered.length > 0 && selectedIds.length === filtered.length}
+                      onChange={handleSelectAll}
+                      className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                    />
+                  </th>
                   <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">Invoice No</th>
                   <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">Customer</th>
                   <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">Dates</th>
@@ -132,6 +183,14 @@ export const Invoices = () => {
               <tbody className="divide-y divide-slate-800/50">
                 {filtered.map(inv => (
                   <tr key={inv.id} className="hover:bg-slate-800/20 transition-colors group">
+                    <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(inv.id)}
+                        onChange={(e) => handleSelectOne(inv.id, e)}
+                        className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                      />
+                    </td>
                     <td className="px-6 py-4">
                       <span className="text-xs font-mono font-bold text-slate-350 bg-slate-800/40 px-2 py-0.5 rounded border border-slate-700/40">
                         {inv.invoiceNo}
@@ -168,7 +227,7 @@ export const Invoices = () => {
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan="6" className="text-center py-12 text-slate-500 text-sm">
+                    <td colSpan="7" className="text-center py-12 text-slate-500 text-sm">
                       No invoices found matching criteria.
                     </td>
                   </tr>
@@ -213,6 +272,50 @@ export const Invoices = () => {
               <button onClick={() => setDeleteId(null)} disabled={isDeleting} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-sm font-semibold">Cancel</button>
               <button onClick={() => handleDelete(deleteId)} disabled={isDeleting} className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-bold">
                 {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBulkConfirm && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-red-400">
+              <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-100">Confirm Bulk Deletion</h3>
+            </div>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              Are you sure you want to delete <span className="font-bold text-white">{selectedIds.length}</span> selected invoice(s)? Any associated ledger entries will be removed/reversed. This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setShowBulkConfirm(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={executeBulkDelete}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-bold shadow-lg shadow-red-600/20 transition-all disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4" />
+                    Delete {selectedIds.length} Invoice(s)
+                  </>
+                )}
               </button>
             </div>
           </div>

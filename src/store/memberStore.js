@@ -48,6 +48,17 @@ export const useMemberStore = create((set, get) => ({
       set({ error: err.message });
       throw err;
     }
+  },
+
+  bulkDeleteMembers: async (ids) => {
+    try {
+      const res = await memberService.bulkDelete(ids);
+      await get().fetchMembers();
+      return res;
+    } catch (err) {
+      set({ error: err.message });
+      throw err;
+    }
   }
 }));
 

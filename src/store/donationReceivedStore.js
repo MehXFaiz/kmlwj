@@ -65,5 +65,18 @@ export const useDonationReceivedStore = create((set, get) => ({
       set({ error: err.response?.data?.error?.message || err.message, loading: false });
       throw err;
     }
+  },
+
+  bulkDeleteDonations: async (ids) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await donationReceivedService.bulkDelete(ids);
+      await get().fetchDonations();
+      set({ loading: false });
+      return res;
+    } catch (err) {
+      set({ error: err.response?.data?.error?.message || err.message, loading: false });
+      throw err;
+    }
   }
 }));

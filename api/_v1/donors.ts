@@ -106,24 +106,45 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'DELETE') {
-    if (!id) {
-      return res.status(400).json({ error: { message: 'Donor ID is required', status: 400 } });
+    const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
+    if (!idsRaw) {
+      return res.status(400).json({ error: { message: 'Donor ID(s) required', status: 400 } });
     }
 
-    const existingDonor = await prisma.donor.findUnique({ where: { id }, include: { donations: true } });
-    if (!existingDonor) {
-      return res.status(404).json({ error: { message: 'Donor not found', status: 404 } });
+    const ids: string[] = Array.isArray(idsRaw)
+      ? idsRaw.map(String)
+      : String(idsRaw).split(',').map(s => s.trim()).filter(Boolean);
+
+    if (ids.length === 0) {
+      return res.status(400).json({ error: { message: 'No valid ID provided', status: 400 } });
     }
 
-    if (existingDonor.donations.length > 0) {
-      return res.status(400).json({ error: { message: 'Cannot delete donor with existing donation records', status: 400 } });
+    const existingDonors = await prisma.donor.findMany({
+      where: { id: { in: ids } },
+      include: { donations: true },
+    });
+
+    if (existingDonors.length === 0) {
+      return res.status(404).json({ error: { message: 'No donors found to delete', status: 404 } });
     }
 
-    await prisma.donor.delete({ where: { id } });
+    const donorsWithDonations = existingDonors.filter(d => d.donations.length > 0);
+    if (donorsWithDonations.length > 0) {
+      return res.status(400).json({
+        error: {
+          message: `Cannot delete donor(s) with existing donation records (${donorsWithDonations.map(d => d.donorCode).join(', ')})`,
+          status: 400,
+        },
+      });
+    }
 
-    await logAudit(req.user.id, 'Delete Donor', 'DONOR', existingDonor, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+    await prisma.donor.deleteMany({ where: { id: { in: ids } } });
 
-    return res.status(200).json({ status: 200, message: 'Donor deleted successfully' });
+    for (const d of existingDonors) {
+      await logAudit(req.user.id, 'Delete Donor', 'DONOR', d, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+    }
+
+    return res.status(200).json({ status: 200, message: `${existingDonors.length} donor(s) deleted successfully` });
   }
 
   return res.status(405).json({ error: { message: 'Method Not Allowed', status: 405 } });

@@ -63,6 +63,17 @@ export const useInvoiceStore = create((set, get) => ({
     }
   },
 
+  bulkDeleteInvoices: async (ids) => {
+    try {
+      const res = await invoiceService.bulkDelete(ids);
+      await get().fetchInvoices();
+      return res;
+    } catch (err) {
+      set({ error: err.message });
+      throw err;
+    }
+  },
+
   postInvoice: async (id, revenueAccountId) => {
     try {
       set({ loading: true });

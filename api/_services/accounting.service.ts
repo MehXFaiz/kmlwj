@@ -96,18 +96,22 @@ export class AccountingService {
     // Keyword or Name Search fallback
     if (!account && line.accountKeyword) {
       const keyword = line.accountKeyword.trim();
+      const cleanKeyword = keyword.replace(/_/g, ' ').replace(/-/g, ' ');
       
       // Try exact or case-insensitive contains match on accountName or glCode
       account = await tx.account.findFirst({
         where: {
           OR: [
+            { accountName: { equals: cleanKeyword, mode: 'insensitive' } },
+            { accountName: { contains: cleanKeyword, mode: 'insensitive' } },
             { accountName: { equals: keyword, mode: 'insensitive' } },
             { accountName: { contains: keyword, mode: 'insensitive' } },
             { glCode: { equals: keyword } },
+            { detailType: { equals: cleanKeyword, mode: 'insensitive' } },
             { detailType: { equals: keyword, mode: 'insensitive' } }
           ],
           isLocked: false,
-          accountLevel: 'GL' // Ensure we post to posting-level (GL) accounts
+          accountLevel: { in: ['GL', 'SUBSIDIARY'] }
         },
         orderBy: { glCode: 'asc' }
       });
@@ -117,11 +121,28 @@ export class AccountingService {
         account = await tx.account.findFirst({
           where: {
             OR: [
+              { accountName: { contains: cleanKeyword.split(' ')[0], mode: 'insensitive' } },
               { accountName: { contains: keyword.split(' ')[0], mode: 'insensitive' } },
-              { description: { contains: keyword, mode: 'insensitive' } }
+              { description: { contains: cleanKeyword, mode: 'insensitive' } }
             ],
             isLocked: false,
-            accountLevel: 'GL'
+            accountLevel: { in: ['GL', 'SUBSIDIARY'] }
+          },
+          orderBy: { glCode: 'asc' }
+        });
+      }
+
+      // Final fallback: any unlocked account matching keyword without level restriction
+      if (!account) {
+        account = await tx.account.findFirst({
+          where: {
+            OR: [
+              { accountName: { equals: cleanKeyword, mode: 'insensitive' } },
+              { accountName: { contains: cleanKeyword, mode: 'insensitive' } },
+              { accountName: { equals: keyword, mode: 'insensitive' } },
+              { accountName: { contains: keyword, mode: 'insensitive' } }
+            ],
+            isLocked: false
           },
           orderBy: { glCode: 'asc' }
         });
@@ -134,7 +155,7 @@ export class AccountingService {
         where: {
           accountType: { name: { equals: line.accountType, mode: 'insensitive' } },
           isLocked: false,
-          accountLevel: 'GL'
+          accountLevel: { in: ['GL', 'SUBSIDIARY'] }
         },
         orderBy: { glCode: 'asc' }
       });
@@ -505,7 +526,7 @@ export class AccountingService {
   static async recalculateAllBalances(txObj?: any): Promise<{ updated: number }> {
     const runInTx = async (tx: any) => {
       const accounts = await tx.account.findMany({
-        where: { accountLevel: 'GL' },
+        where: { accountLevel: { in: ['GL', 'SUBSIDIARY'] } },
         select: { id: true }
       });
 

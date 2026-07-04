@@ -4,14 +4,18 @@ import { useMemberStore } from '../store/memberStore';
 import { 
   Users, UserPlus, Search, Edit2, Trash2, Phone, MapPin, 
   Briefcase, GraduationCap, Calendar, CheckCircle, ShieldCheck, 
-  ArrowRight, Building
+  ArrowRight, Building, AlertTriangle
 } from 'lucide-react';
+import { showToast } from '../components/ui/Toast';
 
 export const Members = () => {
   const navigate = useNavigate();
-  const { members, fetchMembers, deleteMember, loading } = useMemberStore();
+  const { members, fetchMembers, deleteMember, bulkDeleteMembers, loading } = useMemberStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteId, setDeleteId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchMembers();
@@ -32,6 +36,36 @@ export const Members = () => {
     if (!deleteId) return;
     await deleteMember(deleteId);
     setDeleteId(null);
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds(filteredMembers.map(m => m.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id, e) => {
+    e.stopPropagation();
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const executeBulkDelete = async () => {
+    setIsDeleting(true);
+    await new Promise(resolve => setTimeout(resolve, 15));
+    try {
+      await bulkDeleteMembers(selectedIds);
+      showToast(`${selectedIds.length} member(s) deleted successfully`, 'success');
+      setSelectedIds([]);
+    } catch (err) {
+      showToast(err.message || 'Failed to bulk delete members', 'error');
+    } finally {
+      setIsDeleting(false);
+      setShowBulkConfirm(false);
+    }
   };
 
   return (
@@ -59,6 +93,17 @@ export const Members = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          {selectedIds.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowBulkConfirm(true)}
+              className="px-4 py-3.5 rounded-2xl bg-red-500/10 hover:bg-red-500/20 text-red-400 font-extrabold text-xs uppercase tracking-wider border border-red-500/30 transition-colors flex items-center gap-2 cursor-pointer"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Bulk Delete ({selectedIds.length})</span>
+            </button>
+          )}
+
           <Link
             to="/membership-fees"
             className="px-4 py-3 rounded-2xl bg-[#151922] hover:bg-slate-800 text-slate-300 font-extrabold text-xs uppercase tracking-wider border border-slate-800 transition-colors flex items-center gap-2"
@@ -78,7 +123,7 @@ export const Members = () => {
       </div>
 
       {/* Search Filter */}
-      <div className="max-w-7xl mx-auto mb-6 flex items-center gap-4">
+      <div className="max-w-7xl mx-auto mb-6 flex items-center justify-between gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input
@@ -89,6 +134,17 @@ export const Members = () => {
             className="w-full pl-11 pr-4 py-3 rounded-2xl bg-[#1e2330] border border-slate-800 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/50 transition-colors font-medium"
           />
         </div>
+        {filteredMembers.length > 0 && (
+          <label className="flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-[#1e2330] border border-slate-800 text-xs font-bold uppercase tracking-wider text-slate-300 cursor-pointer hover:border-slate-700 transition-colors">
+            <input
+              type="checkbox"
+              checked={selectedIds.length > 0 && selectedIds.length === filteredMembers.length}
+              onChange={handleSelectAll}
+              className="rounded border-slate-700 bg-[#151922] text-amber-500 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+            />
+            <span>Select All ({filteredMembers.length})</span>
+          </label>
+        )}
       </div>
 
       {/* Members Directory Grid / Table */}
@@ -125,6 +181,13 @@ export const Members = () => {
                   {/* Top Bar: Photo & Status */}
                   <div className="flex items-start justify-between gap-4 mb-4">
                     <div className="flex items-center gap-3.5">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(m.id)}
+                        onChange={(e) => handleSelectOne(m.id, e)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="rounded border-slate-700 bg-[#151922] text-amber-500 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4 shrink-0 mt-1"
+                      />
                       {m.photoUrl ? (
                         <img src={m.photoUrl} alt={m.fullName} className="w-14 h-14 rounded-2xl object-cover border-2 border-amber-500/30 shrink-0" />
                       ) : (
@@ -236,6 +299,53 @@ export const Members = () => {
                 className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold uppercase tracking-wider transition-colors shadow-lg shadow-red-600/30"
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBulkConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#1e2330] rounded-3xl border border-slate-800 p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-red-400">
+              <div className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-400 flex items-center justify-center border border-red-500/20 shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div className="text-left">
+                <h3 className="text-base font-extrabold uppercase text-slate-100">Confirm Bulk Deletion</h3>
+                <p className="text-xs text-slate-400">This action cannot be undone.</p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed text-left">
+              Are you sure you want to delete <span className="font-bold text-white">{selectedIds.length}</span> selected community member(s)? Their records will be permanently removed.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setShowBulkConfirm(false)}
+                className="px-5 py-2.5 rounded-xl bg-[#151922] hover:bg-slate-800 text-slate-300 text-xs font-extrabold uppercase tracking-wider border border-slate-800 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={executeBulkDelete}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold uppercase tracking-wider transition-colors shadow-lg shadow-red-600/30 disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete {selectedIds.length} Member(s)
+                  </>
+                )}
               </button>
             </div>
           </div>

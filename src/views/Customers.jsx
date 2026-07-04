@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCustomerStore } from '../store/customerStore';
-import { Users, Search, Plus, Edit2, Trash2, X, Building2, Mail, Phone } from 'lucide-react';
+import { Users, Search, Plus, Edit2, Trash2, X, Building2, Mail, Phone, AlertTriangle } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 
@@ -123,7 +123,7 @@ function CustomerModal({ isOpen, onClose, onSave, initial }) {
 }
 
 export const Customers = () => {
-  const { customers, fetchCustomers, addCustomer, updateCustomer, deleteCustomer } = useCustomerStore();
+  const { customers, fetchCustomers, addCustomer, updateCustomer, deleteCustomer, bulkDeleteCustomers } = useCustomerStore();
   
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get('search') || '');
@@ -131,6 +131,8 @@ export const Customers = () => {
   const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
 
   useEffect(() => {
     fetchCustomers();
@@ -173,6 +175,36 @@ export const Customers = () => {
     }
   };
 
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds(filtered.map(c => c.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id, e) => {
+    e.stopPropagation();
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const executeBulkDelete = async () => {
+    setIsDeleting(true);
+    await new Promise(resolve => setTimeout(resolve, 15));
+    try {
+      await bulkDeleteCustomers(selectedIds);
+      showToast(`${selectedIds.length} customer(s) deleted successfully`, 'success');
+      setSelectedIds([]);
+    } catch (err) {
+      showToast(err.message || 'Failed to bulk delete customers. Ensure they have no registered invoices.', 'error');
+    } finally {
+      setIsDeleting(false);
+      setShowBulkConfirm(false);
+    }
+  };
+
   return (
     <div className="space-y-6 pb-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -186,6 +218,16 @@ export const Customers = () => {
           <p className="text-xs text-slate-500 mt-0.5">Manage details of commercial clients and invoice entities</p>
         </div>
         <div className={pageActionsClass}>
+          {selectedIds.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowBulkConfirm(true)}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-bold transition-all shadow-lg active:scale-95 flex-1 sm:flex-none cursor-pointer"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Bulk Delete ({selectedIds.length})</span>
+            </button>
+          )}
           <button onClick={() => { setEditItem(null); setModalOpen(true); }}
             className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-900/40 transition-all flex-1 sm:flex-none">
             <Plus className="h-4 w-4" /> New Customer
@@ -208,6 +250,14 @@ export const Customers = () => {
             <table className="w-full text-left min-w-[800px]">
               <thead>
                 <tr className="border-b border-slate-800 bg-slate-900/80">
+                  <th className="px-4 py-3.5 w-10">
+                    <input
+                      type="checkbox"
+                      checked={filtered.length > 0 && selectedIds.length === filtered.length}
+                      onChange={handleSelectAll}
+                      className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                    />
+                  </th>
                   <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">Name & Company</th>
                   <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">Contact Details</th>
                   <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">Address</th>
@@ -219,6 +269,14 @@ export const Customers = () => {
               <tbody className="divide-y divide-slate-800/50">
                 {filtered.map(c => (
                   <tr key={c.id} className="hover:bg-slate-800/20 transition-colors group">
+                    <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(c.id)}
+                        onChange={(e) => handleSelectOne(c.id, e)}
+                        className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                      />
+                    </td>
                     <td className="px-6 py-4">
                       <p className="text-sm font-semibold text-slate-200">{c.name}</p>
                       {c.company && (
@@ -300,6 +358,50 @@ export const Customers = () => {
               <button onClick={() => setDeleteId(null)} disabled={isDeleting} className="flex-1 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-sm font-semibold">Cancel</button>
               <button onClick={() => handleDelete(deleteId)} disabled={isDeleting} className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-bold">
                 {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBulkConfirm && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-red-400">
+              <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-100">Confirm Bulk Deletion</h3>
+            </div>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              Are you sure you want to delete <span className="font-bold text-white">{selectedIds.length}</span> selected customer(s)? Customers with registered invoices will be skipped. This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setShowBulkConfirm(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={executeBulkDelete}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-bold shadow-lg shadow-red-600/20 transition-all disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4" />
+                    Delete {selectedIds.length} Customer(s)
+                  </>
+                )}
               </button>
             </div>
           </div>
