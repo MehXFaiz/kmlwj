@@ -6,7 +6,7 @@ import { useAuthStore } from '../store/authStore';
 import {
   DollarSign, Search, Plus, Printer, CheckCircle, Clock, XCircle,
   Eye, Trash2, UserPlus, Calendar, CreditCard, Building2, Filter,
-  ArrowDownLeft, FileText, Check, AlertCircle, X, AlertTriangle
+  ArrowDownLeft, FileText, Check, AlertCircle, X, AlertTriangle, Edit2
 } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
@@ -852,6 +852,16 @@ export const DonationsReceived = () => {
 
                           {canEditOrDelete && (
                             <button
+                              onClick={() => { setSelectedReceipt(d); setModalOpen(true); }}
+                              className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 transition-colors"
+                              title="Edit Receipt"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+
+                          {canEditOrDelete && (
+                            <button
                               onClick={() => handleDelete(d)}
                               className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-colors"
                               title="Delete Receipt Permanently"
@@ -924,6 +934,14 @@ export const DonationsReceived = () => {
                         className="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-medium flex items-center gap-1"
                       >
                         <CheckCircle className="h-3.5 w-3.5" /> Post
+                      </button>
+                    )}
+                    {canEditOrDelete && (
+                      <button
+                        onClick={() => { setSelectedReceipt(d); setModalOpen(true); }}
+                        className="px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs font-medium flex items-center gap-1"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" /> Edit
                       </button>
                     )}
                     {canEditOrDelete && (

@@ -627,8 +627,11 @@ export const Donations = () => {
                             </button>
                           </>
                         ) : (
-                          // Allow editing approved donations by unlocking or editing in modal if allowed, but typically pending only. Let's make it consistent.
-                          null
+                          canEditOrDelete && (
+                            <button onClick={() => { setEditItem(d); setModalOpen(true); }} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-slate-200 cursor-pointer" title="Edit Donation">
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
+                          )
                         )}
                         {canEditOrDelete && (
                           <button onClick={() => setDeleteId(d.id)} className="p-1.5 rounded-lg hover:bg-red-950/40 text-red-500 hover:text-red-400 cursor-pointer" title="Delete Donation">
@@ -671,10 +674,10 @@ export const Donations = () => {
                   </button>
                   <div className="flex gap-3 items-center">
                     {d.status === 'PENDING' && (
-                      <>
-                        <button onClick={() => { setEditItem(d); setModalOpen(true); }} className="text-xs text-slate-400 hover:text-white cursor-pointer">Edit</button>
-                        <button onClick={() => setApproveId(d.id)} className="text-xs text-emerald-450 hover:text-emerald-400 font-bold flex items-center gap-1 cursor-pointer"><CheckCircle2 className="h-3 w-3" /> Approve</button>
-                      </>
+                      <button onClick={() => setApproveId(d.id)} className="text-xs text-emerald-450 hover:text-emerald-400 font-bold flex items-center gap-1 cursor-pointer"><CheckCircle2 className="h-3 w-3" /> Approve</button>
+                    )}
+                    {(d.status === 'PENDING' || canEditOrDelete) && (
+                      <button onClick={() => { setEditItem(d); setModalOpen(true); }} className="text-xs text-slate-400 hover:text-white cursor-pointer flex items-center gap-1"><Edit2 className="h-3 w-3" /> Edit</button>
                     )}
                     {canEditOrDelete && (
                       <button onClick={() => setDeleteId(d.id)} className="text-xs text-red-400 hover:text-red-350 cursor-pointer flex items-center gap-1">

@@ -189,7 +189,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     });
     if (!existing) return res.status(404).json({ error: { message: 'Donation receipt not found', status: 404 } });
 
-    const { status, narration, referenceNo, chequeNo, chequeDate } = req.body;
+    const { status, narration, referenceNo, chequeNo, chequeDate, amount, donorId, donationType, paymentMethod, receiptDate, cashAccountId, bankAccountId } = req.body;
 
     const result = await prisma.$transaction(async (tx) => {
       let journalEntryId = existing.journalEntryId;
@@ -238,6 +238,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           referenceNo: referenceNo !== undefined ? (referenceNo || null) : undefined,
           chequeNo: chequeNo !== undefined ? (chequeNo || null) : undefined,
           chequeDate: chequeDate !== undefined ? (chequeDate ? new Date(chequeDate) : null) : undefined,
+          amount: amount !== undefined ? Number(amount) : undefined,
+          donorId: donorId !== undefined ? donorId : undefined,
+          donationType: donationType !== undefined ? donationType : undefined,
+          paymentMethod: paymentMethod !== undefined ? paymentMethod : undefined,
+          receiptDate: receiptDate !== undefined ? (receiptDate ? new Date(receiptDate) : undefined) : undefined,
+          cashAccountId: cashAccountId !== undefined ? (cashAccountId || null) : undefined,
+          bankAccountId: bankAccountId !== undefined ? (bankAccountId || null) : undefined,
         },
         include: {
           donor: true,

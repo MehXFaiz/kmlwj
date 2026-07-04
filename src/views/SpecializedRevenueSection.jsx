@@ -346,7 +346,7 @@ export const SpecializedRevenueSection = ({
                           title="Print Receipt">
                           <Printer className="h-4 w-4" />
                         </button>
-                        {item.status === 'Confirmed' && canEditOrDelete && (
+                        {canEditOrDelete && (
                           <button onClick={() => handleEditClick(item)}
                             className="p-1.5 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded transition-colors inline-flex ml-1"
                             title="Edit Record">

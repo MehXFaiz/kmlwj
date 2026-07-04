@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useInvoiceStore } from '../store/invoiceStore';
+import { useAuthStore } from '../store/authStore';
 import { FileSpreadsheet, Search, Plus, Edit2, Trash2, ChevronRight, Eye, AlertTriangle } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
@@ -8,6 +9,7 @@ import { showToast } from '../components/ui/Toast';
 export const Invoices = () => {
   const navigate = useNavigate();
   const { invoices, fetchInvoices, deleteInvoice, bulkDeleteInvoices } = useInvoiceStore();
+  const { canEditOrDelete } = useAuthStore();
   
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get('search') || '');
@@ -215,7 +217,7 @@ export const Invoices = () => {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={() => navigate(`/invoices/${inv.id}`)} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-500 hover:text-slate-250" title="View details"><Eye className="h-3.5 w-3.5" /></button>
-                        {inv.status === 'DRAFT' && (
+                        {(inv.status === 'DRAFT' || canEditOrDelete) && (
                           <>
                             <button onClick={() => navigate(`/invoices/edit/${inv.id}`)} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-500 hover:text-slate-250" title="Edit invoice"><Edit2 className="h-3.5 w-3.5" /></button>
                             <button onClick={() => setDeleteId(inv.id)} className="p-1.5 rounded-lg hover:bg-red-950/40 text-slate-500 hover:text-red-400" title="Delete invoice"><Trash2 className="h-3.5 w-3.5" /></button>
