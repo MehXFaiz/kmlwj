@@ -54,25 +54,25 @@ var revenue_collections_default = makeHandler(async (req, res) => {
       const item = await prisma.revenueCollection.findUnique({ where: { id }, include: { bankAccount: true } });
       if (!item) return res.status(404).json({ error: { message: "Record not found", status: 404 } });
       if (item.status === "POSTED") return res.status(400).json({ error: { message: "Record is already posted to ledger", status: 400 } });
-      let debitAccountId = null;
+      let debitAccountId2 = null;
       if (item.paymentMethod === "CASH") {
         const cashAccount = await prisma.account.findFirst({
           where: { accountName: { contains: "Cash", mode: "insensitive" } }
         });
         if (!cashAccount) return res.status(400).json({ error: { message: "Cash account not found in Chart of Accounts", status: 400 } });
-        debitAccountId = cashAccount.id;
+        debitAccountId2 = cashAccount.id;
       } else {
         if (!item.bankAccountId) return res.status(400).json({ error: { message: "Bank account is required for BANK/CHEQUE payments", status: 400 } });
-        debitAccountId = item.bankAccountId;
+        debitAccountId2 = item.bankAccountId;
       }
-      const result = await prisma.$transaction(async (tx) => {
+      const result2 = await prisma.$transaction(async (tx) => {
         const incomeAccount = await getIncomeAccountForCategory(item.category, tx);
         if (!incomeAccount) {
           throw new Error(`No revenue account found in Chart of Accounts for ${item.category}`);
         }
         const postingResult = await AccountingService.postReceipt(tx, {
           amount: item.amount,
-          cashOrBankAccountId: debitAccountId,
+          cashOrBankAccountId: debitAccountId2,
           incomeAccountId: incomeAccount.id,
           reference: `${item.category.slice(0, 3).toUpperCase()}-${item.receiptNo}`,
           description: `${item.category} Receipt from ${item.title} ${item.subTitle ? `(${item.subTitle})` : ""}`,
@@ -92,43 +92,79 @@ var revenue_collections_default = makeHandler(async (req, res) => {
         });
         return { approvedItem, journalEntry: postingResult.journalEntry };
       });
-      await logAudit(req.user.id, `Post ${item.category}`, "REVENUE", item, result.approvedItem, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-      return res.status(200).json({ status: 200, data: result.approvedItem, message: `${item.category} posted to ledger successfully` });
+      await logAudit(req.user.id, `Post ${item.category}`, "REVENUE", item, result2.approvedItem, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      return res.status(200).json({ status: 200, data: result2.approvedItem, message: `${item.category} posted to ledger successfully` });
     }
     const { category, title, subTitle, mobile, eventDate, quantity, rate, destination, amount, paymentMethod, bankAccountId, chequeNumber, remarks } = req.body;
     if (!category || !title || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: "Missing required fields (category, title, amount, paymentMethod)", status: 400 } });
     }
-    if (amount <= 0) {
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
       return res.status(400).json({ error: { message: "Amount must be greater than 0", status: 400 } });
     }
     if ((paymentMethod === "BANK" || paymentMethod === "CHEQUE") && !bankAccountId) {
       return res.status(400).json({ error: { message: "Bank account is required for Bank/Cheque payment methods", status: 400 } });
     }
-    const newItem = await prisma.revenueCollection.create({
-      data: {
-        category,
-        title,
-        subTitle: subTitle || null,
-        mobile: mobile || null,
-        eventDate: eventDate ? new Date(eventDate) : /* @__PURE__ */ new Date(),
-        quantity: quantity ? parseInt(quantity, 10) : null,
-        rate: rate ? parseFloat(rate) : null,
-        destination: destination || null,
-        amount: parseFloat(amount),
-        paymentMethod,
-        bankAccountId: bankAccountId || null,
-        chequeNumber: chequeNumber || null,
-        status: "Confirmed",
-        remarks: remarks || null,
-        createdById: req.user.id
-      },
-      include: {
-        bankAccount: true
+    let debitAccountId = null;
+    if (paymentMethod === "CASH") {
+      const cashAccount = await prisma.account.findFirst({
+        where: { accountName: { contains: "Cash", mode: "insensitive" } }
+      });
+      if (!cashAccount) return res.status(400).json({ error: { message: "Cash account not found in Chart of Accounts", status: 400 } });
+      debitAccountId = cashAccount.id;
+    } else {
+      debitAccountId = bankAccountId;
+    }
+    const result = await prisma.$transaction(async (tx) => {
+      const incomeAccount = await getIncomeAccountForCategory(category, tx);
+      if (!incomeAccount) {
+        throw new Error(`No revenue account found in Chart of Accounts for ${category}`);
       }
+      const count = await tx.revenueCollection.count();
+      const nextReceiptNo = count + 1;
+      const postingResult = await AccountingService.postReceipt(tx, {
+        amount: parsedAmount,
+        cashOrBankAccountId: debitAccountId,
+        incomeAccountId: incomeAccount.id,
+        reference: `${category.slice(0, 3).toUpperCase()}-${nextReceiptNo}`,
+        description: `${category} Receipt from ${title} ${subTitle ? `(${subTitle})` : ""}`,
+        module: category,
+        voucherType: "BR",
+        postedBy: req.user.id,
+        postingDate: eventDate ? new Date(eventDate) : /* @__PURE__ */ new Date(),
+        ipAddress: req.headers["x-forwarded-for"],
+        userAgent: req.headers["user-agent"]
+      });
+      const newItem = await tx.revenueCollection.create({
+        data: {
+          category,
+          receiptNo: nextReceiptNo,
+          title,
+          subTitle: subTitle || null,
+          mobile: mobile || null,
+          eventDate: eventDate ? new Date(eventDate) : /* @__PURE__ */ new Date(),
+          quantity: quantity ? parseInt(quantity, 10) : null,
+          rate: rate ? parseFloat(rate) : null,
+          destination: destination || null,
+          amount: parsedAmount,
+          paymentMethod,
+          bankAccountId: bankAccountId || null,
+          chequeNumber: chequeNumber || null,
+          status: "POSTED",
+          remarks: remarks || null,
+          journalEntryId: postingResult.journalEntry.id,
+          createdById: req.user.id
+        },
+        include: {
+          bankAccount: true,
+          journalEntry: true
+        }
+      });
+      return newItem;
     });
-    await logAudit(req.user.id, `Create ${category}`, "REVENUE", null, newItem, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    return res.status(201).json({ status: 201, data: newItem });
+    await logAudit(req.user.id, `Create & Post ${category}`, "REVENUE", null, result, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    return res.status(201).json({ status: 201, data: result });
   }
   if (method === "DELETE") {
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
@@ -187,41 +223,77 @@ var revenue_collections_default = makeHandler(async (req, res) => {
     if (!existingItem) {
       return res.status(404).json({ error: { message: "Record not found", status: 404 } });
     }
-    if (existingItem.status === "POSTED") {
-      return res.status(400).json({ error: { message: "Cannot edit a posted record", status: 400 } });
-    }
     const { category, title, subTitle, mobile, eventDate, quantity, rate, destination, amount, paymentMethod, bankAccountId, chequeNumber, remarks } = req.body;
     if (!category || !title || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: "Missing required fields (category, title, amount, paymentMethod)", status: 400 } });
     }
-    if (amount <= 0) {
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
       return res.status(400).json({ error: { message: "Amount must be greater than 0", status: 400 } });
     }
     if ((paymentMethod === "BANK" || paymentMethod === "CHEQUE") && !bankAccountId) {
       return res.status(400).json({ error: { message: "Bank account is required for Bank/Cheque payment methods", status: 400 } });
     }
-    const updatedItem = await prisma.revenueCollection.update({
-      where: { id },
-      data: {
-        category,
-        title,
-        subTitle: subTitle || null,
-        mobile: mobile || null,
-        eventDate: eventDate ? new Date(eventDate) : /* @__PURE__ */ new Date(),
-        quantity: quantity ? parseInt(quantity, 10) : null,
-        rate: rate ? parseFloat(rate) : null,
-        destination: destination || null,
-        amount: parseFloat(amount),
-        paymentMethod,
-        bankAccountId: bankAccountId || null,
-        chequeNumber: chequeNumber || null,
-        remarks: remarks || null
-      },
-      include: {
-        bankAccount: true
+    const updatedItem = await prisma.$transaction(async (tx) => {
+      if (existingItem.journalEntryId) {
+        try {
+          await AccountingService.deleteJournalEntry(tx, existingItem.journalEntryId, req.user.id, `Reversing ${category} for update`);
+        } catch (e) {
+        }
       }
+      let debitAccountId = null;
+      if (paymentMethod === "CASH") {
+        const cashAccount = await tx.account.findFirst({
+          where: { accountName: { contains: "Cash", mode: "insensitive" } }
+        });
+        if (!cashAccount) throw new Error("Cash account not found in Chart of Accounts");
+        debitAccountId = cashAccount.id;
+      } else {
+        debitAccountId = bankAccountId;
+      }
+      const incomeAccount = await getIncomeAccountForCategory(category, tx);
+      if (!incomeAccount) {
+        throw new Error(`No revenue account found in Chart of Accounts for ${category}`);
+      }
+      const postingResult = await AccountingService.postReceipt(tx, {
+        amount: parsedAmount,
+        cashOrBankAccountId: debitAccountId,
+        incomeAccountId: incomeAccount.id,
+        reference: `${category.slice(0, 3).toUpperCase()}-${existingItem.receiptNo}`,
+        description: `${category} Receipt from ${title} ${subTitle ? `(${subTitle})` : ""}`,
+        module: category,
+        voucherType: "BR",
+        postedBy: req.user.id,
+        postingDate: eventDate ? new Date(eventDate) : /* @__PURE__ */ new Date(),
+        ipAddress: req.headers["x-forwarded-for"],
+        userAgent: req.headers["user-agent"]
+      });
+      return await tx.revenueCollection.update({
+        where: { id },
+        data: {
+          category,
+          title,
+          subTitle: subTitle || null,
+          mobile: mobile || null,
+          eventDate: eventDate ? new Date(eventDate) : /* @__PURE__ */ new Date(),
+          quantity: quantity ? parseInt(quantity, 10) : null,
+          rate: rate ? parseFloat(rate) : null,
+          destination: destination || null,
+          amount: parsedAmount,
+          paymentMethod,
+          bankAccountId: bankAccountId || null,
+          chequeNumber: chequeNumber || null,
+          status: "POSTED",
+          remarks: remarks || null,
+          journalEntryId: postingResult.journalEntry.id
+        },
+        include: {
+          bankAccount: true,
+          journalEntry: true
+        }
+      });
     });
-    await logAudit(req.user.id, `Update ${category}`, "REVENUE", existingItem, updatedItem, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    await logAudit(req.user.id, `Update & Post ${category}`, "REVENUE", existingItem, updatedItem, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     return res.status(200).json({ status: 200, data: updatedItem });
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });

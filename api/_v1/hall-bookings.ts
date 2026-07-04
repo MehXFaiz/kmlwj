@@ -102,46 +102,83 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(200).json({ status: 200, data: result.approvedBooking, message: 'Booking posted and journal entries created successfully' });
     }
 
-    // Action: Create Booking
+    // Action: Create Booking & Auto-Post to Ledger
     const { bookingDate, bookerName, address, mobile, programDate, programType, timings, hallId, isForJamaat, amount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
 
     if (!bookerName || !programDate || !hallId || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: 'Missing required fields', status: 400 } });
     }
-    if (amount <= 0) {
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
       return res.status(400).json({ error: { message: 'Amount must be greater than 0', status: 400 } });
     }
     if ((paymentMethod === 'BANK' || paymentMethod === 'CHEQUE') && !bankAccountId) {
       return res.status(400).json({ error: { message: 'Bank account is required for Bank/Cheque payment methods', status: 400 } });
     }
 
-    const newBooking = await prisma.hallBooking.create({
-      data: {
-        bookingDate: bookingDate ? new Date(bookingDate) : undefined,
-        bookerName,
-        address: address || null,
-        mobile: mobile || null,
-        programDate: new Date(programDate),
-        programType: programType || null,
-        timings: timings || null,
-        hallId,
-        isForJamaat: Boolean(isForJamaat),
-        amount: parseFloat(amount),
-        paymentMethod,
-        bankAccountId: bankAccountId || null,
-        chequeNumber: chequeNumber || null,
-        chequeBankName: chequeBankName || null,
-        status: 'Confirmed',
-        remarks: remarks || null,
-      },
-      include: {
-        hallAccount: true
-      }
+    let debitAccountId: string | null = null;
+    if (paymentMethod === 'CASH') {
+      const cashAccount = await prisma.account.findFirst({
+        where: { accountName: { contains: 'Cash', mode: 'insensitive' } }
+      });
+      if (!cashAccount) return res.status(400).json({ error: { message: 'Cash account not found in Chart of Accounts', status: 400 } });
+      debitAccountId = cashAccount.id;
+    } else {
+      debitAccountId = bankAccountId;
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const count = await tx.hallBooking.count();
+      const nextReceiptNo = count + 1;
+
+      const postingResult = await AccountingService.postReceipt(tx, {
+        amount: parsedAmount,
+        cashOrBankAccountId: debitAccountId!,
+        incomeAccountId: hallId,
+        reference: `HB-${nextReceiptNo}`,
+        description: `Hall Booking Receipt for ${bookerName}${programType ? ` (${programType})` : ''}`,
+        module: 'Hall Booking',
+        voucherType: 'BR',
+        postedBy: req.user!.id,
+        postingDate: bookingDate ? new Date(bookingDate) : new Date(),
+        ipAddress: req.headers['x-forwarded-for'] as string,
+        userAgent: req.headers['user-agent']
+      });
+
+      const newBooking = await tx.hallBooking.create({
+        data: {
+          bookingDate: bookingDate ? new Date(bookingDate) : undefined,
+          receiptNo: nextReceiptNo,
+          bookerName,
+          address: address || null,
+          mobile: mobile || null,
+          programDate: new Date(programDate),
+          programType: programType || null,
+          timings: timings || null,
+          hallId,
+          isForJamaat: Boolean(isForJamaat),
+          amount: parsedAmount,
+          paymentMethod,
+          bankAccountId: bankAccountId || null,
+          chequeNumber: chequeNumber || null,
+          chequeBankName: chequeBankName || null,
+          status: 'POSTED',
+          remarks: remarks || null,
+          journalEntryId: postingResult.journalEntry.id,
+          createdById: req.user!.id
+        },
+        include: {
+          hallAccount: true,
+          journalEntry: true
+        }
+      });
+
+      return newBooking;
     });
 
-    await logAudit(req.user.id, 'Create Hall Booking', 'REVENUE', null, newBooking, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+    await logAudit(req.user.id, 'Create & Post Hall Booking', 'REVENUE', null, result, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-    return res.status(201).json({ status: 201, data: newBooking });
+    return res.status(201).json({ status: 201, data: result });
   }
 
   if (method === 'DELETE') {
@@ -215,47 +252,81 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if (!existingBooking) {
       return res.status(404).json({ error: { message: 'Booking not found', status: 404 } });
     }
-    if (existingBooking.status === 'POSTED') {
-      return res.status(400).json({ error: { message: 'Cannot edit a posted booking', status: 400 } });
-    }
 
     const { bookingDate, bookerName, address, mobile, programDate, programType, timings, hallId, isForJamaat, amount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
 
     if (!bookerName || !programDate || !hallId || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: 'Missing required fields', status: 400 } });
     }
-    if (amount <= 0) {
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
       return res.status(400).json({ error: { message: 'Amount must be greater than 0', status: 400 } });
     }
     if ((paymentMethod === 'BANK' || paymentMethod === 'CHEQUE') && !bankAccountId) {
       return res.status(400).json({ error: { message: 'Bank account is required for Bank/Cheque payment methods', status: 400 } });
     }
 
-    const updatedBooking = await prisma.hallBooking.update({
-      where: { id },
-      data: {
-        bookingDate: bookingDate ? new Date(bookingDate) : undefined,
-        bookerName,
-        address: address || null,
-        mobile: mobile || null,
-        programDate: new Date(programDate),
-        programType: programType || null,
-        timings: timings || null,
-        hallId,
-        isForJamaat: Boolean(isForJamaat),
-        amount: parseFloat(amount),
-        paymentMethod,
-        bankAccountId: bankAccountId || null,
-        chequeNumber: chequeNumber || null,
-        chequeBankName: chequeBankName || null,
-        remarks: remarks || null,
-      },
-      include: {
-        hallAccount: true
+    const updatedBooking = await prisma.$transaction(async (tx) => {
+      if (existingBooking.journalEntryId) {
+        try {
+          await AccountingService.deleteJournalEntry(tx, existingBooking.journalEntryId, req.user!.id, 'Reversing Hall Booking for update');
+        } catch (e) {}
       }
+
+      let debitAccountId: string | null = null;
+      if (paymentMethod === 'CASH') {
+        const cashAccount = await tx.account.findFirst({
+          where: { accountName: { contains: 'Cash', mode: 'insensitive' } }
+        });
+        if (!cashAccount) throw new Error('Cash account not found in Chart of Accounts');
+        debitAccountId = cashAccount.id;
+      } else {
+        debitAccountId = bankAccountId;
+      }
+
+      const postingResult = await AccountingService.postReceipt(tx, {
+        amount: parsedAmount,
+        cashOrBankAccountId: debitAccountId!,
+        incomeAccountId: hallId,
+        reference: `HB-${existingBooking.receiptNo}`,
+        description: `Hall Booking Receipt for ${bookerName}${programType ? ` (${programType})` : ''}`,
+        module: 'Hall Booking',
+        voucherType: 'BR',
+        postedBy: req.user!.id,
+        postingDate: bookingDate ? new Date(bookingDate) : new Date(),
+        ipAddress: req.headers['x-forwarded-for'] as string,
+        userAgent: req.headers['user-agent']
+      });
+
+      return await tx.hallBooking.update({
+        where: { id },
+        data: {
+          bookingDate: bookingDate ? new Date(bookingDate) : undefined,
+          bookerName,
+          address: address || null,
+          mobile: mobile || null,
+          programDate: new Date(programDate),
+          programType: programType || null,
+          timings: timings || null,
+          hallId,
+          isForJamaat: Boolean(isForJamaat),
+          amount: parsedAmount,
+          paymentMethod,
+          bankAccountId: bankAccountId || null,
+          chequeNumber: chequeNumber || null,
+          chequeBankName: chequeBankName || null,
+          status: 'POSTED',
+          remarks: remarks || null,
+          journalEntryId: postingResult.journalEntry.id
+        },
+        include: {
+          hallAccount: true,
+          journalEntry: true
+        }
+      });
     });
 
-    await logAudit(req.user.id, 'Update Hall Booking', 'REVENUE', existingBooking, updatedBooking, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+    await logAudit(req.user.id, 'Update & Post Hall Booking', 'REVENUE', existingBooking, updatedBooking, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
     return res.status(200).json({ status: 200, data: updatedBooking });
   }

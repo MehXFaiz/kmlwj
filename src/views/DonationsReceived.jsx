@@ -464,7 +464,7 @@ function DonationReceiptModal({ isOpen, onClose, onSave, initial, donors, cashAc
   );
 }
 
-export default function DonationsReceived() {
+export const DonationsReceived = () => {
   const { donations, stats, loading, fetchDonations, addDonation, updateDonationStatus, deleteDonation } = useDonationReceivedStore();
   const { donors, fetchDonors } = useDonorStore();
   const { flatAccounts, fetchAccountsList } = useCoaStore();
@@ -908,4 +908,6 @@ export default function DonationsReceived() {
       />
     </div>
   );
-}
+};
+
+export default DonationsReceived;

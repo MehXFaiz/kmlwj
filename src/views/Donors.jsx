@@ -174,7 +174,7 @@ function DonorModal({ isOpen, onClose, onSave, initial }) {
   );
 }
 
-export default function Donors() {
+export const Donors = () => {
   const { donors, loading, fetchDonors, addDonor, updateDonor, deleteDonor } = useDonorStore();
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -453,4 +453,6 @@ export default function Donors() {
       />
     </div>
   );
-}
+};
+
+export default Donors;
