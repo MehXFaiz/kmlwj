@@ -419,8 +419,8 @@ export const DonationsReceived = () => {
                             <Check className="h-3 w-3" /> POSTED
                           </span>
                         ) : d.status === 'DRAFT' ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border bg-amber-950/60 text-amber-400 border-amber-900/50">
-                            <Clock className="h-3 w-3" /> DRAFT
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold uppercase tracking-wider">
+                            <AlertTriangle className="h-3 w-3" /> PENDING POST
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border bg-red-950/60 text-red-400 border-red-900/50">
@@ -511,7 +511,9 @@ export const DonationsReceived = () => {
                       {d.status === 'POSTED' ? (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-emerald-950/60 text-emerald-400 border-emerald-900/50 inline-block mt-1">POSTED</span>
                       ) : d.status === 'DRAFT' ? (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-amber-950/60 text-amber-400 border-amber-900/50 inline-block mt-1">DRAFT</span>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px] font-bold uppercase tracking-wider inline-block mt-1">
+                          <AlertTriangle className="h-3 w-3 inline" /> PENDING POST
+                        </span>
                       ) : (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-red-950/60 text-red-400 border-red-900/50 inline-block mt-1">VOIDED</span>
                       )}

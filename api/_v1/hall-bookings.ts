@@ -249,20 +249,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       const count = await tx.hallBooking.count();
       const nextReceiptNo = count + 1;
 
-      const postingResult = await AccountingService.postReceipt(tx, {
-        amount: parsedAmount,
-        cashOrBankAccountId: debitAccountId!,
-        incomeAccountId: hallId,
-        reference: `HB-${nextReceiptNo}`,
-        description: `Hall Booking Receipt for ${bookerName}${programType ? ` (${programType})` : ''}`,
-        module: 'Hall Booking',
-        voucherType: 'BR',
-        postedBy: req.user!.id,
-        postingDate: bookingDate ? new Date(bookingDate) : new Date(),
-        ipAddress: req.headers['x-forwarded-for'] as string,
-        userAgent: req.headers['user-agent']
-      });
-
       const newBooking = await tx.hallBooking.create({
         data: {
           bookingDate: bookingDate ? new Date(bookingDate) : undefined,
@@ -280,9 +266,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           bankAccountId: bankAccountId || null,
           chequeNumber: chequeNumber || null,
           chequeBankName: chequeBankName || null,
-          status: 'POSTED',
+          status: 'Confirmed',
           remarks: remarks || null,
-          journalEntryId: postingResult.journalEntry.id,
           createdById: req.user!.id
         },
         include: {
@@ -460,69 +445,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     try {
       const updatedBooking = await prisma.$transaction(async (tx) => {
-      if (existingBooking.journalEntryId) {
-        try {
-          await AccountingService.deleteJournalEntry(tx, existingBooking.journalEntryId, req.user!.id, 'Reversing Hall Booking for update');
-        } catch (e) {}
-      }
-
-      let debitAccountId: string | null = null;
-      if (paymentMethod === 'CASH') {
-        const cashAccount = await tx.account.findFirst({
-          where: { accountName: { contains: 'Cash', mode: 'insensitive' } }
-        });
-        if (!cashAccount) throw new Error('Cash account not found in Chart of Accounts');
-        debitAccountId = cashAccount.id;
-      } else {
-        debitAccountId = bankAccountId;
-      }
-
-      const postingResult = await AccountingService.postReceipt(tx, {
-        amount: parsedAmount,
-        cashOrBankAccountId: debitAccountId!,
-        incomeAccountId: hallId,
-        reference: `HB-${existingBooking.receiptNo}`,
-        description: `Hall Booking Receipt for ${bookerName}${programType ? ` (${programType})` : ''}`,
-        module: 'Hall Booking',
-        voucherType: 'BR',
-        postedBy: req.user!.id,
-        postingDate: bookingDate ? new Date(bookingDate) : new Date(),
-        ipAddress: req.headers['x-forwarded-for'] as string,
-        userAgent: req.headers['user-agent']
-      });
-
-      return await tx.hallBooking.update({
-        where: { id },
-        data: {
-          bookingDate: bookingDate ? new Date(bookingDate) : undefined,
-          bookerName,
-          address: address || null,
-          mobile: mobile || null,
-          programDate: new Date(programDate),
-          programType: programType || null,
-          timings: timings || null,
-          hallId,
-          isForJamaat: Boolean(isForJamaat),
-          amount: parsedAmount,
-          paymentMethod,
-          bankAccountId: bankAccountId || null,
-          chequeNumber: chequeNumber || null,
-          chequeBankName: chequeBankName || null,
-          status: 'POSTED',
-          remarks: remarks || null,
-          journalEntryId: postingResult.journalEntry.id
-        },
-          cashOrBankAccountId: debitAccountId!,
-          incomeAccountId: hallId,
-          reference: `HB-${existingBooking.receiptNo}`,
-          description: `Hall Booking Receipt for ${bookerName}${programType ? ` (${programType})` : ''}`,
-          module: 'Hall Booking',
-          voucherType: 'BR',
-          postedBy: req.user!.id,
-          postingDate: bookingDate ? new Date(bookingDate) : new Date(),
-          ipAddress: req.headers['x-forwarded-for'] as string,
-          userAgent: req.headers['user-agent']
-        });
+        if (existingBooking.journalEntryId) {
+          try {
+            await AccountingService.deleteJournalEntry(tx, existingBooking.journalEntryId, req.user!.id, 'Reversing Hall Booking for update');
+          } catch (e) {}
+        }
 
         return await tx.hallBooking.update({
           where: { id },
@@ -541,9 +468,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             bankAccountId: bankAccountId || null,
             chequeNumber: chequeNumber || null,
             chequeBankName: chequeBankName || null,
-            status: 'POSTED',
+            status: 'Confirmed',
             remarks: remarks || null,
-            journalEntryId: postingResult.journalEntry.id
+            journalEntryId: null
           },
           include: {
             hallAccount: true,

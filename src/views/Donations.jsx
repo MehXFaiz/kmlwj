@@ -606,9 +606,13 @@ export const Donations = () => {
                     </td>
                     <td className="px-4 py-3.5">
                       {d.status === 'APPROVED' ? (
-                         <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border bg-emerald-950/60 text-emerald-400 border-emerald-900/50">Approved</span>
+                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold uppercase tracking-wider">
+                           <CheckCircle2 className="h-3 w-3" /> Posted
+                         </span>
                       ) : (
-                         <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border bg-amber-950/60 text-amber-400 border-amber-900/50">Pending</span>
+                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold uppercase tracking-wider">
+                           <AlertTriangle className="h-3 w-3" /> Pending Post
+                         </span>
                       )}
                     </td>
                     <td className="px-4 py-3.5 text-xs text-slate-400">{new Date(d.createdAt).toLocaleDateString()}</td>
@@ -664,7 +668,9 @@ export const Donations = () => {
                       {d.donorMobile && <span className="text-[10px] font-normal text-slate-550 block mt-0.5">{d.donorMobile}</span>}
                     </h4>
                   </div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${d.status === 'APPROVED' ? 'bg-emerald-950/60 text-emerald-400 border-emerald-900/50' : 'bg-amber-950/60 text-amber-400 border-amber-900/50'}`}>{d.status}</span>
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider ${d.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
+                    {d.status === 'APPROVED' ? <><CheckCircle2 className="h-3 w-3" /> Posted</> : <><AlertTriangle className="h-3 w-3" /> Pending Post</>}
+                  </span>
                 </div>
                 <div className="text-xs text-slate-400 mb-2">{d.donationType} | {d.paymentMethod} | <span className="font-bold text-slate-200">{d.amount.toLocaleString()}</span></div>
                 

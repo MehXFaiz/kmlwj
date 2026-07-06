@@ -120,7 +120,7 @@ export const DonationReceiptForm = () => {
     chequeDate: '',
     referenceNo: '',
     narration: '',
-    status: 'POSTED'
+    status: 'DRAFT'
   });
 
   useEffect(() => {
@@ -432,8 +432,8 @@ export const DonationReceiptForm = () => {
                 <div>
                   <label className={labelClass}>Status *</label>
                   <select required value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} className={`${inputClass} font-semibold`}>
-                    <option value="POSTED">POSTED (Auto-post to Ledger)</option>
-                    <option value="DRAFT">DRAFT (Save for review)</option>
+                    <option value="DRAFT">PENDING POST (Do not auto-post to GL)</option>
+                    <option value="POSTED">POSTED (Auto-post to GL)</option>
                   </select>
                 </div>
               </div>

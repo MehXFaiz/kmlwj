@@ -105,7 +105,7 @@ var donations_received_default = makeHandler(async (req, res) => {
     const count = await prisma.donationReceived.count();
     const nextNum = (count + 1).toString().padStart(4, "0");
     const receiptNo = `REC-${year}-${nextNum}`;
-    const txStatus = status === "DRAFT" ? "DRAFT" : "POSTED";
+    const txStatus = status === "POSTED" ? "POSTED" : "DRAFT";
     const result = await prisma.$transaction(async (tx) => {
       let journalEntryId = null;
       if (txStatus === "POSTED") {

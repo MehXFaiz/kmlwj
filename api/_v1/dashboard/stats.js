@@ -44,8 +44,37 @@ var stats_default = makeHandler(async (req, res) => {
       monthlyData[monthIndex].Expenses += entry.debit - entry.credit;
     }
   }
+  const startOfMonth = new Date(currentYear, (/* @__PURE__ */ new Date()).getMonth(), 1);
+  const pendingDonations = await prisma.donation.count({
+    where: { status: "PENDING" }
+  });
+  const donationsThisMonthRaw = await prisma.donation.aggregate({
+    _sum: { amount: true },
+    _count: true,
+    where: {
+      status: "APPROVED",
+      createdAt: { gte: startOfMonth }
+    }
+  });
+  const hallBookingsThisMonth = await prisma.hallBooking.count({
+    where: { createdAt: { gte: startOfMonth } }
+  });
+  const outstandingInvoices = await prisma.invoice.count({
+    where: { status: { in: ["ISSUED", "OVERDUE"] } }
+  });
+  const pendingApprovalsList = await prisma.donation.findMany({
+    where: { status: "PENDING" },
+    take: 5,
+    orderBy: { createdAt: "desc" },
+    include: { beneficiary: true }
+  });
+  const donationBreakdown = await prisma.donation.groupBy({
+    by: ["donationType"],
+    _sum: { amount: true },
+    where: { status: "APPROVED" }
+  });
   const rawLogs = await prisma.auditLog.findMany({
-    take: 10,
+    take: 8,
     orderBy: { createdAt: "desc" },
     include: {
       user: {
@@ -64,14 +93,19 @@ var stats_default = makeHandler(async (req, res) => {
   return res.status(200).json({
     status: 200,
     data: {
+      // old stats
       totalAccounts,
-      revenueHeads,
-      expenseHeads,
-      totalJournalEntries,
-      lockedAccounts,
       activeUsers,
       monthlyData,
-      recentActivities
+      recentActivities,
+      // new business stats
+      pendingDonations,
+      donationsThisMonth: donationsThisMonthRaw._count,
+      donationsAmountThisMonth: donationsThisMonthRaw._sum.amount || 0,
+      hallBookingsThisMonth,
+      outstandingInvoices,
+      pendingApprovalsList,
+      donationBreakdown
     }
   });
 });
