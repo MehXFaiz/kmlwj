@@ -81,13 +81,13 @@ export const VoucherSlipModal = ({
         {/* Top Control Bar - Hidden when printing */}
         <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-800 bg-slate-950/80 shrink-0 print:hidden">
           <div className="flex items-center gap-2">
-            <Printer className="h-4 w-4 text-amber-400" />
+            <Printer className="h-4 w-4 text-indigo-400" />
             <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">Official Voucher Slip Preview</span>
           </div>
           <div className="flex items-center gap-3">
             <button 
               onClick={handlePrint} 
-              className="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-lg shadow-amber-900/30 cursor-pointer select-none"
+              className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-lg shadow-indigo-900/30 cursor-pointer select-none"
             >
               <Printer className="h-3.5 w-3.5" /> Print Voucher
             </button>
