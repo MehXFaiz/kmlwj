@@ -42,6 +42,8 @@ import incomeStatementHandler from './_v1/reports/income-statement.js';
 import balanceSheetHandler from './_v1/reports/balance-sheet.js';
 import cashFlowHandler from './_v1/reports/cash-flow.js';
 import searchHandler from './_v1/search.js';
+import simpleExpenseHandler from './_v1/simple-expense.js';
+import simpleIncomeHandler from './_v1/simple-income.js';
 
 const app = express();
 
@@ -200,5 +202,11 @@ app.get('/api/v1/reports/trial-balance', makeExpress(trialBalanceHandler));
 app.get('/api/v1/reports/income-statement', makeExpress(incomeStatementHandler));
 app.get('/api/v1/reports/balance-sheet', makeExpress(balanceSheetHandler));
 app.get('/api/v1/reports/cash-flow', makeExpress(cashFlowHandler));
+
+// Simple Expense & Income Routes
+app.get('/api/v1/simple-expense', makeExpress(simpleExpenseHandler));
+app.post('/api/v1/simple-expense', makeExpress(simpleExpenseHandler));
+app.get('/api/v1/simple-income', makeExpress(simpleIncomeHandler));
+app.post('/api/v1/simple-income', makeExpress(simpleIncomeHandler));
 
 export default app;
