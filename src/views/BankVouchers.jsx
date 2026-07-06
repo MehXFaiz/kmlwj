@@ -448,23 +448,28 @@ export const BankVouchers = () => {
                           <td className="px-6 py-4">{getStatusBadge(v.status)}</td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => setPrintItem(v)} className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer" title="Print physical voucher"><Printer className="h-3.5 w-3.5" /></button>
+                              <button onClick={() => setPrintItem(v)} className="p-1.5 rounded-lg bg-slate-800/40 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/40 transition-colors cursor-pointer" title="Print physical voucher">
+                                <Printer className="h-3.5 w-3.5" />
+                              </button>
                               {v.status === 'Draft' && (
                                 <button onClick={() => handlePost(v.dbId)} disabled={statusLoading}
-                                  className="px-2 py-1 rounded bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600/20 border border-indigo-900/50 text-[10px] font-bold">
-                                  {t('tables.bankVouchers.post')}
+                                  className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 transition-colors cursor-pointer"
+                                  title={t('tables.bankVouchers.post') || "Post Voucher"}>
+                                  <CheckCircle className="h-3.5 w-3.5" />
                                 </button>
                               )}
                               {v.status === 'Posted' && (
                                 <button onClick={() => handleCancel(v.dbId)} disabled={statusLoading}
-                                  className="px-2 py-1 rounded bg-red-950/20 text-red-400 hover:bg-red-950/40 border border-red-900/30 text-[10px] font-bold">
-                                  {t('tables.bankVouchers.void')}
+                                  className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-colors cursor-pointer"
+                                  title={t('tables.bankVouchers.void') || "Void Voucher & Reverse Ledger Entry"}>
+                                  <XCircle className="h-3.5 w-3.5" />
                                 </button>
                               )}
                               {canEditOrDelete && (
                                 <button onClick={() => handleDeleteVoucher(v.dbId, v.voucherNo)} disabled={statusLoading}
-                                  className="px-2 py-1 rounded bg-red-950/40 text-red-300 hover:bg-red-900/60 border border-red-800/50 text-[10px] font-bold flex items-center gap-1" title="Delete from database">
-                                  <Trash2 className="h-3 w-3" /> Delete
+                                  className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-colors cursor-pointer"
+                                  title="Delete from database">
+                                  <Trash2 className="h-3.5 w-3.5" />
                                 </button>
                               )}
                             </div>
@@ -525,8 +530,31 @@ export const BankVouchers = () => {
                   </div>
                   <div className="flex justify-between items-center text-xs pt-2 border-t border-slate-800/50">
                     <span className="font-bold text-slate-250">PKR {getVoucherTotal(v).toLocaleString()}</span>
-                    <div className="flex gap-2">
-                      <button onClick={() => setPrintItem(v)} className="text-xs text-indigo-400 flex items-center gap-1 cursor-pointer"><Printer className="h-3.5 w-3.5" /> {t('tables.bankVouchers.print')}</button>
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={() => setPrintItem(v)} className="p-1.5 rounded-lg bg-slate-800/40 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/40 transition-colors cursor-pointer" title="Print physical voucher">
+                        <Printer className="h-3.5 w-3.5" />
+                      </button>
+                      {v.status === 'Draft' && (
+                        <button onClick={() => handlePost(v.dbId)} disabled={statusLoading}
+                          className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 transition-colors cursor-pointer"
+                          title={t('tables.bankVouchers.post') || "Post Voucher"}>
+                          <CheckCircle className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      {v.status === 'Posted' && (
+                        <button onClick={() => handleCancel(v.dbId)} disabled={statusLoading}
+                          className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-colors cursor-pointer"
+                          title={t('tables.bankVouchers.void') || "Void Voucher & Reverse Ledger Entry"}>
+                          <XCircle className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      {canEditOrDelete && (
+                        <button onClick={() => handleDeleteVoucher(v.dbId, v.voucherNo)} disabled={statusLoading}
+                          className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-colors cursor-pointer"
+                          title="Delete from database">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
