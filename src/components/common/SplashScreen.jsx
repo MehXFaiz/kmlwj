@@ -386,13 +386,9 @@ export function SplashScreen({ onComplete }) {
                 opacity: titleVisible ? 1 : 0,
                 transform: titleVisible ? 'translateY(0)' : 'translateY(15px)',
                 transition: 'opacity 0.8s cubic-bezier(0.16,1,0.3,1) 0.4s, transform 0.8s cubic-bezier(0.16,1,0.3,1) 0.4s',
-<<<<<<< HEAD
-                fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif",
-                lineHeight: 2,
-=======
                 fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
-                padding: '10px 0'
->>>>>>> ba24d0d986ab9a65b77d214e666d9da4e92f8a83
+                lineHeight: 2,
+                padding: '10px 0',
               }}
             >
               کچھی مسلم لوہار واڈہ ویلفیئر جماعت

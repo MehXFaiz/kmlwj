@@ -32,13 +32,12 @@ const Donations = lazy(() => import('./views/Donations').then(m => ({ default: m
 const Donors = lazy(() => import('./views/Donors').then(m => ({ default: m.Donors })));
 const DonationsReceived = lazy(() => import('./views/DonationsReceived').then(m => ({ default: m.DonationsReceived })));
 const DonationReports = lazy(() => import('./views/DonationReports').then(m => ({ default: m.DonationReports })));
-<<<<<<< HEAD
 const Invoices = lazy(() => import('./views/Invoices').then(m => ({ default: m.Invoices })));
 
 // Operation Module Views
 const Income = lazy(() => import('./views/Income').then(m => ({ default: m.Income })));
 const Expenses = lazy(() => import('./views/Expenses').then(m => ({ default: m.Expenses })));
-=======
+
 const DonorForm = lazy(() => import('./views/DonorForm').then(m => ({ default: m.DonorForm })));
 const DonationReceiptForm = lazy(() => import('./views/DonationReceiptForm').then(m => ({ default: m.DonationReceiptForm })));
 
@@ -49,10 +48,8 @@ const ZakatSection = lazy(() => import('./views/CategorizedRevenues').then(m => 
 const FitraSection = lazy(() => import('./views/CategorizedRevenues').then(m => ({ default: m.FitraSection })));
 const SpecializedRevenueForm = lazy(() => import('./views/SpecializedRevenueForm').then(m => ({ default: m.SpecializedRevenueForm })));
 
-
 // Invoice Module Views
 const Customers = lazy(() => import('./views/Customers').then(m => ({ default: m.Customers })));
-const Invoices = lazy(() => import('./views/Invoices').then(m => ({ default: m.Invoices })));
 const InvoiceForm = lazy(() => import('./views/InvoiceForm').then(m => ({ default: m.InvoiceForm })));
 const InvoiceDetail = lazy(() => import('./views/InvoiceDetail').then(m => ({ default: m.InvoiceDetail })));
 const Members = lazy(() => import('./views/Members').then(m => ({ default: m.Members })));
@@ -64,7 +61,6 @@ const BankVoucherForm = lazy(() => import('./views/BankVoucherForm').then(m => (
 const RevenueEntryForm = lazy(() => import('./views/RevenueEntryForm').then(m => ({ default: m.RevenueEntryForm })));
 const ExpenseEntryForm = lazy(() => import('./views/ExpenseEntryForm').then(m => ({ default: m.ExpenseEntryForm })));
 const TransferForm = lazy(() => import('./views/TransferForm').then(m => ({ default: m.TransferForm })));
->>>>>>> ba24d0d986ab9a65b77d214e666d9da4e92f8a83
 
 // Auth Views (also lazy-loaded)
 const Login = lazy(() => import('./views/Login').then(m => ({ default: m.Login })));
@@ -114,7 +110,6 @@ class ChunkErrorBoundary extends Component {
       // Real runtime error
       return (
         <div className="flex flex-col items-center justify-center h-screen w-screen bg-slate-950 text-center px-4">
-<<<<<<< HEAD
           <div className="p-6 bg-red-950/30 border border-red-900 rounded-xl max-w-xl w-full">
             <h3 className="text-lg font-bold text-red-400 mb-2">Application Error</h3>
             <div className="p-4 bg-black/40 rounded bg-slate-900 overflow-auto text-left text-red-300 font-mono text-sm max-h-[50vh]">
@@ -126,11 +121,6 @@ class ChunkErrorBoundary extends Component {
               Reload Page
             </button>
           </div>
-=======
-          <div className="h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mb-4" />
-          <h3 className="text-lg font-bold text-slate-200">Applying latest updates...</h3>
-          <p className="text-sm text-slate-500 mt-2">Loading the newest version of the application.</p>
->>>>>>> ba24d0d986ab9a65b77d214e666d9da4e92f8a83
         </div>
       );
     }
@@ -349,7 +339,6 @@ function App() {
                 <Reports />
               </PermissionGuard>
             } />
-<<<<<<< HEAD
             <Route path="/income" element={
               <PermissionGuard requiredPerms={['RECORD_INCOME', 'CREATE_ACCOUNT']}>
                 <Income />
@@ -365,20 +354,6 @@ function App() {
                 <TrialBalanceSheet />
               </PermissionGuard>
             } />
-            <Route path="/beneficiaries" element={<Beneficiaries />} />
-            <Route path="/donations" element={<Donations />} />
-            <Route path="/donation-reports" element={
-              <PermissionGuard requiredPerms={['VIEW_REPORTS']}>
-                <DonationReports />
-              </PermissionGuard>
-            } />
-            <Route path="/invoices" element={
-              <PermissionGuard requiredPerms={['VIEW_INVOICES']}>
-                <Invoices />
-              </PermissionGuard>
-            } />
-=======
-            <Route path="/trial-balance-sheet" element={<TrialBalanceSheet />} />
             <Route path="/hall-bookings" element={<HallBookings />} />
             <Route path="/hall-bookings/new" element={<HallBookingForm />} />
             <Route path="/hall-bookings/edit/:id" element={<HallBookingForm />} />
@@ -390,7 +365,11 @@ function App() {
             <Route path="/donations-received" element={<DonationsReceived />} />
             <Route path="/donations-received/new" element={<DonationReceiptForm />} />
             <Route path="/donations-received/edit/:id" element={<DonationReceiptForm />} />
-            <Route path="/donation-reports" element={<DonationReports />} />
+            <Route path="/donation-reports" element={
+              <PermissionGuard requiredPerms={['VIEW_REPORTS']}>
+                <DonationReports />
+              </PermissionGuard>
+            } />
             <Route path="/membership-fees" element={<MembershipFeeSection />} />
             <Route path="/membership-fees/new" element={<SpecializedRevenueForm category="Membership Fee" title="Membership Fee Collection" desc="Manage member fee contributions and annual renewals" titleLabel="Member Name" subTitleLabel="Membership ID / CNIC" dateLabel="Fee Date" showRate={true} rateLabel="Fee Rate" backPath="/membership-fees" />} />
             <Route path="/membership-fees/edit/:id" element={<SpecializedRevenueForm category="Membership Fee" title="Membership Fee Collection" desc="Manage member fee contributions and annual renewals" titleLabel="Member Name" subTitleLabel="Membership ID / CNIC" dateLabel="Fee Date" showRate={true} rateLabel="Fee Rate" backPath="/membership-fees" />} />
@@ -407,7 +386,11 @@ function App() {
             <Route path="/members" element={<Members />} />
             <Route path="/members/new" element={<MemberForm />} />
             <Route path="/members/edit/:id" element={<MemberForm />} />
-            <Route path="/invoices" element={<Invoices />} />
+            <Route path="/invoices" element={
+              <PermissionGuard requiredPerms={['VIEW_INVOICES']}>
+                <Invoices />
+              </PermissionGuard>
+            } />
             <Route path="/invoices/new" element={<InvoiceForm />} />
             <Route path="/invoices/edit/:id" element={<InvoiceForm />} />
             <Route path="/invoices/:id" element={<InvoiceDetail />} />
@@ -416,7 +399,6 @@ function App() {
             <Route path="/bank-vouchers/revenue/new" element={<RevenueEntryForm />} />
             <Route path="/bank-vouchers/expense/new" element={<ExpenseEntryForm />} />
             <Route path="/bank-vouchers/transfer/new" element={<TransferForm />} />
->>>>>>> ba24d0d986ab9a65b77d214e666d9da4e92f8a83
             <Route path="/users-roles" element={
               <PermissionGuard requiredPerms={['MANAGE_USERS', 'MANAGE_ROLES']}>
                 <UsersRoles />

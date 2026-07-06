@@ -11,16 +11,11 @@ import {
 import {
   TrendingUp, TrendingDown, Banknote, Activity, BarChart3,
   ArrowUpRight, ArrowDownRight, Scale, ShieldCheck, ShieldAlert,
-<<<<<<< HEAD
   Lock, Unlock, Layers, BookOpen, Zap, Plus, FileText,
   RefreshCw, Download, Bell, ChevronRight, CheckCircle2,
   AlertTriangle, Clock, Users, PieChart as PieIcon,
-  Calendar, PlusCircle, MinusCircle, CheckSquare, Heart
-=======
-  Lock, Layers, BookOpen, Plus, FileText,
-  RefreshCw, Bell, ChevronRight, CheckCircle2,
-  AlertTriangle, Clock, Users, ArrowRight, Wallet, RepeatIcon,
->>>>>>> ba24d0d986ab9a65b77d214e666d9da4e92f8a83
+  Calendar, PlusCircle, MinusCircle, CheckSquare, Heart,
+  ArrowRight, Wallet, RepeatIcon, Receipt,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -382,13 +377,8 @@ export const Dashboard = () => {
   // Financial stats
   const stats = useMemo(() => {
     let assets = 0, liabilities = 0, equity = 0, revenue = 0, expenses = 0;
-<<<<<<< HEAD
-    let cashBalance = 0, bankBalance = 0;
-=======
     let cashBalance = 0;
     let bankBalance = 0;
-
->>>>>>> ba24d0d986ab9a65b77d214e666d9da4e92f8a83
     accounts.forEach((acc) => {
       const isSub = acc.detailType === 'Subsidiary' || acc.level === 'SUBSIDIARY';
       const localBal = localBalances?.[acc.code] || 0;
@@ -420,12 +410,8 @@ export const Dashboard = () => {
       }
     });
     return {
-<<<<<<< HEAD
-      assets, liabilities, equity, revenue, expenses, cashBalance, bankBalance,
-=======
       assets, liabilities, equity, revenue, expenses,
       cashBalance, bankBalance,
->>>>>>> ba24d0d986ab9a65b77d214e666d9da4e92f8a83
       netIncome: revenue - expenses,
       grossMargin: revenue > 0 ? ((revenue - expenses) / revenue * 100) : 0,
       isEquationBalanced: Math.abs(assets - (liabilities + equity)) < 0.01,
@@ -540,54 +526,6 @@ export const Dashboard = () => {
         </div>
       </div>
 
-<<<<<<< HEAD
-      {/* ── Financial KPI Cards Row 1 ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard title="Cash Balance" value={stats.cashBalance} prefix="Rs " decimals={0}
-          icon={Banknote} iconBg="bg-blue-950/60" iconColor="text-blue-400"
-          trend="neutral" trendLabel="Ready Funds"
-          accent="border-blue-900/40 bg-gradient-to-br from-blue-950/30 to-slate-900/60"
-          delay={0} />
-        <KpiCard title="Bank Balance" value={stats.bankBalance} prefix="Rs " decimals={0}
-          icon={Activity} iconBg="bg-amber-950/60" iconColor="text-amber-400"
-          trend="neutral" trendLabel="Bank Accounts"
-          accent="border-amber-900/30 bg-gradient-to-br from-amber-950/20 to-slate-900/60"
-          delay={80} />
-        <KpiCard title="This Month's Income" value={stats.revenue} prefix="Rs " decimals={0}
-          icon={TrendingUp} iconBg="bg-emerald-950/60" iconColor="text-emerald-400"
-          trend="up" trendLabel="All Income Streams"
-          accent="border-emerald-900/30 bg-gradient-to-br from-emerald-950/20 to-slate-900/60"
-          delay={160} />
-        <KpiCard title="This Month's Expenses" value={stats.expenses} prefix="Rs " decimals={0}
-          icon={TrendingDown} iconBg="bg-red-950/60" iconColor="text-red-400"
-          trend="down" trendLabel="Operating Costs"
-          accent="border-red-900/30 bg-gradient-to-br from-red-950/20 to-slate-900/60"
-          delay={240} />
-      </div>
-
-      {/* ── Operations KPI Cards Row 2 ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard title="Donations This Month" value={dbStats?.donationsAmountThisMonth || 0} prefix="Rs " decimals={0}
-          icon={Heart} iconBg="bg-pink-950/60" iconColor="text-pink-400"
-          trend="up" trendLabel={`${dbStats?.donationsThisMonth || 0} donations`}
-          delay={320} />
-        <KpiCard title="Hall Bookings This Month" value={dbStats?.hallBookingsThisMonth || 0}
-          icon={Calendar} iconBg="bg-indigo-950/60" iconColor="text-indigo-400"
-          trend="up" trendLabel="Bookings"
-          delay={400} />
-        <KpiCard title="Pending Approvals" value={dbStats?.pendingDonations || 0}
-          icon={Clock} iconBg="bg-orange-950/60" iconColor="text-orange-400"
-          trend="neutral" trendLabel="Requires Action"
-          delay={480} />
-        <KpiCard title="Outstanding Invoices" value={dbStats?.outstandingInvoices || 0}
-          icon={FileText} iconBg="bg-violet-950/60" iconColor="text-violet-400"
-          trend="neutral" trendLabel="Unpaid / Overdue"
-          delay={560} />
-      </div>
-
-      {/* ── Balance Equation Banner ── */}
-      <div className={`rounded-xl border-l-4 px-5 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-=======
 
       {/* ── Financial KPI Cards ── premium redesign ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -647,7 +585,6 @@ export const Dashboard = () => {
 
       {/* ── Account Health Banner ── */}
       <div className={`rounded-xl border px-4 py-3.5 flex items-center gap-3 ${
->>>>>>> ba24d0d986ab9a65b77d214e666d9da4e92f8a83
         stats.isEquationBalanced
           ? 'border-slate-800/60 bg-slate-900/40'
           : 'border-red-900/50 bg-red-950/20'
@@ -692,29 +629,9 @@ export const Dashboard = () => {
 
         {/* Pie Chart: Donation Breakdown */}
         <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5 shadow-none">
-<<<<<<< HEAD
-          <SectionHeader title="Donation Breakdown" subtitle="By category" />
-          <div className="h-36 sm:h-40 mb-3">
-            <ResponsiveContainer width="100%" height="100%" minWidth={1}>
-              <PieChart>
-                <Pie 
-                  data={dbStats?.donationBreakdown?.map(d => ({ name: d.donationType, value: d._sum.amount })) || []} 
-                  cx="50%" cy="50%" innerRadius={40} outerRadius={68}
-                  paddingAngle={3} dataKey="value" strokeWidth={0}
-                >
-                  {(dbStats?.donationBreakdown || []).map((entry, i) => {
-                    const colors = ['#f43f5e', '#ec4899', '#d946ef', '#a855f7', '#8b5cf6', '#6366f1'];
-                    return <Cell key={i} fill={colors[i % colors.length]} />;
-                  })}
-                </Pie>
-                <ChartTooltip content={<DarkTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
-=======
           <SectionHeader title={t('dashboard.accountDistribution')} subtitle={t('dashboard.breakdownByAccountType')} />
           <div className="h-36 sm:h-40 mb-3">
             <MemoizedPieChart data={typeDistData} />
->>>>>>> ba24d0d986ab9a65b77d214e666d9da4e92f8a83
           </div>
           <div className="space-y-0.5">
             {(dbStats?.donationBreakdown || []).map((entry, i) => {
@@ -744,48 +661,6 @@ export const Dashboard = () => {
         {/* Pending Approvals Widget */}
         <div className="lg:col-span-2 rounded-xl border border-orange-800/40 bg-orange-950/10 p-4 sm:p-5 shadow-none flex flex-col">
           <SectionHeader
-<<<<<<< HEAD
-            title="Pending Approvals"
-            subtitle="Donations requiring your approval"
-            action={
-              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full border text-orange-400 bg-orange-950/50 border-orange-900/50">
-                {dbStats?.pendingDonations || 0} Pending
-              </span>
-            }
-          />
-          <div className="flex-1 mt-2">
-            {dbStats?.pendingApprovalsList?.length > 0 ? (
-              <div className="space-y-2">
-                {dbStats.pendingApprovalsList.map(donation => (
-                  <div key={donation.id} className="flex items-center justify-between p-3 rounded-lg border border-slate-800/60 bg-slate-900/40 hover:bg-slate-800/60 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-300">
-                        <Users className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-200">{donation.beneficiary?.name || 'Unknown'}</p>
-                        <p className="text-xs text-slate-500">{donation.donationType} • via {donation.paymentMethod}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right hidden sm:block">
-                        <p className="text-sm font-bold text-emerald-400">Rs {donation.amount.toLocaleString()}</p>
-                        <p className="text-[10px] text-slate-500">{new Date(donation.createdAt).toLocaleDateString()}</p>
-                      </div>
-                      <button onClick={() => navigate('/donations')} className="px-3 py-1.5 text-xs font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-900/50 rounded-lg hover:bg-emerald-900/60 transition-colors">
-                        Review
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-slate-500 text-sm py-10">
-                <CheckCircle2 className="w-10 h-10 text-slate-700 mb-2" />
-                No pending approvals
-              </div>
-            )}
-=======
             title={t('dashboard.balanceSheetOverview')}
             subtitle={t('dashboard.assetsVsLiabilitiesVsEquity')}
             action={
@@ -800,34 +675,11 @@ export const Dashboard = () => {
           />
           <div className="h-48 sm:h-56">
             <MemoizedBarChart data={balSheetData} />
->>>>>>> ba24d0d986ab9a65b77d214e666d9da4e92f8a83
           </div>
         </div>
 
         {/* Quick Actions */}
         <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5 shadow-none">
-<<<<<<< HEAD
-          <SectionHeader title="Quick Actions" subtitle="Common daily operations" />
-          <div className="space-y-2">
-            <QuickAction icon={PlusCircle} label="Add Income"
-              color="bg-emerald-950/60 border border-emerald-800/40 text-emerald-400"
-              onClick={() => navigate('/income')} />
-            <QuickAction icon={MinusCircle} label="Add Expense"
-              color="bg-red-950/60 border border-red-800/40 text-red-400"
-              onClick={() => navigate('/expenses')} />
-            <QuickAction icon={Heart} label="Receive Donation"
-              color="bg-pink-950/60 border border-pink-800/40 text-pink-400"
-              onClick={() => navigate('/donations')} />
-            <QuickAction icon={Calendar} label="Book Hall"
-              color="bg-indigo-950/60 border border-indigo-800/40 text-indigo-400"
-              onClick={() => navigate('/hall-bookings')} />
-            <QuickAction icon={Receipt} label="Create Invoice"
-              color="bg-blue-950/60 border border-blue-800/40 text-blue-400"
-              onClick={() => navigate('/invoices')} />
-            <QuickAction icon={Users} label="Add Beneficiary"
-              color="bg-violet-950/60 border border-violet-800/40 text-violet-400"
-              onClick={() => navigate('/beneficiaries')} />
-=======
           <SectionHeader title={t('dashboard.quickActions')} subtitle={t('dashboard.commonERPOperations')} />
           <div className="space-y-2">
             <QuickAction icon={FileText} label={t('dashboard.journalEntry')}
@@ -866,7 +718,6 @@ export const Dashboard = () => {
                 </span>
               </div>
             ))}
->>>>>>> ba24d0d986ab9a65b77d214e666d9da4e92f8a83
           </div>
         </div>
       </div>

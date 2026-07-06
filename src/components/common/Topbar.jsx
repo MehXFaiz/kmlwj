@@ -77,22 +77,15 @@ export const Topbar = ({ onMobileMenuToggle }) => {
         </button>
 
         {/* Welfare Jamaat Urdu Branding */}
-<<<<<<< HEAD
-        <div className="flex-1 flex items-center justify-start lg:justify-center min-w-0 px-2 sm:px-4">
-        <span
-            className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-blue-200 to-emerald-200 truncate select-none text-[17px] sm:text-[22px]"
-            style={{
-              fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif",
-              lineHeight: 2,
-              letterSpacing: '0.01em',
-            }}
-=======
         <div className="flex-1 flex items-center justify-center min-w-0 px-2 sm:px-4">
           <span
             dir="rtl"
-            className="font-semibold text-slate-200 truncate block select-none text-[15px] sm:text-[18px] text-center w-full leading-relaxed"
-            style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif", letterSpacing: '0.02em' }}
->>>>>>> ba24d0d986ab9a65b77d214e666d9da4e92f8a83
+            className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-blue-200 to-emerald-200 truncate select-none text-[17px] sm:text-[22px] text-center w-full leading-relaxed"
+            style={{
+              fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
+              lineHeight: 2,
+              letterSpacing: '0.01em',
+            }}
           >
             کچھی مسلم لوہار واڈہ ویلفیئر جماعت
           </span>
