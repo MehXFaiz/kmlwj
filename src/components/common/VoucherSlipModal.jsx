@@ -1,5 +1,6 @@
 import React from 'react';
 import { Printer, X } from 'lucide-react';
+import logoImg from '../../assets/logo.png';
 
 const numberToWords = (num) => {
   if (!num || num === 0) return 'Zero';
@@ -143,10 +144,8 @@ export const VoucherSlipModal = ({
             </div>
 
             {/* Background Emblem/Watermark */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0 opacity-[0.06]">
-              <div className="text-center font-bold tracking-tighter" style={{ fontSize: '180px', lineHeight: '0.8', color: '#4a4238' }}>
-                KMLWJ
-              </div>
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0 opacity-[0.08] print:opacity-[0.1]">
+              <img src={logoImg} alt="KMLWJ Logo Watermark" className="w-64 h-64 sm:w-80 sm:h-80 object-contain grayscale" />
             </div>
 
             {/* Main Content Area */}
@@ -161,10 +160,14 @@ export const VoucherSlipModal = ({
                   </div>
                 </div>
 
-                {/* Dark Pill Title Banner */}
+                {/* Clean Pill Title Banner */}
                 <div 
-                  style={{ backgroundColor: '#2b2623', color: '#f5f0e1' }}
-                  className="px-6 sm:px-8 py-1 sm:py-1.5 rounded-full font-bold text-base sm:text-xl tracking-[0.2em] uppercase shadow-md mx-auto sm:mx-0"
+                  style={{ 
+                    backgroundColor: '#eae3d2', 
+                    color: '#2d2925',
+                    borderColor: '#8c8270'
+                  }}
+                  className="px-6 sm:px-8 py-1 sm:py-1.5 rounded-full font-extrabold text-base sm:text-xl tracking-[0.25em] uppercase border-2 shadow-sm mx-auto sm:mx-0 print:border-[#4a4238] print:bg-[#eae3d2]"
                 >
                   VOUCHER
                 </div>
