@@ -174,7 +174,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
     {
       title: t('sidebar.moneyOut', 'Money Out'),
       items: [
-        { name: t('sidebar.addExpenses', 'Add Expenses'), hint: 'Log & manage business expenses', icon: TrendingDown, path: '/bank-vouchers/expense/new' },
+        { name: t('sidebar.addExpenses', 'Add Expenses'), hint: 'Log & manage business expenses', icon: TrendingDown, path: '/bank-vouchers' },
       ],
     },
     {
