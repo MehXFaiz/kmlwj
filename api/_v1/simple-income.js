@@ -1,6 +1,6 @@
-import { makeHandler } from "../../_utils/handler.js";
-import { verifyAuth } from "../../_middlewares/auth.middleware.js";
-import { prisma } from "../../_prisma.js";
+import { makeHandler } from "../_utils/handler.js";
+import { verifyAuth } from "../_middlewares/auth.middleware.js";
+import { prisma } from "../_prisma.js";
 var simple_income_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
