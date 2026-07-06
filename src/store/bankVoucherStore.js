@@ -41,6 +41,19 @@ export const useBankVoucherStore = create((set, get) => ({
     }
   },
 
+  updateVoucher: async (id, voucherData, type) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await api.put('/api/v1/journal-entries', { id, ...voucherData });
+      await get().fetchVouchers(type);
+      set({ loading: false });
+      return res.data;
+    } catch (err) {
+      set({ error: err.response?.data?.error?.message || err.message, loading: false });
+      throw err;
+    }
+  },
+
   deleteVoucher: async (id, type) => {
     set({ loading: true, error: null });
     try {

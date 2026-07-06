@@ -2,14 +2,29 @@ import { useState, useEffect } from 'react';
 import { useSimpleExpenseStore } from '../store/simpleExpenseStore';
 import { useExpenseStore } from '../store/expenseStore';
 import { useCoaStore } from '../store/coaStore';
-import { MinusCircle, Search, X, CheckCircle2, TrendingDown, Building2, Banknote } from 'lucide-react';
+import { MinusCircle, Search, X, CheckCircle2, TrendingDown, Building2, Banknote, Edit, Trash2 } from 'lucide-react';
 
-function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts }) {
+function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editingExpense }) {
   const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], expenseHeadId: '', paidTo: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
 
   useEffect(() => {
-    if (isOpen) setForm({ date: new Date().toISOString().split('T')[0], expenseHeadId: '', paidTo: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
-  }, [isOpen]);
+    if (isOpen) {
+      if (editingExpense) {
+        setForm({
+          date: editingExpense.date ? new Date(editingExpense.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          expenseHeadId: editingExpense.expenseHeadId || '',
+          paidTo: editingExpense.paidTo || '',
+          description: editingExpense.description || '',
+          amount: editingExpense.amount !== undefined ? editingExpense.amount.toString() : '',
+          paymentMethod: editingExpense.paymentMethod || 'CASH',
+          bankAccountId: editingExpense.bankAccountId || '',
+          reference: editingExpense.reference || ''
+        });
+      } else {
+        setForm({ date: new Date().toISOString().split('T')[0], expenseHeadId: '', paidTo: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
+      }
+    }
+  }, [isOpen, editingExpense]);
 
   if (!isOpen) return null;
 
@@ -31,8 +46,8 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts }) {
               <MinusCircle className="h-4 w-4 text-red-400" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-200">Record Expense</h3>
-              <p className="text-[11px] text-slate-500">Log a new business expense</p>
+              <h3 className="text-sm font-bold text-slate-200">{editingExpense ? 'Edit Expense' : 'Record Expense'}</h3>
+              <p className="text-[11px] text-slate-500">{editingExpense ? 'Update business expense details' : 'Log a new business expense'}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-300">
@@ -112,7 +127,7 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts }) {
           <button onClick={onClose} className="px-4 py-2 text-xs font-bold text-slate-300 hover:text-white transition-colors">Cancel</button>
           <button onClick={handleSave} disabled={!form.expenseHeadId || !form.amount}
             className="flex items-center gap-2 px-5 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-            <CheckCircle2 className="h-4 w-4" /> Save Record
+            <CheckCircle2 className="h-4 w-4" /> {editingExpense ? 'Update Expense' : 'Save Record'}
           </button>
         </div>
       </div>
@@ -121,11 +136,12 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts }) {
 }
 
 export const Expenses = () => {
-  const { expenses, isLoading, fetchExpenses, createExpense } = useSimpleExpenseStore();
+  const { expenses, isLoading, fetchExpenses, createExpense, updateExpense, deleteExpense } = useSimpleExpenseStore();
   const { heads: expenseHeads, fetchHeads } = useExpenseStore();
   const { accounts, fetchAccounts } = useCoaStore();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -148,7 +164,7 @@ export const Expenses = () => {
           <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">Expense Payments</h2>
           <p className="text-xs text-slate-500 mt-1">Manage direct business expenses and cash outflows</p>
         </div>
-        <button onClick={() => setIsModalOpen(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-bold shadow-lg shadow-red-900/20 transition-all active:scale-95">
+        <button onClick={() => { setEditingExpense(null); setIsModalOpen(true); }} className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-bold shadow-lg shadow-red-900/20 transition-all active:scale-95">
           <MinusCircle className="h-4 w-4" /> Add Expense
         </button>
       </div>
@@ -186,7 +202,7 @@ export const Expenses = () => {
               </thead>
               <tbody className="divide-y divide-slate-800/40">
                 {filteredExpenses.map((exp) => (
-                  <tr key={exp.id} className="hover:bg-slate-800/20 transition-colors">
+                  <tr key={exp.id} className="group hover:bg-slate-800/20 transition-colors">
                     <td className="py-3 px-4 text-xs text-slate-400 whitespace-nowrap">
                       {new Date(exp.date).toLocaleDateString()}
                     </td>
@@ -210,9 +226,23 @@ export const Expenses = () => {
                       {exp.reference && <p className="text-[9px] text-slate-500 mt-0.5 font-mono">{exp.reference}</p>}
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <span className="text-sm font-mono font-bold text-red-400">
-                        {exp.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </span>
+                      <div className="flex items-center justify-end gap-3">
+                        <span className="text-sm font-mono font-bold text-red-400">
+                          {exp.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </span>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => { setEditingExpense(exp); setIsModalOpen(true); }}
+                            className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-indigo-400 transition-colors"
+                            title="Edit Expense">
+                            <Edit className="h-3.5 w-3.5" />
+                          </button>
+                          <button onClick={async () => { if (window.confirm('Delete this expense?')) await deleteExpense(exp.id); }}
+                            className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-red-400 transition-colors"
+                            title="Delete Expense">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -224,13 +254,19 @@ export const Expenses = () => {
 
       <ExpenseModal 
         isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+        onClose={() => { setIsModalOpen(false); setEditingExpense(null); }} 
         onSave={async (data) => {
-          const success = await createExpense(data);
-          if (success) setIsModalOpen(false);
+          if (editingExpense) {
+            const success = await updateExpense(editingExpense.id, data);
+            if (success) { setIsModalOpen(false); setEditingExpense(null); }
+          } else {
+            const success = await createExpense(data);
+            if (success) setIsModalOpen(false);
+          }
         }}
         expenseHeads={expenseHeads}
         accounts={accounts}
+        editingExpense={editingExpense}
       />
     </div>
   );

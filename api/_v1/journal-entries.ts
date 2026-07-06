@@ -107,10 +107,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'PATCH' || method === 'PUT') {
-    const { id, status } = req.body;
+    const { id, status, reference, description, postingDate, amount, lines } = req.body;
     
-    if (!id || !status) {
-       return res.status(400).json({ error: { message: 'Missing id or status', status: 400 } });
+    if (!id) {
+       return res.status(400).json({ error: { message: 'Missing journal entry id', status: 400 } });
     }
 
     try {
@@ -122,25 +122,102 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
         if (!je) throw new Error('Journal entry not found');
 
-        if (je.status === status) return je;
+        const isStatusChangeOnly = (status && status !== je.status && reference === undefined && description === undefined && postingDate === undefined && amount === undefined && !lines);
 
-        if (je.status === 'Draft' && status === 'Posted') {
-          return await AccountingService.postDraft(tx, id, req.user!.id);
-        }
-        
-        if (je.status === 'Posted' && status === 'Cancelled') {
-          return await AccountingService.reverseJournalEntry(tx, id, req.user!.id, req.body.reason);
+        if (isStatusChangeOnly) {
+          if (je.status === status) return je;
+
+          if (je.status === 'Draft' && status === 'Posted') {
+            return await AccountingService.postDraft(tx, id, req.user!.id);
+          }
+          
+          if (je.status === 'Posted' && status === 'Cancelled') {
+            return await AccountingService.reverseJournalEntry(tx, id, req.user!.id, req.body.reason);
+          }
+
+          const updatedJe = await tx.journalEntry.update({
+            where: { id },
+            data: { status }
+          });
+          return updatedJe;
         }
 
-        const updatedJe = await tx.journalEntry.update({
+        // Updating details / amount
+        const newDate = postingDate ? new Date(postingDate) : je.postingDate;
+        const newRef = reference !== undefined ? reference : je.reference;
+        const newDesc = description !== undefined ? description : je.description;
+        const newStatus = status || je.status;
+
+        await tx.journalEntry.update({
           where: { id },
-          data: { status }
+          data: {
+            postingDate: newDate,
+            reference: newRef,
+            description: newDesc !== undefined ? (newDesc || null) : undefined,
+            status: newStatus
+          }
         });
 
-        return updatedJe;
+        // If amount changed without custom lines array
+        if (amount !== undefined && !lines && je.lines.length > 0) {
+          const numAmount = Number(amount);
+          for (const l of je.lines) {
+            const newDebit = l.debit > 0 ? numAmount : l.debit;
+            const newCredit = l.credit > 0 ? numAmount : l.credit;
+            const lineDesc = newDesc !== undefined ? newDesc : l.description;
+
+            await tx.journalEntryLine.update({
+              where: { id: l.id },
+              data: {
+                debit: newDebit,
+                credit: newCredit,
+                description: lineDesc
+              }
+            });
+          }
+        } else if (lines && Array.isArray(lines) && lines.length > 0) {
+          await tx.journalEntryLine.deleteMany({
+            where: { journalEntryId: je.id }
+          });
+          for (const l of lines) {
+            await tx.journalEntryLine.create({
+              data: {
+                journalEntryId: je.id,
+                accountId: l.accountId,
+                description: l.description || newDesc || newRef || je.description,
+                debit: Number(l.debit) || 0,
+                credit: Number(l.credit) || 0,
+              }
+            });
+          }
+        }
+
+        // If status is Posted or becoming Posted, refresh ledger entries and balances
+        if (newStatus === 'Posted' || newStatus === 'POSTED') {
+          await tx.ledgerEntry.deleteMany({
+            where: { reference: { in: [je.voucherNo, `${je.voucherNo}-REV`] } }
+          });
+
+          const updatedLines = await tx.journalEntryLine.findMany({ where: { journalEntryId: je.id } });
+          for (const l of updatedLines) {
+            await tx.ledgerEntry.create({
+              data: {
+                accountId: l.accountId,
+                debit: l.debit,
+                credit: l.credit,
+                reference: je.voucherNo,
+                description: l.description || newDesc || newRef || je.description,
+                transactionDate: newDate
+              }
+            });
+            await AccountingService.recalculateAccountBalance(tx, l.accountId);
+          }
+        }
+
+        return await tx.journalEntry.findUnique({ where: { id }, include: { lines: true } });
       });
 
-      await logAudit(req.user.id, 'Update Journal Status', 'Journal Entries', null, { id, status }, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      await logAudit(req.user.id, 'Update Journal Entry', 'Journal Entries', null, { id, status, reference, amount }, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
       return res.status(200).json({ status: 200, data: result });
     } catch (err: any) {

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
 import { useAuthStore } from '../store/authStore';
-import { FileSpreadsheet, Search, Plus, Printer, CheckCircle, XCircle, Eye, EyeOff, Trash2, AlertTriangle } from 'lucide-react';
+import { FileSpreadsheet, Search, Plus, Printer, CheckCircle, XCircle, Eye, EyeOff, Trash2, AlertTriangle, Edit, X } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 import { useTranslation } from 'react-i18next';
@@ -188,15 +188,107 @@ function BankVoucherPrintModal({ voucher, onClose }) {
   );
 }
 
+function BankVoucherEditModal({ voucher, onClose, onSave }) {
+  const [date, setDate] = useState(() => {
+    const d = voucher.postingDate || voucher.date;
+    return d ? new Date(d).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+  });
+  const [reference, setReference] = useState(voucher.reference || '');
+  const [description, setDescription] = useState(voucher.description || '');
+  const [amount, setAmount] = useState(() => {
+    const sum = voucher.lines?.reduce((s, l) => s + (l.debit || 0), 0);
+    return sum ? sum.toString() : '';
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!amount || Number(amount) <= 0) return;
+    setLoading(true);
+    try {
+      await onSave({
+        id: voucher.dbId || voucher.id,
+        postingDate: date,
+        reference,
+        description,
+        amount: Number(amount)
+      });
+      onClose();
+    } catch (err) {
+      console.error("Failed to update voucher:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-lg rounded-2xl border border-indigo-900/40 bg-slate-900 shadow-2xl overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-lg bg-indigo-950/60 border border-indigo-800/40 flex items-center justify-center">
+              <Edit className="h-4 w-4 text-indigo-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-200">Edit {voucher.voucherType === 'BP' ? 'Expense' : 'Voucher'} ({voucher.voucherNo})</h3>
+              <p className="text-[11px] text-slate-500">Update voucher details & amount</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-300">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Date *</label>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} required
+              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-indigo-500 transition-all" />
+          </div>
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Amount (PKR) *</label>
+            <input type="number" step="0.01" min="0.01" value={amount} onChange={e => setAmount(e.target.value)} required placeholder="0.00"
+              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm font-mono focus:border-indigo-500 transition-all" />
+          </div>
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Paid To / Reference</label>
+            <input type="text" value={reference} onChange={e => setReference(e.target.value)} placeholder="e.g. Vendor name, Cheque no..."
+              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-indigo-500 transition-all" />
+          </div>
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Description / Memo</label>
+            <textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} placeholder="Provide details..."
+              className="w-full px-3 py-2 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-indigo-500 transition-all resize-none" />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+            <button type="button" onClick={onClose} disabled={loading}
+              className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors">
+              Cancel
+            </button>
+            <button type="submit" disabled={loading || !amount}
+              className="flex items-center gap-2 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-900/30 transition-all disabled:opacity-50">
+              {loading && <div className="h-3 w-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export const BankVouchers = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { vouchers, fetchVouchers, updateVoucherStatus, deleteVoucher, bulkDeleteVouchers, loading } = useBankVoucherStore();
+  const { vouchers, fetchVouchers, updateVoucher, updateVoucherStatus, deleteVoucher, bulkDeleteVouchers, loading } = useBankVoucherStore();
   const { canEditOrDelete } = useAuthStore();
   
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('BP'); // BP (Payments), BR (Receipts)
   const [printItem, setPrintItem] = useState(null);
+  const [editItem, setEditItem] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [statusLoading, setStatusLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -206,6 +298,16 @@ export const BankVouchers = () => {
   useEffect(() => {
     fetchVouchers(activeTab);
   }, [activeTab, fetchVouchers]);
+
+  const handleSaveEdit = async (updatedData) => {
+    try {
+      await updateVoucher(updatedData.id, updatedData, activeTab);
+      showToast('Voucher updated successfully', 'success');
+    } catch (err) {
+      showToast(err.message || 'Failed to update voucher', 'error');
+      throw err;
+    }
+  };
 
   const filtered = useMemo(() => {
     return vouchers.filter(v => 
@@ -482,6 +584,13 @@ export const BankVouchers = () => {
                               <button onClick={() => setPrintItem(v)} className="p-1.5 rounded-lg bg-slate-800/40 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/40 transition-colors cursor-pointer" title="Print physical voucher">
                                 <Printer className="h-3.5 w-3.5" />
                               </button>
+                              {(v.status === 'Draft' || canEditOrDelete) && (
+                                <button onClick={() => setEditItem(v)} disabled={statusLoading}
+                                  className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 transition-colors cursor-pointer"
+                                  title="Edit Voucher">
+                                  <Edit className="h-3.5 w-3.5" />
+                                </button>
+                              )}
                               {v.status === 'Draft' && (
                                 <button onClick={() => handlePost(v.dbId)} disabled={statusLoading}
                                   className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 transition-colors cursor-pointer"
@@ -565,6 +674,13 @@ export const BankVouchers = () => {
                       <button onClick={() => setPrintItem(v)} className="p-1.5 rounded-lg bg-slate-800/40 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/40 transition-colors cursor-pointer" title="Print physical voucher">
                         <Printer className="h-3.5 w-3.5" />
                       </button>
+                      {(v.status === 'Draft' || canEditOrDelete) && (
+                        <button onClick={() => setEditItem(v)} disabled={statusLoading}
+                          className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 transition-colors cursor-pointer"
+                          title="Edit Voucher">
+                          <Edit className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                       {v.status === 'Draft' && (
                         <button onClick={() => handlePost(v.dbId)} disabled={statusLoading}
                           className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 transition-colors cursor-pointer"
@@ -647,6 +763,14 @@ export const BankVouchers = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {editItem && (
+        <BankVoucherEditModal
+          voucher={editItem}
+          onClose={() => setEditItem(null)}
+          onSave={handleSaveEdit}
+        />
       )}
     </div>
   );
