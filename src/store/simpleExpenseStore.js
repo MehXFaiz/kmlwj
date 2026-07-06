@@ -9,7 +9,7 @@ export const useSimpleExpenseStore = create((set, get) => ({
   fetchExpenses: async () => {
     set({ isLoading: true, error: null });
     try {
-      const { data } = await api.get('/v1/simple-expense');
+      const { data } = await api.get('/api/v1/simple-expense');
       set({ expenses: data.data || [] });
     } catch (error) {
       set({ error: error.response?.data?.error?.message || 'Failed to fetch expenses' });
@@ -21,7 +21,7 @@ export const useSimpleExpenseStore = create((set, get) => ({
   createExpense: async (expenseData) => {
     set({ error: null });
     try {
-      const { data } = await api.post('/v1/simple-expense', expenseData);
+      const { data } = await api.post('/api/v1/simple-expense', expenseData);
       set(state => ({ expenses: [data.data, ...state.expenses] }));
       return true;
     } catch (error) {

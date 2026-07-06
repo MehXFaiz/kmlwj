@@ -9,7 +9,7 @@ export const useIncomeStore = create((set, get) => ({
   fetchIncomes: async () => {
     set({ isLoading: true, error: null });
     try {
-      const { data } = await api.get('/v1/simple-income');
+      const { data } = await api.get('/api/v1/simple-income');
       set({ incomes: data.data || [] });
     } catch (error) {
       set({ error: error.response?.data?.error?.message || 'Failed to fetch incomes' });
@@ -21,7 +21,7 @@ export const useIncomeStore = create((set, get) => ({
   createIncome: async (incomeData) => {
     set({ error: null });
     try {
-      const { data } = await api.post('/v1/simple-income', incomeData);
+      const { data } = await api.post('/api/v1/simple-income', incomeData);
       set(state => ({ incomes: [data.data, ...state.incomes] }));
       return true;
     } catch (error) {
