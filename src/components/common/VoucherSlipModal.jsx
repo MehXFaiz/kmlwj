@@ -266,7 +266,7 @@ export const VoucherSlipModal = ({
               <div className="grid grid-cols-3 gap-2 pt-8 mt-2 items-end text-center font-serif italic text-xs sm:text-sm text-[#2d2925]">
                 <div className="text-left">
                   <div className="border-t border-[#4a4238] pt-1 inline-block min-w-[120px] sm:min-w-[140px]">
-                    Prepared by : <span className="font-semibold not-italic">{preparedBy}</span>
+                    Prepared by
                   </div>
                 </div>
 
