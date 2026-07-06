@@ -174,15 +174,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
     {
       title: t('sidebar.moneyOut', 'Money Out'),
       items: [
-        { name: t('sidebar.salaries', 'Salaries'), hint: 'Log salary payouts', icon: Users, path: '/bank-vouchers/expense/new?type=Salary' },
-        { name: t('sidebar.rent', 'Rent'), hint: 'Log rent payments', icon: Building, path: '/bank-vouchers/expense/new?type=Rent' },
-        { name: t('sidebar.fuel', 'Fuel'), hint: 'Log fuel expenses', icon: Bus, path: '/bank-vouchers/expense/new?type=Fuel' },
-        { name: t('sidebar.busRepair', 'Bus Repair'), hint: 'Log bus maintenance costs', icon: Bus, path: '/bank-vouchers/expense/new?type=Bus Repair' },
-        { name: t('sidebar.generatorRepair', 'Generator Repair'), hint: 'Log generator maintenance costs', icon: Activity, path: '/bank-vouchers/expense/new?type=Generator Repair' },
-        { name: t('sidebar.legalFee', 'Legal Fee'), hint: 'Log legal & professional fees', icon: FileText, path: '/bank-vouchers/expense/new?type=Legal Fee' },
-        { name: t('sidebar.medicalDonationDistribution', 'Medical Donation Distribution'), hint: 'Log medical distribution expenses', icon: Heart, path: '/bank-vouchers/expense/new?type=Medical Donation' },
-        { name: t('sidebar.zakatDistribution', 'Zakat Distribution'), hint: 'Log Zakat distribution payouts', icon: Gift, path: '/bank-vouchers/expense/new?type=Zakat Distribution' },
-        { name: t('sidebar.other', 'Other'), hint: 'Log other miscellaneous payouts', icon: TrendingDown, path: '/bank-vouchers/expense/new?type=Other' },
+        { name: t('sidebar.expenses', 'Expenses'), hint: 'Log & manage business expenses', icon: TrendingDown, path: '/expenses' },
       ],
     },
     {
