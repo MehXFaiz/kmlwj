@@ -138,7 +138,7 @@ const MobileFab = () => {
 
   const actions = [
     { label: 'Add Income', desc: 'Record money received', icon: TrendingUp, color: 'text-emerald-400 bg-emerald-950/80 border-emerald-800/60', path: '/bank-vouchers/revenue/new' },
-    { label: 'Add Expense', desc: 'Record money spent', icon: TrendingDown, color: 'text-red-400 bg-red-950/80 border-red-800/60', path: '/bank-vouchers/expense/new' },
+    { label: 'Add Expense', desc: 'Record money spent', icon: TrendingDown, color: 'text-red-400 bg-red-950/80 border-red-800/60', path: '/expenses' },
     { label: 'Journal Entry', desc: 'Manual entry', icon: FileText, color: 'text-amber-400 bg-amber-950/80 border-amber-800/60', path: '/journals' },
     { label: 'General Ledger', desc: 'View account ledgers', icon: BookOpen, color: 'text-cyan-400 bg-cyan-950/80 border-cyan-800/60', path: '/ledger' },
     { label: 'Transfer', desc: 'Move between accounts', icon: RefreshCw, color: 'text-violet-400 bg-violet-950/80 border-violet-800/60', path: '/bank-vouchers/transfer/new' },
@@ -397,7 +397,7 @@ function App() {
             <Route path="/bank-vouchers" element={<BankVouchers />} />
             <Route path="/bank-vouchers/new" element={<BankVoucherForm />} />
             <Route path="/bank-vouchers/revenue/new" element={<RevenueEntryForm />} />
-            <Route path="/bank-vouchers/expense/new" element={<ExpenseEntryForm />} />
+            <Route path="/bank-vouchers/expense/new" element={<Navigate to="/expenses" replace />} />
             <Route path="/bank-vouchers/transfer/new" element={<TransferForm />} />
             <Route path="/users-roles" element={
               <PermissionGuard requiredPerms={['MANAGE_USERS', 'MANAGE_ROLES']}>

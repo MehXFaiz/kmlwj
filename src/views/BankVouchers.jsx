@@ -347,7 +347,7 @@ export const BankVouchers = () => {
             </>
           ) : (
             <>
-              <Link to="/bank-vouchers/expense/new"
+              <Link to="/expenses"
                 className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-lg shadow-rose-900/40 transition-all flex-1 sm:flex-none">
                 <Plus className="h-4 w-4" /> {t('forms.addExpense')}
               </Link>
