@@ -109,13 +109,13 @@ export const Topbar = ({ onMobileMenuToggle }) => {
               <div className="absolute right-0 mt-2 w-36 bg-slate-900 border border-slate-800/80 rounded-xl shadow-2xl shadow-black/50 z-50 p-1 overflow-hidden">
                 <button
                   onClick={() => { i18n.changeLanguage('en'); setLanguageMenuOpen(false); }}
-                  className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-lg transition-all ${language === 'en' ? 'bg-slate-800 text-amber-300' : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-100'}`}
+                  className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-lg transition-all ${language === 'en' ? 'bg-slate-800 text-indigo-300' : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-100'}`}
                 >
                   🇺🇸 &nbsp;English
                 </button>
                 <button
                   onClick={() => { i18n.changeLanguage('ur'); setLanguageMenuOpen(false); }}
-                  className={`w-full text-right px-3 py-2 text-xs font-semibold rounded-lg transition-all ${language === 'ur' ? 'bg-slate-800 text-amber-300' : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-100'}`}
+                  className={`w-full text-right px-3 py-2 text-xs font-semibold rounded-lg transition-all ${language === 'ur' ? 'bg-slate-800 text-indigo-300' : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-100'}`}
                   style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
                   dir="rtl"
                 >
