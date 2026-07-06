@@ -600,7 +600,7 @@ export const BankVouchers = () => {
                               )}
                               {v.status === 'Posted' && (
                                 <button onClick={() => handleCancel(v.dbId)} disabled={statusLoading}
-                                  className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-colors cursor-pointer"
+                                  className="p-1.5 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 transition-colors cursor-pointer"
                                   title={t('tables.bankVouchers.void') || "Void Voucher & Reverse Ledger Entry"}>
                                   <XCircle className="h-3.5 w-3.5" />
                                 </button>
@@ -690,7 +690,7 @@ export const BankVouchers = () => {
                       )}
                       {v.status === 'Posted' && (
                         <button onClick={() => handleCancel(v.dbId)} disabled={statusLoading}
-                          className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 transition-colors cursor-pointer"
                           title={t('tables.bankVouchers.void') || "Void Voucher & Reverse Ledger Entry"}>
                           <XCircle className="h-3.5 w-3.5" />
                         </button>

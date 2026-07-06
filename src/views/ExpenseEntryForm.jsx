@@ -370,11 +370,11 @@ export const ExpenseEntryForm = () => {
                   </div>
                 ) : (
                   autoCreationDetails && (
-                    <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-950/20 border border-amber-900/30 text-xs text-amber-300">
-                      <AlertCircle className="h-4 w-4 mt-0.5 text-amber-400 flex-shrink-0" />
+                    <div className="flex items-start gap-3 p-3.5 rounded-xl bg-blue-950/20 border border-blue-900/30 text-xs text-blue-300">
+                      <AlertCircle className="h-4 w-4 mt-0.5 text-blue-400 flex-shrink-0" />
                       <div className="space-y-1">
-                        <p className="font-semibold text-amber-200">{t('forms.missingSubAccount')}</p>
-                        <p className="text-amber-400/90 leading-relaxed">
+                        <p className="font-semibold text-blue-200">{t('forms.missingSubAccount')}</p>
+                        <p className="text-blue-400/90 leading-relaxed">
                           No ledger account exists for <strong className="text-white">"{expenseType}"</strong>.
                           The system will automatically generate it under <strong className="text-white">{autoCreationDetails.parentName}</strong> with code <strong className="font-mono text-white">{autoCreationDetails.nextCode}</strong> upon saving.
                         </p>

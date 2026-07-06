@@ -443,7 +443,7 @@ export const Donations = () => {
                            <CheckCircle2 className="h-3 w-3" /> Posted
                          </span>
                       ) : (
-                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold uppercase tracking-wider">
+                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-bold uppercase tracking-wider">
                            <AlertTriangle className="h-3 w-3" /> Pending Post
                          </span>
                       )}
@@ -501,7 +501,7 @@ export const Donations = () => {
                       {d.donorMobile && <span className="text-[10px] font-normal text-slate-550 block mt-0.5">{d.donorMobile}</span>}
                     </h4>
                   </div>
-                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider ${d.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider ${d.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>
                     {d.status === 'APPROVED' ? <><CheckCircle2 className="h-3 w-3" /> Posted</> : <><AlertTriangle className="h-3 w-3" /> Pending Post</>}
                   </span>
                 </div>

@@ -459,7 +459,7 @@ export const Dashboard = () => {
 
   const typeColors = {
     Asset: { bg: 'bg-blue-500', dot: 'bg-blue-500', bar: 'bg-blue-500' },
-    Liability: { bg: 'bg-amber-500', dot: 'bg-amber-400', bar: 'bg-amber-500' },
+    Liability: { bg: 'bg-orange-500', dot: 'bg-orange-400', bar: 'bg-orange-500' },
     Equity: { bg: 'bg-violet-500', dot: 'bg-violet-400', bar: 'bg-violet-500' },
     Revenue: { bg: 'bg-emerald-500', dot: 'bg-emerald-400', bar: 'bg-emerald-500' },
     Expense: { bg: 'bg-red-500', dot: 'bg-red-400', bar: 'bg-red-500' },
@@ -695,7 +695,7 @@ export const Dashboard = () => {
               color="bg-emerald-950/60 border border-emerald-800/40 text-emerald-400"
               onClick={() => startTransition(() => navigate('/reports'))} />
             <QuickAction icon={Users} label={t('dashboard.usersAndRoles')}
-              color="bg-amber-950/60 border border-amber-800/40 text-amber-400"
+              color="bg-indigo-950/60 border border-indigo-800/40 text-indigo-400"
               onClick={() => startTransition(() => navigate('/users-roles'))} />
             <QuickAction icon={ShieldCheck} label={t('dashboard.auditTrail')}
               color="bg-slate-800/60 border border-slate-700/40 text-slate-400"
