@@ -37,6 +37,7 @@ import {
   Receipt,
   PlusCircle,
   MinusCircle,
+  FileText,
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
