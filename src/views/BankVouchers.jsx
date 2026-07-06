@@ -233,6 +233,24 @@ export const BankVouchers = () => {
     return targetLine ? targetLine.accountCode : '—';
   };
 
+  const getVoucherTypeOrRef = (v) => {
+    if (v.reference && v.reference !== '—') {
+      const cleaned = v.reference.replace(/\s*Payout$/i, '').trim();
+      if (cleaned && cleaned !== v.voucherNo) return cleaned;
+    }
+    if (v.description) {
+      const match = v.description.match(/\(([^)]+)\)/);
+      if (match && match[1]) return match[1];
+    }
+    const targetLine = v.lines?.find(line => v.voucherType === 'BP' ? line.debit > 0 : line.credit > 0);
+    if (targetLine?.accountName) return targetLine.accountName;
+    if (targetLine?.description) {
+      const match = targetLine.description.match(/\(([^)]+)\)/);
+      if (match && match[1]) return match[1];
+    }
+    return v.reference || '—';
+  };
+
   const handlePost = async (id) => {
     setStatusLoading(true);
     try {
@@ -407,6 +425,7 @@ export const BankVouchers = () => {
                       <th className="px-6 py-3.5 w-10"></th>
                       <th className="px-6 py-3.5">{t('tables.bankVouchers.voucherNo')}</th>
                       <th className="px-6 py-3.5">{t('tables.bankVouchers.date')}</th>
+                      <th className="px-6 py-3.5">{activeTab === 'BP' ? (t('tables.bankVouchers.expenseType') || 'EXPENSE TYPE') : (t('tables.bankVouchers.reference') || 'TYPE / REF')}</th>
                       <th className="px-6 py-3.5">{t('tables.bankVouchers.bankAccount')}</th>
                       <th className="px-6 py-3.5">{t('tables.bankVouchers.offsetAccount')}</th>
                       <th className="px-6 py-3.5">{t('tables.bankVouchers.totalAmount')}</th>
@@ -438,6 +457,18 @@ export const BankVouchers = () => {
                             <span className="text-xs font-mono font-bold text-slate-350 bg-slate-800/40 px-2 py-0.5 rounded border border-slate-700/40">{v.voucherNo}</span>
                           </td>
                           <td className="px-6 py-4 text-xs text-slate-300">{v.postingDate}</td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-xs font-bold text-slate-200">
+                                {getVoucherTypeOrRef(v)}
+                              </span>
+                              {v.description && (
+                                <span className="text-[10px] text-slate-500 max-w-[180px] truncate" title={v.description}>
+                                  {v.description}
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-6 py-4">
                             <span className="text-xs font-mono font-bold text-indigo-400 bg-indigo-950/40 border border-indigo-900/40 px-2 py-0.2 rounded">{getBankCode(v)}</span>
                           </td>
@@ -478,7 +509,7 @@ export const BankVouchers = () => {
                         {/* Expanded details container */}
                         {expandedId === v.dbId && (
                           <tr className="bg-slate-950/30 border-y border-slate-850">
-                            <td colSpan={canEditOrDelete ? "9" : "8"} className="px-8 py-4 space-y-3">
+                            <td colSpan={canEditOrDelete ? "10" : "9"} className="px-8 py-4 space-y-3">
                               <div className="grid grid-cols-2 gap-4 text-xs text-slate-450 mb-2">
                                 <div><span className="font-bold text-slate-500">{t('tables.bankVouchers.referenceCheque')}</span> {v.reference}</div>
                                 <div><span className="font-bold text-slate-500">{t('tables.bankVouchers.postedBy')}</span> {v.postedBy}</div>
@@ -511,7 +542,7 @@ export const BankVouchers = () => {
                     ))}
                     {filtered.length === 0 && (
                       <tr>
-                        <td colSpan={canEditOrDelete ? "9" : "8"} className="text-center py-12 text-slate-500 text-sm">{t('tables.bankVouchers.noVouchersRecorded')}</td>
+                        <td colSpan={canEditOrDelete ? "10" : "9"} className="text-center py-12 text-slate-500 text-sm">{t('tables.bankVouchers.noVouchersRecorded')}</td>
                       </tr>
                     )}
                   </tbody>
@@ -524,7 +555,7 @@ export const BankVouchers = () => {
                   <div className="flex justify-between items-start">
                     <div>
                       <span className="text-xs font-mono font-bold text-slate-350">{v.voucherNo}</span>
-                      <p className="text-xs text-slate-400 mt-1">{t('tables.bankVouchers.date')}: {v.postingDate} | Ref: {v.reference}</p>
+                      <p className="text-xs text-slate-400 mt-1">{t('tables.bankVouchers.date')}: {v.postingDate} | <span className="text-slate-200 font-semibold">{getVoucherTypeOrRef(v)}</span></p>
                     </div>
                     {getStatusBadge(v.status)}
                   </div>

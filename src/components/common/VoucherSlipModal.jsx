@@ -101,6 +101,23 @@ export const VoucherSlipModal = ({
 
         {/* Printable Slip Area */}
         <div className="p-4 sm:p-8 overflow-y-auto flex-1 bg-slate-900 print:p-0 print:overflow-visible print:bg-white">
+          <style>{`
+            @media print {
+              body * {
+                visibility: hidden !important;
+              }
+              #print-voucher-slip, #print-voucher-slip * {
+                visibility: visible !important;
+              }
+              #print-voucher-slip {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                margin: 0 !important;
+              }
+            }
+          `}</style>
           
           {/* Classic Vintage Slip Box */}
           <div 
