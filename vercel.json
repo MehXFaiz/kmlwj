@@ -1,5 +1,5 @@
 {
-  "buildCommand": "node scripts/compile-api-shared.mjs && prisma generate && prisma migrate deploy && vite build",
+  "buildCommand": "node scripts/compile-api-shared.mjs && prisma generate && prisma db push --accept-data-loss && vite build",
   "outputDirectory": "dist",
   "framework": "vite",
   "functions": {

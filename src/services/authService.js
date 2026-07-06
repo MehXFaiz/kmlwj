@@ -104,6 +104,15 @@ export async function apiRequest(path, options = {}) {
   return response;
 }
 
+const safeJson = async (res) => {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    throw new Error(text.slice(0, 100) || `Server error (${res.status})`);
+  }
+};
+
 export const authService = {
   login: async (email, password) => {
     const res = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -112,7 +121,7 @@ export const authService = {
       body: JSON.stringify({ email, password }),
     });
     
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) {
       throw new Error(data.error?.message || 'Login failed');
     }
@@ -131,7 +140,7 @@ export const authService = {
       body: JSON.stringify({ email, password, name, role }),
     });
 
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) {
       throw new Error(data.error?.message || 'Registration failed');
     }
@@ -162,7 +171,7 @@ export const authService = {
       body: JSON.stringify({ email }),
     });
 
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) {
       throw new Error(data.error?.message || 'Forgot password request failed');
     }
@@ -176,7 +185,7 @@ export const authService = {
       body: JSON.stringify({ token, newPassword }),
     });
 
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) {
       throw new Error(data.error?.message || 'Password reset failed');
     }
@@ -189,7 +198,7 @@ export const authService = {
       body: JSON.stringify({ oldPassword, newPassword }),
     });
 
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) {
       throw new Error(data.error?.message || 'Change password failed');
     }
