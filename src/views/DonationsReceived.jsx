@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
+import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 
 const DONATION_TYPES = [
   'GENERAL_DONATION', 'ZAKAT', 'FITRA', 'SADQA', 'QURBANI',
@@ -27,82 +28,25 @@ const nullsToEmpty = (obj) =>
 function PrintReceiptModal({ donation, onClose }) {
   if (!donation) return null;
 
+  const categoryLabel = donation.donationType ? donation.donationType.replace(/_/g, ' ') : 'Donation';
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 print:p-0 print:static print:inset-auto print:block">
-      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm print:hidden" onClick={onClose} />
-      
-      <div className="relative z-10 w-full max-w-2xl rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden flex flex-col print:shadow-none print:border-none print:bg-white print:w-full print:static print:block animate-in zoom-in-95 duration-150">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0 print:hidden">
-          <div className="flex items-center gap-2">
-            <Printer className="h-4 w-4 text-indigo-400" />
-            <h3 className="text-sm font-bold text-slate-200">Donation Receipt Details</h3>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={() => window.print()} className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
-              <Printer className="h-3.5 w-3.5" /> Print Receipt
-            </button>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-350">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        <div className="p-8 print:p-6 space-y-6 bg-slate-950/40 print:bg-white print:text-black">
-          <div className="flex justify-between items-start border-b border-slate-800/80 print:border-slate-300 pb-6">
-            <div>
-              <h2 className="text-xl font-black tracking-tight text-slate-100 print:text-black">KACHI MEMON LION WELFARE JAMAT</h2>
-              <p className="text-xs text-slate-400 print:text-slate-600 mt-1">Official Charitable Donation Receipt</p>
-            </div>
-            <div className="text-right">
-              <span className="inline-block px-3 py-1 rounded-lg bg-indigo-500/10 print:bg-slate-100 text-indigo-400 print:text-black font-mono font-bold text-sm border border-indigo-500/20 print:border-slate-300">
-                {donation.receiptNo}
-              </span>
-              <p className="text-xs text-slate-400 print:text-slate-600 mt-1">
-                Date: {new Date(donation.receiptDate).toLocaleDateString()}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-6 p-4 rounded-xl bg-slate-900/60 print:bg-slate-50 border border-slate-800/80 print:border-slate-200">
-            <div>
-              <p className="text-[11px] font-bold uppercase text-slate-500 print:text-slate-600">Received From (Donor)</p>
-              <p className="text-base font-bold text-slate-100 print:text-black mt-1">{donation.donor?.fullName}</p>
-              <p className="text-xs text-slate-400 print:text-slate-600">Code: {donation.donor?.donorCode} {donation.donor?.cnic ? `| CNIC: ${donation.donor?.cnic}` : ''}</p>
-            </div>
-            <div>
-              <p className="text-[11px] font-bold uppercase text-slate-500 print:text-slate-600">Donation Category</p>
-              <p className="text-base font-bold text-indigo-400 print:text-black mt-1">{donation.donationType?.replace(/_/g, ' ')}</p>
-              <p className="text-xs text-slate-400 print:text-slate-600">Payment: {donation.paymentMethod}</p>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl border border-emerald-500/20 print:border-slate-300 bg-emerald-500/5 print:bg-slate-50 flex justify-between items-center">
-            <span className="text-sm font-bold text-slate-300 print:text-black">Total Amount Received:</span>
-            <span className="text-2xl font-black text-emerald-400 print:text-black">
-              PKR {Number(donation.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-            </span>
-          </div>
-
-          {(donation.referenceNo || donation.chequeNo || donation.narration) && (
-            <div className="space-y-2 text-xs text-slate-300 print:text-slate-700 bg-slate-900/40 print:bg-white p-4 rounded-xl border border-slate-800/60 print:border-slate-200">
-              {donation.chequeNo && <p><strong className="text-slate-400 print:text-black">Cheque No:</strong> {donation.chequeNo} {donation.chequeDate ? `(Dated: ${new Date(donation.chequeDate).toLocaleDateString()})` : ''}</p>}
-              {donation.referenceNo && <p><strong className="text-slate-400 print:text-black">Reference No:</strong> {donation.referenceNo}</p>}
-              {donation.narration && <p><strong className="text-slate-400 print:text-black">Remarks / Narration:</strong> {donation.narration}</p>}
-            </div>
-          )}
-
-          <div className="pt-12 flex justify-between items-end text-xs text-slate-500 print:text-slate-600">
-            <div>
-              <p>Created By: {donation.createdBy?.fullName || 'Admin'}</p>
-              <p className="text-[10px]">System Generated Document</p>
-            </div>
-            <div className="text-center w-48 border-t border-slate-700 print:border-slate-400 pt-2">
-              <p className="font-semibold text-slate-300 print:text-black">Authorized Signature</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <VoucherSlipModal
+      isOpen={true}
+      onClose={onClose}
+      title={`${categoryLabel} RECEIPT`}
+      voucherNo={donation.receiptNo || donation.id?.slice(0, 8)?.toUpperCase()}
+      fileNo={donation.donor?.donorCode || donation.donor?.cnic || ''}
+      date={donation.receiptDate || donation.createdAt}
+      name={donation.donor?.fullName}
+      address={donation.donor?.mobile || donation.donor?.address || ''}
+      debitCredit={donation.paymentMethod}
+      accountName={`${categoryLabel} A/c`}
+      particulars={`Donation Received - ${categoryLabel}${donation.narration ? ` (${donation.narration})` : ''}${donation.chequeNo ? ` [Cheque #${donation.chequeNo}]` : ''}`}
+      amount={donation.amount}
+      preparedBy={donation.createdBy?.fullName || 'Operator'}
+      payeeLabel="Receiver's Sign"
+    />
   );
 }
 

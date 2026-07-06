@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/authStore';
 import { showToast } from '../components/ui/Toast';
 import { Heart, Search, Plus, Edit2, Trash2, CheckCircle2, X, AlertTriangle, Printer } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
+import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 
 // Replace null DB values with '' so controlled inputs stay controlled
 const nullsToEmpty = (obj) =>
@@ -216,193 +217,25 @@ const numberToWords = (num) => {
 };
 
 function DonationInvoiceModal({ donation, onClose }) {
-  const handlePrint = () => {
-    window.print();
-  };
+  if (!donation) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 print:p-0 print:static print:inset-auto print:block">
-      {/* Background backdrop - hidden when printing */}
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm print:hidden animate-fade-in" onClick={onClose} />
-      
-      {/* Invoice Box */}
-      <div className="relative z-10 w-full max-w-2xl rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:border-none print:bg-white print:w-full print:static print:block">
-        
-        {/* Header - Hidden when printing */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0 print:hidden">
-          <div className="flex items-center gap-2">
-            <Printer className="h-4 w-4 text-pink-400" />
-            <h3 className="text-sm font-bold text-slate-200">Donation Receipt / Invoice</h3>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={handlePrint} className="px-3 py-1.5 rounded-lg bg-pink-650 hover:bg-pink-550 text-white text-xs font-bold transition-all flex items-center gap-1 cursor-pointer select-none">
-              <Printer className="h-3.5 w-3.5" /> Print Invoice
-            </button>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-350">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Printable content */}
-        <div id="print-receipt" className="p-8 space-y-6 overflow-y-auto flex-1 bg-slate-900 text-slate-300 print:bg-white print:text-black print:overflow-visible print:p-0 print:static print:w-full print:block">
-          <style>{`
-            @media print {
-              body * {
-                visibility: hidden !important;
-              }
-              #print-receipt, #print-receipt * {
-                visibility: visible !important;
-              }
-              #print-receipt {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-              }
-            }
-          `}</style>
-          
-          {/* Invoice Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-800 pb-6 gap-4 print:border-black print:pb-4 print:flex-row print:justify-between">
-            <div className="space-y-1">
-              <h2 className="text-lg font-bold text-slate-100 print:text-black" style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif", lineHeight: 1.6 }}>کچھی مسلم لوہار واڈہ ویلفیئر جماعت</h2>
-              <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold print:text-black">Kutchi Muslim Loharwada Welfare Jamaat</p>
-              <p className="text-xs text-slate-400 print:text-black">Official Donation Receipt</p>
-            </div>
-            <div className="text-left sm:text-right print:text-right">
-              <div className="text-xs font-mono text-slate-550 print:text-black">RECEIPT ID: <span className="font-bold text-slate-300 print:text-black">{donation.id.slice(0, 8).toUpperCase()}</span></div>
-              <div className="text-xs text-slate-550 print:text-black mt-1">Date: {new Date(donation.createdAt).toLocaleDateString(undefined, { dateStyle: 'long' })}</div>
-              <div className="mt-1.5">
-                {donation.status === 'APPROVED' ? (
-                  <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-900/50 print:bg-gray-100 print:text-black print:border-black">APPROVED RECEIPT</span>
-                ) : (
-                  <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-amber-950/60 text-amber-400 border border-amber-900/50 print:bg-gray-100 print:text-black print:border-black">PENDING VERIFICATION</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Details Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 print:grid-cols-2 print:gap-4 print:grid">
-            <div className="space-y-2">
-              <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider print:text-black">Donor Details</h4>
-              <div className="bg-slate-950/40 border border-slate-850 p-3.5 rounded-xl space-y-1.5 print:bg-transparent print:border-black print:rounded-none">
-                <p className="text-xs font-bold text-slate-350 print:text-black">{donation.donorName || '—'}</p>
-                <p className="text-[11px] text-slate-500 print:text-black">Mobile: {donation.donorMobile || '—'}</p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider print:text-black">Receipt Reference</h4>
-              <div className="bg-slate-950/40 border border-slate-850 p-3.5 rounded-xl space-y-1.5 print:bg-transparent print:border-black print:rounded-none">
-                <p className="text-xs font-bold text-slate-350 print:text-black">Fund Allocation: {donation.donationType}</p>
-                <p className="text-[11px] text-slate-500 print:text-black">Method: {donation.paymentMethod}</p>
-                {(donation.paymentMethod === 'CHEQUE' || donation.paymentMethod === 'BANK') && (
-                  <>
-                    <p className="text-[11px] text-slate-500 print:text-black">Bank Name: {donation.donorBankName || '—'}</p>
-                    <p className="text-[11px] text-slate-500 print:text-black">Cheque/Ref No: {donation.chequeNumber || '—'}</p>
-                  </>
-                )}
-                <p className="text-[11px] text-slate-550 print:text-black">Recorded by: {donation.createdBy?.fullName || 'Operator'}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Breakdown Table */}
-          <div className="space-y-2">
-            <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider print:text-black">Itemized Breakdown</h4>
-            <div className="rounded-xl border border-slate-850 bg-slate-950/20 overflow-hidden print:border-black print:rounded-none">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-slate-800 bg-slate-950/40 print:bg-gray-100 print:border-black">
-                    <th className="px-4 py-2.5 text-[10px] font-bold uppercase text-slate-500 print:text-black">Description</th>
-                    <th className="px-4 py-2.5 text-[10px] font-bold uppercase text-slate-500 text-right print:text-black">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-850 print:divide-black">
-                  <tr>
-                    <td className="px-4 py-3.5 text-xs text-slate-350 print:text-black">
-                      Charitable donation contribution received for {donation.donationType} fund.
-                      {donation.remarks && <div className="text-[10px] text-slate-500 print:text-black mt-1">Memo: {donation.remarks}</div>}
-                    </td>
-                    <td className="px-4 py-3.5 text-xs font-bold text-right text-slate-200 print:text-black">PKR {donation.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                  </tr>
-                  <tr className="bg-slate-950/40 print:bg-gray-50">
-                    <td className="px-4 py-2.5 text-xs font-bold text-slate-400 print:text-black">Total Receipt Amount</td>
-                    <td className="px-4 py-2.5 text-xs font-bold text-right text-slate-200 print:text-black">PKR {donation.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Amount in words */}
-          <div className="bg-slate-950/20 border border-slate-850/60 p-3.5 rounded-xl text-xs print:bg-transparent print:border-black print:rounded-none">
-            <span className="font-semibold text-slate-500 print:text-black mr-2 uppercase tracking-wide text-[10px]">Amount in Words:</span>
-            <span className="font-bold text-slate-300 print:text-black italic">{numberToWords(donation.amount)}</span>
-          </div>
-
-          {/* Authorized Signature section */}
-          <div className="pt-10 flex justify-between items-end gap-12 print:pt-8 print:flex print:justify-between">
-            <div className="text-center">
-              <div className="w-40 border-b border-slate-800 print:border-black mb-1.5 mx-auto"></div>
-              <p className="text-[10px] text-slate-500 uppercase tracking-wider print:text-black">Receiver Signature</p>
-            </div>
-            <div className="text-center">
-              <div className="w-40 border-b border-slate-800 print:border-black mb-1.5 mx-auto"></div>
-              <p className="text-[10px] text-slate-500 uppercase tracking-wider print:text-black">Authorized Signature</p>
-            </div>
-          </div>
-
-          {/* computer generated notice */}
-          <div className="pt-6 text-center text-[9px] text-slate-600 border-t border-slate-900/60 print:border-black print:text-black">
-            This is a computer-generated donation receipt issued by Kutchi Muslim Loharwada Welfare Jamaat ERP system. No physical signature is required.
-          </div>
-        </div>
-
-        {/* Footer actions - Hidden when printing */}
-        <div className="bg-slate-955/40 border-t border-slate-800 px-6 py-4 flex justify-end gap-3 shrink-0 print:hidden">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-xs font-semibold hover:bg-slate-800 hover:text-slate-200 transition-all cursor-pointer">
-            Close
-          </button>
-          <button onClick={handlePrint} className="px-4 py-2 rounded-lg bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-pink-900/25">
-            <Printer className="h-4 w-4" />
-            <span>Print Receipt</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Global CSS to handle hide-everything-on-print */}
-      <style>{`
-        @media print {
-          /* Hide everything except the modal content */
-          body > :not(#root) {
-            display: none !important;
-          }
-          /* Standard print style to hide sidebar and topbar */
-          header, nav, aside, footer, button, .print-hidden, .print\\:hidden {
-            display: none !important;
-          }
-          /* Ensure modal occupies top left without overlays */
-          .fixed {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            height: auto !important;
-            background: transparent !important;
-            padding: 0 !important;
-          }
-          .bg-black\\/70, .backdrop-blur-sm {
-            display: none !important;
-          }
-          .shadow-2xl, .rounded-2xl {
-            box-shadow: none !important;
-            border-radius: 0 !important;
-          }
-        }
-      `}</style>
-    </div>
+    <VoucherSlipModal
+      isOpen={true}
+      onClose={onClose}
+      title="DONATION VOUCHER"
+      voucherNo={donation.id?.slice(0, 8)?.toUpperCase()}
+      fileNo={donation.donationType || ''}
+      date={donation.createdAt}
+      name={donation.donorName}
+      address={donation.donorMobile || donation.donorBankName || ''}
+      debitCredit={donation.paymentMethod}
+      accountName="Donation Disbursement A/c"
+      particulars={`Donation Given / Disbursement - ${donation.donationType}${donation.remarks ? ` (${donation.remarks})` : ''}${donation.chequeNumber ? ` [Cheque #${donation.chequeNumber}]` : ''}`}
+      amount={donation.amount}
+      preparedBy={donation.createdBy?.fullName || 'Operator'}
+      payeeLabel="Payee's Signature"
+    />
   );
 }
 

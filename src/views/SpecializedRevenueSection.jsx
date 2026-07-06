@@ -8,6 +8,7 @@ import { useCoaStore } from '../store/coaStore';
 import { useMemberStore } from '../store/memberStore';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { showToast } from '../components/ui/Toast';
+import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 
 export const SpecializedRevenueSection = ({
   category = 'Zakat',
@@ -312,66 +313,24 @@ export const SpecializedRevenueSection = ({
         </div>
       )}
 
-      {/* Print Modal */}
+      {/* Print Modal using classic slip design */}
       {printItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div id="print-receipt" className="bg-white text-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 print:p-0 print:shadow-none print:border-none">
-            <style>{`
-              @media print {
-                body * {
-                  visibility: hidden !important;
-                }
-                #print-receipt, #print-receipt * {
-                  visibility: visible !important;
-                }
-                #print-receipt {
-                  position: absolute;
-                  left: 0;
-                  top: 0;
-                  width: 100%;
-                }
-              }
-            `}</style>
-            <div className="flex items-center justify-between border-b pb-3 print:hidden">
-              <h3 className="font-bold text-base">Official Receipt Preview</h3>
-              <button onClick={() => setPrintItem(null)} className="text-slate-400 hover:text-slate-600">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            
-            <div className="text-center space-y-1">
-              <h2 className="font-extrabold text-lg uppercase tracking-wider">{printItem.category} RECEIPT</h2>
-              <p className="text-xs text-slate-500">Kutchi Muslim Loharwada Welfare Jamaat</p>
-              <div className="font-mono text-xs font-bold pt-1">Receipt No: #{printItem.receiptNo}</div>
-            </div>
-
-            <div className="border-t border-b py-4 space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-slate-500">{titleLabel}:</span><span className="font-bold">{printItem.title}</span></div>
-              {subTitleLabel && <div className="flex justify-between"><span className="text-slate-500">{subTitleLabel}:</span><span className="font-mono">{printItem.subTitle || '—'}</span></div>}
-              <div className="flex justify-between"><span className="text-slate-500">Date:</span><span>{new Date(printItem.eventDate || printItem.createdAt).toLocaleDateString()}</span></div>
-              {showQty && <div className="flex justify-between"><span className="text-slate-500">{qtyLabel}:</span><span className="font-bold">{printItem.quantity}</span></div>}
-              {showRate && <div className="flex justify-between"><span className="text-slate-500">{rateLabel}:</span><span>Rs. {printItem.rate?.toLocaleString()}</span></div>}
-              {showDest && <div className="flex justify-between"><span className="text-slate-500">{destLabel}:</span><span>{printItem.destination}</span></div>}
-              <div className="flex justify-between"><span className="text-slate-500">Payment Method:</span><span className="font-bold">{printItem.paymentMethod}</span></div>
-              <div className="flex justify-between pt-2 border-t font-extrabold text-base"><span className="text-slate-700">Total Amount:</span><span className="text-emerald-600">Rs. {printItem.amount.toLocaleString()}</span></div>
-            </div>
-
-            {printItem.remarks && (
-              <div className="text-xs text-slate-500 bg-slate-50 p-2.5 rounded-lg border">
-                <strong>Remarks:</strong> {printItem.remarks}
-              </div>
-            )}
-
-            <div className="flex items-center justify-end gap-3 pt-2 print:hidden">
-              <button onClick={() => setPrintItem(null)} className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold">
-                Close
-              </button>
-              <button onClick={() => window.print()} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md">
-                <Printer className="h-4 w-4" /> Print Receipt
-              </button>
-            </div>
-          </div>
-        </div>
+        <VoucherSlipModal
+          isOpen={true}
+          onClose={() => setPrintItem(null)}
+          title={`${printItem.category} VOUCHER`}
+          voucherNo={printItem.receiptNo || printItem.id?.slice(0, 8)?.toUpperCase()}
+          fileNo={printItem.subTitle || ''}
+          date={printItem.eventDate || printItem.createdAt}
+          name={printItem.title}
+          address={printItem.destination || printItem.remarks || ''}
+          debitCredit={printItem.paymentMethod}
+          accountName={`${printItem.category} Collection`}
+          particulars={showQty ? `${printItem.category} — ${printItem.quantity} ${qtyLabel} @ Rs. ${printItem.rate?.toLocaleString()}` : `${printItem.category} Collection${printItem.remarks ? ` - ${printItem.remarks}` : ''}`}
+          amount={printItem.amount}
+          preparedBy={printItem.createdBy?.fullName || 'Operator'}
+          payeeLabel="Donor / Payer Sign"
+        />
       )}
     </DashboardLayout>
   );
