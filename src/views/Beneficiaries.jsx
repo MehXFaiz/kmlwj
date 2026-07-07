@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useBeneficiaryStore } from '../store/beneficiaryStore';
-import { Users, Search, Plus, Edit2, Trash2, X, AlertTriangle } from 'lucide-react';
+import { Users, Search, Plus, Edit2, Trash2, X, AlertTriangle, CheckCircle, Phone, MapPin, Briefcase } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -312,8 +312,8 @@ export const Beneficiaries = () => {
         </div>
       </div>
 
-      {/* Table / List View Container */}
-      <div className="rounded-2xl border border-slate-800/80 bg-slate-900/50 shadow-lg overflow-hidden backdrop-blur-sm">
+      {/* Grid Card View Container (Reference Style) */}
+      <div className="mt-2">
         {filtered.length === 0 ? (
           <EmptyState
             icon={Users}
@@ -323,86 +323,100 @@ export const Beneficiaries = () => {
             onAction={!search ? () => navigate('/beneficiaries/new') : undefined}
           />
         ) : (
-          <>
-            <DesktopOnly>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left min-w-[800px]">
-                  <thead>
-                    <tr className="border-b border-slate-800 bg-slate-900/80 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      <th className="px-4 py-3.5 w-10">
-                        <input
-                          type="checkbox"
-                          checked={isAllSelected}
-                          onChange={toggleAll}
-                          className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer"
-                        />
-                      </th>
-                      <th className="px-4 py-3.5">Name</th>
-                      <th className="px-4 py-3.5">CNIC</th>
-                      <th className="px-4 py-3.5">Contact Details</th>
-                      <th className="px-4 py-3.5">Address</th>
-                      <th className="px-4 py-3.5">Created At</th>
-                      <th className="px-4 py-3.5 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/50 text-sm">
-                    {filtered.map(b => (
-                      <tr key={b.id} className={`hover:bg-slate-800/30 transition-colors group ${selectedIds.includes(b.id) ? 'bg-amber-500/5' : ''}`}>
-                        <td className="px-4 py-4 w-10">
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.includes(b.id)}
-                            onChange={() => toggleSelect(b.id)}
-                            className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer"
-                          />
-                        </td>
-                        <td className="px-4 py-4 font-semibold text-slate-200">{b.name || '—'}</td>
-                        <td className="px-4 py-4 font-mono text-xs text-slate-300">{b.cnic || '—'}</td>
-                        <td className="px-4 py-4 space-y-0.5">
-                          {b.mobile && <p className="text-xs text-slate-300 flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-amber-400/80" /> {b.mobile}</p>}
-                          {b.email && <p className="text-[11px] text-slate-400 flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-amber-400/80" /> {b.email}</p>}
-                          {!b.mobile && !b.email && <span className="text-xs text-slate-500">—</span>}
-                        </td>
-                        <td className="px-4 py-4 text-xs text-slate-400 max-w-xs truncate" title={b.address}>{b.address || '—'}</td>
-                        <td className="px-4 py-4 text-xs text-slate-400">{new Date(b.createdAt).toLocaleDateString()}</td>
-                        <td className="px-4 py-4 text-right">
-                          <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => navigate(`/beneficiaries/edit/${b.id}`)} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-slate-200 cursor-pointer" title="Edit Beneficiary"><Edit2 className="h-3.5 w-3.5" /></button>
-                            <button onClick={() => setDeleteId(b.id)} className="p-1.5 rounded-lg hover:bg-red-950/40 text-red-400/80 hover:text-red-400 cursor-pointer" title="Delete Beneficiary"><Trash2 className="h-3.5 w-3.5" /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </DesktopOnly>
-            <MobileOnly className="p-3 space-y-3">
-              {filtered.map(b => (
-                <div key={b.id} className={`rounded-xl border bg-slate-950/50 p-3.5 transition-colors shadow-sm ${selectedIds.includes(b.id) ? 'border-amber-500/50 bg-amber-500/5' : 'border-slate-800/80'}`}>
-                  <div className="flex items-start gap-3 mb-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(b.id)}
-                      onChange={() => toggleSelect(b.id)}
-                      className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer"
-                    />
-                    <div className="flex-1 flex justify-between items-start">
-                      <h4 className="text-sm font-bold text-slate-200">{b.name}</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            {filtered.map(b => (
+              <div
+                key={b.id}
+                className={`group relative rounded-2xl border bg-slate-900/90 p-5 shadow-xl hover:shadow-2xl hover:border-slate-700/80 transition-all duration-300 flex flex-col justify-between ${
+                  selectedIds.includes(b.id) ? 'border-amber-500/60 bg-amber-500/5 shadow-amber-500/10' : 'border-slate-800/80'
+                }`}
+              >
+                {/* Card Top: Checkbox, Avatar, Name & Status */}
+                <div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3.5">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(b.id)}
+                        onChange={() => toggleSelect(b.id)}
+                        className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer shrink-0"
+                      />
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/30 flex items-center justify-center text-amber-400 font-extrabold text-lg shadow-inner shrink-0">
+                        {b.name ? b.name.charAt(0).toUpperCase() : 'B'}
+                      </div>
+                      <div>
+                        <h4 className="text-base font-bold text-amber-400 group-hover:text-amber-300 transition-colors leading-tight tracking-tight">
+                          {b.name || 'Unnamed Beneficiary'}
+                        </h4>
+                        <p className="text-xs text-slate-400 font-medium mt-0.5">
+                          {b.remarks ? b.remarks.slice(0, 30) : 'Welfare Recipient'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-bold uppercase tracking-wide shrink-0">
+                      <CheckCircle className="w-3.5 h-3.5" /> ACTIVE
+                    </span>
+                  </div>
+
+                  {/* Inner Details Well */}
+                  <div className="bg-slate-950/70 rounded-xl border border-slate-800/80 p-4 my-4 space-y-2.5 shadow-inner">
+                    <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider">CNIC</span>
+                      <span className="font-mono font-bold text-slate-100 text-xs">{b.cnic || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                        <Phone className="w-3.5 h-3.5 text-amber-400" /> MOBILE
+                      </span>
+                      <span className="font-mono font-bold text-slate-100 text-xs">{b.mobile || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-amber-400" /> GHAM / CITY
+                      </span>
+                      <span className="font-bold text-slate-100 text-xs truncate max-w-[150px]">
+                        {b.address || 'Karachi'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                        <Briefcase className="w-3.5 h-3.5 text-amber-400" /> CATEGORY
+                      </span>
+                      <span className="font-bold text-slate-100 text-xs truncate max-w-[150px]">
+                        {b.remarks || 'Financial Aid'}
+                      </span>
                     </div>
                   </div>
-                  <div className="text-xs text-slate-400 mb-2 pl-7 space-y-1">
-                    <div>CNIC: <span className="font-mono text-slate-300">{b.cnic || '—'}</span></div>
-                    {b.mobile && <div>Mob: {b.mobile}</div>}
-                  </div>
-                  <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-800/50 pl-7">
-                     <button onClick={() => navigate(`/beneficiaries/edit/${b.id}`)} className="text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1 cursor-pointer"><Edit2 className="h-3 w-3" /> Edit</button>
-                     <button onClick={() => setDeleteId(b.id)} className="text-xs font-semibold text-red-400 hover:text-red-300 flex items-center gap-1 cursor-pointer"><Trash2 className="h-3 w-3" /> Delete</button>
+                </div>
+
+                {/* Card Footer: Date & Action Icons */}
+                <div className="flex items-center justify-between gap-2 pt-3.5 border-t border-slate-800/80">
+                  <span className="text-[11px] font-medium text-slate-500">
+                    DOI: {b.createdAt ? new Date(b.createdAt).toISOString().slice(0, 10) : '2026-07-04'}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/beneficiaries/edit/${b.id}`)}
+                      className="w-8 h-8 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                      title="Edit Beneficiary"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteId(b.id)}
+                      className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                      title="Delete Beneficiary"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
-              ))}
-            </MobileOnly>
-          </>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

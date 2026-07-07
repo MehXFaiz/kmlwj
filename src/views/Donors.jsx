@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDonorStore } from '../store/donorStore';
-import { Users, Search, Plus, Edit2, Trash2, X, Mail, Phone, CreditCard, MapPin, AlertTriangle } from 'lucide-react';
+import { Users, Search, Plus, Edit2, Trash2, X, Mail, Phone, CreditCard, MapPin, AlertTriangle, CheckCircle } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 
@@ -136,185 +136,114 @@ export const Donors = () => {
         </div>
       </div>
 
-      {/* Table Section */}
-      <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 overflow-hidden shadow-xl">
-        <DesktopOnly>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[800px]">
-              <thead>
-                <tr className="border-b border-slate-800 bg-slate-900/80">
-                  <th className="px-4 py-3.5 w-10">
-                    <input
-                      type="checkbox"
-                      checked={filtered.length > 0 && selectedIds.length === filtered.length}
-                      onChange={handleSelectAll}
-                      className="rounded border-slate-700 bg-slate-800 text-amber-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
-                    />
-                  </th>
-                  <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">Donor Code</th>
-                  <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">Donor Name</th>
-                  <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">CNIC / ID</th>
-                  <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">Contact Details</th>
-                  <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">City / Address</th>
-                  <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">Status</th>
-                  <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/50">
-                {loading && donors.length === 0 ? (
-                  <tr>
-                    <td colSpan="8" className="px-6 py-12 text-center text-slate-500 text-sm">
-                      Loading donors directory...
-                    </td>
-                  </tr>
-                ) : filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan="8" className="px-6 py-12 text-center text-slate-500 text-sm">
-                      No donors found matching criteria.
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map(d => (
-                    <tr key={d.id} className="hover:bg-slate-800/20 transition-colors group">
-                      <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(d.id)}
-                          onChange={(e) => handleSelectOne(d.id, e)}
-                          className="rounded border-slate-700 bg-slate-800 text-amber-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
-                        />
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                          {d.donorCode}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="text-sm font-semibold text-slate-200">{d.fullName}</p>
-                        {d.fatherName && (
-                          <p className="text-[11px] text-slate-500 mt-0.5">s/o {d.fatherName}</p>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        {d.cnic ? (
-                          <p className="text-xs font-mono text-slate-300 flex items-center gap-1.5">
-                            <CreditCard className="h-3.5 w-3.5 text-slate-500" /> {d.cnic}
-                          </p>
-                        ) : (
-                          <span className="text-xs text-slate-600">—</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 space-y-0.5">
-                        {d.mobile && (
-                          <p className="text-xs text-slate-300 flex items-center gap-1.5">
-                            <Phone className="h-3.5 w-3.5 text-amber-400/80" /> {d.mobile}
-                          </p>
-                        )}
-                        {d.email && (
-                          <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
-                            <Mail className="h-3.5 w-3.5 text-amber-400/80" /> {d.email}
-                          </p>
-                        )}
-                        {!d.mobile && !d.email && <span className="text-xs text-slate-600">—</span>}
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="text-xs text-slate-300 flex items-center gap-1">
-                          {d.city && <span className="font-medium text-slate-300">{d.city}</span>}
-                          {d.address && <span className="text-slate-500 truncate max-w-48">({d.address})</span>}
-                          {!d.city && !d.address && <span className="text-slate-600">—</span>}
+      {/* Grid Card View Container (Reference Style) */}
+      <div className="mt-2">
+        {loading && donors.length === 0 ? (
+          <div className="p-12 text-center text-slate-400 font-medium">Loading donors directory...</div>
+        ) : filtered.length === 0 ? (
+          <div className="p-12 text-center text-slate-400 font-medium bg-slate-900/40 rounded-2xl border border-slate-800">No donors found matching your search criteria.</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            {filtered.map(d => (
+              <div
+                key={d.id}
+                className={`group relative rounded-2xl border bg-slate-900/90 p-5 shadow-xl hover:shadow-2xl hover:border-slate-700/80 transition-all duration-300 flex flex-col justify-between ${
+                  selectedIds.includes(d.id) ? 'border-amber-500/60 bg-amber-500/5 shadow-amber-500/10' : 'border-slate-800/80'
+                }`}
+              >
+                {/* Card Top: Checkbox, Avatar, Name & Status */}
+                <div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3.5">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(d.id)}
+                        onChange={() => handleSelectOne(d.id)}
+                        className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer shrink-0"
+                      />
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/30 flex items-center justify-center text-amber-400 font-extrabold text-lg shadow-inner shrink-0">
+                        {d.fullName ? d.fullName.charAt(0).toUpperCase() : 'D'}
+                      </div>
+                      <div>
+                        <h4 className="text-base font-bold text-amber-400 group-hover:text-amber-300 transition-colors leading-tight tracking-tight">
+                          {d.fullName || 'Unnamed Donor'}
+                        </h4>
+                        <p className="text-xs text-slate-400 font-medium mt-0.5">
+                          {d.fatherName ? `s/o ${d.fatherName}` : (d.donorCode || 'Donor')}
                         </p>
-                      </td>
-                      <td className="px-6 py-4">
-                        {d.isActive ? (
-                          <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border bg-emerald-950/60 text-emerald-400 border-emerald-900/50">Active</span>
-                        ) : (
-                          <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border bg-slate-800/60 text-slate-400 border-slate-700/50">Inactive</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => navigate(`/donors/edit/${d.id}`)}
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
-                            title="Edit Donor"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(d)}
-                            className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-colors"
-                            title="Delete Donor"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </DesktopOnly>
-
-        <MobileOnly>
-          <div className="divide-y divide-slate-800/50">
-            {loading && donors.length === 0 ? (
-              <div className="p-6 text-center text-slate-500 text-sm">Loading donors...</div>
-            ) : filtered.length === 0 ? (
-              <div className="p-6 text-center text-slate-500 text-sm">No donors found matching criteria.</div>
-            ) : (
-              filtered.map(d => (
-                <div key={d.id} className="p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 mb-1">
-                        {d.donorCode}
-                      </span>
-                      <h4 className="text-sm font-bold text-slate-200">{d.fullName}</h4>
-                      {d.fatherName && <p className="text-xs text-slate-500">s/o {d.fatherName}</p>}
+                      </div>
                     </div>
+
                     {d.isActive ? (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-emerald-950/60 text-emerald-400 border-emerald-900/50">Active</span>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-bold uppercase tracking-wide shrink-0">
+                        <CheckCircle className="w-3.5 h-3.5" /> ACTIVE
+                      </span>
                     ) : (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-slate-800/60 text-slate-400 border-slate-700/50">Inactive</span>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700 text-[11px] font-bold uppercase tracking-wide shrink-0">
+                        INACTIVE
+                      </span>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-400 bg-slate-950/50 p-2.5 rounded-lg border border-slate-800/50">
-                    <div>
-                      <span className="text-slate-500 block text-[10px]">Mobile</span>
-                      {d.mobile || '—'}
+                  {/* Inner Details Well */}
+                  <div className="bg-slate-950/70 rounded-xl border border-slate-800/80 p-4 my-4 space-y-2.5 shadow-inner">
+                    <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider">CNIC</span>
+                      <span className="font-mono font-bold text-slate-100 text-xs">{d.cnic || 'N/A'}</span>
                     </div>
-                    <div>
-                      <span className="text-slate-500 block text-[10px]">CNIC</span>
-                      {d.cnic || '—'}
+                    <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                        <Phone className="w-3.5 h-3.5 text-amber-400" /> MOBILE
+                      </span>
+                      <span className="font-mono font-bold text-slate-100 text-xs">{d.mobile || 'N/A'}</span>
                     </div>
-                    <div className="col-span-2">
-                      <span className="text-slate-500 block text-[10px]">City / Address</span>
-                      {d.city ? `${d.city} ` : ''}{d.address ? `(${d.address})` : (d.city ? '' : '—')}
+                    <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-amber-400" /> GHAM / CITY
+                      </span>
+                      <span className="font-bold text-slate-100 text-xs truncate max-w-[150px]">
+                        {d.city || d.address || 'Karachi'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                        <CreditCard className="w-3.5 h-3.5 text-amber-400" /> DONOR CODE
+                      </span>
+                      <span className="font-bold text-amber-400 text-xs font-mono">
+                        {d.donorCode || 'N/A'}
+                      </span>
                     </div>
                   </div>
+                </div>
 
-                  <div className="flex items-center justify-end gap-2 pt-1">
+                {/* Card Footer: Date & Action Icons */}
+                <div className="flex items-center justify-between gap-2 pt-3.5 border-t border-slate-800/80">
+                  <span className="text-[11px] font-medium text-slate-500">
+                    DOI: {d.createdAt ? new Date(d.createdAt).toISOString().slice(0, 10) : '2026-07-04'}
+                  </span>
+                  <div className="flex items-center gap-2">
                     <button
+                      type="button"
                       onClick={() => navigate(`/donors/edit/${d.id}`)}
-                      className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs font-medium flex items-center gap-1.5"
+                      className="w-8 h-8 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                      title="Edit Donor"
                     >
-                      <Edit2 className="h-3.5 w-3.5" /> Edit
+                      <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleDelete(d)}
-                      className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-medium flex items-center gap-1.5"
+                      className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                      title="Delete Donor"
                     >
-                      <Trash2 className="h-3.5 w-3.5" /> Delete
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
-              ))
-            )}
+              </div>
+            ))}
           </div>
-        </MobileOnly>
+        )}
       </div>
 
       {showBulkConfirm && (

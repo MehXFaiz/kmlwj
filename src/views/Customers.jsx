@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useCustomerStore } from '../store/customerStore';
-import { Users, Search, Plus, Edit2, Trash2, X, Building2, Mail, Phone, AlertTriangle } from 'lucide-react';
+import { Users, Search, Plus, Edit2, Trash2, X, Building2, Mail, Phone, AlertTriangle, CheckCircle, MapPin, Briefcase } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -303,8 +303,8 @@ export const Customers = () => {
         </div>
       </div>
 
-      {/* Table / List View Container */}
-      <div className="rounded-2xl border border-slate-800/80 bg-slate-900/50 shadow-lg overflow-hidden backdrop-blur-sm">
+      {/* Grid Card View Container (Reference Style) */}
+      <div className="mt-2">
         {filtered.length === 0 ? (
           <EmptyState
             icon={Building2}
@@ -314,109 +314,104 @@ export const Customers = () => {
             onAction={!search ? () => navigate('/customers/new') : undefined}
           />
         ) : (
-          <>
-            <DesktopOnly>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left min-w-[800px]">
-                  <thead>
-                    <tr className="border-b border-slate-800 bg-slate-900/80 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      <th className="px-4 py-3.5 w-10">
-                        <input
-                          type="checkbox"
-                          checked={filtered.length > 0 && selectedIds.length === filtered.length}
-                          onChange={handleSelectAll}
-                          className="rounded border-slate-700 bg-slate-800 text-amber-500 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
-                        />
-                      </th>
-                      <th className="px-6 py-3.5">Name & Company</th>
-                      <th className="px-6 py-3.5">Contact Details</th>
-                      <th className="px-6 py-3.5">Address</th>
-                      <th className="px-6 py-3.5">Status</th>
-                      <th className="px-6 py-3.5">Created At</th>
-                      <th className="px-6 py-3.5 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/50 text-sm">
-                    {filtered.map(c => (
-                      <tr key={c.id} className={`hover:bg-slate-800/30 transition-colors group ${selectedIds.includes(c.id) ? 'bg-amber-500/5' : ''}`}>
-                        <td className="px-4 py-4 w-10" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.includes(c.id)}
-                            onChange={(e) => handleSelectOne(c.id, e)}
-                            className="rounded border-slate-700 bg-slate-800 text-amber-500 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
-                          />
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="text-sm font-semibold text-slate-200">{c.name}</p>
-                          {c.company && (
-                            <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
-                              <Building2 className="h-3 w-3 text-amber-400/80" /> {c.company}
-                            </p>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 space-y-0.5">
-                          {c.email && (
-                            <p className="text-xs text-slate-300 flex items-center gap-1.5">
-                              <Mail className="h-3.5 w-3.5 text-amber-400/80" /> {c.email}
-                            </p>
-                          )}
-                          {c.phone && (
-                            <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
-                              <Phone className="h-3.5 w-3.5 text-amber-400/80" /> {c.phone}
-                            </p>
-                          )}
-                          {!c.email && !c.phone && <span className="text-xs text-slate-500">—</span>}
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="text-xs text-slate-400 truncate max-w-64" title={c.address}>{c.address || '—'}</p>
-                        </td>
-                        <td className="px-6 py-4">
-                          {c.isActive ? (
-                            <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Active</span>
-                          ) : (
-                            <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border bg-slate-800/60 text-slate-400 border-slate-700/50">Inactive</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-xs text-slate-400">{new Date(c.createdAt).toLocaleDateString()}</td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => navigate(`/customers/edit/${c.id}`)} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-slate-200 cursor-pointer" title="Edit Customer"><Edit2 className="h-3.5 w-3.5" /></button>
-                            <button onClick={() => setDeleteId(c.id)} className="p-1.5 rounded-lg hover:bg-red-950/40 text-red-400/80 hover:text-red-400 cursor-pointer" title="Delete Customer"><Trash2 className="h-3.5 w-3.5" /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </DesktopOnly>
-            <MobileOnly className="p-3 space-y-3">
-              {filtered.map(c => (
-                <div key={c.id} className={`rounded-xl border bg-slate-950/50 p-3.5 transition-colors shadow-sm ${selectedIds.includes(c.id) ? 'border-amber-500/50 bg-amber-500/5' : 'border-slate-800/80'}`}>
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-200">{c.name}</h4>
-                      {c.company && <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5"><Building2 className="h-3 w-3 text-amber-400/80" /> {c.company}</p>}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            {filtered.map(c => (
+              <div
+                key={c.id}
+                className={`group relative rounded-2xl border bg-slate-900/90 p-5 shadow-xl hover:shadow-2xl hover:border-slate-700/80 transition-all duration-300 flex flex-col justify-between ${
+                  selectedIds.includes(c.id) ? 'border-amber-500/60 bg-amber-500/5 shadow-amber-500/10' : 'border-slate-800/80'
+                }`}
+              >
+                {/* Card Top: Checkbox, Avatar, Name & Status */}
+                <div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3.5">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(c.id)}
+                        onChange={(e) => handleSelectOne(c.id, e)}
+                        className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer shrink-0"
+                      />
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/30 flex items-center justify-center text-amber-400 font-extrabold text-lg shadow-inner shrink-0">
+                        {c.name ? c.name.charAt(0).toUpperCase() : 'C'}
+                      </div>
+                      <div>
+                        <h4 className="text-base font-bold text-amber-400 group-hover:text-amber-300 transition-colors leading-tight tracking-tight">
+                          {c.name || 'Unnamed Client'}
+                        </h4>
+                        <p className="text-xs text-slate-400 font-medium mt-0.5 flex items-center gap-1">
+                          {c.company ? (
+                            <>
+                              <Building2 className="w-3 h-3 text-amber-400 shrink-0" /> {c.company}
+                            </>
+                          ) : 'Individual Client'}
+                        </p>
+                      </div>
                     </div>
+
                     {c.isActive ? (
-                      <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Active</span>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-bold uppercase tracking-wide shrink-0">
+                        <CheckCircle className="w-3.5 h-3.5" /> ACTIVE
+                      </span>
                     ) : (
-                      <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border bg-slate-800/60 text-slate-400 border-slate-700/50">Inactive</span>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700 text-[11px] font-bold uppercase tracking-wide shrink-0">
+                        INACTIVE
+                      </span>
                     )}
                   </div>
-                  <div className="text-xs text-slate-400 space-y-1 mt-2">
-                    {c.email && <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-amber-400/80" /> {c.email}</div>}
-                    {c.phone && <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-amber-400/80" /> {c.phone}</div>}
-                  </div>
-                  <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-800/50">
-                     <button onClick={() => navigate(`/customers/edit/${c.id}`)} className="text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1 cursor-pointer"><Edit2 className="h-3 w-3" /> Edit</button>
-                     <button onClick={() => setDeleteId(c.id)} className="text-xs font-semibold text-red-400 hover:text-red-300 flex items-center gap-1 cursor-pointer"><Trash2 className="h-3 w-3" /> Delete</button>
+
+                  {/* Inner Details Well */}
+                  <div className="bg-slate-950/70 rounded-xl border border-slate-800/80 p-4 my-4 space-y-2.5 shadow-inner">
+                    <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                        <Phone className="w-3.5 h-3.5 text-amber-400" /> MOBILE / PH
+                      </span>
+                      <span className="font-mono font-bold text-slate-100 text-xs">{c.phone || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                        <Mail className="w-3.5 h-3.5 text-amber-400" /> EMAIL
+                      </span>
+                      <span className="font-bold text-slate-100 text-xs truncate max-w-[160px]">{c.email || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-amber-400" /> ADDRESS / CITY
+                      </span>
+                      <span className="font-bold text-slate-100 text-xs truncate max-w-[150px]">
+                        {c.address || 'Karachi'}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </MobileOnly>
-          </>
+
+                {/* Card Footer: Date & Action Icons */}
+                <div className="flex items-center justify-between gap-2 pt-3.5 border-t border-slate-800/80">
+                  <span className="text-[11px] font-medium text-slate-500">
+                    DOI: {c.createdAt ? new Date(c.createdAt).toISOString().slice(0, 10) : '2026-07-04'}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/customers/edit/${c.id}`)}
+                      className="w-8 h-8 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                      title="Edit Customer"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteId(c.id)}
+                      className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                      title="Delete Customer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
