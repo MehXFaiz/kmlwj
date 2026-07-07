@@ -36,6 +36,21 @@ export const GeneralLedger = () => {
   }, [ledgerData]);
 
   const groupedLedgers = useMemo(() => {
+    if (accountInfo) {
+      const code = accountInfo.glCode || '000';
+      const meta = accountMeta[code] || null;
+      const accType = accountInfo.type || meta?.type || 'ASSET';
+      const opBal = summary.openingBalance !== undefined && summary.openingBalance !== null ? summary.openingBalance : (meta?.openingBalance || 0);
+      
+      return [{
+        glCode: code,
+        accountName: accountInfo.name || meta?.name || 'Unknown Account',
+        type: accType,
+        openingBalance: opBal,
+        entries: entries || []
+      }];
+    }
+
     if (!entries || entries.length === 0) return [];
     
     const map = new Map();
@@ -67,7 +82,12 @@ export const GeneralLedger = () => {
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
+    const newFilters = { ...filters, [name]: value };
+    setFilters(newFilters);
+    if (name === 'accountId') {
+      fetchLedger(newFilters);
+      setSelectedIds([]);
+    }
   };
 
   const applyFilters = () => {
@@ -175,7 +195,7 @@ export const GeneralLedger = () => {
             >
               <option value="">All Accounts</option>
               {accounts.map(acc => (
-                <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
+                <option key={acc.id} value={acc.id}>{acc.name}</option>
               ))}
             </select>
           </div>
@@ -357,49 +377,60 @@ export const GeneralLedger = () => {
                       </tr>
 
                       {/* Transaction Rows */}
-                      {rowsWithBal.map((entry) => (
-                        <tr
-                          key={entry.id}
-                          className={`hover:bg-slate-900/40 transition-colors ${selectedIds.includes(entry.id) ? 'bg-amber-500/10' : ''}`}
-                        >
-                          {canEditOrDelete && (
-                            <td className="py-3 px-4 text-center">
-                              <input
-                                type="checkbox"
-                                checked={selectedIds.includes(entry.id)}
-                                onChange={(e) => handleSelectOne(entry.id, e)}
-                                onClick={(e) => e.stopPropagation()}
-                                className="w-4 h-4 rounded bg-slate-800 border-slate-700 text-amber-500 focus:ring-amber-500/50 cursor-pointer"
-                              />
-                            </td>
-                          )}
-                          <td className="py-3 px-4 text-slate-300 font-medium whitespace-nowrap">{entry.date}</td>
-                          <td className="py-3 px-4 text-slate-200">{entry.description || '—'}</td>
-                          <td className="py-3 px-4 font-mono text-amber-400/90 whitespace-nowrap">{entry.reference}</td>
-                          <td className="py-3 px-4 text-right font-mono text-emerald-400">
-                            {entry.debit > 0 ? `PKR ${entry.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
+                      {rowsWithBal.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={canEditOrDelete ? 8 : 7}
+                            className="py-6 px-4 text-center text-slate-500 italic bg-slate-900/10"
+                          >
+                            No transaction entries found for this account in the selected period.
                           </td>
-                          <td className="py-3 px-4 text-right font-mono text-rose-400">
-                            {entry.credit > 0 ? `PKR ${entry.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
-                          </td>
-                          <td className="py-3 px-4 text-right font-mono font-extrabold text-slate-100 bg-slate-900/40">
-                            PKR {Math.abs(entry.runningBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            <span className="text-[10px] ml-1 opacity-70 font-normal">{entry.runningBalance < 0 ? '(Cr)' : ''}</span>
-                          </td>
-                          {canEditOrDelete && (
-                            <td className="py-3 px-4 text-center">
-                              <button
-                                type="button"
-                                onClick={(e) => handleDeleteEntry(entry, e)}
-                                title="Delete GL Entry"
-                                className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors inline-flex items-center justify-center cursor-pointer"
-                              >
-                                <Trash2 className="h-4 w-4 pointer-events-none" />
-                              </button>
-                            </td>
-                          )}
                         </tr>
-                      ))}
+                      ) : (
+                        rowsWithBal.map((entry) => (
+                          <tr
+                            key={entry.id}
+                            className={`hover:bg-slate-900/40 transition-colors ${selectedIds.includes(entry.id) ? 'bg-amber-500/10' : ''}`}
+                          >
+                            {canEditOrDelete && (
+                              <td className="py-3 px-4 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedIds.includes(entry.id)}
+                                  onChange={(e) => handleSelectOne(entry.id, e)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-4 h-4 rounded bg-slate-800 border-slate-700 text-amber-500 focus:ring-amber-500/50 cursor-pointer"
+                                />
+                              </td>
+                            )}
+                            <td className="py-3 px-4 text-slate-300 font-medium whitespace-nowrap">{entry.date}</td>
+                            <td className="py-3 px-4 text-slate-200">{entry.description || '—'}</td>
+                            <td className="py-3 px-4 font-mono text-amber-400/90 whitespace-nowrap">{entry.reference}</td>
+                            <td className="py-3 px-4 text-right font-mono text-emerald-400">
+                              {entry.debit > 0 ? `PKR ${entry.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
+                            </td>
+                            <td className="py-3 px-4 text-right font-mono text-rose-400">
+                              {entry.credit > 0 ? `PKR ${entry.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
+                            </td>
+                            <td className="py-3 px-4 text-right font-mono font-extrabold text-slate-100 bg-slate-900/40">
+                              PKR {Math.abs(entry.runningBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                              <span className="text-[10px] ml-1 opacity-70 font-normal">{entry.runningBalance < 0 ? '(Cr)' : ''}</span>
+                            </td>
+                            {canEditOrDelete && (
+                              <td className="py-3 px-4 text-center">
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleDeleteEntry(entry, e)}
+                                  title="Delete GL Entry"
+                                  className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors inline-flex items-center justify-center cursor-pointer"
+                                >
+                                  <Trash2 className="h-4 w-4 pointer-events-none" />
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        ))
+                      )}
 
                       {/* Account Period Totals Row */}
                       <tr className="bg-slate-950/80 font-extrabold border-t-2 border-slate-800 text-xs">
