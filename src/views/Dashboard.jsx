@@ -353,20 +353,22 @@ export const Dashboard = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { accounts, fetchAccounts, selectedSubsidiary } = useCoaStore();
-  const { journals, auditLogs } = useJournalStore();
+  const { journals, auditLogs, fetchJournals } = useJournalStore();
   const { stats: dbStats, fetchStats } = useDashboardStore();
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     fetchAccounts();
     fetchStats();
-  }, [fetchAccounts, fetchStats]);
+    if (fetchJournals) fetchJournals(selectedSubsidiary);
+  }, [fetchAccounts, fetchStats, fetchJournals, selectedSubsidiary]);
 
   const handleRefresh = useCallback(() => {
     fetchAccounts();
     fetchStats();
+    if (fetchJournals) fetchJournals(selectedSubsidiary);
     setRefreshKey(k => k + 1);
-  }, [fetchAccounts, fetchStats]);
+  }, [fetchAccounts, fetchStats, fetchJournals, selectedSubsidiary]);
 
   // Live balances
   const { rollupBalances, localBalances } = useMemo(
@@ -376,47 +378,62 @@ export const Dashboard = () => {
 
   // Financial stats
   const stats = useMemo(() => {
+    if (dbStats?.summary) {
+      return {
+        ...dbStats.summary,
+        assets: dbStats.summary.totalAssets || 0,
+        liabilities: dbStats.summary.totalLiabilities || 0,
+        equity: dbStats.summary.totalEquity || 0,
+        revenue: dbStats.summary.totalRevenue || 0,
+        expenses: dbStats.summary.totalExpense || 0,
+        cashBalance: dbStats.summary.cashBalance || 0,
+        bankBalance: dbStats.summary.bankBalance || 0,
+        netIncome: dbStats.summary.netIncome || 0,
+        grossMargin: dbStats.summary.totalRevenue > 0 ? ((dbStats.summary.totalRevenue - dbStats.summary.totalExpense) / dbStats.summary.totalRevenue * 100) : 0,
+        isEquationBalanced: dbStats.summary.isEquationBalanced ?? true,
+      };
+    }
+
     let assets = 0, liabilities = 0, equity = 0, revenue = 0, expenses = 0;
     let cashBalance = 0;
     let bankBalance = 0;
     accounts.forEach((acc) => {
-      const isSub = acc.detailType === 'Subsidiary' || acc.level === 'SUBSIDIARY';
-      const localBal = localBalances?.[acc.code] || 0;
+      const bal = acc.currentBalance !== undefined ? Number(acc.currentBalance) || 0 : (localBalances?.[acc.code] || 0);
+      const type = (acc.type || '').toUpperCase();
+      const detailType = (acc.detailType || '').toLowerCase();
+      const nameLower = (acc.name || '').toLowerCase();
+      const isLeaf = !accounts.some(a => a.parentCode === acc.code);
 
-      if (acc.type === 'Asset' && isSub) {
-        const nameLower = (acc.name || '').toLowerCase();
-        if (nameLower.includes('cash')) {
-          cashBalance += localBal;
-        } else if (nameLower.includes('bank')) {
-          bankBalance += localBal;
+      if (isLeaf) {
+        if (type === 'ASSET' || type === 'ASSETS') {
+          assets += bal;
+          if (detailType === 'bank' || nameLower.includes('bank') || nameLower.includes('al-habib') || nameLower.includes('meezan') || nameLower.includes('hbl') || nameLower.includes('mcb') || nameLower.includes('ubl') || nameLower.includes('allied') || nameLower.includes('faysal')) {
+            bankBalance += bal;
+          } else if (detailType === 'cash' || nameLower.includes('cash') || nameLower.includes('till') || nameLower.includes('petty') || nameLower.includes('hand')) {
+            cashBalance += bal;
+          }
+        } else if (type === 'LIABILITY' || type === 'LIABILITIES') {
+          liabilities += (bal < 0 ? Math.abs(bal) : bal);
+        } else if (type === 'EQUITY') {
+          equity += (bal < 0 ? Math.abs(bal) : bal);
+        } else if (type === 'REVENUE' || type === 'INCOME') {
+          revenue += (bal < 0 ? Math.abs(bal) : bal);
+        } else if (type === 'EXPENSE' || type === 'EXPENSES') {
+          expenses += bal;
         }
       }
-
-      if (acc.parentCode === null) {
-        const bal = rollupBalances[acc.code] || 0;
-        if (acc.type === 'Asset') assets += bal;
-        else if (acc.type === 'Liability') liabilities += bal;
-        else if (acc.type === 'Equity') equity += bal;
-        else if (acc.type === 'Revenue') revenue += bal;
-        else if (acc.type === 'Expense') expenses += bal;
-      }
-      // Calculate Cash and Bank
-      const isLeaf = !accounts.some(a => a.parentCode === acc.code);
-      if (acc.type === 'Asset' && isLeaf) {
-        const bal = rollupBalances[acc.code] || 0;
-        const name = acc.name.toLowerCase();
-        if (name.includes('cash') && !name.includes('bank')) cashBalance += bal;
-        if (name.includes('bank')) bankBalance += bal;
-      }
     });
+
+    const netIncome = revenue - expenses;
+    const totalEquityWithNetIncome = equity + netIncome;
     return {
       assets, liabilities, equity, revenue, expenses,
       cashBalance, bankBalance,
-      netIncome: revenue - expenses,
+      netIncome,
       grossMargin: revenue > 0 ? ((revenue - expenses) / revenue * 100) : 0,
-      isEquationBalanced: Math.abs(assets - (liabilities + equity)) < 0.01,
+      isEquationBalanced: Math.abs(assets - (liabilities + totalEquityWithNetIncome)) < 0.01,
     };
-  }, [accounts, rollupBalances, localBalances]);
+  }, [accounts, localBalances, dbStats]);
 
   // Account counts
   const acctStats = useMemo(() => {
@@ -444,13 +461,25 @@ export const Dashboard = () => {
 
   // Balance sheet bar data
   const balSheetData = useMemo(() => [
-    { name: 'Assets', value: Math.round(stats.assets), fill: 'var(--chart-asset)' },
-    { name: 'Liabilities', value: Math.round(stats.liabilities), fill: 'var(--chart-liability)' },
-    { name: 'Equity', value: Math.round(stats.equity), fill: 'var(--chart-equity)' },
+    { name: 'Assets', value: Math.round(stats.assets || 0), fill: 'var(--chart-asset)' },
+    { name: 'Liabilities', value: Math.round(stats.liabilities || 0), fill: 'var(--chart-liability)' },
+    { name: 'Equity', value: Math.round((stats.equity || 0) + (stats.netIncome || 0)), fill: 'var(--chart-equity)' },
   ], [stats]);
 
   // Recent transactions from journals
-  const recentJournals = useMemo(() => (journals || []).slice(0, 6), [journals]);
+  const recentJournals = useMemo(() => {
+    if (dbStats?.recentTransactions && dbStats.recentTransactions.length > 0) {
+      return dbStats.recentTransactions;
+    }
+    return (journals || []).slice(0, 6).map(je => ({
+      id: je.voucherNo || je.id?.slice?.(0, 8) || je.id,
+      dbId: je.dbId || je.id,
+      date: je.postingDate ? new Date(je.postingDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : je.date || '',
+      reference: je.reference || je.description || 'Journal Entry',
+      amount: je.lines ? je.lines.reduce((s, l) => s + (Number(l.debit) || 0), 0) : je.amount || 0,
+      status: je.status || 'Posted'
+    }));
+  }, [dbStats, journals]);
 
   const recentActivity = useMemo(() => {
     if (dbStats && dbStats.recentActivities) return dbStats.recentActivities;
@@ -627,28 +656,38 @@ export const Dashboard = () => {
           </div>
         </div>
 
-        {/* Pie Chart: Donation Breakdown */}
+        {/* Pie Chart: Account Distribution */}
         <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 p-4 sm:p-5 shadow-none">
           <SectionHeader title={t('dashboard.accountDistribution')} subtitle={t('dashboard.breakdownByAccountType')} />
           <div className="h-36 sm:h-40 mb-3">
             <MemoizedPieChart data={typeDistData} />
           </div>
-          <div className="space-y-0.5">
-            {(dbStats?.donationBreakdown || []).map((entry, i) => {
-              const total = dbStats.donationsAmountThisMonth || 1; // avoid / 0
-              const pct = (entry._sum.amount / total) * 100;
-              const colors = [
-                { dot: 'bg-rose-500', bar: 'bg-rose-500' },
-                { dot: 'bg-pink-500', bar: 'bg-pink-500' },
-                { dot: 'bg-fuchsia-500', bar: 'bg-fuchsia-500' },
-                { dot: 'bg-purple-500', bar: 'bg-purple-500' },
-                { dot: 'bg-violet-500', bar: 'bg-violet-500' },
-                { dot: 'bg-amber-500', bar: 'bg-amber-500' },
-              ];
-              const c = colors[i % colors.length];
+          <div className="space-y-1.5 mt-2">
+            {[
+              { label: 'Assets', count: `${acctStats.byType.Asset || 0} accounts`, bal: stats.assets || 0, color: 'bg-amber-500', dot: 'bg-amber-400' },
+              { label: 'Liabilities', count: `${acctStats.byType.Liability || 0} accounts`, bal: stats.liabilities || 0, color: 'bg-purple-500', dot: 'bg-purple-400' },
+              { label: 'Equity', count: `${acctStats.byType.Equity || 0} accounts`, bal: stats.equity || 0, color: 'bg-blue-500', dot: 'bg-blue-400' },
+              { label: 'Revenue', count: `${acctStats.byType.Revenue || 0} accounts`, bal: stats.revenue || 0, color: 'bg-emerald-500', dot: 'bg-emerald-400' },
+              { label: 'Expenses', count: `${acctStats.byType.Expense || 0} accounts`, bal: stats.expenses || 0, color: 'bg-red-500', dot: 'bg-red-400' },
+            ].map((item) => {
+              const totalBal = (stats.assets + stats.liabilities + stats.equity + stats.revenue + stats.expenses) || 1;
+              const pct = Math.max(5, Math.round((item.bal / totalBal) * 100));
               return (
-                <AccountTypeStat key={entry.donationType} label={entry.donationType} count={`Rs ${entry._sum.amount.toLocaleString()}`} pct={pct}
-                  color={c.bar} dotColor={c.dot} />
+                <div key={item.label} className="flex items-center gap-3 py-1.5 border-b border-slate-800/40 last:border-0">
+                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${item.dot}`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between text-xs font-semibold text-slate-300">
+                      <span>{item.label}</span>
+                      <span className="font-mono text-slate-200">Rs {item.bal.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <div className="w-24 sm:w-32 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                        <div className={`h-full rounded-full ${item.color} transition-all duration-500`} style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-[10px] text-slate-500">{item.count}</span>
+                    </div>
+                  </div>
+                </div>
               );
             })}
           </div>
@@ -658,7 +697,7 @@ export const Dashboard = () => {
       {/* ── Pending Approvals + Quick Actions ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Pending Approvals Widget */}
+        {/* Balance Sheet Overview Widget */}
         <div className="lg:col-span-2 rounded-xl border border-orange-800/40 bg-orange-950/10 p-4 sm:p-5 shadow-none flex flex-col">
           <SectionHeader
             title={t('dashboard.balanceSheetOverview')}
@@ -731,7 +770,7 @@ export const Dashboard = () => {
             title="Recent Transactions"
             subtitle="Latest posted journal entries"
             action={
-              <button className="text-[11px] font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 transition-colors">
+              <button onClick={() => startTransition(() => navigate('/journals'))} className="text-[11px] font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 transition-colors cursor-pointer">
                 View All <ChevronRight className="h-3 w-3" />
               </button>
             }
@@ -739,24 +778,25 @@ export const Dashboard = () => {
           {/* Mobile card list */}
           <div className="space-y-2 sm:hidden">
             {recentJournals.map((je, i) => {
-              const total = je.lines.reduce((s, l) => s + l.debit, 0);
+              const total = je.amount !== undefined ? je.amount : (je.lines ? je.lines.reduce((s, l) => s + (Number(l.debit) || 0), 0) : 0);
               return (
                 <div
-                  key={je.id}
-                  className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-3"
+                  key={je.dbId || je.id || i}
+                  onClick={() => startTransition(() => navigate('/journals'))}
+                  className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-3 cursor-pointer hover:border-slate-700 transition-all"
                   style={{ opacity: 0, animation: `fadeSlideIn 0.4s ease ${i * 70}ms forwards` }}
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <span className="font-mono text-[11px] font-bold text-amber-400">{je.id}</span>
                     <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-950/50 text-emerald-400 border border-emerald-900/40 shrink-0">
-                      Posted
+                      {je.status || 'Posted'}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-300 mb-1.5 break-words">{je.reference}</p>
+                  <p className="text-[11px] text-slate-300 mb-1.5 break-words font-medium">{je.reference}</p>
                   <div className="flex items-center justify-between gap-2 text-[11px]">
                     <span className="text-slate-500">{je.date}</span>
                     <span className="font-mono font-bold text-emerald-400">
-                      PKR {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      PKR {Number(total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>
@@ -776,9 +816,9 @@ export const Dashboard = () => {
               </thead>
               <tbody className="divide-y divide-slate-800/40">
                 {recentJournals.map((je, i) => {
-                  const total = je.lines.reduce((s, l) => s + l.debit, 0);
+                  const total = je.amount !== undefined ? je.amount : (je.lines ? je.lines.reduce((s, l) => s + (Number(l.debit) || 0), 0) : 0);
                   return (
-                    <tr key={je.id} className="group hover:bg-slate-800/20 transition-colors"
+                    <tr key={je.dbId || je.id || i} onClick={() => startTransition(() => navigate('/journals'))} className="group hover:bg-slate-800/40 transition-colors cursor-pointer"
                       style={{ opacity: 0, animation: `fadeSlideIn 0.4s ease ${i * 70}ms forwards` }}>
                       <td className="py-2.5 pr-3">
                         <span className="font-mono text-[11px] font-bold text-amber-400">{je.id}</span>
@@ -786,17 +826,17 @@ export const Dashboard = () => {
                       <td className="py-2.5 pr-3">
                         <span className="text-[11px] text-slate-400">{je.date}</span>
                       </td>
-                      <td className="py-2.5 pr-3 max-w-[140px]">
-                        <span className="text-[11px] text-slate-300 truncate block">{je.reference}</span>
+                      <td className="py-2.5 pr-3 max-w-[160px]">
+                        <span className="text-[11px] text-slate-200 font-medium truncate block">{je.reference}</span>
                       </td>
                       <td className="py-2.5 pr-3">
                         <span className="font-mono text-[11px] font-bold text-emerald-400">
-                          PKR {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          PKR {Number(total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </span>
                       </td>
                       <td className="py-2.5 text-right">
                         <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-950/50 text-emerald-400 border border-emerald-900/40">
-                          Posted
+                          {je.status || 'Posted'}
                         </span>
                       </td>
                     </tr>
