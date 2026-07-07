@@ -158,23 +158,22 @@ export const DonationForm = () => {
               </div>
               <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 
-                {/* Select from People We Help */}
+                {/* Main Recipient Dropdown (People We Help) */}
                 <div className="sm:col-span-2 bg-gradient-to-r from-slate-950/80 via-slate-900/80 to-slate-950/80 p-4 rounded-xl border border-amber-500/30 shadow-inner">
                   <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                     <label className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <Users className="w-4 h-4 text-amber-400 shrink-0" /> Select from People We Help (Beneficiaries)
+                      <Users className="w-4 h-4 text-amber-400 shrink-0" /> Recipient / Beneficiary Name (People We Help) *
                     </label>
                     <Link to="/beneficiaries/new" target="_blank" className="text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 hover:underline">
                       + Register New Beneficiary
                     </Link>
                   </div>
                   <select
-                    value={selectedBeneficiaryId}
+                    required
+                    value={form.donorName}
                     onChange={(e) => {
-                      const selectedId = e.target.value;
-                      setSelectedBeneficiaryId(selectedId);
-                      if (!selectedId) return;
-                      const b = beneficiaries.find(item => item.id === selectedId);
+                      const val = e.target.value;
+                      const b = beneficiaries.find(item => item.name === val || item.id === val);
                       if (b) {
                         setForm(f => ({
                           ...f,
@@ -182,29 +181,38 @@ export const DonationForm = () => {
                           donorMobile: b.mobile || '',
                           remarks: f.remarks ? `${f.remarks} (Beneficiary CNIC: ${b.cnic || 'N/A'})` : `Beneficiary CNIC: ${b.cnic || 'N/A'}`
                         }));
-                        showToast(`Auto-filled data for ${b.name}`, 'success');
+                        showToast(`Selected beneficiary: ${b.name}`, 'success');
+                      } else {
+                        setForm(f => ({ ...f, donorName: val }));
                       }
                     }}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm font-semibold text-slate-100 focus:outline-none focus:border-amber-500 transition-all cursor-pointer shadow-sm"
+                    className="w-full px-3.5 py-3 rounded-xl bg-slate-900 border border-amber-500/40 text-sm font-bold text-slate-100 focus:outline-none focus:border-amber-500 transition-all cursor-pointer shadow-md"
                   >
-                    <option value="">-- Choose a person we help to auto-fill details --</option>
+                    <option value="">-- Select Recipient from People We Help (Dropdown) --</option>
                     {beneficiaries.map(b => (
-                      <option key={b.id} value={b.id} className="bg-slate-900 text-slate-200 py-1">
-                        {b.name} {b.mobile ? `(${b.mobile})` : ''} {b.cnic ? `• CNIC: ${b.cnic}` : ''} {b.address ? `• ${b.address.slice(0, 25)}...` : ''}
+                      <option key={b.id} value={b.name} className="bg-slate-900 text-slate-200 py-1 font-semibold">
+                        {b.name} {b.mobile ? `• Ph: ${b.mobile}` : ''} {b.cnic ? `• CNIC: ${b.cnic}` : ''}
                       </option>
                     ))}
+                    <option value="Custom / Other Recipient" className="bg-slate-900 text-amber-400 font-bold">
+                      ➕ Other / Custom Recipient (Not in list)...
+                    </option>
                   </select>
+                  {form.donorName === 'Custom / Other Recipient' && (
+                    <input
+                      type="text"
+                      required
+                      placeholder="Type custom recipient name here..."
+                      onChange={e => setForm(f => ({ ...f, donorName: e.target.value }))}
+                      className="w-full mt-3 px-3.5 py-2.5 rounded-xl bg-slate-950/90 border border-amber-500 text-sm font-semibold text-amber-300 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    />
+                  )}
                   <div className="flex items-center gap-1.5 mt-2 text-[11px] text-slate-400">
                     <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                    <span>Select a registered beneficiary to automatically populate Recipient Name and Mobile below.</span>
+                    <span>Select from your registered welfare beneficiaries to automatically populate contact details below.</span>
                   </div>
                 </div>
 
-                <div>
-                  <label className={labelClass}>Recipient / Beneficiary Name *</label>
-                  <input type="text" value={form.donorName} onChange={e => setForm(f => ({ ...f, donorName: e.target.value }))}
-                    placeholder="E.g. Muhammad Ali" className={inputClass} />
-                </div>
                 <div>
                   <label className={labelClass}>Recipient Mobile</label>
                   <input type="text" value={form.donorMobile} onChange={e => setForm(f => ({ ...f, donorMobile: e.target.value }))}
