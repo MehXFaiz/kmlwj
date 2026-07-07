@@ -4,7 +4,7 @@ import { useDonationStore } from '../store/donationStore';
 import { useCoaStore } from '../store/coaStore';
 import { useAuthStore } from '../store/authStore';
 import { showToast } from '../components/ui/Toast';
-import { Heart, Search, Plus, Edit2, Trash2, CheckCircle2, X, AlertTriangle, Printer } from 'lucide-react';
+import { Heart, Search, Plus, Edit2, Trash2, CheckCircle2, X, AlertTriangle, Printer, Phone, CreditCard, Banknote, Calendar, MapPin } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -429,8 +429,8 @@ export const Donations = () => {
         </div>
       </div>
 
-      {/* Table / List View Container */}
-      <div className="rounded-2xl border border-slate-800/80 bg-slate-900/50 shadow-lg overflow-hidden backdrop-blur-sm">
+      {/* Grid Card View Container (Reference Style) */}
+      <div className="mt-2">
         {filtered.length === 0 ? (
           <EmptyState
             icon={Heart}
@@ -440,148 +440,137 @@ export const Donations = () => {
             onAction={!search ? () => navigate('/donations/new') : undefined}
           />
         ) : (
-          <>
-            <DesktopOnly>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left min-w-[950px]">
-                  <thead>
-                    <tr className="border-b border-slate-800 bg-slate-900/80 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      {canEditOrDelete && (
-                        <th className="px-4 py-3.5 w-10">
-                          <input
-                            type="checkbox"
-                            checked={filtered.length > 0 && selectedIds.length === filtered.length}
-                            onChange={handleSelectAll}
-                            className="rounded border-slate-700 bg-slate-800/60 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer w-4 h-4"
-                          />
-                        </th>
-                      )}
-                      <th className="px-4 py-3.5">Donor Name</th>
-                      <th className="px-4 py-3.5">Type</th>
-                      <th className="px-4 py-3.5">Amount</th>
-                      <th className="px-4 py-3.5">Method</th>
-                      <th className="px-4 py-3.5">Status</th>
-                      <th className="px-4 py-3.5">Created</th>
-                      <th className="px-4 py-3.5 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/50 text-sm">
-                    {filtered.map(d => (
-                      <tr key={d.id} className={`hover:bg-slate-800/30 transition-colors group ${selectedIds.includes(d.id) ? 'bg-amber-500/5' : ''}`}>
-                        {canEditOrDelete && (
-                          <td className="px-4 py-4 w-10" onClick={(e) => e.stopPropagation()}>
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.includes(d.id)}
-                              onChange={(e) => handleSelectOne(d.id, e)}
-                              className="rounded border-slate-700 bg-slate-800/60 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer w-4 h-4"
-                            />
-                          </td>
-                        )}
-                        <td className="px-4 py-4">
-                          <p className="font-semibold text-slate-200">{d.donorName || '—'}</p>
-                          {d.donorMobile && <p className="text-xs text-slate-400 font-mono mt-0.5">{d.donorMobile}</p>}
-                        </td>
-                        <td className="px-4 py-4">
-                          <span className="inline-flex items-center text-[11px] font-medium px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700/60 text-slate-300">
-                            {d.donationType || 'GENERAL'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 font-bold text-amber-400">
-                          PKR {(d.amount || 0).toLocaleString()}
-                        </td>
-                        <td className="px-4 py-4 text-xs text-slate-300">
-                          {d.paymentMethod}
-                          {d.chequeNumber && <span className="block text-[10px] text-slate-500">Chq: {d.chequeNumber}</span>}
-                        </td>
-                        <td className="px-4 py-4">
-                          <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider ${d.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
-                            {d.status === 'APPROVED' ? <><CheckCircle2 className="h-3 w-3" /> Posted</> : <><AlertTriangle className="h-3 w-3" /> Pending Post</>}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-xs text-slate-400">{new Date(d.createdAt).toLocaleDateString()}</td>
-                        <td className="px-4 py-4 text-right">
-                          <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => setPrintDonation(d)} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-slate-200 cursor-pointer" title="Print Slip">
-                              <Printer className="h-3.5 w-3.5" />
-                            </button>
-                            {d.status === 'PENDING' ? (
-                              <>
-                                <button onClick={() => setApproveId(d.id)} className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold text-xs flex items-center gap-1 cursor-pointer" title="Post to Ledger">
-                                  <CheckCircle2 className="h-3.5 w-3.5" /> Post
-                                </button>
-                                {canEditOrDelete && (
-                                  <button onClick={() => navigate(`/donations/edit/${d.id}`)} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-slate-200 cursor-pointer" title="Edit Donation">
-                                    <Edit2 className="h-3.5 w-3.5" />
-                                  </button>
-                                )}
-                              </>
-                            ) : (
-                              canEditOrDelete && (
-                                <button onClick={() => navigate(`/donations/edit/${d.id}`)} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-slate-200 cursor-pointer" title="Edit Donation">
-                                  <Edit2 className="h-3.5 w-3.5" />
-                                </button>
-                              )
-                            )}
-                            {canEditOrDelete && (
-                              <button onClick={() => setDeleteId(d.id)} className="p-1.5 rounded-lg hover:bg-red-950/40 text-red-400/80 hover:text-red-400 cursor-pointer" title="Delete Donation">
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </DesktopOnly>
-            <MobileOnly className="p-3 space-y-3">
-              {filtered.map(d => (
-                <div key={d.id} className={`rounded-xl border bg-slate-950/50 p-3.5 transition-colors shadow-sm ${selectedIds.includes(d.id) ? 'border-amber-500/50 bg-amber-500/5' : 'border-slate-800/80'}`}>
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            {filtered.map(d => (
+              <div
+                key={d.id}
+                className={`group relative rounded-2xl border bg-slate-900/90 p-5 shadow-xl hover:shadow-2xl hover:border-slate-700/80 transition-all duration-300 flex flex-col justify-between ${
+                  selectedIds.includes(d.id) ? 'border-amber-500/60 bg-amber-500/5 shadow-amber-500/10' : 'border-slate-800/80'
+                }`}
+              >
+                {/* Card Top: Checkbox, Avatar/Icon, Name & Status Badge */}
+                <div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3.5">
                       {canEditOrDelete && (
                         <input
                           type="checkbox"
                           checked={selectedIds.includes(d.id)}
                           onChange={(e) => handleSelectOne(d.id, e)}
-                          className="rounded border-slate-700 bg-slate-800/60 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer w-4 h-4"
+                          className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer shrink-0"
                         />
                       )}
-                      <h4 className="text-sm font-bold text-slate-200">
-                        {d.donorName || '—'}
-                        {d.donorMobile && <span className="text-[10px] font-normal text-slate-400 block mt-0.5">{d.donorMobile}</span>}
-                      </h4>
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/30 flex items-center justify-center text-amber-400 font-extrabold text-lg shadow-inner shrink-0">
+                        {d.donorName ? d.donorName.charAt(0).toUpperCase() : <Heart className="w-5 h-5 text-amber-400" />}
+                      </div>
+                      <div>
+                        <h4 className="text-base font-bold text-amber-400 group-hover:text-amber-300 transition-colors leading-tight tracking-tight">
+                          {d.donorName || 'Unnamed Donor'}
+                        </h4>
+                        <p className="text-xs text-slate-400 font-medium mt-0.5 flex items-center gap-1">
+                          {d.donorMobile ? (
+                            <>
+                              <Phone className="w-3 h-3 text-amber-400/80 shrink-0" /> {d.donorMobile}
+                            </>
+                          ) : 'Welfare Aid Recipient'}
+                        </p>
+                      </div>
                     </div>
-                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider ${d.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
-                      {d.status === 'APPROVED' ? <><CheckCircle2 className="h-3 w-3" /> Posted</> : <><AlertTriangle className="h-3 w-3" /> Pending Post</>}
+
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] font-bold uppercase tracking-wide shrink-0 ${
+                      d.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                    }`}>
+                      {d.status === 'APPROVED' ? (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5" /> POSTED
+                        </>
+                      ) : (
+                        <>
+                          <AlertTriangle className="w-3.5 h-3.5" /> PENDING POST
+                        </>
+                      )}
                     </span>
                   </div>
-                  <div className="text-xs text-slate-400 mb-2 pl-6">{d.donationType} | {d.paymentMethod} | <span className="font-bold text-amber-400">PKR {(d.amount || 0).toLocaleString()}</span></div>
-                  
-                  <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-800/50 pl-6">
-                    <button onClick={() => setPrintDonation(d)} className="text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1 cursor-pointer">
-                      <Printer className="h-3.5 w-3.5" /> Print Slip
-                    </button>
-                    <div className="flex gap-3 items-center">
-                      {d.status === 'PENDING' && (
-                        <button onClick={() => setApproveId(d.id)} className="text-xs text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 cursor-pointer"><CheckCircle2 className="h-3 w-3" /> Post</button>
-                      )}
-                      {(d.status === 'PENDING' || canEditOrDelete) && (
-                        <button onClick={() => navigate(`/donations/edit/${d.id}`)} className="text-xs font-semibold text-slate-300 hover:text-white cursor-pointer flex items-center gap-1"><Edit2 className="h-3 w-3" /> Edit</button>
-                      )}
-                      {canEditOrDelete && (
-                        <button onClick={() => setDeleteId(d.id)} className="text-xs font-semibold text-red-400 hover:text-red-300 cursor-pointer flex items-center gap-1">
-                          <Trash2 className="h-3 w-3" /> Delete
-                        </button>
-                      )}
+
+                  {/* Inner Details Well */}
+                  <div className="bg-slate-950/70 rounded-xl border border-slate-800/80 p-4 my-4 space-y-2.5 shadow-inner">
+                    <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                        <Banknote className="w-3.5 h-3.5 text-amber-400" /> AMOUNT
+                      </span>
+                      <span className="font-bold text-amber-400 text-sm">
+                        PKR {(d.amount || 0).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                        <Heart className="w-3.5 h-3.5 text-amber-400" /> AID TYPE
+                      </span>
+                      <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded bg-slate-800/90 text-slate-200 border border-slate-700/60">
+                        {d.donationType || 'GENERAL'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                        <CreditCard className="w-3.5 h-3.5 text-amber-400" /> METHOD
+                      </span>
+                      <span className="font-semibold text-slate-100 text-xs">
+                        {d.paymentMethod || 'CASH'}
+                        {d.chequeNumber && <span className="text-slate-400 font-normal ml-1">#{d.chequeNumber}</span>}
+                      </span>
                     </div>
                   </div>
                 </div>
-              ))}
-            </MobileOnly>
-          </>
+
+                {/* Card Footer: Date & Action Icons */}
+                <div className="flex items-center justify-between gap-2 pt-3.5 border-t border-slate-800/80">
+                  <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" /> {d.createdAt ? new Date(d.createdAt).toLocaleDateString() : '7/7/2026'}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPrintDonation(d)}
+                      className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                      title="Print Voucher Slip"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                    </button>
+                    {d.status === 'PENDING' && (
+                      <button
+                        type="button"
+                        onClick={() => setApproveId(d.id)}
+                        className="px-3 py-1.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-bold text-xs transition-all cursor-pointer shadow-sm"
+                        title="Post to Ledger"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Post
+                      </button>
+                    )}
+                    {canEditOrDelete && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/donations/edit/${d.id}`)}
+                          className="w-8 h-8 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                          title="Edit Aid Disbursement"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteId(d.id)}
+                          className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                          title="Delete Disbursement"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

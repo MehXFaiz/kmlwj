@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Search, Printer, AlertTriangle, CheckCircle, Trash2, X, DollarSign, Calendar, Users, Building, Edit2, CheckCircle2, ChevronDown } from 'lucide-react';
+import { Plus, Search, Printer, AlertTriangle, CheckCircle, Trash2, X, DollarSign, Calendar, Users, Building, Edit2, CheckCircle2, ChevronDown, LayoutGrid, Table as TableIcon, MapPin, Tag, Phone, Bus, Heart, User, Hash } from 'lucide-react';
 import { useRevenueCollectionStore } from '../store/revenueCollectionStore';
 import { useAuthStore } from '../store/authStore';
 import { useCoaStore } from '../store/coaStore';
@@ -34,6 +34,7 @@ export const SpecializedRevenueSection = ({
 
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState('cards');
   const [printItem, setPrintItem] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
@@ -41,6 +42,8 @@ export const SpecializedRevenueSection = ({
 
   const getBasePath = () => {
     if (category === 'Bus Booking') return '/bus-bookings';
+    if (category === 'Zakat') return '/zakat';
+    if (category === 'Fitra') return '/fitra';
     return '/membership-fees';
   };
 
@@ -115,6 +118,10 @@ export const SpecializedRevenueSection = ({
     );
   }, [collections, search]);
 
+  const totalAmount = useMemo(() => {
+    return filtered.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  }, [filtered]);
+
   return (
     <DashboardLayout breadcrumbs={['Revenue & Collections', title]}>
       <div className="space-y-6">
@@ -144,21 +151,240 @@ export const SpecializedRevenueSection = ({
         </div>
 
         <div className="w-full rounded-2xl border border-slate-800/60 bg-slate-900/50 backdrop-blur-xl overflow-hidden shadow-xl">
-          <div className="p-4 sm:p-5 border-b border-slate-800/80">
-            <div className="relative max-w-md">
+          <div className="p-4 sm:p-5 border-b border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="relative max-w-md w-full sm:w-80">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder={`Search ${title.toLowerCase()}...`}
                 className="w-full pl-9 pr-4 py-2 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-colors" />
             </div>
+
+            <div className="flex items-center justify-between sm:justify-end gap-4 flex-wrap">
+              <div className="text-xs sm:text-sm font-bold text-slate-300">
+                Total Amount: <span className="text-emerald-400 font-extrabold">Rs. {totalAmount.toLocaleString()}</span> ({filtered.length} records)
+              </div>
+              <div className="flex items-center bg-slate-950/80 p-1 rounded-xl border border-slate-800/80">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('cards')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    viewMode === 'cards'
+                      ? 'bg-amber-600 text-white shadow-md shadow-amber-950/50'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" /> Cards
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('table')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    viewMode === 'table'
+                      ? 'bg-amber-600 text-white shadow-md shadow-amber-950/50'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <TableIcon className="w-3.5 h-3.5" /> Table
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div className="overflow-x-auto">
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400">
-                <div className="h-6 w-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-                <span className="text-sm">Loading {title.toLowerCase()}...</span>
-              </div>
-            ) : (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400">
+              <div className="h-6 w-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm">Loading {title.toLowerCase()}...</span>
+            </div>
+          ) : viewMode === 'cards' ? (
+            <div className="p-5 bg-slate-950/20">
+              {filtered.length === 0 ? (
+                <div className="py-12 text-center text-slate-500 text-sm">
+                  No {title.toLowerCase()} found. Click 'New {category} Entry' to add one.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {filtered.map((item) => {
+                    const isConfirmed = item.status === 'Confirmed';
+                    return (
+                      <div
+                        key={item.id}
+                        className="group relative rounded-2xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 to-slate-900/60 p-5 shadow-xl hover:shadow-2xl hover:border-amber-500/50 transition-all duration-300 flex flex-col justify-between"
+                      >
+                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-amber-500/0 via-amber-500/0 to-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+                        <div>
+                          <div className="flex items-start justify-between gap-3 relative z-10">
+                            <div className="flex items-start gap-3.5">
+                              {canEditOrDelete && (
+                                <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedIds.includes(item.id)}
+                                    onChange={(e) => handleSelectOne(item.id, e)}
+                                    className="rounded border-slate-700 bg-slate-800 text-amber-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                                  />
+                                </div>
+                              )}
+                              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/30 flex items-center justify-center text-amber-400 font-extrabold text-lg shadow-inner shrink-0 group-hover:scale-105 transition-transform">
+                                {item.title ? item.title.charAt(0).toUpperCase() : <User className="w-5 h-5 text-amber-400" />}
+                              </div>
+                              <div>
+                                <h4 className="text-base font-bold text-slate-100 group-hover:text-amber-400 transition-colors leading-tight tracking-tight">
+                                  {item.title || 'Unknown'}
+                                </h4>
+                                <p className="text-xs text-slate-400 font-medium mt-1 flex items-center gap-1.5">
+                                  {item.mobile ? (
+                                    <>
+                                      <Phone className="w-3 h-3 text-amber-400/80 shrink-0" /> {item.mobile}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <User className="w-3 h-3 text-amber-400/80 shrink-0" /> {category} Record
+                                    </>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider shrink-0 ${
+                              isConfirmed
+                                ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            }`}>
+                              {isConfirmed ? (
+                                <>
+                                  <AlertTriangle className="w-3.5 h-3.5" /> Pending Post
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="w-3.5 h-3.5" /> Posted
+                                </>
+                              )}
+                            </span>
+                          </div>
+
+                          <div className="bg-slate-950/70 rounded-xl border border-slate-800/80 px-4 divide-y divide-slate-800/60 my-4 shadow-inner relative z-10">
+                            <div className="flex items-center justify-between py-2.5">
+                              <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider flex items-center gap-1.5">
+                                <DollarSign className="w-3.5 h-3.5 text-emerald-400" /> TOTAL AMOUNT
+                              </span>
+                              <span className="font-extrabold text-emerald-400 text-base">
+                                Rs. {(Number(item.amount) || 0).toLocaleString()}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between py-2.5">
+                              <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider flex items-center gap-1.5">
+                                <Hash className="w-3.5 h-3.5 text-amber-400" /> RECEIPT #
+                              </span>
+                              <span className="font-mono text-xs font-bold text-slate-200">
+                                #{item.receiptNo || '—'}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between py-2.5">
+                              <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider flex items-center gap-1.5">
+                                <Calendar className="w-3.5 h-3.5 text-amber-400" /> {dateLabel}
+                              </span>
+                              <span className="font-medium text-slate-200 text-xs">
+                                {item.eventDate ? new Date(item.eventDate).toLocaleDateString() : '—'}
+                              </span>
+                            </div>
+
+                            {subTitleLabel && (
+                              <div className="flex items-center justify-between py-2.5">
+                                <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider flex items-center gap-1.5 truncate pr-2">
+                                  <Tag className="w-3.5 h-3.5 text-amber-400 shrink-0" /> {subTitleLabel}
+                                </span>
+                                <span className="font-mono text-xs text-slate-300 font-medium truncate max-w-[150px]" title={item.subTitle}>
+                                  {item.subTitle || '—'}
+                                </span>
+                              </div>
+                            )}
+
+                            {showQty && (
+                              <div className="flex items-center justify-between py-2.5">
+                                <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider flex items-center gap-1.5">
+                                  <Users className="w-3.5 h-3.5 text-amber-400" /> {qtyLabel}
+                                </span>
+                                <span className="font-bold text-slate-300 text-xs">
+                                  {item.quantity || 1}
+                                </span>
+                              </div>
+                            )}
+
+                            {showRate && (
+                              <div className="flex items-center justify-between py-2.5">
+                                <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider flex items-center gap-1.5">
+                                  <DollarSign className="w-3.5 h-3.5 text-amber-400" /> {rateLabel}
+                                </span>
+                                <span className="text-slate-300 text-xs font-medium">
+                                  Rs. {item.rate?.toLocaleString() || '—'}
+                                </span>
+                              </div>
+                            )}
+
+                            {showDest && (
+                              <div className="flex items-center justify-between py-2.5">
+                                <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider flex items-center gap-1.5">
+                                  <Building className="w-3.5 h-3.5 text-amber-400" /> {destLabel}
+                                </span>
+                                <span className="font-medium text-slate-300 text-xs truncate max-w-[150px]" title={item.destination}>
+                                  {item.destination || '—'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="pt-3.5 border-t border-slate-800/80 flex items-center justify-between gap-2 relative z-10">
+                          <span className="text-xs text-slate-500 font-medium truncate max-w-[140px]" title={item.remarks || item.paymentMethod}>
+                            {item.paymentMethod || 'Cash'}{item.remarks ? ` • ${item.remarks}` : ''}
+                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {isConfirmed && (
+                              <button
+                                onClick={() => handlePost(item.id)}
+                                className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30 transition-all"
+                                title="Post to Ledger"
+                              >
+                                <CheckCircle2 className="h-3.5 w-3.5" /> Post
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setPrintItem(item)}
+                              className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors inline-flex border border-slate-800 hover:border-slate-700"
+                              title="Print Receipt"
+                            >
+                              <Printer className="h-4 w-4" />
+                            </button>
+                            {canEditOrDelete && (
+                              <button
+                                onClick={() => navigate(`${getBasePath()}/edit/${item.id}`)}
+                                className="p-1.5 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 rounded-lg transition-colors inline-flex border border-slate-800 hover:border-amber-500/30"
+                                title="Edit Record"
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </button>
+                            )}
+                            {canEditOrDelete && (
+                              <button
+                                onClick={() => handleDelete(item.id)}
+                                className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors inline-flex border border-slate-800 hover:border-red-500/30"
+                                title="Delete Record"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
               <table className="w-full text-left text-sm whitespace-nowrap">
                 <thead>
                   <tr className="border-b border-slate-800/80 bg-slate-900/80 text-[10px] font-bold uppercase tracking-wider text-slate-400">
@@ -262,8 +488,8 @@ export const SpecializedRevenueSection = ({
                   )}
                 </tbody>
               </table>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 

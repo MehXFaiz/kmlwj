@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Search, Printer, AlertTriangle, CheckCircle, X, Trash2, Edit2, CheckCircle2, Calendar, Table as TableIcon } from 'lucide-react';
+import { Plus, Search, Printer, AlertTriangle, CheckCircle, X, Trash2, Edit2, CheckCircle2, Calendar, Table as TableIcon, LayoutGrid, Building2, Phone, DollarSign, FileText, Clock } from 'lucide-react';
 import { useHallBookingStore } from '../store/hallBookingStore';
 import { useAuthStore } from '../store/authStore';
 import { DashboardLayout } from '../layouts/DashboardLayout';
@@ -15,7 +15,7 @@ export const HallBookings = () => {
   const { canEditOrDelete } = useAuthStore();
   const [search, setSearch] = useState('');
   const [printItem, setPrintItem] = useState(null);
-  const [viewMode, setViewMode] = useState('table');
+  const [viewMode, setViewMode] = useState('cards');
 
   const [selectedIds, setSelectedIds] = useState([]);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
@@ -122,6 +122,13 @@ export const HallBookings = () => {
               <div className="flex items-center bg-slate-950/80 rounded-xl p-1 border border-slate-800">
                 <button
                   type="button"
+                  onClick={() => setViewMode('cards')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${viewMode === 'cards' ? 'bg-amber-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" /> Card View
+                </button>
+                <button
+                  type="button"
                   onClick={() => setViewMode('table')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${viewMode === 'table' ? 'bg-amber-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
                 >
@@ -141,6 +148,160 @@ export const HallBookings = () => {
           {viewMode === 'calendar' ? (
             <div className="p-5">
               <HallBookingCalendar bookings={bookings} />
+            </div>
+          ) : viewMode === 'cards' ? (
+            <div className="p-5">
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400">
+                  <div className="h-6 w-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm">Loading bookings...</span>
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="py-16 text-center bg-slate-900/40 border border-slate-800/60 rounded-2xl">
+                  <Calendar className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+                  <p className="text-slate-400 font-semibold text-sm">{t('tables.hallBookings.noBookingsFound', 'No hall bookings found')}</p>
+                  <p className="text-slate-500 text-xs mt-1">Try adjusting your search term or create a new booking.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                  {filtered.map((booking) => (
+                    <div
+                      key={booking.id}
+                      className={`group relative rounded-2xl border bg-slate-900/90 p-5 shadow-xl hover:shadow-2xl hover:border-slate-700/80 transition-all duration-300 flex flex-col justify-between ${
+                        selectedIds.includes(booking.id) ? 'border-amber-500/60 bg-amber-500/5 shadow-amber-500/10' : 'border-slate-800/80'
+                      }`}
+                    >
+                      {/* Card Top: Checkbox, Avatar/Icon, Name & Status Badge */}
+                      <div>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3.5">
+                            {canEditOrDelete && (
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.includes(booking.id)}
+                                onChange={(e) => handleSelectOne(booking.id, e)}
+                                className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer shrink-0"
+                              />
+                            )}
+                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/30 flex items-center justify-center text-amber-400 font-extrabold text-lg shadow-inner shrink-0">
+                              {booking.bookerName ? booking.bookerName.charAt(0).toUpperCase() : <Building2 className="w-5 h-5 text-amber-400" />}
+                            </div>
+                            <div>
+                              <h4 className="text-base font-bold text-amber-400 group-hover:text-amber-300 transition-colors leading-tight tracking-tight">
+                                {booking.bookerName || 'Unnamed Booker'}
+                              </h4>
+                              <p className="text-xs text-slate-400 font-medium mt-0.5 flex items-center gap-1">
+                                {booking.mobile ? (
+                                  <>
+                                    <Phone className="w-3 h-3 text-amber-400/80 shrink-0" /> {booking.mobile}
+                                  </>
+                                ) : 'No Phone Provided'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] font-bold uppercase tracking-wide shrink-0 ${
+                            booking.status === 'Confirmed' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                          }`}>
+                            {booking.status === 'Confirmed' ? (
+                              <>
+                                <AlertTriangle className="w-3.5 h-3.5" /> PENDING POST
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="w-3.5 h-3.5" /> POSTED
+                              </>
+                            )}
+                          </span>
+                        </div>
+
+                        {/* Inner Details Well */}
+                        <div className="bg-slate-950/70 rounded-xl border border-slate-800/80 p-4 my-4 space-y-2.5 shadow-inner">
+                          <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                            <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                              <DollarSign className="w-3.5 h-3.5 text-amber-400" /> TOTAL AMOUNT
+                            </span>
+                            <span className="font-bold text-emerald-400 text-sm">
+                              Rs. {Number(booking.amount || 0).toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                            <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                              <FileText className="w-3.5 h-3.5 text-amber-400" /> RECEIPT NO
+                            </span>
+                            <span className="font-mono font-bold text-slate-100 text-xs">
+                              #{booking.receiptNo}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                            <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                              <Building2 className="w-3.5 h-3.5 text-amber-400" /> HALL
+                            </span>
+                            <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded bg-slate-800/90 text-slate-200 border border-slate-700/60">
+                              {booking.hallAccount?.accountName || 'N/A'}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5 text-amber-400" /> PROGRAM DATE
+                            </span>
+                            <span className="font-semibold text-slate-100 text-xs">
+                              {new Date(booking.programDate).toLocaleDateString()}
+                              {booking.timings && <span className="text-slate-400 font-normal ml-1.5">({booking.timings})</span>}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Card Footer: Date & Action Icons */}
+                      <div className="flex items-center justify-between gap-2 pt-3.5 border-t border-slate-800/80">
+                        <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5 text-slate-400" /> {booking.programDate ? new Date(booking.programDate).toLocaleDateString() : 'N/A'}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setPrintItem(booking)}
+                            className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                            title="Print Receipt"
+                          >
+                            <Printer className="w-3.5 h-3.5" />
+                          </button>
+                          {booking.status === 'Confirmed' && (
+                            <button
+                              type="button"
+                              onClick={() => handlePost(booking.id)}
+                              className="px-3 py-1.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-bold text-xs transition-all cursor-pointer shadow-sm"
+                              title="Post to Ledger"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Post
+                            </button>
+                          )}
+                          {canEditOrDelete && (
+                            <>
+                              <Link
+                                to={`/hall-bookings/edit/${booking.id}`}
+                                className="w-8 h-8 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                                title="Edit Booking"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </Link>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(booking.id)}
+                                className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                                title="Delete Booking"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">

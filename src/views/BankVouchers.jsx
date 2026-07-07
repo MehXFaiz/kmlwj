@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
 import { useAuthStore } from '../store/authStore';
-import { FileSpreadsheet, Search, Plus, Printer, CheckCircle, XCircle, Eye, EyeOff, Trash2, AlertTriangle, Edit, X } from 'lucide-react';
-import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
+import { FileSpreadsheet, Search, Plus, Printer, CheckCircle, XCircle, Trash2, AlertTriangle, Edit, X, Banknote, Building2, Calendar, ArrowUpRight, ArrowDownLeft, FileText, ChevronDown, ChevronUp, Layers } from 'lucide-react';
+import { pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 import { useTranslation } from 'react-i18next';
 
@@ -492,225 +492,215 @@ export const BankVouchers = () => {
         </button>
       </div>
 
-      {/* Search */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="relative flex-1 w-full sm:min-w-52">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('tables.bankVouchers.searchPlaceholder')}
-            className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-650 focus:outline-none focus:border-amber-600/50 transition-all" />
+      {/* Search & Filter Toolbar */}
+      <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-3 shadow-sm backdrop-blur-md flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div className="relative flex-1 w-full sm:max-w-md">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('tables.bankVouchers.searchPlaceholder') || "Search by voucher #, reference or remarks..."}
+            className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-950/80 border border-slate-800/80 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 transition-all" />
+        </div>
+        <div className="flex items-center gap-4 self-end sm:self-auto text-xs font-medium text-slate-400 px-2">
+          {canEditOrDelete && filtered.length > 0 && (
+            <label className="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white transition-colors">
+              <input
+                type="checkbox"
+                checked={filtered.length > 0 && selectedIds.length === filtered.length}
+                onChange={handleSelectAll}
+                className="rounded border-slate-700 bg-slate-800 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer w-4 h-4"
+              />
+              <span>Select All</span>
+            </label>
+          )}
+          <span>Showing <strong className="text-slate-200">{filtered.length}</strong> {filtered.length === 1 ? 'voucher' : 'vouchers'}</span>
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 overflow-hidden">
+      {/* Grid Card View Container (Reference Style) */}
+      <div className="mt-2">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-2 text-slate-400">
-            <div className="h-6 w-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-            <span className="text-xs">{t('tables.bankVouchers.loadingVouchers')}</span>
+          <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400 bg-slate-900/40 border border-slate-800/80 rounded-2xl">
+            <div className="h-8 w-8 border-3 border-amber-500 border-t-transparent rounded-full animate-spin" />
+            <span className="text-xs font-semibold tracking-wide uppercase text-slate-400">{t('tables.bankVouchers.loadingVouchers') || 'Loading Vouchers...'}</span>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 px-4 text-center bg-slate-900/40 border border-slate-800/80 rounded-2xl">
+            <div className="w-16 h-16 rounded-full bg-slate-800/80 border border-slate-700/60 flex items-center justify-center text-slate-500 mb-4 shadow-inner">
+              <FileSpreadsheet className="w-8 h-8 text-slate-400" />
+            </div>
+            <h3 className="text-base font-bold text-slate-200 mb-1">{search ? 'No vouchers found' : 'No vouchers recorded yet'}</h3>
+            <p className="text-xs text-slate-400 max-w-md mb-6">{search ? `We couldn't find any results matching "${search}". Try adjusting your search term or clearing the filter.` : 'Start by recording your first bank payment or receipt voucher to generate accounting entries and ledger records.'}</p>
           </div>
         ) : (
-          <>
-            <DesktopOnly>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left min-w-[900px]">
-                  <thead>
-                    <tr className="border-b border-slate-800 bg-slate-900/80 text-[10px] font-bold uppercase text-slate-500">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            {filtered.map(v => (
+              <div
+                key={v.dbId}
+                className={`group relative rounded-2xl border bg-slate-900/90 p-5 shadow-xl hover:shadow-2xl hover:border-slate-700/80 transition-all duration-300 flex flex-col justify-between ${
+                  selectedIds.includes(v.dbId) ? 'border-amber-500/60 bg-amber-500/5 shadow-amber-500/10' : 'border-slate-800/80'
+                }`}
+              >
+                {/* Card Top: Checkbox, Icon, Voucher No & Status Badge */}
+                <div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3.5">
                       {canEditOrDelete && (
-                        <th className="px-4 py-3.5 w-10">
-                          <input
-                            type="checkbox"
-                            checked={filtered.length > 0 && selectedIds.length === filtered.length}
-                            onChange={handleSelectAll}
-                            className="rounded border-slate-700 bg-slate-800 text-amber-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
-                          />
-                        </th>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(v.dbId)}
+                          onChange={(e) => handleSelectOne(v.dbId, e)}
+                          className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer shrink-0"
+                        />
                       )}
-                      <th className="px-6 py-3.5 w-10"></th>
-                      <th className="px-6 py-3.5">{t('tables.bankVouchers.voucherNo')}</th>
-                      <th className="px-6 py-3.5">{t('tables.bankVouchers.date')}</th>
-                      <th className="px-6 py-3.5">{activeTab === 'BP' ? (t('tables.bankVouchers.expenseType') || 'EXPENSE TYPE') : (t('tables.bankVouchers.reference') || 'TYPE / REF')}</th>
-                      <th className="px-6 py-3.5">{t('tables.bankVouchers.bankAccount')}</th>
-                      <th className="px-6 py-3.5">{t('tables.bankVouchers.offsetAccount')}</th>
-                      <th className="px-6 py-3.5">{t('tables.bankVouchers.totalAmount')}</th>
-                      <th className="px-6 py-3.5">{t('tables.bankVouchers.status')}</th>
-                      <th className="px-6 py-3.5"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/50">
-                    {filtered.map(v => (
-                      <optgroup key={v.dbId} label="" className="contents">
-                        <tr className="hover:bg-slate-800/10 transition-colors group">
-                          {canEditOrDelete && (
-                            <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
-                              <input
-                                type="checkbox"
-                                checked={selectedIds.includes(v.dbId)}
-                                onChange={(e) => handleSelectOne(v.dbId, e)}
-                                className="rounded border-slate-700 bg-slate-800 text-amber-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
-                              />
-                            </td>
-                          )}
-                          <td className="px-6 py-4">
-                            <button onClick={() => setExpandedId(expandedId === v.dbId ? null : v.dbId)}
-                              className="p-1 rounded hover:bg-slate-800 text-slate-500">
-                              {expandedId === v.dbId ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                            </button>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-xs font-mono font-bold text-slate-350 bg-slate-800/40 px-2 py-0.5 rounded border border-slate-700/40">{v.voucherNo}</span>
-                          </td>
-                          <td className="px-6 py-4 text-xs text-slate-300">{v.postingDate}</td>
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-xs font-bold text-slate-200">
-                                {getVoucherTypeOrRef(v)}
-                              </span>
-                              {v.description && (
-                                <span className="text-[10px] text-slate-500 max-w-[180px] truncate" title={v.description}>
-                                  {v.description}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-xs font-mono font-bold text-amber-400 bg-amber-950/40 border border-amber-900/40 px-2 py-0.2 rounded">{getBankCode(v)}</span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-xs font-mono font-bold text-slate-400 bg-slate-800/45 border border-slate-700/40 px-2 py-0.2 rounded">{getOffsetAccount(v)}</span>
-                          </td>
-                          <td className="px-6 py-4 text-xs font-bold text-slate-200">PKR {getVoucherTotal(v).toLocaleString()}</td>
-                          <td className="px-6 py-4">{getStatusBadge(v.status)}</td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => setPrintItem(v)} className="p-1.5 rounded-lg bg-slate-800/40 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/40 transition-colors cursor-pointer" title="Print physical voucher">
-                                <Printer className="h-3.5 w-3.5" />
-                              </button>
-                              {(v.status === 'Draft' || canEditOrDelete) && (
-                                <button onClick={() => setEditItem(v)} disabled={statusLoading}
-                                  className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-colors cursor-pointer"
-                                  title="Edit Voucher">
-                                  <Edit className="h-3.5 w-3.5" />
-                                </button>
-                              )}
-                              {v.status === 'Draft' && (
-                                <button onClick={() => handlePost(v.dbId)} disabled={statusLoading}
-                                  className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-colors cursor-pointer"
-                                  title={t('tables.bankVouchers.post') || "Post Voucher"}>
-                                  <CheckCircle className="h-3.5 w-3.5" />
-                                </button>
-                              )}
-                              {v.status === 'Posted' && (
-                                <button onClick={() => handleCancel(v.dbId)} disabled={statusLoading}
-                                  className="p-1.5 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 transition-colors cursor-pointer"
-                                  title={t('tables.bankVouchers.void') || "Void Voucher & Reverse Ledger Entry"}>
-                                  <XCircle className="h-3.5 w-3.5" />
-                                </button>
-                              )}
-                              {canEditOrDelete && (
-                                <button onClick={() => handleDeleteVoucher(v.dbId, v.voucherNo)} disabled={statusLoading}
-                                  className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-colors cursor-pointer"
-                                  title="Delete from database">
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                        {/* Expanded details container */}
-                        {expandedId === v.dbId && (
-                          <tr className="bg-slate-950/30 border-y border-slate-850">
-                            <td colSpan={canEditOrDelete ? "10" : "9"} className="px-8 py-4 space-y-3">
-                              <div className="grid grid-cols-2 gap-4 text-xs text-slate-450 mb-2">
-                                <div><span className="font-bold text-slate-500">{t('tables.bankVouchers.referenceCheque')}</span> {v.reference}</div>
-                                <div><span className="font-bold text-slate-500">{t('tables.bankVouchers.postedBy')}</span> {v.postedBy}</div>
-                                {v.description && <div className="col-span-2"><span className="font-bold text-slate-500">{t('tables.bankVouchers.memo')}</span> {v.description}</div>}
-                              </div>
-                              <div className="rounded-lg border border-slate-850 bg-slate-900/40 overflow-hidden max-w-2xl">
-                                <table className="w-full text-left text-xs">
-                                  <thead>
-                                    <tr className="border-b border-slate-850 bg-slate-950/40 text-[9px] font-bold text-slate-500 uppercase">
-                                      <th className="px-4 py-1.5">{t('tables.bankVouchers.accountCode')}</th>
-                                      <th className="px-4 py-1.5 text-right w-24">{t('tables.bankVouchers.debit')}</th>
-                                      <th className="px-4 py-1.5 text-right w-24">{t('tables.bankVouchers.credit')}</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-slate-850/60">
-                                    {v.lines.map(line => (
-                                      <tr key={line.id}>
-                                        <td className="px-4 py-2 font-medium text-slate-350">{line.accountCode} - {line.description || t('tables.bankVouchers.entry')}</td>
-                                        <td className="px-4 py-2 text-right font-bold text-slate-200">{line.debit > 0 ? line.debit.toLocaleString() : '—'}</td>
-                                        <td className="px-4 py-2 text-right font-bold text-slate-200">{line.credit > 0 ? line.credit.toLocaleString() : '—'}</td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            </td>
-                          </tr>
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-inner shrink-0 border ${
+                        v.voucherType === 'BP' 
+                          ? 'bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-transparent border-amber-500/30 text-amber-400' 
+                          : 'bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-transparent border-emerald-500/30 text-emerald-400'
+                      }`}>
+                        {v.voucherType === 'BP' ? <ArrowUpRight className="w-6 h-6" /> : <ArrowDownLeft className="w-6 h-6" />}
+                      </div>
+                      <div>
+                        <h4 className="text-base font-bold text-amber-400 group-hover:text-amber-300 transition-colors leading-tight tracking-tight font-mono">
+                          {v.voucherNo || 'BP-0000'}
+                        </h4>
+                        <p className="text-xs text-slate-200 font-bold mt-0.5">
+                          {getVoucherTypeOrRef(v)}
+                        </p>
+                        {v.description && (
+                          <p className="text-[11px] text-slate-400 font-medium mt-0.5 line-clamp-2" title={v.description}>
+                            {v.description}
+                          </p>
                         )}
-                      </optgroup>
-                    ))}
-                    {filtered.length === 0 && (
-                      <tr>
-                        <td colSpan={canEditOrDelete ? "10" : "9"} className="text-center py-12 text-slate-500 text-sm">{t('tables.bankVouchers.noVouchersRecorded')}</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </DesktopOnly>
-            <MobileOnly className="p-3 space-y-3">
-              {filtered.map(v => (
-                <div key={v.dbId} className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-3 space-y-2">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <span className="text-xs font-mono font-bold text-slate-350">{v.voucherNo}</span>
-                      <p className="text-xs text-slate-400 mt-1">{t('tables.bankVouchers.date')}: {v.postingDate} | <span className="text-slate-200 font-semibold">{getVoucherTypeOrRef(v)}</span></p>
+                      </div>
                     </div>
-                    {getStatusBadge(v.status)}
+
+                    <div className="shrink-0">
+                      {getStatusBadge(v.status)}
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center text-xs pt-2 border-t border-slate-800/50">
-                    <span className="font-bold text-slate-250">PKR {getVoucherTotal(v).toLocaleString()}</span>
-                    <div className="flex items-center gap-1.5">
-                      <button onClick={() => setPrintItem(v)} className="p-1.5 rounded-lg bg-slate-800/40 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/40 transition-colors cursor-pointer" title="Print physical voucher">
-                        <Printer className="h-3.5 w-3.5" />
-                      </button>
-                      {(v.status === 'Draft' || canEditOrDelete) && (
-                        <button onClick={() => setEditItem(v)} disabled={statusLoading}
-                          className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-colors cursor-pointer"
-                          title="Edit Voucher">
-                          <Edit className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                      {v.status === 'Draft' && (
-                        <button onClick={() => handlePost(v.dbId)} disabled={statusLoading}
-                          className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-colors cursor-pointer"
-                          title={t('tables.bankVouchers.post') || "Post Voucher"}>
-                          <CheckCircle className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                      {v.status === 'Posted' && (
-                        <button onClick={() => handleCancel(v.dbId)} disabled={statusLoading}
-                          className="p-1.5 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 transition-colors cursor-pointer"
-                          title={t('tables.bankVouchers.void') || "Void Voucher & Reverse Ledger Entry"}>
-                          <XCircle className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                      {canEditOrDelete && (
-                        <button onClick={() => handleDeleteVoucher(v.dbId, v.voucherNo)} disabled={statusLoading}
-                          className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-colors cursor-pointer"
-                          title="Delete from database">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      )}
+
+                  {/* Inner Details Well */}
+                  <div className="bg-slate-950/70 rounded-xl border border-slate-800/80 p-4 my-4 space-y-2.5 shadow-inner">
+                    <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                        <Banknote className="w-3.5 h-3.5 text-amber-400" /> {t('tables.bankVouchers.totalAmount') || 'TOTAL AMOUNT'}
+                      </span>
+                      <span className="font-bold text-amber-400 text-sm">
+                        PKR {getVoucherTotal(v).toLocaleString()}
+                      </span>
                     </div>
+                    <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-amber-400" /> {t('tables.bankVouchers.bankAccount') || 'BANK ACCOUNT'}
+                      </span>
+                      <span className="text-xs font-mono font-bold text-amber-400 bg-amber-950/40 border border-amber-900/40 px-2 py-0.5 rounded">
+                        {getBankCode(v)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5 text-amber-400" /> {t('tables.bankVouchers.offsetAccount') || 'OFFSET ACCOUNT'}
+                      </span>
+                      <span className="text-xs font-mono font-bold text-slate-300 bg-slate-800/45 border border-slate-700/40 px-2 py-0.5 rounded">
+                        {getOffsetAccount(v)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-amber-400" /> {t('tables.bankVouchers.referenceCheque') || 'REFERENCE'}
+                      </span>
+                      <span className="font-semibold text-slate-200 text-xs truncate max-w-[150px]" title={v.reference}>
+                        {v.reference || '—'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Expand Ledger Lines Button */}
+                  <div className="mt-1">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedId(expandedId === v.dbId ? null : v.dbId)}
+                      className="w-full py-1.5 px-3 rounded-lg bg-slate-800/40 hover:bg-slate-800/80 border border-slate-700/50 text-slate-300 hover:text-amber-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <Layers className="w-3.5 h-3.5 text-amber-400" />
+                      {expandedId === v.dbId ? 'Hide Ledger Entries' : 'View Ledger Entries'} ({v.lines ? v.lines.length : 0})
+                      {expandedId === v.dbId ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    </button>
+                    
+                    {expandedId === v.dbId && (
+                      <div className="mt-2.5 rounded-xl border border-slate-800/80 bg-slate-950/90 overflow-hidden animate-in fade-in duration-150">
+                        <div className="px-3 py-2 bg-slate-900/80 border-b border-slate-800 flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          <span>{t('tables.bankVouchers.accountCode') || 'ACCOUNT / ENTRY'}</span>
+                          <div className="flex gap-4">
+                            <span className="w-16 text-right">{t('tables.bankVouchers.debit') || 'DEBIT'}</span>
+                            <span className="w-16 text-right">{t('tables.bankVouchers.credit') || 'CREDIT'}</span>
+                          </div>
+                        </div>
+                        <div className="divide-y divide-slate-800/50 max-h-48 overflow-y-auto">
+                          {v.lines && v.lines.map(line => (
+                            <div key={line.id} className="p-2.5 flex justify-between items-center text-xs">
+                              <div className="pr-2 truncate flex-1 font-medium text-slate-300" title={line.description}>
+                                <span className="font-mono text-slate-400 bg-slate-800/50 border border-slate-700/40 px-1 py-0.5 rounded mr-1.5 text-[10px]">{line.accountCode}</span>
+                                {line.description || t('tables.bankVouchers.entry')}
+                              </div>
+                              <div className="flex gap-4 shrink-0 font-mono font-semibold">
+                                <span className="w-16 text-right text-slate-200">{line.debit > 0 ? line.debit.toLocaleString() : '—'}</span>
+                                <span className="w-16 text-right text-slate-200">{line.credit > 0 ? line.credit.toLocaleString() : '—'}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {v.postedBy && (
+                          <div className="px-3 py-1.5 bg-slate-900/40 border-t border-slate-800/60 text-[10px] text-slate-400">
+                            <span className="font-bold">{t('tables.bankVouchers.postedBy') || 'Posted By'}:</span> {v.postedBy}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))}
-              {filtered.length === 0 && (
-                <div className="text-center py-8 text-slate-500 text-xs">{t('tables.bankVouchers.noVouchersRecorded')}</div>
-              )}
-            </MobileOnly>
-          </>
+
+                {/* Card Footer: Date & Action Icons */}
+                <div className="flex items-center justify-between gap-2 pt-3.5 mt-3.5 border-t border-slate-800/80">
+                  <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" /> {v.postingDate}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={() => setPrintItem(v)} className="w-8 h-8 rounded-full bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 flex items-center justify-center transition-all cursor-pointer shadow-sm" title="Print physical voucher">
+                      <Printer className="h-3.5 w-3.5" />
+                    </button>
+                    {(v.status === 'Draft' || canEditOrDelete) && (
+                      <button onClick={() => setEditItem(v)} disabled={statusLoading}
+                        className="w-8 h-8 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                        title="Edit Voucher">
+                        <Edit className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                    {v.status === 'Draft' && (
+                      <button onClick={() => handlePost(v.dbId)} disabled={statusLoading}
+                        className="w-8 h-8 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                        title={t('tables.bankVouchers.post') || "Post Voucher"}>
+                        <CheckCircle className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                    {v.status === 'Posted' && (
+                      <button onClick={() => handleCancel(v.dbId)} disabled={statusLoading}
+                        className="w-8 h-8 rounded-full bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                        title={t('tables.bankVouchers.void') || "Void Voucher & Reverse Ledger Entry"}>
+                        <XCircle className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                    {canEditOrDelete && (
+                      <button onClick={() => handleDeleteVoucher(v.dbId, v.voucherNo)} disabled={statusLoading}
+                        className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                        title="Delete from database">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

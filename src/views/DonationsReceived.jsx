@@ -279,239 +279,155 @@ export const DonationsReceived = () => {
         </div>
       </div>
 
-      {/* Receipts Table Section */}
-      <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 overflow-hidden shadow-xl">
-        <DesktopOnly>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[900px]">
-              <thead>
-                <tr className="border-b border-slate-800 bg-slate-900/80">
-                  <th className="px-4 py-3.5 w-10">
-                    <input
-                      type="checkbox"
-                      checked={filtered.length > 0 && selectedIds.length === filtered.length}
-                      onChange={handleSelectAll}
-                      className="rounded border-slate-700 bg-slate-800 text-amber-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
-                    />
-                  </th>
-                  <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">Receipt No & Date</th>
-                  <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">Donor Details</th>
-                  <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">Category</th>
-                  <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">Payment & Account</th>
-                  <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500 text-right">Amount (PKR)</th>
-                  <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500 text-center">Status</th>
-                  <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/50">
-                {loading && donations.length === 0 ? (
-                  <tr>
-                    <td colSpan="8" className="px-6 py-12 text-center text-slate-500 text-sm">
-                      Loading received donations...
-                    </td>
-                  </tr>
-                ) : filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan="8" className="px-6 py-12 text-center text-slate-500 text-sm">
-                      No donation receipts found matching criteria.
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map(d => (
-                    <tr key={d.id} className="hover:bg-slate-800/20 transition-colors group">
-                      <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(d.id)}
-                          onChange={(e) => handleSelectOne(d.id, e)}
-                          className="rounded border-slate-700 bg-slate-800 text-amber-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
-                        />
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-block px-2 py-0.5 rounded text-xs font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-1">
-                          {d.receiptNo}
-                        </span>
-                        <p className="text-xs text-slate-400 flex items-center gap-1">
-                          <Calendar className="h-3 w-3 text-slate-500" />
-                          {new Date(d.receiptDate).toLocaleDateString()}
+      {/* Grid Card View Container (Reference Style) */}
+      <div className="mt-2">
+        {loading && donations.length === 0 ? (
+          <div className="p-12 text-center text-slate-400 font-medium">Loading received donations...</div>
+        ) : filtered.length === 0 ? (
+          <div className="p-12 text-center text-slate-400 font-medium bg-slate-900/40 rounded-2xl border border-slate-800">No donation receipts found matching your search criteria.</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            {filtered.map(d => (
+              <div
+                key={d.id}
+                className={`group relative rounded-2xl border bg-slate-900/90 p-5 shadow-xl hover:shadow-2xl hover:border-slate-700/80 transition-all duration-300 flex flex-col justify-between ${
+                  selectedIds.includes(d.id) ? 'border-amber-500/60 bg-amber-500/5 shadow-amber-500/10' : 'border-slate-800/80'
+                }`}
+              >
+                {/* Card Top: Checkbox, Avatar/Icon, Name & Status Badge */}
+                <div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3.5">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(d.id)}
+                        onChange={(e) => handleSelectOne(d.id, e)}
+                        className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer shrink-0"
+                      />
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/30 flex items-center justify-center text-amber-400 font-extrabold text-lg shadow-inner shrink-0">
+                        {d.donor?.fullName ? d.donor.fullName.charAt(0).toUpperCase() : <DollarSign className="w-5 h-5 text-amber-400" />}
+                      </div>
+                      <div>
+                        <h4 className="text-base font-bold text-amber-400 group-hover:text-amber-300 transition-colors leading-tight tracking-tight">
+                          {d.donor?.fullName || 'Anonymous Donor'}
+                        </h4>
+                        <p className="text-xs text-slate-400 font-medium mt-0.5 flex items-center gap-1">
+                          {d.donor?.donorCode ? (
+                            <>
+                              <CreditCard className="w-3 h-3 text-amber-400/80 shrink-0" /> {d.donor.donorCode}
+                            </>
+                          ) : 'General Contribution'}
                         </p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="text-sm font-semibold text-slate-200">{d.donor?.fullName}</p>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
-                          Code: <span className="font-mono text-amber-400">{d.donor?.donorCode}</span>
-                        </p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                          {d.donationType?.replace(/_/g, ' ')}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="text-xs font-bold text-slate-300">{d.paymentMethod}</p>
-                        <p className="text-[11px] text-slate-500 truncate max-w-48 mt-0.5" title={d.cashAccount?.accountName || d.bankAccount?.accountName}>
-                          {d.cashAccount?.accountName || d.bankAccount?.accountName || '—'}
-                        </p>
-                        {d.chequeNo && <p className="text-[10px] text-slate-400 font-mono">Chq: {d.chequeNo}</p>}
-                      </td>
-                      <td className="px-6 py-4 text-right font-mono font-bold text-emerald-400 text-sm">
-                        {Number(d.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        {d.status === 'POSTED' ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border bg-emerald-950/60 text-emerald-400 border-emerald-900/50">
-                            <Check className="h-3 w-3" /> POSTED
-                          </span>
-                        ) : d.status === 'DRAFT' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-bold uppercase tracking-wider">
-                            <AlertTriangle className="h-3 w-3" /> PENDING POST
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border bg-red-950/60 text-red-400 border-red-900/50">
-                            <X className="h-3 w-3" /> VOIDED
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => setPrintItem(d)}
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
-                            title="Print Receipt"
-                          >
-                            <Printer className="h-3.5 w-3.5" />
-                          </button>
-
-                          {d.status === 'DRAFT' && (
-                            <button
-                              onClick={() => handlePostDraft(d)}
-                              className="p-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 transition-colors"
-                              title="Post Receipt to Ledger"
-                            >
-                              <CheckCircle className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-
-                          {d.status === 'POSTED' && canEditOrDelete && (
-                            <button
-                              onClick={() => handleCancelReceipt(d)}
-                              className="p-1.5 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 transition-colors"
-                              title="Void Receipt & Reverse Ledger Entry"
-                            >
-                              <XCircle className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-
-                          {canEditOrDelete && (
-                            <button
-                              onClick={() => { setSelectedReceipt(d); setModalOpen(true); }}
-                              className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-colors"
-                              title="Edit Receipt"
-                            >
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-
-                          {canEditOrDelete && (
-                            <button
-                              onClick={() => handleDelete(d)}
-                              className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-colors"
-                              title="Delete Receipt Permanently"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </DesktopOnly>
-
-        <MobileOnly>
-          <div className="divide-y divide-slate-800/50">
-            {loading && donations.length === 0 ? (
-              <div className="p-6 text-center text-slate-500 text-sm">Loading receipts...</div>
-            ) : filtered.length === 0 ? (
-              <div className="p-6 text-center text-slate-500 text-sm">No receipts found matching criteria.</div>
-            ) : (
-              filtered.map(d => (
-                <div key={d.id} className="p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-1">
-                        {d.receiptNo}
-                      </span>
-                      <h4 className="text-sm font-bold text-slate-200">{d.donor?.fullName}</h4>
-                      <p className="text-xs text-slate-500">{d.donationType?.replace(/_/g, ' ')}</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-mono font-bold text-emerald-400">
-                        PKR {Number(d.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </p>
+
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] font-bold uppercase tracking-wide shrink-0 ${
+                      d.status === 'POSTED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : d.status === 'DRAFT' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
+                    }`}>
                       {d.status === 'POSTED' ? (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-emerald-950/60 text-emerald-400 border-emerald-900/50 inline-block mt-1">POSTED</span>
+                        <>
+                          <CheckCircle className="w-3.5 h-3.5" /> POSTED
+                        </>
                       ) : d.status === 'DRAFT' ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px] font-bold uppercase tracking-wider inline-block mt-1">
-                          <AlertTriangle className="h-3 w-3 inline" /> PENDING POST
-                        </span>
+                        <>
+                          <AlertTriangle className="w-3.5 h-3.5" /> PENDING POST
+                        </>
                       ) : (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-red-950/60 text-red-400 border-red-900/50 inline-block mt-1">VOIDED</span>
+                        <>
+                          <XCircle className="w-3.5 h-3.5" /> VOIDED
+                        </>
                       )}
-                    </div>
+                    </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-400 bg-slate-950/50 p-2.5 rounded-lg border border-slate-800/50">
-                    <div>
-                      <span className="text-slate-500 block text-[10px]">Date</span>
-                      {new Date(d.receiptDate).toLocaleDateString()}
+                  {/* Inner Details Well */}
+                  <div className="bg-slate-950/70 rounded-xl border border-slate-800/80 p-4 my-4 space-y-2.5 shadow-inner">
+                    <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                        <DollarSign className="w-3.5 h-3.5 text-amber-400" /> AMOUNT
+                      </span>
+                      <span className="font-bold text-amber-400 text-sm">
+                        PKR {Number(d.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </span>
                     </div>
-                    <div>
-                      <span className="text-slate-500 block text-[10px]">Payment</span>
-                      {d.paymentMethod}
+                    <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-amber-400" /> RECEIPT NO
+                      </span>
+                      <span className="font-mono font-bold text-slate-100 text-xs">
+                        {d.receiptNo || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                        <DollarSign className="w-3.5 h-3.5 text-amber-400" /> CATEGORY
+                      </span>
+                      <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded bg-slate-800/90 text-slate-200 border border-slate-700/60">
+                        {d.donationType?.replace(/_/g, ' ') || 'GENERAL'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                        <CreditCard className="w-3.5 h-3.5 text-amber-400" /> METHOD
+                      </span>
+                      <span className="font-semibold text-slate-100 text-xs truncate max-w-[150px]">
+                        {d.paymentMethod || 'CASH'}
+                        {d.bankAccount && <span className="text-slate-400 font-normal ml-1">({d.bankAccount.accountName})</span>}
+                      </span>
                     </div>
                   </div>
+                </div>
 
-                  <div className="flex items-center justify-end gap-2 pt-1">
+                {/* Card Footer: Date & Action Icons */}
+                <div className="flex items-center justify-between gap-2 pt-3.5 border-t border-slate-800/80">
+                  <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" /> {d.receiptDate ? new Date(d.receiptDate).toLocaleDateString() : '7/7/2026'}
+                  </span>
+                  <div className="flex items-center gap-2">
                     <button
+                      type="button"
                       onClick={() => setPrintItem(d)}
-                      className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs font-medium flex items-center gap-1"
+                      className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                      title="Print Receipt Slip"
                     >
-                      <Printer className="h-3.5 w-3.5" /> Print
+                      <Printer className="w-3.5 h-3.5" />
                     </button>
                     {d.status === 'DRAFT' && (
                       <button
+                        type="button"
                         onClick={() => handlePostDraft(d)}
-                        className="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-medium flex items-center gap-1"
+                        className="px-3 py-1.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-bold text-xs transition-all cursor-pointer shadow-sm"
+                        title="Post Receipt to Ledger"
                       >
-                        <CheckCircle className="h-3.5 w-3.5" /> Post
+                        <CheckCircle className="w-3.5 h-3.5" /> Post
                       </button>
                     )}
                     {canEditOrDelete && (
-                      <button
-                        onClick={() => { setSelectedReceipt(d); setModalOpen(true); }}
-                        className="px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-medium flex items-center gap-1"
-                      >
-                        <Edit2 className="h-3.5 w-3.5" /> Edit
-                      </button>
-                    )}
-                    {canEditOrDelete && (
-                      <button
-                        onClick={() => handleDelete(d)}
-                        className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-medium flex items-center gap-1"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" /> Delete
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => { setSelectedReceipt(d); setModalOpen(true); }}
+                          className="w-8 h-8 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                          title="Edit Receipt"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(d)}
+                          className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                          title="Delete Receipt"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
-              ))
-            )}
+              </div>
+            ))}
           </div>
-        </MobileOnly>
+        )}
       </div>
 
       {showBulkConfirm && (
