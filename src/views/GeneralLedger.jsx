@@ -106,14 +106,14 @@ export const GeneralLedger = () => {
     });
   };
 
-  const isAsset = accountInfo && ['ASSET'].includes(accountInfo.type.toUpperCase());
-  const debitLabel = isAsset ? "Period Debits (In)" : (accountInfo ? "Period Debits (Out)" : "Period Debits");
-  const creditLabel = isAsset ? "Period Credits (Out)" : (accountInfo ? "Period Credits (In)" : "Period Credits");
+  const isDebitNormal = accountInfo && ['ASSET', 'EXPENSE'].includes(accountInfo.type.toUpperCase());
+  const debitLabel = isDebitNormal ? "Period Debits (In)" : (accountInfo ? "Period Debits (Out)" : "Period Debits");
+  const creditLabel = isDebitNormal ? "Period Credits (Out)" : (accountInfo ? "Period Credits (In)" : "Period Credits");
 
-  const debitColor = isAsset ? "text-emerald-400" : (accountInfo ? "text-red-400" : "text-emerald-400");
-  const creditColor = isAsset ? "text-red-400" : (accountInfo ? "text-emerald-400" : "text-red-400");
-  const tableDebitColor = isAsset ? "text-emerald-400" : (accountInfo ? "text-red-400" : "text-emerald-400");
-  const tableCreditColor = isAsset ? "text-red-400" : (accountInfo ? "text-emerald-400" : "text-red-400");
+  const debitColor = isDebitNormal ? "text-emerald-400" : (accountInfo ? "text-red-400" : "text-emerald-400");
+  const creditColor = isDebitNormal ? "text-red-400" : (accountInfo ? "text-emerald-400" : "text-red-400");
+  const tableDebitColor = isDebitNormal ? "text-emerald-400" : (accountInfo ? "text-red-400" : "text-emerald-400");
+  const tableCreditColor = isDebitNormal ? "text-red-400" : (accountInfo ? "text-emerald-400" : "text-red-400");
 
   return (
     <div className="space-y-6">
