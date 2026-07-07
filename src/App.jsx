@@ -28,7 +28,9 @@ const HallBookingForm = lazy(() => import('./views/HallBookingForm').then(m => (
 
 // Donation Module Views
 const Beneficiaries = lazy(() => import('./views/Beneficiaries').then(m => ({ default: m.Beneficiaries })));
+const BeneficiaryForm = lazy(() => import('./views/BeneficiaryForm').then(m => ({ default: m.BeneficiaryForm })));
 const Donations = lazy(() => import('./views/Donations').then(m => ({ default: m.Donations })));
+const DonationForm = lazy(() => import('./views/DonationForm').then(m => ({ default: m.DonationForm })));
 const Donors = lazy(() => import('./views/Donors').then(m => ({ default: m.Donors })));
 const DonationsReceived = lazy(() => import('./views/DonationsReceived').then(m => ({ default: m.DonationsReceived })));
 const DonationReports = lazy(() => import('./views/DonationReports').then(m => ({ default: m.DonationReports })));
@@ -50,6 +52,7 @@ const SpecializedRevenueForm = lazy(() => import('./views/SpecializedRevenueForm
 
 // Invoice Module Views
 const Customers = lazy(() => import('./views/Customers').then(m => ({ default: m.Customers })));
+const CustomerForm = lazy(() => import('./views/CustomerForm').then(m => ({ default: m.CustomerForm })));
 const InvoiceForm = lazy(() => import('./views/InvoiceForm').then(m => ({ default: m.InvoiceForm })));
 const InvoiceDetail = lazy(() => import('./views/InvoiceDetail').then(m => ({ default: m.InvoiceDetail })));
 const Members = lazy(() => import('./views/Members').then(m => ({ default: m.Members })));
@@ -358,7 +361,11 @@ function App() {
             <Route path="/hall-bookings/new" element={<HallBookingForm />} />
             <Route path="/hall-bookings/edit/:id" element={<HallBookingForm />} />
             <Route path="/beneficiaries" element={<Beneficiaries />} />
+            <Route path="/beneficiaries/new" element={<BeneficiaryForm />} />
+            <Route path="/beneficiaries/edit/:id" element={<BeneficiaryForm />} />
             <Route path="/donations" element={<Donations />} />
+            <Route path="/donations/new" element={<DonationForm />} />
+            <Route path="/donations/edit/:id" element={<DonationForm />} />
             <Route path="/donors" element={<Donors />} />
             <Route path="/donors/new" element={<DonorForm />} />
             <Route path="/donors/edit/:id" element={<DonorForm />} />
@@ -383,6 +390,8 @@ function App() {
             <Route path="/fitra/new" element={<SpecializedRevenueForm category="Fitra" title="Fitra Collection" desc="Manage Eid Fitra collections and head-counts" titleLabel="Donor Name" subTitleLabel={null} dateLabel="Collection Date" showQty={true} qtyLabel="Head Count" showRate={true} rateLabel="Rate per Head" backPath="/fitra" />} />
             <Route path="/fitra/edit/:id" element={<SpecializedRevenueForm category="Fitra" title="Fitra Collection" desc="Manage Eid Fitra collections and head-counts" titleLabel="Donor Name" subTitleLabel={null} dateLabel="Collection Date" showQty={true} qtyLabel="Head Count" showRate={true} rateLabel="Rate per Head" backPath="/fitra" />} />
             <Route path="/customers" element={<Customers />} />
+            <Route path="/customers/new" element={<CustomerForm />} />
+            <Route path="/customers/edit/:id" element={<CustomerForm />} />
             <Route path="/members" element={<Members />} />
             <Route path="/members/new" element={<MemberForm />} />
             <Route path="/members/edit/:id" element={<MemberForm />} />

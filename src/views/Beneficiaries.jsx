@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useBeneficiaryStore } from '../store/beneficiaryStore';
 import { Users, Search, Plus, Edit2, Trash2, X, AlertTriangle } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
@@ -176,12 +176,11 @@ function BeneficiaryModal({ isOpen, onClose, onSave, initial }) {
 }
 
 export const Beneficiaries = () => {
-  const { beneficiaries, fetchBeneficiaries, addBeneficiary, updateBeneficiary, deleteBeneficiary } = useBeneficiaryStore();
+  const { beneficiaries, fetchBeneficiaries, deleteBeneficiary } = useBeneficiaryStore();
+  const navigate = useNavigate();
   
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get('search') || '');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
@@ -210,15 +209,6 @@ export const Beneficiaries = () => {
   const isAllSelected = filtered.length > 0 && selectedIds.length === filtered.length;
   const toggleAll = () => isAllSelected ? setSelectedIds([]) : setSelectedIds(allIds);
   const toggleSelect = (id) => setSelectedIds(p => p.includes(id) ? p.filter(i => i !== id) : [...p, id]);
-
-  const handleSave = async (data) => {
-    if (editItem) {
-      await updateBeneficiary(editItem.id, data);
-    } else {
-      await addBeneficiary(data);
-    }
-    setEditItem(null);
-  };
 
   const handleDelete = async (id) => {
     setIsDeleting(true);
@@ -296,7 +286,7 @@ export const Beneficiaries = () => {
               <Trash2 className="h-3.5 w-3.5" /> Bulk Delete ({selectedIds.length})
             </button>
           )}
-          <button onClick={() => { setEditItem(null); setModalOpen(true); }}
+          <button onClick={() => navigate('/beneficiaries/new')}
             className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-lg shadow-amber-900/40 transition-all flex-1 sm:flex-none">
             <Plus className="h-4 w-4" /> New Beneficiary
           </button>
@@ -320,7 +310,7 @@ export const Beneficiaries = () => {
               title={search ? 'No results found' : 'No beneficiaries yet'}
               description={search ? `No one matches "${search}". Try a different name or CNIC.` : 'Start by adding the first person to your welfare list.'}
               actionLabel={!search ? 'Add First Person' : undefined}
-              onAction={!search ? () => { setEditItem(null); setModalOpen(true); } : undefined}
+              onAction={!search ? () => navigate('/beneficiaries/new') : undefined}
             />
           ) : (
           <div className="overflow-x-auto">
@@ -368,7 +358,7 @@ export const Beneficiaries = () => {
                     <td className="px-4 py-3.5 text-xs text-slate-400">{new Date(b.createdAt).toLocaleDateString()}</td>
                     <td className="px-4 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => { setEditItem(b); setModalOpen(true); }} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-500 hover:text-slate-200"><Edit2 className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => navigate(`/beneficiaries/edit/${b.id}`)} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-500 hover:text-slate-200"><Edit2 className="h-3.5 w-3.5" /></button>
                         <button onClick={() => setDeleteId(b.id)} className="p-1.5 rounded-lg hover:bg-red-950/40 text-slate-500 hover:text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
                       </div>
                     </td>
@@ -395,7 +385,7 @@ export const Beneficiaries = () => {
                 </div>
                 <div className="text-xs text-slate-400 mb-2 pl-7">CNIC: {b.cnic} | Mob: {b.mobile}</div>
                 <div className="flex justify-between mt-3 pt-3 border-t border-slate-800/50">
-                   <button onClick={() => { setEditItem(b); setModalOpen(true); }} className="text-xs text-slate-400 hover:text-white">Edit</button>
+                   <button onClick={() => navigate(`/beneficiaries/edit/${b.id}`)} className="text-xs text-slate-400 hover:text-white">Edit</button>
                    <button onClick={() => setDeleteId(b.id)} className="text-xs text-red-400">Delete</button>
                 </div>
               </div>
@@ -436,7 +426,7 @@ export const Beneficiaries = () => {
         </div>
       )}
 
-      <BeneficiaryModal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditItem(null); }} onSave={handleSave} initial={editItem} />
+
     </div>
   );
 };

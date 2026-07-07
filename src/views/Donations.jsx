@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useDonationStore } from '../store/donationStore';
 import { useCoaStore } from '../store/coaStore';
 import { useAuthStore } from '../store/authStore';
@@ -296,14 +296,13 @@ function DonationInvoiceModal({ donation, onClose }) {
 }
 
 export const Donations = () => {
-  const { donations, fetchDonations, addDonation, updateDonation, approveDonation, deleteDonation, bulkDeleteDonations } = useDonationStore();
+  const { donations, fetchDonations, approveDonation, deleteDonation, bulkDeleteDonations } = useDonationStore();
   const { flatAccounts, fetchAccountsList } = useCoaStore();
   const { canEditOrDelete } = useAuthStore();
+  const navigate = useNavigate();
 
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get('search') || '');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editItem, setEditItem] = useState(null);
   const [approveId, setApproveId] = useState(null);
   const [printDonation, setPrintDonation] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -322,10 +321,6 @@ export const Donations = () => {
     }
   }, [searchParams]);
 
-  const bankAccounts = useMemo(() => {
-    return flatAccounts.filter(a => (a.name || '').toLowerCase().includes('bank') || (a.type || '').toLowerCase().includes('bank'));
-  }, [flatAccounts]);
-
   const filtered = useMemo(() => {
     return donations.filter(d => 
       (d.donorName || '').toLowerCase().includes(search.toLowerCase()) || 
@@ -334,22 +329,6 @@ export const Donations = () => {
       (d.paymentMethod || '').toLowerCase().includes(search.toLowerCase())
     );
   }, [donations, search]);
-
-  const handleSave = async (data) => {
-    try {
-      if (editItem) {
-        await updateDonation(editItem.id, data);
-        showToast('Donation updated successfully', 'success');
-      } else {
-        await addDonation(data);
-        showToast('Donation logged successfully', 'success');
-      }
-      setModalOpen(false);
-      setEditItem(null);
-    } catch (e) {
-      showToast(e.message || 'Failed to save donation', 'error');
-    }
-  };
 
   const handleApprove = async (id) => {
     try {
@@ -424,8 +403,8 @@ export const Donations = () => {
               <Trash2 className="h-4 w-4" /> Bulk Delete ({selectedIds.length})
             </button>
           )}
-          <button onClick={() => { setEditItem(null); setModalOpen(true); }}
-            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold shadow-lg shadow-pink-900/40 transition-all flex-1 sm:flex-none cursor-pointer">
+          <button onClick={() => navigate('/donations/new')}
+            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-lg shadow-amber-900/40 transition-all flex-1 sm:flex-none cursor-pointer">
             <Plus className="h-4 w-4" /> Log Donation
           </button>
         </div>
@@ -515,13 +494,13 @@ export const Donations = () => {
                             <button onClick={() => setApproveId(d.id)} className="p-1.5 rounded-lg hover:bg-emerald-950/40 text-emerald-500 hover:text-emerald-400 cursor-pointer" title="Post to Ledger (Approve)">
                               <CheckCircle2 className="h-4 w-4" />
                             </button>
-                            <button onClick={() => { setEditItem(d); setModalOpen(true); }} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-slate-200 cursor-pointer" title="Edit Donation">
+                            <button onClick={() => navigate(`/donations/edit/${d.id}`)} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-slate-200 cursor-pointer" title="Edit Donation">
                               <Edit2 className="h-3.5 w-3.5" />
                             </button>
                           </>
                         ) : (
                           canEditOrDelete && (
-                            <button onClick={() => { setEditItem(d); setModalOpen(true); }} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-slate-200 cursor-pointer" title="Edit Donation">
+                            <button onClick={() => navigate(`/donations/edit/${d.id}`)} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-slate-200 cursor-pointer" title="Edit Donation">
                               <Edit2 className="h-3.5 w-3.5" />
                             </button>
                           )
@@ -571,9 +550,9 @@ export const Donations = () => {
                     {d.status === 'PENDING' && (
                       <button onClick={() => setApproveId(d.id)} className="text-xs text-emerald-450 hover:text-emerald-400 font-bold flex items-center gap-1 cursor-pointer"><CheckCircle2 className="h-3 w-3" /> Approve</button>
                     )}
-                    {(d.status === 'PENDING' || canEditOrDelete) && (
-                      <button onClick={() => { setEditItem(d); setModalOpen(true); }} className="text-xs text-slate-400 hover:text-white cursor-pointer flex items-center gap-1"><Edit2 className="h-3 w-3" /> Edit</button>
-                    )}
+                      {(d.status === 'PENDING' || canEditOrDelete) && (
+                        <button onClick={() => navigate(`/donations/edit/${d.id}`)} className="text-xs text-slate-400 hover:text-white cursor-pointer flex items-center gap-1"><Edit2 className="h-3 w-3" /> Edit</button>
+                      )}
                     {canEditOrDelete && (
                       <button onClick={() => setDeleteId(d.id)} className="text-xs text-red-400 hover:text-red-350 cursor-pointer flex items-center gap-1">
                         <Trash2 className="h-3 w-3" /> Delete
@@ -644,7 +623,7 @@ export const Donations = () => {
         </div>
       )}
 
-      <DonationModal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditItem(null); }} onSave={handleSave} initial={editItem} accounts={bankAccounts} />
+
 
       {printDonation && (
         <DonationInvoiceModal

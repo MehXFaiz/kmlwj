@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useCustomerStore } from '../store/customerStore';
 import { Users, Search, Plus, Edit2, Trash2, X, Building2, Mail, Phone, AlertTriangle } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
@@ -181,12 +181,11 @@ function CustomerModal({ isOpen, onClose, onSave, initial }) {
 }
 
 export const Customers = () => {
-  const { customers, fetchCustomers, addCustomer, updateCustomer, deleteCustomer, bulkDeleteCustomers } = useCustomerStore();
+  const { customers, fetchCustomers, deleteCustomer, bulkDeleteCustomers } = useCustomerStore();
+  const navigate = useNavigate();
   
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get('search') || '');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -210,15 +209,6 @@ export const Customers = () => {
       (c.email && c.email.toLowerCase().includes(search.toLowerCase()))
     );
   }, [customers, search]);
-
-  const handleSave = async (data) => {
-    if (editItem) {
-      await updateCustomer(editItem.id, data);
-    } else {
-      await addCustomer(data);
-    }
-    setEditItem(null);
-  };
 
   const handleDelete = async (id) => {
     setIsDeleting(true);
@@ -286,7 +276,7 @@ export const Customers = () => {
               <span>Bulk Delete ({selectedIds.length})</span>
             </button>
           )}
-          <button onClick={() => { setEditItem(null); setModalOpen(true); }}
+          <button onClick={() => navigate('/customers/new')}
             className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-lg shadow-amber-900/40 transition-all flex-1 sm:flex-none">
             <Plus className="h-4 w-4" /> New Customer
           </button>
@@ -369,7 +359,7 @@ export const Customers = () => {
                     <td className="px-6 py-4 text-xs text-slate-500">{new Date(c.createdAt).toLocaleDateString()}</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => { setEditItem(c); setModalOpen(true); }} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-500 hover:text-slate-200" title="Edit Customer"><Edit2 className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => navigate(`/customers/edit/${c.id}`)} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-500 hover:text-slate-200" title="Edit Customer"><Edit2 className="h-3.5 w-3.5" /></button>
                         <button onClick={() => setDeleteId(c.id)} className="p-1.5 rounded-lg hover:bg-red-950/40 text-slate-500 hover:text-red-400" title="Delete Customer"><Trash2 className="h-3.5 w-3.5" /></button>
                       </div>
                     </td>
@@ -398,7 +388,7 @@ export const Customers = () => {
                   {c.phone && <div>Phone: {c.phone}</div>}
                 </div>
                 <div className="flex justify-between mt-3 pt-3 border-t border-slate-800/50">
-                   <button onClick={() => { setEditItem(c); setModalOpen(true); }} className="text-xs text-slate-400 hover:text-white">Edit</button>
+                   <button onClick={() => navigate(`/customers/edit/${c.id}`)} className="text-xs text-slate-400 hover:text-white">Edit</button>
                    <button onClick={() => setDeleteId(c.id)} className="text-xs text-red-400">Delete</button>
                 </div>
               </div>
@@ -466,7 +456,7 @@ export const Customers = () => {
         </div>
       )}
 
-      <CustomerModal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditItem(null); }} onSave={handleSave} initial={editItem} />
+
     </div>
   );
 };
