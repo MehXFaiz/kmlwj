@@ -126,6 +126,7 @@ app.delete('/api/v1/expense-heads', makeExpress(expenseHandler));
 app.get('/api/v1/users', makeExpress(usersHandler));
 app.post('/api/v1/users', makeExpress(usersHandler));
 app.put('/api/v1/users', makeExpress(usersHandler));
+app.delete('/api/v1/users', makeExpress(usersHandler));
 app.get('/api/v1/roles', makeExpress(rolesHandler));
 app.put('/api/v1/roles', makeExpress(rolesHandler));
 app.get('/api/v1/audit-logs', makeExpress(auditLogsHandler));

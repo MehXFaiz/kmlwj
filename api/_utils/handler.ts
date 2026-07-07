@@ -12,7 +12,7 @@ export function makeHandler(fn: ServerlessFunction) {
   return async (req: VercelRequest, res: VercelResponse) => {
     // CORS headers
     res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || '*');
+    res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || 'http://localhost:5173');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
     res.setHeader(
       'Access-Control-Allow-Headers',

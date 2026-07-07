@@ -12,10 +12,20 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const id = req.query.id as string;
 
   if (method === 'GET') {
-    const beneficiaries = await prisma.beneficiary.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
-    return res.status(200).json({ status: 200, data: beneficiaries });
+    const { limit = '100', page = '1' } = req.query as any;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 100;
+    const skip = (pageNum - 1) * limitNum;
+
+    const [beneficiaries, total] = await Promise.all([
+      prisma.beneficiary.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limitNum,
+      }),
+      prisma.beneficiary.count()
+    ]);
+    return res.status(200).json({ status: 200, data: beneficiaries, meta: { total, page: pageNum, limit: limitNum } });
   }
 
   if (method === 'POST') {

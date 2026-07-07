@@ -75,7 +75,8 @@ export async function verifyAuth(req: AuthenticatedRequest, res: VercelResponse)
   }
 
   const token = authHeader.split(' ')[1];
-  const secret = process.env.JWT_SECRET || 'super_secret_jwt_sign_key_123_abc';
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET is not configured');
 
   try {
     const payload = jwt.verify(token, secret) as { sub: string; email: string; role: string };
@@ -115,7 +116,8 @@ export function requireAuth(req: any, res: any, next: any): void {
   }
 
   const token = authHeader.split(' ')[1];
-  const secret = process.env.JWT_SECRET || 'super_secret_jwt_sign_key_123_abc';
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET is not configured');
 
   try {
     const payload = jwt.verify(token, secret) as { sub: string; email: string; role: string };

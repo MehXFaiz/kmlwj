@@ -3,6 +3,7 @@ import { makeHandler } from '../_utils/handler.js';
 import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
+import { compareCodes } from '../_utils/code-compare.js';
 import { AccountingService } from '../_services/accounting.service.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
@@ -112,13 +113,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     // Reserved accounts cannot be assigned unless explicitly marked as reserved
     if (!isReserved) {
-      const reservedMatch = await prisma.reservedCode.findFirst({
-        where: {
-          isActive: true,
-          reserveStart: { lte: code },
-          reserveEnd: { gte: code },
-        }
-      });
+      const allReserved = await prisma.reservedCode.findMany({ where: { isActive: true } });
+      const reservedMatch = allReserved.find(r => 
+        compareCodes(r.reserveStart, code) <= 0 && 
+        compareCodes(r.reserveEnd, code) >= 0
+      );
       if (reservedMatch) {
         return res.status(400).json({ error: { message: `Code ${code} falls within a reserved range: ${reservedMatch.reserveReason}`, status: 400 } });
       }
@@ -215,13 +214,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       // Reserved accounts cannot be assigned unless explicitly marked as reserved
       if (isReserved !== true && existingAccount.isReserved !== true) {
-        const reservedMatch = await prisma.reservedCode.findFirst({
-          where: {
-            isActive: true,
-            reserveStart: { lte: code },
-            reserveEnd: { gte: code },
-          }
-        });
+        const allReserved = await prisma.reservedCode.findMany({ where: { isActive: true } });
+        const reservedMatch = allReserved.find(r => 
+          compareCodes(r.reserveStart, code) <= 0 && 
+          compareCodes(r.reserveEnd, code) >= 0
+        );
         if (reservedMatch) {
           return res.status(400).json({ error: { message: `Code ${code} falls within a reserved range: ${reservedMatch.reserveReason}`, status: 400 } });
         }

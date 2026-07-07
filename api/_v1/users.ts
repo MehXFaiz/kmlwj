@@ -140,5 +140,34 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     });
   }
 
+  if (method === 'DELETE') {
+    if (!id) {
+      return res.status(400).json({ error: { message: 'User ID is required', status: 400 } });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { id } });
+    if (!existingUser) {
+      return res.status(404).json({ error: { message: 'User not found', status: 404 } });
+    }
+
+    // Soft delete by setting isActive to false
+    const deletedUser = await prisma.user.update({
+      where: { id },
+      data: { isActive: false },
+    });
+
+    await logAudit(
+      req.user.id,
+      'Deactivate User',
+      'USERS',
+      { id: existingUser.id, isActive: existingUser.isActive },
+      { id: deletedUser.id, isActive: deletedUser.isActive },
+      req.headers['x-forwarded-for'] as string,
+      req.headers['user-agent']
+    );
+
+    return res.status(200).json({ status: 200, message: 'User successfully deactivated' });
+  }
+
   return res.status(405).json({ error: { message: 'Method Not Allowed', status: 405 } });
 });

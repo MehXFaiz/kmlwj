@@ -32,10 +32,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   // Perm mapping definition
   const permMap: Record<string, string[]> = {
     coa: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT', 'LOCK_ACCOUNT'],
-    journals: ['VIEW_REPORTS'],
+    journals: ['VIEW_REPORTS', 'POST_JOURNAL'],
     reports: ['VIEW_REPORTS'],
     users: ['MANAGE_USERS'],
     settings: ['MANAGE_ROLES', 'MANAGE_RESERVED_CODES'],
+    income: ['RECORD_INCOME', 'CREATE_ACCOUNT'],
+    expense: ['RECORD_EXPENSE', 'CREATE_ACCOUNT'],
+    invoices: ['VIEW_INVOICES'],
   };
 
   if (method === 'GET') {
@@ -57,6 +60,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         reports: permMap.reports.every((p) => activePermNames.includes(p)),
         users: permMap.users.every((p) => activePermNames.includes(p)),
         settings: permMap.settings.every((p) => activePermNames.includes(p)),
+        income: permMap.income.every((p) => activePermNames.includes(p)),
+        expense: permMap.expense.every((p) => activePermNames.includes(p)),
+        invoices: permMap.invoices.every((p) => activePermNames.includes(p)),
       };
 
       // Check if role is locked (Super Admin cannot be modified, or check description)
@@ -112,6 +118,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           permissionsToAssign.push(...permMap[key]);
         }
       });
+
+      // Ensure permissions exist in DB
+      for (const permName of permissionsToAssign) {
+        await prisma.permission.upsert({
+          where: { name: permName },
+          update: {},
+          create: { name: permName, description: `Access to ${permName}` }
+        });
+      }
 
       // Fetch corresponding permission records from DB
       const dbPermissions = await prisma.permission.findMany({

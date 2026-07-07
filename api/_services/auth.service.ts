@@ -14,7 +14,8 @@ async function hashPassword(password: string): Promise<string> {
 
 // Helper to generate access & refresh tokens
 function generateAccessToken(userId: string, email: string, role: string): string {
-  const secret = process.env.JWT_SECRET || 'super_secret_jwt_sign_key_123_abc';
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET is not configured');
   return jwt.sign({ sub: userId, email, role }, secret, { expiresIn: ACCESS_TOKEN_EXPIRY });
 }
 
@@ -101,33 +102,43 @@ export async function login(data: any) {
     include: { role: true },
   });
 
-  if (!user && data.email === 'guest@erp.com') {
-    // Automatically register the guest user if they don't exist
-    const auditorRole = await prisma.role.findUnique({ where: { name: 'Auditor' } });
-    const hashedPassword = await bcrypt.hash('guest123', 12);
-    user = await prisma.user.create({
-      data: {
-        email: 'guest@erp.com',
-        password: hashedPassword,
-        fullName: 'Guest Visitor',
-        roleId: auditorRole?.id || (await prisma.role.findFirst())?.id || '',
-        isActive: true,
-      },
-      include: { role: true },
-    });
+  if (data.email === 'guest@erp.com') {
+    if (process.env.GUEST_MODE !== 'true') {
+      throw { status: 403, message: 'Guest access is disabled' };
+    }
+    if (!user) {
+      // Automatically register the guest user if they don't exist
+      const auditorRole = await prisma.role.findUnique({ where: { name: 'Auditor' } });
+      const hashedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);
+      user = await prisma.user.create({
+        data: {
+          email: 'guest@erp.com',
+          password: hashedPassword,
+          fullName: 'Guest Visitor',
+          roleId: auditorRole?.id || (await prisma.role.findFirst())?.id || '',
+          isActive: true,
+        },
+        include: { role: true },
+      });
+    }
+  } else {
+    if (!user) {
+      throw { status: 401, message: 'Invalid credentials' };
+    }
+
+    if (!user.isActive) {
+      throw { status: 403, message: 'This account has been deactivated' };
+    }
+
+    const matches = await bcrypt.compare(data.password, user.password);
+    if (!matches) {
+      throw { status: 401, message: 'Invalid credentials' };
+    }
   }
 
-  if (!user) {
-    throw { status: 401, message: 'Invalid credentials' };
-  }
-
+  // Ensure active check for guest as well if they existed
   if (!user.isActive) {
     throw { status: 403, message: 'This account has been deactivated' };
-  }
-
-  const matches = await bcrypt.compare(data.password, user.password);
-  if (!matches) {
-    throw { status: 401, message: 'Invalid credentials' };
   }
 
   const accessToken = generateAccessToken(user.id, user.email, user.role.name);
