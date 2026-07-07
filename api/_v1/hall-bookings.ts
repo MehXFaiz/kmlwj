@@ -66,8 +66,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           'REVENUE',
           null,
           {
-            user: req.user.fullName || req.user.email,
-            hall: conflictBooking.hallAccount?.accountName || conflictBooking.hallAccount?.name || 'Selected Hall',
+            user: (req.user as any).fullName || req.user.email,
+            hall: conflictBooking.hallAccount?.accountName || 'Selected Hall',
             bookingDate: dateParam,
             attemptedBy: req.user.id,
             ipAddress: ipAddress,
@@ -81,7 +81,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           available: false,
           bookedBy: conflictBooking.bookerName,
           bookingDate: conflictBooking.programDate.toISOString().split('T')[0],
-          hallName: conflictBooking.hallAccount?.accountName || conflictBooking.hallAccount?.name || 'Selected Hall',
+          hallName: conflictBooking.hallAccount?.accountName || 'Selected Hall',
           receiptNo: conflictBooking.receiptNo,
           status: conflictBooking.status,
         });
@@ -227,8 +227,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         'REVENUE',
         null,
         {
-          user: req.user.fullName || req.user.email,
-          hall: conflictBooking.hallAccount?.accountName || conflictBooking.hallAccount?.name || 'Selected Hall',
+          user: (req.user as any).fullName || req.user.email,
+          hall: conflictBooking.hallAccount?.accountName || 'Selected Hall',
           bookingDate: eventDateStr,
           attemptedBy: req.user.id,
           ipAddress: ipAddress,
@@ -291,7 +291,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           'REVENUE',
           null,
           {
-            user: req.user.fullName || req.user.email,
+            user: (req.user as any).fullName || req.user.email,
             hall: hallId,
             bookingDate: programDate || bookingDate,
             attemptedBy: req.user.id,
@@ -426,8 +426,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         'REVENUE',
         null,
         {
-          user: req.user.fullName || req.user.email,
-          hall: conflictBooking.hallAccount?.accountName || conflictBooking.hallAccount?.name || 'Selected Hall',
+          user: (req.user as any).fullName || req.user.email,
+          hall: conflictBooking.hallAccount?.accountName || 'Selected Hall',
           bookingDate: eventDateStr,
           attemptedBy: req.user.id,
           ipAddress: ipAddress,
@@ -491,7 +491,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           'REVENUE',
           null,
           {
-            user: req.user.fullName || req.user.email,
+            user: (req.user as any).fullName || req.user.email,
             hall: hallId,
             bookingDate: programDate || bookingDate,
             attemptedBy: req.user.id,

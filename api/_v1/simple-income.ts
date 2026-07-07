@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
 import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
 import { prisma } from '../_prisma.js';
+import { AccountingService } from '../_services/accounting.service.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
@@ -26,81 +27,167 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Missing required fields', status: 400 } });
     }
 
-    // Begin transaction to create SimpleIncome and corresponding JournalEntry
+    const numAmount = Number(amount);
+    if (numAmount <= 0) {
+      return res.status(400).json({ error: { message: 'Amount must be greater than zero', status: 400 } });
+    }
+
+    // Begin transaction to create SimpleIncome and post to General Ledger via AccountingService
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Get Revenue Head account code
       const revenueHead = await tx.revenueHead.findUnique({
         where: { id: revenueHeadId },
-        include: { subsidiaryAccount: true }
+        include: { account: true }
       });
 
-      if (!revenueHead || !revenueHead.subsidiaryAccount) {
-        throw new Error('Revenue head or associated account not found');
+      if (!revenueHead) {
+        throw new Error('Revenue head not found');
       }
 
-      // 2. Determine Debit Account (Cash or Bank)
-      let debitAccountCode;
-      if (paymentMethod === 'BANK' && bankAccountId) {
-        const bankAcc = await tx.account.findUnique({ where: { id: bankAccountId } });
-        if (!bankAcc) throw new Error('Bank account not found');
-        debitAccountCode = bankAcc.code;
-      } else {
-        // Find default cash account (Assuming 1000000 series, find one named Cash)
-        const cashAcc = await tx.account.findFirst({
-          where: { name: { contains: 'Cash', mode: 'insensitive' }, type: 'Asset' }
-        });
-        if (!cashAcc) throw new Error('Cash account not found. Please create a Cash account first.');
-        debitAccountCode = cashAcc.code;
-      }
+      const incomeAccountId = revenueHead.accountId || revenueHead.account?.id;
 
-      // 3. Create Journal Entry
-      // Income Journal: Debit Asset (Cash/Bank), Credit Revenue
-      const journalEntry = await tx.journalEntry.create({
-        data: {
-          date: new Date(date),
-          reference: reference || 'Income Receipt',
-          description: description || `Income from ${revenueHead.name}`,
-          status: 'POSTED', // Auto-post simple incomes for operators
-          createdById: req.user!.id,
-          lines: {
-            create: [
-              { accountCode: debitAccountCode, debit: amount, credit: 0, description },
-              { accountCode: revenueHead.subsidiaryAccount.code, debit: 0, credit: amount, description }
-            ]
-          }
-        }
+      // Automatically post receipt to GL: Debits Cash/Bank, Credits Income Account
+      const postingResult = await AccountingService.postReceipt(tx, {
+        amount: numAmount,
+        cashOrBankAccountId: paymentMethod === 'BANK' && bankAccountId ? bankAccountId : undefined,
+        cashOrBankAccountKeyword: paymentMethod !== 'BANK' ? 'Cash' : undefined,
+        incomeAccountId: incomeAccountId || undefined,
+        incomeAccountKeyword: !incomeAccountId ? (revenueHead.name || 'Income') : undefined,
+        description: description || `Income from ${revenueHead.name}`,
+        reference: reference || 'Income Receipt',
+        module: 'Simple Income',
+        postedBy: req.user!.id,
+        postingDate: date ? new Date(date) : new Date(),
+        ipAddress: (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress,
+        userAgent: req.headers['user-agent']
       });
 
-      // 4. Create SimpleIncome record
       const income = await tx.simpleIncome.create({
         data: {
-          date: new Date(date),
+          date: date ? new Date(date) : new Date(),
           revenueHeadId,
           description,
-          amount,
-          paymentMethod,
-          bankAccountId,
+          amount: numAmount,
+          paymentMethod: paymentMethod || 'CASH',
+          bankAccountId: paymentMethod === 'BANK' ? bankAccountId : null,
           reference,
-          journalEntryId: journalEntry.id,
+          journalEntryId: postingResult.journalEntry.id,
           createdById: req.user!.id
         },
         include: { revenueHead: true }
       });
 
-      // 5. Create Audit Log
-      await tx.auditLog.create({
-        data: {
-          userId: req.user!.id,
-          action: 'Create Simple Income',
-          module: 'Income',
-          details: `Added income of ${amount} for ${revenueHead.name}`
-        }
-      });
+      try {
+        await tx.auditLog.create({
+          data: {
+            userId: req.user!.id,
+            action: 'Create Simple Income',
+            module: 'Income',
+            details: `Added income of ${numAmount} for ${revenueHead.name}`
+          }
+        });
+      } catch (e) {}
 
       return income;
     });
 
     return res.status(201).json({ status: 201, data: result });
+  }
+
+  if (req.method === 'PUT' || req.method === 'PATCH') {
+    const { id, date, revenueHeadId, description, amount, paymentMethod, bankAccountId, reference } = req.body;
+    if (!id || !revenueHeadId || !amount) {
+      return res.status(400).json({ error: { message: 'Missing required fields', status: 400 } });
+    }
+
+    const numAmount = Number(amount);
+    if (numAmount <= 0) {
+      return res.status(400).json({ error: { message: 'Amount must be greater than zero', status: 400 } });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const existing = await tx.simpleIncome.findUnique({ where: { id }, include: { revenueHead: true } });
+      if (!existing) throw new Error('Income not found');
+
+      if (existing.journalEntryId) {
+        try {
+          await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user!.id, 'Simple Income Updated');
+        } catch (e) {}
+      }
+
+      const revenueHead = await tx.revenueHead.findUnique({
+        where: { id: revenueHeadId },
+        include: { account: true }
+      });
+      if (!revenueHead) {
+        throw new Error('Revenue head not found');
+      }
+
+      const incomeAccountId = revenueHead.accountId || revenueHead.account?.id;
+
+      const postingResult = await AccountingService.postReceipt(tx, {
+        amount: numAmount,
+        cashOrBankAccountId: paymentMethod === 'BANK' && bankAccountId ? bankAccountId : undefined,
+        cashOrBankAccountKeyword: paymentMethod !== 'BANK' ? 'Cash' : undefined,
+        incomeAccountId: incomeAccountId || undefined,
+        incomeAccountKeyword: !incomeAccountId ? (revenueHead.name || 'Income') : undefined,
+        description: description || `Income from ${revenueHead.name}`,
+        reference: reference || 'Income Receipt',
+        module: 'Simple Income',
+        postedBy: req.user!.id,
+        postingDate: date ? new Date(date) : new Date(),
+        ipAddress: (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress,
+        userAgent: req.headers['user-agent']
+      });
+
+      const updated = await tx.simpleIncome.update({
+        where: { id },
+        data: {
+          date: date ? new Date(date) : new Date(),
+          revenueHeadId,
+          description,
+          amount: numAmount,
+          paymentMethod: paymentMethod || 'CASH',
+          bankAccountId: paymentMethod === 'BANK' ? bankAccountId : null,
+          reference,
+          journalEntryId: postingResult.journalEntry.id
+        },
+        include: { revenueHead: true, createdBy: { select: { fullName: true } } }
+      });
+
+      try {
+        await tx.auditLog.create({
+          data: {
+            userId: req.user!.id,
+            action: 'Update Simple Income',
+            module: 'Income',
+            details: `Updated income of ${numAmount} for ${revenueHead.name}`
+          }
+        });
+      } catch (e) {}
+
+      return updated;
+    });
+
+    return res.status(200).json({ status: 200, data: result });
+  }
+
+  if (req.method === 'DELETE') {
+    const id = req.query.id || req.body.id;
+    if (!id) return res.status(400).json({ error: { message: 'Income ID required', status: 400 } });
+
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.simpleIncome.findUnique({ where: { id: String(id) } });
+      if (existing && existing.journalEntryId) {
+        try {
+          await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user!.id, 'Simple Income Deleted');
+        } catch (e) {}
+      }
+      if (existing) {
+        await tx.simpleIncome.delete({ where: { id: String(id) } });
+      }
+    });
+
+    return res.status(200).json({ status: 200, message: 'Income deleted successfully' });
   }
 
   return res.status(405).json({ error: { message: 'Method Not Allowed', status: 405 } });

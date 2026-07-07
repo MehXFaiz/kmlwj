@@ -74,7 +74,7 @@ var customers_default = makeHandler(async (req, res) => {
     if (customersWithInvoices.length > 0) {
       return res.status(400).json({
         error: {
-          message: `Cannot delete customer(s) with existing invoices (${customersWithInvoices.map((c) => c.customerCode).join(", ")})`,
+          message: `Cannot delete customer(s) with existing invoices (${customersWithInvoices.map((c) => c.name).join(", ")})`,
           status: 400
         }
       });

@@ -27,77 +27,66 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Missing required fields', status: 400 } });
     }
 
-    // Begin transaction to create SimpleExpense and corresponding JournalEntry
+    const numAmount = Number(amount);
+    if (numAmount <= 0) {
+      return res.status(400).json({ error: { message: 'Amount must be greater than zero', status: 400 } });
+    }
+
+    // Begin transaction to create SimpleExpense and post to General Ledger via AccountingService
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Get Expense Head account code
       const expenseHead = await tx.expenseHead.findUnique({
         where: { id: expenseHeadId },
-        include: { subsidiaryAccount: true }
+        include: { account: true }
       });
 
-      if (!expenseHead || !expenseHead.subsidiaryAccount) {
-        throw new Error('Expense head or associated account not found');
+      if (!expenseHead) {
+        throw new Error('Expense head not found');
       }
 
-      // 2. Determine Credit Account (Cash or Bank)
-      let creditAccountCode;
-      if (paymentMethod === 'BANK' && bankAccountId) {
-        const bankAcc = await tx.account.findUnique({ where: { id: bankAccountId } });
-        if (!bankAcc) throw new Error('Bank account not found');
-        creditAccountCode = bankAcc.code;
-      } else {
-        // Find default cash account
-        const cashAcc = await tx.account.findFirst({
-          where: { name: { contains: 'Cash', mode: 'insensitive' }, type: 'Asset' }
-        });
-        if (!cashAcc) throw new Error('Cash account not found. Please create a Cash account first.');
-        creditAccountCode = cashAcc.code;
-      }
+      const expenseAccountId = expenseHead.accountId || expenseHead.account?.id;
 
-      // 3. Create Journal Entry
-      // Expense Journal: Debit Expense, Credit Asset (Cash/Bank)
-      const journalEntry = await tx.journalEntry.create({
-        data: {
-          date: new Date(date),
-          reference: reference || 'Expense Payment',
-          description: description || `Expense for ${expenseHead.name}`,
-          status: 'POSTED', // Auto-post simple expenses for operators
-          createdById: req.user!.id,
-          lines: {
-            create: [
-              { accountCode: expenseHead.subsidiaryAccount.code, debit: amount, credit: 0, description },
-              { accountCode: creditAccountCode, debit: 0, credit: amount, description }
-            ]
-          }
-        }
+      // Automatically post payment to GL: Debits Expense Account, Credits Cash/Bank
+      const postingResult = await AccountingService.postPayment(tx, {
+        amount: numAmount,
+        cashOrBankAccountId: paymentMethod === 'BANK' && bankAccountId ? bankAccountId : undefined,
+        cashOrBankAccountKeyword: paymentMethod !== 'BANK' ? 'Cash' : undefined,
+        expenseAccountId: expenseAccountId || undefined,
+        expenseAccountKeyword: !expenseAccountId ? (expenseHead.name || 'Expense') : undefined,
+        description: description || `Expense for ${expenseHead.name}`,
+        reference: reference || 'Expense Payment',
+        module: 'Simple Expense',
+        postedBy: req.user!.id,
+        postingDate: date ? new Date(date) : new Date(),
+        ipAddress: (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress,
+        userAgent: req.headers['user-agent']
       });
 
-      // 4. Create SimpleExpense record
       const expense = await tx.simpleExpense.create({
         data: {
-          date: new Date(date),
+          date: date ? new Date(date) : new Date(),
           expenseHeadId,
           paidTo,
           description,
-          amount,
-          paymentMethod,
-          bankAccountId,
+          amount: numAmount,
+          paymentMethod: paymentMethod || 'CASH',
+          bankAccountId: paymentMethod === 'BANK' ? bankAccountId : null,
           reference,
-          journalEntryId: journalEntry.id,
+          journalEntryId: postingResult.journalEntry.id,
           createdById: req.user!.id
         },
         include: { expenseHead: true }
       });
 
-      // 5. Create Audit Log
-      await tx.auditLog.create({
-        data: {
-          userId: req.user!.id,
-          action: 'Create Simple Expense',
-          module: 'Expense',
-          details: `Added expense of ${amount} for ${expenseHead.name}`
-        }
-      });
+      try {
+        await tx.auditLog.create({
+          data: {
+            userId: req.user!.id,
+            action: 'Create Simple Expense',
+            module: 'Expense',
+            details: `Added expense of ${numAmount} for ${expenseHead.name}`
+          }
+        });
+      } catch (e) {}
 
       return expense;
     });
@@ -109,6 +98,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const { id, date, expenseHeadId, paidTo, description, amount, paymentMethod, bankAccountId, reference } = req.body;
     if (!id || !expenseHeadId || !amount) {
       return res.status(400).json({ error: { message: 'Missing required fields', status: 400 } });
+    }
+
+    const numAmount = Number(amount);
+    if (numAmount <= 0) {
+      return res.status(400).json({ error: { message: 'Amount must be greater than zero', status: 400 } });
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -123,65 +117,55 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       const expenseHead = await tx.expenseHead.findUnique({
         where: { id: expenseHeadId },
-        include: { subsidiaryAccount: true }
+        include: { account: true }
       });
-      if (!expenseHead || !expenseHead.subsidiaryAccount) {
-        throw new Error('Expense head or associated account not found');
+      if (!expenseHead) {
+        throw new Error('Expense head not found');
       }
 
-      let creditAccountCode;
-      if (paymentMethod === 'BANK' && bankAccountId) {
-        const bankAcc = await tx.account.findUnique({ where: { id: bankAccountId } });
-        if (!bankAcc) throw new Error('Bank account not found');
-        creditAccountCode = bankAcc.code;
-      } else {
-        const cashAcc = await tx.account.findFirst({
-          where: { name: { contains: 'Cash', mode: 'insensitive' }, type: 'Asset' }
-        });
-        if (!cashAcc) throw new Error('Cash account not found.');
-        creditAccountCode = cashAcc.code;
-      }
+      const expenseAccountId = expenseHead.accountId || expenseHead.account?.id;
 
-      const journalEntry = await tx.journalEntry.create({
-        data: {
-          date: new Date(date),
-          reference: reference || 'Expense Payment',
-          description: description || `Expense for ${expenseHead.name}`,
-          status: 'POSTED',
-          createdById: req.user!.id,
-          lines: {
-            create: [
-              { accountCode: expenseHead.subsidiaryAccount.code, debit: amount, credit: 0, description },
-              { accountCode: creditAccountCode, debit: 0, credit: amount, description }
-            ]
-          }
-        }
+      const postingResult = await AccountingService.postPayment(tx, {
+        amount: numAmount,
+        cashOrBankAccountId: paymentMethod === 'BANK' && bankAccountId ? bankAccountId : undefined,
+        cashOrBankAccountKeyword: paymentMethod !== 'BANK' ? 'Cash' : undefined,
+        expenseAccountId: expenseAccountId || undefined,
+        expenseAccountKeyword: !expenseAccountId ? (expenseHead.name || 'Expense') : undefined,
+        description: description || `Expense for ${expenseHead.name}`,
+        reference: reference || 'Expense Payment',
+        module: 'Simple Expense',
+        postedBy: req.user!.id,
+        postingDate: date ? new Date(date) : new Date(),
+        ipAddress: (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress,
+        userAgent: req.headers['user-agent']
       });
 
       const updated = await tx.simpleExpense.update({
         where: { id },
         data: {
-          date: new Date(date),
+          date: date ? new Date(date) : new Date(),
           expenseHeadId,
           paidTo,
           description,
-          amount,
-          paymentMethod,
-          bankAccountId,
+          amount: numAmount,
+          paymentMethod: paymentMethod || 'CASH',
+          bankAccountId: paymentMethod === 'BANK' ? bankAccountId : null,
           reference,
-          journalEntryId: journalEntry.id
+          journalEntryId: postingResult.journalEntry.id
         },
         include: { expenseHead: true, createdBy: { select: { fullName: true } } }
       });
 
-      await tx.auditLog.create({
-        data: {
-          userId: req.user!.id,
-          action: 'Update Simple Expense',
-          module: 'Expense',
-          details: `Updated expense of ${amount} for ${expenseHead.name}`
-        }
-      });
+      try {
+        await tx.auditLog.create({
+          data: {
+            userId: req.user!.id,
+            action: 'Update Simple Expense',
+            module: 'Expense',
+            details: `Updated expense of ${numAmount} for ${expenseHead.name}`
+          }
+        });
+      } catch (e) {}
 
       return updated;
     });

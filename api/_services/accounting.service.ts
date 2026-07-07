@@ -30,6 +30,7 @@ export interface PostReceiptParams {
   amount: number;
   cashOrBankAccountId?: string;
   cashOrBankAccountCode?: string;
+  cashOrBankAccountKeyword?: string;
   incomeAccountId?: string;
   incomeAccountCode?: string;
   incomeAccountKeyword?: string;
@@ -48,6 +49,7 @@ export interface PostPaymentParams {
   amount: number;
   cashOrBankAccountId?: string;
   cashOrBankAccountCode?: string;
+  cashOrBankAccountKeyword?: string;
   expenseAccountId?: string;
   expenseAccountCode?: string;
   expenseAccountKeyword?: string;
@@ -360,7 +362,7 @@ export class AccountingService {
       {
         accountId: params.cashOrBankAccountId,
         accountCode: params.cashOrBankAccountCode,
-        accountKeyword: !params.cashOrBankAccountId && !params.cashOrBankAccountCode ? 'Cash' : undefined,
+        accountKeyword: params.cashOrBankAccountKeyword || (!params.cashOrBankAccountId && !params.cashOrBankAccountCode ? 'Cash' : undefined),
         debit: params.amount,
         credit: 0,
         description: `Receipt: ${params.description || params.reference}`
@@ -410,7 +412,7 @@ export class AccountingService {
       {
         accountId: params.cashOrBankAccountId,
         accountCode: params.cashOrBankAccountCode,
-        accountKeyword: !params.cashOrBankAccountId && !params.cashOrBankAccountCode ? 'Cash' : undefined,
+        accountKeyword: params.cashOrBankAccountKeyword || (!params.cashOrBankAccountId && !params.cashOrBankAccountCode ? 'Cash' : undefined),
         debit: 0,
         credit: params.amount,
         description: `Payment: ${params.description || params.reference}`

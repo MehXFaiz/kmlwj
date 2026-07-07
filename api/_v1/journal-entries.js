@@ -174,7 +174,7 @@ var journal_entries_default = makeHandler(async (req, res) => {
                 credit: l.credit,
                 reference: je.voucherNo,
                 description: l.description || newDesc || newRef || je.description,
-                transactionDate: newDate
+                postingDate: newDate
               }
             });
             await AccountingService.recalculateAccountBalance(tx, l.accountId);

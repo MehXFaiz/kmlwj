@@ -57,7 +57,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
           null,
           {
             user: req.user.fullName || req.user.email,
-            hall: conflictBooking.hallAccount?.accountName || conflictBooking.hallAccount?.name || "Selected Hall",
+            hall: conflictBooking.hallAccount?.accountName || "Selected Hall",
             bookingDate: dateParam,
             attemptedBy: req.user.id,
             ipAddress,
@@ -70,7 +70,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
           available: false,
           bookedBy: conflictBooking.bookerName,
           bookingDate: conflictBooking.programDate.toISOString().split("T")[0],
-          hallName: conflictBooking.hallAccount?.accountName || conflictBooking.hallAccount?.name || "Selected Hall",
+          hallName: conflictBooking.hallAccount?.accountName || "Selected Hall",
           receiptNo: conflictBooking.receiptNo,
           status: conflictBooking.status
         });
@@ -197,7 +197,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         null,
         {
           user: req.user.fullName || req.user.email,
-          hall: conflictBooking.hallAccount?.accountName || conflictBooking.hallAccount?.name || "Selected Hall",
+          hall: conflictBooking.hallAccount?.accountName || "Selected Hall",
           bookingDate: eventDateStr,
           attemptedBy: req.user.id,
           ipAddress,
@@ -371,7 +371,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         null,
         {
           user: req.user.fullName || req.user.email,
-          hall: conflictBooking.hallAccount?.accountName || conflictBooking.hallAccount?.name || "Selected Hall",
+          hall: conflictBooking.hallAccount?.accountName || "Selected Hall",
           bookingDate: eventDateStr,
           attemptedBy: req.user.id,
           ipAddress,

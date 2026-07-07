@@ -207,7 +207,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
                 credit: l.credit,
                 reference: je.voucherNo,
                 description: l.description || newDesc || newRef || je.description,
-                transactionDate: newDate
+                postingDate: newDate
               }
             });
             await AccountingService.recalculateAccountBalance(tx, l.accountId);
