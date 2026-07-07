@@ -51,4 +51,16 @@ export const useUserStore = create((set, get) => ({
       throw err;
     }
   },
+
+  deleteUser: async (id) => {
+    set({ loading: true, error: null });
+    try {
+      await userService.delete(id);
+      await get().fetchUsers();
+      set({ loading: false });
+    } catch (err) {
+      set({ error: err.message || 'Failed to delete user', loading: false });
+      throw err;
+    }
+  },
 }));

@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useUserStore } from '../store/userStore';
 import { useRoleStore } from '../store/roleStore';
-import { Lock, Unlock, Users, RefreshCw, Plus, Edit2, UserPlus, Shield, CheckCircle2, XCircle, X, Clock, ChevronRight } from 'lucide-react';
+import { Lock, Unlock, Users, RefreshCw, Plus, Edit2, UserPlus, Shield, CheckCircle2, XCircle, X, Clock, ChevronRight, Trash2, AlertTriangle } from 'lucide-react';
 import { showToast, ToastPlaceholder } from '../components/ui/Toast';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
@@ -165,12 +165,13 @@ function UserFormPanel({ onClose, onSave, initial, availableRoles }) {
 }
 
 export const UsersRoles = () => {
-  const { users, fetchUsers, addUser, updateUser } = useUserStore();
+  const { users, fetchUsers, addUser, updateUser, deleteUser } = useUserStore();
   const { roles, activity, fetchRoles, updateRole, fetchActivity } = useRoleStore();
 
   const [activeTab, setActiveTab] = useState('users');
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
 
   const initData = async () => {
@@ -186,6 +187,17 @@ export const UsersRoles = () => {
   };
 
   useEffect(() => { initData(); }, []);
+
+  const handleDeleteUser = async (id) => {
+    try {
+      await deleteUser(id);
+      showToast('User deleted successfully');
+      setConfirmDeleteId(null);
+      if (editingUser?.id === id) closeForm();
+    } catch (err) {
+      showToast(err.message || 'Failed to delete user');
+    }
+  };
 
   const handleRefresh = async () => {
     await initData();
@@ -317,12 +329,26 @@ export const UsersRoles = () => {
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-400 mb-2">{u.email}</p>
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-800/60">
-                        <span className="text-[10px] font-bold text-amber-400 uppercase">{u.role}</span>
-                        <button onClick={() => openEdit(u)} className="flex items-center gap-1 text-[11px] text-slate-300 hover:text-white">
-                          <Edit2 className="h-3 w-3" /> Edit
-                        </button>
-                      </div>
+                      {confirmDeleteId === u.id ? (
+                        <div className="flex items-center gap-2 pt-2 border-t border-red-900/40">
+                          <AlertTriangle className="h-3 w-3 text-red-400 shrink-0" />
+                          <span className="text-[10px] text-red-400 flex-1">Delete user?</span>
+                          <button onClick={() => handleDeleteUser(u.id)} className="px-2 py-1 rounded bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold">Yes</button>
+                          <button onClick={() => setConfirmDeleteId(null)} className="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-200 text-[10px] font-bold">No</button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-800/60">
+                          <span className="text-[10px] font-bold text-amber-400 uppercase">{u.role}</span>
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => openEdit(u)} className="flex items-center gap-1 text-[11px] text-slate-300 hover:text-white">
+                              <Edit2 className="h-3 w-3" /> Edit
+                            </button>
+                            <button onClick={() => setConfirmDeleteId(u.id)} className="flex items-center gap-1 text-[11px] text-red-400 hover:text-red-300">
+                              <Trash2 className="h-3 w-3" /> Delete
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
@@ -336,7 +362,7 @@ export const UsersRoles = () => {
                         <th className="py-3 px-4">Email</th>
                         <th className="py-3 px-4">Role</th>
                         <th className="py-3 px-4">Status</th>
-                        <th className="py-3 px-4 w-20"></th>
+                        <th className="py-3 px-4 w-28"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/40 text-xs">
@@ -360,13 +386,41 @@ export const UsersRoles = () => {
                                 {u.isActive ? 'Active' : 'Inactive'}
                               </span>
                             </td>
-                            <td className="py-3 px-4 text-right">
-                              <button
-                                onClick={() => openEdit(u)}
-                                className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-                              >
-                                <Edit2 className="h-3.5 w-3.5" />
-                              </button>
+                            <td className="py-3 px-4">
+                              {confirmDeleteId === u.id ? (
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <span className="text-[10px] text-red-400 font-semibold mr-1">Delete?</span>
+                                  <button
+                                    onClick={() => handleDeleteUser(u.id)}
+                                    className="px-2.5 py-1 rounded-md bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold transition-colors"
+                                  >
+                                    Yes
+                                  </button>
+                                  <button
+                                    onClick={() => setConfirmDeleteId(null)}
+                                    className="px-2.5 py-1 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-200 text-[10px] font-bold transition-colors"
+                                  >
+                                    No
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-end gap-1">
+                                  <button
+                                    onClick={() => openEdit(u)}
+                                    className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                                    title="Edit user"
+                                  >
+                                    <Edit2 className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => setConfirmDeleteId(u.id)}
+                                    className="p-1.5 rounded-lg hover:bg-red-950/60 text-slate-500 hover:text-red-400 transition-colors"
+                                    title="Delete user"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              )}
                             </td>
                           </tr>
                         ))
