@@ -29,8 +29,9 @@ export const useUserStore = create((set, get) => ({
       set({ loading: false });
       return newUser;
     } catch (err) {
-      set({ error: err.message || 'Failed to add user', loading: false });
-      throw err;
+      const errMsg = err.response?.data?.error?.message || err.message || 'Failed to add user';
+      set({ error: errMsg, loading: false });
+      throw new Error(errMsg);
     }
   },
 
@@ -47,8 +48,9 @@ export const useUserStore = create((set, get) => ({
       set({ loading: false });
       return updated;
     } catch (err) {
-      set({ error: err.message || 'Failed to update user', loading: false });
-      throw err;
+      const errMsg = err.response?.data?.error?.message || err.message || 'Failed to update user';
+      set({ error: errMsg, loading: false });
+      throw new Error(errMsg);
     }
   },
 
@@ -59,8 +61,9 @@ export const useUserStore = create((set, get) => ({
       await get().fetchUsers();
       set({ loading: false });
     } catch (err) {
-      set({ error: err.message || 'Failed to delete user', loading: false });
-      throw err;
+      const errMsg = err.response?.data?.error?.message || err.message || 'Failed to delete user';
+      set({ error: errMsg, loading: false });
+      throw new Error(errMsg);
     }
   },
 }));

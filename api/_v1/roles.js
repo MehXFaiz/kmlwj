@@ -22,10 +22,13 @@ var roles_default = makeHandler(async (req, res) => {
   }
   const permMap = {
     coa: ["CREATE_ACCOUNT", "UPDATE_ACCOUNT", "DELETE_ACCOUNT", "LOCK_ACCOUNT"],
-    journals: ["VIEW_REPORTS"],
+    journals: ["VIEW_REPORTS", "POST_JOURNAL"],
     reports: ["VIEW_REPORTS"],
     users: ["MANAGE_USERS"],
-    settings: ["MANAGE_ROLES", "MANAGE_RESERVED_CODES"]
+    settings: ["MANAGE_ROLES", "MANAGE_RESERVED_CODES"],
+    income: ["RECORD_INCOME", "CREATE_ACCOUNT"],
+    expense: ["RECORD_EXPENSE", "CREATE_ACCOUNT"],
+    invoices: ["VIEW_INVOICES"]
   };
   if (method === "GET") {
     const dbRoles = await prisma.role.findMany({
@@ -43,7 +46,10 @@ var roles_default = makeHandler(async (req, res) => {
         journals: permMap.journals.every((p) => activePermNames.includes(p)),
         reports: permMap.reports.every((p) => activePermNames.includes(p)),
         users: permMap.users.every((p) => activePermNames.includes(p)),
-        settings: permMap.settings.every((p) => activePermNames.includes(p))
+        settings: permMap.settings.every((p) => activePermNames.includes(p)),
+        income: permMap.income.every((p) => activePermNames.includes(p)),
+        expense: permMap.expense.every((p) => activePermNames.includes(p)),
+        invoices: permMap.invoices.every((p) => activePermNames.includes(p))
       };
       const locked = role.name === "Super Admin" || role.description?.includes("Locked");
       return {
@@ -86,6 +92,13 @@ var roles_default = makeHandler(async (req, res) => {
           permissionsToAssign.push(...permMap[key]);
         }
       });
+      for (const permName of permissionsToAssign) {
+        await prisma.permission.upsert({
+          where: { name: permName },
+          update: {},
+          create: { name: permName, description: `Access to ${permName}` }
+        });
+      }
       const dbPermissions = await prisma.permission.findMany({
         where: {
           name: { in: permissionsToAssign }

@@ -111,6 +111,59 @@ var users_default = makeHandler(async (req, res) => {
       }
     });
   }
+  if (method === "DELETE") {
+    if (!id) {
+      return res.status(400).json({ error: { message: "User ID is required", status: 400 } });
+    }
+    const existingUser = await prisma.user.findUnique({ where: { id } });
+    if (!existingUser) {
+      return res.status(404).json({ error: { message: "User not found", status: 404 } });
+    }
+    if (existingUser.id === req.user.id) {
+      return res.status(400).json({ error: { message: "Cannot delete your own user account", status: 400 } });
+    }
+    try {
+      await prisma.refreshToken.deleteMany({
+        where: { userId: id }
+      });
+      await prisma.user.delete({
+        where: { id }
+      });
+      await logAudit(
+        req.user.id,
+        "Delete User",
+        "USERS",
+        { id: existingUser.id, email: existingUser.email, fullName: existingUser.fullName },
+        null,
+        req.headers["x-forwarded-for"],
+        req.headers["user-agent"]
+      );
+      return res.status(200).json({ status: 200, message: "User successfully deleted" });
+    } catch (err) {
+      if (err.code === "P2003") {
+        const deactivatedUser = await prisma.user.update({
+          where: { id },
+          data: { isActive: false }
+        });
+        await logAudit(
+          req.user.id,
+          "Deactivate User (via Delete)",
+          "USERS",
+          { id: existingUser.id, isActive: existingUser.isActive },
+          { id: deactivatedUser.id, isActive: deactivatedUser.isActive },
+          req.headers["x-forwarded-for"],
+          req.headers["user-agent"]
+        );
+        return res.status(400).json({
+          error: {
+            message: "User has active records (donations, bookings, ledger etc.) and cannot be fully deleted. They have been set to Inactive instead.",
+            status: 400
+          }
+        });
+      }
+      return res.status(500).json({ error: { message: err.message || "Internal server error during delete", status: 500 } });
+    }
+  }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
 });
 export {

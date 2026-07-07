@@ -18,11 +18,20 @@ var donors_default = makeHandler(async (req, res) => {
         { mobile: { contains: search, mode: "insensitive" } }
       ];
     }
-    const donors = await prisma.donor.findMany({
-      where: whereClause,
-      orderBy: { donorCode: "asc" }
-    });
-    return res.status(200).json({ status: 200, data: donors });
+    const { limit = "100", page = "1" } = req.query;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 100;
+    const skip = (pageNum - 1) * limitNum;
+    const [donors, total] = await Promise.all([
+      prisma.donor.findMany({
+        where: whereClause,
+        orderBy: { donorCode: "asc" },
+        skip,
+        take: limitNum
+      }),
+      prisma.donor.count({ where: whereClause })
+    ]);
+    return res.status(200).json({ status: 200, data: donors, meta: { total, page: pageNum, limit: limitNum } });
   }
   if (method === "POST") {
     const { fullName, fatherName, mobile, cnic, email, address, city, isActive } = req.body;

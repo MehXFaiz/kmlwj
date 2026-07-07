@@ -28,28 +28,48 @@ var donations_received_default = makeHandler(async (req, res) => {
         { donor: { fullName: { contains: search, mode: "insensitive" } } }
       ];
     }
-    const donations = await prisma.donationReceived.findMany({
-      where: whereClause,
-      include: {
-        donor: true,
-        cashAccount: true,
-        bankAccount: true,
-        journalEntry: true,
-        createdBy: { select: { id: true, fullName: true, email: true } }
-      },
-      orderBy: { receiptDate: "desc" }
-    });
-    const totalAmount = donations.filter((d) => d.status === "POSTED").reduce((sum, d) => sum + (d.amount || 0), 0);
-    const cashAmount = donations.filter((d) => d.status === "POSTED" && d.paymentMethod === "CASH").reduce((sum, d) => sum + (d.amount || 0), 0);
-    const bankAmount = donations.filter((d) => d.status === "POSTED" && d.paymentMethod !== "CASH").reduce((sum, d) => sum + (d.amount || 0), 0);
+    const { limit = "100", page = "1" } = req.query;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 100;
+    const skip = (pageNum - 1) * limitNum;
+    const [donations, total] = await Promise.all([
+      prisma.donationReceived.findMany({
+        where: whereClause,
+        include: {
+          donor: true,
+          cashAccount: true,
+          bankAccount: true,
+          journalEntry: true,
+          createdBy: { select: { id: true, fullName: true, email: true } }
+        },
+        orderBy: { receiptDate: "desc" },
+        skip,
+        take: limitNum
+      }),
+      prisma.donationReceived.count({ where: whereClause })
+    ]);
+    const [totalAgg, cashAgg] = await Promise.all([
+      prisma.donationReceived.aggregate({
+        where: { ...whereClause, status: "POSTED" },
+        _sum: { amount: true }
+      }),
+      prisma.donationReceived.aggregate({
+        where: { ...whereClause, status: "POSTED", paymentMethod: "CASH" },
+        _sum: { amount: true }
+      })
+    ]);
+    const totalAmount = totalAgg._sum.amount || 0;
+    const cashAmount = cashAgg._sum.amount || 0;
+    const bankAmount = totalAmount - cashAmount;
     return res.status(200).json({
       status: 200,
       data: donations,
+      meta: { total, page: pageNum, limit: limitNum },
       stats: {
         totalAmount,
         cashAmount,
         bankAmount,
-        totalReceipts: donations.length
+        totalReceipts: total
       }
     });
   }

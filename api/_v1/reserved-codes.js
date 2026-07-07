@@ -2,15 +2,15 @@ import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
+import { compareCodes } from "../_utils/code-compare.js";
 var reserved_codes_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
   const { method } = req;
   const id = req.query.id;
   if (method === "GET") {
-    const dbReservedCodes = await prisma.reservedCode.findMany({
-      orderBy: { reserveStart: "asc" }
-    });
+    const dbReservedCodes = await prisma.reservedCode.findMany();
+    dbReservedCodes.sort((a, b) => compareCodes(a.reserveStart, b.reserveStart));
     return res.status(200).json({ status: 200, data: dbReservedCodes });
   }
   const user = await prisma.user.findUnique({
@@ -31,15 +31,13 @@ var reserved_codes_default = makeHandler(async (req, res) => {
     if (!reserveStart || !reserveEnd || !reserveReason) {
       return res.status(400).json({ error: { message: "Start code, end code, and reason are required", status: 400 } });
     }
-    if (reserveStart > reserveEnd) {
+    if (compareCodes(reserveStart, reserveEnd) > 0) {
       return res.status(400).json({ error: { message: "Start code must be less than or equal to end code", status: 400 } });
     }
-    const overlap = await prisma.reservedCode.findFirst({
-      where: {
-        reserveStart: { lte: reserveEnd },
-        reserveEnd: { gte: reserveStart }
-      }
-    });
+    const existingReservations = await prisma.reservedCode.findMany();
+    const overlap = existingReservations.find(
+      (r) => compareCodes(r.reserveStart, reserveEnd) <= 0 && compareCodes(r.reserveEnd, reserveStart) >= 0
+    );
     if (overlap) {
       return res.status(400).json({ error: { message: `Range overlaps with existing reservation: ${overlap.reserveStart}-${overlap.reserveEnd}`, status: 400 } });
     }
@@ -68,16 +66,13 @@ var reserved_codes_default = makeHandler(async (req, res) => {
     const { reserveStart, reserveEnd, reserveReason, isActive } = req.body;
     const newStart = reserveStart !== void 0 ? reserveStart : existingReservation.reserveStart;
     const newEnd = reserveEnd !== void 0 ? reserveEnd : existingReservation.reserveEnd;
-    if (newStart > newEnd) {
+    if (compareCodes(newStart, newEnd) > 0) {
       return res.status(400).json({ error: { message: "Start code must be less than or equal to end code", status: 400 } });
     }
-    const overlap = await prisma.reservedCode.findFirst({
-      where: {
-        id: { not: id },
-        reserveStart: { lte: newEnd },
-        reserveEnd: { gte: newStart }
-      }
-    });
+    const existingReservations = await prisma.reservedCode.findMany({ where: { id: { not: id } } });
+    const overlap = existingReservations.find(
+      (r) => compareCodes(r.reserveStart, newEnd) <= 0 && compareCodes(r.reserveEnd, newStart) >= 0
+    );
     if (overlap) {
       return res.status(400).json({ error: { message: `Range overlaps with existing reservation: ${overlap.reserveStart}-${overlap.reserveEnd}`, status: 400 } });
     }

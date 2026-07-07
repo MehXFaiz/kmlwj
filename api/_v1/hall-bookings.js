@@ -90,15 +90,24 @@ var hall_bookings_default = makeHandler(async (req, res) => {
       if (!booking) return res.status(404).json({ error: { message: "Booking not found", status: 404 } });
       return res.status(200).json({ status: 200, data: booking });
     }
-    const bookings = await prisma.hallBooking.findMany({
-      include: {
-        hallAccount: true,
-        bankAccount: true,
-        createdBy: { select: { id: true, fullName: true, email: true } }
-      },
-      orderBy: { createdAt: "desc" }
-    });
-    return res.status(200).json({ status: 200, data: bookings });
+    const { limit = "100", page = "1" } = req.query;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 100;
+    const skip = (pageNum - 1) * limitNum;
+    const [bookings, total] = await Promise.all([
+      prisma.hallBooking.findMany({
+        include: {
+          hallAccount: true,
+          bankAccount: true,
+          createdBy: { select: { id: true, fullName: true, email: true } }
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limitNum
+      }),
+      prisma.hallBooking.count()
+    ]);
+    return res.status(200).json({ status: 200, data: bookings, meta: { total, page: pageNum, limit: limitNum } });
   }
   if (method === "POST") {
     if (action === "approve") {

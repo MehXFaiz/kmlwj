@@ -8,10 +8,19 @@ var beneficiaries_default = makeHandler(async (req, res) => {
   const { method } = req;
   const id = req.query.id;
   if (method === "GET") {
-    const beneficiaries = await prisma.beneficiary.findMany({
-      orderBy: { createdAt: "desc" }
-    });
-    return res.status(200).json({ status: 200, data: beneficiaries });
+    const { limit = "100", page = "1" } = req.query;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 100;
+    const skip = (pageNum - 1) * limitNum;
+    const [beneficiaries, total] = await Promise.all([
+      prisma.beneficiary.findMany({
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limitNum
+      }),
+      prisma.beneficiary.count()
+    ]);
+    return res.status(200).json({ status: 200, data: beneficiaries, meta: { total, page: pageNum, limit: limitNum } });
   }
   if (method === "POST") {
     const { name, cnic, mobile, address, remarks, isActive } = req.body;

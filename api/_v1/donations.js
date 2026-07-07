@@ -16,15 +16,24 @@ var donations_default = makeHandler(async (req, res) => {
   const { method } = req;
   const action = req.query.action;
   if (method === "GET") {
-    const donations = await prisma.donation.findMany({
-      include: {
-        beneficiary: true,
-        bankAccount: true,
-        createdBy: { select: { id: true, fullName: true, email: true } }
-      },
-      orderBy: { createdAt: "desc" }
-    });
-    return res.status(200).json({ status: 200, data: donations });
+    const { limit = "100", page = "1" } = req.query;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 100;
+    const skip = (pageNum - 1) * limitNum;
+    const [donations, total] = await Promise.all([
+      prisma.donation.findMany({
+        include: {
+          beneficiary: true,
+          bankAccount: true,
+          createdBy: { select: { id: true, fullName: true, email: true } }
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limitNum
+      }),
+      prisma.donation.count()
+    ]);
+    return res.status(200).json({ status: 200, data: donations, meta: { total, page: pageNum, limit: limitNum } });
   }
   if (method === "POST") {
     if (action === "approve") {
@@ -33,12 +42,13 @@ var donations_default = makeHandler(async (req, res) => {
       const donation = await prisma.donation.findUnique({ where: { id }, include: { beneficiary: true } });
       if (!donation) return res.status(404).json({ error: { message: "Donation not found", status: 404 } });
       if (donation.status === "APPROVED") return res.status(400).json({ error: { message: "Donation is already approved", status: 400 } });
-      const revenueAccount = await prisma.account.findFirst({
-        where: {
-          type: "Revenue",
-          accountName: { contains: "Donation", mode: "insensitive" }
-        }
+      const accounts = await prisma.account.findMany({
+        where: { type: "Revenue" }
       });
+      const exactMatch = accounts.find((a) => a.accountName.toLowerCase() === donation.donationType.toLowerCase() || a.accountName.toLowerCase() === `${donation.donationType} Donation`.toLowerCase());
+      const generalMatch = accounts.find((a) => a.accountName.toLowerCase() === "general donation");
+      const fallbackMatch = accounts.find((a) => a.accountName.toLowerCase().includes("donation"));
+      const revenueAccount = exactMatch || generalMatch || fallbackMatch;
       if (!revenueAccount) return res.status(400).json({ error: { message: "Donation Revenue account not found in Chart of Accounts", status: 400 } });
       let debitAccountId = null;
       if (donation.paymentMethod === "CASH") {

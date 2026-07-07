@@ -15,10 +15,19 @@ var members_default = makeHandler(async (req, res) => {
       }
       return res.status(200).json({ status: 200, data: member });
     }
-    const members = await prisma.member.findMany({
-      orderBy: { createdAt: "desc" }
-    });
-    return res.status(200).json({ status: 200, data: members });
+    const { limit = "100", page = "1" } = req.query;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 100;
+    const skip = (pageNum - 1) * limitNum;
+    const [members, total] = await Promise.all([
+      prisma.member.findMany({
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limitNum
+      }),
+      prisma.member.count()
+    ]);
+    return res.status(200).json({ status: 200, data: members, meta: { total, page: pageNum, limit: limitNum } });
   }
   if (method === "POST") {
     const {

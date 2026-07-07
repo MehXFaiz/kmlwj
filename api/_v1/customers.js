@@ -8,10 +8,19 @@ var customers_default = makeHandler(async (req, res) => {
   const { method } = req;
   const id = req.query.id;
   if (method === "GET") {
-    const customers = await prisma.customer.findMany({
-      orderBy: { name: "asc" }
-    });
-    return res.status(200).json({ status: 200, data: customers });
+    const { limit = "100", page = "1" } = req.query;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 100;
+    const skip = (pageNum - 1) * limitNum;
+    const [customers, total] = await Promise.all([
+      prisma.customer.findMany({
+        orderBy: { name: "asc" },
+        skip,
+        take: limitNum
+      }),
+      prisma.customer.count()
+    ]);
+    return res.status(200).json({ status: 200, data: customers, meta: { total, page: pageNum, limit: limitNum } });
   }
   if (method === "POST") {
     const { name, email, phone, address, company, isActive } = req.body;
