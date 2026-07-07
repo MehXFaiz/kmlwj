@@ -52,8 +52,8 @@ function BeneficiaryModal({ isOpen, onClose, onSave, initial }) {
       <div className="relative z-10 w-full sm:max-w-xl rounded-t-2xl sm:rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl max-h-[92dvh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-indigo-950/60 border border-indigo-800/40 flex items-center justify-center">
-              <Users className="h-4 w-4 text-indigo-400" />
+            <div className="h-8 w-8 rounded-lg bg-amber-950/60 border border-amber-800/40 flex items-center justify-center">
+              <Users className="h-4 w-4 text-amber-400" />
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-200">{initial ? 'Update Person\'s Details' : 'Add Person to Welfare List'}</h3>
@@ -69,38 +69,38 @@ function BeneficiaryModal({ isOpen, onClose, onSave, initial }) {
           <div>
             <label className="block text-xs font-semibold text-slate-400 mb-1.5">Full Name *</label>
             <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              placeholder="e.g. Ahmed Khan" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm placeholder-slate-600 focus:border-indigo-500/60 focus:outline-none transition-all font-medium" />
+              placeholder="e.g. Ahmed Khan" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm placeholder-slate-600 focus:border-amber-500/60 focus:outline-none transition-all font-medium" />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-1.5">ID Card Number (CNIC)</label>
               <input value={form.cnic} onChange={e => setForm(f => ({ ...f, cnic: e.target.value }))}
-                placeholder="42101-1234567-8" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-all font-medium" />
+                placeholder="42101-1234567-8" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-amber-500/60 transition-all font-medium" />
               <p className="text-[10px] text-slate-600 mt-1">Format: 00000-0000000-0</p>
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-1.5">Mobile Number</label>
               <input value={form.mobile} onChange={e => setForm(f => ({ ...f, mobile: e.target.value }))}
-                placeholder="0300-0000000" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-all font-medium" />
+                placeholder="0300-0000000" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-amber-500/60 transition-all font-medium" />
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-400 mb-1.5">Home Address</label>
             <textarea value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-all h-20 resize-none font-medium" />
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-amber-500/60 transition-all h-20 resize-none font-medium" />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-400 mb-1.5">Notes / Remarks</label>
             <input value={form.remarks} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-all font-medium" />
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-amber-500/60 transition-all font-medium" />
           </div>
 
           <div className="flex items-center gap-3 pt-2">
             <input type="checkbox" id="isActive" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
-              className="h-4 w-4 rounded border-slate-800 bg-slate-950/60 text-indigo-600 focus:ring-indigo-600 focus:ring-offset-slate-900 cursor-pointer" />
+              className="h-4 w-4 rounded border-slate-800 bg-slate-950/60 text-amber-600 focus:ring-amber-600 focus:ring-offset-slate-900 cursor-pointer" />
             <label htmlFor="isActive" className="text-sm font-semibold text-slate-300 cursor-pointer">This person is currently receiving aid</label>
           </div>
         </div>
@@ -108,7 +108,7 @@ function BeneficiaryModal({ isOpen, onClose, onSave, initial }) {
         <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 px-6 py-4 border-t border-slate-800 shrink-0">
           <button onClick={onClose} className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">Cancel</button>
           <button onClick={handleSave} disabled={!form.name.trim()}
-            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50 cursor-pointer">
+            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold transition-all shadow-lg shadow-amber-600/25 active:scale-95 disabled:opacity-50 cursor-pointer">
             {initial ? 'Save Changes' : 'Create Beneficiary'}
           </button>
         </div>
@@ -222,7 +222,7 @@ export const Beneficiaries = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-indigo-400 bg-indigo-950/50 border border-indigo-900/60 px-2.5 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-400 bg-amber-950/50 border border-amber-900/60 px-2.5 py-0.5 rounded-full">
               <Users className="h-3 w-3" /> Beneficiary Management
             </span>
           </div>
@@ -239,7 +239,7 @@ export const Beneficiaries = () => {
             </button>
           )}
           <button onClick={() => { setEditItem(null); setModalOpen(true); }}
-            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-900/40 transition-all flex-1 sm:flex-none">
+            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-lg shadow-amber-900/40 transition-all flex-1 sm:flex-none">
             <Plus className="h-4 w-4" /> New Beneficiary
           </button>
         </div>
@@ -250,7 +250,7 @@ export const Beneficiaries = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, CNIC, or mobile..."
             name="beneficiary-search" autoComplete="off"
-            className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-indigo-600/50 transition-all" />
+            className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-amber-600/50 transition-all" />
         </div>
       </div>
 
@@ -274,7 +274,7 @@ export const Beneficiaries = () => {
                       type="checkbox"
                       checked={isAllSelected}
                       onChange={toggleAll}
-                      className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-indigo-600 focus:ring-indigo-600 focus:ring-offset-slate-900 cursor-pointer"
+                      className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-600 focus:ring-amber-600 focus:ring-offset-slate-900 cursor-pointer"
                     />
                   </th>
                   <th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-500">Name</th>
@@ -286,13 +286,13 @@ export const Beneficiaries = () => {
               </thead>
               <tbody className="divide-y divide-slate-800/50">
                 {filtered.map(b => (
-                  <tr key={b.id} className={`hover:bg-slate-800/20 transition-colors group ${selectedIds.includes(b.id) ? 'bg-indigo-900/10' : ''}`}>
+                  <tr key={b.id} className={`hover:bg-slate-800/20 transition-colors group ${selectedIds.includes(b.id) ? 'bg-amber-900/10' : ''}`}>
                     <td className="px-4 py-3.5">
                       <input
                         type="checkbox"
                         checked={selectedIds.includes(b.id)}
                         onChange={() => toggleSelect(b.id)}
-                        className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-indigo-600 focus:ring-indigo-600 focus:ring-offset-slate-900 cursor-pointer"
+                        className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-600 focus:ring-amber-600 focus:ring-offset-slate-900 cursor-pointer"
                       />
                     </td>
                     <td className="px-4 py-3.5"><p className="text-sm font-semibold text-slate-200">{b.name}</p></td>
@@ -323,13 +323,13 @@ export const Beneficiaries = () => {
         </DesktopOnly>
         <MobileOnly className="p-3 space-y-3">
             {filtered.map(b => (
-              <div key={b.id} className={`rounded-lg border bg-slate-950/40 p-3 transition-colors ${selectedIds.includes(b.id) ? 'border-indigo-600/50 bg-indigo-900/10' : 'border-slate-800/60'}`}>
+              <div key={b.id} className={`rounded-lg border bg-slate-950/40 p-3 transition-colors ${selectedIds.includes(b.id) ? 'border-amber-600/50 bg-amber-900/10' : 'border-slate-800/60'}`}>
                 <div className="flex items-start gap-3 mb-2">
                   <input
                     type="checkbox"
                     checked={selectedIds.includes(b.id)}
                     onChange={() => toggleSelect(b.id)}
-                    className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-indigo-600 focus:ring-indigo-600 focus:ring-offset-slate-900 cursor-pointer"
+                    className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-600 focus:ring-amber-600 focus:ring-offset-slate-900 cursor-pointer"
                   />
                   <div className="flex-1 flex justify-between items-start">
                     <h4 className="text-sm font-bold text-slate-200">{b.name}</h4>

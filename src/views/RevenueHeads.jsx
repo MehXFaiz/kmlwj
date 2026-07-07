@@ -72,7 +72,7 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
                 value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                 placeholder="e.g. Zakat"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 transition-all font-medium"
               />
             </div>
             <div>
@@ -82,7 +82,7 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
                 value={form.amount || ''}
                 onChange={e => setForm(f => ({ ...f, amount: parseFloat(e.target.value) || 0 }))}
                 placeholder="0.00"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 transition-all font-medium"
               />
             </div>
           </div>
@@ -93,7 +93,7 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
               <select
                 value={form.category}
                 onChange={e => setForm(f => ({ ...f, category: e.target.value, hall: e.target.value === 'Hall Bookings' ? '' : f.hall }))}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-amber-500/60 transition-all font-medium"
               >
                 {['Hall Bookings', 'Other Income'].map(c => (
                   <option key={c} value={c}>{c}</option>
@@ -105,7 +105,7 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
               <select
                 value={form.accountId || ''}
                 onChange={e => setForm(f => ({ ...f, accountId: e.target.value }))}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-amber-500/60 transition-all font-medium"
               >
                 <option value="">No Linked Account (Optional)</option>
                 {accounts.map(a => (
@@ -122,7 +122,7 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
                 <select
                   value={form.hall || ''}
                   onChange={e => setForm(f => ({ ...f, hall: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-indigo-500/60 transition-all font-medium"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-amber-500/60 transition-all font-medium"
                 >
                   <option value="">Select a hall...</option>
                   <option value="Bagh-e-Hajiani Garden">Bagh-e-Hajiani Garden</option>
@@ -155,7 +155,7 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
           <button
             onClick={handleSave}
             disabled={!form.name.trim() || !form.category.trim()}
-            className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95"
+            className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all shadow-lg shadow-amber-600/25 active:scale-95"
           >
             {initial ? 'Save Changes' : 'Create Revenue Head'}
           </button>
@@ -214,7 +214,7 @@ function RevenueHeadViewModal({ isOpen, onClose, item }) {
                     {item.category}
                  </span>
                  {item.hall && (
-                   <span className={`px-2.5 py-1 text-xs font-bold rounded-md border bg-indigo-950/40 text-indigo-300 border-indigo-900/50 shadow-sm`}>
+                   <span className={`px-2.5 py-1 text-xs font-bold rounded-md border bg-amber-950/40 text-amber-300 border-amber-900/50 shadow-sm`}>
                      {item.hall}
                    </span>
                  )}

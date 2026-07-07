@@ -80,7 +80,7 @@ export const Topbar = ({ onMobileMenuToggle }) => {
         <div className="flex-1 flex items-center justify-center min-w-0 px-2 sm:px-4">
           <span
             dir="rtl"
-            className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-blue-200 to-emerald-200 truncate select-none text-[17px] sm:text-[22px] text-center w-full leading-relaxed"
+            className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-blue-200 to-emerald-200 truncate select-none text-[17px] sm:text-[22px] text-center w-full leading-relaxed"
             style={{
               fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
               lineHeight: 2,
@@ -109,13 +109,13 @@ export const Topbar = ({ onMobileMenuToggle }) => {
               <div className="absolute right-0 mt-2 w-36 bg-slate-900 border border-slate-800/80 rounded-xl shadow-2xl shadow-black/50 z-50 p-1 overflow-hidden">
                 <button
                   onClick={() => { i18n.changeLanguage('en'); setLanguageMenuOpen(false); }}
-                  className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-lg transition-all ${language === 'en' ? 'bg-slate-800 text-indigo-300' : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-100'}`}
+                  className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-lg transition-all ${language === 'en' ? 'bg-slate-800 text-amber-300' : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-100'}`}
                 >
                   🇺🇸 &nbsp;English
                 </button>
                 <button
                   onClick={() => { i18n.changeLanguage('ur'); setLanguageMenuOpen(false); }}
-                  className={`w-full text-right px-3 py-2 text-xs font-semibold rounded-lg transition-all ${language === 'ur' ? 'bg-slate-800 text-indigo-300' : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-100'}`}
+                  className={`w-full text-right px-3 py-2 text-xs font-semibold rounded-lg transition-all ${language === 'ur' ? 'bg-slate-800 text-amber-300' : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-100'}`}
                   style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
                   dir="rtl"
                 >

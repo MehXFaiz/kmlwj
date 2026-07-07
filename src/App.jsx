@@ -100,7 +100,7 @@ class ChunkErrorBoundary extends Component {
       if (isChunkLoadError) {
         return (
           <div className="flex flex-col items-center justify-center h-screen w-screen bg-slate-950 text-center px-4">
-            <div className="h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
+            <div className="h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mb-4" />
             <h3 className="text-lg font-bold text-slate-200">Applying latest updates...</h3>
             <p className="text-sm text-slate-500 mt-2">Loading the newest version of the application.</p>
           </div>

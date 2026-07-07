@@ -35,7 +35,7 @@ export const Select = forwardRef(({
             focus:outline-none transition-all duration-200 cursor-pointer font-medium
             ${error 
               ? 'border-red-500/60 focus:border-red-500/60' 
-              : 'border-slate-800 focus:border-indigo-500/60'
+              : 'border-slate-800 focus:border-amber-500/60'
             }
             ${className}
           `}

@@ -90,7 +90,7 @@ export const Signup = () => {
     <AuthLayout>
       {/* Card wrapper */}
       <div className="relative group w-full max-w-full min-w-0">
-        <div className="absolute -inset-[2px] bg-gradient-to-r from-indigo-500/20 via-blue-500/20 to-emerald-500/20 rounded-[26px] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 hidden sm:block pointer-events-none" />
+        <div className="absolute -inset-[2px] bg-gradient-to-r from-amber-500/20 via-blue-500/20 to-emerald-500/20 rounded-[26px] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 hidden sm:block pointer-events-none" />
 
         <div className="relative w-full box-border bg-slate-900/70 backdrop-blur-2xl border border-slate-800/60 rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-9 shadow-2xl shadow-black/30">
           {/* Back nav */}
@@ -136,7 +136,7 @@ export const Signup = () => {
               </label>
               <div className="relative group/input">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <User className="h-[15px] w-[15px] text-slate-600 group-focus-within/input:text-indigo-400 transition-colors" />
+                  <User className="h-[15px] w-[15px] text-slate-600 group-focus-within/input:text-amber-400 transition-colors" />
                 </div>
                 <input
                   type="text"
@@ -145,7 +145,7 @@ export const Signup = () => {
                   onChange={(e) => setName(e.target.value)}
                   pattern="^[a-zA-Z\s.-]{3,50}$"
                   title="Name must contain only letters, spaces, hyphens, and dots (3-50 characters)"
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 text-sm transition-all duration-200 font-medium"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 text-sm transition-all duration-200 font-medium"
                   placeholder="John Doe"
                   autoComplete="name"
                   required
@@ -160,7 +160,7 @@ export const Signup = () => {
               </label>
               <div className="relative group/input">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Mail className="h-[15px] w-[15px] text-slate-600 group-focus-within/input:text-indigo-400 transition-colors" />
+                  <Mail className="h-[15px] w-[15px] text-slate-600 group-focus-within/input:text-amber-400 transition-colors" />
                 </div>
                 <input
                   type="email"
@@ -169,7 +169,7 @@ export const Signup = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
                   title="Please enter a valid email address (e.g. name@company.com)"
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 text-sm transition-all duration-200 font-medium"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 text-sm transition-all duration-200 font-medium"
                   placeholder="name@company.com"
                   autoComplete="email"
                   required
@@ -184,7 +184,7 @@ export const Signup = () => {
               </label>
               <div className="relative group/input">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Lock className="h-[15px] w-[15px] text-slate-600 group-focus-within/input:text-indigo-400 transition-colors" />
+                  <Lock className="h-[15px] w-[15px] text-slate-600 group-focus-within/input:text-amber-400 transition-colors" />
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -193,7 +193,7 @@ export const Signup = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   pattern="^.{8,}$"
                   title="Password must be at least 8 characters long."
-                  className="w-full pl-10 pr-11 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 text-sm transition-all duration-200 font-medium"
+                  className="w-full pl-10 pr-11 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 text-sm transition-all duration-200 font-medium"
                   placeholder="Min 8 characters"
                   autoComplete="new-password"
                   required
@@ -241,10 +241,10 @@ export const Signup = () => {
                     e.stopPropagation();
                     setShowRoleDropdown(!showRoleDropdown);
                   }}
-                  className="w-full flex items-center justify-between gap-2 px-3 sm:px-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-sm transition-all duration-200 cursor-pointer focus:outline-none focus:border-indigo-500/60 min-w-0 font-medium"
+                  className="w-full flex items-center justify-between gap-2 px-3 sm:px-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-sm transition-all duration-200 cursor-pointer focus:outline-none focus:border-amber-500/60 min-w-0 font-medium"
                 >
                   <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
-                    {selectedRole && <selectedRole.icon className="h-4 w-4 text-indigo-400 shrink-0" />}
+                    {selectedRole && <selectedRole.icon className="h-4 w-4 text-amber-400 shrink-0" />}
                     <div className="text-left min-w-0 flex-1">
                       <span className="text-slate-100 font-semibold block truncate">{selectedRole?.label}</span>
                       <span className="text-slate-500 text-[11px] block truncate">{selectedRole?.desc}</span>
@@ -267,23 +267,23 @@ export const Signup = () => {
                         }}
                         className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors cursor-pointer ${
                           role === value
-                            ? 'bg-indigo-500/10 text-white'
+                            ? 'bg-amber-500/10 text-white'
                             : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
                         }`}
                       >
                         <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
                           role === value
-                            ? 'bg-indigo-500/20 border border-indigo-500/30'
+                            ? 'bg-amber-500/20 border border-amber-500/30'
                             : 'bg-slate-800/50 border border-slate-700/50'
                         }`}>
-                          <Icon className={`h-3.5 w-3.5 ${role === value ? 'text-indigo-400' : 'text-slate-500'}`} />
+                          <Icon className={`h-3.5 w-3.5 ${role === value ? 'text-amber-400' : 'text-slate-500'}`} />
                         </div>
                         <div>
                           <p className="text-sm font-semibold">{label}</p>
                           <p className="text-[11px] text-slate-500">{desc}</p>
                         </div>
                         {role === value && (
-                          <div className="ml-auto w-2 h-2 rounded-full bg-indigo-400" />
+                          <div className="ml-auto w-2 h-2 rounded-full bg-amber-400" />
                         )}
                       </button>
                     ))}
@@ -297,7 +297,7 @@ export const Signup = () => {
               type="submit"
               id="signup-submit"
               disabled={loading}
-              className="w-full py-3.5 px-4 mt-2 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-semibold text-sm rounded-xl shadow-lg shadow-indigo-600/25 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+              className="w-full py-3.5 px-4 mt-2 bg-amber-600 hover:bg-amber-500 active:scale-[0.98] text-white font-semibold text-sm rounded-xl shadow-lg shadow-amber-600/25 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -312,7 +312,7 @@ export const Signup = () => {
             <span className="text-slate-600 text-xs">Already have an account? </span>
             <Link
               to="/login"
-              className="text-indigo-400/80 hover:text-indigo-300 text-xs font-bold transition-colors duration-200"
+              className="text-amber-400/80 hover:text-amber-300 text-xs font-bold transition-colors duration-200"
             >
               Sign in
             </Link>

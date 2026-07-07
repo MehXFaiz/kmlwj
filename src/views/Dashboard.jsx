@@ -301,11 +301,11 @@ function ActivityRow({ log, index }) {
       className="flex items-start gap-3 py-3 border-b border-slate-800/50 last:border-0 group"
     >
       <div className={`mt-0.5 h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
-        isPost ? 'bg-indigo-950/60 border border-indigo-800/40' :
+        isPost ? 'bg-amber-950/60 border border-amber-800/40' :
         isInit ? 'bg-emerald-950/60 border border-emerald-800/40' :
         'bg-slate-800/60 border border-slate-700/40'
       }`}>
-        {isPost ? <FileText className="h-3.5 w-3.5 text-indigo-400" /> :
+        {isPost ? <FileText className="h-3.5 w-3.5 text-amber-400" /> :
          isInit ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> :
          <Activity className="h-3.5 w-3.5 text-slate-400" />}
       </div>
@@ -318,7 +318,7 @@ function ActivityRow({ log, index }) {
         </div>
       </div>
       <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
-        isPost ? 'bg-indigo-950/60 text-indigo-400 border border-indigo-900/50' :
+        isPost ? 'bg-amber-950/60 text-amber-400 border border-amber-900/50' :
         'bg-slate-800/60 text-slate-400 border border-slate-700/50'
       }`}>{log.action}</span>
     </div>
@@ -499,7 +499,7 @@ export const Dashboard = () => {
           {[
             { label: t('dashboard.addIncome'),    desc: t('dashboard.addIncomeDesc'),    icon: TrendingUp,  color: 'text-emerald-400', ring: 'ring-emerald-500/20', glow: 'shadow-emerald-950/40', iconBg: 'bg-emerald-500/10 border-emerald-500/20', line: 'bg-emerald-500', path: '/bank-vouchers/revenue/new' },
             { label: t('dashboard.addExpense'),   desc: t('dashboard.addExpenseDesc'),   icon: TrendingDown, color: 'text-red-400',    ring: 'ring-red-500/20',     glow: 'shadow-red-950/40',     iconBg: 'bg-red-500/10 border-red-500/20',         line: 'bg-red-500',     path: '/bank-vouchers/expense/new' },
-            { label: t('dashboard.journalEntry'), desc: t('dashboard.journalEntryDesc'), icon: FileText,     color: 'text-indigo-400', ring: 'ring-indigo-500/20',  glow: 'shadow-indigo-950/40',  iconBg: 'bg-indigo-500/10 border-indigo-500/20',   line: 'bg-indigo-500', path: '/journals' },
+            { label: t('dashboard.journalEntry'), desc: t('dashboard.journalEntryDesc'), icon: FileText,     color: 'text-amber-400', ring: 'ring-amber-500/20',  glow: 'shadow-amber-950/40',  iconBg: 'bg-amber-500/10 border-amber-500/20',   line: 'bg-amber-500', path: '/journals' },
             { label: 'General Ledger',            desc: 'View account ledgers & history',icon: BookOpen,     color: 'text-cyan-400',   ring: 'ring-cyan-500/20',    glow: 'shadow-cyan-950/40',    iconBg: 'bg-cyan-500/10 border-cyan-500/20',       line: 'bg-cyan-500',   path: '/ledger' },
             { label: t('dashboard.transferMoney'),desc: t('dashboard.transferMoneyDesc'),icon: RefreshCw,    color: 'text-violet-400', ring: 'ring-violet-500/20',  glow: 'shadow-violet-950/40',  iconBg: 'bg-violet-500/10 border-violet-500/20',   line: 'bg-violet-500', path: '/bank-vouchers/transfer/new' },
           ].map((action) => (
@@ -643,7 +643,7 @@ export const Dashboard = () => {
                 { dot: 'bg-fuchsia-500', bar: 'bg-fuchsia-500' },
                 { dot: 'bg-purple-500', bar: 'bg-purple-500' },
                 { dot: 'bg-violet-500', bar: 'bg-violet-500' },
-                { dot: 'bg-indigo-500', bar: 'bg-indigo-500' },
+                { dot: 'bg-amber-500', bar: 'bg-amber-500' },
               ];
               const c = colors[i % colors.length];
               return (
@@ -683,7 +683,7 @@ export const Dashboard = () => {
           <SectionHeader title={t('dashboard.quickActions')} subtitle={t('dashboard.commonERPOperations')} />
           <div className="space-y-2">
             <QuickAction icon={FileText} label={t('dashboard.journalEntry')}
-              color="bg-indigo-950/60 border border-indigo-800/40 text-indigo-400"
+              color="bg-amber-950/60 border border-amber-800/40 text-amber-400"
               onClick={() => startTransition(() => navigate('/journals'))} />
             <QuickAction icon={Layers} label={t('dashboard.chartOfAccounts')}
               color="bg-blue-950/60 border border-blue-800/40 text-blue-400"
@@ -695,7 +695,7 @@ export const Dashboard = () => {
               color="bg-emerald-950/60 border border-emerald-800/40 text-emerald-400"
               onClick={() => startTransition(() => navigate('/reports'))} />
             <QuickAction icon={Users} label={t('dashboard.usersAndRoles')}
-              color="bg-indigo-950/60 border border-indigo-800/40 text-indigo-400"
+              color="bg-amber-950/60 border border-amber-800/40 text-amber-400"
               onClick={() => startTransition(() => navigate('/users-roles'))} />
             <QuickAction icon={ShieldCheck} label={t('dashboard.auditTrail')}
               color="bg-slate-800/60 border border-slate-700/40 text-slate-400"
@@ -731,7 +731,7 @@ export const Dashboard = () => {
             title="Recent Transactions"
             subtitle="Latest posted journal entries"
             action={
-              <button className="text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-colors">
+              <button className="text-[11px] font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 transition-colors">
                 View All <ChevronRight className="h-3 w-3" />
               </button>
             }
@@ -747,7 +747,7 @@ export const Dashboard = () => {
                   style={{ opacity: 0, animation: `fadeSlideIn 0.4s ease ${i * 70}ms forwards` }}
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <span className="font-mono text-[11px] font-bold text-indigo-400">{je.id}</span>
+                    <span className="font-mono text-[11px] font-bold text-amber-400">{je.id}</span>
                     <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-950/50 text-emerald-400 border border-emerald-900/40 shrink-0">
                       Posted
                     </span>
@@ -781,7 +781,7 @@ export const Dashboard = () => {
                     <tr key={je.id} className="group hover:bg-slate-800/20 transition-colors"
                       style={{ opacity: 0, animation: `fadeSlideIn 0.4s ease ${i * 70}ms forwards` }}>
                       <td className="py-2.5 pr-3">
-                        <span className="font-mono text-[11px] font-bold text-indigo-400">{je.id}</span>
+                        <span className="font-mono text-[11px] font-bold text-amber-400">{je.id}</span>
                       </td>
                       <td className="py-2.5 pr-3">
                         <span className="text-[11px] text-slate-400">{je.date}</span>

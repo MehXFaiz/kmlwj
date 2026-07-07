@@ -92,7 +92,7 @@ export const Donors = () => {
           )}
           <Link
             to="/donors/new"
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold transition-all shadow-lg shadow-amber-600/25 active:scale-95"
           >
             <Plus className="h-4 w-4" />
             <span>Register Donor</span>
@@ -107,7 +107,7 @@ export const Donors = () => {
             <p className="text-xs font-semibold uppercase text-slate-500">Total Donors</p>
             <p className="text-2xl font-black text-slate-200 mt-1">{donors.length}</p>
           </div>
-          <div className="p-3 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+          <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
             <Users className="h-6 w-6" />
           </div>
         </div>
@@ -131,7 +131,7 @@ export const Donors = () => {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search by donor name, code (DNR-0001), CNIC, or phone number..."
-            className="w-full pl-9 pr-4 py-2 rounded-lg bg-slate-950/80 border border-slate-800 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+            className="w-full pl-9 pr-4 py-2 rounded-lg bg-slate-950/80 border border-slate-800 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-amber-500"
           />
         </div>
       </div>
@@ -148,7 +148,7 @@ export const Donors = () => {
                       type="checkbox"
                       checked={filtered.length > 0 && selectedIds.length === filtered.length}
                       onChange={handleSelectAll}
-                      className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                      className="rounded border-slate-700 bg-slate-800 text-amber-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
                     />
                   </th>
                   <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">Donor Code</th>
@@ -181,11 +181,11 @@ export const Donors = () => {
                           type="checkbox"
                           checked={selectedIds.includes(d.id)}
                           onChange={(e) => handleSelectOne(d.id, e)}
-                          className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                          className="rounded border-slate-700 bg-slate-800 text-amber-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
                         />
                       </td>
                       <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
                           {d.donorCode}
                         </span>
                       </td>
@@ -207,12 +207,12 @@ export const Donors = () => {
                       <td className="px-6 py-4 space-y-0.5">
                         {d.mobile && (
                           <p className="text-xs text-slate-300 flex items-center gap-1.5">
-                            <Phone className="h-3.5 w-3.5 text-indigo-400/80" /> {d.mobile}
+                            <Phone className="h-3.5 w-3.5 text-amber-400/80" /> {d.mobile}
                           </p>
                         )}
                         {d.email && (
                           <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
-                            <Mail className="h-3.5 w-3.5 text-indigo-400/80" /> {d.email}
+                            <Mail className="h-3.5 w-3.5 text-amber-400/80" /> {d.email}
                           </p>
                         )}
                         {!d.mobile && !d.email && <span className="text-xs text-slate-600">—</span>}
@@ -268,7 +268,7 @@ export const Donors = () => {
                 <div key={d.id} className="p-4 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 mb-1">
+                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 mb-1">
                         {d.donorCode}
                       </span>
                       <h4 className="text-sm font-bold text-slate-200">{d.fullName}</h4>

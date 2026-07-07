@@ -75,13 +75,13 @@ export const Members = () => {
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
-            <Users className="w-6 h-6 text-indigo-400" />
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+            <Users className="w-6 h-6 text-amber-400" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-bold text-slate-100">Community Members Directory</h1>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
                 {members.length} Registered
               </span>
             </div>
@@ -107,13 +107,13 @@ export const Members = () => {
             to="/membership-fees"
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-sm font-semibold transition-all"
           >
-            <Building className="w-4 h-4 text-indigo-400" />
+            <Building className="w-4 h-4 text-amber-400" />
             <span>Fee Ledger</span>
           </Link>
 
           <Link
             to="/members/new"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold transition-all shadow-lg shadow-amber-600/25 active:scale-95"
           >
             <UserPlus className="w-4 h-4" />
             <span>Register Member</span>
@@ -130,7 +130,7 @@ export const Members = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search by Name, CNIC, Mobile, Gham, Profession..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 transition-colors"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/50 transition-colors"
           />
         </div>
         {filteredMembers.length > 0 && canEditOrDelete && (
@@ -139,7 +139,7 @@ export const Members = () => {
               type="checkbox"
               checked={selectedIds.length > 0 && selectedIds.length === filteredMembers.length}
               onChange={handleSelectAll}
-              className="rounded border-slate-700 bg-slate-800 text-indigo-500 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+              className="rounded border-slate-700 bg-slate-800 text-amber-500 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
             />
             <span>Select All ({filteredMembers.length})</span>
           </label>
@@ -164,7 +164,7 @@ export const Members = () => {
             {!searchTerm && (
               <Link
                 to="/members/new"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold transition-all shadow-lg shadow-amber-600/25"
               >
                 <span>Register First Member</span>
                 <ArrowRight className="w-4 h-4" />
@@ -188,18 +188,18 @@ export const Members = () => {
                           checked={selectedIds.includes(m.id)}
                           onChange={(e) => handleSelectOne(m.id, e)}
                           onClick={(e) => e.stopPropagation()}
-                          className="rounded border-slate-700 bg-slate-800 text-indigo-500 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4 shrink-0 mt-1"
+                          className="rounded border-slate-700 bg-slate-800 text-amber-500 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4 shrink-0 mt-1"
                         />
                       )}
                       {m.photoUrl ? (
                         <img src={m.photoUrl} alt={m.fullName} className="w-12 h-12 rounded-xl object-cover border border-slate-700 shrink-0" />
                       ) : (
-                        <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center font-bold text-base text-indigo-400 shrink-0">
+                        <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center font-bold text-base text-amber-400 shrink-0">
                           {m.fullName?.charAt(0) || 'M'}
                         </div>
                       )}
                       <div>
-                        <h4 className="text-sm font-bold text-slate-100 group-hover:text-indigo-300 transition-colors leading-tight">
+                        <h4 className="text-sm font-bold text-slate-100 group-hover:text-amber-300 transition-colors leading-tight">
                           {m.fullName}
                         </h4>
                         <p className="text-xs text-slate-500 mt-0.5">
@@ -221,13 +221,13 @@ export const Members = () => {
                     </div>
                     <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
                       <span className="text-slate-500 uppercase text-[10px] font-semibold tracking-wider flex items-center gap-1">
-                        <Phone className="w-3 h-3 text-indigo-400" /> Mobile
+                        <Phone className="w-3 h-3 text-amber-400" /> Mobile
                       </span>
                       <span className="font-mono font-semibold text-slate-200">{m.mobile || 'N/A'}</span>
                     </div>
                     <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
                       <span className="text-slate-500 uppercase text-[10px] font-semibold tracking-wider flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-indigo-400" /> Gham / City
+                        <MapPin className="w-3 h-3 text-amber-400" /> Gham / City
                       </span>
                       <span className="font-semibold text-slate-200 truncate max-w-[140px]">
                         {m.ghamName || m.city || 'N/A'}
@@ -235,7 +235,7 @@ export const Members = () => {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500 uppercase text-[10px] font-semibold tracking-wider flex items-center gap-1">
-                        <Briefcase className="w-3 h-3 text-indigo-400" /> Profession
+                        <Briefcase className="w-3 h-3 text-amber-400" /> Profession
                       </span>
                       <span className="font-semibold text-slate-200 truncate max-w-[140px]">
                         {m.profession || 'N/A'}
@@ -253,7 +253,7 @@ export const Members = () => {
                     <div className="flex items-center gap-1.5">
                       <Link
                         to={`/members/edit/${m.id}`}
-                        className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 transition-colors"
+                        className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-colors"
                         title="Edit Member"
                       >
                         <Edit2 className="w-3.5 h-3.5" />

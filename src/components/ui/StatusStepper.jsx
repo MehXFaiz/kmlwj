@@ -6,17 +6,17 @@ import { CheckCircle2 } from 'lucide-react';
  * Props:
  *   steps      — array of { label, description? }
  *   current    — 0-based index of current active step
- *   variant    — 'indigo' | 'emerald' | 'rose' (color accent)
+ *   variant    — 'amber' | 'emerald' | 'rose' (color accent)
  */
-export function StatusStepper({ steps = [], current = 0, variant = 'indigo' }) {
+export function StatusStepper({ steps = [], current = 0, variant = 'amber' }) {
   const accentColors = {
-    indigo: {
-      done:    'bg-indigo-600 border-indigo-500 text-white',
-      active:  'bg-indigo-600/20 border-indigo-500 text-indigo-300 ring-4 ring-indigo-500/20',
+    amber: {
+      done:    'bg-amber-600 border-amber-500 text-white',
+      active:  'bg-amber-600/20 border-amber-500 text-amber-300 ring-4 ring-amber-500/20',
       pending: 'bg-slate-800 border-slate-700 text-slate-500',
-      line:    'bg-indigo-600',
+      line:    'bg-amber-600',
       lineGray:'bg-slate-800',
-      label:   'text-indigo-300',
+      label:   'text-amber-300',
     },
     emerald: {
       done:    'bg-emerald-600 border-emerald-500 text-white',
@@ -36,7 +36,7 @@ export function StatusStepper({ steps = [], current = 0, variant = 'indigo' }) {
     },
   };
 
-  const c = accentColors[variant] || accentColors.indigo;
+  const c = accentColors[variant] || accentColors.amber;
 
   return (
     <div className="flex items-start gap-0 w-full overflow-x-auto pb-1 scrollbar-none">

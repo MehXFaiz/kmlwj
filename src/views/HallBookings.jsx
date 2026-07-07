@@ -105,7 +105,7 @@ export const HallBookings = () => {
               </button>
             )}
             <Link to="/hall-bookings/new"
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold shadow-lg shadow-indigo-900/20 transition-all">
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold shadow-lg shadow-amber-900/20 transition-all">
               <Plus className="h-4 w-4" /> {t('tables.hallBookings.newBooking')}
             </Link>
           </div>
@@ -117,20 +117,20 @@ export const HallBookings = () => {
               <div className="relative max-w-md flex-1 min-w-[240px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('tables.hallBookings.searchPlaceholder')}
-                  className="w-full pl-9 pr-4 py-2 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 transition-colors" />
+                  className="w-full pl-9 pr-4 py-2 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-colors" />
               </div>
               <div className="flex items-center bg-slate-950/80 rounded-xl p-1 border border-slate-800">
                 <button
                   type="button"
                   onClick={() => setViewMode('table')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${viewMode === 'table' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${viewMode === 'table' ? 'bg-amber-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
                 >
                   <TableIcon className="h-3.5 w-3.5" /> Table View
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewMode('calendar')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${viewMode === 'calendar' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${viewMode === 'calendar' ? 'bg-amber-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
                 >
                   <Calendar className="h-3.5 w-3.5" /> Calendar View
                 </button>
@@ -146,7 +146,7 @@ export const HallBookings = () => {
             <div className="overflow-x-auto">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400">
-                <div className="h-6 w-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                <div className="h-6 w-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
                 <span className="text-sm">Loading bookings...</span>
               </div>
             ) : (
@@ -159,7 +159,7 @@ export const HallBookings = () => {
                           type="checkbox"
                           checked={filtered.length > 0 && selectedIds.length === filtered.length}
                           onChange={handleSelectAll}
-                          className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                          className="rounded border-slate-700 bg-slate-800 text-amber-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
                         />
                       </th>
                     )}
@@ -181,7 +181,7 @@ export const HallBookings = () => {
                             type="checkbox"
                             checked={selectedIds.includes(booking.id)}
                             onChange={(e) => handleSelectOne(booking.id, e)}
-                            className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                            className="rounded border-slate-700 bg-slate-800 text-amber-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
                           />
                         </td>
                       )}
@@ -226,7 +226,7 @@ export const HallBookings = () => {
                         </button>
                         {canEditOrDelete && (
                           <Link to={`/hall-bookings/edit/${booking.id}`}
-                            className="p-1.5 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded transition-colors inline-flex ml-1"
+                            className="p-1.5 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 rounded transition-colors inline-flex ml-1"
                             title="Edit Booking">
                             <Edit2 className="h-4 w-4" />
                           </Link>

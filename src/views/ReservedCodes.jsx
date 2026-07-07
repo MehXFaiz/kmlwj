@@ -78,12 +78,12 @@ function ReservedCodeModal({ isOpen, onClose, onSave, initial, apiError }) {
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-1.5">Start Code *</label>
               <input value={form.reserveStart} onChange={e => setForm(f => ({ ...f, reserveStart: e.target.value }))} placeholder="e.g. 8000"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-mono" />
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 transition-all font-mono" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-1.5">End Code *</label>
               <input value={form.reserveEnd} onChange={e => setForm(f => ({ ...f, reserveEnd: e.target.value }))} placeholder="e.g. 8999"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-mono" />
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 transition-all font-mono" />
             </div>
           </div>
 
@@ -91,7 +91,7 @@ function ReservedCodeModal({ isOpen, onClose, onSave, initial, apiError }) {
             <label className="block text-xs font-semibold text-slate-400 mb-1.5">Reason *</label>
             <textarea value={form.reserveReason} onChange={e => setForm(f => ({ ...f, reserveReason: e.target.value }))} rows={2}
               placeholder="Why is this code range being reserved..."
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium resize-none" />
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 transition-all font-medium resize-none" />
           </div>
 
           <div>
@@ -106,7 +106,7 @@ function ReservedCodeModal({ isOpen, onClose, onSave, initial, apiError }) {
         <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-4 border-t border-slate-800 shrink-0">
           <button onClick={onClose} className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">Cancel</button>
           <button onClick={handleSave} disabled={!form.reserveStart.trim() || !form.reserveEnd.trim() || !form.reserveReason.trim()}
-            className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50">
+            className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold transition-all shadow-lg shadow-amber-600/25 active:scale-95 disabled:opacity-50">
             {initial ? 'Save Changes' : 'Reserve Code Range'}
           </button>
         </div>
@@ -289,10 +289,10 @@ export const ReservedCodes = () => {
       </div>
 
       {/* Info Banner */}
-      <div className="rounded-xl border border-indigo-900/30 bg-indigo-950/10 px-4 sm:px-5 py-3.5 flex items-start gap-3">
-        <Info className="h-4 w-4 text-indigo-400 mt-0.5 flex-shrink-0" />
+      <div className="rounded-xl border border-amber-900/30 bg-amber-950/10 px-4 sm:px-5 py-3.5 flex items-start gap-3">
+        <Info className="h-4 w-4 text-amber-400 mt-0.5 flex-shrink-0" />
         <div>
-          <p className="text-[11px] font-semibold text-indigo-300">Why Reserve GL Codes?</p>
+          <p className="text-[11px] font-semibold text-amber-300">Why Reserve GL Codes?</p>
           <p className="text-[11px] text-slate-500 mt-0.5">
             Reserved code ranges prevent accidental creation of accounts in protected GL segments. Once a range is reserved, no new accounts can be created within that code block.
           </p>

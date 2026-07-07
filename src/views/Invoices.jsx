@@ -90,7 +90,7 @@ export const Invoices = () => {
       case 'DRAFT':
         return <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border bg-slate-800/60 text-slate-400 border-slate-700/50">Draft</span>;
       case 'POSTED':
-        return <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border bg-indigo-950/60 text-indigo-400 border-indigo-900/50">Posted</span>;
+        return <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border bg-amber-950/60 text-amber-400 border-amber-900/50">Posted</span>;
       case 'PAID':
         return <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border bg-emerald-950/60 text-emerald-400 border-emerald-900/50">Paid</span>;
       case 'CANCELLED':
@@ -113,7 +113,7 @@ export const Invoices = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-indigo-400 bg-indigo-950/50 border border-indigo-900/60 px-2.5 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-400 bg-amber-950/50 border border-amber-900/60 px-2.5 py-0.5 rounded-full">
               <FileSpreadsheet className="h-3 w-3" /> Sales Invoices
             </span>
           </div>
@@ -132,7 +132,7 @@ export const Invoices = () => {
             </button>
           )}
           <Link to="/invoices/new"
-            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-900/40 transition-all flex-1 sm:flex-none">
+            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-lg shadow-amber-900/40 transition-all flex-1 sm:flex-none">
             <Plus className="h-4 w-4" /> Create Invoice
           </Link>
         </div>
@@ -144,7 +144,7 @@ export const Invoices = () => {
           <button
             key={tab.value}
             onClick={() => setStatusFilter(tab.value)}
-            className={`px-4 py-3 text-xs font-bold transition-all relative cursor-pointer border-b-2 -mb-[2px] ${statusFilter === tab.value ? 'text-indigo-400 border-indigo-500 font-extrabold' : 'text-slate-400 border-transparent hover:text-slate-200'}`}
+            className={`px-4 py-3 text-xs font-bold transition-all relative cursor-pointer border-b-2 -mb-[2px] ${statusFilter === tab.value ? 'text-amber-400 border-amber-500 font-extrabold' : 'text-slate-400 border-transparent hover:text-slate-200'}`}
           >
             {tab.label}
           </button>
@@ -156,7 +156,7 @@ export const Invoices = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by invoice #, customer name, memo..."
             name="invoice-search" autoComplete="off"
-            className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-650 focus:outline-none focus:border-indigo-600/50 transition-all" />
+            className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-650 focus:outline-none focus:border-amber-600/50 transition-all" />
         </div>
       </div>
 
@@ -171,7 +171,7 @@ export const Invoices = () => {
                       type="checkbox"
                       checked={filtered.length > 0 && selectedIds.length === filtered.length}
                       onChange={handleSelectAll}
-                      className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                      className="rounded border-slate-700 bg-slate-800 text-amber-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
                     />
                   </th>
                   <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">Invoice No</th>
@@ -190,7 +190,7 @@ export const Invoices = () => {
                         type="checkbox"
                         checked={selectedIds.includes(inv.id)}
                         onChange={(e) => handleSelectOne(inv.id, e)}
-                        className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                        className="rounded border-slate-700 bg-slate-800 text-amber-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
                       />
                     </td>
                     <td className="px-6 py-4">

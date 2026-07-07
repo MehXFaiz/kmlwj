@@ -72,7 +72,7 @@ export const Login = () => {
       {/* Card wrapper */}
       <div className="relative group w-full max-w-full min-w-0">
         {/* Ambient glow — hidden on very small screens to avoid overflow */}
-        <div className="absolute -inset-[2px] bg-gradient-to-r from-emerald-500/20 via-blue-500/20 to-indigo-500/20 rounded-[26px] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 hidden sm:block pointer-events-none" />
+        <div className="absolute -inset-[2px] bg-gradient-to-r from-emerald-500/20 via-blue-500/20 to-amber-500/20 rounded-[26px] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 hidden sm:block pointer-events-none" />
 
         {/* Main card */}
         <div className="relative w-full box-border bg-slate-900/70 backdrop-blur-2xl border border-slate-800/60 rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-9 shadow-2xl shadow-black/30">
@@ -110,7 +110,7 @@ export const Login = () => {
               </label>
               <div className="relative group/input">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Mail className="h-[15px] w-[15px] text-slate-600 group-focus-within/input:text-indigo-400 transition-colors" />
+                  <Mail className="h-[15px] w-[15px] text-slate-600 group-focus-within/input:text-amber-400 transition-colors" />
                 </div>
                 <input
                   type="email"
@@ -119,7 +119,7 @@ export const Login = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
                   title="Please enter a valid email address (e.g. name@company.com)"
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 text-sm transition-all duration-200 font-medium"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 text-sm transition-all duration-200 font-medium"
                   placeholder="name@company.com"
                   autoComplete="email"
                   required
@@ -133,14 +133,14 @@ export const Login = () => {
                 </label>
                 <Link
                   to="/forgot-password"
-                  className="text-[11px] font-semibold text-slate-500 hover:text-indigo-400 transition-colors duration-200"
+                  className="text-[11px] font-semibold text-slate-500 hover:text-amber-400 transition-colors duration-200"
                 >
                   Forgot?
                 </Link>
               </div>
               <div className="relative group/input">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Lock className="h-[15px] w-[15px] text-slate-600 group-focus-within/input:text-indigo-400 transition-colors" />
+                  <Lock className="h-[15px] w-[15px] text-slate-600 group-focus-within/input:text-amber-400 transition-colors" />
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -149,7 +149,7 @@ export const Login = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   pattern="^.{6,}$"
                   title="Password must be at least 6 characters long."
-                  className="w-full pl-10 pr-11 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 text-sm transition-all duration-200 font-medium"
+                  className="w-full pl-10 pr-11 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 text-sm transition-all duration-200 font-medium"
                   placeholder="••••••••"
                   autoComplete="current-password"
                   required
@@ -170,7 +170,7 @@ export const Login = () => {
               type="submit"
               id="login-submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-semibold text-sm rounded-xl shadow-lg shadow-indigo-600/25 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+              className="w-full py-3 px-4 bg-amber-600 hover:bg-amber-500 active:scale-[0.98] text-white font-semibold text-sm rounded-xl shadow-lg shadow-amber-600/25 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -216,7 +216,7 @@ export const Login = () => {
             <span className="text-slate-600 text-xs">New to AccuLedger? </span>
             <Link
               to="/signup"
-              className="text-indigo-400/80 hover:text-indigo-300 text-xs font-bold transition-colors duration-200"
+              className="text-amber-400/80 hover:text-amber-300 text-xs font-bold transition-colors duration-200"
             >
               Create an account
             </Link>

@@ -51,7 +51,7 @@ export const Modal = ({
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
             transition={{ type: "spring", duration: 0.4 }}
             className={`
-              relative w-full glass-panel glow-indigo rounded-t-2xl sm:rounded-xl shadow-2xl overflow-hidden z-10 border border-slate-800
+              relative w-full glass-panel glow-amber rounded-t-2xl sm:rounded-xl shadow-2xl overflow-hidden z-10 border border-slate-800
               max-h-[92dvh] sm:max-h-none flex flex-col
               ${sizes[size]}
               ${className}

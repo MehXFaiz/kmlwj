@@ -231,10 +231,10 @@ export const HallBookingForm = () => {
   };
 
   const inputClass = (hasError) =>
-    `w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium ${hasError ? 'border-red-500/60' : 'border-slate-800'}`;
+    `w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 transition-all font-medium ${hasError ? 'border-red-500/60' : 'border-slate-800'}`;
 
   const inputWithIconClass = (hasError) =>
-    `w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-950/60 border text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium ${hasError ? 'border-red-500/60' : 'border-slate-800'}`;
+    `w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-950/60 border text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 transition-all font-medium ${hasError ? 'border-red-500/60' : 'border-slate-800'}`;
 
   const labelClass = 'block text-xs font-semibold text-slate-400 mb-1.5';
 
@@ -242,7 +242,7 @@ export const HallBookingForm = () => {
     return (
       <DashboardLayout breadcrumbs={['Revenue', t('tables.hallBookings.title'), id ? 'Edit Booking' : 'New Booking']}>
         <div className="max-w-3xl mx-auto py-16 flex flex-col items-center justify-center gap-3 text-slate-400">
-          <div className="h-6 w-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          <div className="h-6 w-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
           <span className="text-sm">Loading booking details...</span>
         </div>
       </DashboardLayout>
@@ -268,7 +268,7 @@ export const HallBookingForm = () => {
               </p>
             </div>
           </div>
-          <span className="text-xs font-semibold text-indigo-400 bg-indigo-500/10 px-3 py-1.5 rounded-full border border-indigo-500/20">
+          <span className="text-xs font-semibold text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20">
             {id ? 'Editing Record' : 'New Booking'}
           </span>
         </div>
@@ -278,33 +278,33 @@ export const HallBookingForm = () => {
             
             {/* Left Column: Info & Reserved Dates */}
             <div className="lg:col-span-4 space-y-5">
-              <div className="bg-indigo-500/5 rounded-2xl border border-indigo-500/20 p-5">
+              <div className="bg-amber-500/5 rounded-2xl border border-amber-500/20 p-5">
                 <div className="flex items-center gap-2 mb-4">
-                  <Info className="w-4 h-4 text-indigo-400" />
-                  <h3 className="text-sm font-semibold text-indigo-300">Booking Guidelines</h3>
+                  <Info className="w-4 h-4 text-amber-400" />
+                  <h3 className="text-sm font-semibold text-amber-300">Booking Guidelines</h3>
                 </div>
                 <div className="space-y-3">
                   <p className="text-xs text-slate-300 leading-relaxed">
                     Check the <strong>Reserved Dates Panel</strong> below to avoid booking conflicts.
                   </p>
                   <div className="flex items-center gap-3 mt-2">
-                    <div className="w-7 h-7 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
-                      <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                    <div className="w-7 h-7 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                      <Clock className="w-3.5 h-3.5 text-amber-400" />
                     </div>
                     <span className="text-xs font-semibold text-slate-300">Timings: Morning, Afternoon, Evening, Night</span>
                   </div>
                 </div>
-                <div className="border-t border-indigo-500/20 my-4" />
+                <div className="border-t border-amber-500/20 my-4" />
                 <p className="text-xs text-slate-500 leading-relaxed">
                   Fields marked with <span className="text-red-400 font-bold">*</span> are mandatory. Jamaat discounts apply automatically when checked.
                 </p>
               </div>
 
               {/* Reserved / Booked Dates Panel */}
-              <div className="rounded-xl border border-indigo-500/20 bg-gradient-to-br from-slate-900/90 to-slate-950 p-4 space-y-3 shadow-lg shadow-black/20">
+              <div className="rounded-xl border border-amber-500/20 bg-gradient-to-br from-slate-900/90 to-slate-950 p-4 space-y-3 shadow-lg shadow-black/20">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
                   <div className="flex items-center gap-2.5">
-                    <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400">
+                    <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">
                       <Calendar className="h-4 w-4" />
                     </div>
                     <div>
@@ -321,14 +321,14 @@ export const HallBookingForm = () => {
                       <button
                         type="button"
                         onClick={() => setActiveTab('list')}
-                        className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-all ${activeTab === 'list' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                        className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-all ${activeTab === 'list' ? 'bg-amber-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
                       >
                         List View
                       </button>
                       <button
                         type="button"
                         onClick={() => setActiveTab('calendar')}
-                        className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-all ${activeTab === 'calendar' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                        className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-all ${activeTab === 'calendar' ? 'bg-amber-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
                       >
                         Calendar Grid
                       </button>
@@ -342,7 +342,7 @@ export const HallBookingForm = () => {
                         {showAllDates ? 'Showing All Dates' : 'Showing Upcoming Only'}
                       </button>
                     )}
-                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20">
                       {activeBookings.length} Booked
                     </span>
                   </div>
@@ -379,11 +379,11 @@ export const HallBookingForm = () => {
                           <div>
                             <div className="flex items-center justify-between gap-1 mb-1.5 border-b border-slate-800/60 pb-1.5">
                               <span className="font-bold text-slate-200 flex items-center gap-1.5 text-[13px]">
-                                <Clock className="h-3.5 w-3.5 text-indigo-400" />
+                                <Clock className="h-3.5 w-3.5 text-amber-400" />
                                 {b.programDate ? new Date(b.programDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
                               </span>
                               <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                                isConflict ? 'bg-red-500 text-white font-black' : 'bg-slate-800 text-indigo-300 border border-slate-700'
+                                isConflict ? 'bg-red-500 text-white font-black' : 'bg-slate-800 text-amber-300 border border-slate-700'
                               }`}>
                                 {b.timings || 'Any time'}
                               </span>
@@ -415,11 +415,11 @@ export const HallBookingForm = () => {
               {/* Card 01: Booker Details */}
               <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
                 <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
-                  <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
+                  <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">
                     01
                   </span>
                   <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                    <User className="h-4 w-4 text-indigo-400" /> {t('receipt.bookerName')} Details
+                    <User className="h-4 w-4 text-amber-400" /> {t('receipt.bookerName')} Details
                   </h3>
                 </div>
                 <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -480,11 +480,11 @@ export const HallBookingForm = () => {
               {/* Card 02: Program Details */}
               <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
                 <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
-                  <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
+                  <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">
                     02
                   </span>
                   <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-indigo-400" /> Program Details
+                    <Calendar className="h-4 w-4 text-amber-400" /> Program Details
                   </h3>
                 </div>
                 <div className="p-5">
@@ -571,7 +571,7 @@ export const HallBookingForm = () => {
 
                     <div className="sm:col-span-2">
                       <label className="flex items-center gap-3 cursor-pointer p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:bg-slate-800/60 transition-colors">
-                        <input type="checkbox" {...register('isForJamaat')} className="w-4 h-4 accent-indigo-500" />
+                        <input type="checkbox" {...register('isForJamaat')} className="w-4 h-4 accent-amber-500" />
                         <span className="text-sm font-semibold text-slate-300">{t('receipt.forJamaat')}</span>
                       </label>
                     </div>
@@ -582,11 +582,11 @@ export const HallBookingForm = () => {
               {/* Card 03: Payment Details */}
               <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
                 <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
-                  <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
+                  <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">
                     03
                   </span>
                   <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                    <CreditCard className="h-4 w-4 text-indigo-400" /> Payment Details
+                    <CreditCard className="h-4 w-4 text-amber-400" /> Payment Details
                   </h3>
                 </div>
                 <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -599,7 +599,7 @@ export const HallBookingForm = () => {
                         message: 'Positive decimal number up to 2 decimal places'
                       }
                     })} required
-                      className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border text-lg font-bold text-emerald-400 focus:outline-none focus:border-indigo-500/60 transition-all ${errors.amount ? 'border-red-500/60' : 'border-slate-800'}`} />
+                      className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border text-lg font-bold text-emerald-400 focus:outline-none focus:border-amber-500/60 transition-all ${errors.amount ? 'border-red-500/60' : 'border-slate-800'}`} />
                     {errors.amount && (
                       <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.amount.message}</span>
                     )}
@@ -712,7 +712,7 @@ export const HallBookingForm = () => {
                   Cancel
                 </Link>
                 <button type="submit" disabled={isSubmitting || !availability.available}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold transition-all shadow-lg shadow-amber-600/25 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">
                   <Save className="w-4 h-4" />
                   {isSubmitting ? 'Saving...' : id ? 'Update Booking' : 'Save Booking'}
                 </button>

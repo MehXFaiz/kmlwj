@@ -142,13 +142,13 @@ export const InvoiceForm = () => {
     }
   };
 
-  const inputClass = 'w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium';
+  const inputClass = 'w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 transition-all font-medium';
   const labelClass = 'block text-xs font-semibold text-slate-400 mb-1.5';
 
   if (loading && id) {
     return (
       <div className="flex items-center justify-center h-[50vh]">
-        <div className="h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <div className="h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -171,7 +171,7 @@ export const InvoiceForm = () => {
             </p>
           </div>
         </div>
-        <span className="text-xs font-semibold text-indigo-400 bg-indigo-500/10 px-3 py-1.5 rounded-full border border-indigo-500/20">
+        <span className="text-xs font-semibold text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20">
           {id ? 'Editing Invoice' : 'New Invoice'}
         </span>
       </div>
@@ -180,18 +180,18 @@ export const InvoiceForm = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Column: Info Card */}
           <div className="lg:col-span-4 space-y-5">
-            <div className="bg-indigo-500/5 rounded-2xl border border-indigo-500/20 p-5">
+            <div className="bg-amber-500/5 rounded-2xl border border-amber-500/20 p-5">
               <div className="flex items-center gap-2 mb-4">
-                <Info className="w-4 h-4 text-indigo-400" />
-                <h3 className="text-sm font-semibold text-indigo-300">Invoice Information</h3>
+                <Info className="w-4 h-4 text-amber-400" />
+                <h3 className="text-sm font-semibold text-amber-300">Invoice Information</h3>
               </div>
               <div className="space-y-3">
                 <p className="text-xs text-slate-300 leading-relaxed">
                   Provide customer details, line items, and applicable taxes or discounts to generate an invoice.
                 </p>
                 <div className="flex items-center gap-3 mt-2">
-                  <div className="w-7 h-7 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
-                    <Save className="w-3.5 h-3.5 text-indigo-400" />
+                  <div className="w-7 h-7 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                    <Save className="w-3.5 h-3.5 text-amber-400" />
                   </div>
                   <span className="text-xs font-semibold text-slate-300">Auto-saves calculations</span>
                 </div>
@@ -205,7 +205,7 @@ export const InvoiceForm = () => {
             {/* Card 01: Invoice Attributes */}
           <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
             <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
-              <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
+              <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">
                 01
               </span>
               <h3 className="text-sm font-semibold text-slate-200">Invoice Attributes</h3>
@@ -247,13 +247,13 @@ export const InvoiceForm = () => {
           <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
             <div className="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between gap-3 bg-slate-800/40">
               <div className="flex items-center gap-3">
-                <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
+                <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">
                   02
                 </span>
                 <h3 className="text-sm font-semibold text-slate-200">Line Items</h3>
               </div>
               <button type="button" onClick={handleAddItem}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600/20 border border-indigo-500/20 transition-all text-xs font-semibold">
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600/10 text-amber-400 hover:bg-amber-600/20 border border-amber-500/20 transition-all text-xs font-semibold">
                 <Plus className="h-3.5 w-3.5" /> Add Row
               </button>
             </div>
@@ -265,19 +265,19 @@ export const InvoiceForm = () => {
                     <input value={item.description} onChange={e => handleItemChange(idx, 'description', e.target.value)}
                       pattern="^[a-zA-Z0-9\s.,#\/-]{3,100}$" title="Only letters, numbers, spaces, and basic punctuation (3-100 characters)"
                       placeholder="Item description"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-indigo-500/60 transition-all font-medium placeholder-slate-600" />
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-amber-500/60 transition-all font-medium placeholder-slate-600" />
                   </div>
 
                   <div className="w-full sm:w-24">
                     <label className="block text-xs font-semibold text-slate-500 mb-1 sm:hidden">Qty</label>
                     <input type="number" min="1" step="any" value={item.quantity} onChange={e => handleItemChange(idx, 'quantity', e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 text-sm text-center focus:outline-none focus:border-indigo-500/60 transition-all font-medium" />
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 text-sm text-center focus:outline-none focus:border-amber-500/60 transition-all font-medium" />
                   </div>
 
                   <div className="w-full sm:w-32">
                     <label className="block text-xs font-semibold text-slate-500 mb-1 sm:hidden">Unit Price</label>
                     <input type="number" min="0" step="any" value={item.unitPrice} onChange={e => handleItemChange(idx, 'unitPrice', e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 text-sm text-right focus:outline-none focus:border-indigo-500/60 transition-all font-medium" />
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 text-sm text-right focus:outline-none focus:border-amber-500/60 transition-all font-medium" />
                   </div>
 
                   <div className="w-full sm:w-32">
@@ -300,7 +300,7 @@ export const InvoiceForm = () => {
             {/* Card 03: Financial Computations */}
           <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
             <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
-              <span className="w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">
+              <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">
                 03
               </span>
               <h3 className="text-sm font-semibold text-slate-200">Financial Computations</h3>
@@ -325,7 +325,7 @@ export const InvoiceForm = () => {
 
               <div className="border-t border-slate-800 pt-4 flex justify-between items-baseline">
                 <span className="text-slate-200 font-bold text-sm">Total Bill</span>
-                <span className="text-xl font-extrabold text-indigo-400">
+                <span className="text-xl font-extrabold text-amber-400">
                   PKR {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
               </div>
@@ -339,7 +339,7 @@ export const InvoiceForm = () => {
               Cancel
             </button>
             <button type="submit" disabled={loading}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50 cursor-pointer">
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold transition-all shadow-lg shadow-amber-600/25 active:scale-95 disabled:opacity-50 cursor-pointer">
               <Save className="h-4 w-4" />
               {loading ? 'Saving...' : 'Save Invoice'}
             </button>

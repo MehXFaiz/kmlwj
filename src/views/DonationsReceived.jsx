@@ -202,7 +202,7 @@ export const DonationsReceived = () => {
               PKR {Number(stats.cashAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </p>
           </div>
-          <div className="p-3 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+          <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
             <Building2 className="h-6 w-6" />
           </div>
         </div>
@@ -214,7 +214,7 @@ export const DonationsReceived = () => {
               PKR {Number(stats.bankAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </p>
           </div>
-          <div className="p-3 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+          <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
             <CreditCard className="h-6 w-6" />
           </div>
         </div>
@@ -239,7 +239,7 @@ export const DonationsReceived = () => {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search by receipt # (REC-2026-0001), donor name, reference, or cheque #"
-            className="w-full pl-9 pr-4 py-2 rounded-lg bg-slate-950/80 border border-slate-800 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+            className="w-full pl-9 pr-4 py-2 rounded-lg bg-slate-950/80 border border-slate-800 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-amber-500"
           />
         </div>
 
@@ -247,7 +247,7 @@ export const DonationsReceived = () => {
           <select
             value={filterType}
             onChange={e => setFilterType(e.target.value)}
-            className="px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-indigo-500"
+            className="px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-amber-500"
           >
             <option value="">All Categories</option>
             {DONATION_TYPES.map(t => (
@@ -258,7 +258,7 @@ export const DonationsReceived = () => {
           <select
             value={filterMethod}
             onChange={e => setFilterMethod(e.target.value)}
-            className="px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-indigo-500"
+            className="px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-amber-500"
           >
             <option value="">All Methods</option>
             {PAYMENT_METHODS.map(m => (
@@ -269,7 +269,7 @@ export const DonationsReceived = () => {
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value)}
-            className="px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-indigo-500"
+            className="px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-amber-500"
           >
             <option value="">All Statuses</option>
             <option value="POSTED">POSTED</option>
@@ -291,7 +291,7 @@ export const DonationsReceived = () => {
                       type="checkbox"
                       checked={filtered.length > 0 && selectedIds.length === filtered.length}
                       onChange={handleSelectAll}
-                      className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                      className="rounded border-slate-700 bg-slate-800 text-amber-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
                     />
                   </th>
                   <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">Receipt No & Date</th>
@@ -324,7 +324,7 @@ export const DonationsReceived = () => {
                           type="checkbox"
                           checked={selectedIds.includes(d.id)}
                           onChange={(e) => handleSelectOne(d.id, e)}
-                          className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                          className="rounded border-slate-700 bg-slate-800 text-amber-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
                         />
                       </td>
                       <td className="px-6 py-4">
@@ -339,11 +339,11 @@ export const DonationsReceived = () => {
                       <td className="px-6 py-4">
                         <p className="text-sm font-semibold text-slate-200">{d.donor?.fullName}</p>
                         <p className="text-[11px] text-slate-500 mt-0.5">
-                          Code: <span className="font-mono text-indigo-400">{d.donor?.donorCode}</span>
+                          Code: <span className="font-mono text-amber-400">{d.donor?.donorCode}</span>
                         </p>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
                           {d.donationType?.replace(/_/g, ' ')}
                         </span>
                       </td>
@@ -405,7 +405,7 @@ export const DonationsReceived = () => {
                           {canEditOrDelete && (
                             <button
                               onClick={() => { setSelectedReceipt(d); setModalOpen(true); }}
-                              className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 transition-colors"
+                              className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-colors"
                               title="Edit Receipt"
                             >
                               <Edit2 className="h-3.5 w-3.5" />
@@ -493,7 +493,7 @@ export const DonationsReceived = () => {
                     {canEditOrDelete && (
                       <button
                         onClick={() => { setSelectedReceipt(d); setModalOpen(true); }}
-                        className="px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs font-medium flex items-center gap-1"
+                        className="px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-medium flex items-center gap-1"
                       >
                         <Edit2 className="h-3.5 w-3.5" /> Edit
                       </button>

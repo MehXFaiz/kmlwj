@@ -232,7 +232,7 @@ export const Expenses = () => {
                         </span>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => { setEditingExpense(exp); setIsModalOpen(true); }}
-                            className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-indigo-400 transition-colors"
+                            className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-amber-400 transition-colors"
                             title="Edit Expense">
                             <Edit className="h-3.5 w-3.5" />
                           </button>

@@ -58,7 +58,7 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
         <div className="flex justify-between items-center p-4 border-b border-slate-200 print:hidden shrink-0">
           <h2 className="text-lg font-bold text-slate-800">Print Booking Receipt</h2>
           <div className="flex items-center gap-3">
-            <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold text-sm transition-colors">
+            <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-bold text-sm transition-colors">
               <Printer className="h-4 w-4" /> Print
             </button>
             <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">

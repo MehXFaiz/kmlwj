@@ -89,7 +89,7 @@ export const Reports = () => {
           onClick={() => handleTabChange('trial-balance')}
           className={`pb-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 whitespace-nowrap flex items-center gap-2 ${
             activeTab === 'trial-balance'
-              ? 'border-indigo-500 text-indigo-400 font-extrabold'
+              ? 'border-amber-500 text-amber-400 font-extrabold'
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
@@ -99,7 +99,7 @@ export const Reports = () => {
           onClick={() => handleTabChange('income-statement')}
           className={`pb-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 whitespace-nowrap flex items-center gap-2 ${
             activeTab === 'income-statement'
-              ? 'border-indigo-500 text-indigo-400 font-extrabold'
+              ? 'border-amber-500 text-amber-400 font-extrabold'
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
@@ -109,7 +109,7 @@ export const Reports = () => {
           onClick={() => handleTabChange('balance-sheet')}
           className={`pb-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 whitespace-nowrap flex items-center gap-2 ${
             activeTab === 'balance-sheet'
-              ? 'border-indigo-500 text-indigo-400 font-extrabold'
+              ? 'border-amber-500 text-amber-400 font-extrabold'
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
@@ -119,7 +119,7 @@ export const Reports = () => {
           onClick={() => handleTabChange('cash-flow')}
           className={`pb-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 whitespace-nowrap flex items-center gap-2 ${
             activeTab === 'cash-flow'
-              ? 'border-indigo-500 text-indigo-400 font-extrabold'
+              ? 'border-amber-500 text-amber-400 font-extrabold'
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
@@ -282,12 +282,12 @@ export const Reports = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <h4 className="text-sm font-bold uppercase tracking-widest text-indigo-400 border-b border-slate-700 pb-2">Equity</h4>
+                    <h4 className="text-sm font-bold uppercase tracking-widest text-amber-400 border-b border-slate-700 pb-2">Equity</h4>
                     <div className="space-y-1">
                       {balanceSheetData.equity.map((row) => (
                         <div key={row.id} className={`flex justify-between items-center py-2 text-sm ${row.isNetIncome ? 'italic' : ''}`}>
-                          <span className={`${row.isNetIncome ? 'text-indigo-300' : 'text-slate-300'}`}>{row.accountName}</span>
-                          <span className={`font-mono ${row.isNetIncome ? 'text-indigo-300' : 'text-slate-200'}`}>
+                          <span className={`${row.isNetIncome ? 'text-amber-300' : 'text-slate-300'}`}>{row.accountName}</span>
+                          <span className={`font-mono ${row.isNetIncome ? 'text-amber-300' : 'text-slate-200'}`}>
                             {row.sign < 0 ? `(${formatMoney(row.balance)})` : formatMoney(row.balance)}
                           </span>
                         </div>
@@ -295,7 +295,7 @@ export const Reports = () => {
                     </div>
                     <div className="flex justify-between items-center py-2 border-t border-slate-800/60 font-bold text-sm">
                       <span className="text-slate-400 text-xs uppercase tracking-widest">Total Equity</span>
-                      <span className="font-mono text-indigo-400">{formatMoney(balanceSheetData.summary.totalEquity)}</span>
+                      <span className="font-mono text-amber-400">{formatMoney(balanceSheetData.summary.totalEquity)}</span>
                     </div>
                   </div>
 

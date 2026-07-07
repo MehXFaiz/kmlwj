@@ -65,13 +65,13 @@ function BankVoucherPrintModal({ voucher, onClose }) {
         {/* Header - Hidden when printing */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0 print:hidden">
           <div className="flex items-center gap-2">
-            <Printer className="h-4 w-4 text-indigo-400" />
+            <Printer className="h-4 w-4 text-amber-400" />
             <h3 className="text-sm font-bold text-slate-200">
               {voucher.voucherType === 'BP' ? t('tables.bankVouchers.printBankPayment') : t('tables.bankVouchers.printBankReceipt')}
             </h3>
           </div>
           <div className="flex gap-2">
-            <button onClick={handlePrint} className="px-3 py-1.5 rounded-lg bg-indigo-650 hover:bg-indigo-550 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+            <button onClick={handlePrint} className="px-3 py-1.5 rounded-lg bg-amber-650 hover:bg-amber-550 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
               <Printer className="h-3.5 w-3.5" /> {t('tables.bankVouchers.print')}
             </button>
             <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-350">
@@ -224,11 +224,11 @@ function BankVoucherEditModal({ voucher, onClose, onSave }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-lg rounded-2xl border border-indigo-900/40 bg-slate-900 shadow-2xl overflow-hidden flex flex-col">
+      <div className="relative w-full max-w-lg rounded-2xl border border-amber-900/40 bg-slate-900 shadow-2xl overflow-hidden flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-indigo-950/60 border border-indigo-800/40 flex items-center justify-center">
-              <Edit className="h-4 w-4 text-indigo-400" />
+            <div className="h-8 w-8 rounded-lg bg-amber-950/60 border border-amber-800/40 flex items-center justify-center">
+              <Edit className="h-4 w-4 text-amber-400" />
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-200">Edit {voucher.voucherType === 'BP' ? 'Expense' : 'Voucher'} ({voucher.voucherNo})</h3>
@@ -244,22 +244,22 @@ function BankVoucherEditModal({ voucher, onClose, onSave }) {
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Date *</label>
             <input type="date" value={date} onChange={e => setDate(e.target.value)} required
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-indigo-500 transition-all" />
+              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-amber-500 transition-all" />
           </div>
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Amount (PKR) *</label>
             <input type="number" step="0.01" min="0.01" value={amount} onChange={e => setAmount(e.target.value)} required placeholder="0.00"
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm font-mono focus:border-indigo-500 transition-all" />
+              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm font-mono focus:border-amber-500 transition-all" />
           </div>
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Paid To / Reference</label>
             <input type="text" value={reference} onChange={e => setReference(e.target.value)} placeholder="e.g. Vendor name, Cheque no..."
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-indigo-500 transition-all" />
+              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-amber-500 transition-all" />
           </div>
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Description / Memo</label>
             <textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} placeholder="Provide details..."
-              className="w-full px-3 py-2 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-indigo-500 transition-all resize-none" />
+              className="w-full px-3 py-2 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-amber-500 transition-all resize-none" />
           </div>
 
           <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
@@ -268,7 +268,7 @@ function BankVoucherEditModal({ voucher, onClose, onSave }) {
               Cancel
             </button>
             <button type="submit" disabled={loading || !amount}
-              className="flex items-center gap-2 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-900/30 transition-all disabled:opacity-50">
+              className="flex items-center gap-2 px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-lg shadow-amber-900/30 transition-all disabled:opacity-50">
               {loading && <div className="h-3 w-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
               Save Changes
             </button>
@@ -423,7 +423,7 @@ export const BankVouchers = () => {
       case 'Draft':
         return <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border bg-slate-800/60 text-slate-400 border-slate-700/50">{t('tables.bankVouchers.draft')}</span>;
       case 'Posted':
-        return <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border bg-indigo-950/60 text-indigo-400 border-indigo-900/50">{t('tables.bankVouchers.posted')}</span>;
+        return <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border bg-amber-950/60 text-amber-400 border-amber-900/50">{t('tables.bankVouchers.posted')}</span>;
       case 'Cancelled':
         return <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border bg-red-950/60 text-red-400 border-red-900/50">{t('tables.bankVouchers.cancelled')}</span>;
       default:
@@ -436,7 +436,7 @@ export const BankVouchers = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-indigo-400 bg-indigo-950/50 border border-indigo-900/60 px-2.5 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-400 bg-amber-950/50 border border-amber-900/60 px-2.5 py-0.5 rounded-full">
               <FileSpreadsheet className="h-3 w-3" /> {t('tables.bankVouchers.cashBankVouchers')}
             </span>
           </div>
@@ -483,11 +483,11 @@ export const BankVouchers = () => {
       {/* Tabs */}
       <div className="flex items-center border-b border-slate-800/80 scrollbar-none overflow-x-auto whitespace-nowrap">
         <button onClick={() => setActiveTab('BP')}
-          className={`px-4 py-3 text-xs font-bold transition-all relative border-b-2 -mb-[2px] cursor-pointer ${activeTab === 'BP' ? 'text-indigo-400 border-indigo-500 font-extrabold' : 'text-slate-400 border-transparent hover:text-slate-200'}`}>
+          className={`px-4 py-3 text-xs font-bold transition-all relative border-b-2 -mb-[2px] cursor-pointer ${activeTab === 'BP' ? 'text-amber-400 border-amber-500 font-extrabold' : 'text-slate-400 border-transparent hover:text-slate-200'}`}>
           {t('tables.bankVouchers.bankPaymentsBP')}
         </button>
         <button onClick={() => setActiveTab('BR')}
-          className={`px-4 py-3 text-xs font-bold transition-all relative border-b-2 -mb-[2px] cursor-pointer ${activeTab === 'BR' ? 'text-indigo-400 border-indigo-500 font-extrabold' : 'text-slate-400 border-transparent hover:text-slate-200'}`}>
+          className={`px-4 py-3 text-xs font-bold transition-all relative border-b-2 -mb-[2px] cursor-pointer ${activeTab === 'BR' ? 'text-amber-400 border-amber-500 font-extrabold' : 'text-slate-400 border-transparent hover:text-slate-200'}`}>
           {t('tables.bankVouchers.bankReceiptsBR')}
         </button>
       </div>
@@ -497,14 +497,14 @@ export const BankVouchers = () => {
         <div className="relative flex-1 w-full sm:min-w-52">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('tables.bankVouchers.searchPlaceholder')}
-            className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-650 focus:outline-none focus:border-indigo-600/50 transition-all" />
+            className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-650 focus:outline-none focus:border-amber-600/50 transition-all" />
         </div>
       </div>
 
       <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 overflow-hidden">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-2 text-slate-400">
-            <div className="h-6 w-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            <div className="h-6 w-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
             <span className="text-xs">{t('tables.bankVouchers.loadingVouchers')}</span>
           </div>
         ) : (
@@ -520,7 +520,7 @@ export const BankVouchers = () => {
                             type="checkbox"
                             checked={filtered.length > 0 && selectedIds.length === filtered.length}
                             onChange={handleSelectAll}
-                            className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                            className="rounded border-slate-700 bg-slate-800 text-amber-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
                           />
                         </th>
                       )}
@@ -545,7 +545,7 @@ export const BankVouchers = () => {
                                 type="checkbox"
                                 checked={selectedIds.includes(v.dbId)}
                                 onChange={(e) => handleSelectOne(v.dbId, e)}
-                                className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                                className="rounded border-slate-700 bg-slate-800 text-amber-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
                               />
                             </td>
                           )}
@@ -572,7 +572,7 @@ export const BankVouchers = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="text-xs font-mono font-bold text-indigo-400 bg-indigo-950/40 border border-indigo-900/40 px-2 py-0.2 rounded">{getBankCode(v)}</span>
+                            <span className="text-xs font-mono font-bold text-amber-400 bg-amber-950/40 border border-amber-900/40 px-2 py-0.2 rounded">{getBankCode(v)}</span>
                           </td>
                           <td className="px-6 py-4">
                             <span className="text-xs font-mono font-bold text-slate-400 bg-slate-800/45 border border-slate-700/40 px-2 py-0.2 rounded">{getOffsetAccount(v)}</span>
@@ -586,14 +586,14 @@ export const BankVouchers = () => {
                               </button>
                               {(v.status === 'Draft' || canEditOrDelete) && (
                                 <button onClick={() => setEditItem(v)} disabled={statusLoading}
-                                  className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 transition-colors cursor-pointer"
+                                  className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-colors cursor-pointer"
                                   title="Edit Voucher">
                                   <Edit className="h-3.5 w-3.5" />
                                 </button>
                               )}
                               {v.status === 'Draft' && (
                                 <button onClick={() => handlePost(v.dbId)} disabled={statusLoading}
-                                  className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 transition-colors cursor-pointer"
+                                  className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-colors cursor-pointer"
                                   title={t('tables.bankVouchers.post') || "Post Voucher"}>
                                   <CheckCircle className="h-3.5 w-3.5" />
                                 </button>
@@ -676,14 +676,14 @@ export const BankVouchers = () => {
                       </button>
                       {(v.status === 'Draft' || canEditOrDelete) && (
                         <button onClick={() => setEditItem(v)} disabled={statusLoading}
-                          className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-colors cursor-pointer"
                           title="Edit Voucher">
                           <Edit className="h-3.5 w-3.5" />
                         </button>
                       )}
                       {v.status === 'Draft' && (
                         <button onClick={() => handlePost(v.dbId)} disabled={statusLoading}
-                          className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-colors cursor-pointer"
                           title={t('tables.bankVouchers.post') || "Post Voucher"}>
                           <CheckCircle className="h-3.5 w-3.5" />
                         </button>

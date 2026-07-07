@@ -119,7 +119,7 @@ export const Settings = () => {
                     onChange={(e) => setOldPassword(e.target.value)}
                     pattern="^.{8,}$"
                     title="Password must be at least 8 characters long."
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 text-sm transition-all font-medium"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 text-sm transition-all font-medium"
                     required
                   />
                 </div>
@@ -132,7 +132,7 @@ export const Settings = () => {
                     onChange={(e) => setNewPassword(e.target.value)}
                     pattern="^.{8,}$"
                     title="Password must be at least 8 characters long."
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 text-sm transition-all font-medium"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 text-sm transition-all font-medium"
                     required
                   />
                 </div>
@@ -145,7 +145,7 @@ export const Settings = () => {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     pattern="^.{8,}$"
                     title="Password must be at least 8 characters long."
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 text-sm transition-all font-medium"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 text-sm transition-all font-medium"
                     required
                   />
                 </div>

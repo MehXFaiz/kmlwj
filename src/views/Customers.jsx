@@ -55,8 +55,8 @@ function CustomerModal({ isOpen, onClose, onSave, initial }) {
       <div className="relative z-10 w-full sm:max-w-xl rounded-t-2xl sm:rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl max-h-[92dvh] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-200">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-indigo-950/60 border border-indigo-800/40 flex items-center justify-center">
-              <Users className="h-4 w-4 text-indigo-400" />
+            <div className="h-8 w-8 rounded-lg bg-amber-950/60 border border-amber-800/40 flex items-center justify-center">
+              <Users className="h-4 w-4 text-amber-400" />
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-200">{initial ? 'Edit Customer' : 'New Customer'}</h3>
@@ -72,19 +72,19 @@ function CustomerModal({ isOpen, onClose, onSave, initial }) {
           <div>
             <label className="block text-xs font-semibold text-slate-400 mb-1.5">Customer Name *</label>
             <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              placeholder="e.g. John Doe or Acme Corp" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm placeholder-slate-600 focus:border-indigo-500/60 focus:outline-none transition-all font-medium" />
+              placeholder="e.g. John Doe or Acme Corp" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm placeholder-slate-600 focus:border-amber-500/60 focus:outline-none transition-all font-medium" />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-1.5">Email Address</label>
               <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                placeholder="client@example.com" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-all placeholder-slate-600 font-medium" />
+                placeholder="client@example.com" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-amber-500/60 transition-all placeholder-slate-600 font-medium" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-1.5">Phone Number</label>
               <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-                placeholder="+92 300 1234567" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-all placeholder-slate-600 font-medium" />
+                placeholder="+92 300 1234567" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-amber-500/60 transition-all placeholder-slate-600 font-medium" />
             </div>
           </div>
 
@@ -93,19 +93,19 @@ function CustomerModal({ isOpen, onClose, onSave, initial }) {
             <div className="relative">
               <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
               <input value={form.company} onChange={e => setForm(f => ({ ...f, company: e.target.value }))}
-                placeholder="e.g. Acme Corporation" className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-all placeholder-slate-600 font-medium" />
+                placeholder="e.g. Acme Corporation" className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-amber-500/60 transition-all placeholder-slate-600 font-medium" />
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-400 mb-1.5">Billing Address</label>
             <textarea value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-indigo-500/60 transition-all h-20 resize-none font-medium placeholder-slate-600" placeholder="Billing / Shipping Address details" />
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-amber-500/60 transition-all h-20 resize-none font-medium placeholder-slate-600" placeholder="Billing / Shipping Address details" />
           </div>
 
           <div className="flex items-center gap-3 pt-2">
             <input type="checkbox" id="isActive" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
-              className="h-4 w-4 rounded border-slate-800 bg-slate-950/60 text-indigo-600 focus:ring-indigo-600 focus:ring-offset-slate-900 cursor-pointer" />
+              className="h-4 w-4 rounded border-slate-800 bg-slate-950/60 text-amber-600 focus:ring-amber-600 focus:ring-offset-slate-900 cursor-pointer" />
             <label htmlFor="isActive" className="text-sm font-semibold text-slate-300 cursor-pointer">Active Client</label>
           </div>
         </div>
@@ -113,7 +113,7 @@ function CustomerModal({ isOpen, onClose, onSave, initial }) {
         <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 px-6 py-4 border-t border-slate-800 shrink-0">
           <button onClick={onClose} className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">Cancel</button>
           <button onClick={handleSave} disabled={!form.name.trim()}
-            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50 cursor-pointer">
+            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold transition-all shadow-lg shadow-amber-600/25 active:scale-95 disabled:opacity-50 cursor-pointer">
             {initial ? 'Save Changes' : 'Create Customer'}
           </button>
         </div>
@@ -210,7 +210,7 @@ export const Customers = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-indigo-400 bg-indigo-950/50 border border-indigo-900/60 px-2.5 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-400 bg-amber-950/50 border border-amber-900/60 px-2.5 py-0.5 rounded-full">
               <Users className="h-3 w-3" /> Client Directory
             </span>
           </div>
@@ -229,7 +229,7 @@ export const Customers = () => {
             </button>
           )}
           <button onClick={() => { setEditItem(null); setModalOpen(true); }}
-            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-900/40 transition-all flex-1 sm:flex-none">
+            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-lg shadow-amber-900/40 transition-all flex-1 sm:flex-none">
             <Plus className="h-4 w-4" /> New Customer
           </button>
         </div>
@@ -240,7 +240,7 @@ export const Customers = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, email, or company..."
             name="customer-search" autoComplete="off"
-            className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-indigo-600/50 transition-all" />
+            className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-amber-600/50 transition-all" />
         </div>
       </div>
 
@@ -255,7 +255,7 @@ export const Customers = () => {
                       type="checkbox"
                       checked={filtered.length > 0 && selectedIds.length === filtered.length}
                       onChange={handleSelectAll}
-                      className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                      className="rounded border-slate-700 bg-slate-800 text-amber-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
                     />
                   </th>
                   <th className="px-6 py-3.5 text-[10px] font-bold uppercase text-slate-500">Name & Company</th>
@@ -274,7 +274,7 @@ export const Customers = () => {
                         type="checkbox"
                         checked={selectedIds.includes(c.id)}
                         onChange={(e) => handleSelectOne(c.id, e)}
-                        className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                        className="rounded border-slate-700 bg-slate-800 text-amber-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
                       />
                     </td>
                     <td className="px-6 py-4">
@@ -288,12 +288,12 @@ export const Customers = () => {
                     <td className="px-6 py-4 space-y-0.5">
                       {c.email && (
                         <p className="text-xs text-slate-300 flex items-center gap-1.5">
-                          <Mail className="h-3.5 w-3.5 text-indigo-400/80" /> {c.email}
+                          <Mail className="h-3.5 w-3.5 text-amber-400/80" /> {c.email}
                         </p>
                       )}
                       {c.phone && (
                         <p className="text-[11px] text-slate-450 flex items-center gap-1.5">
-                          <Phone className="h-3.5 w-3.5 text-indigo-400/80" /> {c.phone}
+                          <Phone className="h-3.5 w-3.5 text-amber-400/80" /> {c.phone}
                         </p>
                       )}
                       {!c.email && !c.phone && <span className="text-xs text-slate-600">—</span>}

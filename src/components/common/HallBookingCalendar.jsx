@@ -78,7 +78,7 @@ export default function HallBookingCalendar({ bookings = [], selectedHallId, onS
           isBooked
             ? 'bg-red-500/15 border-red-500/50 text-red-200 cursor-not-allowed shadow-sm shadow-red-500/10 hover:bg-red-500/20 hover:border-red-500'
             : isSelected
-              ? 'bg-indigo-600/30 border-indigo-500 text-white ring-2 ring-indigo-500/50 cursor-pointer'
+              ? 'bg-amber-600/30 border-amber-500 text-white ring-2 ring-amber-500/50 cursor-pointer'
               : 'bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-500/20 hover:border-emerald-500/40 text-emerald-300 cursor-pointer'
         }`}
       >
@@ -88,7 +88,7 @@ export default function HallBookingCalendar({ bookings = [], selectedHallId, onS
             isToday 
               ? 'bg-amber-500 text-slate-950 font-black shadow-sm' 
               : isSelected
-                ? 'bg-indigo-500 text-white font-bold'
+                ? 'bg-amber-500 text-white font-bold'
                 : 'text-slate-300'
           }`}>
             {day}
@@ -122,7 +122,7 @@ export default function HallBookingCalendar({ bookings = [], selectedHallId, onS
             {dayBookings.map((b, idx) => (
               <div key={b.id || idx} className="space-y-1.5 text-xs text-slate-300 mb-2 last:mb-0">
                 <div className="flex items-center gap-1.5 font-bold text-white truncate">
-                  <Building className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+                  <Building className="h-3.5 w-3.5 text-amber-400 shrink-0" />
                   <span className="truncate">{b.hallAccount?.accountName || b.hallAccount?.name || 'Selected Hall'}</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-slate-300 truncate">
@@ -151,11 +151,11 @@ export default function HallBookingCalendar({ bookings = [], selectedHallId, onS
   }
 
   return (
-    <div className="rounded-2xl border border-indigo-500/20 bg-gradient-to-br from-slate-900/90 via-slate-950 to-slate-900 p-5 shadow-xl space-y-4">
+    <div className="rounded-2xl border border-amber-500/20 bg-gradient-to-br from-slate-900/90 via-slate-950 to-slate-900 p-5 shadow-xl space-y-4">
       {/* Calendar Header Controls */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400">
+          <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">
             <CalendarIcon className="h-5 w-5" />
           </div>
           <div>

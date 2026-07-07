@@ -533,7 +533,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
             <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-slate-800">
               {loading && (
                 <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-400">
-                  <div className="h-6 w-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                  <div className="h-6 w-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
                   <span className="text-xs">Searching database...</span>
                 </div>
               )}
@@ -666,12 +666,12 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
                           <button key={je.id} onClick={() => handleNavClick(`/journals?search=${je.voucherNo}`)}
                             className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-800/60 border border-transparent hover:border-slate-800/40 text-left transition-all group cursor-pointer">
                             <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded-lg bg-indigo-950/60 border border-indigo-900/40 flex items-center justify-center group-hover:bg-indigo-900/60 transition-colors">
-                                <FileSpreadsheet className="h-4 w-4 text-indigo-400" />
+                              <div className="h-8 w-8 rounded-lg bg-amber-950/60 border border-amber-900/40 flex items-center justify-center group-hover:bg-amber-900/60 transition-colors">
+                                <FileSpreadsheet className="h-4 w-4 text-amber-400" />
                               </div>
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <span className="text-[10px] font-mono font-bold text-indigo-400 bg-indigo-950/70 border border-indigo-900/65 px-1.5 py-0.5 rounded">{je.voucherNo}</span>
+                                  <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-950/70 border border-amber-900/65 px-1.5 py-0.5 rounded">{je.voucherNo}</span>
                                   <span className="text-xs font-bold text-slate-200">{je.reference}</span>
                                 </div>
                                 <p className="text-[10px] text-slate-500 mt-0.5">{je.status} · {je.postedBy}</p>
@@ -692,8 +692,8 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
                           <button key={c.id} onClick={() => handleNavClick(`/customers?search=${c.name}`)}
                             className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-800/60 border border-transparent hover:border-slate-800/40 text-left transition-all group cursor-pointer">
                             <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded-lg bg-indigo-950/60 border border-indigo-900/40 flex items-center justify-center group-hover:bg-indigo-900/60 transition-colors">
-                                <Users className="h-4 w-4 text-indigo-400" />
+                              <div className="h-8 w-8 rounded-lg bg-amber-950/60 border border-amber-900/40 flex items-center justify-center group-hover:bg-amber-900/60 transition-colors">
+                                <Users className="h-4 w-4 text-amber-400" />
                               </div>
                               <div>
                                 <p className="text-xs font-bold text-slate-200">{c.name}</p>

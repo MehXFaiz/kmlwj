@@ -57,7 +57,7 @@ function UserModal({ isOpen, onClose, onSave, initial, availableRoles }) {
       <div className="relative z-10 w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl max-h-[92dvh] flex flex-col">
         <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5 text-indigo-400" />
+            <UserPlus className="h-5 w-5 text-amber-400" />
             <h3 className="text-sm font-bold text-slate-200">{initial ? 'Edit User' : 'New User'}</h3>
           </div>
           <button onClick={onClose} className="p-1 text-slate-500 hover:text-slate-300">
@@ -72,7 +72,7 @@ function UserModal({ isOpen, onClose, onSave, initial, availableRoles }) {
               value={form.fullName}
               onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))}
               placeholder="e.g. Jane Doe"
-              className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-500"
+              className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-amber-500"
             />
           </div>
 
@@ -84,7 +84,7 @@ function UserModal({ isOpen, onClose, onSave, initial, availableRoles }) {
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
               placeholder="e.g. jane@company.com"
               type="email"
-              className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 disabled:opacity-50"
+              className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-amber-500 disabled:opacity-50"
             />
           </div>
 
@@ -97,7 +97,7 @@ function UserModal({ isOpen, onClose, onSave, initial, availableRoles }) {
               onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
               placeholder={initial ? '••••••••' : 'Enter security password'}
               type="password"
-              className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-500"
+              className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-amber-500"
             />
           </div>
 
@@ -106,7 +106,7 @@ function UserModal({ isOpen, onClose, onSave, initial, availableRoles }) {
             <select
               value={form.role}
               onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-              className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-indigo-500"
+              className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-sm focus:outline-none focus:border-amber-500"
             >
               {availableRoles.map((r) => (
                 <option key={r} value={r}>
@@ -143,7 +143,7 @@ function UserModal({ isOpen, onClose, onSave, initial, availableRoles }) {
           </button>
           <button
             onClick={handleSubmit}
-            className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all"
+            className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-all"
           >
             {initial ? 'Save Updates' : 'Add User'}
           </button>
@@ -259,7 +259,7 @@ export const UsersRoles = () => {
                 setEditingUser(null);
                 setUserModalOpen(true);
               }}
-              className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all w-full sm:w-auto"
+              className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-all w-full sm:w-auto"
             >
               <Plus className="h-4 w-4" /> Add User
             </button>
@@ -273,7 +273,7 @@ export const UsersRoles = () => {
           onClick={() => setActiveTab('users')}
           className={`pb-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${
             activeTab === 'users'
-              ? 'border-indigo-500 text-indigo-400 font-extrabold'
+              ? 'border-amber-500 text-amber-400 font-extrabold'
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
@@ -283,7 +283,7 @@ export const UsersRoles = () => {
           onClick={() => setActiveTab('roles')}
           className={`pb-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${
             activeTab === 'roles'
-              ? 'border-indigo-500 text-indigo-400 font-extrabold'
+              ? 'border-amber-500 text-amber-400 font-extrabold'
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
@@ -316,7 +316,7 @@ export const UsersRoles = () => {
                       </div>
                       <p className="text-[11px] text-slate-400 mb-2">{u.email}</p>
                       <div className="flex items-center justify-between pt-2 border-t border-slate-800/60">
-                        <span className="text-[10px] font-bold text-indigo-400 uppercase">{u.role}</span>
+                        <span className="text-[10px] font-bold text-amber-400 uppercase">{u.role}</span>
                         <button
                           onClick={() => {
                             setEditingUser(u);
@@ -356,7 +356,7 @@ export const UsersRoles = () => {
                             <td className="py-3 px-4 font-semibold text-slate-200">{u.fullName}</td>
                             <td className="py-3 px-4 text-slate-400">{u.email}</td>
                             <td className="py-3 px-4">
-                              <span className="text-[10px] font-bold text-indigo-400 bg-indigo-950/40 border border-indigo-900/40 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                              <span className="text-[10px] font-bold text-amber-400 bg-amber-950/40 border border-amber-900/40 px-2 py-0.5 rounded-full uppercase tracking-wider">
                                 {u.role}
                               </span>
                             </td>
@@ -521,7 +521,7 @@ export const UsersRoles = () => {
                   <div key={a.id} className="text-xs space-y-1">
                     <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono">
                       <span>{formattedTime}</span>
-                      <span className={`px-1.5 py-0.2 rounded border ${isUsersModule ? 'bg-indigo-950/50 border-indigo-900 text-indigo-400' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>{a.module || 'SYSTEM'}</span>
+                      <span className={`px-1.5 py-0.2 rounded border ${isUsersModule ? 'bg-amber-950/50 border-amber-900 text-amber-400' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>{a.module || 'SYSTEM'}</span>
                     </div>
                     <p className="text-slate-200 leading-normal">{a.action}</p>
                     <p className="text-[10px] text-slate-500 font-medium">Actor: {a.user ? a.user.fullName : 'System'}</p>

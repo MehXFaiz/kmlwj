@@ -39,7 +39,7 @@ export const ForgotPassword = () => {
   return (
     <AuthLayout>
       <div className="relative group w-full max-w-full min-w-0">
-        <div className="absolute -inset-1.5 bg-gradient-to-r from-indigo-600 to-rose-600 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200 hidden sm:block pointer-events-none"></div>
+        <div className="absolute -inset-1.5 bg-gradient-to-r from-amber-600 to-rose-600 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200 hidden sm:block pointer-events-none"></div>
         
         <div className="relative w-full box-border bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-8 shadow-2xl">
           <div className="mb-5 sm:mb-6">
@@ -47,7 +47,7 @@ export const ForgotPassword = () => {
               <ArrowLeft className="h-3.5 w-3.5" />
               Back to Login
             </Link>
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-rose-400">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-rose-400">
               Recover Access
             </h2>
             <p className="text-slate-400 text-sm mt-1 font-medium">
@@ -88,7 +88,7 @@ export const ForgotPassword = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
                   title="Please enter a valid email address (e.g. name@company.com)"
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 text-sm transition-all font-medium"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 text-sm transition-all font-medium"
                   placeholder="name@company.com"
                   required
                 />
@@ -99,7 +99,7 @@ export const ForgotPassword = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-semibold text-sm rounded-xl shadow-lg shadow-indigo-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="w-full py-3.5 px-4 bg-amber-600 hover:bg-amber-500 active:scale-[0.98] text-white font-semibold text-sm rounded-xl shadow-lg shadow-amber-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

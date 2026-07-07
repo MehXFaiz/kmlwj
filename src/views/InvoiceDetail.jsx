@@ -116,7 +116,7 @@ export const InvoiceDetail = () => {
   if (invLoading || !currentInvoice) {
     return (
       <div className="flex items-center justify-center h-[50vh]">
-        <div className="h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <div className="h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -137,24 +137,24 @@ export const InvoiceDetail = () => {
             </div>
             <div className="flex gap-2">
               <button onClick={() => setShowCancelModal(true)} className="px-3 py-1.5 rounded border border-slate-700 text-slate-400 hover:text-slate-200 text-xs font-semibold">Void Invoice</button>
-              <button onClick={() => setShowPostModal(true)} className="px-4 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow shadow-indigo-900/40">Confirm Invoice</button>
+              <button onClick={() => setShowPostModal(true)} className="px-4 py-1.5 rounded bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow shadow-amber-900/40">Confirm Invoice</button>
             </div>
           </div>
         );
       case 'POSTED':
         return (
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl bg-indigo-950/20 border border-indigo-900/50 text-indigo-300 gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl bg-amber-950/20 border border-amber-900/50 text-amber-300 gap-4">
             <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-lg bg-indigo-950 border border-indigo-900 flex items-center justify-center text-indigo-400">
+              <div className="h-9 w-9 rounded-lg bg-amber-950 border border-amber-900 flex items-center justify-center text-amber-400">
                 <CheckCircle className="h-5 w-5" />
               </div>
               <div>
                 <p className="text-sm font-bold">✉️ Invoice Sent — Awaiting Payment</p>
-                <p className="text-[11px] text-indigo-400/70">Invoice is confirmed in records. Payment is due from the client.</p>
+                <p className="text-[11px] text-amber-400/70">Invoice is confirmed in records. Payment is due from the client.</p>
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setShowCancelModal(true)} className="px-3 py-1.5 rounded border border-indigo-900/40 hover:bg-red-950/20 text-red-400 text-xs font-semibold">Void Invoice</button>
+              <button onClick={() => setShowCancelModal(true)} className="px-3 py-1.5 rounded border border-amber-900/40 hover:bg-red-950/20 text-red-400 text-xs font-semibold">Void Invoice</button>
               <button onClick={() => setShowPayModal(true)} className="px-4 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow shadow-emerald-900/40">Mark as Paid</button>
             </div>
           </div>
@@ -219,7 +219,7 @@ export const InvoiceDetail = () => {
         <div className="print:hidden bg-slate-900/50 border border-slate-800/70 rounded-xl p-4">
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Invoice Progress</p>
           <StatusStepper
-            variant="indigo"
+            variant="amber"
             current={
               currentInvoice.status === 'DRAFT' ? 0 :
               currentInvoice.status === 'POSTED' ? 1 :
@@ -245,7 +245,7 @@ export const InvoiceDetail = () => {
         {/* Invoice Header */}
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-indigo-400 print:text-black">KMLWJ</h1>
+            <h1 className="text-2xl font-black tracking-tight text-amber-400 print:text-black">KMLWJ</h1>
             <p className="text-xs text-slate-500 font-bold uppercase tracking-wider print:text-slate-700">Accounting ERP Terminal</p>
           </div>
           <div className="text-right">
@@ -282,7 +282,7 @@ export const InvoiceDetail = () => {
             </div>
             <div>
               <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 print:text-slate-650">Status</h4>
-              <span className={`inline-flex items-center text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${currentInvoice.status === 'PAID' ? 'bg-emerald-950/40 text-emerald-450 border-emerald-900/30' : currentInvoice.status === 'POSTED' ? 'bg-indigo-950/40 text-indigo-450 border-indigo-900/30' : currentInvoice.status === 'CANCELLED' ? 'bg-red-950/40 text-red-450 border-red-900/30' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
+              <span className={`inline-flex items-center text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${currentInvoice.status === 'PAID' ? 'bg-emerald-950/40 text-emerald-450 border-emerald-900/30' : currentInvoice.status === 'POSTED' ? 'bg-amber-950/40 text-amber-450 border-amber-900/30' : currentInvoice.status === 'CANCELLED' ? 'bg-red-950/40 text-red-450 border-red-900/30' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
                 {currentInvoice.status}
               </span>
             </div>
@@ -334,7 +334,7 @@ export const InvoiceDetail = () => {
             )}
             <div className="flex justify-between border-t border-slate-800/80 pt-3 text-slate-200 font-extrabold print:border-slate-300 print:text-black">
               <span>Grand Total</span>
-              <span className="text-indigo-400 print:text-black">PKR {currentInvoice.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              <span className="text-amber-400 print:text-black">PKR {currentInvoice.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </div>
           </div>
         </div>
@@ -364,7 +364,7 @@ export const InvoiceDetail = () => {
               <label className="block text-xs font-semibold text-slate-400 mb-1.5">Select Income Category *</label>
               <p className="text-[11px] text-slate-600 mb-2">Which type of income does this invoice represent?</p>
               <select value={revenueAccountId} onChange={e => setRevenueAccountId(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-indigo-500/60 transition-all font-medium">
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-amber-500/60 transition-all font-medium">
                 {revenueAccounts.map(acc => (
                   <option key={acc.id} value={acc.id}>{acc.name}</option>
                 ))}
@@ -376,7 +376,7 @@ export const InvoiceDetail = () => {
 
             <div className="flex gap-3 pt-2">
               <button onClick={() => setShowPostModal(false)} disabled={actionLoading} className="flex-1 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">Go Back</button>
-              <button onClick={handlePost} disabled={actionLoading || !revenueAccountId} className="flex-1 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/25 active:scale-95 disabled:opacity-50">
+              <button onClick={handlePost} disabled={actionLoading || !revenueAccountId} className="flex-1 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold transition-all shadow-lg shadow-amber-600/25 active:scale-95 disabled:opacity-50">
                 {actionLoading ? 'Confirming...' : 'Confirm Invoice'}
               </button>
             </div>
@@ -397,7 +397,7 @@ export const InvoiceDetail = () => {
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-1.5">How was payment received? *</label>
               <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-indigo-500/60 transition-all font-medium">
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-amber-500/60 transition-all font-medium">
                 <option value="BANK">Bank Transfer</option>
                 <option value="CASH">Cash</option>
                 <option value="CHEQUE">Cheque</option>
@@ -408,7 +408,7 @@ export const InvoiceDetail = () => {
               <label className="block text-xs font-semibold text-slate-400 mb-1.5">Payment goes to: *</label>
               <p className="text-[11px] text-slate-600 mb-2">Which account should receive this payment?</p>
               <select value={bankAccountId} onChange={e => setBankAccountId(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-indigo-500/60 transition-all font-medium">
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-amber-500/60 transition-all font-medium">
                 {assetAccounts.map(acc => (
                   <option key={acc.id} value={acc.id}>{acc.name}</option>
                 ))}
@@ -422,7 +422,7 @@ export const InvoiceDetail = () => {
               <div>
                 <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cheque Number</label>
                 <input value={chequeNumber} onChange={e => setChequeNumber(e.target.value)} placeholder="e.g. CHQ-92841"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-all font-medium" />
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 transition-all font-medium" />
               </div>
             )}
 
@@ -450,7 +450,7 @@ export const InvoiceDetail = () => {
               <div>
                 <label className="block text-xs font-semibold text-slate-400 mb-1.5">Select the income category used for this invoice</label>
                 <select value={cancelRevenueAccountId} onChange={e => setCancelRevenueAccountId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-indigo-500/60 transition-all font-medium">
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-amber-500/60 transition-all font-medium">
                   {revenueAccounts.map(acc => (
                     <option key={acc.id} value={acc.id}>{acc.name}</option>
                   ))}

@@ -159,7 +159,7 @@ export const JournalEntries = () => {
                   placeholder="Search journals..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full sm:w-64 pl-9 pr-4 py-1.5 bg-slate-950/40 border border-slate-800 rounded-lg text-slate-200 text-xs focus:outline-none focus:border-indigo-600/60 transition-all placeholder-slate-500"
+                  className="w-full sm:w-64 pl-9 pr-4 py-1.5 bg-slate-950/40 border border-slate-800 rounded-lg text-slate-200 text-xs focus:outline-none focus:border-amber-600/60 transition-all placeholder-slate-500"
                 />
               </div>
               <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono self-end sm:self-auto">
@@ -235,7 +235,7 @@ export const JournalEntries = () => {
                       type="checkbox"
                       checked={filteredJournals.length > 0 && selectedIds.length === filteredJournals.length}
                       onChange={handleSelectAll}
-                      className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                      className="rounded border-slate-700 bg-slate-800 text-amber-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
                     />
                   </th>
                 )}
@@ -275,7 +275,7 @@ export const JournalEntries = () => {
                               type="checkbox"
                               checked={selectedIds.includes(je.dbId || je.id)}
                               onChange={(e) => handleSelectOne(je.dbId || je.id, e)}
-                              className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                              className="rounded border-slate-700 bg-slate-800 text-amber-600 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
                             />
                           </td>
                         )}

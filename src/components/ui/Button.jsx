@@ -14,7 +14,7 @@ export const Button = forwardRef(({
   const baseStyle = "inline-flex items-center justify-center font-semibold transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none rounded-xl cursor-pointer";
   
   const variants = {
-    primary: "bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/25",
+    primary: "bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-600/25",
     secondary: "bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors",
     outline: "bg-transparent hover:bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-600 transition-colors",
     danger: "bg-red-950/40 hover:bg-red-900/60 text-red-200 border border-red-900/50 shadow-lg shadow-red-950/20 transition-colors",
