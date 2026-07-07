@@ -12,6 +12,16 @@ import api from '../services/api';
 import HallBookingConflictModal from '../components/common/HallBookingConflictModal';
 import HallBookingCalendar from '../components/common/HallBookingCalendar';
 
+const getNormalizedHallName = (name) => {
+  if (!name) return null;
+  const n = name.toLowerCase();
+  if (n.includes('bagh') || n.includes('hajiani') || n.includes('hajiyani')) return 'Bagh-e-Hajiani Garden';
+  if (n.includes('sadaya') || n.includes('sada')) return 'Sadaya Hall';
+  if (n.includes('zikarya') || n.includes('zikriya') || n.includes('zakaria') || n.includes('zakriya')) return 'Zikarya Hall';
+  if (n.includes('annexy') || n.includes('anexy') || n.includes('gosha') || n.includes('anxy')) return 'Annexy Hall';
+  return null;
+};
+
 export const HallBookingForm = () => {
   const { t } = useTranslation();
   const { id } = useParams();
@@ -64,6 +74,17 @@ export const HallBookingForm = () => {
         const booking = await fetchBookingById(id);
         if (booking) {
           const formattedDate = booking.programDate ? new Date(booking.programDate).toISOString().split('T')[0] : '';
+          let resolvedHallId = booking.hallId || '';
+          if (resolvedHallId && flatAccounts) {
+            const acc = flatAccounts.find(a => a.id === resolvedHallId);
+            if (acc) {
+              const normName = getNormalizedHallName(acc.name || acc.accountName);
+              if (normName) {
+                const canonicalAcc = flatAccounts.find(a => (a.type === 'Revenue' || a.accountTypeName === 'REVENUE' || a.accountTypeName === 'Revenue') && getNormalizedHallName(a.name || a.accountName) === normName);
+                if (canonicalAcc) resolvedHallId = canonicalAcc.id;
+              }
+            }
+          }
           reset({
             bookerName: booking.bookerName || '',
             mobile: booking.mobile || '',
@@ -71,7 +92,7 @@ export const HallBookingForm = () => {
             programDate: formattedDate,
             programType: booking.programType || '',
             timings: booking.timings || 'Evening',
-            hallId: booking.hallId || '',
+            hallId: resolvedHallId,
             isForJamaat: booking.isForJamaat || false,
             amount: booking.amount || '',
             paymentMethod: booking.paymentMethod || 'CASH',
@@ -92,21 +113,33 @@ export const HallBookingForm = () => {
     loadBooking();
   }, [id, fetchBookingById, reset, navigate]);
 
-  const isOneOfFourHalls = (name) => {
-    if (!name) return false;
-    const n = name.toLowerCase();
-    return (
-      n.includes('bagh') || n.includes('hajiani') || n.includes('hajiyani') ||
-      n.includes('sadaya') || n.includes('sada') ||
-      n.includes('zikarya') || n.includes('zikriya') || n.includes('zakaria') || n.includes('zakriya') ||
-      n.includes('annexy') || n.includes('anexy') || n.includes('gosha') || n.includes('anxy')
-    );
-  };
+  const hallAccounts = React.useMemo(() => {
+    const seen = new Set();
+    const result = [];
+    const standardHalls = ['Bagh-e-Hajiani Garden', 'Sadaya Hall', 'Zikarya Hall', 'Annexy Hall'];
 
-  const hallAccounts = flatAccounts.filter(a =>
-    (a.type === 'Revenue' || a.accountTypeName === 'REVENUE') &&
-    isOneOfFourHalls(a.name)
-  );
+    (flatAccounts || []).forEach(a => {
+      if (a.type === 'Revenue' || a.accountTypeName === 'REVENUE' || a.accountTypeName === 'Revenue') {
+        const normalized = getNormalizedHallName(a.name || a.accountName);
+        if (normalized && !seen.has(normalized)) {
+          seen.add(normalized);
+          result.push({
+            ...a,
+            name: normalized
+          });
+        }
+      }
+    });
+
+    return result.sort((a, b) => {
+      const idxA = standardHalls.indexOf(a.name);
+      const idxB = standardHalls.indexOf(b.name);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [flatAccounts]);
 
   const bankAccounts = flatAccounts.filter(a =>
     (a.type === 'Asset' || a.accountTypeName === 'ASSET') &&
@@ -169,34 +202,7 @@ export const HallBookingForm = () => {
     return () => { isMounted = false; };
   }, [hallId, programDate, id]);
 
-  useEffect(() => {
-    // Only auto-calculate amount if hallId or isForJamaat was touched/modified by the user
-    // or if it's a new booking
-    if (id && !dirtyFields.hallId && !dirtyFields.isForJamaat) return;
-
-    if (!hallId) return;
-
-    const hall = hallAccounts.find(h => h.id === hallId);
-    if (!hall) return;
-
-    const hallName = hall.name.toLowerCase();
-    let baseRate = 0;
-
-    if (hallName.includes('hajiani') || hallName.includes('hajiyani')) {
-      baseRate = 43000;
-    } else if (hallName.includes('anxy') || hallName.includes('annexy') || hallName.includes('anexy')) {
-      baseRate = 33000;
-    } else if (hallName.includes('sadaya')) {
-      baseRate = 28000;
-    } else if (hallName.includes('zikarya') || hallName.includes('zikriya') || hallName.includes('zakariya') || hallName.includes('zakriya')) {
-      baseRate = 28000;
-    }
-
-    if (baseRate > 0) {
-      const finalRate = isForJamaat ? baseRate * 0.5 : baseRate;
-      setValue('amount', finalRate);
-    }
-  }, [id, hallId, isForJamaat, hallAccounts, setValue, dirtyFields.hallId, dirtyFields.isForJamaat]);
+  // Fixed payment rates removed per user request so amounts can be entered manually
 
   const onSubmit = async (data) => {
     if (!data.bookerName || !data.programDate || !data.hallId || !data.amount) {
