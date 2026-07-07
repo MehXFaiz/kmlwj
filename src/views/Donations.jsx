@@ -59,106 +59,162 @@ function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
     onSave({ ...form });
   };
 
+  const inputClass = 'w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 transition-all font-medium';
+  const labelClass = 'block text-xs font-semibold text-slate-400 mb-1.5';
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full sm:max-w-xl rounded-t-2xl sm:rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl max-h-[92dvh] flex flex-col">
+      <div className="relative z-10 w-full sm:max-w-2xl rounded-t-2xl sm:rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl max-h-[92dvh] flex flex-col">
+
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-pink-950/60 border border-pink-800/40 flex items-center justify-center">
-              <Heart className="h-4 w-4 text-pink-400" />
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+              <Heart className="h-4 w-4 text-amber-400" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-200">{initial ? 'Edit Donation' : 'New Donation'}</h3>
-              <p className="text-[11px] text-slate-500">Log a new donation</p>
+              <h3 className="text-sm font-bold text-slate-100">{initial ? 'Edit Donation' : 'New Donation'}</h3>
+              <p className="text-[11px] text-slate-500">Log a charitable contribution</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-350">
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors">
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="p-6 space-y-4 overflow-y-auto flex-1 text-left">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Donor Name *</label>
-              <input type="text" value={form.donorName} onChange={e => setForm(f => ({ ...f, donorName: e.target.value }))}
-                placeholder="E.g. Muhammad Ali" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:border-amber-500/60 transition-all font-medium placeholder-slate-600" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Donor Mobile</label>
-              <input type="text" value={form.donorMobile} onChange={e => setForm(f => ({ ...f, donorMobile: e.target.value }))}
-                placeholder="E.g. 0300-1234567" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:border-amber-500/60 transition-all font-medium placeholder-slate-600" />
-            </div>
-          </div>
+        {/* Body */}
+        <div className="overflow-y-auto flex-1">
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-0 sm:gap-5 p-5">
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Donation Type *</label>
-              <select value={form.donationType} onChange={e => setForm(f => ({ ...f, donationType: e.target.value }))}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:border-amber-500/60 transition-all font-medium">
-                {['MONTHLY', 'MARRIAGE', 'MEDICAL', 'EMERGENCY', 'EDUCATION', 'CUSTOM'].map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Amount *</label>
-              <input type="number" min="0" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
-                placeholder="10000" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:border-amber-500/60 transition-all font-medium placeholder-slate-600" />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Payment Method *</label>
-            <select value={form.paymentMethod} onChange={e => setForm(f => ({ ...f, paymentMethod: e.target.value, bankAccountId: '', chequeNumber: '', donorBankName: '' }))} className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-amber-500/60 transition-all font-medium">
-              {['CASH', 'BANK', 'CHEQUE'].map(t => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-          </div>
-
-          {(form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Bank Account *</label>
-                <select value={form.bankAccountId} onChange={e => setForm(f => ({ ...f, bankAccountId: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:border-amber-500/60 transition-all font-medium">
-                  <option value="">Select Bank Account</option>
-                  {accounts.map(a => (
-                    <option key={a.id} value={a.id}>{a.accountName}</option>
-                  ))}
-                </select>
-              </div>
-              {form.paymentMethod === 'CHEQUE' && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cheque/Ref Number *</label>
-                  <input value={form.chequeNumber} onChange={e => setForm(f => ({ ...f, chequeNumber: e.target.value }))}
-                    placeholder="CHQ-001" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:border-amber-500/60 transition-all font-medium placeholder-slate-600" />
+            {/* Left: Info Panel */}
+            <div className="sm:col-span-4 mb-4 sm:mb-0">
+              <div className="bg-amber-500/5 rounded-2xl border border-amber-500/20 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Heart className="w-4 h-4 text-amber-400" />
+                  <h4 className="text-sm font-semibold text-amber-300">Donation Info</h4>
                 </div>
-              )}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-6 h-6 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                      <Heart className="w-3 h-3 text-amber-400" />
+                    </div>
+                    <span className="text-xs font-semibold text-slate-300">Tracks Donation Inflow</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-6 h-6 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="w-3 h-3 text-amber-400" />
+                    </div>
+                    <span className="text-xs font-semibold text-slate-300">Posts to General Ledger</span>
+                  </div>
+                </div>
+                <div className="border-t border-amber-500/20 my-3" />
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Fields marked with <span className="text-red-400 font-bold">*</span> are mandatory.
+                </p>
+              </div>
             </div>
-          )}
 
-          {(form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && (
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Donor Bank (Pakistani Banks)</label>
-              <select value={form.donorBankName} onChange={e => setForm(f => ({ ...f, donorBankName: e.target.value }))} className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-amber-500/60 transition-all font-medium">
-                <option value="">Select Bank (Optional)</option>
-                {['Habib Bank Limited (HBL)', 'National Bank of Pakistan (NBP)', 'Meezan Bank', 'United Bank Limited (UBL)', 'MCB Bank', 'Allied Bank Limited (ABL)', 'Bank Alfalah', 'Standard Chartered Bank', 'Askari Bank', 'Bank AL Habib', 'Faysal Bank', 'Soneri Bank', 'Bank of Punjab (BOP)', 'JS Bank', 'Dubai Islamic Bank', 'Al Baraka Bank', 'Bank Islami', 'Sindh Bank', 'Habib Metropolitan Bank', 'First Women Bank', 'Samba Bank', 'Silkbank', 'Summit Bank'].map(b => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
-              </select>
+            {/* Right: Form Cards */}
+            <div className="sm:col-span-8 space-y-4">
+
+              {/* Card 01: Donor Details */}
+              <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
+                  <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">01</span>
+                  <h4 className="text-sm font-semibold text-slate-200">Donor & Amount</h4>
+                </div>
+                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelClass}>Donor Name *</label>
+                    <input type="text" value={form.donorName} onChange={e => setForm(f => ({ ...f, donorName: e.target.value }))}
+                      placeholder="E.g. Muhammad Ali" className={inputClass} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Donor Mobile</label>
+                    <input type="text" value={form.donorMobile} onChange={e => setForm(f => ({ ...f, donorMobile: e.target.value }))}
+                      placeholder="E.g. 0300-1234567" className={inputClass} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Donation Type *</label>
+                    <select value={form.donationType} onChange={e => setForm(f => ({ ...f, donationType: e.target.value }))}
+                      className={inputClass}>
+                      {['MONTHLY', 'MARRIAGE', 'MEDICAL', 'EMERGENCY', 'EDUCATION', 'CUSTOM'].map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Amount *</label>
+                    <input type="number" min="0" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+                      placeholder="10000" className={inputClass} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 02: Payment */}
+              <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
+                  <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">02</span>
+                  <h4 className="text-sm font-semibold text-slate-200">Payment Details</h4>
+                </div>
+                <div className="p-4 space-y-3">
+                  <div>
+                    <label className={labelClass}>Payment Method *</label>
+                    <select value={form.paymentMethod} onChange={e => setForm(f => ({ ...f, paymentMethod: e.target.value, bankAccountId: '', chequeNumber: '', donorBankName: '' }))} className={inputClass}>
+                      {['CASH', 'BANK', 'CHEQUE'].map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {(form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className={labelClass}>Bank Account *</label>
+                        <select value={form.bankAccountId} onChange={e => setForm(f => ({ ...f, bankAccountId: e.target.value }))}
+                          className={inputClass}>
+                          <option value="">Select Bank Account</option>
+                          {accounts.map(a => (
+                            <option key={a.id} value={a.id}>{a.accountName}</option>
+                          ))}
+                        </select>
+                      </div>
+                      {form.paymentMethod === 'CHEQUE' && (
+                        <div>
+                          <label className={labelClass}>Cheque/Ref Number *</label>
+                          <input value={form.chequeNumber} onChange={e => setForm(f => ({ ...f, chequeNumber: e.target.value }))}
+                            placeholder="CHQ-001" className={inputClass} />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {(form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && (
+                    <div>
+                      <label className={labelClass}>Donor Bank (Pakistani Banks)</label>
+                      <select value={form.donorBankName} onChange={e => setForm(f => ({ ...f, donorBankName: e.target.value }))} className={inputClass}>
+                        <option value="">Select Bank (Optional)</option>
+                        {['Habib Bank Limited (HBL)', 'National Bank of Pakistan (NBP)', 'Meezan Bank', 'United Bank Limited (UBL)', 'MCB Bank', 'Allied Bank Limited (ABL)', 'Bank Alfalah', 'Standard Chartered Bank', 'Askari Bank', 'Bank AL Habib', 'Faysal Bank', 'Soneri Bank', 'Bank of Punjab (BOP)', 'JS Bank', 'Dubai Islamic Bank', 'Al Baraka Bank', 'Bank Islami', 'Sindh Bank', 'Habib Metropolitan Bank', 'First Women Bank', 'Samba Bank', 'Silkbank', 'Summit Bank'].map(b => (
+                          <option key={b} value={b}>{b}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className={labelClass}>Remarks</label>
+                    <textarea value={form.remarks} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))}
+                      className={`${inputClass} h-20 resize-none`} />
+                  </div>
+                </div>
+              </div>
+
             </div>
-          )}
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Remarks</label>
-            <textarea value={form.remarks} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-amber-500/60 transition-all h-20 resize-none font-medium placeholder-slate-600" />
           </div>
         </div>
 
+        {/* Footer */}
         <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 px-6 py-4 border-t border-slate-800 shrink-0">
           <button onClick={onClose} className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">Cancel</button>
           <button onClick={handleSave}

@@ -46,65 +46,123 @@ function BeneficiaryModal({ isOpen, onClose, onSave, initial }) {
     onClose();
   };
 
+  const inputClass = 'w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 transition-all font-medium';
+  const labelClass = 'block text-xs font-semibold text-slate-400 mb-1.5';
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full sm:max-w-xl rounded-t-2xl sm:rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl max-h-[92dvh] flex flex-col">
+      <div className="relative z-10 w-full sm:max-w-2xl rounded-t-2xl sm:rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl max-h-[92dvh] flex flex-col">
+
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-amber-950/60 border border-amber-800/40 flex items-center justify-center">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
               <Users className="h-4 w-4 text-amber-400" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-200">{initial ? 'Update Person\'s Details' : 'Add Person to Welfare List'}</h3>
+              <h3 className="text-sm font-bold text-slate-100">{initial ? "Update Person's Details" : 'Add Person to Welfare List'}</h3>
               <p className="text-[11px] text-slate-500">{initial ? 'Update contact and status information' : 'Register a new beneficiary'}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-300">
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors">
             <X className="h-4 w-4" />
           </button>
         </div>
 
-          <div className="p-6 space-y-4 overflow-y-auto flex-1">
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Full Name *</label>
-            <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              placeholder="e.g. Ahmed Khan" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm placeholder-slate-600 focus:border-amber-500/60 focus:outline-none transition-all font-medium" />
-          </div>
+        {/* Body */}
+        <div className="overflow-y-auto flex-1">
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-0 sm:gap-5 p-5">
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">ID Card Number (CNIC)</label>
-              <input value={form.cnic} onChange={e => setForm(f => ({ ...f, cnic: e.target.value }))}
-                placeholder="42101-1234567-8" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-amber-500/60 transition-all font-medium" />
-              <p className="text-[10px] text-slate-600 mt-1">Format: 00000-0000000-0</p>
+            {/* Left: Info Panel */}
+            <div className="sm:col-span-4 mb-4 sm:mb-0">
+              <div className="bg-amber-500/5 rounded-2xl border border-amber-500/20 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Users className="w-4 h-4 text-amber-400" />
+                  <h4 className="text-sm font-semibold text-amber-300">Welfare Registry</h4>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-6 h-6 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                      <Users className="w-3 h-3 text-amber-400" />
+                    </div>
+                    <span className="text-xs font-semibold text-slate-300">Track Aid Recipients</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-6 h-6 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                      <Search className="w-3 h-3 text-amber-400" />
+                    </div>
+                    <span className="text-xs font-semibold text-slate-300">Searchable by CNIC & Mobile</span>
+                  </div>
+                </div>
+                <div className="border-t border-amber-500/20 my-3" />
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Fields marked with <span className="text-red-400 font-bold">*</span> are mandatory.
+                </p>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Mobile Number</label>
-              <input value={form.mobile} onChange={e => setForm(f => ({ ...f, mobile: e.target.value }))}
-                placeholder="0300-0000000" className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-amber-500/60 transition-all font-medium" />
+
+            {/* Right: Form Cards */}
+            <div className="sm:col-span-8 space-y-4">
+
+              {/* Card 01: Identity */}
+              <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
+                  <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">01</span>
+                  <h4 className="text-sm font-semibold text-slate-200">Personal Information</h4>
+                </div>
+                <div className="p-4 space-y-3">
+                  <div>
+                    <label className={labelClass}>Full Name *</label>
+                    <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                      placeholder="e.g. Ahmed Khan" className={inputClass} />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelClass}>ID Card Number (CNIC)</label>
+                      <input value={form.cnic} onChange={e => setForm(f => ({ ...f, cnic: e.target.value }))}
+                        placeholder="42101-1234567-8" className={inputClass} />
+                      <p className="text-[10px] text-slate-600 mt-1">Format: 00000-0000000-0</p>
+                    </div>
+                    <div>
+                      <label className={labelClass}>Mobile Number</label>
+                      <input value={form.mobile} onChange={e => setForm(f => ({ ...f, mobile: e.target.value }))}
+                        placeholder="0300-0000000" className={inputClass} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 02: Additional Info */}
+              <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
+                  <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">02</span>
+                  <h4 className="text-sm font-semibold text-slate-200">Additional Details</h4>
+                </div>
+                <div className="p-4 space-y-3">
+                  <div>
+                    <label className={labelClass}>Home Address</label>
+                    <textarea value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
+                      className={`${inputClass} h-20 resize-none`} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Notes / Remarks</label>
+                    <input value={form.remarks} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))}
+                      className={inputClass} />
+                  </div>
+                  <div className="flex items-center gap-3 pt-1">
+                    <input type="checkbox" id="isActive" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
+                      className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-600 focus:ring-amber-600 focus:ring-offset-slate-900 cursor-pointer" />
+                    <label htmlFor="isActive" className="text-sm font-semibold text-slate-300 cursor-pointer">This person is currently receiving aid</label>
+                  </div>
+                </div>
+              </div>
+
             </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Home Address</label>
-            <textarea value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-amber-500/60 transition-all h-20 resize-none font-medium" />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Notes / Remarks</label>
-            <input value={form.remarks} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-amber-500/60 transition-all font-medium" />
-          </div>
-
-          <div className="flex items-center gap-3 pt-2">
-            <input type="checkbox" id="isActive" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
-              className="h-4 w-4 rounded border-slate-800 bg-slate-950/60 text-amber-600 focus:ring-amber-600 focus:ring-offset-slate-900 cursor-pointer" />
-            <label htmlFor="isActive" className="text-sm font-semibold text-slate-300 cursor-pointer">This person is currently receiving aid</label>
           </div>
         </div>
 
+        {/* Footer */}
         <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 px-6 py-4 border-t border-slate-800 shrink-0">
           <button onClick={onClose} className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">Cancel</button>
           <button onClick={handleSave} disabled={!form.name.trim()}
