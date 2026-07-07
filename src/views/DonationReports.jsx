@@ -96,31 +96,44 @@ export const DonationReports = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 print:hidden">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 print:hidden">
+        {/* From date */}
         <div>
-          <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1.5">Date Range</label>
-          <div className="flex gap-2">
-            <input type="date" value={dateRange.start} onChange={e => setDateRange(prev => ({ ...prev, start: e.target.value }))} className="w-full px-2 py-2 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-300 focus:outline-none focus:border-cyan-600/50" />
-            <input type="date" value={dateRange.end} onChange={e => setDateRange(prev => ({ ...prev, end: e.target.value }))} className="w-full px-2 py-2 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-300 focus:outline-none focus:border-cyan-600/50" />
-          </div>
+          <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1.5">From</label>
+          <input
+            type="date"
+            value={dateRange.start}
+            onChange={e => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+            className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-sm text-slate-300 focus:outline-none focus:border-cyan-600/50 [color-scheme:dark]"
+          />
+        </div>
+        {/* To date */}
+        <div>
+          <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1.5">To</label>
+          <input
+            type="date"
+            value={dateRange.end}
+            onChange={e => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+            className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-sm text-slate-300 focus:outline-none focus:border-cyan-600/50 [color-scheme:dark]"
+          />
         </div>
         <div>
           <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1.5">Donation Type</label>
-          <select value={filterType} onChange={e => setFilterType(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-300 focus:outline-none focus:border-cyan-600/50 cursor-pointer">
+          <select value={filterType} onChange={e => setFilterType(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-sm text-slate-300 focus:outline-none focus:border-cyan-600/50 cursor-pointer">
             <option value="All">All Types</option>
             {['MONTHLY', 'MARRIAGE', 'MEDICAL', 'EMERGENCY', 'EDUCATION', 'CUSTOM'].map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
         <div>
           <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1.5">Beneficiary</label>
-          <select value={filterBeneficiary} onChange={e => setFilterBeneficiary(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-300 focus:outline-none focus:border-cyan-600/50 cursor-pointer">
+          <select value={filterBeneficiary} onChange={e => setFilterBeneficiary(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-sm text-slate-300 focus:outline-none focus:border-cyan-600/50 cursor-pointer">
             <option value="All">All Beneficiaries</option>
             {beneficiaries.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         </div>
         <div>
           <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1.5">Payment Method</label>
-          <select value={filterMethod} onChange={e => setFilterMethod(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-300 focus:outline-none focus:border-cyan-600/50 cursor-pointer">
+          <select value={filterMethod} onChange={e => setFilterMethod(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-sm text-slate-300 focus:outline-none focus:border-cyan-600/50 cursor-pointer">
             <option value="All">All Methods</option>
             {['CASH', 'BANK', 'CHEQUE'].map(t => <option key={t} value={t}>{t}</option>)}
           </select>
