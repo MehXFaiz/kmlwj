@@ -49,8 +49,15 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
   const location = useLocation();
   const { t } = useTranslation();
 
-  // Track which items with subItems are expanded
-  const [expandedItems, setExpandedItems] = useState({ '/coa': true });
+  // Track which items with subItems are expanded — persisted in sessionStorage so /coa stays open by default
+  const [expandedItems, setExpandedItems] = useState(() => {
+    try {
+      const stored = sessionStorage.getItem('sidebarExpanded');
+      return stored ? JSON.parse(stored) : { '/coa': true };
+    } catch {
+      return { '/coa': true };
+    }
+  });
 
   const toggleExpand = (path, e) => {
     if (e) {
@@ -58,7 +65,11 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
       e.stopPropagation();
     }
     startTransition(() => {
-      setExpandedItems(prev => ({ ...prev, [path]: !prev[path] }));
+      setExpandedItems(prev => {
+        const next = { ...prev, [path]: !prev[path] };
+        try { sessionStorage.setItem('sidebarExpanded', JSON.stringify(next)); } catch {}
+        return next;
+      });
     });
   };
 
