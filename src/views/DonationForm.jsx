@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useDonationStore } from '../store/donationStore';
 import { useCoaStore } from '../store/coaStore';
-import { Heart, ChevronLeft, Save, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { useBeneficiaryStore } from '../store/beneficiaryStore';
+import { Heart, ChevronLeft, Save, ShieldCheck, CheckCircle2, Users, UserCheck, Sparkles } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
 
 const nullsToEmpty = (obj) =>
@@ -26,14 +27,17 @@ export const DonationForm = () => {
   const navigate = useNavigate();
   const { donations, fetchDonations, addDonation, updateDonation } = useDonationStore();
   const { flatAccounts, fetchAccountsList } = useCoaStore();
+  const { beneficiaries, fetchBeneficiaries } = useBeneficiaryStore();
 
   const [form, setForm] = useState(DEFAULT_DONATION);
   const [loading, setLoading] = useState(false);
+  const [selectedBeneficiaryId, setSelectedBeneficiaryId] = useState('');
 
   useEffect(() => {
     fetchDonations();
     fetchAccountsList();
-  }, [fetchDonations, fetchAccountsList]);
+    fetchBeneficiaries();
+  }, [fetchDonations, fetchAccountsList, fetchBeneficiaries]);
 
   useEffect(() => {
     if (id && donations.length > 0) {
@@ -102,13 +106,13 @@ export const DonationForm = () => {
           </Link>
           <div>
             <h1 className="text-xl font-bold text-slate-100">
-              {id ? 'Edit Donation' : 'Log New Donation'}
+              {id ? 'Edit Welfare Aid / Disbursement' : 'Log New Aid / Donation Disbursement'}
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">Record a charitable contribution</p>
+            <p className="text-xs text-slate-500 mt-0.5">Record financial assistance and aid distributed to People We Help</p>
           </div>
         </div>
         <span className="text-xs font-semibold text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20">
-          {id ? 'Editing Record' : 'New Donation'}
+          {id ? 'Editing Disbursement' : 'New Disbursement'}
         </span>
       </div>
 
@@ -127,7 +131,7 @@ export const DonationForm = () => {
                   <div className="w-7 h-7 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
                     <Heart className="w-3.5 h-3.5 text-amber-400" />
                   </div>
-                  <span className="text-xs font-semibold text-slate-300">Tracks Donation Inflow</span>
+                  <span className="text-xs font-semibold text-slate-300">Tracks Welfare Disbursement Outflow</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-7 h-7 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
@@ -138,7 +142,7 @@ export const DonationForm = () => {
               </div>
               <div className="border-t border-amber-500/20 my-4" />
               <p className="text-xs text-slate-500 leading-relaxed">
-                Fields marked with <span className="text-red-400 font-bold">*</span> are mandatory.
+                Fields marked with <span className="text-red-400 font-bold">*</span> are mandatory. You can auto-fill recipient details by selecting from <strong className="text-slate-300">People We Help</strong>.
               </p>
             </div>
           </div>
@@ -146,25 +150,68 @@ export const DonationForm = () => {
           {/* Right: Form Cards */}
           <div className="lg:col-span-8 space-y-5">
 
-            {/* Card 01: Donor & Amount */}
+            {/* Card 01: Beneficiary & Amount */}
             <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
               <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
                 <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">01</span>
-                <h3 className="text-sm font-semibold text-slate-200">Donor & Amount</h3>
+                <h3 className="text-sm font-semibold text-slate-200">Recipient & Amount (Beneficiary Aid)</h3>
               </div>
               <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                
+                {/* Select from People We Help */}
+                <div className="sm:col-span-2 bg-gradient-to-r from-slate-950/80 via-slate-900/80 to-slate-950/80 p-4 rounded-xl border border-amber-500/30 shadow-inner">
+                  <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                    <label className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Users className="w-4 h-4 text-amber-400 shrink-0" /> Select from People We Help (Beneficiaries)
+                    </label>
+                    <Link to="/beneficiaries/new" target="_blank" className="text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 hover:underline">
+                      + Register New Beneficiary
+                    </Link>
+                  </div>
+                  <select
+                    value={selectedBeneficiaryId}
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      setSelectedBeneficiaryId(selectedId);
+                      if (!selectedId) return;
+                      const b = beneficiaries.find(item => item.id === selectedId);
+                      if (b) {
+                        setForm(f => ({
+                          ...f,
+                          donorName: b.name || '',
+                          donorMobile: b.mobile || '',
+                          remarks: f.remarks ? `${f.remarks} (Beneficiary CNIC: ${b.cnic || 'N/A'})` : `Beneficiary CNIC: ${b.cnic || 'N/A'}`
+                        }));
+                        showToast(`Auto-filled data for ${b.name}`, 'success');
+                      }
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm font-semibold text-slate-100 focus:outline-none focus:border-amber-500 transition-all cursor-pointer shadow-sm"
+                  >
+                    <option value="">-- Choose a person we help to auto-fill details --</option>
+                    {beneficiaries.map(b => (
+                      <option key={b.id} value={b.id} className="bg-slate-900 text-slate-200 py-1">
+                        {b.name} {b.mobile ? `(${b.mobile})` : ''} {b.cnic ? `• CNIC: ${b.cnic}` : ''} {b.address ? `• ${b.address.slice(0, 25)}...` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="flex items-center gap-1.5 mt-2 text-[11px] text-slate-400">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>Select a registered beneficiary to automatically populate Recipient Name and Mobile below.</span>
+                  </div>
+                </div>
+
                 <div>
-                  <label className={labelClass}>Donor Name *</label>
+                  <label className={labelClass}>Recipient / Beneficiary Name *</label>
                   <input type="text" value={form.donorName} onChange={e => setForm(f => ({ ...f, donorName: e.target.value }))}
                     placeholder="E.g. Muhammad Ali" className={inputClass} />
                 </div>
                 <div>
-                  <label className={labelClass}>Donor Mobile</label>
+                  <label className={labelClass}>Recipient Mobile</label>
                   <input type="text" value={form.donorMobile} onChange={e => setForm(f => ({ ...f, donorMobile: e.target.value }))}
                     placeholder="E.g. 0300-1234567" className={inputClass} />
                 </div>
                 <div>
-                  <label className={labelClass}>Donation Type *</label>
+                  <label className={labelClass}>Donation / Aid Type *</label>
                   <select value={form.donationType} onChange={e => setForm(f => ({ ...f, donationType: e.target.value }))}
                     className={inputClass}>
                     {['MONTHLY', 'MARRIAGE', 'MEDICAL', 'EMERGENCY', 'EDUCATION', 'CUSTOM'].map(t => (

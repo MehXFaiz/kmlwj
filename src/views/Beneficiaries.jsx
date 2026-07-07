@@ -267,130 +267,143 @@ export const Beneficiaries = () => {
 
   return (
     <div className="space-y-6 pb-10">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-400 bg-amber-950/50 border border-amber-900/60 px-2.5 py-0.5 rounded-full">
-              <Users className="h-3 w-3" /> Beneficiary Management
-            </span>
+      {/* Executive Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/20 flex items-center justify-center text-amber-400 shadow-inner flex-shrink-0">
+            <Users className="h-6 w-6" />
           </div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">Beneficiaries</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Manage individuals or entities receiving donations</p>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">Beneficiaries</h2>
+              <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-slate-800/80 border border-slate-700/60 text-slate-400">
+                Directory
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">Manage welfare recipients, individuals, and organizations receiving donations</p>
+          </div>
         </div>
         <div className={pageActionsClass}>
           {selectedIds.length > 0 && (
             <button
               onClick={() => setShowBulkConfirm(true)}
-              className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30 border border-red-900/50 transition-all text-xs font-semibold flex-1 sm:flex-none"
+              className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30 transition-all text-xs font-bold flex-1 sm:flex-none shadow-sm cursor-pointer"
             >
-              <Trash2 className="h-3.5 w-3.5" /> Bulk Delete ({selectedIds.length})
+              <Trash2 className="h-4 w-4" /> Bulk Delete ({selectedIds.length})
             </button>
           )}
           <button onClick={() => navigate('/beneficiaries/new')}
-            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-lg shadow-amber-900/40 transition-all flex-1 sm:flex-none">
-            <Plus className="h-4 w-4" /> New Beneficiary
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold shadow-lg shadow-amber-500/15 hover:shadow-amber-500/25 transition-all flex-1 sm:flex-none cursor-pointer active:scale-95">
+            <Plus className="h-4 w-4 stroke-[2.5]" /> <span>New Beneficiary</span>
           </button>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="relative flex-1 w-full sm:min-w-52">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+      {/* Search & Filter Toolbar */}
+      <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-3 shadow-sm backdrop-blur-md flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div className="relative flex-1 w-full sm:max-w-md">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, CNIC, or mobile..."
             name="beneficiary-search" autoComplete="off"
-            className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-amber-600/50 transition-all" />
+            className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-950/80 border border-slate-800/80 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 transition-all" />
+        </div>
+        <div className="flex items-center gap-2 self-end sm:self-auto text-xs font-medium text-slate-400 px-2">
+          <span>Showing <strong className="text-slate-200">{filtered.length}</strong> {filtered.length === 1 ? 'beneficiary' : 'beneficiaries'}</span>
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 overflow-hidden">
-        <DesktopOnly>
-          {filtered.length === 0 ? (
-            <EmptyState
-              emoji="👤"
-              title={search ? 'No results found' : 'No beneficiaries yet'}
-              description={search ? `No one matches "${search}". Try a different name or CNIC.` : 'Start by adding the first person to your welfare list.'}
-              actionLabel={!search ? 'Add First Person' : undefined}
-              onAction={!search ? () => navigate('/beneficiaries/new') : undefined}
-            />
-          ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[800px]">
-              <thead>
-                <tr className="border-b border-slate-800 bg-slate-900/80">
-                  <th className="px-4 py-3 w-10">
+      {/* Table / List View Container */}
+      <div className="rounded-2xl border border-slate-800/80 bg-slate-900/50 shadow-lg overflow-hidden backdrop-blur-sm">
+        {filtered.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title={search ? 'No beneficiaries found' : 'No beneficiaries yet'}
+            description={search ? `We couldn't find any results matching "${search}". Try adjusting your search term or clearing the filter.` : 'Start by adding your first beneficiary to manage donation distribution and welfare assistance.'}
+            actionLabel={!search ? 'Add First Beneficiary' : undefined}
+            onAction={!search ? () => navigate('/beneficiaries/new') : undefined}
+          />
+        ) : (
+          <>
+            <DesktopOnly>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left min-w-[800px]">
+                  <thead>
+                    <tr className="border-b border-slate-800 bg-slate-900/80 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      <th className="px-4 py-3.5 w-10">
+                        <input
+                          type="checkbox"
+                          checked={isAllSelected}
+                          onChange={toggleAll}
+                          className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer"
+                        />
+                      </th>
+                      <th className="px-4 py-3.5">Name</th>
+                      <th className="px-4 py-3.5">CNIC</th>
+                      <th className="px-4 py-3.5">Contact Details</th>
+                      <th className="px-4 py-3.5">Address</th>
+                      <th className="px-4 py-3.5">Created At</th>
+                      <th className="px-4 py-3.5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/50 text-sm">
+                    {filtered.map(b => (
+                      <tr key={b.id} className={`hover:bg-slate-800/30 transition-colors group ${selectedIds.includes(b.id) ? 'bg-amber-500/5' : ''}`}>
+                        <td className="px-4 py-4 w-10">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(b.id)}
+                            onChange={() => toggleSelect(b.id)}
+                            className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-4 py-4 font-semibold text-slate-200">{b.name || '—'}</td>
+                        <td className="px-4 py-4 font-mono text-xs text-slate-300">{b.cnic || '—'}</td>
+                        <td className="px-4 py-4 space-y-0.5">
+                          {b.mobile && <p className="text-xs text-slate-300 flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-amber-400/80" /> {b.mobile}</p>}
+                          {b.email && <p className="text-[11px] text-slate-400 flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-amber-400/80" /> {b.email}</p>}
+                          {!b.mobile && !b.email && <span className="text-xs text-slate-500">—</span>}
+                        </td>
+                        <td className="px-4 py-4 text-xs text-slate-400 max-w-xs truncate" title={b.address}>{b.address || '—'}</td>
+                        <td className="px-4 py-4 text-xs text-slate-400">{new Date(b.createdAt).toLocaleDateString()}</td>
+                        <td className="px-4 py-4 text-right">
+                          <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => navigate(`/beneficiaries/edit/${b.id}`)} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-slate-200 cursor-pointer" title="Edit Beneficiary"><Edit2 className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => setDeleteId(b.id)} className="p-1.5 rounded-lg hover:bg-red-950/40 text-red-400/80 hover:text-red-400 cursor-pointer" title="Delete Beneficiary"><Trash2 className="h-3.5 w-3.5" /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </DesktopOnly>
+            <MobileOnly className="p-3 space-y-3">
+              {filtered.map(b => (
+                <div key={b.id} className={`rounded-xl border bg-slate-950/50 p-3.5 transition-colors shadow-sm ${selectedIds.includes(b.id) ? 'border-amber-500/50 bg-amber-500/5' : 'border-slate-800/80'}`}>
+                  <div className="flex items-start gap-3 mb-2">
                     <input
                       type="checkbox"
-                      checked={isAllSelected}
-                      onChange={toggleAll}
-                      className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-600 focus:ring-amber-600 focus:ring-offset-slate-900 cursor-pointer"
+                      checked={selectedIds.includes(b.id)}
+                      onChange={() => toggleSelect(b.id)}
+                      className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer"
                     />
-                  </th>
-                  <th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-500">Name</th>
-                  <th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-500">CNIC / Mobile</th>
-                  <th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-500">Status</th>
-                  <th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-500">Created At</th>
-                  <th className="px-4 py-3 text-[10px] font-bold uppercase text-slate-500"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/50">
-                {filtered.map(b => (
-                  <tr key={b.id} className={`hover:bg-slate-800/20 transition-colors group ${selectedIds.includes(b.id) ? 'bg-amber-900/10' : ''}`}>
-                    <td className="px-4 py-3.5">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(b.id)}
-                        onChange={() => toggleSelect(b.id)}
-                        className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-600 focus:ring-amber-600 focus:ring-offset-slate-900 cursor-pointer"
-                      />
-                    </td>
-                    <td className="px-4 py-3.5"><p className="text-sm font-semibold text-slate-200">{b.name}</p></td>
-                    <td className="px-4 py-3.5">
-                      <div className="text-xs text-slate-300">{b.cnic || 'No CNIC'}</div>
-                      <div className="text-[11px] text-slate-500">{b.mobile || 'No Mobile'}</div>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      {b.isActive ? (
-                         <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border bg-emerald-950/60 text-emerald-400 border-emerald-900/50">Active</span>
-                      ) : (
-                         <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border bg-slate-800/60 text-slate-400 border-slate-700/50">Inactive</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3.5 text-xs text-slate-400">{new Date(b.createdAt).toLocaleDateString()}</td>
-                    <td className="px-4 py-3.5 text-right">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => navigate(`/beneficiaries/edit/${b.id}`)} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-500 hover:text-slate-200"><Edit2 className="h-3.5 w-3.5" /></button>
-                        <button onClick={() => setDeleteId(b.id)} className="p-1.5 rounded-lg hover:bg-red-950/40 text-slate-500 hover:text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          )}
-        </DesktopOnly>
-        <MobileOnly className="p-3 space-y-3">
-            {filtered.map(b => (
-              <div key={b.id} className={`rounded-lg border bg-slate-950/40 p-3 transition-colors ${selectedIds.includes(b.id) ? 'border-amber-600/50 bg-amber-900/10' : 'border-slate-800/60'}`}>
-                <div className="flex items-start gap-3 mb-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(b.id)}
-                    onChange={() => toggleSelect(b.id)}
-                    className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-600 focus:ring-amber-600 focus:ring-offset-slate-900 cursor-pointer"
-                  />
-                  <div className="flex-1 flex justify-between items-start">
-                    <h4 className="text-sm font-bold text-slate-200">{b.name}</h4>
+                    <div className="flex-1 flex justify-between items-start">
+                      <h4 className="text-sm font-bold text-slate-200">{b.name}</h4>
+                    </div>
+                  </div>
+                  <div className="text-xs text-slate-400 mb-2 pl-7 space-y-1">
+                    <div>CNIC: <span className="font-mono text-slate-300">{b.cnic || '—'}</span></div>
+                    {b.mobile && <div>Mob: {b.mobile}</div>}
+                  </div>
+                  <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-800/50 pl-7">
+                     <button onClick={() => navigate(`/beneficiaries/edit/${b.id}`)} className="text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1 cursor-pointer"><Edit2 className="h-3 w-3" /> Edit</button>
+                     <button onClick={() => setDeleteId(b.id)} className="text-xs font-semibold text-red-400 hover:text-red-300 flex items-center gap-1 cursor-pointer"><Trash2 className="h-3 w-3" /> Delete</button>
                   </div>
                 </div>
-                <div className="text-xs text-slate-400 mb-2 pl-7">CNIC: {b.cnic} | Mob: {b.mobile}</div>
-                <div className="flex justify-between mt-3 pt-3 border-t border-slate-800/50">
-                   <button onClick={() => navigate(`/beneficiaries/edit/${b.id}`)} className="text-xs text-slate-400 hover:text-white">Edit</button>
-                   <button onClick={() => setDeleteId(b.id)} className="text-xs text-red-400">Delete</button>
-                </div>
-              </div>
-            ))}
-        </MobileOnly>
+              ))}
+            </MobileOnly>
+          </>
+        )}
       </div>
 
       {deleteId && (
