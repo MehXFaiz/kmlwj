@@ -32,13 +32,40 @@ var general_ledger_default = makeHandler(async (req, res) => {
     const [entries, total] = await Promise.all([
       prisma.ledgerEntry.findMany({
         where: entryWhere,
-        include: { account: { select: { glCode: true, accountName: true, initialBalance: true } } },
+        include: { account: { select: { glCode: true, accountName: true, initialBalance: true, accountType: { select: { name: true } } } } },
         orderBy: { postingDate: "asc" },
         skip,
         take: limitNum
       }),
       prisma.ledgerEntry.count({ where: entryWhere })
     ]);
+    const uniqueAccountIds = [...new Set(entries.map((e) => e.accountId))];
+    const accountMeta = {};
+    for (const accId of uniqueAccountIds) {
+      const firstEntry = entries.find((e) => e.accountId === accId);
+      const initialBal = firstEntry?.account?.initialBalance || 0;
+      const typeName = firstEntry?.account?.accountType?.name?.toUpperCase() || "ASSET";
+      const glCode2 = firstEntry?.account?.glCode || "";
+      const name = firstEntry?.account?.accountName || "";
+      let opBal = initialBal;
+      if (startDate) {
+        const prior = await prisma.ledgerEntry.aggregate({
+          where: {
+            accountId: accId,
+            postingDate: { lt: new Date(startDate) }
+          },
+          _sum: { debit: true, credit: true }
+        });
+        const pDebit = prior._sum.debit || 0;
+        const pCredit = prior._sum.credit || 0;
+        if (["ASSET", "EXPENSE"].includes(typeName)) {
+          opBal += pDebit - pCredit;
+        } else {
+          opBal += pCredit - pDebit;
+        }
+      }
+      accountMeta[glCode2] = { openingBalance: opBal, type: typeName, initialBalance: initialBal, name };
+    }
     let openingBalance = 0;
     if (targetAccount) {
       openingBalance = targetAccount.initialBalance || 0;
@@ -101,6 +128,7 @@ var general_ledger_default = makeHandler(async (req, res) => {
           totalCredit,
           closingBalance: targetAccount ? closingBalance : null
         },
+        accountMeta,
         entries: formattedEntries
       },
       meta: { total, page: pageNum, limit: limitNum }

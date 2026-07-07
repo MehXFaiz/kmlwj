@@ -44,13 +44,45 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const [entries, total] = await Promise.all([
       prisma.ledgerEntry.findMany({
         where: entryWhere,
-        include: { account: { select: { glCode: true, accountName: true, initialBalance: true } } },
+        include: { account: { select: { glCode: true, accountName: true, initialBalance: true, accountType: { select: { name: true } } } } },
         orderBy: { postingDate: 'asc' },
         skip,
         take: limitNum,
       }),
       prisma.ledgerEntry.count({ where: entryWhere })
     ]);
+
+    // For each unique account present in the fetched entries, calculate its opening balance
+    const uniqueAccountIds = [...new Set(entries.map(e => e.accountId))];
+    const accountMeta: Record<string, { openingBalance: number; type: string; initialBalance: number; name: string }> = {};
+
+    for (const accId of uniqueAccountIds) {
+      const firstEntry = entries.find(e => e.accountId === accId);
+      const initialBal = firstEntry?.account?.initialBalance || 0;
+      const typeName = (firstEntry?.account as any)?.accountType?.name?.toUpperCase() || 'ASSET';
+      const glCode = firstEntry?.account?.glCode || '';
+      const name = firstEntry?.account?.accountName || '';
+      
+      let opBal = initialBal;
+
+      if (startDate) {
+        const prior = await prisma.ledgerEntry.aggregate({
+          where: {
+            accountId: accId,
+            postingDate: { lt: new Date(startDate) }
+          },
+          _sum: { debit: true, credit: true }
+        });
+        const pDebit = prior._sum.debit || 0;
+        const pCredit = prior._sum.credit || 0;
+        if (['ASSET', 'EXPENSE'].includes(typeName)) {
+          opBal += (pDebit - pCredit);
+        } else {
+          opBal += (pCredit - pDebit);
+        }
+      }
+      accountMeta[glCode] = { openingBalance: opBal, type: typeName, initialBalance: initialBal, name };
+    }
 
     // Calculate Opening Balance
     let openingBalance = 0;
@@ -132,6 +164,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           totalCredit,
           closingBalance: targetAccount ? closingBalance : null
         },
+        accountMeta,
         entries: formattedEntries
       },
       meta: { total, page: pageNum, limit: limitNum }
