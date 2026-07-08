@@ -188,20 +188,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       let cashOrBankAccountId: string | null = null;
       if (paymentMethod === 'CASH') {
-        const cashAccount = await tx.account.findFirst({
-          where: {
-            OR: [
-              { accountName: { equals: 'Cash in Hand', mode: 'insensitive' } },
-              { accountName: { contains: 'Cash in Hand', mode: 'insensitive' } },
-              { accountName: { contains: 'Cash', mode: 'insensitive' } }
-            ],
-            isLocked: false,
-            children: { none: {} },
-            accountLevel: { in: ['SUBSIDIARY', 'GL'] }
-          },
-          orderBy: { glCode: 'asc' }
-        });
-        if (cashAccount) cashOrBankAccountId = cashAccount.id;
+        const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
+        cashOrBankAccountId = cashAccount.id;
       } else {
         cashOrBankAccountId = bankAccountId || null;
       }
@@ -276,20 +264,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       if (finalStatus === 'APPROVED') {
         let cashOrBankAccountId: string | null = null;
         if (updated.paymentMethod === 'CASH') {
-          const cashAccount = await tx.account.findFirst({
-            where: {
-              OR: [
-                { accountName: { equals: 'Cash in Hand', mode: 'insensitive' } },
-                { accountName: { contains: 'Cash in Hand', mode: 'insensitive' } },
-                { accountName: { contains: 'Cash', mode: 'insensitive' } }
-              ],
-              isLocked: false,
-              children: { none: {} },
-              accountLevel: { in: ['SUBSIDIARY', 'GL'] }
-            },
-            orderBy: { glCode: 'asc' }
-          });
-          if (cashAccount) cashOrBankAccountId = cashAccount.id;
+          const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
+          cashOrBankAccountId = cashAccount.id;
         } else {
           cashOrBankAccountId = updated.bankAccountId || null;
         }
