@@ -215,26 +215,45 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       let journalEntryId = existing.journalEntryId;
       let newStatus = status !== undefined ? status : existing.status;
 
-      // If changing from DRAFT to POSTED
-      if (existing.status === 'DRAFT' && newStatus === 'POSTED') {
-        const debitAccountId = existing.cashAccountId || existing.bankAccountId;
-        if (!debitAccountId) throw new Error("No Cash/Bank account linked to this receipt");
+      // If changing to or remaining POSTED when edited
+      if (newStatus === 'POSTED') {
+        if (existing.journalEntryId) {
+          try {
+            await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user!.id, 'Donation Receipt Updated');
+          } catch (e) {}
+        }
 
-        const postingResult = await AccountingService.postReceipt(tx, {
-          amount: existing.amount,
-          cashOrBankAccountId: debitAccountId,
-          incomeAccountKeyword: existing.donationType,
-          reference: existing.receiptNo,
-          description: (narration || existing.narration) || `Received ${existing.donationType} from ${existing.donor.fullName}`,
-          module: 'Donations Received',
-          postedBy: req.user!.id,
-          postingDate: existing.receiptDate,
-          ipAddress: req.headers['x-forwarded-for'] as string,
-          userAgent: req.headers['user-agent'] as string,
-          voucherType: 'BR'
-        });
-        if (postingResult && postingResult.journalEntry) {
-          journalEntryId = postingResult.journalEntry.id;
+        let debitAccountId: string | null = null;
+        const currentMethod = paymentMethod !== undefined ? paymentMethod : existing.paymentMethod;
+        if (currentMethod === 'CASH') {
+          const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
+          debitAccountId = cashAccount.id;
+        } else {
+          debitAccountId = bankAccountId !== undefined ? bankAccountId : (existing.bankAccountId || existing.cashAccountId);
+        }
+
+        if (debitAccountId) {
+          const updatedAmount = amount !== undefined ? parseFloat(amount) : existing.amount;
+          const updatedType = donationType !== undefined ? donationType : existing.donationType;
+          const updatedNarration = narration !== undefined ? narration : existing.narration;
+          const updatedDate = receiptDate !== undefined ? new Date(receiptDate) : existing.receiptDate;
+
+          const postingResult = await AccountingService.postReceipt(tx, {
+            amount: updatedAmount,
+            cashOrBankAccountId: debitAccountId,
+            incomeAccountKeyword: updatedType,
+            reference: existing.receiptNo,
+            description: updatedNarration || `Received ${updatedType} from ${existing.donor.fullName}`,
+            module: 'Donations Received',
+            postedBy: req.user!.id,
+            postingDate: updatedDate,
+            ipAddress: req.headers['x-forwarded-for'] as string,
+            userAgent: req.headers['user-agent'] as string,
+            voucherType: 'BR'
+          });
+          if (postingResult && postingResult.journalEntry) {
+            journalEntryId = postingResult.journalEntry.id;
+          }
         }
       } 
       // If changing from POSTED to CANCELLED
@@ -243,9 +262,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           try {
             await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user!.id, 'Donation Receipt Cancelled');
             journalEntryId = null;
-          } catch (e) {
-            // Ignore if already deleted
-          }
+          } catch (e) {}
         }
       }
 

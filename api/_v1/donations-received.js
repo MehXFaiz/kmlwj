@@ -185,24 +185,42 @@ var donations_received_default = makeHandler(async (req, res) => {
     const result = await prisma.$transaction(async (tx) => {
       let journalEntryId = existing.journalEntryId;
       let newStatus = status !== void 0 ? status : existing.status;
-      if (existing.status === "DRAFT" && newStatus === "POSTED") {
-        const debitAccountId = existing.cashAccountId || existing.bankAccountId;
-        if (!debitAccountId) throw new Error("No Cash/Bank account linked to this receipt");
-        const postingResult = await AccountingService.postReceipt(tx, {
-          amount: existing.amount,
-          cashOrBankAccountId: debitAccountId,
-          incomeAccountKeyword: existing.donationType,
-          reference: existing.receiptNo,
-          description: narration || existing.narration || `Received ${existing.donationType} from ${existing.donor.fullName}`,
-          module: "Donations Received",
-          postedBy: req.user.id,
-          postingDate: existing.receiptDate,
-          ipAddress: req.headers["x-forwarded-for"],
-          userAgent: req.headers["user-agent"],
-          voucherType: "BR"
-        });
-        if (postingResult && postingResult.journalEntry) {
-          journalEntryId = postingResult.journalEntry.id;
+      if (newStatus === "POSTED") {
+        if (existing.journalEntryId) {
+          try {
+            await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user.id, "Donation Receipt Updated");
+          } catch (e) {
+          }
+        }
+        let debitAccountId = null;
+        const currentMethod = paymentMethod !== void 0 ? paymentMethod : existing.paymentMethod;
+        if (currentMethod === "CASH") {
+          const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
+          debitAccountId = cashAccount.id;
+        } else {
+          debitAccountId = bankAccountId !== void 0 ? bankAccountId : existing.bankAccountId || existing.cashAccountId;
+        }
+        if (debitAccountId) {
+          const updatedAmount = amount !== void 0 ? parseFloat(amount) : existing.amount;
+          const updatedType = donationType !== void 0 ? donationType : existing.donationType;
+          const updatedNarration = narration !== void 0 ? narration : existing.narration;
+          const updatedDate = receiptDate !== void 0 ? new Date(receiptDate) : existing.receiptDate;
+          const postingResult = await AccountingService.postReceipt(tx, {
+            amount: updatedAmount,
+            cashOrBankAccountId: debitAccountId,
+            incomeAccountKeyword: updatedType,
+            reference: existing.receiptNo,
+            description: updatedNarration || `Received ${updatedType} from ${existing.donor.fullName}`,
+            module: "Donations Received",
+            postedBy: req.user.id,
+            postingDate: updatedDate,
+            ipAddress: req.headers["x-forwarded-for"],
+            userAgent: req.headers["user-agent"],
+            voucherType: "BR"
+          });
+          if (postingResult && postingResult.journalEntry) {
+            journalEntryId = postingResult.journalEntry.id;
+          }
         }
       } else if (existing.status === "POSTED" && newStatus === "CANCELLED") {
         if (existing.journalEntryId) {

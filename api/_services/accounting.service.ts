@@ -609,7 +609,7 @@ export class AccountingService {
 
     const currentBalance = isDebitNormal
       ? (initialBalance + totalDebit - totalCredit)
-      : (-initialBalance + totalDebit - totalCredit);
+      : (initialBalance + totalCredit - totalDebit);
 
     await tx.account.update({
       where: { id: accountId },

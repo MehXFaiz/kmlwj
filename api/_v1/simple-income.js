@@ -102,10 +102,10 @@ var simple_income_default = makeHandler(async (req, res) => {
         throw new Error("Revenue head not found");
       }
       const incomeAccountId = revenueHead.accountId || revenueHead.account?.id;
+      const cashAccount = paymentMethod !== "BANK" ? await AccountingService.ensureCashInHandAccount(tx) : null;
       const postingResult = await AccountingService.postReceipt(tx, {
         amount: numAmount,
-        cashOrBankAccountId: paymentMethod === "BANK" && bankAccountId ? bankAccountId : void 0,
-        cashOrBankAccountKeyword: paymentMethod !== "BANK" ? "Cash" : void 0,
+        cashOrBankAccountId: paymentMethod === "BANK" && bankAccountId ? bankAccountId : cashAccount?.id,
         incomeAccountId: incomeAccountId || void 0,
         incomeAccountKeyword: !incomeAccountId ? revenueHead.name || "Income" : void 0,
         description: description || `Income from ${revenueHead.name}`,

@@ -103,10 +103,10 @@ var simple_expense_default = makeHandler(async (req, res) => {
         throw new Error("Expense head not found");
       }
       const expenseAccountId = expenseHead.accountId || expenseHead.account?.id;
+      const cashAccount = paymentMethod !== "BANK" ? await AccountingService.ensureCashInHandAccount(tx) : null;
       const postingResult = await AccountingService.postPayment(tx, {
         amount: numAmount,
-        cashOrBankAccountId: paymentMethod === "BANK" && bankAccountId ? bankAccountId : void 0,
-        cashOrBankAccountKeyword: paymentMethod !== "BANK" ? "Cash" : void 0,
+        cashOrBankAccountId: paymentMethod === "BANK" && bankAccountId ? bankAccountId : cashAccount?.id,
         expenseAccountId: expenseAccountId || void 0,
         expenseAccountKeyword: !expenseAccountId ? expenseHead.name || "Expense" : void 0,
         description: description || `Expense for ${expenseHead.name}`,

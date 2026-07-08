@@ -124,10 +124,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       const incomeAccountId = revenueHead.accountId || revenueHead.account?.id;
 
+      const cashAccount = paymentMethod !== 'BANK' ? await AccountingService.ensureCashInHandAccount(tx) : null;
       const postingResult = await AccountingService.postReceipt(tx, {
         amount: numAmount,
-        cashOrBankAccountId: paymentMethod === 'BANK' && bankAccountId ? bankAccountId : undefined,
-        cashOrBankAccountKeyword: paymentMethod !== 'BANK' ? 'Cash' : undefined,
+        cashOrBankAccountId: paymentMethod === 'BANK' && bankAccountId ? bankAccountId : cashAccount?.id,
         incomeAccountId: incomeAccountId || undefined,
         incomeAccountKeyword: !incomeAccountId ? (revenueHead.name || 'Income') : undefined,
         description: description || `Income from ${revenueHead.name}`,

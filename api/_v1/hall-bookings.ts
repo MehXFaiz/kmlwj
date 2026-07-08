@@ -455,6 +455,34 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           } catch (e) {}
         }
 
+        let debitAccountId: string | null = null;
+        if (paymentMethod === 'CASH') {
+          const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
+          debitAccountId = cashAccount.id;
+        } else {
+          debitAccountId = bankAccountId || null;
+        }
+
+        const wasPosted = existingBooking.status === 'POSTED' || Boolean(existingBooking.journalEntryId);
+        let newJournalEntryId: string | null = null;
+
+        if (wasPosted && debitAccountId && hallId) {
+          const postingResult = await AccountingService.postReceipt(tx, {
+            amount: parsedAmount,
+            cashOrBankAccountId: debitAccountId,
+            incomeAccountId: hallId,
+            reference: `HB-${existingBooking.receiptNo}`,
+            description: `Hall Booking Receipt for ${bookerName}`,
+            module: 'Hall Booking',
+            voucherType: 'BR',
+            postedBy: req.user!.id,
+            postingDate: new Date(programDate),
+          });
+          if (postingResult?.journalEntry) {
+            newJournalEntryId = postingResult.journalEntry.id;
+          }
+        }
+
         return await tx.hallBooking.update({
           where: { id },
           data: {
@@ -472,9 +500,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             bankAccountId: bankAccountId || null,
             chequeNumber: chequeNumber || null,
             chequeBankName: chequeBankName || null,
-            status: 'Confirmed',
+            status: wasPosted && newJournalEntryId ? 'POSTED' : 'Confirmed',
             remarks: remarks || null,
-            journalEntryId: null
+            journalEntryId: newJournalEntryId
           },
           include: {
             hallAccount: true,
