@@ -121,7 +121,16 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         debitAccountId = cashAccountId;
       } else {
         const defaultCash = await prisma.account.findFirst({
-          where: { accountName: { contains: 'Cash', mode: 'insensitive' } }
+          where: {
+            OR: [
+              { accountName: { equals: 'Cash in Hand', mode: 'insensitive' } },
+              { accountName: { contains: 'Cash in Hand', mode: 'insensitive' } },
+              { accountName: { contains: 'Cash', mode: 'insensitive' } }
+            ],
+            children: { none: {} },
+            isLocked: false
+          },
+          orderBy: { glCode: 'asc' }
         });
         if (!defaultCash) return res.status(400).json({ error: { message: 'No Cash account specified or found in Chart of Accounts', status: 400 } });
         debitAccountId = defaultCash.id;
@@ -129,7 +138,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     } else {
       if (!bankAccountId) {
         const defaultBank = await prisma.account.findFirst({
-          where: { accountName: { contains: 'Bank', mode: 'insensitive' } }
+          where: {
+            accountName: { contains: 'Bank', mode: 'insensitive' },
+            children: { none: {} },
+            isLocked: false
+          },
+          orderBy: { glCode: 'asc' }
         });
         if (!defaultBank) return res.status(400).json({ error: { message: 'Bank account is required for Bank/Cheque/Online payments', status: 400 } });
         debitAccountId = defaultBank.id;

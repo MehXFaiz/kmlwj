@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../../_utils/handler.js';
 import { verifyAuth, AuthenticatedRequest } from '../../_middlewares/auth.middleware.js';
 import { prisma } from '../../_prisma.js';
+import { AccountingService } from '../../_services/accounting.service.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   if (req.method !== 'GET') {
@@ -60,6 +61,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       monthlyData[monthIndex].Expenses += (Number(entry.debit) || 0) - (Number(entry.credit) || 0);
     }
   }
+
+  // Ensure any accidentally posted header lines are migrated to leaf accounts and balances recalculated
+  await AccountingService.ensureLeafPostingsAndBalances(prisma);
 
   // Calculate live financial summary from accounts table
   const allAccounts = await prisma.account.findMany({

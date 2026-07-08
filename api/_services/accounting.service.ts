@@ -95,28 +95,66 @@ export class AccountingService {
       account = await tx.account.findUnique({ where: { glCode: line.accountCode } });
     }
 
+    // Ensure directly looked-up account resolves to a leaf account if it is a header
+    if (account) {
+      const hasChild = await tx.account.findFirst({ where: { parentId: account.id } });
+      if (hasChild) {
+        const leaf = await tx.account.findFirst({
+          where: {
+            OR: [
+              { parentId: account.id },
+              { accountName: { contains: account.accountName, mode: 'insensitive' } }
+            ],
+            children: { none: {} },
+            isLocked: false
+          },
+          orderBy: { glCode: 'asc' }
+        });
+        if (leaf) account = leaf;
+      }
+    }
+
     // Keyword or Name Search fallback
     if (!account && line.accountKeyword) {
       const keyword = line.accountKeyword.trim();
       const cleanKeyword = keyword.replace(/_/g, ' ').replace(/-/g, ' ');
-      
+
+      if (cleanKeyword.toLowerCase() === 'cash') {
+        account = await tx.account.findFirst({
+          where: {
+            OR: [
+              { accountName: { equals: 'Cash in Hand', mode: 'insensitive' } },
+              { accountName: { contains: 'Cash in Hand', mode: 'insensitive' } },
+              { accountName: { contains: 'Cash', mode: 'insensitive' } },
+              { detailType: { equals: 'Cash', mode: 'insensitive' } }
+            ],
+            isLocked: false,
+            children: { none: {} }
+          },
+          orderBy: { glCode: 'asc' }
+        });
+      }
+
       // Try exact or case-insensitive contains match on accountName or glCode
-      account = await tx.account.findFirst({
-        where: {
-          OR: [
-            { accountName: { equals: cleanKeyword, mode: 'insensitive' } },
-            { accountName: { contains: cleanKeyword, mode: 'insensitive' } },
-            { accountName: { equals: keyword, mode: 'insensitive' } },
-            { accountName: { contains: keyword, mode: 'insensitive' } },
-            { glCode: { equals: keyword } },
-            { detailType: { equals: cleanKeyword, mode: 'insensitive' } },
-            { detailType: { equals: keyword, mode: 'insensitive' } }
-          ],
-          isLocked: false,
-          accountLevel: { in: ['GL', 'SUBSIDIARY'] }
-        },
-        orderBy: { glCode: 'asc' }
-      });
+      if (!account) {
+        account = await tx.account.findFirst({
+          where: {
+            OR: [
+              { accountName: { equals: cleanKeyword, mode: 'insensitive' } },
+              { accountName: { contains: cleanKeyword, mode: 'insensitive' } },
+              { accountName: { equals: keyword, mode: 'insensitive' } },
+              { accountName: { contains: keyword, mode: 'insensitive' } },
+              { glCode: { equals: keyword } },
+              { detailType: { equals: cleanKeyword, mode: 'insensitive' } },
+              { detailType: { equals: keyword, mode: 'insensitive' } }
+            ],
+            isLocked: false,
+            children: { none: {} },
+            accountLevel: { in: ['GL', 'SUBSIDIARY'] }
+          },
+          orderBy: { glCode: 'asc' }
+        });
+      }
 
       // If still not found and a general keyword like 'Cash' or 'Bank' or 'Donation' was used
       if (!account) {
@@ -128,6 +166,7 @@ export class AccountingService {
               { description: { contains: cleanKeyword, mode: 'insensitive' } }
             ],
             isLocked: false,
+            children: { none: {} },
             accountLevel: { in: ['GL', 'SUBSIDIARY'] }
           },
           orderBy: { glCode: 'asc' }
@@ -144,7 +183,8 @@ export class AccountingService {
               { accountName: { equals: keyword, mode: 'insensitive' } },
               { accountName: { contains: keyword, mode: 'insensitive' } }
             ],
-            isLocked: false
+            isLocked: false,
+            children: { none: {} }
           },
           orderBy: { glCode: 'asc' }
         });
@@ -157,6 +197,7 @@ export class AccountingService {
         where: {
           accountType: { name: { equals: line.accountType, mode: 'insensitive' } },
           isLocked: false,
+          children: { none: {} },
           accountLevel: { in: ['GL', 'SUBSIDIARY'] }
         },
         orderBy: { glCode: 'asc' }
@@ -281,7 +322,6 @@ export class AccountingService {
 
         // Update Account Running Balance
         // Formula: Opening Balance + Total Debit - Total Credit = Current Balance
-        // We apply increment: debit - credit
         const netChange = line.debit - line.credit;
         if (netChange !== 0) {
           await tx.account.update({
@@ -292,6 +332,11 @@ export class AccountingService {
               }
             }
           });
+          try {
+            await AccountingService.recalculateAccountBalance(tx, line.account.id);
+          } catch (e) {
+            // fallback if recalculation fails
+          }
         }
       }
     }
@@ -542,6 +587,76 @@ export class AccountingService {
       return runInTx(txObj);
     } else {
       return prisma.$transaction(runInTx);
+    }
+  }
+
+  /**
+   * Automatically heals any journal entry lines posted to non-leaf header accounts
+   * (e.g. 1100 Cash & Cash Equivalents) by moving them to standard leaf accounts (e.g. 1115 Cash in Hand).
+   */
+  static async ensureLeafPostingsAndBalances(prismaClient: any) {
+    try {
+      const headerLines = await prismaClient.journalEntryLine.findMany({
+        where: {
+          account: {
+            children: {
+              some: {}
+            }
+          }
+        },
+        include: {
+          account: true
+        }
+      });
+
+      if (headerLines.length > 0) {
+        for (const line of headerLines) {
+          let leafAccount = null;
+          const nameLower = (line.account.accountName || '').toLowerCase();
+          const detailLower = (line.account.detailType || '').toLowerCase();
+
+          if (nameLower.includes('cash') || detailLower === 'cash') {
+            leafAccount = await prismaClient.account.findFirst({
+              where: {
+                OR: [
+                  { accountName: { equals: 'Cash in Hand', mode: 'insensitive' } },
+                  { accountName: { contains: 'Cash in Hand', mode: 'insensitive' } },
+                  { accountName: { contains: 'Cash', mode: 'insensitive' } }
+                ],
+                children: { none: {} },
+                isLocked: false
+              },
+              orderBy: { glCode: 'asc' }
+            });
+          } else if (nameLower.includes('bank') || detailLower === 'bank') {
+            leafAccount = await prismaClient.account.findFirst({
+              where: {
+                OR: [
+                  { accountName: { contains: 'Bank', mode: 'insensitive' } },
+                  { detailType: { equals: 'Bank', mode: 'insensitive' } }
+                ],
+                children: { none: {} },
+                isLocked: false
+              },
+              orderBy: { glCode: 'asc' }
+            });
+          }
+
+          if (leafAccount && leafAccount.id !== line.accountId) {
+            await prismaClient.journalEntryLine.update({
+              where: { id: line.id },
+              data: { accountId: leafAccount.id }
+            });
+            await prismaClient.ledgerEntry.updateMany({
+              where: { accountId: line.accountId, reference: line.journalEntryId },
+              data: { accountId: leafAccount.id }
+            });
+          }
+        }
+        await AccountingService.recalculateAllBalances(prismaClient);
+      }
+    } catch (err) {
+      // Ignore migration errors during normal flow
     }
   }
 

@@ -20,6 +20,7 @@ async function getExpenseAccountForDonation(donationType: string, tx: any) {
       accountType: { name: { equals: 'Expense', mode: 'insensitive' } },
       accountName: { contains: donationType, mode: 'insensitive' },
       accountLevel: { in: ['SUBSIDIARY', 'GL'] },
+      children: { none: {} },
       isLocked: false
     }
   });
@@ -36,6 +37,7 @@ async function getExpenseAccountForDonation(donationType: string, tx: any) {
           { accountName: { contains: 'Charity', mode: 'insensitive' } }
         ],
         accountLevel: { in: ['SUBSIDIARY', 'GL'] },
+        children: { none: {} },
         isLocked: false
       }
     });
@@ -47,6 +49,7 @@ async function getExpenseAccountForDonation(donationType: string, tx: any) {
       where: {
         accountType: { name: { equals: 'Expense', mode: 'insensitive' } },
         accountLevel: { in: ['SUBSIDIARY', 'GL'] },
+        children: { none: {} },
         isLocked: false
       },
       orderBy: { glCode: 'asc' }
@@ -100,8 +103,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       if (donation.paymentMethod === 'CASH') {
         const cashAccount = await prisma.account.findFirst({
           where: {
-            accountName: { contains: 'Cash', mode: 'insensitive' },
+            OR: [
+              { accountName: { equals: 'Cash in Hand', mode: 'insensitive' } },
+              { accountName: { contains: 'Cash in Hand', mode: 'insensitive' } },
+              { accountName: { contains: 'Cash', mode: 'insensitive' } }
+            ],
             isLocked: false,
+            children: { none: {} },
             accountLevel: { in: ['SUBSIDIARY', 'GL'] }
           },
           orderBy: { glCode: 'asc' }
@@ -162,20 +170,63 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Cheque number is required for Cheque payment method', status: 400 } });
     }
 
-    const newDonation = await prisma.donation.create({
-      data: {
-        beneficiaryId: beneficiaryId || null,
-        donorName,
-        donorMobile: donorMobile || null,
-        donationType,
-        amount: parseFloat(amount),
-        paymentMethod,
-        bankAccountId: bankAccountId || null,
-        chequeNumber: chequeNumber || null,
-        donorBankName: donorBankName || null,
-        remarks: remarks || null,
-        createdById: req.user.id,
-      },
+    const newDonation = await prisma.$transaction(async (tx) => {
+      const createdDonation = await tx.donation.create({
+        data: {
+          beneficiaryId: beneficiaryId || null,
+          donorName,
+          donorMobile: donorMobile || null,
+          donationType,
+          amount: parseFloat(amount),
+          paymentMethod,
+          bankAccountId: bankAccountId || null,
+          chequeNumber: chequeNumber || null,
+          donorBankName: donorBankName || null,
+          remarks: remarks || null,
+          status: 'APPROVED',
+          createdById: req.user!.id,
+        },
+      });
+
+      let cashOrBankAccountId: string | null = null;
+      if (paymentMethod === 'CASH') {
+        const cashAccount = await tx.account.findFirst({
+          where: {
+            OR: [
+              { accountName: { equals: 'Cash in Hand', mode: 'insensitive' } },
+              { accountName: { contains: 'Cash in Hand', mode: 'insensitive' } },
+              { accountName: { contains: 'Cash', mode: 'insensitive' } }
+            ],
+            isLocked: false,
+            children: { none: {} },
+            accountLevel: { in: ['SUBSIDIARY', 'GL'] }
+          },
+          orderBy: { glCode: 'asc' }
+        });
+        if (cashAccount) cashOrBankAccountId = cashAccount.id;
+      } else {
+        cashOrBankAccountId = bankAccountId || null;
+      }
+
+      if (cashOrBankAccountId) {
+        const expenseAccount = await getExpenseAccountForDonation(donationType, tx);
+        if (expenseAccount) {
+          await AccountingService.postPayment(tx, {
+            amount: parseFloat(amount),
+            cashOrBankAccountId,
+            expenseAccountId: expenseAccount.id,
+            reference: `DON-${createdDonation.id.substring(0, 8)}`,
+            description: `Donation Given / Disbursement to ${donorName || 'Beneficiary'} - ${donationType}`,
+            module: 'Donations Given',
+            voucherType: 'BP',
+            postedBy: req.user!.id,
+            ipAddress: req.headers['x-forwarded-for'] as string,
+            userAgent: req.headers['user-agent']
+          });
+        }
+      }
+
+      return createdDonation;
     });
 
     await logAudit(req.user.id, 'Create Donation', 'DONATION', null, newDonation, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);

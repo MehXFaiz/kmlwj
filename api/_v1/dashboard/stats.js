@@ -1,6 +1,7 @@
 import { makeHandler } from "../../_utils/handler.js";
 import { verifyAuth } from "../../_middlewares/auth.middleware.js";
 import { prisma } from "../../_prisma.js";
+import { AccountingService } from "../../_services/accounting.service.js";
 var stats_default = makeHandler(async (req, res) => {
   if (req.method !== "GET") {
     return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
@@ -44,6 +45,7 @@ var stats_default = makeHandler(async (req, res) => {
       monthlyData[monthIndex].Expenses += (Number(entry.debit) || 0) - (Number(entry.credit) || 0);
     }
   }
+  await AccountingService.ensureLeafPostingsAndBalances(prisma);
   const allAccounts = await prisma.account.findMany({
     include: { accountType: true }
   });
