@@ -68,10 +68,7 @@ var revenue_collections_default = makeHandler(async (req, res) => {
       if (item.status === "POSTED") return res.status(400).json({ error: { message: "Record is already posted to ledger", status: 400 } });
       let debitAccountId2 = null;
       if (item.paymentMethod === "CASH") {
-        const cashAccount = await prisma.account.findFirst({
-          where: { accountName: { contains: "Cash", mode: "insensitive" } }
-        });
-        if (!cashAccount) return res.status(400).json({ error: { message: "Cash account not found in Chart of Accounts", status: 400 } });
+        const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
         debitAccountId2 = cashAccount.id;
       } else {
         if (!item.bankAccountId) return res.status(400).json({ error: { message: "Bank account is required for BANK/CHEQUE payments", status: 400 } });
@@ -255,10 +252,7 @@ var revenue_collections_default = makeHandler(async (req, res) => {
       }
       let debitAccountId = null;
       if (paymentMethod === "CASH") {
-        const cashAccount = await tx.account.findFirst({
-          where: { accountName: { contains: "Cash", mode: "insensitive" } }
-        });
-        if (!cashAccount) throw new Error("Cash account not found in Chart of Accounts");
+        const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
         debitAccountId = cashAccount.id;
       } else {
         debitAccountId = bankAccountId;

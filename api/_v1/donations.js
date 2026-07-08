@@ -160,20 +160,8 @@ var donations_default = makeHandler(async (req, res) => {
       });
       let cashOrBankAccountId = null;
       if (paymentMethod === "CASH") {
-        const cashAccount = await tx.account.findFirst({
-          where: {
-            OR: [
-              { accountName: { equals: "Cash in Hand", mode: "insensitive" } },
-              { accountName: { contains: "Cash in Hand", mode: "insensitive" } },
-              { accountName: { contains: "Cash", mode: "insensitive" } }
-            ],
-            isLocked: false,
-            children: { none: {} },
-            accountLevel: { in: ["SUBSIDIARY", "GL"] }
-          },
-          orderBy: { glCode: "asc" }
-        });
-        if (cashAccount) cashOrBankAccountId = cashAccount.id;
+        const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
+        cashOrBankAccountId = cashAccount.id;
       } else {
         cashOrBankAccountId = bankAccountId || null;
       }
@@ -236,20 +224,8 @@ var donations_default = makeHandler(async (req, res) => {
       if (finalStatus === "APPROVED") {
         let cashOrBankAccountId = null;
         if (updated.paymentMethod === "CASH") {
-          const cashAccount = await tx.account.findFirst({
-            where: {
-              OR: [
-                { accountName: { equals: "Cash in Hand", mode: "insensitive" } },
-                { accountName: { contains: "Cash in Hand", mode: "insensitive" } },
-                { accountName: { contains: "Cash", mode: "insensitive" } }
-              ],
-              isLocked: false,
-              children: { none: {} },
-              accountLevel: { in: ["SUBSIDIARY", "GL"] }
-            },
-            orderBy: { glCode: "asc" }
-          });
-          if (cashAccount) cashOrBankAccountId = cashAccount.id;
+          const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
+          cashOrBankAccountId = cashAccount.id;
         } else {
           cashOrBankAccountId = updated.bankAccountId || null;
         }
