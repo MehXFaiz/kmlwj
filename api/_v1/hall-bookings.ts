@@ -139,10 +139,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       let debitAccountId: string | null = null;
       if (booking.paymentMethod === 'CASH') {
-        const cashAccount = await prisma.account.findFirst({
-          where: { accountName: { contains: 'Cash', mode: 'insensitive' } }
-        });
-        if (!cashAccount) return res.status(400).json({ error: { message: 'Cash account not found in Chart of Accounts', status: 400 } });
+        const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
         debitAccountId = cashAccount.id;
       } else {
         if (!booking.bankAccountId) return res.status(400).json({ error: { message: 'Bank account is required for BANK/CHEQUE payments', status: 400 } });
@@ -197,10 +194,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     let debitAccountId: string | null = null;
     if (paymentMethod === 'CASH') {
-      const cashAccount = await prisma.account.findFirst({
-        where: { accountName: { contains: 'Cash', mode: 'insensitive' } }
-      });
-      if (!cashAccount) return res.status(400).json({ error: { message: 'Cash account not found in Chart of Accounts', status: 400 } });
+      const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
       debitAccountId = cashAccount.id;
     } else {
       debitAccountId = bankAccountId;

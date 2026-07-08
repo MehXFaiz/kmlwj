@@ -83,6 +83,71 @@ export interface PostTransferParams {
 
 export class AccountingService {
   /**
+   * Ensures a dedicated leaf Cash in Hand account exists and returns it.
+   */
+  static async ensureCashInHandAccount(tx: any) {
+    let cashAccount = await tx.account.findFirst({
+      where: {
+        AND: [
+          {
+            OR: [
+              { accountName: { equals: 'Cash in Hand', mode: 'insensitive' } },
+              { accountName: { contains: 'Cash in Hand', mode: 'insensitive' } },
+              { accountName: { equals: 'Cash Account', mode: 'insensitive' } }
+            ]
+          },
+          { NOT: { accountName: { contains: 'Bank', mode: 'insensitive' } } },
+          { NOT: { accountName: { contains: '&', mode: 'insensitive' } } },
+          { isLocked: false },
+          { children: { none: {} } }
+        ]
+      },
+      orderBy: { glCode: 'asc' }
+    });
+
+    if (cashAccount) return cashAccount;
+
+    const parentAccount = await tx.account.findFirst({
+      where: {
+        OR: [
+          { glCode: '1010100' },
+          { accountName: { contains: 'Cash & Bank Balances', mode: 'insensitive' } }
+        ]
+      }
+    });
+
+    const assetType = await tx.accountType.findFirst({
+      where: { name: { in: ['Asset', 'Assets', 'ASSET', 'ASSETS'] } }
+    });
+
+    let glCode = '1010103';
+    let codeCounter = 3;
+    while (await tx.account.findUnique({ where: { glCode } })) {
+      codeCounter++;
+      glCode = `101010${codeCounter}`;
+    }
+
+    cashAccount = await tx.account.create({
+      data: {
+        glCode,
+        accountName: 'Cash in Hand',
+        accountLevel: 'GL',
+        parentId: parentAccount ? parentAccount.id : null,
+        accountTypeId: assetType ? assetType.id : null,
+        detailType: 'Cash',
+        currency: 'PKR',
+        subsidiary: ['Global'],
+        initialBalance: 0,
+        currentBalance: 0,
+        isSystemDefined: true,
+        description: 'Main operational cash in hand account'
+      }
+    });
+
+    return cashAccount;
+  }
+
+  /**
    * Resolves an Account from the Chart of Accounts using ID, GL Code, keyword, or type fallback.
    * Enforces that the account exists and is not locked.
    */
@@ -120,19 +185,7 @@ export class AccountingService {
       const cleanKeyword = keyword.replace(/_/g, ' ').replace(/-/g, ' ');
 
       if (cleanKeyword.toLowerCase() === 'cash') {
-        account = await tx.account.findFirst({
-          where: {
-            OR: [
-              { accountName: { equals: 'Cash in Hand', mode: 'insensitive' } },
-              { accountName: { contains: 'Cash in Hand', mode: 'insensitive' } },
-              { accountName: { contains: 'Cash', mode: 'insensitive' } },
-              { detailType: { equals: 'Cash', mode: 'insensitive' } }
-            ],
-            isLocked: false,
-            children: { none: {} }
-          },
-          orderBy: { glCode: 'asc' }
-        });
+        account = await AccountingService.ensureCashInHandAccount(tx);
       }
 
       // Try exact or case-insensitive contains match on accountName or glCode
@@ -596,6 +649,33 @@ export class AccountingService {
    */
   static async ensureLeafPostingsAndBalances(prismaClient: any) {
     try {
+      const cashAccount = await AccountingService.ensureCashInHandAccount(prismaClient);
+      let needsRecalculation = false;
+
+      // Heal Hall Bookings with paymentMethod = 'CASH' that got posted to Bank accounts
+      const cashBookings = await prismaClient.hallBooking.findMany({
+        where: { paymentMethod: 'CASH' },
+        include: { journalEntry: { include: { lines: true } } }
+      });
+
+      for (const booking of cashBookings) {
+        if (booking.journalEntry) {
+          for (const line of booking.journalEntry.lines) {
+            if (line.debit > 0 && line.accountId !== cashAccount.id) {
+              await prismaClient.journalEntryLine.update({
+                where: { id: line.id },
+                data: { accountId: cashAccount.id }
+              });
+              await prismaClient.ledgerEntry.updateMany({
+                where: { reference: booking.journalEntry.id, debit: { gt: 0 } },
+                data: { accountId: cashAccount.id }
+              });
+              needsRecalculation = true;
+            }
+          }
+        }
+      }
+
       const headerLines = await prismaClient.journalEntryLine.findMany({
         where: {
           account: {
@@ -616,18 +696,7 @@ export class AccountingService {
           const detailLower = (line.account.detailType || '').toLowerCase();
 
           if (nameLower.includes('cash') || detailLower === 'cash') {
-            leafAccount = await prismaClient.account.findFirst({
-              where: {
-                OR: [
-                  { accountName: { equals: 'Cash in Hand', mode: 'insensitive' } },
-                  { accountName: { contains: 'Cash in Hand', mode: 'insensitive' } },
-                  { accountName: { contains: 'Cash', mode: 'insensitive' } }
-                ],
-                children: { none: {} },
-                isLocked: false
-              },
-              orderBy: { glCode: 'asc' }
-            });
+            leafAccount = cashAccount;
           } else if (nameLower.includes('bank') || detailLower === 'bank') {
             leafAccount = await prismaClient.account.findFirst({
               where: {
@@ -651,8 +720,12 @@ export class AccountingService {
               where: { accountId: line.accountId, reference: line.journalEntryId },
               data: { accountId: leafAccount.id }
             });
+            needsRecalculation = true;
           }
         }
+      }
+
+      if (needsRecalculation) {
         await AccountingService.recalculateAllBalances(prismaClient);
       }
     } catch (err) {
