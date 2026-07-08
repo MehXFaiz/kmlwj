@@ -21,14 +21,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
     }
 
-    // 1. Fetch cash and bank subsidiary accounts
+    // 1. Fetch cash and bank accounts dynamically
     const cashBankAccounts = await prisma.account.findMany({
       where: {
-        accountType: { name: 'ASSET' },
-        detailType: 'Subsidiary',
+        accountType: { name: { in: ['Asset', 'ASSET'], mode: 'insensitive' } },
         OR: [
           { accountName: { contains: 'bank', mode: 'insensitive' } },
           { accountName: { contains: 'cash', mode: 'insensitive' } },
+          { detailType: { in: ['Cash', 'Bank'], mode: 'insensitive' } }
         ]
       },
       include: {
@@ -37,7 +37,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     });
 
     const cashBankCodes = new Set(cashBankAccounts.map(a => a.glCode));
-    const beginningCash = cashBankAccounts.reduce((sum, acc) => sum + (acc.initialBalance || 0), 0);
+    const endingCash = cashBankAccounts.reduce((sum, acc) => sum + Number(acc.currentBalance || 0), 0);
 
     // 2. Fetch all posted journal entries and analyze transactions
     const postedJournals = await prisma.journalEntry.findMany({
@@ -67,24 +67,31 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       if (cashLines.length === 0 || nonCashLines.length === 0) return;
 
       // Net impact on cash/bank in this entry
-      const debitSum = cashLines.reduce((sum, l) => sum + l.debit, 0);
-      const creditSum = cashLines.reduce((sum, l) => sum + l.credit, 0);
+      const debitSum = cashLines.reduce((sum, l) => sum + Number(l.debit || 0), 0);
+      const creditSum = cashLines.reduce((sum, l) => sum + Number(l.credit || 0), 0);
       const netCashChange = debitSum - creditSum;
 
       if (netCashChange > 0) {
         // Cash Inflow: associate with the credit offset accounts
+        const totalNonCashCredit = nonCashLines.reduce((sum, l) => sum + Number(l.credit || 0), 0);
         nonCashLines.forEach((l) => {
           if (l.credit > 0) {
+            const ratio = totalNonCashCredit > 0 ? Number(l.credit) / totalNonCashCredit : 1;
+            const amount = Math.round(netCashChange * ratio * 100) / 100;
             const name = l.account.accountName;
-            inflowsMap[name] = (inflowsMap[name] || 0) + l.credit;
+            inflowsMap[name] = (inflowsMap[name] || 0) + amount;
           }
         });
       } else if (netCashChange < 0) {
         // Cash Outflow: associate with the debit offset accounts
+        const absChange = Math.abs(netCashChange);
+        const totalNonCashDebit = nonCashLines.reduce((sum, l) => sum + Number(l.debit || 0), 0);
         nonCashLines.forEach((l) => {
           if (l.debit > 0) {
+            const ratio = totalNonCashDebit > 0 ? Number(l.debit) / totalNonCashDebit : 1;
+            const amount = Math.round(absChange * ratio * 100) / 100;
             const name = l.account.accountName;
-            outflowsMap[name] = (outflowsMap[name] || 0) + l.debit;
+            outflowsMap[name] = (outflowsMap[name] || 0) + amount;
           }
         });
       }
@@ -100,10 +107,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       amount
     }));
 
-    const totalInflow = inflows.reduce((sum, item) => sum + item.amount, 0);
-    const totalOutflow = outflows.reduce((sum, item) => sum + item.amount, 0);
-    const netChange = totalInflow - totalOutflow;
-    const endingCash = beginningCash + netChange;
+    const totalInflow = Math.round(inflows.reduce((sum, i) => sum + i.amount, 0) * 100) / 100;
+    const totalOutflow = Math.round(outflows.reduce((sum, o) => sum + o.amount, 0) * 100) / 100;
+    const netChange = Math.round((totalInflow - totalOutflow) * 100) / 100;
+    const beginningCash = Math.round((endingCash - netChange) * 100) / 100;
 
     return res.status(200).json({
       status: 200,
