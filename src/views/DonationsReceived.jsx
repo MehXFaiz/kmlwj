@@ -406,7 +406,7 @@ export const DonationsReceived = () => {
                       <>
                         <button
                           type="button"
-                          onClick={() => { setSelectedReceipt(d); setModalOpen(true); }}
+                          onClick={() => navigate(`/donations-received/edit/${d.id}`)}
                           className="w-8 h-8 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
                           title="Edit Receipt"
                         >

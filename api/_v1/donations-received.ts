@@ -105,7 +105,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Missing required fields (donorId, donationType, amount, paymentMethod)', status: 400 } });
     }
 
-    const parsedAmount = parseFloat(amount);
+    const parsedAmount = Math.round(parseFloat(amount) * 100) / 100;
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       return res.status(400).json({ error: { message: 'Amount must be a positive number', status: 400 } });
     }
@@ -274,7 +274,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           referenceNo: referenceNo !== undefined ? (referenceNo || null) : undefined,
           chequeNo: chequeNo !== undefined ? (chequeNo || null) : undefined,
           chequeDate: chequeDate !== undefined ? (chequeDate ? new Date(chequeDate) : null) : undefined,
-          amount: amount !== undefined ? Number(amount) : undefined,
+          amount: amount !== undefined ? Math.round(Number(amount) * 100) / 100 : undefined,
           donorId: donorId !== undefined ? donorId : undefined,
           donationType: donationType !== undefined ? donationType : undefined,
           paymentMethod: paymentMethod !== undefined ? paymentMethod : undefined,

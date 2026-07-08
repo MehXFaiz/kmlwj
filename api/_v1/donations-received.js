@@ -91,7 +91,7 @@ var donations_received_default = makeHandler(async (req, res) => {
     if (!donorId || !donationType || amount === void 0 || !paymentMethod) {
       return res.status(400).json({ error: { message: "Missing required fields (donorId, donationType, amount, paymentMethod)", status: 400 } });
     }
-    const parsedAmount = parseFloat(amount);
+    const parsedAmount = Math.round(parseFloat(amount) * 100) / 100;
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       return res.status(400).json({ error: { message: "Amount must be a positive number", status: 400 } });
     }
@@ -238,7 +238,7 @@ var donations_received_default = makeHandler(async (req, res) => {
           referenceNo: referenceNo !== void 0 ? referenceNo || null : void 0,
           chequeNo: chequeNo !== void 0 ? chequeNo || null : void 0,
           chequeDate: chequeDate !== void 0 ? chequeDate ? new Date(chequeDate) : null : void 0,
-          amount: amount !== void 0 ? Number(amount) : void 0,
+          amount: amount !== void 0 ? Math.round(Number(amount) * 100) / 100 : void 0,
           donorId: donorId !== void 0 ? donorId : void 0,
           donationType: donationType !== void 0 ? donationType : void 0,
           paymentMethod: paymentMethod !== void 0 ? paymentMethod : void 0,
