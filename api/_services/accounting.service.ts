@@ -652,6 +652,15 @@ export class AccountingService {
       const cashAccount = await AccountingService.ensureCashInHandAccount(prismaClient);
       let needsRecalculation = false;
 
+      // Fix any bank accounts erroneously marked with detailType = 'Cash'
+      await prismaClient.account.updateMany({
+        where: {
+          accountName: { contains: 'Bank', mode: 'insensitive' },
+          detailType: 'Cash'
+        },
+        data: { detailType: 'Bank' }
+      });
+
       // Heal Hall Bookings with paymentMethod = 'CASH' that got posted to Bank accounts
       const cashBookings = await prismaClient.hallBooking.findMany({
         where: { paymentMethod: 'CASH' },
@@ -670,6 +679,36 @@ export class AccountingService {
                 where: { reference: booking.journalEntry.id, debit: { gt: 0 } },
                 data: { accountId: cashAccount.id }
               });
+              needsRecalculation = true;
+            }
+          }
+        }
+      }
+
+      // Heal Donations Received with paymentMethod = 'CASH' that got posted to Bank accounts
+      const cashDonationsReceived = await prismaClient.donationReceived.findMany({
+        where: { paymentMethod: 'CASH' },
+        include: { journalEntry: { include: { lines: true } } }
+      });
+
+      for (const donRec of cashDonationsReceived) {
+        if (donRec.journalEntry) {
+          for (const line of donRec.journalEntry.lines) {
+            if (line.debit > 0 && line.accountId !== cashAccount.id) {
+              await prismaClient.journalEntryLine.update({
+                where: { id: line.id },
+                data: { accountId: cashAccount.id }
+              });
+              await prismaClient.ledgerEntry.updateMany({
+                where: { reference: donRec.journalEntry.id, debit: { gt: 0 } },
+                data: { accountId: cashAccount.id }
+              });
+              if (donRec.cashAccountId !== cashAccount.id) {
+                await prismaClient.donationReceived.update({
+                  where: { id: donRec.id },
+                  data: { cashAccountId: cashAccount.id, bankAccountId: null }
+                });
+              }
               needsRecalculation = true;
             }
           }

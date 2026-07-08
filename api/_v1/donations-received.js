@@ -101,24 +101,8 @@ var donations_received_default = makeHandler(async (req, res) => {
     }
     let debitAccountId = null;
     if (paymentMethod === "CASH") {
-      if (cashAccountId) {
-        debitAccountId = cashAccountId;
-      } else {
-        const defaultCash = await prisma.account.findFirst({
-          where: {
-            OR: [
-              { accountName: { equals: "Cash in Hand", mode: "insensitive" } },
-              { accountName: { contains: "Cash in Hand", mode: "insensitive" } },
-              { accountName: { contains: "Cash", mode: "insensitive" } }
-            ],
-            children: { none: {} },
-            isLocked: false
-          },
-          orderBy: { glCode: "asc" }
-        });
-        if (!defaultCash) return res.status(400).json({ error: { message: "No Cash account specified or found in Chart of Accounts", status: 400 } });
-        debitAccountId = defaultCash.id;
-      }
+      const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
+      debitAccountId = cashAccount.id;
     } else {
       if (!bankAccountId) {
         const defaultBank = await prisma.account.findFirst({
