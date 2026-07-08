@@ -84,7 +84,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const nameLower = (acc.accountName || '').toLowerCase();
     const detailType = (acc.detailType || '').toLowerCase();
 
-    const isLeaf = !allAccounts.some(a => a.parentId === acc.id);
+    const isLeaf = !allAccounts.some(a => a.parentId === acc.id) || Math.abs(bal) > 0.001;
 
     if (isLeaf) {
       if (typeName === 'ASSET' || typeName === 'ASSETS') {

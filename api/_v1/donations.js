@@ -14,33 +14,33 @@ async function getExpenseAccountForDonation(donationType, tx) {
   let acc = await tx.account.findFirst({
     where: {
       accountType: { name: { equals: "Expense", mode: "insensitive" } },
-      accountName: { contains: donationType, mode: "insensitive" },
-      accountLevel: { in: ["SUBSIDIARY", "GL"] },
+      NOT: { accountName: { contains: "Salary", mode: "insensitive" } },
+      OR: [
+        { accountName: { contains: donationType, mode: "insensitive" } },
+        { accountName: { contains: "Aid", mode: "insensitive" } },
+        { accountName: { contains: "Welfare", mode: "insensitive" } },
+        { accountName: { contains: "Donation", mode: "insensitive" } }
+      ],
       children: { none: {} },
       isLocked: false
-    }
+    },
+    orderBy: { glCode: "asc" }
   });
   if (!acc) {
     acc = await tx.account.findFirst({
       where: {
         accountType: { name: { equals: "Expense", mode: "insensitive" } },
-        OR: [
-          { accountName: { contains: "Donation", mode: "insensitive" } },
-          { accountName: { contains: "Welfare", mode: "insensitive" } },
-          { accountName: { contains: "Aid", mode: "insensitive" } },
-          { accountName: { contains: "Charity", mode: "insensitive" } }
-        ],
-        accountLevel: { in: ["SUBSIDIARY", "GL"] },
+        NOT: { accountName: { contains: "Salary", mode: "insensitive" } },
         children: { none: {} },
         isLocked: false
-      }
+      },
+      orderBy: { glCode: "asc" }
     });
   }
   if (!acc) {
     acc = await tx.account.findFirst({
       where: {
         accountType: { name: { equals: "Expense", mode: "insensitive" } },
-        accountLevel: { in: ["SUBSIDIARY", "GL"] },
         children: { none: {} },
         isLocked: false
       },

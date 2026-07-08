@@ -14,41 +14,39 @@ function generateVoucherNumber() {
 }
 
 async function getExpenseAccountForDonation(donationType: string, tx: any) {
-  // First try: find an expense account whose name contains the donation type (e.g. Monthly, Marriage, Medical)
+  // First try: find a welfare/aid account matching donationType or general aid
   let acc = await tx.account.findFirst({
     where: {
       accountType: { name: { equals: 'Expense', mode: 'insensitive' } },
-      accountName: { contains: donationType, mode: 'insensitive' },
-      accountLevel: { in: ['SUBSIDIARY', 'GL'] },
+      NOT: { accountName: { contains: 'Salary', mode: 'insensitive' } },
+      OR: [
+        { accountName: { contains: donationType, mode: 'insensitive' } },
+        { accountName: { contains: 'Aid', mode: 'insensitive' } },
+        { accountName: { contains: 'Welfare', mode: 'insensitive' } },
+        { accountName: { contains: 'Donation', mode: 'insensitive' } }
+      ],
       children: { none: {} },
       isLocked: false
-    }
+    },
+    orderBy: { glCode: 'asc' }
   });
 
   if (!acc) {
-    // Second try: find an expense account containing 'Donation' or 'Welfare' or 'Aid' or 'Charity'
     acc = await tx.account.findFirst({
       where: {
         accountType: { name: { equals: 'Expense', mode: 'insensitive' } },
-        OR: [
-          { accountName: { contains: 'Donation', mode: 'insensitive' } },
-          { accountName: { contains: 'Welfare', mode: 'insensitive' } },
-          { accountName: { contains: 'Aid', mode: 'insensitive' } },
-          { accountName: { contains: 'Charity', mode: 'insensitive' } }
-        ],
-        accountLevel: { in: ['SUBSIDIARY', 'GL'] },
+        NOT: { accountName: { contains: 'Salary', mode: 'insensitive' } },
         children: { none: {} },
         isLocked: false
-      }
+      },
+      orderBy: { glCode: 'asc' }
     });
   }
 
   if (!acc) {
-    // Third try: any unlocked GL expense account
     acc = await tx.account.findFirst({
       where: {
         accountType: { name: { equals: 'Expense', mode: 'insensitive' } },
-        accountLevel: { in: ['SUBSIDIARY', 'GL'] },
         children: { none: {} },
         isLocked: false
       },
