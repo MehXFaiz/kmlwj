@@ -143,6 +143,8 @@ app.delete('/api/v1/beneficiaries', makeExpress(beneficiariesHandler));
 
 app.get('/api/v1/donations', makeExpress(donationsHandler));
 app.post('/api/v1/donations', makeExpress(donationsHandler));
+app.put('/api/v1/donations', makeExpress(donationsHandler));
+app.patch('/api/v1/donations', makeExpress(donationsHandler));
 app.delete('/api/v1/donations', makeExpress(donationsHandler));
 
 app.get('/api/v1/donors', makeExpress(donorsHandler));

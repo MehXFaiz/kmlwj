@@ -199,28 +199,79 @@ var donations_default = makeHandler(async (req, res) => {
     await logAudit(req.user.id, "Create Donation", "DONATION", null, newDonation, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     return res.status(201).json({ status: 201, data: newDonation });
   }
-  if (method === "PUT") {
+  if (method === "PUT" || method === "PATCH") {
     const id = req.query.id;
     if (!id) return res.status(400).json({ error: { message: "Donation ID is required", status: 400 } });
     const existingDonation = await prisma.donation.findUnique({ where: { id } });
     if (!existingDonation) return res.status(404).json({ error: { message: "Donation not found", status: 404 } });
-    if (existingDonation.status !== "PENDING") return res.status(400).json({ error: { message: "Only pending donations can be updated", status: 400 } });
     const { beneficiaryId, donorName, donorMobile, donationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks, status } = req.body;
-    const updatedDonation = await prisma.donation.update({
-      where: { id },
-      data: {
-        beneficiaryId: beneficiaryId !== void 0 ? beneficiaryId || null : void 0,
-        donorName: donorName || void 0,
-        donorMobile: donorMobile !== void 0 ? donorMobile || null : void 0,
-        donationType: donationType || void 0,
-        amount: amount !== void 0 ? parseFloat(amount) : void 0,
-        paymentMethod: paymentMethod || void 0,
-        bankAccountId: bankAccountId !== void 0 ? bankAccountId || null : void 0,
-        chequeNumber: chequeNumber !== void 0 ? chequeNumber || null : void 0,
-        donorBankName: donorBankName !== void 0 ? donorBankName || null : void 0,
-        remarks: remarks !== void 0 ? remarks || null : void 0,
-        status: status || void 0
+    const updatedDonation = await prisma.$transaction(async (tx) => {
+      if (existingDonation.status === "APPROVED") {
+        const ref = `DON-${existingDonation.id.substring(0, 8)}`;
+        const je = await tx.journalEntry.findFirst({ where: { reference: ref } });
+        if (je) {
+          try {
+            await AccountingService.deleteJournalEntry(tx, je.id, req.user.id, "Donation Updated");
+          } catch (e) {
+          }
+        }
       }
+      const updated = await tx.donation.update({
+        where: { id },
+        data: {
+          beneficiaryId: beneficiaryId !== void 0 ? beneficiaryId || null : void 0,
+          donorName: donorName || void 0,
+          donorMobile: donorMobile !== void 0 ? donorMobile || null : void 0,
+          donationType: donationType || void 0,
+          amount: amount !== void 0 ? parseFloat(amount) : void 0,
+          paymentMethod: paymentMethod || void 0,
+          bankAccountId: bankAccountId !== void 0 ? bankAccountId || null : void 0,
+          chequeNumber: chequeNumber !== void 0 ? chequeNumber || null : void 0,
+          donorBankName: donorBankName !== void 0 ? donorBankName || null : void 0,
+          remarks: remarks !== void 0 ? remarks || null : void 0,
+          status: status || void 0
+        }
+      });
+      const finalStatus = updated.status || "APPROVED";
+      if (finalStatus === "APPROVED") {
+        let cashOrBankAccountId = null;
+        if (updated.paymentMethod === "CASH") {
+          const cashAccount = await tx.account.findFirst({
+            where: {
+              OR: [
+                { accountName: { equals: "Cash in Hand", mode: "insensitive" } },
+                { accountName: { contains: "Cash in Hand", mode: "insensitive" } },
+                { accountName: { contains: "Cash", mode: "insensitive" } }
+              ],
+              isLocked: false,
+              children: { none: {} },
+              accountLevel: { in: ["SUBSIDIARY", "GL"] }
+            },
+            orderBy: { glCode: "asc" }
+          });
+          if (cashAccount) cashOrBankAccountId = cashAccount.id;
+        } else {
+          cashOrBankAccountId = updated.bankAccountId || null;
+        }
+        if (cashOrBankAccountId) {
+          const expenseAccount = await getExpenseAccountForDonation(updated.donationType, tx);
+          if (expenseAccount) {
+            await AccountingService.postPayment(tx, {
+              amount: Number(updated.amount),
+              cashOrBankAccountId,
+              expenseAccountId: expenseAccount.id,
+              reference: `DON-${updated.id.substring(0, 8)}`,
+              description: `Donation Given / Disbursement to ${updated.donorName || "Beneficiary"} - ${updated.donationType}`,
+              module: "Donations Given",
+              voucherType: "BP",
+              postedBy: req.user.id,
+              ipAddress: req.headers["x-forwarded-for"],
+              userAgent: req.headers["user-agent"]
+            });
+          }
+        }
+      }
+      return updated;
     });
     await logAudit(req.user.id, "Update Donation", "DONATION", existingDonation, updatedDonation, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     return res.status(200).json({ status: 200, data: updatedDonation });

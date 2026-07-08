@@ -232,31 +232,88 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     return res.status(201).json({ status: 201, data: newDonation });
   }
 
-  if (method === 'PUT') {
+  if (method === 'PUT' || method === 'PATCH') {
     const id = req.query.id as string;
     if (!id) return res.status(400).json({ error: { message: 'Donation ID is required', status: 400 } });
 
     const existingDonation = await prisma.donation.findUnique({ where: { id } });
     if (!existingDonation) return res.status(404).json({ error: { message: 'Donation not found', status: 404 } });
-    if (existingDonation.status !== 'PENDING') return res.status(400).json({ error: { message: 'Only pending donations can be updated', status: 400 } });
 
     const { beneficiaryId, donorName, donorMobile, donationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks, status } = req.body;
 
-    const updatedDonation = await prisma.donation.update({
-      where: { id },
-      data: {
-        beneficiaryId: beneficiaryId !== undefined ? (beneficiaryId || null) : undefined,
-        donorName: donorName || undefined,
-        donorMobile: donorMobile !== undefined ? (donorMobile || null) : undefined,
-        donationType: donationType || undefined,
-        amount: amount !== undefined ? parseFloat(amount) : undefined,
-        paymentMethod: paymentMethod || undefined,
-        bankAccountId: bankAccountId !== undefined ? (bankAccountId || null) : undefined,
-        chequeNumber: chequeNumber !== undefined ? (chequeNumber || null) : undefined,
-        donorBankName: donorBankName !== undefined ? (donorBankName || null) : undefined,
-        remarks: remarks !== undefined ? (remarks || null) : undefined,
-        status: status || undefined,
-      },
+    const updatedDonation = await prisma.$transaction(async (tx) => {
+      // If already approved, delete previous accounting journal entry so we can re-post with updated figures
+      if (existingDonation.status === 'APPROVED') {
+        const ref = `DON-${existingDonation.id.substring(0, 8)}`;
+        const je = await tx.journalEntry.findFirst({ where: { reference: ref } });
+        if (je) {
+          try {
+            await AccountingService.deleteJournalEntry(tx, je.id, req.user!.id, 'Donation Updated');
+          } catch (e) {
+            // Ignore if already deleted
+          }
+        }
+      }
+
+      const updated = await tx.donation.update({
+        where: { id },
+        data: {
+          beneficiaryId: beneficiaryId !== undefined ? (beneficiaryId || null) : undefined,
+          donorName: donorName || undefined,
+          donorMobile: donorMobile !== undefined ? (donorMobile || null) : undefined,
+          donationType: donationType || undefined,
+          amount: amount !== undefined ? parseFloat(amount) : undefined,
+          paymentMethod: paymentMethod || undefined,
+          bankAccountId: bankAccountId !== undefined ? (bankAccountId || null) : undefined,
+          chequeNumber: chequeNumber !== undefined ? (chequeNumber || null) : undefined,
+          donorBankName: donorBankName !== undefined ? (donorBankName || null) : undefined,
+          remarks: remarks !== undefined ? (remarks || null) : undefined,
+          status: status || undefined,
+        },
+      });
+
+      const finalStatus = updated.status || 'APPROVED';
+      if (finalStatus === 'APPROVED') {
+        let cashOrBankAccountId: string | null = null;
+        if (updated.paymentMethod === 'CASH') {
+          const cashAccount = await tx.account.findFirst({
+            where: {
+              OR: [
+                { accountName: { equals: 'Cash in Hand', mode: 'insensitive' } },
+                { accountName: { contains: 'Cash in Hand', mode: 'insensitive' } },
+                { accountName: { contains: 'Cash', mode: 'insensitive' } }
+              ],
+              isLocked: false,
+              children: { none: {} },
+              accountLevel: { in: ['SUBSIDIARY', 'GL'] }
+            },
+            orderBy: { glCode: 'asc' }
+          });
+          if (cashAccount) cashOrBankAccountId = cashAccount.id;
+        } else {
+          cashOrBankAccountId = updated.bankAccountId || null;
+        }
+
+        if (cashOrBankAccountId) {
+          const expenseAccount = await getExpenseAccountForDonation(updated.donationType, tx);
+          if (expenseAccount) {
+            await AccountingService.postPayment(tx, {
+              amount: Number(updated.amount),
+              cashOrBankAccountId,
+              expenseAccountId: expenseAccount.id,
+              reference: `DON-${updated.id.substring(0, 8)}`,
+              description: `Donation Given / Disbursement to ${updated.donorName || 'Beneficiary'} - ${updated.donationType}`,
+              module: 'Donations Given',
+              voucherType: 'BP',
+              postedBy: req.user!.id,
+              ipAddress: req.headers['x-forwarded-for'] as string,
+              userAgent: req.headers['user-agent']
+            });
+          }
+        }
+      }
+
+      return updated;
     });
 
     await logAudit(req.user.id, 'Update Donation', 'DONATION', existingDonation, updatedDonation, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
