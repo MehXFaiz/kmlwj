@@ -561,12 +561,12 @@ export const Dashboard = () => {
         {[
           {
             title: t('dashboard.totalIncome'),
-            value: stats.revenue,
+            value: (stats.revenue || 0) - (stats.expenses || 0),
             icon: TrendingUp,
             iconColor: 'text-emerald-400',
             iconBg: 'bg-emerald-500/10 border-emerald-500/20',
             trend: 'up',
-            trendLabel: t('dashboard.moneyReceived'),
+            trendLabel: stats.expenses ? `Net after expenses (Gross: Rs ${Number(stats.revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })})` : t('dashboard.moneyReceived'),
             trendColor: 'text-emerald-400',
             accentBar: 'from-emerald-500 to-emerald-400',
             delay: 0,
