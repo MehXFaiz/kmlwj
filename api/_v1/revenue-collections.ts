@@ -6,38 +6,44 @@ import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
 
 async function getIncomeAccountForCategory(category: string, tx: any) {
-  // First try: find a revenue account whose name contains the category
+  let searchKeyword = category;
+  if (/membership/i.test(category)) searchKeyword = 'Membership';
+  else if (/bus/i.test(category)) searchKeyword = 'Bus';
+  else if (/hall/i.test(category)) searchKeyword = 'Hall';
+  else if (/zakat/i.test(category)) searchKeyword = 'Zakat';
+
+  // First try: find a revenue account matching searchKeyword (unlocked, no child accounts)
   let acc = await tx.account.findFirst({
     where: {
-      accountType: { name: { equals: 'Revenue', mode: 'insensitive' } },
-      accountName: { contains: category, mode: 'insensitive' },
-      accountLevel: { in: ['SUBSIDIARY', 'GL'] },
-      isLocked: false
-    }
+      accountType: { name: { in: ['Revenue', 'Income'], mode: 'insensitive' } },
+      accountName: { contains: searchKeyword, mode: 'insensitive' },
+      isLocked: false,
+      children: { none: {} }
+    },
+    orderBy: { glCode: 'asc' }
   });
 
-  if (!acc) {
-    // Fallback: map categories to broader search terms
-    let searchTerm = category;
-    if (category === 'Membership Fee' || category === 'Bus Booking') searchTerm = 'Income';
-
+  if (!acc && searchKeyword !== category) {
     acc = await tx.account.findFirst({
       where: {
-        accountType: { name: { equals: 'Revenue', mode: 'insensitive' } },
-        accountName: { contains: searchTerm, mode: 'insensitive' },
-        accountLevel: { in: ['SUBSIDIARY', 'GL'] },
-        isLocked: false
-      }
+        accountType: { name: { in: ['Revenue', 'Income'], mode: 'insensitive' } },
+        accountName: { contains: category, mode: 'insensitive' },
+        isLocked: false,
+        children: { none: {} }
+      },
+      orderBy: { glCode: 'asc' }
     });
   }
 
-  // Last resort: any revenue account
+  // Last resort: any unlocked leaf revenue account
   if (!acc) {
     acc = await tx.account.findFirst({
       where: {
-        accountType: { name: { equals: 'Revenue', mode: 'insensitive' } },
-        isLocked: false
-      }
+        accountType: { name: { in: ['Revenue', 'Income'], mode: 'insensitive' } },
+        isLocked: false,
+        children: { none: {} }
+      },
+      orderBy: { glCode: 'asc' }
     });
   }
 
