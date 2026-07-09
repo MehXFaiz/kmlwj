@@ -243,38 +243,8 @@ export const RevenueEntryForm = () => {
       </div>
 
       <form onSubmit={handleSave}>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column: Info Card */}
-          <div className="lg:col-span-4 space-y-5">
-            <div className="bg-amber-500/5 rounded-2xl border border-amber-500/20 p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <Info className="w-4 h-4 text-amber-400" />
-                <h3 className="text-sm font-semibold text-amber-300">Revenue Information</h3>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                  </div>
-                  <span className="text-xs font-semibold text-slate-300">Smart Ledger Mapping</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-                    <CheckCircle className="w-3.5 h-3.5 text-amber-400" />
-                  </div>
-                  <span className="text-xs font-semibold text-slate-300">Auto Account Creation</span>
-                </div>
-              </div>
-              <div className="border-t border-amber-500/20 my-4" />
-              <p className="text-xs text-slate-500 leading-relaxed">
-                If the selected revenue source does not exist in the Chart of Accounts, the system will automatically create it for you.
-              </p>
-            </div>
-          </div>
-
-          {/* Right Column: Form Cards */}
-          <div className="lg:col-span-8 space-y-5">
-            {/* Card 01: Revenue Source */}
+        <div className="space-y-5 max-w-4xl">
+          {/* Card 01: Revenue Source */}
             <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
               <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
                 <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">
@@ -474,7 +444,6 @@ export const RevenueEntryForm = () => {
               </button>
             </div>
           </div>
-        </div>
       </form>
     </div>
   );
