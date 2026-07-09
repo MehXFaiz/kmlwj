@@ -17,6 +17,18 @@ export const useRoleStore = create((set, get) => ({
     }
   },
 
+  addRole: async (payload) => {
+    set({ loading: true, error: null });
+    try {
+      await roleService.create(payload);
+      await get().fetchRoles();
+      set({ loading: false });
+    } catch (err) {
+      set({ error: err.message || 'Failed to create role', loading: false });
+      throw err;
+    }
+  },
+
   updateRole: async (id, payload) => {
     set({ loading: true, error: null });
     try {
@@ -25,6 +37,18 @@ export const useRoleStore = create((set, get) => ({
       set({ loading: false });
     } catch (err) {
       set({ error: err.message || 'Failed to update role', loading: false });
+      throw err;
+    }
+  },
+
+  deleteRole: async (id) => {
+    set({ loading: true, error: null });
+    try {
+      await roleService.delete(id);
+      await get().fetchRoles();
+      set({ loading: false });
+    } catch (err) {
+      set({ error: err.message || 'Failed to delete role', loading: false });
       throw err;
     }
   },

@@ -34,7 +34,9 @@ export const userService = {
 
 export const roleService = {
   getAll: () => api.get('/api/v1/roles').then((r) => r.data.data),
+  create: (data) => api.post('/api/v1/roles', data).then((r) => r.data.data),
   update: (id, data) => api.put(`/api/v1/roles?id=${id}`, data).then((r) => r.data),
+  delete: (id) => api.delete(`/api/v1/roles?id=${id}`).then((r) => r.data),
 };
 
 export const dashboardService = {

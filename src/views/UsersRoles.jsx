@@ -164,14 +164,184 @@ function UserFormPanel({ onClose, onSave, initial, availableRoles }) {
   );
 }
 
+/* ─── Dynamic Role Form Panel ─── */
+const PERMISSION_MODULES = [
+  { key: 'coa', label: 'Chart of Accounts', desc: 'Create, edit & manage ledger accounts' },
+  { key: 'journals', label: 'Journal Entries', desc: 'Post general & bank vouchers' },
+  { key: 'reports', label: 'Financial Reports', desc: 'Balance sheet, income statement & trial balance' },
+  { key: 'income', label: 'Income & Revenues', desc: 'Record donations, receipts & revenue collections' },
+  { key: 'expense', label: 'Expense & Payables', desc: 'Record bills, expenses & vendor payments' },
+  { key: 'invoices', label: 'Invoices & Billing', desc: 'Create & manage customer invoices' },
+  { key: 'users', label: 'User Directory', desc: 'Provision users & reset credentials' },
+  { key: 'settings', label: 'Security & Roles', desc: 'Manage system settings & dynamic roles' },
+];
+
+function RoleFormPanel({ onClose, onSave }) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [permissions, setPermissions] = useState({
+    coa: true,
+    journals: true,
+    reports: true,
+    income: true,
+    expense: true,
+    invoices: true,
+    users: false,
+    settings: false,
+  });
+
+  const togglePermKey = (key) => {
+    setPermissions((p) => ({ ...p, [key]: !p[key] }));
+  };
+
+  const handleSelectAll = (val) => {
+    const next = {};
+    PERMISSION_MODULES.forEach((m) => { next[m.key] = val; });
+    setPermissions(next);
+  };
+
+  const handleSubmit = () => {
+    if (!name.trim()) {
+      showToast('Role Name is required');
+      return;
+    }
+    onSave({
+      name: name.trim(),
+      description: description.trim() || `${name.trim()} Role`,
+      permissions,
+    });
+  };
+
+  const inputClass =
+    'w-full px-3 py-2.5 rounded-xl bg-slate-950/70 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-amber-500/70 focus:ring-1 focus:ring-amber-500/20 transition-all placeholder:text-slate-600';
+  const labelClass = 'block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5';
+
+  return (
+    <div className="rounded-xl border border-slate-700/60 bg-slate-900/90 overflow-hidden flex flex-col h-full animate-in slide-in-from-right-4 duration-300">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-800/80 bg-slate-900">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center">
+            <Shield className="h-3.5 w-3.5 text-amber-400" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-slate-100">Create Dynamic Role</h3>
+            <p className="text-[10px] text-slate-500">Define role name & assign granular permissions</p>
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Form Body */}
+      <div className="p-5 space-y-4 flex-1 overflow-y-auto">
+        <div>
+          <label className={labelClass}>Role Name *</label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Senior Auditor, Billing Specialist..."
+            className={inputClass}
+          />
+        </div>
+
+        <div>
+          <label className={labelClass}>Description</label>
+          <input
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="e.g. Access to financial records and reporting only"
+            className={inputClass}
+          />
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className={labelClass}>Permissions Matrix *</label>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleSelectAll(true)}
+                className="text-[10px] font-bold text-amber-400 hover:underline"
+              >
+                Grant All
+              </button>
+              <span className="text-slate-700">|</span>
+              <button
+                type="button"
+                onClick={() => handleSelectAll(false)}
+                className="text-[10px] font-bold text-slate-400 hover:underline"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2">
+            {PERMISSION_MODULES.map((m) => {
+              const active = !!permissions[m.key];
+              return (
+                <button
+                  key={m.key}
+                  type="button"
+                  onClick={() => togglePermKey(m.key)}
+                  className={`w-full text-left p-2.5 rounded-xl border transition-all flex items-center justify-between ${
+                    active
+                      ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300'
+                      : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
+                  }`}
+                >
+                  <div className="min-w-0 pr-2">
+                    <p className="text-xs font-bold">{m.label}</p>
+                    <p className="text-[10px] text-slate-500 truncate">{m.desc}</p>
+                  </div>
+                  <div className={`w-5 h-5 rounded-md flex items-center justify-center border shrink-0 ${
+                    active
+                      ? 'bg-emerald-500 border-emerald-400 text-slate-950'
+                      : 'bg-slate-900 border-slate-700 text-transparent'
+                  }`}>
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Footer Actions */}
+      <div className="flex items-center justify-end gap-2.5 px-5 py-4 border-t border-slate-800/80 bg-slate-900/60">
+        <button
+          onClick={onClose}
+          className="px-4 py-2 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-600 text-xs font-semibold transition-all"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSubmit}
+          className="flex items-center gap-2 px-5 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white text-xs font-bold transition-all shadow-lg shadow-amber-900/30"
+        >
+          <Plus className="h-3.5 w-3.5" /> Create Role
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export const UsersRoles = () => {
   const { users, fetchUsers, addUser, updateUser, deleteUser } = useUserStore();
-  const { roles, activity, fetchRoles, updateRole, fetchActivity } = useRoleStore();
+  const { roles, activity, fetchRoles, addRole, updateRole, deleteRole, fetchActivity } = useRoleStore();
 
   const [activeTab, setActiveTab] = useState('users');
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
+  const [roleFormOpen, setRoleFormOpen] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [confirmDeleteRoleId, setConfirmDeleteRoleId] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
 
   const initData = async () => {
@@ -199,6 +369,16 @@ export const UsersRoles = () => {
     }
   };
 
+  const handleDeleteRole = async (id) => {
+    try {
+      await deleteRole(id);
+      showToast('Role deleted successfully');
+      setConfirmDeleteRoleId(null);
+    } catch (err) {
+      showToast(err.message || 'Failed to delete role');
+    }
+  };
+
   const handleRefresh = async () => {
     await initData();
     showToast('Directory refreshed');
@@ -220,9 +400,20 @@ export const UsersRoles = () => {
     }
   };
 
-  const openCreate = () => { setEditingUser(null); setFormOpen(true); };
-  const openEdit = (u) => { setEditingUser(u); setFormOpen(true); };
-  const closeForm = () => { setFormOpen(false); setEditingUser(null); };
+  const handleSaveRole = async (roleData) => {
+    try {
+      await addRole(roleData);
+      showToast(`Dynamic role "${roleData.name}" created successfully`);
+      setRoleFormOpen(false);
+    } catch (err) {
+      showToast(err.message || 'Failed to create role');
+    }
+  };
+
+  const openCreateUser = () => { setEditingUser(null); setRoleFormOpen(false); setFormOpen(true); };
+  const openEditUser = (u) => { setEditingUser(u); setRoleFormOpen(false); setFormOpen(true); };
+  const openCreateRole = () => { setFormOpen(false); setEditingUser(null); setRoleFormOpen(true); };
+  const closeForm = () => { setFormOpen(false); setRoleFormOpen(false); setEditingUser(null); };
 
   const togglePerm = async (roleId, key) => {
     const role = roles.find((r) => r.id === roleId);
@@ -248,7 +439,7 @@ export const UsersRoles = () => {
   };
 
   const roleNames = useMemo(() => roles.map((r) => r.name), [roles]);
-  const permKeys = ['coa', 'journals', 'reports', 'users', 'settings'];
+  const permKeys = ['coa', 'journals', 'reports', 'income', 'expense', 'invoices', 'users', 'settings'];
 
   if (loading) {
     return (
@@ -266,22 +457,29 @@ export const UsersRoles = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">Access Management</h2>
-          <p className="text-xs text-slate-500">Provision user profiles, assign corporate roles, and audit access trials.</p>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">Access & Role Management</h2>
+          <p className="text-xs text-slate-500">Provision user profiles, define dynamic roles, and configure granular permissions.</p>
         </div>
         <div className={pageActionsClass}>
           <button
             onClick={handleRefresh}
             className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white transition-all text-xs font-semibold w-full sm:w-auto"
           >
-            <RefreshCw className="h-3.5 w-3.5" /> Reload Directory
+            <RefreshCw className="h-3.5 w-3.5" /> Reload
           </button>
-          {activeTab === 'users' && (
+          {activeTab === 'users' ? (
             <button
-              onClick={openCreate}
+              onClick={openCreateUser}
               className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-all w-full sm:w-auto shadow-lg shadow-amber-900/30"
             >
               <Plus className="h-4 w-4" /> Add User
+            </button>
+          ) : (
+            <button
+              onClick={openCreateRole}
+              className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-all w-full sm:w-auto shadow-lg shadow-amber-900/30"
+            >
+              <Plus className="h-4 w-4" /> Create Custom Role
             </button>
           )}
         </div>
@@ -307,7 +505,7 @@ export const UsersRoles = () => {
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
-          Roles & Permissions Matrix
+          Dynamic Roles & Permissions ({roles.length})
         </button>
       </div>
 
@@ -340,7 +538,7 @@ export const UsersRoles = () => {
                         <div className="flex items-center justify-between pt-2 border-t border-slate-800/60">
                           <span className="text-[10px] font-bold text-amber-400 uppercase">{u.role}</span>
                           <div className="flex items-center gap-2">
-                            <button onClick={() => openEdit(u)} className="flex items-center gap-1 text-[11px] text-slate-300 hover:text-white">
+                            <button onClick={() => openEditUser(u)} className="flex items-center gap-1 text-[11px] text-slate-300 hover:text-white">
                               <Edit2 className="h-3 w-3" /> Edit
                             </button>
                             <button onClick={() => setConfirmDeleteId(u.id)} className="flex items-center gap-1 text-[11px] text-red-400 hover:text-red-300">
@@ -406,7 +604,7 @@ export const UsersRoles = () => {
                               ) : (
                                 <div className="flex items-center justify-end gap-1">
                                   <button
-                                    onClick={() => openEdit(u)}
+                                    onClick={() => openEditUser(u)}
                                     className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
                                     title="Edit user"
                                   >
@@ -433,28 +631,45 @@ export const UsersRoles = () => {
           ) : (
             <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-2 sm:p-4 min-w-0">
               <MobileOnly className="space-y-3 p-1">
-                {roles.map((r) => (
-                  <div key={r.id} className="rounded-xl border border-slate-800/60 bg-slate-950/40 p-3">
-                    <div className="flex items-center justify-between gap-2 mb-3">
-                      <div className="font-semibold text-slate-200 flex items-center gap-2 min-w-0">
-                        <Users className="h-4 w-4 text-slate-300 shrink-0" />
-                        <span className="truncate">{r.name}</span>
+                {roles.map((r) => {
+                  const isCore = r.name === 'Super Admin' || r.name === 'Admin';
+                  return (
+                    <div key={r.id} className="rounded-xl border border-slate-800/60 bg-slate-950/40 p-3">
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <div className="font-semibold text-slate-200 flex items-center gap-2 min-w-0">
+                          <Users className="h-4 w-4 text-slate-300 shrink-0" />
+                          <span className="truncate">{r.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button onClick={() => toggleLock(r.id)} disabled={r.name === 'Super Admin'} className={`px-2 py-1 rounded text-xs shrink-0 flex items-center gap-1 ${r.locked ? 'bg-red-950/50 border border-red-900/50 text-red-400' : 'bg-slate-800 border border-slate-700 text-slate-200'} disabled:opacity-40`}>
+                            {r.locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                            {r.locked ? 'Locked' : 'Editable'}
+                          </button>
+                          {!isCore && (
+                            confirmDeleteRoleId === r.id ? (
+                              <div className="flex items-center gap-1">
+                                <button onClick={() => handleDeleteRole(r.id)} className="px-2 py-1 rounded bg-red-600 text-white text-[10px] font-bold">Delete</button>
+                                <button onClick={() => setConfirmDeleteRoleId(null)} className="px-2 py-1 rounded bg-slate-700 text-slate-300 text-[10px]">X</button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setConfirmDeleteRoleId(r.id)} className="p-1 rounded bg-red-950/40 text-red-400 hover:bg-red-900/40" title="Delete custom role">
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )
+                          )}
+                        </div>
                       </div>
-                      <button onClick={() => toggleLock(r.id)} disabled={r.name === 'Super Admin'} className={`px-2 py-1 rounded text-xs shrink-0 flex items-center gap-1 ${r.locked ? 'bg-red-950/50 border border-red-900/50 text-red-400' : 'bg-slate-800 border border-slate-700 text-slate-200'} disabled:opacity-40`}>
-                        {r.locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
-                        {r.locked ? 'Locked' : 'Editable'}
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        {permKeys.map((k) => (
+                          <label key={k} className={`px-2 py-1.5 rounded text-[11px] font-semibold flex items-center gap-1.5 ${r.permissions[k] ? 'bg-emerald-950/60 border border-emerald-900/50 text-emerald-400' : 'bg-slate-850 border border-slate-800 text-slate-500'}`}>
+                            <input type="checkbox" disabled={r.locked || r.name === 'Super Admin'} checked={!!r.permissions[k]} onChange={() => togglePerm(r.id, k)} className="accent-emerald-500 cursor-pointer disabled:cursor-not-allowed" />
+                            {k}
+                          </label>
+                        ))}
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {permKeys.map((k) => (
-                        <label key={k} className={`px-2 py-1.5 rounded text-[11px] font-semibold flex items-center gap-1.5 ${r.permissions[k] ? 'bg-emerald-950/60 border border-emerald-900/50 text-emerald-400' : 'bg-slate-850 border border-slate-800 text-slate-500'}`}>
-                          <input type="checkbox" disabled={r.locked || r.name === 'Super Admin'} checked={!!r.permissions[k]} onChange={() => togglePerm(r.id, k)} className="accent-emerald-500 cursor-pointer disabled:cursor-not-allowed" />
-                          {k}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </MobileOnly>
               <DesktopOnly>
                 <div className="overflow-x-auto">
@@ -462,37 +677,54 @@ export const UsersRoles = () => {
                     <thead>
                       <tr className="text-[10px] font-bold text-slate-500 uppercase bg-slate-900/60 border-b border-slate-800">
                         <th className="py-3 px-4">Role</th>
-                        <th className="py-3 px-4">Permissions Matrix</th>
-                        <th className="py-3 px-4 w-32">Lock Status</th>
+                        <th className="py-3 px-4">Granular Permissions Matrix</th>
+                        <th className="py-3 px-4 w-44 text-right">Actions & Security</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {roles.map((r) => (
-                        <tr key={r.id} className="border-b border-slate-800/40 hover:bg-slate-800/10">
-                          <td className="py-3 px-4">
-                            <div className="font-semibold text-slate-200 flex items-center gap-2">
-                              <Users className="h-4 w-4 text-slate-400" /> {r.name}
-                            </div>
-                            {r.description && <span className="text-[10px] text-slate-500 block mt-0.5">{r.description}</span>}
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex flex-wrap gap-1.5">
-                              {permKeys.map((k) => (
-                                <label key={k} className={`px-2 py-1 rounded text-[11px] font-semibold flex items-center gap-1.5 border transition-all ${r.permissions[k] ? 'bg-emerald-950/60 border border-emerald-900/50 text-emerald-400' : 'bg-slate-850 border border-slate-800 text-slate-500'}`}>
-                                  <input type="checkbox" disabled={r.locked || r.name === 'Super Admin'} checked={!!r.permissions[k]} onChange={() => togglePerm(r.id, k)} className="accent-emerald-500 cursor-pointer disabled:cursor-not-allowed" />
-                                  {k}
-                                </label>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <button onClick={() => toggleLock(r.id)} disabled={r.name === 'Super Admin'} className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border transition-all ${r.locked ? 'bg-red-950/50 border border-red-900/50 text-red-400 hover:bg-red-950' : 'bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-755'} disabled:opacity-40 disabled:cursor-not-allowed`}>
-                              {r.locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
-                              {r.locked ? 'Locked' : 'Editable'}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {roles.map((r) => {
+                        const isCore = r.name === 'Super Admin' || r.name === 'Admin';
+                        return (
+                          <tr key={r.id} className="border-b border-slate-800/40 hover:bg-slate-800/10">
+                            <td className="py-3 px-4">
+                              <div className="font-semibold text-slate-200 flex items-center gap-2">
+                                <Users className="h-4 w-4 text-slate-400" /> {r.name}
+                              </div>
+                              {r.description && <span className="text-[10px] text-slate-500 block mt-0.5">{r.description}</span>}
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex flex-wrap gap-1.5">
+                                {permKeys.map((k) => (
+                                  <label key={k} className={`px-2 py-1 rounded text-[11px] font-semibold flex items-center gap-1.5 border transition-all ${r.permissions[k] ? 'bg-emerald-950/60 border border-emerald-900/50 text-emerald-400' : 'bg-slate-850 border border-slate-800 text-slate-500'}`}>
+                                    <input type="checkbox" disabled={r.locked || r.name === 'Super Admin'} checked={!!r.permissions[k]} onChange={() => togglePerm(r.id, k)} className="accent-emerald-500 cursor-pointer disabled:cursor-not-allowed" />
+                                    {k}
+                                  </label>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button onClick={() => toggleLock(r.id)} disabled={r.name === 'Super Admin'} className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border transition-all ${r.locked ? 'bg-red-950/50 border border-red-900/50 text-red-400 hover:bg-red-950' : 'bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-755'} disabled:opacity-40 disabled:cursor-not-allowed`}>
+                                  {r.locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
+                                  {r.locked ? 'Locked' : 'Editable'}
+                                </button>
+                                {!isCore && (
+                                  confirmDeleteRoleId === r.id ? (
+                                    <div className="flex items-center gap-1">
+                                      <button onClick={() => handleDeleteRole(r.id)} className="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold">Confirm</button>
+                                      <button onClick={() => setConfirmDeleteRoleId(null)} className="px-2.5 py-1.5 rounded-lg bg-slate-700 text-slate-300 text-xs">Cancel</button>
+                                    </div>
+                                  ) : (
+                                    <button onClick={() => setConfirmDeleteRoleId(r.id)} className="p-1.5 rounded-lg border border-red-900/40 bg-red-950/30 text-red-400 hover:bg-red-900/50 hover:text-red-300 transition-colors" title="Delete custom role">
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  )
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -509,6 +741,11 @@ export const UsersRoles = () => {
               onSave={handleSaveUser}
               initial={editingUser}
               availableRoles={roleNames}
+            />
+          ) : roleFormOpen ? (
+            <RoleFormPanel
+              onClose={closeForm}
+              onSave={handleSaveRole}
             />
           ) : (
             <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-4 h-full">
