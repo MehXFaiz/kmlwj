@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { useMemberStore } from '../store/memberStore';
+import { PhoneInput, validatePhoneNumber } from '../components/ui/PhoneInput';
+import { CNICInput, validateCNIC } from '../components/ui/CNICInput';
 import {
   Camera, Image as ImageIcon, ShieldCheck, QrCode, ArrowRight,
   ChevronLeft, CheckCircle, AlertCircle, Save
@@ -16,7 +18,7 @@ export const MemberForm = () => {
   const [toast, setToast] = useState(null);
   const fileInputRef = useRef(null);
 
-  const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting }, reset } = useForm({
+  const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting }, reset, control } = useForm({
     defaultValues: {
       fullName: '',
       fatherName: '',
@@ -240,10 +242,19 @@ export const MemberForm = () => {
 
                 <div>
                   <label className={labelClass}>National ID (CNIC) *</label>
-                  <input
-                    {...register('cnic', { required: 'CNIC is required' })}
-                    placeholder="00000-0000000-0"
-                    className={inputClass(errors.cnic) + ' font-mono'}
+                  <Controller
+                    name="cnic"
+                    control={control}
+                    rules={{ 
+                      required: 'CNIC is required',
+                      validate: (value) => validateCNIC(value) || 'CNIC must contain exactly 13 digits'
+                    }}
+                    render={({ field }) => (
+                      <CNICInput
+                        {...field}
+                        className={inputClass(errors.cnic)}
+                      />
+                    )}
                   />
                   {errors.cnic && <span className="text-xs text-red-400 mt-1 block">{errors.cnic.message}</span>}
                 </div>
@@ -282,10 +293,19 @@ export const MemberForm = () => {
 
                 <div>
                   <label className={labelClass}>Primary Contact *</label>
-                  <input
-                    {...register('mobile', { required: 'Contact number is required' })}
-                    placeholder="03XXXXXXXXX"
-                    className={inputClass(errors.mobile) + ' font-mono'}
+                  <Controller
+                    name="mobile"
+                    control={control}
+                    rules={{ 
+                      required: 'Contact number is required',
+                      validate: (value) => validatePhoneNumber(value) || 'Phone number must contain exactly 11 digits'
+                    }}
+                    render={({ field }) => (
+                      <PhoneInput
+                        {...field}
+                        className={inputClass(errors.mobile)}
+                      />
+                    )}
                   />
                   {errors.mobile && <span className="text-xs text-red-400 mt-1 block">{errors.mobile.message}</span>}
                 </div>

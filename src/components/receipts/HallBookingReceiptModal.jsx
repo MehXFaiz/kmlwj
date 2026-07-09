@@ -45,10 +45,10 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
   
   // Identify hall
   const hallName = (booking.hallName || booking.hallAccount?.accountName || '').toLowerCase();
-  const isBagh = hallName.includes('bagh') || hallName.includes('hajiani') || hallName.includes('hajiyani') || hallName.includes('باغ');
+  const isBagh = hallName.includes('bagh') || hallName.includes('hajiani') || hallName.includes('hajiyani') || hallName.includes('باغ') || hallName.includes('گارڈن');
   const isSadaBahar = hallName.includes('sada') || hallName.includes('sadaya') || hallName.includes('سدا');
   const isZakaria = hallName.includes('zakaria') || hallName.includes('zikarya') || hallName.includes('zikriya') || hallName.includes('zakriya') || hallName.includes('zakariya') || hallName.includes('زکریا');
-  const isGosha = hallName.includes('gosha') || hallName.includes('annexy') || hallName.includes('anexy') || hallName.includes('anxy') || hallName.includes('گوشہ');
+  const isGosha = hallName.includes('gosha') || hallName.includes('annexy') || hallName.includes('anexy') || hallName.includes('anxy') || hallName.includes('گوشہ') || hallName.includes('اینیکسی');
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm print:p-0 print:bg-white print:backdrop-blur-none">
@@ -181,11 +181,11 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
               {/* Row 5: Halls 1 */}
               <div className="flex gap-12 items-center mt-2 pl-8">
                 <div className="flex items-center gap-4 flex-1">
-                  <span className="font-bold">باغ حاجیانی کریمہ</span>
+                  <span className="font-bold">باغ حاجیانی گارڈن</span>
                   <div className="w-16 border-b border-black text-center text-xl font-bold">{isBagh ? '✓' : ''}</div>
                 </div>
                 <div className="flex items-center gap-4 flex-1">
-                  <span className="font-bold">سدا بہار ہال</span>
+                  <span className="font-bold">سدایا ہال</span>
                   <div className="w-16 border-b border-black text-center text-xl font-bold">{isSadaBahar ? '✓' : ''}</div>
                 </div>
               </div>
@@ -197,7 +197,7 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
                   <div className="w-16 border-b border-black text-center text-xl font-bold">{isZakaria ? '✓' : ''}</div>
                 </div>
                 <div className="flex items-center gap-4 flex-1">
-                  <span className="font-bold">گوشہ تقاریب حاجی علی محمد</span>
+                  <span className="font-bold">اینیکسی ہال</span>
                   <div className="w-16 border-b border-black text-center text-xl font-bold">{isGosha ? '✓' : ''}</div>
                 </div>
               </div>

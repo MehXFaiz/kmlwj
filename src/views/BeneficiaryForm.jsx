@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useBeneficiaryStore } from '../store/beneficiaryStore';
+import { PhoneInput, validatePhoneNumber } from '../components/ui/PhoneInput';
+import { CNICInput, validateCNIC } from '../components/ui/CNICInput';
 import { Users, Search, ChevronLeft, Save, ShieldCheck } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
 
@@ -35,12 +37,12 @@ export const BeneficiaryForm = () => {
       showToast('Name should only contain letters, spaces, hyphens, and dots (3-50 chars)', 'warning');
       return;
     }
-    if (form.cnic && !/^\d{5}-\d{7}-\d{1}$/.test(form.cnic)) {
-      showToast('CNIC must be in format: 00000-0000000-0', 'warning');
+    if (form.cnic && !validateCNIC(form.cnic)) {
+      showToast('CNIC must contain exactly 13 digits', 'warning');
       return;
     }
-    if (form.mobile && !/^((\+92|92|0)?3[0-9]{2}-?[0-9]{7})$/.test(form.mobile)) {
-      showToast('Invalid mobile number. E.g. 0300-1234567', 'warning');
+    if (form.mobile && !validatePhoneNumber(form.mobile)) {
+      showToast('Phone number must contain exactly 11 digits', 'warning');
       return;
     }
     setLoading(true);
@@ -134,14 +136,19 @@ export const BeneficiaryForm = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className={labelClass}>ID Card Number (CNIC)</label>
-                    <input value={form.cnic} onChange={e => setForm(f => ({ ...f, cnic: e.target.value }))}
-                      placeholder="42101-1234567-8" className={inputClass} />
-                    <p className="text-[10px] text-slate-600 mt-1">Format: 00000-0000000-0</p>
+                    <CNICInput 
+                      value={form.cnic} 
+                      onChange={e => setForm(f => ({ ...f, cnic: e.target.value }))}
+                      className={inputClass}
+                    />
                   </div>
                   <div>
                     <label className={labelClass}>Mobile Number</label>
-                    <input value={form.mobile} onChange={e => setForm(f => ({ ...f, mobile: e.target.value }))}
-                      placeholder="0300-0000000" className={inputClass} />
+                    <PhoneInput 
+                      value={form.mobile} 
+                      onChange={e => setForm(f => ({ ...f, mobile: e.target.value }))}
+                      className={inputClass}
+                    />
                   </div>
                 </div>
               </div>

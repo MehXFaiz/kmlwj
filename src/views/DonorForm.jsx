@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { useDonorStore } from '../store/donorStore';
+import { PhoneInput, validatePhoneNumber } from '../components/ui/PhoneInput';
+import { CNICInput, validateCNIC } from '../components/ui/CNICInput';
 import {
   Users, ShieldCheck, QrCode, ChevronLeft, CheckCircle, AlertCircle, Save
 } from 'lucide-react';
@@ -14,7 +16,7 @@ export const DonorForm = () => {
 
   const [toast, setToast] = useState(null);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm({
+  const { register, handleSubmit, formState: { errors, isSubmitting }, reset, control } = useForm({
     defaultValues: {
       fullName: '',
       fatherName: '',
@@ -163,15 +165,18 @@ export const DonorForm = () => {
 
                 <div>
                   <label className={labelClass}>CNIC / ID No</label>
-                  <input
-                    {...register('cnic', { 
-                      pattern: {
-                        value: /^[0-9+-\s]{5,20}$/,
-                        message: 'Please enter a valid CNIC / Identity Number'
-                      }
-                    })}
-                    placeholder="e.g. 42101-1234567-1"
-                    className={inputClass(errors.cnic)}
+                  <Controller
+                    name="cnic"
+                    control={control}
+                    rules={{ 
+                      validate: (value) => !value || validateCNIC(value) || 'CNIC must contain exactly 13 digits'
+                    }}
+                    render={({ field }) => (
+                      <CNICInput
+                        {...field}
+                        className={inputClass(errors.cnic)}
+                      />
+                    )}
                   />
                   {errors.cnic && <span className="text-xs text-red-400 mt-1 block">{errors.cnic.message}</span>}
                 </div>
@@ -189,11 +194,20 @@ export const DonorForm = () => {
               <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass}>Mobile Phone</label>
-                  <input
-                    {...register('mobile')}
-                    placeholder="e.g. 0300-1234567"
-                    className={inputClass(false)}
+                  <Controller
+                    name="mobile"
+                    control={control}
+                    rules={{ 
+                      validate: (value) => !value || validatePhoneNumber(value) || 'Phone number must contain exactly 11 digits'
+                    }}
+                    render={({ field }) => (
+                      <PhoneInput
+                        {...field}
+                        className={inputClass(errors.mobile)}
+                      />
+                    )}
                   />
+                  {errors.mobile && <span className="text-xs text-red-400 mt-1 block">{errors.mobile.message}</span>}
                 </div>
 
                 <div>

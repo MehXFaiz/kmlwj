@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
+import { PhoneInput, validatePhoneNumber } from '../components/ui/PhoneInput';
 import { Save, ChevronLeft, Calendar, User, Phone, MapPin, Clock, CreditCard, Landmark, Info } from 'lucide-react';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { useHallBookingStore } from '../store/hallBookingStore';
@@ -35,7 +36,7 @@ export const HallBookingForm = () => {
   const [availability, setAvailability] = useState({ checking: false, available: true, conflict: null });
   const [showConflictModal, setShowConflictModal] = useState(false);
 
-  const { register, handleSubmit, watch, setValue, reset, formState: { isSubmitting, dirtyFields, errors } } = useForm({
+  const { register, handleSubmit, watch, setValue, reset, formState: { isSubmitting, dirtyFields, errors }, control } = useForm({
     defaultValues: {
       bookerName: '',
       mobile: '',
@@ -451,13 +452,19 @@ export const HallBookingForm = () => {
                     <label className={labelClass}>{t('receipt.mobile')}</label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                      <input {...register('mobile', {
-                        pattern: {
-                          value: /^$|^((\+92|92|0)?3[0-9]{2}-?[0-9]{7})$/,
-                          message: 'Invalid mobile number. E.g. 0300-1234567'
-                        }
-                      })}
-                        className={inputWithIconClass(errors.mobile)} />
+                      <Controller
+                        name="mobile"
+                        control={control}
+                        rules={{
+                          validate: (value) => !value || validatePhoneNumber(value) || 'Phone number must contain exactly 11 digits'
+                        }}
+                        render={({ field }) => (
+                          <PhoneInput
+                            {...field}
+                            className={`${inputWithIconClass(errors.mobile)}`}
+                          />
+                        )}
+                      />
                     </div>
                     {errors.mobile && (
                       <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.mobile.message}</span>

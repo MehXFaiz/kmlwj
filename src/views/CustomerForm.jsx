@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useCustomerStore } from '../store/customerStore';
+import { PhoneInput, getRawPhoneNumber, validatePhoneNumber } from '../components/ui/PhoneInput';
 import { Users, Building2, Mail, ChevronLeft, Save, ShieldCheck } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
 
@@ -37,8 +38,8 @@ export const CustomerForm = () => {
     if (form.email && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(form.email)) {
       showToast('Please enter a valid email address', 'warning'); return;
     }
-    if (form.phone && !/^[0-9+\s-]{10,15}$/.test(form.phone)) {
-      showToast('Phone must contain only numbers, spaces, plus signs, or hyphens (10-15 chars)', 'warning'); return;
+    if (form.phone && !validatePhoneNumber(form.phone)) {
+      showToast('Phone number must contain exactly 11 digits', 'warning'); return;
     }
     if (form.company && !/^[a-zA-Z0-9\s.-]{3,50}$/.test(form.company)) {
       showToast('Company name should contain only letters, numbers, spaces, hyphens, and dots (3-50 chars)', 'warning'); return;
@@ -137,8 +138,11 @@ export const CustomerForm = () => {
                   </div>
                   <div>
                     <label className={labelClass}>Phone Number</label>
-                    <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-                      placeholder="+92 300 1234567" className={inputClass} />
+                    <PhoneInput 
+                      value={form.phone} 
+                      onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                      className={inputClass}
+                    />
                   </div>
                 </div>
                 <div>

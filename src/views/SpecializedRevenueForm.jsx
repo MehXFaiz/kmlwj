@@ -3,6 +3,7 @@ import { useNavigate, useParams, Link, useLocation } from 'react-router-dom';
 import { useRevenueCollectionStore } from '../store/revenueCollectionStore';
 import { useCoaStore } from '../store/coaStore';
 import { useMemberStore } from '../store/memberStore';
+import { PhoneInput } from '../components/ui/PhoneInput';
 import {
   DollarSign, Building, Bus, Users, ChevronLeft, CheckCircle, AlertCircle, Save, Search, ChevronDown
 } from 'lucide-react';
@@ -351,11 +352,9 @@ export const SpecializedRevenueForm = ({
 
                 <div>
                   <label className={labelClass}>Mobile Phone</label>
-                  <input
-                    type="text"
+                  <PhoneInput
                     value={form.mobile}
                     onChange={e => setForm({ ...form, mobile: e.target.value })}
-                    placeholder="0300-1234567"
                     className={inputClass}
                   />
                 </div>

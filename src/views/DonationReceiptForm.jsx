@@ -3,6 +3,8 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useDonationReceivedStore } from '../store/donationReceivedStore';
 import { useDonorStore } from '../store/donorStore';
 import { useCoaStore } from '../store/coaStore';
+import { PhoneInput } from '../components/ui/PhoneInput';
+import { CNICInput } from '../components/ui/CNICInput';
 import {
   ArrowDownLeft, Receipt, CreditCard, ChevronLeft, CheckCircle, AlertCircle, Save, UserPlus
 } from 'lucide-react';
@@ -66,21 +68,17 @@ function QuickDonorModal({ isOpen, onClose, onCreated }) {
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-400 mb-1.5">Mobile Phone</label>
-            <input
-              type="text"
+            <PhoneInput
               value={phone}
               onChange={e => setPhone(e.target.value)}
-              placeholder="0300-1234567"
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500/60 transition-all font-medium"
             />
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-400 mb-1.5">CNIC / ID No</label>
-            <input
-              type="text"
+            <CNICInput
               value={cnic}
               onChange={e => setCnic(e.target.value)}
-              placeholder="42101-1234567-1"
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500/60 transition-all font-medium"
             />
           </div>
