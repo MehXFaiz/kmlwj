@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useBeneficiaryStore } from '../store/beneficiaryStore';
+import { useAuthStore } from '../store/authStore';
 import { Users, Search, Plus, Edit2, Trash2, X, AlertTriangle, CheckCircle, Phone, MapPin, Briefcase } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
@@ -177,6 +178,7 @@ function BeneficiaryModal({ isOpen, onClose, onSave, initial }) {
 
 export const Beneficiaries = () => {
   const { beneficiaries, fetchBeneficiaries, deleteBeneficiary } = useBeneficiaryStore();
+  const { canEditOrDelete } = useAuthStore();
   const navigate = useNavigate();
   
   const [searchParams] = useSearchParams();

@@ -169,7 +169,6 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
       title: t('sidebar.home', 'Home'),
       items: [
         { name: t('sidebar.dashboard', 'Dashboard'), hint: t('sidebar.dashboardHint', 'At a glance overview'), icon: LayoutDashboard, path: '/' },
-        { name: t('sidebar.generalLedger', 'General Ledger'), hint: t('sidebar.generalLedgerHint', 'All account entries'), icon: BookOpen, path: '/ledger' },
       ],
     },
     {
