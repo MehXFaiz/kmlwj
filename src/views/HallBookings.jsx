@@ -9,6 +9,17 @@ import { showToast } from '../components/ui/Toast';
 import { HallBookingReceiptModal } from '../components/receipts/HallBookingReceiptModal';
 import HallBookingCalendar from '../components/common/HallBookingCalendar';
 
+const formatHallName = (booking) => {
+  if (!booking) return 'N/A';
+  const raw = typeof booking === 'string' ? booking : (booking.hallName || booking.hallAccount?.accountName || booking.hallAccount?.name || '');
+  if (!raw) return 'N/A';
+  const parenMatch = raw.match(/(?:Hall Booking Revenue|Hall Booking)\s*\((.+?)\)/i);
+  if (parenMatch && parenMatch[1]) return parenMatch[1].trim();
+  const dashMatch = raw.match(/(?:Hall Booking Revenue|Hall Booking)\s*[-:]\s*(.+)/i);
+  if (dashMatch && dashMatch[1]) return dashMatch[1].trim();
+  return raw;
+};
+
 export const HallBookings = () => {
   const { t, i18n } = useTranslation();
   const { bookings, loading, fetchBookings, postBooking, deleteBooking, bulkDeleteBookings } = useHallBookingStore();
@@ -79,11 +90,17 @@ export const HallBookings = () => {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return bookings.filter(b => 
-      b.bookerName?.toLowerCase().includes(q) ||
-      b.mobile?.includes(search) ||
-      b.receiptNo?.toString().includes(search)
-    );
+    return bookings.filter(b => {
+      const cleanHall = formatHallName(b).toLowerCase();
+      const rawHall = (b.hallAccount?.accountName || b.hallName || '').toLowerCase();
+      return (
+        b.bookerName?.toLowerCase().includes(q) ||
+        b.mobile?.includes(search) ||
+        b.receiptNo?.toString().includes(search) ||
+        cleanHall.includes(q) ||
+        rawHall.includes(q)
+      );
+    });
   }, [bookings, search]);
 
   return (
@@ -239,7 +256,7 @@ export const HallBookings = () => {
                               <Building2 className="w-3.5 h-3.5 text-amber-400" /> HALL
                             </span>
                             <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded bg-slate-800/90 text-slate-200 border border-slate-700/60">
-                              {booking.hallAccount?.accountName || 'N/A'}
+                              {formatHallName(booking)}
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
@@ -358,7 +375,7 @@ export const HallBookings = () => {
                       </td>
                       <td className="px-6 py-4">
                         <span className="inline-flex items-center px-2 py-1 rounded bg-slate-800/50 border border-slate-700/50 text-xs font-medium text-slate-300">
-                          {booking.hallAccount?.accountName}
+                          {formatHallName(booking)}
                         </span>
                       </td>
                       <td className="px-6 py-4 font-bold text-emerald-400">Rs. {booking.amount.toLocaleString()}</td>

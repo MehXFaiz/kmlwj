@@ -1,6 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, User, Building, Hash, AlertCircle, CheckCircle } from 'lucide-react';
 
+const formatHallName = (booking) => {
+  if (!booking) return 'N/A';
+  const raw = typeof booking === 'string' ? booking : (booking.hallName || booking.hallAccount?.accountName || booking.hallAccount?.name || '');
+  if (!raw) return 'N/A';
+  const parenMatch = raw.match(/(?:Hall Booking Revenue|Hall Booking)\s*\((.+?)\)/i);
+  if (parenMatch && parenMatch[1]) return parenMatch[1].trim();
+  const dashMatch = raw.match(/(?:Hall Booking Revenue|Hall Booking)\s*[-:]\s*(.+)/i);
+  if (dashMatch && dashMatch[1]) return dashMatch[1].trim();
+  return raw;
+};
+
 export default function HallBookingCalendar({ bookings = [], selectedHallId, onSelectDate, selectedDate }) {
   const [currentDate, setCurrentDate] = useState(() => {
     return selectedDate ? new Date(selectedDate) : new Date();
@@ -123,7 +134,7 @@ export default function HallBookingCalendar({ bookings = [], selectedHallId, onS
               <div key={b.id || idx} className="space-y-1.5 text-xs text-slate-300 mb-2 last:mb-0">
                 <div className="flex items-center gap-1.5 font-bold text-white truncate">
                   <Building className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-                  <span className="truncate">{b.hallAccount?.accountName || b.hallAccount?.name || 'Selected Hall'}</span>
+                  <span className="truncate">{formatHallName(b)}</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-slate-300 truncate">
                   <User className="h-3.5 w-3.5 text-slate-400 shrink-0" />

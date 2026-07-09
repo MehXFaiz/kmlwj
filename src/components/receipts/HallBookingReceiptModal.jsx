@@ -44,7 +44,7 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
   const amountWords = numberToWords(booking.amount);
   
   // Identify hall
-  const hallName = booking.hallAccount?.accountName?.toLowerCase() || '';
+  const hallName = (booking.hallName || booking.hallAccount?.accountName || '').toLowerCase();
   const isBagh = hallName.includes('bagh') || hallName.includes('hajiani') || hallName.includes('hajiyani') || hallName.includes('باغ');
   const isSadaBahar = hallName.includes('sada') || hallName.includes('sadaya') || hallName.includes('سدا');
   const isZakaria = hallName.includes('zakaria') || hallName.includes('zikarya') || hallName.includes('zikriya') || hallName.includes('zakriya') || hallName.includes('zakariya') || hallName.includes('زکریا');
