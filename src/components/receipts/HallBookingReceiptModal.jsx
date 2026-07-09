@@ -185,7 +185,7 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
                   <div className="w-16 border-b border-black text-center text-xl font-bold">{isBagh ? '✓' : ''}</div>
                 </div>
                 <div className="flex items-center gap-4 flex-1">
-                  <span className="font-bold">سدایا ہال</span>
+                  <span className="font-bold">صدایا ہال</span>
                   <div className="w-16 border-b border-black text-center text-xl font-bold">{isSadaBahar ? '✓' : ''}</div>
                 </div>
               </div>

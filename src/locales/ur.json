@@ -233,6 +233,12 @@
       "noBookingsFound": "آپ کی تلاش کے مطابق کوئی بکنگ نہیں ملی۔"
     }
   },
+  "halls": {
+    "Bagh-e-Hajiani Garden": "باغ حجانی گارڈن",
+    "Sadaya Hall": "صدایا ہال",
+    "Zikarya Hall": "زکریا ہال",
+    "Annexy Hall": "اینکسی ہال"
+  },
   "receipt": {
     "bookingReceipt": "بکنگ رسید",
     "bookingDate": "بکنگ تاریخ",
