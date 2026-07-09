@@ -3,9 +3,12 @@ import { useSimpleExpenseStore } from '../store/simpleExpenseStore';
 import { useExpenseStore } from '../store/expenseStore';
 import { useCoaStore } from '../store/coaStore';
 import { useAuthStore } from '../store/authStore';
+import { useJournalStore, calculateAccountBalances } from '../store/journalStore';
+import { showToast } from '../components/ui/Toast';
 import { MinusCircle, Search, X, CheckCircle2, TrendingDown, Building2, Banknote, Edit, Trash2 } from 'lucide-react';
 
 function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editingExpense }) {
+  const { journals } = useJournalStore();
   const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], expenseHeadId: '', paidTo: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
 
   useEffect(() => {
@@ -31,7 +34,35 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
 
   const handleSave = () => {
     if (!form.expenseHeadId || !form.amount || !form.date) return;
-    onSave({ ...form, amount: Number(form.amount) });
+    const val = Number(form.amount);
+    if (val <= 0) {
+      showToast('Amount must be a positive number.', 'warning');
+      return;
+    }
+
+    const { localBalances } = calculateAccountBalances(accounts, journals, 'Global');
+    let avail = 0;
+    let accName = 'selected account';
+    if (form.paymentMethod === 'BANK' && form.bankAccountId) {
+      const bankAcc = accounts.find(a => a.id === form.bankAccountId);
+      if (bankAcc) {
+        avail = localBalances[bankAcc.code] !== undefined ? localBalances[bankAcc.code] : (bankAcc.initialBalance || 0);
+        accName = bankAcc.name;
+      }
+    } else {
+      const cashAcc = accounts.find(a => a.type === 'Asset' && (a.detailType === 'Cash' || a.name.toLowerCase().includes('cash')));
+      if (cashAcc) {
+        avail = localBalances[cashAcc.code] !== undefined ? localBalances[cashAcc.code] : (cashAcc.initialBalance || 0);
+        accName = cashAcc.name;
+      }
+    }
+
+    if (val > avail) {
+      showToast(`Cannot record expense: Amount (Rs. ${val.toLocaleString()}) exceeds available balance (Rs. ${Math.max(0, avail).toLocaleString()}) in ${accName}.`, 'error');
+      return;
+    }
+
+    onSave({ ...form, amount: val });
     onClose();
   };
 

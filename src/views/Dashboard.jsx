@@ -386,9 +386,9 @@ export const Dashboard = () => {
         equity: dbStats.summary.totalEquity || 0,
         revenue: dbStats.summary.totalRevenue || 0,
         expenses: dbStats.summary.totalExpense || 0,
-        cashBalance: dbStats.summary.cashBalance || 0,
-        bankBalance: dbStats.summary.bankBalance || 0,
-        netIncome: dbStats.summary.netIncome || 0,
+        cashBalance: Math.max(0, dbStats.summary.cashBalance || 0),
+        bankBalance: Math.max(0, dbStats.summary.bankBalance || 0),
+        netIncome: Math.max(0, dbStats.summary.netIncome || 0),
         grossMargin: dbStats.summary.totalRevenue > 0 ? ((dbStats.summary.totalRevenue - dbStats.summary.totalExpense) / dbStats.summary.totalRevenue * 100) : 0,
         isEquationBalanced: dbStats.summary.isEquationBalanced ?? true,
       };
@@ -428,8 +428,8 @@ export const Dashboard = () => {
     const totalEquityWithNetIncome = equity + netIncome;
     return {
       assets, liabilities, equity, revenue, expenses,
-      cashBalance, bankBalance,
-      netIncome,
+      cashBalance: Math.max(0, cashBalance), bankBalance: Math.max(0, bankBalance),
+      netIncome: Math.max(0, netIncome),
       grossMargin: revenue > 0 ? ((revenue - expenses) / revenue * 100) : 0,
       isEquationBalanced: Math.abs(assets - (liabilities + totalEquityWithNetIncome)) < 0.01,
     };
@@ -560,7 +560,7 @@ export const Dashboard = () => {
         {[
           {
             title: t('dashboard.totalIncome'),
-            value: (stats.revenue || 0) - (stats.expenses || 0),
+            value: Math.max(0, (stats.revenue || 0) - (stats.expenses || 0)),
             icon: TrendingUp,
             iconColor: 'text-emerald-400',
             iconBg: 'bg-emerald-500/10 border-emerald-500/20',
@@ -572,7 +572,7 @@ export const Dashboard = () => {
           },
           {
             title: t('dashboard.totalSpent'),
-            value: stats.expenses,
+            value: Math.max(0, stats.expenses || 0),
             icon: TrendingDown,
             iconColor: 'text-red-400',
             iconBg: 'bg-red-500/10 border-red-500/20',
@@ -584,7 +584,7 @@ export const Dashboard = () => {
           },
           {
             title: t('dashboard.cashInHand'),
-            value: stats.cashBalance,
+            value: Math.max(0, stats.cashBalance || 0),
             icon: Banknote,
             iconColor: 'text-blue-400',
             iconBg: 'bg-blue-500/10 border-blue-500/20',
@@ -596,7 +596,7 @@ export const Dashboard = () => {
           },
           {
             title: t('dashboard.bankBalance'),
-            value: stats.bankBalance,
+            value: Math.max(0, stats.bankBalance || 0),
             icon: Layers,
             iconColor: 'text-violet-400',
             iconBg: 'bg-violet-500/10 border-violet-500/20',

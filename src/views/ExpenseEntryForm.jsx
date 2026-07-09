@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useCoaStore } from '../store/coaStore';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
+import { useJournalStore, calculateAccountBalances } from '../store/journalStore';
 import { ChevronLeft, Save, Sparkles, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +12,7 @@ export const ExpenseEntryForm = () => {
   const navigate = useNavigate();
   const { flatAccounts, fetchAccountsList, addAccount } = useCoaStore();
   const { addVoucher } = useBankVoucherStore();
+  const { journals, fetchJournals } = useJournalStore();
 
   const [postingDate, setPostingDate] = useState(new Date().toISOString().split('T')[0]);
   const [reference, setReference] = useState('');
@@ -41,7 +43,8 @@ export const ExpenseEntryForm = () => {
 
   useEffect(() => {
     fetchAccountsList();
-  }, [fetchAccountsList]);
+    fetchJournals('Global', 1, 1000);
+  }, [fetchAccountsList, fetchJournals]);
 
   // Asset accounts for bank selection (same as standard voucher form)
   const bankAccounts = useMemo(() => {
@@ -160,6 +163,16 @@ export const ExpenseEntryForm = () => {
     if (!val || val <= 0 || !/^[1-9]\d*(\.\d{1,2})?$/.test(amount)) {
       showToast('Amount must be a positive number with up to 2 decimal places.', 'warning');
       return;
+    }
+
+    const bankAcc = bankAccounts.find(a => a.id === bankAccountId);
+    if (bankAcc) {
+      const { localBalances } = calculateAccountBalances(flatAccounts, journals, 'Global');
+      const avail = localBalances[bankAcc.code] !== undefined ? localBalances[bankAcc.code] : (bankAcc.initialBalance || 0);
+      if (val > avail) {
+        showToast(`Cannot record expense: Amount (Rs. ${val.toLocaleString()}) exceeds available balance (Rs. ${Math.max(0, avail).toLocaleString()}) in ${bankAcc.name || 'selected account'}.`, 'error');
+        return;
+      }
     }
 
     setLoading(true);

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCoaStore } from '../store/coaStore';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
+import { useJournalStore, calculateAccountBalances } from '../store/journalStore';
 import { ChevronLeft, Save, TrendingDown, TrendingUp, Info } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
 
@@ -9,6 +10,7 @@ export const BankVoucherForm = () => {
   const navigate = useNavigate();
   const { flatAccounts, fetchAccountsList } = useCoaStore();
   const { addVoucher } = useBankVoucherStore();
+  const { journals, fetchJournals } = useJournalStore();
 
   const [voucherType, setVoucherType] = useState('BP'); // BP or BR
   const [postingDate, setPostingDate] = useState(new Date().toISOString().split('T')[0]);
@@ -21,7 +23,8 @@ export const BankVoucherForm = () => {
 
   useEffect(() => {
     fetchAccountsList();
-  }, [fetchAccountsList]);
+    fetchJournals('Global', 1, 1000);
+  }, [fetchAccountsList, fetchJournals]);
 
   // Asset accounts for bank selection
   const bankAccounts = useMemo(() => {
@@ -81,6 +84,15 @@ export const BankVoucherForm = () => {
     if (!bankAcc || !offsetAcc) {
       showToast('Selected accounts are invalid. Please try again.', 'error');
       return;
+    }
+
+    if (voucherType === 'BP') {
+      const { localBalances } = calculateAccountBalances(flatAccounts, journals, 'Global');
+      const avail = localBalances[bankAcc.code] !== undefined ? localBalances[bankAcc.code] : (bankAcc.initialBalance || 0);
+      if (val > avail) {
+        showToast(`Cannot process payment: Amount (Rs. ${val.toLocaleString()}) exceeds available balance (Rs. ${Math.max(0, avail).toLocaleString()}) in ${bankAcc.name || 'selected account'}.`, 'error');
+        return;
+      }
     }
 
     // Build the lines for the Journal Entry
