@@ -153,10 +153,19 @@ export const VoucherSlipModal = ({
               
               {/* Header Section */}
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b border-[#a89f8d] gap-4">
-                <div className="text-left font-bold tracking-wider text-sm sm:text-base text-[#2d2925]">
-                  <div className="uppercase tracking-widest text-xs sm:text-sm font-semibold text-[#5c5346]">LOHARWADA</div>
-                  <div className="text-base sm:text-xl uppercase font-black tracking-wide border-b-2 border-[#2d2925] pb-0.5 inline-block">
-                    {title}
+                <div className="flex items-start gap-4">
+                  <img
+                    src={logoImg}
+                    alt="Logo"
+                    className="w-16 h-16 object-contain"
+                  />
+                  <div className="text-left font-bold tracking-wider text-sm sm:text-base text-[#2d2925]">
+                    <div className="font-semibold text-[#5c5346]" style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif", fontSize: '1rem' }}>
+                      کچھی مسلم لوہار واڈہ ویلفیئر جماعت
+                    </div>
+                    <div className="text-base sm:text-xl uppercase font-black tracking-wide border-b-2 border-[#2d2925] pb-0.5 inline-block">
+                      {title}
+                    </div>
                   </div>
                 </div>
 
