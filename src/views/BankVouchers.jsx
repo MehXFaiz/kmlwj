@@ -6,6 +6,7 @@ import { FileSpreadsheet, Search, Plus, Printer, CheckCircle, XCircle, Trash2, A
 import { pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 import { useTranslation } from 'react-i18next';
+import logoImg from '../assets/logo.png';
 
 // Helper to render number to English words for standard printed receipt
 const numberToWords = (num) => {
@@ -99,13 +100,20 @@ function BankVoucherPrintModal({ voucher, onClose }) {
             }
           `}</style>
           
-          <div className="flex justify-between items-start border-b border-slate-800 pb-6 print:border-black print:pb-4">
-            <div>
-              <h2 className="text-lg font-bold text-slate-100 print:text-black" style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif", lineHeight: 1.6 }}>کچھی مسلم لوہار واڈہ ویلفیئر جماعت</h2>
-              <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold print:text-black">Kutchi Muslim Loharwada Welfare Jamaat</p>
-              <p className="text-xs text-slate-400 font-bold mt-1 print:text-black">
-                {voucher.voucherType === 'BP' ? t('tables.bankVouchers.bankPaymentVoucher') : t('tables.bankVouchers.bankReceiptVoucher')}
-              </p>
+          <div className="flex justify-between items-start border-b border-slate-800 pb-6 print:border-black print:pb-4 gap-4">
+            <div className="flex items-center gap-3">
+              <img
+                src={logoImg}
+                alt="KMLWJ Logo"
+                className="w-12 h-12 object-contain shrink-0"
+              />
+              <div>
+                <h2 className="text-lg font-bold text-slate-100 print:text-black" style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif", lineHeight: 1.6 }}>کچھی مسلم لوہار واڈہ ویلفیئر جماعت</h2>
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold print:text-black">Kutchi Muslim Loharwada Welfare Jamaat</p>
+                <p className="text-xs text-slate-400 font-bold mt-1 print:text-black">
+                  {voucher.voucherType === 'BP' ? t('tables.bankVouchers.bankPaymentVoucher') : t('tables.bankVouchers.bankReceiptVoucher')}
+                </p>
+              </div>
             </div>
             <div className="text-right">
               <div className="text-xs font-mono text-slate-550 print:text-black">{t('tables.bankVouchers.voucher')} <span className="font-bold text-slate-300 print:text-black">{voucher.voucherNo}</span></div>
