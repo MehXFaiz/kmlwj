@@ -42,10 +42,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       id: log.id,
       timestamp: log.createdAt,
       action: log.action,
+      module: log.module || 'SYSTEM',
       details: `${log.module}: ${log.action} performed. IP: ${log.ipAddress || 'unknown'}.`,
       user: log.user ? log.user.fullName : 'System',
       email: log.user ? log.user.email : null,
-      ipAddress: log.ipAddress,
+      ipAddress: log.ipAddress || null,
+      userAgent: log.userAgent || null,
+      oldValues: log.oldValues || null,
+      newValues: log.newValues || null,
     }));
 
     return res.status(200).json({ status: 200, data: formatted });
