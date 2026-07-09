@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSimpleExpenseStore } from '../store/simpleExpenseStore';
 import { useExpenseStore } from '../store/expenseStore';
 import { useCoaStore } from '../store/coaStore';
+import { useAuthStore } from '../store/authStore';
 import { MinusCircle, Search, X, CheckCircle2, TrendingDown, Building2, Banknote, Edit, Trash2 } from 'lucide-react';
 
 function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editingExpense }) {
@@ -137,6 +138,7 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
 
 export const Expenses = () => {
   const { expenses, isLoading, fetchExpenses, createExpense, updateExpense, deleteExpense } = useSimpleExpenseStore();
+  const canEditOrDelete = useAuthStore((s) => s.canEditOrDelete);
   const { heads: expenseHeads, fetchHeads } = useExpenseStore();
   const { accounts, fetchAccounts } = useCoaStore();
   
@@ -230,18 +232,20 @@ export const Expenses = () => {
                         <span className="text-sm font-mono font-bold text-red-400">
                           {exp.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </span>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => { setEditingExpense(exp); setIsModalOpen(true); }}
-                            className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-amber-400 transition-colors"
-                            title="Edit Expense">
-                            <Edit className="h-3.5 w-3.5" />
-                          </button>
-                          <button onClick={async () => { if (window.confirm('Delete this expense?')) await deleteExpense(exp.id); }}
-                            className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-red-400 transition-colors"
-                            title="Delete Expense">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
+                        {canEditOrDelete && (
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => { setEditingExpense(exp); setIsModalOpen(true); }}
+                              className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-amber-400 transition-colors"
+                              title="Edit Expense">
+                              <Edit className="h-3.5 w-3.5" />
+                            </button>
+                            <button onClick={async () => { if (window.confirm('Delete this expense?')) await deleteExpense(exp.id); }}
+                              className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-red-400 transition-colors"
+                              title="Delete Expense">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </td>
                   </tr>

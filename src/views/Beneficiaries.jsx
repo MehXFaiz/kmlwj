@@ -284,7 +284,7 @@ export const Beneficiaries = () => {
           </div>
         </div>
         <div className={pageActionsClass}>
-          {selectedIds.length > 0 && (
+          {canEditOrDelete && selectedIds.length > 0 && (
             <button
               onClick={() => setShowBulkConfirm(true)}
               className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30 transition-all text-xs font-bold flex-1 sm:flex-none shadow-sm cursor-pointer"
@@ -395,24 +395,26 @@ export const Beneficiaries = () => {
                   <span className="text-[11px] font-medium text-slate-500">
                     DOI: {b.createdAt ? new Date(b.createdAt).toISOString().slice(0, 10) : '2026-07-04'}
                   </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/beneficiaries/edit/${b.id}`)}
-                      className="w-8 h-8 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
-                      title="Edit Beneficiary"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeleteId(b.id)}
-                      className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
-                      title="Delete Beneficiary"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  {canEditOrDelete && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/beneficiaries/edit/${b.id}`)}
+                        className="w-8 h-8 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                        title="Edit Beneficiary"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteId(b.id)}
+                        className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                        title="Delete Beneficiary"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

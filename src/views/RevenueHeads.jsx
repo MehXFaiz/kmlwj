@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRevenueStore } from '../store/revenueStore';
 import { useCoaStore } from '../store/coaStore';
+import { useAuthStore } from '../store/authStore';
 import {
   TrendingUp, Search, Plus, ChevronDown, ChevronUp,
   CheckCircle2, XCircle, Edit2, Trash2,
@@ -269,6 +270,7 @@ function RevenueHeadViewModal({ isOpen, onClose, item }) {
 
 export const RevenueHeads = () => {
   const { heads, fetchHeads, addHead, updateHead, deleteHead } = useRevenueStore();
+  const canEditOrDelete = useAuthStore((s) => s.canEditOrDelete);
   const { flatAccounts, fetchAccountsList } = useCoaStore();
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
@@ -411,7 +413,7 @@ export const RevenueHeads = () => {
           <p className="text-xs text-slate-500 mt-0.5">Manage revenue streams and classifications</p>
         </div>
         <div className={pageActionsClass}>
-          {selectedIds.length > 0 && (
+          {canEditOrDelete && selectedIds.length > 0 && (
             <button
               onClick={() => setShowBulkConfirm(true)}
               className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30 border border-red-900/50 transition-all text-xs font-semibold flex-1 sm:flex-none"
@@ -490,14 +492,16 @@ export const RevenueHeads = () => {
                     <span className="font-mono text-slate-400">{h.accountId}</span>
                   </div>
                 )}
-                <div className="flex items-center gap-1 pt-2 border-t border-slate-800/50">
-                  <button onClick={() => { setEditItem(h); setModalOpen(true); }} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-slate-800/60 text-slate-400 hover:text-slate-200 text-xs font-semibold">
-                    <Edit2 className="h-3.5 w-3.5" /> Edit
-                  </button>
-                  <button onClick={() => setDeleteId(h.id)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-red-950/30 text-red-400 hover:bg-red-950/50 text-xs font-semibold">
-                    <Trash2 className="h-3.5 w-3.5" /> Delete
-                  </button>
-                </div>
+                {canEditOrDelete && (
+                  <div className="flex items-center gap-1 pt-2 border-t border-slate-800/50">
+                    <button onClick={() => { setEditItem(h); setModalOpen(true); }} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-slate-800/60 text-slate-400 hover:text-slate-200 text-xs font-semibold">
+                      <Edit2 className="h-3.5 w-3.5" /> Edit
+                    </button>
+                    <button onClick={() => setDeleteId(h.id)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-red-950/30 text-red-400 hover:bg-red-950/50 text-xs font-semibold">
+                      <Trash2 className="h-3.5 w-3.5" /> Delete
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -584,16 +588,18 @@ export const RevenueHeads = () => {
                       {new Date(h.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => { setEditItem(h); setModalOpen(true); }}
-                          className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-500 hover:text-slate-200 transition-colors">
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </button>
-                        <button onClick={() => setDeleteId(h.id)}
-                          className="p-1.5 rounded-lg hover:bg-red-950/40 text-slate-500 hover:text-red-400 transition-colors">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
+                      {canEditOrDelete && (
+                        <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => { setEditItem(h); setModalOpen(true); }}
+                            className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-500 hover:text-slate-200 transition-colors">
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </button>
+                          <button onClick={() => setDeleteId(h.id)}
+                            className="p-1.5 rounded-lg hover:bg-red-950/40 text-slate-500 hover:text-red-400 transition-colors">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );

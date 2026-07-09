@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useReservedCodeStore } from '../store/reservedCodeStore';
+import { useAuthStore } from '../store/authStore';
 import {
   ShieldBan, Search, Plus, ChevronDown, ChevronUp, X, AlertTriangle,
   Lock, Hash, Edit2, Trash2, Download, Layers, CheckCircle2, Copy, Info,
@@ -118,6 +119,7 @@ function ReservedCodeModal({ isOpen, onClose, onSave, initial, apiError }) {
 /* ─── Main Component ─── */
 export const ReservedCodes = () => {
   const { codes, fetchCodes, addCode, updateCode, deleteCode, error } = useReservedCodeStore();
+  const canEditOrDelete = useAuthStore((s) => s.canEditOrDelete);
   
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
@@ -264,7 +266,7 @@ export const ReservedCodes = () => {
           <p className="text-xs text-slate-500 mt-0.5">Manage restricted GL code ranges and system-protected account blocks</p>
         </div>
         <div className={pageActionsClass}>
-          {selectedIds.length > 0 && (
+          {canEditOrDelete && selectedIds.length > 0 && (
             <button
               onClick={() => setShowBulkConfirm(true)}
               className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30 border border-red-900/50 transition-all text-xs font-semibold flex-1 sm:flex-none"
@@ -339,8 +341,12 @@ export const ReservedCodes = () => {
                 <p className="text-[11px] text-slate-300 mb-2">{c.reserveReason}</p>
                 <div className="flex items-center gap-1 pt-2 border-t border-slate-800/50">
                   <button onClick={() => setDetailId(c.id)} className="flex-1 py-2 rounded-lg bg-slate-800/60 text-slate-400 text-xs font-semibold">Details</button>
-                  <button onClick={() => { setEditItem(c); setModalOpen(true); setApiError(null); }} className="flex-1 py-2 rounded-lg bg-slate-800/60 text-slate-400 text-xs font-semibold">Edit</button>
-                  <button onClick={() => setDeleteId(c.id)} className="flex-1 py-2 rounded-lg bg-red-950/30 text-red-400 text-xs font-semibold">Remove</button>
+                  {canEditOrDelete && (
+                    <>
+                      <button onClick={() => { setEditItem(c); setModalOpen(true); setApiError(null); }} className="flex-1 py-2 rounded-lg bg-slate-800/60 text-slate-400 text-xs font-semibold">Edit</button>
+                      <button onClick={() => setDeleteId(c.id)} className="flex-1 py-2 rounded-lg bg-red-950/30 text-red-400 text-xs font-semibold">Remove</button>
+                    </>
+                  )}
                 </div>
               </div>
             );
@@ -409,14 +415,18 @@ export const ReservedCodes = () => {
                           className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-500 hover:text-slate-200 transition-colors">
                           <Info className="h-3.5 w-3.5" />
                         </button>
-                        <button onClick={() => { setEditItem(c); setModalOpen(true); setApiError(null); }}
-                          className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-500 hover:text-slate-200 transition-colors">
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </button>
-                        <button onClick={() => setDeleteId(c.id)}
-                          className="p-1.5 rounded-lg hover:bg-red-950/40 text-slate-500 hover:text-red-400 transition-colors">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        {canEditOrDelete && (
+                          <>
+                            <button onClick={() => { setEditItem(c); setModalOpen(true); setApiError(null); }}
+                              className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-500 hover:text-slate-200 transition-colors">
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
+                            <button onClick={() => setDeleteId(c.id)}
+                              className="p-1.5 rounded-lg hover:bg-red-950/40 text-slate-500 hover:text-red-400 transition-colors">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

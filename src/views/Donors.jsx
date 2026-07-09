@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDonorStore } from '../store/donorStore';
+import { useAuthStore } from '../store/authStore';
 import { Users, Search, Plus, Edit2, Trash2, X, Mail, Phone, CreditCard, MapPin, AlertTriangle, CheckCircle } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
@@ -8,6 +9,7 @@ import { showToast } from '../components/ui/Toast';
 
 export const Donors = () => {
   const navigate = useNavigate();
+  const canEditOrDelete = useAuthStore((s) => s.canEditOrDelete);
   const { donors, loading, fetchDonors, deleteDonor, bulkDeleteDonors } = useDonorStore();
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
@@ -80,7 +82,7 @@ export const Donors = () => {
           <p className="text-xs text-slate-400 mt-1">Manage charitable donors, Zakat contributors, and welfare sponsors</p>
         </div>
         <div className={pageActionsClass}>
-          {selectedIds.length > 0 && (
+          {canEditOrDelete && selectedIds.length > 0 && (
             <button
               type="button"
               onClick={() => setShowBulkConfirm(true)}
@@ -221,24 +223,26 @@ export const Donors = () => {
                   <span className="text-[11px] font-medium text-slate-500">
                     DOI: {d.createdAt ? new Date(d.createdAt).toISOString().slice(0, 10) : '2026-07-04'}
                   </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/donors/edit/${d.id}`)}
-                      className="w-8 h-8 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
-                      title="Edit Donor"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(d)}
-                      className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
-                      title="Delete Donor"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  {canEditOrDelete && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/donors/edit/${d.id}`)}
+                        className="w-8 h-8 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                        title="Edit Donor"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(d)}
+                        className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                        title="Delete Donor"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

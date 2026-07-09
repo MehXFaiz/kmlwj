@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useCustomerStore } from '../store/customerStore';
+import { useAuthStore } from '../store/authStore';
 import { Users, Search, Plus, Edit2, Trash2, X, Building2, Mail, Phone, AlertTriangle, CheckCircle, MapPin, Briefcase } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
@@ -183,6 +184,7 @@ function CustomerModal({ isOpen, onClose, onSave, initial }) {
 
 export const Customers = () => {
   const { customers, fetchCustomers, deleteCustomer, bulkDeleteCustomers } = useCustomerStore();
+  const canEditOrDelete = useAuthStore((s) => s.canEditOrDelete);
   const navigate = useNavigate();
   
   const [searchParams] = useSearchParams();
@@ -273,7 +275,7 @@ export const Customers = () => {
           </div>
         </div>
         <div className={pageActionsClass}>
-          {selectedIds.length > 0 && (
+          {canEditOrDelete && selectedIds.length > 0 && (
             <button
               type="button"
               onClick={() => setShowBulkConfirm(true)}
@@ -390,24 +392,26 @@ export const Customers = () => {
                   <span className="text-[11px] font-medium text-slate-500">
                     DOI: {c.createdAt ? new Date(c.createdAt).toISOString().slice(0, 10) : '2026-07-04'}
                   </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/customers/edit/${c.id}`)}
-                      className="w-8 h-8 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
-                      title="Edit Customer"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeleteId(c.id)}
-                      className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
-                      title="Delete Customer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  {canEditOrDelete && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/customers/edit/${c.id}`)}
+                        className="w-8 h-8 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                        title="Edit Customer"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteId(c.id)}
+                        className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                        title="Delete Customer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
