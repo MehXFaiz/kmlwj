@@ -58,6 +58,39 @@ function checkEditDeletePermission(req: any, res: any): boolean {
   return true;
 }
 
+export function isPostToLedgerRequest(req: any): boolean {
+  const method = (req.method || '').toUpperCase();
+  const url = req.url || req.path || '';
+  if (url.includes('/journal-entries') && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+    return true;
+  }
+  const action = String(req.body?.action || req.query?.action || '').toLowerCase().trim();
+  if (['post', 'post-draft', 'post-to-ledger', 'posttoledger', 'approve'].includes(action)) {
+    return true;
+  }
+  const status = String(req.body?.status || '').toUpperCase().trim();
+  if (status === 'POSTED' || status === 'APPROVED') {
+    return true;
+  }
+  return false;
+}
+
+function checkPostToLedgerPermission(req: any, res: any): boolean {
+  if (isPostToLedgerRequest(req)) {
+    const role = req.user?.role;
+    if (!isAdminOrSuperAdmin(role)) {
+      res.status(403).json({
+        error: {
+          message: 'Forbidden: Only Admin and Super Admin roles are permitted to post to the ledger.',
+          status: 403,
+        },
+      });
+      return false;
+    }
+  }
+  return true;
+}
+
 /**
  * Serverless helper to authenticate requests.
  * Modifies the request object to include 'user' if successful, or returns false (and sends 401).
@@ -86,6 +119,9 @@ export async function verifyAuth(req: AuthenticatedRequest, res: VercelResponse)
       role: payload.role,
     };
     if (!checkEditDeletePermission(req, res)) {
+      return false;
+    }
+    if (!checkPostToLedgerPermission(req, res)) {
       return false;
     }
     return true;
@@ -127,6 +163,9 @@ export function requireAuth(req: any, res: any, next: any): void {
       role: payload.role,
     };
     if (!checkEditDeletePermission(req, res)) {
+      return;
+    }
+    if (!checkPostToLedgerPermission(req, res)) {
       return;
     }
     next();

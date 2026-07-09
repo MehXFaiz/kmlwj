@@ -30,6 +30,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       description: acc.description,
       subsidiary: acc.subsidiary,
       initialBalance: acc.initialBalance,
+      currentBalance: acc.currentBalance || 0,
       isSystemDefined: acc.isSystemDefined,
       isReserved: acc.isReserved,
       children: [] as any[],
@@ -56,6 +57,30 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         rootAccounts.push(formattedNode);
       }
     });
+
+    // Compute hierarchical debit, credit, and net balance bottom-up
+    const computeBalances = (node: any) => {
+      let debit = 0;
+      let credit = 0;
+      if (node.children && node.children.length > 0) {
+        node.children.forEach((child: any) => {
+          computeBalances(child);
+          debit += child.debit || 0;
+          credit += child.credit || 0;
+        });
+      } else {
+        const bal = Number(node.currentBalance || 0);
+        if (bal > 0) {
+          debit = bal;
+        } else if (bal < 0) {
+          credit = Math.abs(bal);
+        }
+      }
+      node.debit = debit;
+      node.credit = credit;
+      node.netBalance = debit - credit;
+    };
+    rootAccounts.forEach(root => computeBalances(root));
 
     // Clean up temporary variables
     const cleanTree = (nodes: any[]) => {

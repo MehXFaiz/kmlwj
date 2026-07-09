@@ -8,11 +8,17 @@ export const canUserEditOrDelete = (role) => {
   return r === 'admin' || r === 'super admin' || r === 'administrator';
 };
 
+export const canUserPostToLedger = (role) => {
+  if (!role) return false;
+  const r = String(role).toLowerCase().trim();
+  return r === 'admin' || r === 'super admin' || r === 'administrator';
+};
+
 export const useAuthStore = create((set, get) => {
   // Listen for session expiry event from service layer
   if (typeof window !== 'undefined') {
     window.addEventListener('auth_session_expired', () => {
-      set({ user: null, role: null, permissions: [], canEditOrDelete: false, isAuthenticated: false, loading: false, error: 'Your session has expired. Please log in again.' });
+      set({ user: null, role: null, permissions: [], canEditOrDelete: false, canPostToLedger: false, isAuthenticated: false, loading: false, error: 'Your session has expired. Please log in again.' });
     });
   }
 
@@ -21,12 +27,14 @@ export const useAuthStore = create((set, get) => {
     role: null,
     permissions: [],
     canEditOrDelete: false,
+    canPostToLedger: false,
     isAuthenticated: false,
     loading: false,
     error: null,
     successMessage: null,
 
     checkCanEditOrDelete: () => canUserEditOrDelete(get().role),
+    checkCanPostToLedger: () => canUserPostToLedger(get().role),
 
     clearError: () => set({ error: null }),
     clearSuccess: () => set({ successMessage: null }),
@@ -44,6 +52,7 @@ export const useAuthStore = create((set, get) => {
           role: userData.role,
           permissions: userData.permissions || [],
           canEditOrDelete: canUserEditOrDelete(userData.role),
+          canPostToLedger: canUserPostToLedger(userData.role),
           isAuthenticated: true,
           loading: false,
         });
@@ -52,7 +61,7 @@ export const useAuthStore = create((set, get) => {
         if (err.response && (err.response.status === 401 || err.response.status === 403)) {
           tokenStorage.clear();
         }
-        set({ user: null, role: null, permissions: [], canEditOrDelete: false, isAuthenticated: false, loading: false });
+        set({ user: null, role: null, permissions: [], canEditOrDelete: false, canPostToLedger: false, isAuthenticated: false, loading: false });
         return false;
       }
     },
@@ -70,6 +79,7 @@ export const useAuthStore = create((set, get) => {
           role: userData.role,
           permissions: userData.permissions || [],
           canEditOrDelete: canUserEditOrDelete(userData.role),
+          canPostToLedger: canUserPostToLedger(userData.role),
           isAuthenticated: true,
           loading: false
         });

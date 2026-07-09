@@ -300,6 +300,7 @@ export const Donations = () => {
   const { donations, fetchDonations, approveDonation, deleteDonation, bulkDeleteDonations } = useDonationStore();
   const { flatAccounts, fetchAccountsList } = useCoaStore();
   const { canEditOrDelete } = useAuthStore();
+  const canPostToLedger = useAuthStore((s) => s.canPostToLedger);
   const navigate = useNavigate();
 
   const [searchParams] = useSearchParams();
@@ -536,7 +537,7 @@ export const Donations = () => {
                     >
                       <Printer className="w-3.5 h-3.5" />
                     </button>
-                    {d.status === 'PENDING' && (
+                    {d.status === 'PENDING' && canPostToLedger && (
                       <button
                         type="button"
                         onClick={() => setApproveId(d.id)}

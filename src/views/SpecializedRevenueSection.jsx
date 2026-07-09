@@ -27,6 +27,7 @@ export const SpecializedRevenueSection = ({
   const { t } = useTranslation();
   const { collections, loading, fetchCollections, addCollection, updateCollection, postCollection, deleteCollection, bulkDeleteCollections } = useRevenueCollectionStore();
   const { canEditOrDelete } = useAuthStore();
+  const canPostToLedger = useAuthStore((s) => s.canPostToLedger);
   const { flatAccounts, fetchAccountsList } = useCoaStore();
   const { members, fetchMembers } = useMemberStore();
 
@@ -341,7 +342,7 @@ export const SpecializedRevenueSection = ({
                             {item.paymentMethod || 'Cash'}{item.remarks ? ` • ${item.remarks}` : ''}
                           </span>
                           <div className="flex items-center gap-1.5 shrink-0">
-                            {isConfirmed && (
+                            {isConfirmed && canPostToLedger && (
                               <button
                                 onClick={() => handlePost(item.id)}
                                 className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30 transition-all"
@@ -450,7 +451,7 @@ export const SpecializedRevenueSection = ({
                         )}
                       </td>
                       <td className="px-6 py-4 text-right space-x-2">
-                        {item.status === 'Confirmed' && (
+                        {item.status === 'Confirmed' && canPostToLedger && (
                           <button onClick={() => handlePost(item.id)}
                             className="p-1.5 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-950/40 rounded transition-colors inline-flex"
                             title="Post to Ledger">

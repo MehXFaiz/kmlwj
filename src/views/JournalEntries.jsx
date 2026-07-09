@@ -15,6 +15,7 @@ export const JournalEntries = () => {
   const { journals, fetchJournals, isLoading, updateJournalStatus, deleteJournalEntry, bulkDeleteJournalEntries } = useJournalStore();
   const { selectedSubsidiary } = useCoaStore();
   const { canEditOrDelete } = useAuthStore();
+  const canPostToLedger = useAuthStore((s) => s.canPostToLedger);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedJeId, setExpandedJeId] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -132,15 +133,17 @@ export const JournalEntries = () => {
               <span>Bulk Delete ({selectedIds.length})</span>
             </Button>
           )}
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setIsModalOpen(true)}
-            className="gap-1.5 cursor-pointer w-full sm:w-auto justify-center"
-          >
-            <Plus className="h-4 w-4" />
-            <span>New Journal Entry</span>
-          </Button>
+          {canPostToLedger && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setIsModalOpen(true)}
+              className="gap-1.5 cursor-pointer w-full sm:w-auto justify-center"
+            >
+              <Plus className="h-4 w-4" />
+              <span>New Journal Entry</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -207,7 +210,7 @@ export const JournalEntries = () => {
                     ))}
                     {(je.status === 'Draft' || canEditOrDelete) && (
                       <div className="flex gap-2 pt-2 border-t border-slate-800/60 mt-2">
-                        {je.status === 'Draft' && (
+                        {je.status === 'Draft' && canPostToLedger && (
                           <>
                             <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => handleUpdateStatus(je.dbId, 'Cancelled')}>Cancel Draft</Button>
                             <Button size="sm" variant="primary" className="flex-1 text-xs" onClick={() => handleUpdateStatus(je.dbId, 'Posted')}>Post Now</Button>
@@ -316,7 +319,7 @@ export const JournalEntries = () => {
                                   <span className="text-[10px] text-slate-500">Posted by: <span className="font-semibold text-slate-400">{je.postedBy}</span></span>
                                   {(je.status === 'Draft' || canEditOrDelete) && (
                                     <div className="flex gap-2 ml-4 border-l border-slate-800 pl-4">
-                                      {je.status === 'Draft' && (
+                                      {je.status === 'Draft' && canPostToLedger && (
                                         <>
                                           <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 px-2" onClick={() => handleUpdateStatus(je.dbId, 'Cancelled')}>
                                             <X className="h-3 w-3" /> Cancel

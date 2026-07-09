@@ -284,6 +284,7 @@ export const BankVouchers = () => {
   const navigate = useNavigate();
   const { vouchers, fetchVouchers, updateVoucher, updateVoucherStatus, deleteVoucher, bulkDeleteVouchers, loading } = useBankVoucherStore();
   const { canEditOrDelete } = useAuthStore();
+  const canPostToLedger = useAuthStore((s) => s.canPostToLedger);
   
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('BP'); // BP (Payments), BR (Receipts)
@@ -675,7 +676,7 @@ export const BankVouchers = () => {
                         <Edit className="h-3.5 w-3.5" />
                       </button>
                     )}
-                    {v.status === 'Draft' && (
+                    {v.status === 'Draft' && canPostToLedger && (
                       <button onClick={() => handlePost(v.dbId)} disabled={statusLoading}
                         className="w-8 h-8 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
                         title={t('tables.bankVouchers.post') || "Post Voucher"}>

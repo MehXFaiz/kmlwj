@@ -12,6 +12,7 @@ export const InvoiceDetail = () => {
   const navigate = useNavigate();
   const { currentInvoice, fetchInvoiceById, postInvoice, payInvoice, cancelInvoice, loading: invLoading } = useInvoiceStore();
   const { flatAccounts, fetchAccountsList, loading: coaLoading } = useCoaStore();
+  const canPostToLedger = useAuthStore((s) => s.canPostToLedger);
 
   const [showPostModal, setShowPostModal] = useState(false);
   const [showPayModal, setShowPayModal] = useState(false);
@@ -137,7 +138,9 @@ export const InvoiceDetail = () => {
             </div>
             <div className="flex gap-2">
               <button onClick={() => setShowCancelModal(true)} className="px-3 py-1.5 rounded border border-slate-700 text-slate-400 hover:text-slate-200 text-xs font-semibold">Void Invoice</button>
-              <button onClick={() => setShowPostModal(true)} className="px-4 py-1.5 rounded bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow shadow-amber-900/40">Confirm Invoice</button>
+              {canPostToLedger && (
+                <button onClick={() => setShowPostModal(true)} className="px-4 py-1.5 rounded bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow shadow-amber-900/40">Confirm Invoice</button>
+              )}
             </div>
           </div>
         );

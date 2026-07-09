@@ -56,6 +56,7 @@ export const DonationsReceived = () => {
   const navigate = useNavigate();
   const { donations, stats, loading, fetchDonations, updateDonationStatus, deleteDonation, bulkDeleteDonations } = useDonationReceivedStore();
   const { canEditOrDelete } = useAuthStore();
+  const canPostToLedger = useAuthStore((s) => s.canPostToLedger);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [printItem, setPrintItem] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -392,7 +393,7 @@ export const DonationsReceived = () => {
                     >
                       <Printer className="w-3.5 h-3.5" />
                     </button>
-                    {d.status === 'DRAFT' && (
+                    {d.status === 'DRAFT' && canPostToLedger && (
                       <button
                         type="button"
                         onClick={() => handlePostDraft(d)}

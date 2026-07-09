@@ -13,6 +13,7 @@ export const HallBookings = () => {
   const { t, i18n } = useTranslation();
   const { bookings, loading, fetchBookings, postBooking, deleteBooking, bulkDeleteBookings } = useHallBookingStore();
   const { canEditOrDelete } = useAuthStore();
+  const canPostToLedger = useAuthStore((s) => s.canPostToLedger);
   const [search, setSearch] = useState('');
   const [printItem, setPrintItem] = useState(null);
   const [viewMode, setViewMode] = useState('cards');
@@ -267,7 +268,7 @@ export const HallBookings = () => {
                           >
                             <Printer className="w-3.5 h-3.5" />
                           </button>
-                          {booking.status === 'Confirmed' && (
+                          {booking.status === 'Confirmed' && canPostToLedger && (
                             <button
                               type="button"
                               onClick={() => handlePost(booking.id)}
@@ -373,7 +374,7 @@ export const HallBookings = () => {
                         )}
                       </td>
                       <td className="px-6 py-4 text-right space-x-2">
-                        {booking.status === 'Confirmed' && (
+                        {booking.status === 'Confirmed' && canPostToLedger && (
                           <button onClick={() => handlePost(booking.id)}
                             className="p-1.5 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-950/40 rounded transition-colors inline-flex"
                             title="Post to Ledger">
