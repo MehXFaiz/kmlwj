@@ -91,7 +91,7 @@ export const BankVoucherForm = () => {
       const { localBalances } = calculateAccountBalances(flatAccounts, journals, 'Global');
       const avail = localBalances[bankAcc.code] !== undefined ? localBalances[bankAcc.code] : (bankAcc.initialBalance || 0);
       if (val > avail) {
-        showToast(`Cannot process payment: Amount (Rs. ${val.toLocaleString()}) exceeds available balance (Rs. ${Math.max(0, avail).toLocaleString()}) in ${bankAcc.name || 'selected account'}.`, 'error');
+        showToast(`Insufficient amount! Current balance: Rs. ${Math.max(0, avail).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'error');
         return;
       }
     }

@@ -116,6 +116,10 @@ export const calculateAccountBalances = (accounts, journals, subsidiary = 'Globa
     if (subsidiary !== 'Global' && je.subsidiary !== subsidiary) {
       return;
     }
+    // Only count Posted entries
+    if (je.status !== 'Posted') {
+      return;
+    }
 
     je.lines.forEach((line) => {
       if (baseBalances[line.accountCode]) {
