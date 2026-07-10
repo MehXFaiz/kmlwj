@@ -178,6 +178,40 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(200).json({ status: 200, data: result.approvedBooking, message: 'Booking posted and journal entries created successfully' });
     }
 
+    // Action: Revert Booking from Ledger
+    if (action === 'revert') {
+      const { id } = req.body;
+      if (!id) return res.status(400).json({ error: { message: 'Booking ID is required', status: 400 } });
+
+      const booking = await prisma.hallBooking.findUnique({ where: { id } });
+      if (!booking) return res.status(404).json({ error: { message: 'Booking not found', status: 404 } });
+      if (booking.status !== 'POSTED') return res.status(400).json({ error: { message: 'Booking is not posted', status: 400 } });
+
+      const result = await prisma.$transaction(async (tx) => {
+        if (booking.journalEntryId) {
+          try {
+            await AccountingService.deleteJournalEntry(tx, booking.journalEntryId, req.user!.id, 'Hall Booking Reverted');
+          } catch (e) {
+            // Ignore if already deleted
+          }
+        }
+
+        const revertedBooking = await tx.hallBooking.update({
+          where: { id },
+          data: { 
+            status: 'Pending',
+            journalEntryId: null 
+          }
+        });
+
+        return revertedBooking;
+      });
+
+      await logAudit(req.user.id, 'Revert Hall Booking', 'REVENUE', booking, result, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+
+      return res.status(200).json({ status: 200, data: result, message: 'Booking reverted from ledger successfully' });
+    }
+
     // Action: Create Booking & Auto-Post to Ledger
     const { bookingDate, bookerName, address, mobile, programDate, programType, timings, hallId, isForJamaat, amount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
 

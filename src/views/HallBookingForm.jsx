@@ -211,6 +211,12 @@ export const HallBookingForm = () => {
       return;
     }
 
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (data.programDate < todayStr) {
+      showToast('Booking date must be today or a future date.', 'warning');
+      return;
+    }
+
     try {
       let savedBooking;
       if (id) {

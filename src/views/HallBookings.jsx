@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Search, Printer, AlertTriangle, CheckCircle, X, Trash2, Edit2, CheckCircle2, Calendar, Table as TableIcon, LayoutGrid, Building2, Phone, DollarSign, FileText, Clock } from 'lucide-react';
+import { Plus, Search, Printer, AlertTriangle, CheckCircle, X, Trash2, Edit2, CheckCircle2, Calendar, Table as TableIcon, LayoutGrid, Building2, Phone, DollarSign, FileText, Clock, RotateCcw } from 'lucide-react';
 import { useHallBookingStore } from '../store/hallBookingStore';
 import { useAuthStore } from '../store/authStore';
 import { DashboardLayout } from '../layouts/DashboardLayout';
@@ -22,7 +22,7 @@ const formatHallName = (booking) => {
 
 export const HallBookings = () => {
   const { t, i18n } = useTranslation();
-  const { bookings, loading, fetchBookings, postBooking, deleteBooking, bulkDeleteBookings } = useHallBookingStore();
+  const { bookings, loading, fetchBookings, postBooking, revertBooking, deleteBooking, bulkDeleteBookings } = useHallBookingStore();
   const { canEditOrDelete } = useAuthStore();
   const canPostToLedger = useAuthStore((s) => s.canPostToLedger);
   const [search, setSearch] = useState('');
@@ -43,6 +43,17 @@ export const HallBookings = () => {
       showToast('Booking posted to ledger successfully!', 'success');
     } catch (err) {
       showToast(err.message || 'Failed to post booking', 'error');
+    }
+  };
+
+  const handleRevert = async (id) => {
+    if (window.confirm('Are you sure you want to revert this booking? Its journal entries will be deleted and status reset to Pending.')) {
+      try {
+        await revertBooking(id);
+        showToast('Booking reverted from ledger successfully!', 'success');
+      } catch (err) {
+        showToast(err.message || 'Failed to revert booking', 'error');
+      }
     }
   };
 
@@ -295,6 +306,16 @@ export const HallBookings = () => {
                               <CheckCircle2 className="w-3.5 h-3.5" /> Post
                             </button>
                           )}
+                          {booking.status === 'POSTED' && canPostToLedger && (
+                            <button
+                              type="button"
+                              onClick={() => handleRevert(booking.id)}
+                              className="px-3 py-1.5 rounded-full bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 flex items-center gap-1 font-bold text-xs transition-all cursor-pointer shadow-sm"
+                              title="Revert from Ledger"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" /> Revert
+                            </button>
+                          )}
                           {canEditOrDelete && (
                             <>
                               <Link
@@ -396,6 +417,13 @@ export const HallBookings = () => {
                             className="p-1.5 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-950/40 rounded transition-colors inline-flex"
                             title="Post to Ledger">
                             <CheckCircle2 className="h-4 w-4" />
+                          </button>
+                        )}
+                        {booking.status === 'POSTED' && canPostToLedger && (
+                          <button onClick={() => handleRevert(booking.id)}
+                            className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded transition-colors inline-flex"
+                            title="Revert from Ledger">
+                            <RotateCcw className="h-4 w-4" />
                           </button>
                         )}
                         <button onClick={() => setPrintItem(booking)}

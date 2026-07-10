@@ -59,6 +59,18 @@ export const useHallBookingStore = create((set) => ({
     }
   },
 
+  revertBooking: async (id) => {
+    try {
+      const response = await api.post('/api/v1/hall-bookings?action=revert', { id });
+      set((state) => ({
+        bookings: state.bookings.map(b => b.id === id ? { ...b, ...response.data.data } : b)
+      }));
+      return response.data.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   deleteBooking: async (id) => {
     try {
       await api.delete(`/api/v1/hall-bookings?id=${id}`);
