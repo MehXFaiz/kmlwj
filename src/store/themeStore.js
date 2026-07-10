@@ -1,63 +1,42 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-// Available accent color palettes — each defines the full brand-* hue/sat
+// Available luxury metallic palettes inspired by the logo
 export const COLOR_PALETTES = [
   {
-    id: 'amber',
-    name: 'Amber',
-    hue: 34,
-    saturation: 88,
-    swatch: 'hsl(34, 88%, 52%)',
+    id: 'copper',
+    name: 'Copper',
+    hue: 23,
+    saturation: 55,
+    swatch: 'hsl(23, 55%, 53%)',
   },
   {
-    id: 'indigo',
-    name: 'Indigo',
-    hue: 224,
-    saturation: 89,
-    swatch: 'hsl(224, 89%, 48%)',
+    id: 'gold',
+    name: 'Gold',
+    hue: 45,
+    saturation: 67,
+    swatch: 'hsl(45, 67%, 46%)',
   },
   {
-    id: 'violet',
-    name: 'Violet',
-    hue: 263,
-    saturation: 80,
-    swatch: 'hsl(263, 80%, 55%)',
+    id: 'bronze',
+    name: 'Bronze',
+    hue: 23,
+    saturation: 43,
+    swatch: 'hsl(23, 43%, 46%)',
   },
   {
-    id: 'rose',
-    name: 'Rose',
-    hue: 340,
-    saturation: 82,
-    swatch: 'hsl(340, 82%, 52%)',
+    id: 'rosegold',
+    name: 'Rose Gold',
+    hue: 12,
+    saturation: 40,
+    swatch: 'hsl(12, 40%, 62%)',
   },
   {
-    id: 'emerald',
-    name: 'Emerald',
-    hue: 152,
-    saturation: 72,
-    swatch: 'hsl(152, 72%, 40%)',
-  },
-  {
-    id: 'sky',
-    name: 'Sky',
-    hue: 200,
-    saturation: 88,
-    swatch: 'hsl(200, 88%, 48%)',
-  },
-  {
-    id: 'teal',
-    name: 'Teal',
-    hue: 174,
-    saturation: 75,
-    swatch: 'hsl(174, 75%, 40%)',
-  },
-  {
-    id: 'fuchsia',
-    name: 'Fuchsia',
-    hue: 292,
-    saturation: 84,
-    swatch: 'hsl(292, 84%, 54%)',
+    id: 'platinum',
+    name: 'Platinum',
+    hue: 208,
+    saturation: 15,
+    swatch: 'hsl(208, 15%, 55%)',
   },
 ];
 
@@ -66,25 +45,31 @@ function applyPalette(palette) {
   const root = document.documentElement;
   const { hue: h, saturation: s } = palette;
 
+  // Generate copper/bronze/gold tone variables dynamically based on selection
   root.style.setProperty('--brand-50',  `hsl(${h}, 100%, 97%)`);
-  root.style.setProperty('--brand-100', `hsl(${h}, 100%, 92%)`);
-  root.style.setProperty('--brand-200', `hsl(${h}, 100%, 84%)`);
-  root.style.setProperty('--brand-300', `hsl(${h}, 100%, 73%)`);
-  root.style.setProperty('--brand-400', `hsl(${h}, 100%, 61%)`);
-  root.style.setProperty('--brand-500', `hsl(${h}, ${s}%, 48%)`);
-  root.style.setProperty('--brand-600', `hsl(${h}, ${s}%, 40%)`);
-  root.style.setProperty('--brand-700', `hsl(${h}, ${s}%, 32%)`);
-  root.style.setProperty('--brand-800', `hsl(${h}, ${s}%, 24%)`);
-  root.style.setProperty('--brand-900', `hsl(${h}, ${s}%, 16%)`);
+  root.style.setProperty('--brand-100', `hsl(${h}, 100%, 93%)`);
+  root.style.setProperty('--brand-200', `hsl(${h}, 95%, 85%)`);
+  root.style.setProperty('--brand-300', `hsl(${h}, 85%, 72%)`);
+  root.style.setProperty('--brand-400', `hsl(${h}, ${s}%, 53%)`);
+  root.style.setProperty('--brand-500', `hsl(${h}, ${s + 10}%, 61%)`);
+  root.style.setProperty('--brand-600', `hsl(${h}, ${s}%, 46%)`);
+  root.style.setProperty('--brand-700', `hsl(${h}, ${s}%, 30%)`);
+  root.style.setProperty('--brand-800', `hsl(${h}, ${s}%, 22%)`);
+  root.style.setProperty('--brand-900', `hsl(${h}, ${s}%, 15%)`);
 }
 
 export const useThemeStore = create(
   persist(
     (set, get) => ({
       theme: 'dark',
-      activePaletteId: 'amber',
+      activePaletteId: 'copper',
 
-      setTheme: () => {}, // locked to dark
+      setTheme: (newTheme) => {
+        const root = document.documentElement;
+        root.classList.remove('dark', 'light');
+        root.classList.add(newTheme);
+        set({ theme: newTheme });
+      },
 
       setPalette: (paletteId) => {
         const palette = COLOR_PALETTES.find((p) => p.id === paletteId);
@@ -93,21 +78,30 @@ export const useThemeStore = create(
         set({ activePaletteId: paletteId });
       },
 
-      /** Called once on app mount to restore the persisted palette */
+      /** Called once on app mount to restore the persisted palette and theme */
       initPalette: () => {
-        const { activePaletteId } = get();
-        // If user had old 'indigo' persisted, upgrade them to 'amber'
-        const resolvedId = activePaletteId === 'indigo' ? 'amber' : activePaletteId;
+        const { activePaletteId, theme } = get();
+        // Upgrade legacy 'amber' or invalid palettes to 'copper'
+        const resolvedId = ['copper', 'gold', 'bronze', 'rosegold', 'platinum'].includes(activePaletteId) 
+          ? activePaletteId 
+          : 'copper';
+          
         const palette = COLOR_PALETTES.find((p) => p.id === resolvedId);
         if (palette) {
           applyPalette(palette);
           if (resolvedId !== activePaletteId) set({ activePaletteId: resolvedId });
         }
+
+        // Apply theme classes
+        const root = document.documentElement;
+        root.classList.remove('dark', 'light');
+        root.classList.add(theme || 'dark');
       },
     }),
     {
       name: 'kmlwj-theme',
-      partialize: (state) => ({ activePaletteId: state.activePaletteId }),
+      partialize: (state) => ({ activePaletteId: state.activePaletteId, theme: state.theme }),
     }
   )
 );
+
