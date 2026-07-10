@@ -1,39 +1,68 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-// Available luxury metallic palettes inspired by the logo - Locked to #432921
+// Available luxury metallic palettes inspired by the logo
 export const COLOR_PALETTES = [
   {
-    id: 'custom',
-    name: 'Custom',
-    hue: 15,
-    saturation: 30,
-    swatch: '#432921',
+    id: 'copper',
+    name: 'Copper',
+    hue: 23,
+    saturation: 55,
+    swatch: 'hsl(23, 55%, 53%)',
+  },
+  {
+    id: 'gold',
+    name: 'Gold',
+    hue: 45,
+    saturation: 67,
+    swatch: 'hsl(45, 67%, 46%)',
+  },
+  {
+    id: 'bronze',
+    name: 'Bronze',
+    hue: 23,
+    saturation: 43,
+    swatch: 'hsl(23, 43%, 46%)',
+  },
+  {
+    id: 'rosegold',
+    name: 'Rose Gold',
+    hue: 12,
+    saturation: 40,
+    swatch: 'hsl(12, 40%, 62%)',
+  },
+  {
+    id: 'platinum',
+    name: 'Platinum',
+    hue: 208,
+    saturation: 15,
+    swatch: 'hsl(208, 15%, 55%)',
   },
 ];
 
 /** Applies the chosen palette by writing CSS variables onto :root */
 function applyPalette(palette) {
   const root = document.documentElement;
+  const { hue: h, saturation: s } = palette;
 
-  // Map all brand variables to #432921 and black
-  root.style.setProperty('--brand-50',  `#000000`);
-  root.style.setProperty('--brand-100', `#000000`);
-  root.style.setProperty('--brand-200', `#000000`);
-  root.style.setProperty('--brand-300', `#432921`);
-  root.style.setProperty('--brand-400', `#432921`);
-  root.style.setProperty('--brand-500', `#432921`);
-  root.style.setProperty('--brand-600', `#432921`);
-  root.style.setProperty('--brand-700', `#432921`);
-  root.style.setProperty('--brand-800', `#432921`);
-  root.style.setProperty('--brand-900', `#432921`);
+  // Generate copper/bronze/gold tone variables dynamically based on selection
+  root.style.setProperty('--brand-50',  `hsl(${h}, 100%, 97%)`);
+  root.style.setProperty('--brand-100', `hsl(${h}, 100%, 93%)`);
+  root.style.setProperty('--brand-200', `hsl(${h}, 95%, 85%)`);
+  root.style.setProperty('--brand-300', `hsl(${h}, 85%, 72%)`);
+  root.style.setProperty('--brand-400', `hsl(${h}, ${s}%, 53%)`);
+  root.style.setProperty('--brand-500', `hsl(${h}, ${s + 10}%, 61%)`);
+  root.style.setProperty('--brand-600', `hsl(${h}, ${s}%, 46%)`);
+  root.style.setProperty('--brand-700', `hsl(${h}, ${s}%, 30%)`);
+  root.style.setProperty('--brand-800', `hsl(${h}, ${s}%, 22%)`);
+  root.style.setProperty('--brand-900', `hsl(${h}, ${s}%, 15%)`);
 }
 
 export const useThemeStore = create(
   persist(
     (set, get) => ({
       theme: 'dark',
-      activePaletteId: 'custom',
+      activePaletteId: 'copper',
 
       setTheme: (newTheme) => {
         const root = document.documentElement;
@@ -43,19 +72,30 @@ export const useThemeStore = create(
       },
 
       setPalette: (paletteId) => {
-        applyPalette();
-        set({ activePaletteId: 'custom' });
+        const palette = COLOR_PALETTES.find((p) => p.id === paletteId);
+        if (!palette) return;
+        applyPalette(palette);
+        set({ activePaletteId: paletteId });
       },
 
       /** Called once on app mount to restore the persisted palette and theme */
       initPalette: () => {
-        applyPalette();
-        set({ activePaletteId: 'custom' });
+        const { activePaletteId, theme } = get();
+        // Upgrade legacy 'amber' or invalid palettes to 'copper'
+        const resolvedId = ['copper', 'gold', 'bronze', 'rosegold', 'platinum'].includes(activePaletteId) 
+          ? activePaletteId 
+          : 'copper';
+          
+        const palette = COLOR_PALETTES.find((p) => p.id === resolvedId);
+        if (palette) {
+          applyPalette(palette);
+          if (resolvedId !== activePaletteId) set({ activePaletteId: resolvedId });
+        }
 
         // Apply theme classes
         const root = document.documentElement;
         root.classList.remove('dark', 'light');
-        root.classList.add('dark');
+        root.classList.add(theme || 'dark');
       },
     }),
     {
@@ -64,4 +104,3 @@ export const useThemeStore = create(
     }
   )
 );
-

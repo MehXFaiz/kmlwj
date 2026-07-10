@@ -3,268 +3,151 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ═══════════════════════════════════════════════════════════════
-   KMLWJ DESIGN SYSTEM — BLACK + #432921 THEME
-   Background: Pure Black (#000000)  |  Foreground: #432921
+   KMLWJ DESIGN SYSTEM — "COPPER / BRONZE / GOLD" THEME
+   Background: Deep Matte Black  |  Accent: Copper & Gold
    ═══════════════════════════════════════════════════════════════ */
 
-:root, .dark {
-  /* All colors mapped to black and readable warm rose-brown tints of #432921 */
-  --slate-950: #000000;          /* deepest page background */
-  --slate-900: #000000;          /* sidebar / nav background */
-  --slate-800: #000000;          /* card background */
-  --slate-700: #2a1611;          /* elevated borders / card hover borders */
-  --slate-600: #432921;          /* primary accents / borders */
-  --slate-500: #785a52;          /* muted text / inactive icons */
-  --slate-400: #aa8e86;          /* secondary text / helper labels */
-  --slate-300: #ccb7b2;          /* body text - highly readable tint of #432921 */
-  --slate-200: #eddcd8;          /* primary labels - highly readable tint of #432921 */
-  --slate-100: #fbf5f4;          /* headings / strong text - warm off-white tint */
-  --slate-50:  #ffffff;          /* white / inverse labels */
+:root {
+  /* ── LIGHT MODE: Warm White / Beige / Metallic accents ── */
+  --slate-950: #fcfbfa;          /* deepest page background: Warm White */
+  --slate-900: #faf8f5;          /* sidebar / nav background */
+  --slate-800: #f5f2eb;          /* card / panel background: Light Beige */
+  --slate-700: #ede9df;          /* elevated card background / hover state */
+  --slate-600: #e3dec9;          /* input borders, dividers */
+  --slate-500: #8c8574;          /* muted text, placeholders */
+  --slate-400: #706a5b;          /* secondary labels */
+  --slate-300: #4a463b;          /* body text */
+  --slate-200: #2b2922;          /* primary labels */
+  --slate-100: #1c1a16;          /* headings / strong text */
+  --slate-50:  #080808;          /* inverse text / deepest black */
 
-  --glass-bg:          rgba(0, 0, 0, 0.85);
-  --glass-border:      rgba(67, 41, 33, 0.35);
-  --glass-hover-bg:    rgba(0, 0, 0, 0.95);
-  --glass-hover-border:rgba(67, 41, 33, 0.65);
+  --glass-bg:          rgba(245, 242, 235, 0.70);
+  --glass-border:      rgba(200, 122, 71, 0.12);
+  --glass-hover-bg:    rgba(245, 242, 235, 0.90);
+  --glass-hover-border:rgba(200, 122, 71, 0.35);   /* copper tint on hover */
 
-  --brand-50:  #fbf5f4;
-  --brand-100: #eddcd8;
-  --brand-200: #ccb7b2;
-  --brand-300: #aa8e86;
-  --brand-400: #432921;
-  --brand-500: #785a52;
-  --brand-600: #432921;
-  --brand-700: #432921;
-  --brand-800: #000000;
-  --brand-900: #000000;
+  /* ── Accent Palette: Metallic Copper ── */
+  --brand-50:  hsl(23, 100%, 97%);
+  --brand-100: hsl(23, 100%, 93%);
+  --brand-200: hsl(23, 95%, 85%);
+  --brand-300: hsl(23, 85%, 72%);
+  --brand-400: hsl(23, 55%, 53%);   /* primary metallic copper */
+  --brand-500: hsl(23, 65%, 46%);   /* darker brand accent for text/borders */
+  --brand-600: hsl(23, 70%, 38%);
+  --brand-700: hsl(23, 75%, 30%);
+  --brand-800: hsl(23, 80%, 22%);
+  --brand-900: hsl(23, 85%, 15%);   /* copper-dark */
 
-  --copper-900: #432921;
-  --copper-800: #432921;
-  --copper-700: #432921;
-  --copper-600: #432921;
-  --copper-500: #432921;
-  --copper-400: #432921;
-  --copper-300: #aa8e86;
-  --copper-200: #ccb7b2;
-  --copper-100: #eddcd8;
-  --copper-50:  #fbf5f4;
+  /* ── Copper tones for System Integrity / special cards ── */
+  --copper-900: #3f1c07;
+  --copper-800: #5e2e10;
+  --copper-700: #7d411b;
+  --copper-600: #9c5528;
+  --copper-500: #b96b3a;
+  --copper-400: #c87a47;
+  --copper-300: #eec1a6;
+  --copper-200: #f6dbcc;
+  --copper-100: #fbeee6;
+  --copper-50:  #fdf8f5;
 
-  --chart-revenue:  #432921;
-  --chart-expense:  #785a52;
-  --chart-asset:    #432921;
-  --chart-liability:#785a52;
-  --chart-equity:   #aa8e86;
-  --chart-grid:     rgba(67, 41, 33, 0.15);
-  --chart-axis:     #aa8e86;
+  /* Chart Colors — warm status colors */
+  --chart-revenue:  #10b981; /* Emerald Green */
+  --chart-expense:  #dc2626; /* Deep Red */
+  --chart-asset:    #c87a47; /* Copper */
+  --chart-liability:#c59b27; /* Burnished Gold */
+  --chart-equity:   #4682b4; /* Steel Blue */
+  --chart-grid:     rgba(0, 0, 0, 0.05);
+  --chart-axis:     #706a5b;
 }
 
+/* .dark overrides for Matte Black / Dark Graphite theme */
+.dark {
+  --slate-950: #080808;          /* primary background: Deep Matte Black */
+  --slate-900: #121212;          /* secondary background: Charcoal Black */
+  --slate-800: #1a1a1a;          /* card / panel background: Dark Graphite */
+  --slate-700: #242424;          /* elevated card background / hover state */
+  --slate-600: #333333;          /* input borders, dividers */
+  --slate-500: #737373;          /* muted text, placeholders */
+  --slate-400: #a3a3a3;          /* secondary labels */
+  --slate-300: #c8c8c8;          /* body text */
+  --slate-200: #e5e5e5;          /* primary labels */
+  --slate-100: #ffffff;          /* headings / strong text */
+  --slate-50:  #fcfbfa;          /* inverse text / warm white */
+
+  --glass-bg:          rgba(26, 26, 26, 0.70);
+  --glass-border:      rgba(255, 255, 255, 0.04);
+  --glass-hover-bg:    rgba(26, 26, 26, 0.90);
+  --glass-hover-border:rgba(200, 122, 71, 0.25);   /* copper glow on hover */
+
+  /* brand defaults to copper accent in dark mode */
+  --brand-50:  hsl(23, 100%, 97%);
+  --brand-100: hsl(23, 100%, 93%);
+  --brand-200: hsl(23, 95%, 85%);
+  --brand-300: hsl(23, 85%, 72%);
+  --brand-400: hsl(23, 55%, 53%);   /* primary metallic copper */
+  --brand-500: hsl(23, 71%, 61%);   /* hover accent: Brighter Metallic Copper */
+  --brand-600: hsl(23, 65%, 46%);
+  --brand-700: hsl(23, 75%, 30%);
+  --brand-800: hsl(23, 80%, 22%);
+  --brand-900: hsl(23, 85%, 15%);
+
+  --chart-revenue:  #10b981;
+  --chart-expense:  #ef4444;
+  --chart-asset:    #c87a47;
+  --chart-liability:#c59b27;
+  --chart-equity:   #4682b4;
+  --chart-grid:     rgba(255, 255, 255, 0.04);
+  --chart-axis:     #888888;
+}
 
 @theme {
   --breakpoint-xs: 30rem;
   --font-sans: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-urdu: "Jameel Noori Nastaleeq", "Jameel Noori Nastaleeq Kasheeda", "Noto Nastaliq Urdu", serif;
 
-  /* Remap slate variables to our customized black + readable rose-brown palette */
-  --color-slate-950: #000000;
-  --color-slate-900: #000000;
-  --color-slate-800: #000000;
-  --color-slate-700: #2a1611;
-  --color-slate-600: #432921;
-  --color-slate-500: #785a52;
-  --color-slate-400: #aa8e86;
-  --color-slate-300: #ccb7b2;
-  --color-slate-200: #eddcd8;
-  --color-slate-100: #fbf5f4;
-  --color-slate-50:  #ffffff;
+  /* ── Remap Tailwind slate to our new premium palette ── */
+  --color-slate-950: var(--slate-950);
+  --color-slate-900: var(--slate-900);
+  --color-slate-800: var(--slate-800);
+  --color-slate-700: var(--slate-700);
+  --color-slate-600: var(--slate-600);
+  --color-slate-500: var(--slate-500);
+  --color-slate-400: var(--slate-400);
+  --color-slate-300: var(--slate-300);
+  --color-slate-200: var(--slate-200);
+  --color-slate-100: var(--slate-100);
+  --color-slate-50:  var(--slate-50);
 
-  /* Remap blue, indigo, purple, violet to rose-brown / brand accents */
-  --color-blue-50: #fbf5f4;
-  --color-blue-100: #eddcd8;
-  --color-blue-200: #ccb7b2;
-  --color-blue-300: #aa8e86;
-  --color-blue-400: #432921;
-  --color-blue-500: #432921;
-  --color-blue-600: #432921;
-  --color-blue-700: #432921;
-  --color-blue-800: #432921;
-  --color-blue-900: #000000;
-  --color-blue-950: #000000;
+  /* ── Brand Accents ── */
+  --color-brand-50:  var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
 
-  --color-indigo-50: #fbf5f4;
-  --color-indigo-100: #eddcd8;
-  --color-indigo-200: #ccb7b2;
-  --color-indigo-300: #aa8e86;
-  --color-indigo-400: #432921;
-  --color-indigo-500: #432921;
-  --color-indigo-600: #432921;
-  --color-indigo-700: #432921;
-  --color-indigo-800: #432921;
-  --color-indigo-900: #000000;
-  --color-indigo-950: #000000;
-
-  --color-purple-50: #fbf5f4;
-  --color-purple-100: #eddcd8;
-  --color-purple-200: #ccb7b2;
-  --color-purple-300: #aa8e86;
-  --color-purple-400: #432921;
-  --color-purple-500: #432921;
-  --color-purple-600: #432921;
-  --color-purple-700: #432921;
-  --color-purple-800: #432921;
-  --color-purple-900: #000000;
-  --color-purple-950: #000000;
-
-  --color-violet-50: #fbf5f4;
-  --color-violet-100: #eddcd8;
-  --color-violet-200: #ccb7b2;
-  --color-violet-300: #aa8e86;
-  --color-violet-400: #432921;
-  --color-violet-500: #432921;
-  --color-violet-600: #432921;
-  --color-violet-700: #432921;
-  --color-violet-800: #432921;
-  --color-violet-900: #000000;
-  --color-violet-950: #000000;
-
-  /* Remap green and emerald status colors to brand accents */
-  --color-green-50: #fbf5f4;
-  --color-green-100: #eddcd8;
-  --color-green-200: #ccb7b2;
-  --color-green-300: #aa8e86;
-  --color-green-400: #432921;
-  --color-green-500: #432921;
-  --color-green-600: #432921;
-  --color-green-700: #432921;
-  --color-green-800: #432921;
-  --color-green-900: #000000;
-  --color-green-950: #000000;
-
-  --color-emerald-50: #fbf5f4;
-  --color-emerald-100: #eddcd8;
-  --color-emerald-200: #ccb7b2;
-  --color-emerald-300: #aa8e86;
-  --color-emerald-400: #432921;
-  --color-emerald-500: #432921;
-  --color-emerald-600: #432921;
-  --color-emerald-700: #432921;
-  --color-emerald-800: #432921;
-  --color-emerald-900: #000000;
-  --color-emerald-950: #000000;
-
-  /* Remap red and rose status colors to brand accents */
-  --color-red-50: #fbf5f4;
-  --color-red-100: #eddcd8;
-  --color-red-200: #ccb7b2;
-  --color-red-300: #aa8e86;
-  --color-red-400: #432921;
-  --color-red-500: #432921;
-  --color-red-600: #432921;
-  --color-red-700: #432921;
-  --color-red-800: #432921;
-  --color-red-900: #000000;
-  --color-red-950: #000000;
-
-  --color-rose-50: #fbf5f4;
-  --color-rose-100: #eddcd8;
-  --color-rose-200: #ccb7b2;
-  --color-rose-300: #aa8e86;
-  --color-rose-400: #432921;
-  --color-rose-500: #432921;
-  --color-rose-600: #432921;
-  --color-rose-700: #432921;
-  --color-rose-800: #432921;
-  --color-rose-900: #000000;
-  --color-rose-950: #000000;
-
-  /* Remap amber, yellow, and orange to brand accents */
-  --color-amber-50: #fbf5f4;
-  --color-amber-100: #eddcd8;
-  --color-amber-200: #ccb7b2;
-  --color-amber-300: #aa8e86;
-  --color-amber-400: #432921;
-  --color-amber-500: #432921;
-  --color-amber-600: #432921;
-  --color-amber-700: #432921;
-  --color-amber-800: #432921;
-  --color-amber-900: #000000;
-  --color-amber-950: #000000;
-
-  --color-yellow-50: #fbf5f4;
-  --color-yellow-100: #eddcd8;
-  --color-yellow-200: #ccb7b2;
-  --color-yellow-300: #aa8e86;
-  --color-yellow-400: #432921;
-  --color-yellow-500: #432921;
-  --color-yellow-600: #432921;
-  --color-yellow-700: #432921;
-  --color-yellow-800: #432921;
-  --color-yellow-900: #000000;
-  --color-yellow-950: #000000;
-
-  --color-orange-50: #fbf5f4;
-  --color-orange-100: #eddcd8;
-  --color-orange-200: #ccb7b2;
-  --color-orange-300: #aa8e86;
-  --color-orange-400: #432921;
-  --color-orange-500: #432921;
-  --color-orange-600: #432921;
-  --color-orange-700: #432921;
-  --color-orange-800: #432921;
-  --color-orange-900: #000000;
-  --color-orange-950: #000000;
-
-  /* Remap cyan and teal to brand accents */
-  --color-cyan-50: #fbf5f4;
-  --color-cyan-100: #eddcd8;
-  --color-cyan-200: #ccb7b2;
-  --color-cyan-300: #aa8e86;
-  --color-cyan-400: #432921;
-  --color-cyan-500: #432921;
-  --color-cyan-600: #432921;
-  --color-cyan-700: #432921;
-  --color-cyan-800: #432921;
-  --color-cyan-900: #000000;
-  --color-cyan-950: #000000;
-
-  --color-teal-50: #fbf5f4;
-  --color-teal-100: #eddcd8;
-  --color-teal-200: #ccb7b2;
-  --color-teal-300: #aa8e86;
-  --color-teal-400: #432921;
-  --color-teal-500: #432921;
-  --color-teal-600: #432921;
-  --color-teal-700: #432921;
-  --color-teal-800: #432921;
-  --color-teal-900: #000000;
-  --color-teal-950: #000000;
-
-  --color-brand-50:  #fbf5f4;
-  --color-brand-100: #eddcd8;
-  --color-brand-200: #ccb7b2;
-  --color-brand-300: #aa8e86;
-  --color-brand-400: #432921;
-  --color-brand-500: #785a52;
-  --color-brand-600: #432921;
-  --color-brand-700: #432921;
-  --color-brand-800: #000000;
-  --color-brand-900: #000000;
-
-  --color-copper-900: #432921;
-  --color-copper-800: #432921;
-  --color-copper-700: #432921;
-  --color-copper-600: #432921;
-  --color-copper-500: #432921;
-  --color-copper-400: #432921;
-  --color-copper-300: #aa8e86;
-  --color-copper-200: #ccb7b2;
-  --color-copper-100: #eddcd8;
-  --color-copper-50:  #fbf5f4;
+  /* ── Expose copper as extra color tokens ── */
+  --color-copper-900: var(--copper-900);
+  --color-copper-800: var(--copper-800);
+  --color-copper-700: var(--copper-700);
+  --color-copper-600: var(--copper-600);
+  --color-copper-500: var(--copper-500);
+  --color-copper-400: var(--copper-400);
+  --color-copper-300: var(--copper-300);
+  --color-copper-200: var(--copper-200);
+  --color-copper-100: var(--copper-100);
+  --color-copper-50:  var(--copper-50);
 
   /* Status colors */
-  --color-success-bg: #432921;
-  --color-warning-bg: #785a52;
-  --color-error-bg:   #432921;
+  --color-success-bg: hsl(142, 76%, 36%);
+  --color-warning-bg: hsl(38, 92%, 50%);
+  --color-error-bg:   hsl(0, 84%, 60%);
 
-  /* Border radius — keep existing for design consistency */
+  /* Border radius */
   --radius-xs:  4px;
   --radius-sm:  8px;
   --radius-md:  12px;
@@ -272,7 +155,7 @@
   --radius-xl:  20px;
   --radius-2xl: 28px;
 
-  /* Animations — keep existing */
+  /* Animations */
   --animate-shimmer: shimmer 2.5s infinite linear;
   --animate-float: float 6s ease-in-out infinite;
 
@@ -299,25 +182,25 @@
 ───────────────────────────────────────── */
 @layer base {
   html {
-    background-color: #000000;
+    background-color: var(--slate-950);
     color-scheme: dark;
   }
 
   body {
-    background-color: #000000;
-    color: var(--slate-200);
+    background-color: var(--slate-950);
+    color: var(--slate-100);
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
   /* Custom scrollbar */
   ::-webkit-scrollbar        { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track  { background: transparent; }
-  ::-webkit-scrollbar-thumb  { background: #432921; border-radius: 9999px; }
-  ::-webkit-scrollbar-thumb:hover { background: #432921; }
+  ::-webkit-scrollbar-thumb  { background: rgba(200, 122, 71, 0.25); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(200, 122, 71, 0.45); }
 
-  /* Focus rings */
+  /* Focus rings — copper */
   :focus-visible {
-    outline: 2px solid #432921;
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
     border-radius: 8px;
   }
@@ -329,7 +212,7 @@
 
   /* Date input calendar icon */
   input[type="date"]::-webkit-calendar-picker-indicator {
-    filter: invert(0.8) sepia(1) saturate(0) hue-rotate(0deg);
+    filter: invert(0.6) sepia(0.5) saturate(2) hue-rotate(10deg);
     cursor: pointer;
   }
 }
@@ -338,10 +221,10 @@
    GLASS PANELS
 ───────────────────────────────────────── */
 .glass-panel {
-  background: #000000;
+  background: var(--glass-bg);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid #432921;
+  border: 1px solid var(--glass-border);
 }
 
 .glass-panel-hover {
@@ -349,8 +232,8 @@
 }
 
 .glass-panel-hover:hover {
-  background: #000000;
-  border-color: #432921;
+  background: var(--glass-hover-bg);
+  border-color: var(--glass-hover-border);
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.6);
   transform: translateY(-2px);
 }
@@ -358,46 +241,51 @@
 /* ─────────────────────────────────────────
    GLOW HELPERS
 ───────────────────────────────────────── */
-.glow-amber, .glow-subtle, .glow-emerald {
-  box-shadow: none;
+.glow-amber {
+  box-shadow: 0 0 40px -10px rgba(200, 122, 71, 0.2);
+}
+.glow-subtle {
+  box-shadow: 0 0 40px -10px rgba(200, 122, 71, 0.12);
+}
+.glow-emerald {
+  box-shadow: 0 0 40px -10px rgba(16, 185, 129, 0.15);
 }
 
+/* ─────────────────────────────────────────
+   TEXT GRADIENTS
+───────────────────────────────────────── */
 .text-gradient, .text-gradient-brand {
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  background-image: none;
-  color: var(--slate-100) !important;
-  -webkit-text-fill-color: var(--slate-100) !important;
+  background-image: linear-gradient(135deg, var(--slate-100) 0%, var(--slate-300) 100%);
 }
-
 
 /* ─────────────────────────────────────────
    COPPER / SYSTEM-INTEGRITY CARD
 ───────────────────────────────────────── */
 .copper-card {
-  background: #000000;
-  border: 1px solid #432921;
+  background: linear-gradient(135deg, #2e1608 0%, #1e0f06 100%);
+  border: 1px solid #522a10;
 }
 
 /* ─────────────────────────────────────────
    INPUT BASE
 ───────────────────────────────────────── */
 .input-navy {
-  background: #000000;
-  border: 1px solid #432921;
+  background: var(--slate-900);
+  border: 1px solid var(--slate-800);
   border-radius: 12px;
-  color: #432921;
+  color: var(--slate-100);
   transition: border-color 0.2s, background 0.2s;
 }
 .input-navy:focus {
-  border-color: #432921;
-  background: #000000;
+  border-color: var(--brand-400);
+  background: var(--slate-700);
   outline: none;
 }
 .input-navy::placeholder {
-  color: #432921;
-  opacity: 0.5;
+  color: var(--slate-500);
 }
 
 /* ─────────────────────────────────────────
@@ -407,12 +295,12 @@
 .coa-tree-line::before {
   content: '';  position: absolute; left: -16px; top: -12px;
   bottom: 12px; width: 1px;
-  border-left: 1px dashed #432921;
+  border-left: 1px dashed var(--slate-700);
 }
 .coa-tree-line::after {
   content: ''; position: absolute; left: -16px; top: 12px;
   width: 12px; height: 1px;
-  border-top: 1px dashed #432921;
+  border-top: 1px dashed var(--slate-700);
 }
 .coa-tree-line-last::before { bottom: auto; height: 24px; }
 
@@ -420,9 +308,9 @@
    SIDEBAR ACTIVE ITEM
 ───────────────────────────────────────── */
 .nav-active {
-  background: #000000;
-  border-left: 2px solid #432921;
-  color: #432921;
+  background: linear-gradient(90deg, rgba(200, 122, 71, 0.12) 0%, rgba(200, 122, 71, 0.04) 100%);
+  border-left: 2px solid var(--brand-400);
+  color: var(--brand-300);
 }
 
 /* ─────────────────────────────────────────
@@ -468,4 +356,3 @@
     font-family: "Jameel Noori Nastaleeq", "Jameel Noori Nastaleeq Kasheeda", "Noto Nastaliq Urdu", serif !important;
   }
 }
-
