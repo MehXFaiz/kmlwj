@@ -268,7 +268,7 @@ export const ExpenseEntryForm = () => {
     }
   };
 
-  const inputClass = 'w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 transition-all font-medium';
+  const inputClass = 'w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500/60 transition-all font-medium';
   const labelClass = 'block text-xs font-semibold text-slate-400 mb-1.5';
 
   return (
@@ -282,7 +282,7 @@ export const ExpenseEntryForm = () => {
           </Link>
           <div>
             <div className="flex items-center gap-2 mb-0.5">
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.12em] text-rose-400 bg-rose-950/40 border border-rose-900/40 px-2 py-0.5 rounded-full">
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.12em] text-brand-400 bg-brand-950/40 border border-brand-900/40 px-2 py-0.5 rounded-full">
                 <Sparkles className="h-3 w-3" /> {t('forms.quickAdd')}
               </span>
             </div>
@@ -290,7 +290,7 @@ export const ExpenseEntryForm = () => {
             <p className="text-xs text-slate-500 mt-0.5">{t('forms.addExpenseDesc')}</p>
           </div>
         </div>
-        <span className="text-xs font-semibold text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20">
+        <span className="text-xs font-semibold text-brand-400 bg-brand-500/10 px-3 py-1.5 rounded-full border border-brand-500/20">
           Quick Entry
         </span>
       </div>
@@ -301,7 +301,7 @@ export const ExpenseEntryForm = () => {
           {/* Card 01: Expense Type */}
             <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
               <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
-                <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">
+                <span className="w-6 h-6 rounded-full bg-brand-500/15 border border-brand-500/30 text-brand-400 font-bold text-xs flex items-center justify-center shrink-0">
                   01
                 </span>
                 <h3 className="text-sm font-semibold text-slate-200">{t('forms.expenseType')}</h3>
@@ -325,7 +325,7 @@ export const ExpenseEntryForm = () => {
                       onClick={() => setExpenseType(type.key)}
                       className={`py-3 px-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer text-center ${
                         expenseType === type.key
-                          ? 'bg-rose-600/10 border-rose-500/60 text-rose-400'
+                          ? 'bg-brand-500/10 border-brand-500/60 text-brand-400 font-bold shadow-sm shadow-brand-500/5'
                           : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
                       }`}
                     >
@@ -357,7 +357,7 @@ export const ExpenseEntryForm = () => {
             {/* Card 02: Ledger Mapping */}
             <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
               <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
-                <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">
+                <span className="w-6 h-6 rounded-full bg-brand-500/15 border border-brand-500/30 text-brand-400 font-bold text-xs flex items-center justify-center shrink-0">
                   02
                 </span>
                 <h3 className="text-sm font-semibold text-slate-200">{t('forms.ledgerMapping')}</h3>
@@ -391,13 +391,13 @@ export const ExpenseEntryForm = () => {
                   </div>
                 ) : (
                   autoCreationDetails && (
-                    <div className="flex items-start gap-3 p-4 rounded-xl bg-slate-950/60 border border-amber-500/20 text-xs text-slate-300">
-                      <AlertCircle className="h-4 w-4 mt-0.5 text-amber-500 flex-shrink-0" />
+                    <div className="flex items-start gap-3 p-4 rounded-xl bg-slate-950/60 border border-brand-500/20 text-xs text-slate-300">
+                      <AlertCircle className="h-4 w-4 mt-0.5 text-brand-400 flex-shrink-0" />
                       <div className="space-y-1">
                         <p className="font-semibold text-slate-200">{t('forms.missingSubAccount')}</p>
                         <p className="text-slate-400 leading-relaxed">
-                          No ledger account exists for <code className="bg-slate-900 border border-slate-800 text-amber-400 px-1.5 py-0.5 rounded font-mono font-bold">"{expenseType === 'Other' && customExpenseName.trim() ? customExpenseName.trim() : expenseType}"</code>.
-                          The system will automatically generate it under <span className="font-semibold text-slate-200">{autoCreationDetails.parentName}</span> with code <code className="bg-slate-900 border border-slate-800 text-amber-400 px-1.5 py-0.5 rounded font-mono font-bold">{autoCreationDetails.nextCode}</code> upon saving.
+                          No ledger account exists for <code className="bg-slate-900 border border-slate-800 text-brand-400 px-1.5 py-0.5 rounded font-mono font-bold">"{expenseType === 'Other' && customExpenseName.trim() ? customExpenseName.trim() : expenseType}"</code>.
+                          The system will automatically generate it under <span className="font-semibold text-slate-200">{autoCreationDetails.parentName}</span> with code <code className="bg-slate-900 border border-slate-800 text-brand-400 px-1.5 py-0.5 rounded font-mono font-bold">{autoCreationDetails.nextCode}</code> upon saving.
                         </p>
                       </div>
                     </div>
@@ -409,7 +409,7 @@ export const ExpenseEntryForm = () => {
             {/* Card 03: Transaction Details */}
             <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
               <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
-                <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">
+                <span className="w-6 h-6 rounded-full bg-brand-500/15 border border-brand-500/30 text-brand-400 font-bold text-xs flex items-center justify-center shrink-0">
                   03
                 </span>
                 <h3 className="text-sm font-semibold text-slate-200">Transaction Details</h3>
@@ -489,7 +489,7 @@ export const ExpenseEntryForm = () => {
                 {t('forms.cancel')}
               </Link>
               <button type="submit" disabled={loading}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold transition-all shadow-lg shadow-amber-600/25 active:scale-95 disabled:opacity-50 cursor-pointer">
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-slate-950 text-sm font-bold transition-all shadow-lg shadow-brand-600/15 active:scale-95 disabled:opacity-50 cursor-pointer">
                 <Save className="h-4 w-4" />
                 {loading ? t('forms.processing') : t('forms.saveAndPost')}
               </button>
