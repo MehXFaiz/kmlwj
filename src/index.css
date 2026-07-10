@@ -8,96 +8,98 @@
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── NEW THEME: Navy-dark base instead of blue-slate ── */
-  --slate-950: #0e1018;          /* deepest page background */
-  --slate-900: #13161f;          /* sidebar / nav */
-  --slate-800: #1c2030;          /* card / panel surfaces */
-  --slate-700: #252a3d;          /* elevated card, modals */
-  --slate-600: #303550;          /* input borders, dividers */
-  --slate-500: #5a6080;          /* muted text, placeholders */
-  --slate-400: #8b92ac;          /* secondary labels */
-  --slate-300: #b0b8d0;          /* body text */
-  --slate-200: #d4dae8;          /* primary labels */
-  --slate-100: #e8edf5;          /* headings / strong text */
-  --slate-50:  #f0f3f8;          /* inverse / bright white */
+  /* ── LIGHT MODE: Warm White / Beige / Metallic accents ── */
+  --slate-950: #fcfbfa;          /* deepest page background: Warm White */
+  --slate-900: #faf8f5;          /* sidebar / nav background */
+  --slate-800: #f5f2eb;          /* card / panel background: Light Beige */
+  --slate-700: #ede9df;          /* elevated card background / hover state */
+  --slate-600: #e3dec9;          /* input borders, dividers */
+  --slate-500: #8c8574;          /* muted text, placeholders */
+  --slate-400: #706a5b;          /* secondary labels */
+  --slate-300: #4a463b;          /* body text */
+  --slate-200: #2b2922;          /* primary labels */
+  --slate-100: #1c1a16;          /* headings / strong text */
+  --slate-50:  #080808;          /* inverse text / deepest black */
 
-  --glass-bg:          rgba(19, 22, 31, 0.75);
-  --glass-border:      rgba(255, 255, 255, 0.05);
-  --glass-hover-bg:    rgba(19, 22, 31, 0.92);
-  --glass-hover-border:rgba(232, 160, 64, 0.15);   /* amber tint on hover */
+  --glass-bg:          rgba(245, 242, 235, 0.70);
+  --glass-border:      rgba(200, 122, 71, 0.12);
+  --glass-hover-bg:    rgba(245, 242, 235, 0.90);
+  --glass-hover-border:rgba(200, 122, 71, 0.35);   /* copper tint on hover */
 
-  /* ── Amber / Copper Gold accent (replaces amber) ── */
-  --brand-50:  hsl(38, 100%, 95%);
-  --brand-100: hsl(38, 100%, 88%);
-  --brand-200: hsl(38, 95%, 76%);
-  --brand-300: hsl(36, 90%, 63%);
-  --brand-400: hsl(34, 88%, 52%);   /* primary amber */
-  --brand-500: hsl(32, 85%, 43%);   /* hover darker amber */
-  --brand-600: hsl(30, 82%, 35%);
-  --brand-700: hsl(28, 78%, 27%);
-  --brand-800: hsl(26, 72%, 20%);
-  --brand-900: hsl(24, 65%, 14%);   /* copper-dark (System Integrity card) */
+  /* ── Accent Palette: Metallic Copper (replaces amber) ── */
+  --brand-50:  hsl(23, 100%, 97%);
+  --brand-100: hsl(23, 100%, 93%);
+  --brand-200: hsl(23, 95%, 85%);
+  --brand-300: hsl(23, 85%, 72%);
+  --brand-400: hsl(23, 55%, 53%);   /* primary metallic copper */
+  --brand-500: hsl(23, 65%, 46%);   /* darker brand accent for text/borders */
+  --brand-600: hsl(23, 70%, 38%);
+  --brand-700: hsl(23, 75%, 30%);
+  --brand-800: hsl(23, 80%, 22%);
+  --brand-900: hsl(23, 85%, 15%);   /* copper-dark */
 
   /* ── Copper tones for System Integrity / special cards ── */
-  --copper-900: #1e0f06;
-  --copper-800: #2e1608;
-  --copper-700: #3d1e0c;
-  --copper-600: #522a10;
-  --copper-500: #7a4320;
-  --copper-400: #b06a34;
-  --copper-300: #d48a50;
-  --copper-200: #e8b07a;
-  --copper-100: #f3d0b0;
-  --copper-50:  #faeee0;
+  --copper-900: #3f1c07;
+  --copper-800: #5e2e10;
+  --copper-700: #7d411b;
+  --copper-600: #9c5528;
+  --copper-500: #b96b3a;
+  --copper-400: #c87a47;
+  --copper-300: #eec1a6;
+  --copper-200: #f6dbcc;
+  --copper-100: #fbeee6;
+  --copper-50:  #fdf8f5;
 
-  /* Chart Colors — kept vivid for data clarity */
-  --chart-revenue:  #10b981;
-  --chart-expense:  #ef4444;
-  --chart-asset:    #f59e0b;
-  --chart-liability:#8b5cf6;
-  --chart-equity:   #3b82f6;
-  --chart-grid:     rgba(255, 255, 255, 0.03);
-  --chart-axis:     #3d4260;
+  /* Chart Colors — warm status colors */
+  --chart-revenue:  #10b981; /* Emerald Green */
+  --chart-expense:  #dc2626; /* Deep Red */
+  --chart-asset:    #c87a47; /* Copper */
+  --chart-liability:#c59b27; /* Burnished Gold */
+  --chart-equity:   #4682b4; /* Steel Blue */
+  --chart-grid:     rgba(0, 0, 0, 0.05);
+  --chart-axis:     #706a5b;
 }
 
-/* .dark mirrors :root */
+/* .dark overrides for Matte Black / Dark Graphite theme */
 .dark {
-  --slate-950: #0e1018;
-  --slate-900: #13161f;
-  --slate-800: #1c2030;
-  --slate-700: #252a3d;
-  --slate-600: #303550;
-  --slate-500: #5a6080;
-  --slate-400: #8b92ac;
-  --slate-300: #b0b8d0;
-  --slate-200: #d4dae8;
-  --slate-100: #e8edf5;
-  --slate-50:  #f0f3f8;
+  --slate-950: #080808;          /* primary background: Deep Matte Black */
+  --slate-900: #121212;          /* secondary background: Charcoal Black */
+  --slate-800: #1a1a1a;          /* card / panel background: Dark Graphite */
+  --slate-700: #242424;          /* elevated card background / hover state */
+  --slate-600: #333333;          /* input borders, dividers */
+  --slate-500: #737373;          /* muted text, placeholders */
+  --slate-400: #a3a3a3;          /* secondary labels */
+  --slate-300: #c8c8c8;          /* body text */
+  --slate-200: #e5e5e5;          /* primary labels */
+  --slate-100: #ffffff;          /* headings / strong text */
+  --slate-50:  #fcfbfa;          /* inverse text / warm white */
 
-  --glass-bg:          rgba(19, 22, 31, 0.75);
-  --glass-border:      rgba(255, 255, 255, 0.05);
-  --glass-hover-bg:    rgba(19, 22, 31, 0.92);
-  --glass-hover-border:rgba(232, 160, 64, 0.15);
+  --glass-bg:          rgba(26, 26, 26, 0.70);
+  --glass-border:      rgba(255, 255, 255, 0.04);
+  --glass-hover-bg:    rgba(26, 26, 26, 0.90);
+  --glass-hover-border:rgba(200, 122, 71, 0.25);   /* copper glow on hover */
 
-  --brand-50:  hsl(38, 100%, 95%);
-  --brand-100: hsl(38, 100%, 88%);
-  --brand-200: hsl(38, 95%, 76%);
-  --brand-300: hsl(36, 90%, 63%);
-  --brand-400: hsl(34, 88%, 52%);
-  --brand-500: hsl(32, 85%, 43%);
-  --brand-600: hsl(30, 82%, 35%);
-  --brand-700: hsl(28, 78%, 27%);
-  --brand-800: hsl(26, 72%, 20%);
-  --brand-900: hsl(24, 65%, 14%);
+  /* brand defaults to copper accent in dark mode */
+  --brand-50:  hsl(23, 100%, 97%);
+  --brand-100: hsl(23, 100%, 93%);
+  --brand-200: hsl(23, 95%, 85%);
+  --brand-300: hsl(23, 85%, 72%);
+  --brand-400: hsl(23, 55%, 53%);   /* primary metallic copper */
+  --brand-500: hsl(23, 71%, 61%);   /* hover accent: Brighter Metallic Copper */
+  --brand-600: hsl(23, 65%, 46%);
+  --brand-700: hsl(23, 75%, 30%);
+  --brand-800: hsl(23, 80%, 22%);
+  --brand-900: hsl(23, 85%, 15%);
 
   --chart-revenue:  #10b981;
   --chart-expense:  #ef4444;
-  --chart-asset:    #f59e0b;
-  --chart-liability:#8b5cf6;
-  --chart-equity:   #3b82f6;
-  --chart-grid:     rgba(255, 255, 255, 0.03);
-  --chart-axis:     #3d4260;
+  --chart-asset:    #c87a47;
+  --chart-liability:#c59b27;
+  --chart-equity:   #4682b4;
+  --chart-grid:     rgba(255, 255, 255, 0.04);
+  --chart-axis:     #888888;
 }
+
 
 @theme {
   --breakpoint-xs: 30rem;
@@ -181,7 +183,7 @@
 ───────────────────────────────────────── */
 @layer base {
   html {
-    background-color: #0e1018;
+    background-color: var(--slate-950);
     color-scheme: dark;
   }
 
@@ -194,12 +196,12 @@
   /* Custom scrollbar */
   ::-webkit-scrollbar        { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track  { background: transparent; }
-  ::-webkit-scrollbar-thumb  { background: rgba(90, 96, 128, 0.35); border-radius: 9999px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(176, 184, 208, 0.5); }
+  ::-webkit-scrollbar-thumb  { background: rgba(200, 122, 71, 0.25); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(200, 122, 71, 0.45); }
 
-  /* Focus rings — amber */
+  /* Focus rings — copper */
   :focus-visible {
-    outline: 2px solid hsl(34, 88%, 52%);
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
     border-radius: 8px;
   }
@@ -279,15 +281,15 @@
    INPUT BASE — pill-rounded, navy bg
 ───────────────────────────────────────── */
 .input-navy {
-  background: #141720;
-  border: 1px solid #252a3d;
-  border-radius: 16px;
+  background: var(--slate-900);
+  border: 1px solid var(--slate-800);
+  border-radius: 12px;
   color: var(--slate-100);
   transition: border-color 0.2s, background 0.2s;
 }
 .input-navy:focus {
-  border-color: hsl(34, 88%, 52%);
-  background: #181d2a;
+  border-color: var(--brand-400);
+  background: var(--slate-700);
   outline: none;
 }
 .input-navy::placeholder {
@@ -301,12 +303,12 @@
 .coa-tree-line::before {
   content: '';  position: absolute; left: -16px; top: -12px;
   bottom: 12px; width: 1px;
-  border-left: 1px dashed rgba(90, 96, 128, 0.35);
+  border-left: 1px dashed var(--slate-700);
 }
 .coa-tree-line::after {
   content: ''; position: absolute; left: -16px; top: 12px;
   width: 12px; height: 1px;
-  border-top: 1px dashed rgba(90, 96, 128, 0.35);
+  border-top: 1px dashed var(--slate-700);
 }
 .coa-tree-line-last::before { bottom: auto; height: 24px; }
 
@@ -314,9 +316,9 @@
    SIDEBAR ACTIVE ITEM
 ───────────────────────────────────────── */
 .nav-active {
-  background: linear-gradient(90deg, rgba(232,160,64,0.12) 0%, rgba(232,160,64,0.04) 100%);
-  border-left: 2px solid hsl(34, 88%, 52%);
-  color: hsl(38, 95%, 70%);
+  background: linear-gradient(90deg, rgba(200, 122, 71, 0.12) 0%, rgba(200, 122, 71, 0.04) 100%);
+  border-left: 2px solid var(--brand-400);
+  color: var(--brand-300);
 }
 
 /* ─────────────────────────────────────────
