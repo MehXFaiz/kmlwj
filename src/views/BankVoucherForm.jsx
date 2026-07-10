@@ -30,7 +30,8 @@ export const BankVoucherForm = () => {
   const bankAccounts = useMemo(() => {
     return flatAccounts.filter(acc =>
       acc.type === 'Asset' &&
-      acc.level === 'SUBSIDIARY' &&
+      acc.detailType !== 'Header' &&
+      (acc.level === 'GL' || acc.level === 'SUBSIDIARY') &&
       (acc.detailType === 'Cash' || (acc.name || '').toLowerCase().includes('bank') || (acc.name || '').toLowerCase().includes('cash'))
     );
   }, [flatAccounts]);
