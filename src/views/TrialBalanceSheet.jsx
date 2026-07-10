@@ -141,6 +141,7 @@ export const TrialBalanceSheet = () => {
 
     // Aggregate journal entries
     journals.forEach(je => {
+      if (je.status !== 'Posted') return;
       je.lines.forEach(line => {
         const stats = baseBalances[line.accountCode];
         if (stats) {
@@ -293,13 +294,13 @@ export const TrialBalanceSheet = () => {
 
     // Compute residual balances from all ledger accounts and distribute to match main total
     const totalActualExpense = computedAccounts
-      .filter(acc => acc.type === 'gl' && acc.nature === 'EXPENSE')
+      .filter(acc => acc.type === 'gl' && acc.nature.toUpperCase() === 'EXPENSE')
       .reduce((sum, acc) => sum + Math.max(0, acc.debit - acc.credit), 0);
     const mappedExpTotal = expenses.reduce((sum, item) => sum + item.val, 0);
     expenses[25].val = Math.max(0, totalActualExpense - mappedExpTotal);
 
     const totalActualIncome = computedAccounts
-      .filter(acc => acc.type === 'gl' && acc.nature === 'REVENUE')
+      .filter(acc => acc.type === 'gl' && acc.nature.toUpperCase() === 'REVENUE')
       .reduce((sum, acc) => sum + Math.max(0, acc.credit - acc.debit), 0);
     
     const mappedIncTotal = incomes.slice(3).reduce((sum, item) => sum + item.val, 0);
