@@ -30,13 +30,23 @@ var trial_balance_default = makeHandler(async (req, res) => {
     const formatted = activeAccounts.map((acc) => {
       let debit = 0;
       let credit = 0;
-      if (acc.currentBalance > 0) {
-        debit = acc.currentBalance;
-        totalDebit += debit;
-      } else if (acc.currentBalance < 0) {
-        credit = Math.abs(acc.currentBalance);
-        totalCredit += credit;
+      const typeName = acc.accountType?.name?.toUpperCase() || "ASSET";
+      const isDebitNormal = ["ASSET", "EXPENSE"].includes(typeName);
+      if (isDebitNormal) {
+        if (acc.currentBalance > 0) {
+          debit = acc.currentBalance;
+        } else if (acc.currentBalance < 0) {
+          credit = Math.abs(acc.currentBalance);
+        }
+      } else {
+        if (acc.currentBalance > 0) {
+          credit = acc.currentBalance;
+        } else if (acc.currentBalance < 0) {
+          debit = Math.abs(acc.currentBalance);
+        }
       }
+      totalDebit += debit;
+      totalCredit += credit;
       return {
         id: acc.id,
         glCode: acc.glCode,

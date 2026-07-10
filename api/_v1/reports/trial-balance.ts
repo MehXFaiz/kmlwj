@@ -41,16 +41,28 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       let debit = 0;
       let credit = 0;
 
-      // In our system, currentBalance is (Sum of Debits) - (Sum of Credits).
-      // If currentBalance > 0, the account has a Debit balance.
-      // If currentBalance < 0, the account has a Credit balance.
-      if (acc.currentBalance > 0) {
-        debit = acc.currentBalance;
-        totalDebit += debit;
-      } else if (acc.currentBalance < 0) {
-        credit = Math.abs(acc.currentBalance);
-        totalCredit += credit;
+      // In our system, currentBalance is:
+      // - (Sum of Debits) - (Sum of Credits) for ASSET and EXPENSE (debit-normal).
+      // - (Sum of Credits) - (Sum of Debits) for LIABILITY, EQUITY, and REVENUE (credit-normal).
+      const typeName = acc.accountType?.name?.toUpperCase() || 'ASSET';
+      const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
+
+      if (isDebitNormal) {
+        if (acc.currentBalance > 0) {
+          debit = acc.currentBalance;
+        } else if (acc.currentBalance < 0) {
+          credit = Math.abs(acc.currentBalance);
+        }
+      } else {
+        if (acc.currentBalance > 0) {
+          credit = acc.currentBalance;
+        } else if (acc.currentBalance < 0) {
+          debit = Math.abs(acc.currentBalance);
+        }
       }
+
+      totalDebit += debit;
+      totalCredit += credit;
 
       return {
         id: acc.id,
