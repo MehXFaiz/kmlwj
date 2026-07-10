@@ -489,15 +489,15 @@ export const TrialBalanceSheet = () => {
       </div>
 
       {/* Header Title & Action Buttons */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 print:hidden">
         <div className="flex flex-col gap-1">
           <h2 className="text-xl font-bold text-slate-100 uppercase tracking-wider">Trial Balance Matrix</h2>
           <p className="text-xs text-slate-400">Live synced financial ledger matrix formatted exactly like the Urdu paper statement.</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
           {/* View Switcher Toggle */}
-          <div className="inline-flex rounded-lg bg-slate-900 border border-slate-800 p-0.5 mr-2">
+          <div className="inline-flex rounded-lg bg-slate-900 border border-slate-800 p-0.5">
             <button
               onClick={() => setViewMode('matrix')}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${viewMode === 'matrix' ? 'bg-brand-400 text-slate-50 shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
@@ -516,18 +516,20 @@ export const TrialBalanceSheet = () => {
             </button>
           </div>
 
-          <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2 cursor-pointer">
-            <Printer className="h-4 w-4" />
-            <span>Print</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleExportCSV} className="gap-2 cursor-pointer">
-            <Download className="h-4 w-4" />
-            <span>Export CSV</span>
-          </Button>
-          <Button variant="primary" size="sm" onClick={handleCreateAccount} className="gap-2 cursor-pointer">
-            <Plus className="h-4 w-4" />
-            <span>New Account</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2 cursor-pointer">
+              <Printer className="h-4 w-4" />
+              <span className="hidden sm:inline">Print</span>
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExportCSV} className="gap-2 cursor-pointer">
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Export CSV</span>
+            </Button>
+            <Button variant="primary" size="sm" onClick={handleCreateAccount} className="gap-2 cursor-pointer">
+              <Plus className="h-4 w-4" />
+              <span>New Account</span>
+            </Button>
+          </div>
         </div>
       </div>
 
