@@ -222,13 +222,13 @@ export const HallBookingForm = () => {
       if (id) {
         savedBooking = await updateBooking(id, {
           ...data,
-          amount: parseFloat(data.amount)
+          amount: Math.round(parseFloat(data.amount))
         });
         showToast('Booking updated successfully!', 'success');
       } else {
         savedBooking = await addBooking({
           ...data,
-          amount: parseFloat(data.amount)
+          amount: Math.round(parseFloat(data.amount))
         });
         showToast('Booking saved successfully!', 'success');
       }
@@ -614,8 +614,8 @@ export const HallBookingForm = () => {
                     <input type="text" {...register('amount', {
                       required: 'Amount is required',
                       pattern: {
-                        value: /^[1-9]\d*(\.\d{1,2})?$/,
-                        message: 'Positive decimal number up to 2 decimal places'
+                        value: /^[1-9]\d*$/,
+                        message: 'Positive whole number'
                       }
                     })} required
                       className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border text-lg font-bold text-emerald-400 focus:outline-none focus:border-amber-500/60 transition-all ${errors.amount ? 'border-red-500/60' : 'border-slate-800'}`} />

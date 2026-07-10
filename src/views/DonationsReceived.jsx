@@ -188,7 +188,7 @@ export const DonationsReceived = () => {
           <div>
             <p className="text-xs font-semibold uppercase text-slate-400">Total Collected</p>
             <p className="text-2xl font-black text-emerald-400 mt-1">
-              PKR {Number(stats.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              PKR {Number(stats.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </p>
           </div>
           <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -200,7 +200,7 @@ export const DonationsReceived = () => {
           <div>
             <p className="text-xs font-semibold uppercase text-slate-400">Cash Inflow</p>
             <p className="text-xl font-bold text-slate-200 mt-1">
-              PKR {Number(stats.cashAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              PKR {Number(stats.cashAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </p>
           </div>
           <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
@@ -212,7 +212,7 @@ export const DonationsReceived = () => {
           <div>
             <p className="text-xs font-semibold uppercase text-slate-400">Bank / Online</p>
             <p className="text-xl font-bold text-slate-200 mt-1">
-              PKR {Number(stats.bankAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              PKR {Number(stats.bankAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </p>
           </div>
           <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
@@ -348,7 +348,7 @@ export const DonationsReceived = () => {
                         <DollarSign className="w-3.5 h-3.5 text-amber-400" /> AMOUNT
                       </span>
                       <span className="font-bold text-amber-400 text-sm">
-                        PKR {Number(d.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        PKR {Number(d.amount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                       </span>
                     </div>
                     <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">

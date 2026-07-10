@@ -175,8 +175,8 @@ export const DonationReceiptForm = () => {
       setToast({ type: 'error', message: 'Please select a donor' });
       return;
     }
-    if (!form.amount || isNaN(form.amount) || Number(form.amount) <= 0) {
-      setToast({ type: 'error', message: 'Please enter a valid positive donation amount' });
+    if (!form.amount || isNaN(form.amount) || Number(form.amount) <= 0 || !/^[1-9]\d*$/.test(String(form.amount))) {
+      setToast({ type: 'error', message: 'Please enter a valid positive whole donation amount' });
       return;
     }
     if (form.paymentMethod === 'CASH' && !form.cashAccountId && cashAccounts.length === 0) {
@@ -190,7 +190,7 @@ export const DonationReceiptForm = () => {
 
     setLoading(true);
     try {
-      const payload = { ...form, amount: Number(form.amount) };
+      const payload = { ...form, amount: Math.round(Number(form.amount)) };
       if (id) {
         await updateDonationStatus(id, form.status, payload);
         setToast({ type: 'success', message: 'Donation receipt updated successfully!' });
@@ -346,11 +346,11 @@ export const DonationReceiptForm = () => {
                     <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">PKR</span>
                     <input
                       type="number"
-                      step="0.01"
+                      step="1"
                       required
                       value={form.amount}
                       onChange={e => setForm({ ...form, amount: e.target.value })}
-                      placeholder="0.00"
+                      placeholder="0"
                       className="w-full pl-12 pr-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-emerald-400 focus:outline-none focus:border-emerald-500/60 transition-all font-bold"
                     />
                   </div>

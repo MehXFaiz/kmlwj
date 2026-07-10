@@ -68,7 +68,7 @@ export const Reports = () => {
 
   const formatMoney = (val) => {
     if (val === undefined || val === null) return '—';
-    return `Rs ${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `Rs ${val.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   };
 
   return (

@@ -73,9 +73,9 @@ export const BankVoucherForm = () => {
       showToast('Reference must contain only letters, numbers, spaces, hyphens, and dots (3-30 chars).', 'warning');
       return;
     }
-    const val = parseFloat(amount);
-    if (!val || val <= 0 || !/^[1-9]\d*(\.\d{1,2})?$/.test(amount)) {
-      showToast('Amount must be a positive number with up to 2 decimal places.', 'warning');
+    const val = parseInt(amount, 10);
+    if (!val || val <= 0 || !/^[1-9]\d*$/.test(amount)) {
+      showToast('Amount must be a positive whole number.', 'warning');
       return;
     }
 
@@ -91,7 +91,7 @@ export const BankVoucherForm = () => {
       const { localBalances } = calculateAccountBalances(flatAccounts, journals, 'Global');
       const avail = localBalances[bankAcc.code] !== undefined ? localBalances[bankAcc.code] : (bankAcc.initialBalance || 0);
       if (val > avail) {
-        showToast(`Insufficient amount! Current balance: Rs. ${Math.max(0, avail).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'error');
+        showToast(`Insufficient amount! Current balance: Rs. ${Math.max(0, avail).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, 'error');
         return;
       }
     }

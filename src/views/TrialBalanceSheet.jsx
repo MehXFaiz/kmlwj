@@ -41,18 +41,18 @@ export const TrialBalanceSheet = () => {
   }, [fetchAccountsTree, fetchJournals]);
 
   const formatMoney = (val) => {
-    if (val === undefined || val === null || isNaN(val)) return 'Rs 0.00';
+    if (val === undefined || val === null || isNaN(val)) return 'Rs 0';
     if (val === 0) return '—';
-    return `Rs ${Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `Rs ${Number(val).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   };
 
   const formatBalance = (debit, credit) => {
     const net = (debit || 0) - (credit || 0);
     if (Math.abs(net) < 0.005) return '—';
     if (net > 0) {
-      return `Rs ${net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Dr`;
+      return `Rs ${net.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} Dr`;
     }
-    return `Rs ${Math.abs(net).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Cr`;
+    return `Rs ${Math.abs(net).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} Cr`;
   };
 
   // Build a lookup map from trial balance report entries

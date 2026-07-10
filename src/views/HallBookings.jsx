@@ -251,7 +251,7 @@ export const HallBookings = () => {
                               <DollarSign className="w-3.5 h-3.5 text-amber-400" /> TOTAL AMOUNT
                             </span>
                             <span className="font-bold text-emerald-400 text-sm">
-                              Rs. {Number(booking.amount || 0).toLocaleString()}
+                              Rs. {Math.round(Number(booking.amount || 0)).toLocaleString()}
                             </span>
                           </div>
                           <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
@@ -399,7 +399,7 @@ export const HallBookings = () => {
                           {formatHallName(booking)}
                         </span>
                       </td>
-                      <td className="px-6 py-4 font-bold text-emerald-400">Rs. {booking.amount.toLocaleString()}</td>
+                      <td className="px-6 py-4 font-bold text-emerald-400">Rs. {Math.round(booking.amount).toLocaleString()}</td>
                       <td className="px-6 py-4">
                         {booking.status === 'Confirmed' ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold uppercase tracking-wider">
