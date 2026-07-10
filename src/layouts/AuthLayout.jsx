@@ -14,13 +14,13 @@ export const AuthLayout = ({ children }) => {
     <div className="min-h-[100dvh] flex flex-col lg:flex-row bg-slate-950 overflow-x-hidden">
       {/* ─── LEFT BRANDING PANEL ─── */}
       <div className="hidden lg:flex lg:w-[48%] xl:w-[52%] relative overflow-hidden flex-col justify-between p-10 xl:p-14 shrink-0">
-        {/* Background gradient — deep blue tones */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-amber-950/60 to-slate-900" />
+        {/* Background gradient — deep warm brand tones */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-brand-950/20 to-slate-900" />
 
         {/* Ambient glow orbs */}
-        <div className="absolute top-[15%] left-[10%] w-72 h-72 bg-amber-500/10 rounded-full blur-[100px] animate-[float_8s_ease-in-out_infinite]" />
-        <div className="absolute bottom-[20%] right-[15%] w-80 h-80 bg-blue-600/15 rounded-full blur-[100px] animate-[float_10s_ease-in-out_infinite_2s]" />
-        <div className="absolute top-[55%] left-[40%] w-48 h-48 bg-amber-600/8 rounded-full blur-[80px] animate-[float_7s_ease-in-out_infinite_1s]" />
+        <div className="absolute top-[15%] left-[10%] w-72 h-72 bg-brand-500/10 rounded-full blur-[100px] animate-[float_8s_ease-in-out_infinite]" />
+        <div className="absolute bottom-[20%] right-[15%] w-80 h-80 bg-brand-600/15 rounded-full blur-[100px] animate-[float_10s_ease-in-out_infinite_2s]" />
+        <div className="absolute top-[55%] left-[40%] w-48 h-48 bg-brand-600/8 rounded-full blur-[80px] animate-[float_7s_ease-in-out_infinite_1s]" />
 
         {/* Subtle grid overlay */}
         <div
@@ -38,14 +38,14 @@ export const AuthLayout = ({ children }) => {
             <img
               src={logoImg}
               alt="KMLWJ Logo"
-              className="w-14 h-14 object-contain filter drop-shadow(0 0 12px rgba(99,102,241,0.4))"
+              className="w-14 h-14 object-contain filter drop-shadow(0 0 12px rgba(200,122,71,0.4))"
             />
-            <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-950/90 to-slate-900/80 border border-amber-800/50 shadow-lg shadow-amber-900/20">
-              <span className="text-lg font-black tracking-[0.18em] bg-gradient-to-r from-amber-300 via-blue-300 to-amber-400 bg-clip-text text-transparent">KMLWJ</span>
+            <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gradient-to-r from-brand-950/90 to-slate-900/80 border border-brand-800/40 shadow-lg shadow-brand-900/20">
+              <span className="text-lg font-black tracking-[0.18em] bg-gradient-to-r from-brand-300 via-brand-200 to-brand-400 bg-clip-text text-transparent">KMLWJ</span>
             </div>
           </div>
           <div
-            className="font-bold text-amber-200/90 mt-2"
+            className="font-bold text-brand-300/90 mt-2"
             style={{
               fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
               fontSize: '1.25rem',
@@ -63,7 +63,7 @@ export const AuthLayout = ({ children }) => {
         <div className="relative z-10 -mt-8">
           <h1 className="text-4xl xl:text-5xl font-black leading-[1.15] tracking-tight">
             <span className="text-white">Financial </span>
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-400 via-blue-400 to-amber-300">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-brand-300 via-brand-450 to-brand-500">
               clarity
             </span>
             <br />
@@ -75,15 +75,15 @@ export const AuthLayout = ({ children }) => {
           </p>
         </div>
 
-        {/* Feature cards — blue-tinted glass */}
+        {/* Feature cards — brand-tinted glass */}
         <div className="relative z-10 grid grid-cols-2 gap-3">
           {features.map(({ icon: Icon, label, desc }) => (
             <div
               key={label}
-              className="flex items-start gap-3 p-3.5 rounded-xl bg-white/[0.03] border border-amber-800/20 backdrop-blur-sm"
+              className="flex items-start gap-3 p-3.5 rounded-xl bg-white/[0.03] border border-brand-800/20 backdrop-blur-sm"
             >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500/20 to-blue-700/30 border border-amber-500/15 flex items-center justify-center shrink-0 mt-0.5">
-                <Icon className="w-4 h-4 text-amber-400" />
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500/20 to-brand-700/30 border border-brand-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                <Icon className="w-4 h-4 text-brand-400" />
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-bold text-slate-200">{label}</p>

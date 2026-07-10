@@ -119,6 +119,55 @@
   --color-slate-100: var(--slate-100);
   --color-slate-50:  var(--slate-50);
 
+  /* ── Remap Tailwind blue, indigo, purple, and violet to prevent default template colors globally ── */
+  --color-blue-50: var(--brand-50);
+  --color-blue-100: var(--brand-100);
+  --color-blue-200: var(--brand-200);
+  --color-blue-300: var(--brand-300);
+  --color-blue-400: var(--brand-400);
+  --color-blue-500: var(--brand-400);
+  --color-blue-600: var(--brand-500);
+  --color-blue-700: var(--brand-600);
+  --color-blue-800: var(--brand-700);
+  --color-blue-900: var(--brand-800);
+  --color-blue-950: var(--brand-900);
+
+  --color-indigo-50: var(--brand-50);
+  --color-indigo-100: var(--brand-100);
+  --color-indigo-200: var(--brand-200);
+  --color-indigo-300: var(--brand-300);
+  --color-indigo-400: var(--brand-400);
+  --color-indigo-500: var(--brand-400);
+  --color-indigo-600: var(--brand-500);
+  --color-indigo-700: var(--brand-600);
+  --color-indigo-800: var(--brand-700);
+  --color-indigo-900: var(--brand-800);
+  --color-indigo-950: var(--brand-900);
+
+  --color-purple-50: var(--brand-50);
+  --color-purple-100: var(--brand-100);
+  --color-purple-200: var(--brand-200);
+  --color-purple-300: var(--brand-300);
+  --color-purple-400: var(--brand-400);
+  --color-purple-500: var(--brand-400);
+  --color-purple-600: var(--brand-500);
+  --color-purple-700: var(--brand-600);
+  --color-purple-800: var(--brand-700);
+  --color-purple-900: var(--brand-800);
+  --color-purple-950: var(--brand-900);
+
+  --color-violet-50: var(--brand-50);
+  --color-violet-100: var(--brand-100);
+  --color-violet-200: var(--brand-200);
+  --color-violet-300: var(--brand-300);
+  --color-violet-400: var(--brand-400);
+  --color-violet-500: var(--brand-400);
+  --color-violet-600: var(--brand-500);
+  --color-violet-700: var(--brand-600);
+  --color-violet-800: var(--brand-700);
+  --color-violet-900: var(--brand-800);
+  --color-violet-950: var(--brand-900);
+
   /* ── Brand = Amber/Gold ── */
   --color-brand-50:  var(--brand-50);
   --color-brand-100: var(--brand-100);

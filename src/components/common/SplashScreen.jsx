@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import logoImg from '../../assets/logo.png';
 
-
 /* ─────────────────────────────────────────────
    Animated SVG Logo Mark
 ───────────────────────────────────────────── */
@@ -15,33 +14,33 @@ function LogoMark({ visible }) {
         transition: 'opacity 0.9s cubic-bezier(0.16,1,0.3,1), transform 0.9s cubic-bezier(0.16,1,0.3,1)',
       }}
     >
-      {/* Outer rotating ring */}
+      {/* Outer rotating ring - Copper */}
       <div
         className="absolute rounded-full"
         style={{
           width: 140,
           height: 140,
-          background: 'conic-gradient(from 0deg, transparent 60%, rgba(99,102,241,0.8) 100%)',
+          background: 'conic-gradient(from 0deg, transparent 60%, rgba(200,122,71,0.8) 100%)',
           animation: 'splash-spin 2.5s linear infinite',
         }}
       />
-      {/* Inner ring */}
+      {/* Inner ring - Gold */}
       <div
         className="absolute rounded-full"
         style={{
           width: 116,
           height: 116,
-          background: 'conic-gradient(from 180deg, transparent 60%, rgba(59,130,246,0.6) 100%)',
+          background: 'conic-gradient(from 180deg, transparent 60%, rgba(197,155,39,0.6) 100%)',
           animation: 'splash-spin-reverse 3.5s linear infinite',
         }}
       />
-      {/* Glow backdrop */}
+      {/* Glow backdrop - Copper */}
       <div
         className="absolute rounded-full"
         style={{
           width: 100,
           height: 100,
-          background: 'radial-gradient(circle, rgba(99,102,241,0.35) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(200,122,71,0.35) 0%, transparent 70%)',
           filter: 'blur(8px)',
           animation: 'splash-pulse 2s ease-in-out infinite',
         }}
@@ -56,7 +55,7 @@ function LogoMark({ visible }) {
           width: 110,
           height: 110,
           objectFit: 'contain',
-          filter: 'drop-shadow(0 0 15px rgba(99,102,241,0.5))',
+          filter: 'drop-shadow(0 0 15px rgba(200,122,71,0.5))',
         }}
       />
     </div>
@@ -117,7 +116,7 @@ function ParticleGrid() {
 
         ctx.beginPath();
         ctx.arc(x, y, 1.1, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(148,163,184,${Math.max(0, alpha)})`;
+        ctx.fillStyle = `rgba(200,122,71,${Math.max(0, alpha)})`;
         ctx.fill();
       });
 
@@ -149,9 +148,9 @@ function ScanLine() {
           left: 0,
           right: 0,
           height: '1px',
-          background: 'linear-gradient(90deg, transparent 0%, rgba(99,102,241,0.6) 40%, rgba(59,130,246,0.8) 50%, rgba(99,102,241,0.6) 60%, transparent 100%)',
+          background: 'linear-gradient(90deg, transparent 0%, rgba(200,122,71,0.6) 40%, rgba(197,155,39,0.8) 50%, rgba(200,122,71,0.6) 60%, transparent 100%)',
           animation: 'splash-scan 3s ease-in-out infinite',
-          boxShadow: '0 0 12px rgba(99,102,241,0.5)',
+          boxShadow: '0 0 12px rgba(200,122,71,0.5)',
         }}
       />
     </div>
@@ -257,8 +256,8 @@ export function SplashScreen({ onComplete }) {
           50%       { opacity: 0; }
         }
         @keyframes splash-bar-glow {
-          0%, 100% { box-shadow: 0 0 8px rgba(99,102,241,0.6); }
-          50%       { box-shadow: 0 0 20px rgba(99,102,241,0.9), 0 0 40px rgba(59,130,246,0.4); }
+          0%, 100% { box-shadow: 0 0 8px rgba(200,122,71,0.5); }
+          50%       { box-shadow: 0 0 20px rgba(200,122,71,0.8), 0 0 40px rgba(197,155,39,0.3); }
         }
         @keyframes splash-grid-drift {
           0%   { transform: translateY(0) rotate(0deg); }
@@ -274,11 +273,11 @@ export function SplashScreen({ onComplete }) {
         }
       `}</style>
 
-      {/* Root overlay */}
+      {/* Root overlay - Matte Black Background */}
       <div
         className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden"
         style={{
-          background: 'radial-gradient(ellipse 80% 60% at 50% 40%, #0d1117 0%, #0e1018 60%, #000000 100%)',
+          background: 'radial-gradient(ellipse 80% 60% at 50% 40%, #121212 0%, #080808 60%, #000000 100%)',
           opacity: fadingOut ? 0 : 1,
           transform: fadingOut ? 'scale(1.03)' : 'scale(1)',
           transition: 'opacity 0.65s ease, transform 0.65s ease',
@@ -288,13 +287,13 @@ export function SplashScreen({ onComplete }) {
         {/* Animated grid dots */}
         <ParticleGrid />
 
-        {/* Large blurred orbs */}
+        {/* Large blurred orbs - Metallic Copper & Gold */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div style={{
             position: 'absolute', top: '10%', left: '15%',
             width: 500, height: 500,
             borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(200,122,71,0.12) 0%, transparent 70%)',
             filter: 'blur(40px)',
             animation: 'splash-grid-drift 18s ease-in-out infinite alternate',
           }} />
@@ -310,7 +309,7 @@ export function SplashScreen({ onComplete }) {
             position: 'absolute', top: '40%', right: '20%',
             width: 280, height: 280,
             borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(197,155,39,0.08) 0%, transparent 70%)',
             filter: 'blur(35px)',
           }} />
         </div>
@@ -340,9 +339,9 @@ export function SplashScreen({ onComplete }) {
               fontWeight: 700,
               letterSpacing: '0.15em',
               textTransform: 'uppercase',
-              color: '#a5b4fc',
-              background: 'rgba(99,102,241,0.12)',
-              border: '1px solid rgba(99,102,241,0.25)',
+              color: '#fdf8f5',
+              background: 'rgba(200,122,71,0.12)',
+              border: '1px solid rgba(200,122,71,0.25)',
             }}>
               <span style={{
                 width: 6, height: 6, borderRadius: '50%',
@@ -365,7 +364,7 @@ export function SplashScreen({ onComplete }) {
                 fontWeight: 800,
                 letterSpacing: '-0.02em',
                 lineHeight: 1.1,
-                background: 'linear-gradient(135deg, #ffffff 0%, #e2e8f0 40%, #a5b4fc 100%)',
+                background: 'linear-gradient(135deg, #ffffff 0%, #ede9df 40%, #eec1a6 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
@@ -382,7 +381,7 @@ export function SplashScreen({ onComplete }) {
                 fontSize: 'clamp(18px, 5vw, 22px)',
                 fontWeight: 600,
                 background: 'transparent',
-                color: '#a5b4fc',
+                color: '#eec1a6',
                 opacity: titleVisible ? 1 : 0,
                 transform: titleVisible ? 'translateY(0)' : 'translateY(15px)',
                 transition: 'opacity 0.8s cubic-bezier(0.16,1,0.3,1) 0.4s, transform 0.8s cubic-bezier(0.16,1,0.3,1) 0.4s',
@@ -397,7 +396,7 @@ export function SplashScreen({ onComplete }) {
               style={{
                 marginTop: 12,
                 fontSize: 13,
-                color: 'rgba(148,163,184,0.8)',
+                color: 'rgba(238,193,166,0.8)',
                 letterSpacing: '0.04em',
                 fontWeight: 400,
                 opacity: titleVisible ? 1 : 0,
@@ -412,7 +411,7 @@ export function SplashScreen({ onComplete }) {
           <div style={{
             width: '100%',
             height: 1,
-            background: 'linear-gradient(90deg, transparent, rgba(99,102,241,0.4), rgba(59,130,246,0.3), transparent)',
+            background: 'linear-gradient(90deg, transparent, rgba(200,122,71,0.4), rgba(197,155,39,0.3), transparent)',
             marginTop: 36,
             marginBottom: 28,
             opacity: barVisible ? 1 : 0,
@@ -437,7 +436,7 @@ export function SplashScreen({ onComplete }) {
             }}>
               <span style={{
                 fontSize: 11,
-                color: 'rgba(148,163,184,0.75)',
+                color: 'rgba(238,193,166,0.75)',
                 fontWeight: 500,
                 letterSpacing: '0.03em',
                 display: 'flex',
@@ -449,16 +448,16 @@ export function SplashScreen({ onComplete }) {
                   width: 7,
                   height: 7,
                   borderRadius: '50%',
-                  background: progress < 100 ? '#6366f1' : '#34d399',
+                  background: progress < 100 ? '#c87a47' : '#34d399',
                   animation: progress < 100 ? 'splash-blink 0.8s ease-in-out infinite' : 'none',
-                  boxShadow: '0 0 8px rgba(99,102,241,0.8)',
+                  boxShadow: '0 0 8px rgba(200,122,71,0.8)',
                 }} />
                 {stepLabel}
               </span>
               <span style={{
                 fontSize: 12,
                 fontWeight: 700,
-                color: progress < 100 ? '#818cf8' : '#34d399',
+                color: progress < 100 ? '#eec1a6' : '#34d399',
                 fontVariantNumeric: 'tabular-nums',
                 letterSpacing: '0.02em',
                 transition: 'color 0.4s ease',
@@ -473,7 +472,7 @@ export function SplashScreen({ onComplete }) {
               height: 5,
               borderRadius: 9999,
               background: 'rgba(15,23,42,0.8)',
-              border: '1px solid rgba(99,102,241,0.15)',
+              border: '1px solid rgba(200,122,71,0.15)',
               overflow: 'hidden',
             }}>
               {/* Fill */}
@@ -482,7 +481,7 @@ export function SplashScreen({ onComplete }) {
                 width: `${progress}%`,
                 borderRadius: 9999,
                 background: progress < 100
-                  ? 'linear-gradient(90deg, #312e81, #4f46e5, #818cf8)'
+                  ? 'linear-gradient(90deg, #3f1c07, #b96b3a, #eec1a6)'
                   : 'linear-gradient(90deg, #059669, #34d399, #6ee7b7)',
                 transition: 'width 0.25s ease, background 0.5s ease',
                 animation: 'splash-bar-glow 2s ease-in-out infinite',
@@ -517,11 +516,11 @@ export function SplashScreen({ onComplete }) {
                     borderRadius: '50%',
                     transition: 'background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease',
                     background: i <= stepIndex
-                      ? (i === stepIndex ? '#4f46e5' : '#1e1b4b')
+                      ? (i === stepIndex ? '#c87a47' : '#3f1c07')
                       : 'rgba(51,65,85,0.5)',
                     transform: i === stepIndex ? 'scale(1.5)' : 'scale(1)',
-                    boxShadow: i === stepIndex ? '0 0 10px rgba(99,102,241,0.9)' : 'none',
-                    border: i <= stepIndex ? '1px solid rgba(99,102,241,0.5)' : '1px solid rgba(51,65,85,0.3)',
+                    boxShadow: i === stepIndex ? '0 0 10px rgba(200,122,71,0.9)' : 'none',
+                    border: i <= stepIndex ? '1px solid rgba(200,122,71,0.5)' : '1px solid rgba(51,65,85,0.3)',
                   }}
                 />
               ))}
@@ -533,7 +532,7 @@ export function SplashScreen({ onComplete }) {
             style={{
               marginTop: 40,
               fontSize: 10,
-              color: 'rgba(100,116,139,0.6)',
+              color: 'rgba(238,193,166,0.6)',
               letterSpacing: '0.06em',
               textTransform: 'uppercase',
               fontWeight: 500,
@@ -557,7 +556,7 @@ export function SplashScreen({ onComplete }) {
             ...pos,
             width: 20,
             height: 20,
-            borderColor: 'rgba(99,102,241,0.25)',
+            borderColor: 'rgba(200,122,71,0.25)',
             borderStyle: 'solid',
             borderWidth: 0,
             ...(pos.top !== undefined && pos.left !== undefined
