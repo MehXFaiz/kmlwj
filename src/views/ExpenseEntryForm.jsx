@@ -24,6 +24,7 @@ export const ExpenseEntryForm = () => {
 
   // Selected high-level expense type
   const [expenseType, setExpenseType] = useState('Salary');
+  const [customExpenseName, setCustomExpenseName] = useState('');
 
   useEffect(() => {
     if (typeParam) {
@@ -33,6 +34,12 @@ export const ExpenseEntryForm = () => {
       }
     }
   }, [typeParam]);
+
+  useEffect(() => {
+    if (expenseType !== 'Other') {
+      setCustomExpenseName('');
+    }
+  }, [expenseType]);
 
   // Selected subsidiary account (when matched accounts exist)
   const [selectedSubAccountId, setSelectedSubAccountId] = useState('');
@@ -89,12 +96,15 @@ export const ExpenseEntryForm = () => {
         case 'Zakat Distribution':
           return nameLower.includes('zakat distribution') || nameLower.includes('zakat expense') || (nameLower.includes('zakat') && nameLower.includes('distrib'));
         case 'Other':
+          if (customExpenseName.trim()) {
+            return nameLower === customExpenseName.toLowerCase().trim() || nameLower.includes(customExpenseName.toLowerCase().trim());
+          }
           return nameLower.includes('other expense') || nameLower.includes('miscellaneous') || nameLower.includes('misc') || nameLower.includes('general expense');
         default:
           return false;
       }
     });
-  }, [expenseType, flatAccounts]);
+  }, [expenseType, customExpenseName, flatAccounts]);
 
   // Reset or set default selected sub account when matches change
   useEffect(() => {
@@ -134,7 +144,10 @@ export const ExpenseEntryForm = () => {
       case 'Zakat Distribution':
         parentCode = '4300000'; parentName = 'Donation Expenses'; name = 'Zakat Distribution Expense'; break;
       case 'Other':
-        parentCode = '4100000'; parentName = 'Administrative Expenses'; name = 'Miscellaneous Expense'; break;
+        parentCode = '4100000';
+        parentName = 'Administrative Expenses';
+        name = customExpenseName.trim() ? customExpenseName.trim() : 'Miscellaneous Expense';
+        break;
       default:
         return null;
     }
@@ -146,10 +159,15 @@ export const ExpenseEntryForm = () => {
     const nextCode = String(sibMax + 1).padStart(7, '0');
 
     return { parentCode, parentName, name, nextCode };
-  }, [expenseType, matchedAccounts, flatAccounts]);
+  }, [expenseType, customExpenseName, matchedAccounts, flatAccounts]);
 
   const handleSave = async (e) => {
     e.preventDefault();
+    if (expenseType === 'Other' && !customExpenseName.trim()) {
+      showToast('Please enter a custom expense name.', 'warning');
+      return;
+    }
+
     if (!bankAccountId) {
       showToast('Please select a cash or bank account first.', 'warning');
       return;
@@ -217,10 +235,11 @@ export const ExpenseEntryForm = () => {
       // Build double-entry lines for Payout (BP)
       // Debit: Offset Account (Expense Subsidiary)
       // Credit: Bank Account (Asset)
-      const memo = description || `Paid for ${expenseType}`;
+      const resolvedExpenseName = expenseType === 'Other' && customExpenseName.trim() ? customExpenseName.trim() : expenseType;
+      const memo = description || `Paid for ${resolvedExpenseName}`;
       const lines = [
-        { accountCode: offsetAcc.code, debit: val, credit: 0, description: `Bank Payout (${expenseType}): ${memo}` },
-        { accountCode: bankAcc.code, debit: 0, credit: val, description: `Bank Payout (${expenseType}): ${memo}` }
+        { accountCode: offsetAcc.code, debit: val, credit: 0, description: `Bank Payout (${resolvedExpenseName}): ${memo}` },
+        { accountCode: bankAcc.code, debit: 0, credit: val, description: `Bank Payout (${resolvedExpenseName}): ${memo}` }
       ];
 
       const prefix = 'BP';
@@ -231,7 +250,7 @@ export const ExpenseEntryForm = () => {
         voucherNo,
         postingDate: new Date(postingDate).toISOString(),
         subsidiary: 'Global',
-        reference: reference || `${expenseType} Payout`,
+        reference: reference || `${resolvedExpenseName} Payout`,
         description: memo,
         status: 'Posted',
         voucherType: 'BP',
@@ -314,6 +333,24 @@ export const ExpenseEntryForm = () => {
                     </button>
                   ))}
                 </div>
+
+                {expenseType === 'Other' && (
+                  <div className="mt-4 max-w-md animate-fadeIn">
+                    <label className={labelClass}>Other Expense Name *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Printing and Stationery"
+                      value={customExpenseName}
+                      onChange={e => setCustomExpenseName(e.target.value)}
+                      className={inputClass}
+                      required={expenseType === 'Other'}
+                      maxLength={40}
+                    />
+                    <p className="text-[10px] text-slate-500 mt-1.5">
+                      Type the specific name. If a ledger account with this name exists, it will auto-link. Otherwise, a new account will be auto-created under Administrative Expenses.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -354,13 +391,13 @@ export const ExpenseEntryForm = () => {
                   </div>
                 ) : (
                   autoCreationDetails && (
-                    <div className="flex items-start gap-3 p-3.5 rounded-xl bg-blue-950/20 border border-blue-900/30 text-xs text-blue-300">
-                      <AlertCircle className="h-4 w-4 mt-0.5 text-blue-400 flex-shrink-0" />
+                    <div className="flex items-start gap-3 p-4 rounded-xl bg-slate-950/60 border border-amber-500/20 text-xs text-slate-300">
+                      <AlertCircle className="h-4 w-4 mt-0.5 text-amber-500 flex-shrink-0" />
                       <div className="space-y-1">
-                        <p className="font-semibold text-blue-200">{t('forms.missingSubAccount')}</p>
-                        <p className="text-blue-400/90 leading-relaxed">
-                          No ledger account exists for <strong className="text-white">"{expenseType}"</strong>.
-                          The system will automatically generate it under <strong className="text-white">{autoCreationDetails.parentName}</strong> with code <strong className="font-mono text-white">{autoCreationDetails.nextCode}</strong> upon saving.
+                        <p className="font-semibold text-slate-200">{t('forms.missingSubAccount')}</p>
+                        <p className="text-slate-400 leading-relaxed">
+                          No ledger account exists for <code className="bg-slate-900 border border-slate-800 text-amber-400 px-1.5 py-0.5 rounded font-mono font-bold">"{expenseType === 'Other' && customExpenseName.trim() ? customExpenseName.trim() : expenseType}"</code>.
+                          The system will automatically generate it under <span className="font-semibold text-slate-200">{autoCreationDetails.parentName}</span> with code <code className="bg-slate-900 border border-slate-800 text-amber-400 px-1.5 py-0.5 rounded font-mono font-bold">{autoCreationDetails.nextCode}</code> upon saving.
                         </p>
                       </div>
                     </div>
