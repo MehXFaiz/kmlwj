@@ -6,6 +6,7 @@ import { useThemeStore } from '../../store/themeStore';
 import { Menu, User, Settings, LogOut, ChevronDown, Globe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ColorPalettePicker } from './ColorPalettePicker';
+import { ThemeToggle } from '../theme/ThemeToggle';
 import { useShallow } from 'zustand/react/shallow';
 import logoImg from '../../assets/logo.png';
 
@@ -82,11 +83,11 @@ export const Topbar = ({ onMobileMenuToggle }) => {
           <img
             src={logoImg}
             alt="KMLWJ Logo"
-            className="w-10 h-10 sm:w-12 sm:h-12 object-contain filter drop-shadow(0 0 8px rgba(99,102,241,0.4)) shrink-0"
+            className="w-10 h-10 sm:w-12 sm:h-12 object-contain filter drop-shadow(0 0 8px rgba(200,122,71,0.4)) shrink-0"
           />
           <span
             dir="rtl"
-            className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-blue-200 to-emerald-200 truncate select-none text-[17px] sm:text-[22px] text-center leading-relaxed"
+            className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-brand-300 via-brand-200 to-brand-400 truncate select-none text-[17px] sm:text-[22px] text-center leading-relaxed"
             style={{
               fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
               lineHeight: 2,
@@ -115,13 +116,13 @@ export const Topbar = ({ onMobileMenuToggle }) => {
               <div className="absolute right-0 mt-2 w-36 bg-slate-900 border border-slate-800/80 rounded-xl shadow-2xl shadow-black/50 z-50 p-1 overflow-hidden">
                 <button
                   onClick={() => { i18n.changeLanguage('en'); setLanguageMenuOpen(false); }}
-                  className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-lg transition-all ${language === 'en' ? 'bg-slate-800 text-amber-300' : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-100'}`}
+                  className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-lg transition-all ${language === 'en' ? 'bg-slate-800 text-brand-300' : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-100'}`}
                 >
                   🇺🇸 &nbsp;English
                 </button>
                 <button
                   onClick={() => { i18n.changeLanguage('ur'); setLanguageMenuOpen(false); }}
-                  className={`w-full text-right px-3 py-2 text-xs font-semibold rounded-lg transition-all ${language === 'ur' ? 'bg-slate-800 text-amber-300' : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-100'}`}
+                  className={`w-full text-right px-3 py-2 text-xs font-semibold rounded-lg transition-all ${language === 'ur' ? 'bg-slate-800 text-brand-300' : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-100'}`}
                   style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
                   dir="rtl"
                 >
@@ -130,6 +131,9 @@ export const Topbar = ({ onMobileMenuToggle }) => {
               </div>
             )}
           </div>
+
+          {/* Theme switcher */}
+          <ThemeToggle />
 
           {/* Color Palette Picker */}
           <ColorPalettePicker />
