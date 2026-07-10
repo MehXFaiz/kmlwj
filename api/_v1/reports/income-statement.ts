@@ -48,18 +48,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         id: acc.id,
         glCode: acc.glCode,
         accountName: acc.accountName,
-        balance: Math.abs(acc.currentBalance)
+        balance: acc.currentBalance
       };
 
       if (type === 'REVENUE') {
         revenues.push(formatted);
-        // Revenue is a credit balance (negative currentBalance)
-        // If they have positive currentBalance, it's a contra revenue (debit balance)
-        // We handle general total by: Revenue = -1 * sum(currentBalance)
-        totalRevenue += (acc.currentBalance * -1);
+        totalRevenue += acc.currentBalance;
       } else if (type === 'EXPENSE') {
         expenses.push(formatted);
-        // Expense is a debit balance (positive currentBalance)
         totalExpense += acc.currentBalance;
       }
     }

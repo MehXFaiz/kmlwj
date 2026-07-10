@@ -38,11 +38,11 @@ var income_statement_default = makeHandler(async (req, res) => {
         id: acc.id,
         glCode: acc.glCode,
         accountName: acc.accountName,
-        balance: Math.abs(acc.currentBalance)
+        balance: acc.currentBalance
       };
       if (type === "REVENUE") {
         revenues.push(formatted);
-        totalRevenue += acc.currentBalance * -1;
+        totalRevenue += acc.currentBalance;
       } else if (type === "EXPENSE") {
         expenses.push(formatted);
         totalExpense += acc.currentBalance;

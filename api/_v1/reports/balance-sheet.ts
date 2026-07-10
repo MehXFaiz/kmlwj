@@ -52,7 +52,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         id: acc.id,
         glCode: acc.glCode,
         accountName: acc.accountName,
-        balance: Math.abs(acc.currentBalance)
+        balance: acc.currentBalance
       };
 
       if (type === 'ASSET') {
@@ -60,12 +60,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         totalAssets += acc.currentBalance;
       } else if (type === 'LIABILITY') {
         liabilities.push(formatted);
-        totalLiabilities += (acc.currentBalance * -1);
+        totalLiabilities += acc.currentBalance;
       } else if (type === 'EQUITY') {
         equity.push(formatted);
-        totalEquity += (acc.currentBalance * -1);
+        totalEquity += acc.currentBalance;
       } else if (type === 'REVENUE') {
-        totalRevenue += (acc.currentBalance * -1);
+        totalRevenue += acc.currentBalance;
       } else if (type === 'EXPENSE') {
         totalExpense += acc.currentBalance;
       }
