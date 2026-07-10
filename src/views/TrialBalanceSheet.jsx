@@ -5,19 +5,27 @@ import { Button } from '../components/ui/Button';
 import { useCoaStore } from '../store/coaStore';
 import { AccountFormDrawer } from '../components/coa/AccountFormDrawer';
 import { reportsService } from '../services/apiServices';
+import { useJournalStore } from '../store/journalStore';
 
 export const TrialBalanceSheet = () => {
   const { treeAccounts, fetchAccountsTree } = useCoaStore();
+  const { journals, fetchJournals } = useJournalStore();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [tbReport, setTbReport] = useState(null);
   const [isLoadingTb, setIsLoadingTb] = useState(false);
   const [viewMode, setViewMode] = useState('matrix'); // 'matrix' (Urdu paper replica) or 'ledger' (Standard hierarchical grid)
   
+  // Date filter states
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
 
   useEffect(() => {
     fetchAccountsTree();
+    fetchJournals('Global', 1, 1000); // Fetch journals for local calculation
     const loadTbData = async () => {
       setIsLoadingTb(true);
       try {
@@ -30,7 +38,7 @@ export const TrialBalanceSheet = () => {
       }
     };
     loadTbData();
-  }, [fetchAccountsTree]);
+  }, [fetchAccountsTree, fetchJournals]);
 
   const formatMoney = (val) => {
     if (val === undefined || val === null || isNaN(val)) return 'Rs 0.00';
@@ -113,13 +121,92 @@ export const TrialBalanceSheet = () => {
     return result;
   }, [treeAccounts, tbLookupMap]);
 
+  // Compute dynamic date-wise filtered accounts
+  const computedAccounts = useMemo(() => {
+    if (!fromDate && !toDate) {
+      return flattenedData;
+    }
+
+    const baseBalances = {};
+    flattenedData.forEach(acc => {
+      baseBalances[acc.code] = {
+        code: acc.code,
+        initial: acc.rawAccount?.initialBalance || 0,
+        debitsBefore: 0,
+        creditsBefore: 0,
+        debitsPeriod: 0,
+        creditsPeriod: 0,
+      };
+    });
+
+    // Aggregate journal entries
+    journals.forEach(je => {
+      je.lines.forEach(line => {
+        const stats = baseBalances[line.accountCode];
+        if (stats) {
+          const dateStr = je.postingDate; // YYYY-MM-DD
+          const isBefore = fromDate && dateStr < fromDate;
+          const isInPeriod = (!fromDate || dateStr >= fromDate) && (!toDate || dateStr <= toDate);
+
+          if (isBefore) {
+            stats.debitsBefore += line.debit;
+            stats.creditsBefore += line.credit;
+          } else if (isInPeriod) {
+            stats.debitsPeriod += line.debit;
+            stats.creditsPeriod += line.credit;
+          }
+        }
+      });
+    });
+
+    // Compute closing/net balances
+    return flattenedData.map(acc => {
+      const stats = baseBalances[acc.code] || { initial: 0, debitsBefore: 0, creditsBefore: 0, debitsPeriod: 0, creditsPeriod: 0 };
+      const type = acc.nature;
+
+      // 1. Calculate opening balance for the period
+      let openingBal = 0;
+      if (type === 'Asset' || type === 'Expense') {
+        openingBal = stats.initial + stats.debitsBefore - stats.creditsBefore;
+      } else {
+        openingBal = stats.initial + stats.creditsBefore - stats.debitsBefore;
+      }
+
+      // 2. Calculate closing balance for the period
+      let closingBal = 0;
+      if (type === 'Asset' || type === 'Expense') {
+        closingBal = openingBal + stats.debitsPeriod - stats.creditsPeriod;
+      } else {
+        closingBal = openingBal + stats.creditsPeriod - stats.debitsPeriod;
+      }
+
+      // 3. Convert to debit/credit columns
+      let debit = 0;
+      let credit = 0;
+      if (type === 'Asset' || type === 'Expense') {
+        if (closingBal > 0) debit = closingBal;
+        else if (closingBal < 0) credit = Math.abs(closingBal);
+      } else {
+        if (closingBal > 0) credit = closingBal;
+        else if (closingBal < 0) debit = Math.abs(closingBal);
+      }
+
+      return {
+        ...acc,
+        debit,
+        credit,
+        netBalance: debit - credit
+      };
+    });
+  }, [flattenedData, journals, fromDate, toDate]);
+
   // Dynamic mapper that maps active ledger accounts to the specific Urdu statement matrix rows (in English)
   const matrixData = useMemo(() => {
     const getBalanceByCodes = (codes, nameRegex = null) => {
       let debitSum = 0;
       let creditSum = 0;
       
-      flattenedData.forEach(acc => {
+      computedAccounts.forEach(acc => {
         if (acc.type === 'gl' || acc.type === 'subsidiary') {
           const matchesCode = codes.includes(acc.code);
           const matchesName = nameRegex && nameRegex.test(acc.glName || acc.mainCategory || '');
@@ -205,18 +292,15 @@ export const TrialBalanceSheet = () => {
     ];
 
     // Compute residual balances from all ledger accounts and distribute to match main total
-    const totalActualExpense = flattenedData
+    const totalActualExpense = computedAccounts
       .filter(acc => acc.type === 'gl' && acc.nature === 'EXPENSE')
       .reduce((sum, acc) => sum + Math.max(0, acc.debit - acc.credit), 0);
     const mappedExpTotal = expenses.reduce((sum, item) => sum + item.val, 0);
     expenses[25].val = Math.max(0, totalActualExpense - mappedExpTotal);
 
-    const totalActualIncome = flattenedData
+    const totalActualIncome = computedAccounts
       .filter(acc => acc.type === 'gl' && acc.nature === 'REVENUE')
       .reduce((sum, acc) => sum + Math.max(0, acc.credit - acc.debit), 0);
-    
-    // Also include opening balances (current assets & liabilities) in the receipts calculation
-    const bankAssetSum = getAssetBal(['1010102']) + getAssetBal(['1010101']);
     
     const mappedIncTotal = incomes.slice(3).reduce((sum, item) => sum + item.val, 0);
     const incomeDiff = totalActualIncome - mappedIncTotal;
@@ -225,27 +309,27 @@ export const TrialBalanceSheet = () => {
     }
 
     return { expenses, incomes };
-  }, [flattenedData]);
+  }, [computedAccounts]);
 
   const filteredData = useMemo(() => {
-    return flattenedData.filter(item => 
+    return computedAccounts.filter(item => 
       item.code.includes(searchQuery) || 
       item.nature.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (item.mainCategory || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (item.glName || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [flattenedData, searchQuery]);
+  }, [computedAccounts, searchQuery]);
 
   // Compute summary totals across MAIN accounts or from trial balance report
   const summaryTotals = useMemo(() => {
-    if (tbReport && tbReport.summary) {
+    if (!fromDate && !toDate && tbReport && tbReport.summary) {
       return {
         totalDebit: tbReport.summary.totalDebit || 0,
         totalCredit: tbReport.summary.totalCredit || 0,
         isBalanced: tbReport.summary.isBalanced ?? true
       };
     }
-    const mainRows = flattenedData.filter(r => r.type === 'main');
+    const mainRows = computedAccounts.filter(r => r.type === 'main');
     const totalDebit = mainRows.reduce((sum, r) => sum + (r.debit || 0), 0);
     const totalCredit = mainRows.reduce((sum, r) => sum + (r.credit || 0), 0);
     return {
@@ -253,7 +337,7 @@ export const TrialBalanceSheet = () => {
       totalCredit,
       isBalanced: Math.abs(totalDebit - totalCredit) < 0.01
     };
-  }, [tbReport, flattenedData]);
+  }, [tbReport, computedAccounts, fromDate, toDate]);
 
   // Compute matrix balanced surplus
   const matrixTotals = useMemo(() => {
@@ -399,7 +483,9 @@ export const TrialBalanceSheet = () => {
       <div className="hidden print:block text-center space-y-2 border-b-2 border-slate-800 pb-4 mb-6">
         <h1 className="text-2xl font-black uppercase tracking-wider text-slate-100">Katchi Muslim Lohar Wadha Welfare Jamaat</h1>
         <p className="text-sm font-semibold text-slate-400 uppercase tracking-widest">Financial Statement / Trial Balance Matrix</p>
-        <p className="text-xs text-slate-500 font-mono">Statement Date: Live Synced Database Ledger Balance</p>
+        <p className="text-xs text-slate-500 font-mono">
+          Statement Date: {fromDate || 'Inception'} to {toDate || 'Live'} Live Synced Database Ledger Balance
+        </p>
       </div>
 
       {/* Header Title & Action Buttons */}
@@ -444,6 +530,53 @@ export const TrialBalanceSheet = () => {
           </Button>
         </div>
       </div>
+
+      {/* Date Search Filter Panel */}
+      <Card className="bg-slate-900/40 border-slate-800 print:hidden">
+        <CardContent className="p-4 flex flex-col sm:flex-row items-end justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-4 w-full">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">From Date</label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="bg-slate-950/60 border border-slate-800 rounded-xl text-xs py-2 px-3 text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-400/30 w-44"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">To Date</label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="bg-slate-950/60 border border-slate-800 rounded-xl text-xs py-2 px-3 text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-400/30 w-44"
+              />
+            </div>
+            {(fromDate || toDate) && (
+              <button
+                type="button"
+                onClick={() => { setFromDate(''); setToDate(''); }}
+                className="px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs font-semibold text-brand-400 hover:text-brand-300 transition-colors cursor-pointer self-end"
+              >
+                Clear Dates
+              </button>
+            )}
+          </div>
+          
+          {/* Search bar inside toolbar */}
+          <div className="relative w-full sm:max-w-xs shrink-0 self-end">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+            <input
+              type="text"
+              placeholder="Search Matrix..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-950/60 border border-slate-800 rounded-xl text-xs py-2.5 pl-9 pr-4 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* KPI Financial Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-4 print:gap-2">
@@ -493,7 +626,7 @@ export const TrialBalanceSheet = () => {
           <div className="bg-slate-900/40 p-4 border-b border-slate-800 flex items-center justify-between print:hidden">
             <div className="flex items-center gap-2 text-xs text-slate-400">
               <span className="inline-block w-2.5 h-2.5 rounded-full bg-brand-400"></span>
-              <span>English translation of the Urdu financial statement matrix. Values map dynamically to the database.</span>
+              <span>Values map dynamically to the database. Selected Date filter: <strong>{fromDate || 'Inception'}</strong> to <strong>{toDate || 'Present'}</strong>.</span>
             </div>
           </div>
           
@@ -593,31 +726,6 @@ export const TrialBalanceSheet = () => {
       {viewMode === 'ledger' && (
         <Card>
           <CardContent className="p-0">
-            {/* Toolbar */}
-            <div className="p-4 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/50 print:hidden">
-              <div className="relative flex-1 w-full md:max-w-md">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
-                <input
-                  type="text"
-                  placeholder="Search GL Code, Nature, or Name..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-slate-950/60 border border-slate-800 rounded-lg text-sm py-2 pl-9 pr-4 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
-                />
-              </div>
-              
-              <div className="flex flex-wrap items-center gap-3 text-xs font-medium">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-sm bg-brand-400/20 border border-brand-400/40"></div>
-                  <span className="text-slate-400">Main</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-sm bg-slate-800 border border-slate-700"></div>
-                  <span className="text-slate-400">Parent / Subsidiary / GL</span>
-                </div>
-              </div>
-            </div>
-
             {/* Table Container */}
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm border-collapse min-w-[900px]">
