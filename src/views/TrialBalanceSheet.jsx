@@ -624,7 +624,7 @@ export const TrialBalanceSheet = () => {
 
       {/* MATRIX VIEW MODE */}
       {viewMode === 'matrix' && (
-        <Card className="overflow-hidden border border-slate-800">
+        <Card className="overflow-hidden border border-slate-800 print:border-slate-300 print:bg-white print:shadow-none">
           <div className="bg-slate-900/40 p-4 border-b border-slate-800 flex items-center justify-between print:hidden">
             <div className="flex items-center gap-2 text-xs text-slate-400">
               <span className="inline-block w-2.5 h-2.5 rounded-full bg-brand-400"></span>
@@ -632,44 +632,44 @@ export const TrialBalanceSheet = () => {
             </div>
           </div>
           
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-0 divide-y xl:divide-y-0 xl:divide-x divide-slate-800">
+          <div className="grid grid-cols-1 xl:grid-cols-2 print:grid-cols-2 gap-0 divide-y xl:divide-y-0 xl:divide-x print:divide-y-0 print:divide-x divide-slate-800 print:divide-slate-300">
             
             {/* Left Side: Payments / Expenses */}
-            <div className="overflow-x-auto">
-              <div className="bg-slate-900/80 px-4 py-3 border-b border-slate-800 flex items-center justify-between">
-                <h3 className="font-bold text-sm text-slate-200 uppercase tracking-wider">Payments / Expenditures</h3>
-                <span className="text-xs text-slate-500 font-mono">Left Column (Debit Outcomes)</span>
+            <div className="overflow-x-auto print:overflow-visible">
+              <div className="bg-slate-900/80 print:bg-slate-100 px-4 py-3 border-b border-slate-800 print:border-slate-300 flex items-center justify-between">
+                <h3 className="font-bold text-sm text-slate-200 print:text-slate-900 uppercase tracking-wider">Payments / Expenditures</h3>
+                <span className="text-xs text-slate-500 font-mono print:hidden">Left Column (Debit Outcomes)</span>
               </div>
               <table className="w-full text-left text-xs border-collapse min-w-[450px]">
                 <thead>
-                  <tr className="bg-slate-950 text-slate-400 font-bold border-b border-slate-800">
-                    <th className="py-2.5 px-4 w-12 text-center">No.</th>
+                  <tr className="bg-slate-950 print:bg-slate-55 text-slate-400 print:text-slate-700 font-bold border-b border-slate-800 print:border-slate-300">
+                    <th className="py-2.5 px-4 w-12 text-center border-r border-slate-900 print:border-slate-200">No.</th>
                     <th className="py-2.5 px-4">Expenses Description</th>
                     <th className="py-2.5 px-4 w-32 text-right">Amount (PKR)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-900">
+                <tbody className="divide-y divide-slate-900 print:divide-slate-200">
                   {matrixData.expenses.map((row) => (
-                    <tr key={row.sNo} className="hover:bg-slate-900/30 transition-colors">
-                      <td className="py-2.5 px-4 font-mono text-slate-500 text-center border-r border-slate-900">{row.sNo}</td>
-                      <td className="py-2.5 px-4 text-slate-300 font-medium">{row.desc}</td>
-                      <td className="py-2.5 px-4 text-right font-mono text-slate-200 font-semibold">
+                    <tr key={row.sNo} className="hover:bg-slate-900/30 transition-colors print:text-slate-800">
+                      <td className="py-2.5 px-4 font-mono text-slate-500 print:text-slate-700 text-center border-r border-slate-900 print:border-slate-200">{row.sNo}</td>
+                      <td className="py-2.5 px-4 text-slate-300 print:text-slate-900 font-medium">{row.desc}</td>
+                      <td className="py-2.5 px-4 text-right font-mono text-slate-200 print:text-slate-900 font-semibold">
                         {formatMoney(row.val)}
                       </td>
                     </tr>
                   ))}
                   {/* Closing Cash Surplus line to balance */}
-                  <tr className="bg-brand-400/5 font-semibold text-brand-300">
-                    <td className="py-2.5 px-4 font-mono text-center border-r border-slate-900">27</td>
+                  <tr className="bg-brand-400/5 print:bg-slate-50 font-semibold text-brand-300 print:text-slate-800">
+                    <td className="py-2.5 px-4 font-mono text-center border-r border-slate-900 print:border-slate-200">27</td>
                     <td className="py-2.5 px-4">Closing Cash & Bank Balance (Surplus)</td>
-                    <td className="py-2.5 px-4 text-right font-mono font-bold">
+                    <td className="py-2.5 px-4 text-right font-mono font-bold print:text-slate-900">
                       {formatMoney(matrixTotals.surplus)}
                     </td>
                   </tr>
                   {/* Total row */}
-                  <tr className="bg-slate-900/90 font-bold text-slate-200 border-t border-slate-700">
+                  <tr className="bg-slate-900/90 print:bg-slate-100 font-bold text-slate-200 print:text-slate-900 border-t border-slate-700 print:border-slate-300">
                     <td colSpan={2} className="py-3 px-4 text-right uppercase tracking-wider">Total Payments (Balanced)</td>
-                    <td className="py-3 px-4 text-right font-mono font-black text-brand-400">
+                    <td className="py-3 px-4 text-right font-mono font-black text-brand-400 print:text-slate-900">
                       {formatMoney(matrixTotals.finalExpensesTotal)}
                     </td>
                   </tr>
@@ -678,41 +678,41 @@ export const TrialBalanceSheet = () => {
             </div>
 
             {/* Right Side: Receipts / Income */}
-            <div className="overflow-x-auto">
-              <div className="bg-slate-900/80 px-4 py-3 border-b border-slate-800 flex items-center justify-between">
-                <h3 className="font-bold text-sm text-slate-200 uppercase tracking-wider">Receipts / Income</h3>
-                <span className="text-xs text-slate-500 font-mono">Right Column (Credit Inflows)</span>
+            <div className="overflow-x-auto print:overflow-visible">
+              <div className="bg-slate-900/80 print:bg-slate-100 px-4 py-3 border-b border-slate-800 print:border-slate-300 flex items-center justify-between">
+                <h3 className="font-bold text-sm text-slate-200 print:text-slate-900 uppercase tracking-wider">Receipts / Income</h3>
+                <span className="text-xs text-slate-500 font-mono print:hidden">Right Column (Credit Inflows)</span>
               </div>
               <table className="w-full text-left text-xs border-collapse min-w-[450px]">
                 <thead>
-                  <tr className="bg-slate-950 text-slate-400 font-bold border-b border-slate-800">
-                    <th className="py-2.5 px-4 w-12 text-center">No.</th>
+                  <tr className="bg-slate-950 print:bg-slate-55 text-slate-400 print:text-slate-700 font-bold border-b border-slate-800 print:border-slate-300">
+                    <th className="py-2.5 px-4 w-12 text-center border-r border-slate-900 print:border-slate-200">No.</th>
                     <th className="py-2.5 px-4">Income Description</th>
                     <th className="py-2.5 px-4 w-32 text-right">Amount (PKR)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-900">
+                <tbody className="divide-y divide-slate-900 print:divide-slate-200">
                   {matrixData.incomes.map((row) => (
-                    <tr key={row.sNo} className="hover:bg-slate-900/30 transition-colors">
-                      <td className="py-2.5 px-4 font-mono text-slate-500 text-center border-r border-slate-900">{row.sNo}</td>
-                      <td className="py-2.5 px-4 text-slate-300 font-medium">{row.desc}</td>
-                      <td className="py-2.5 px-4 text-right font-mono text-slate-200 font-semibold">
+                    <tr key={row.sNo} className="hover:bg-slate-900/30 transition-colors print:text-slate-800">
+                      <td className="py-2.5 px-4 font-mono text-slate-500 print:text-slate-700 text-center border-r border-slate-900 print:border-slate-200">{row.sNo}</td>
+                      <td className="py-2.5 px-4 text-slate-300 print:text-slate-900 font-medium">{row.desc}</td>
+                      <td className="py-2.5 px-4 text-right font-mono text-slate-200 print:text-slate-900 font-semibold">
                         {formatMoney(row.val)}
                       </td>
                     </tr>
                   ))}
                   {/* Padding empty rows to align height with the left side side-by-side */}
                   {Array.from({ length: 7 }).map((_, idx) => (
-                    <tr key={`empty-${idx}`} className="h-10 opacity-30 select-none">
-                      <td className="py-2.5 px-4 text-center border-r border-slate-900">—</td>
-                      <td className="py-2.5 px-4 text-slate-600 font-mono">N/A</td>
-                      <td className="py-2.5 px-4 text-right font-mono text-slate-600">—</td>
+                    <tr key={`empty-${idx}`} className="h-10 opacity-30 print:opacity-0 select-none">
+                      <td className="py-2.5 px-4 text-center border-r border-slate-900 print:border-slate-200">—</td>
+                      <td className="py-2.5 px-4 text-slate-600 print:text-transparent font-mono">N/A</td>
+                      <td className="py-2.5 px-4 text-right font-mono text-slate-650 print:text-transparent">—</td>
                     </tr>
                   ))}
                   {/* Total row */}
-                  <tr className="bg-slate-900/90 font-bold text-slate-200 border-t border-slate-700">
+                  <tr className="bg-slate-900/90 print:bg-slate-100 font-bold text-slate-200 print:text-slate-900 border-t border-slate-700 print:border-slate-300">
                     <td colSpan={2} className="py-3 px-4 text-right uppercase tracking-wider">Total Receipts</td>
-                    <td className="py-3 px-4 text-right font-mono font-black text-brand-400">
+                    <td className="py-3 px-4 text-right font-mono font-black text-brand-400 print:text-slate-900">
                       {formatMoney(matrixTotals.finalIncomesTotal)}
                     </td>
                   </tr>
