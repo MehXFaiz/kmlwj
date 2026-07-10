@@ -15,6 +15,7 @@ const GeneralLedger = lazy(() => import('./views/GeneralLedger').then(m => ({ de
 const JournalEntries = lazy(() => import('./views/JournalEntries').then(m => ({ default: m.JournalEntries })));
 const AuditTrail = lazy(() => import('./views/AuditTrail').then(m => ({ default: m.AuditTrail })));
 const Settings = lazy(() => import('./views/Settings').then(m => ({ default: m.Settings })));
+const AccountingHealthCheck = lazy(() => import('./views/AccountingHealthCheck').then(m => ({ default: m.AccountingHealthCheck })));
 const Profile = lazy(() => import('./views/Profile').then(m => ({ default: m.Profile })));
 const MyAccount = lazy(() => import('./views/MyAccount').then(m => ({ default: m.MyAccount })));
 const RevenueHeads = lazy(() => import('./views/RevenueHeads').then(m => ({ default: m.RevenueHeads })));
@@ -425,6 +426,11 @@ function App() {
             <Route path="/audit" element={
               <PermissionGuard requiredPerms={['VIEW_REPORTS', 'MANAGE_USERS']}>
                 <AuditTrail />
+              </PermissionGuard>
+            } />
+            <Route path="/accounting-health" element={
+              <PermissionGuard requiredPerms={['VIEW_REPORTS', 'MANAGE_USERS']}>
+                <AccountingHealthCheck />
               </PermissionGuard>
             } />
             <Route path="/settings" element={<Settings />} />

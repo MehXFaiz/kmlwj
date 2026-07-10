@@ -241,6 +241,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
         { name: t('sidebar.trialBalanceMatrix'), hint: t('sidebar.trialBalanceMatrixHint'), icon: Layers, path: '/trial-balance-sheet', perms: ['VIEW_REPORTS'] },
         { name: t('sidebar.usersAccess'), hint: t('sidebar.usersAccessHint'), icon: BadgeCheck, path: '/users-roles', perms: ['MANAGE_USERS', 'MANAGE_ROLES'] },
         { name: t('sidebar.auditTrail'), hint: t('sidebar.auditTrailHint'), icon: History, path: '/audit', perms: ['VIEW_REPORTS', 'MANAGE_USERS'] },
+        { name: 'Accounting Health Check', hint: 'Verify accounting integrity & consistency', icon: ShieldCheck, path: '/accounting-health', perms: ['VIEW_REPORTS', 'MANAGE_USERS'] },
       ],
     },
   ], [t]);

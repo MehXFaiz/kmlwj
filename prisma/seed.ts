@@ -1,3 +1,4 @@
+
 import { PrismaClient, AccountLevel } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
@@ -38,6 +39,7 @@ async function main() {
     { name: 'MANAGE_USERS', description: 'Manage users, roles, and permissions' },
     { name: 'MANAGE_ROLES', description: 'Manage system roles and their permissions' },
     { name: 'MANAGE_RESERVED_CODES', description: 'Manage reserved account codes' },
+    { name: 'POST_JOURNAL', description: 'Post journal entries and transactions' },
   ];
 
   console.log('Seeding Permissions...');
@@ -91,8 +93,8 @@ async function main() {
     });
   }
 
-  // Accountant permissions: CREATE_ACCOUNT, UPDATE_ACCOUNT, VIEW_REPORTS
-  const accountantPerms = ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'VIEW_REPORTS'];
+  // Accountant permissions: CREATE_ACCOUNT, UPDATE_ACCOUNT, VIEW_REPORTS, POST_JOURNAL
+  const accountantPerms = ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'VIEW_REPORTS', 'POST_JOURNAL'];
   for (const permName of accountantPerms) {
     await prisma.rolePermission.upsert({
       where: {
@@ -254,11 +256,16 @@ async function main() {
     { glCode: '2020000', accountName: 'Non-Current Liabilities',parentCode: '2000000', accountTypeName: 'LIABILITY', description: 'Long-term financial obligations' },
     // Under Revenue (3000000)
     { glCode: '3010000', accountName: 'Hall & Garden Income',   parentCode: '3000000', accountTypeName: 'REVENUE',   description: 'Revenue from hall and garden bookings' },
-    { glCode: '3020000', accountName: 'Donations',              parentCode: '3000000', accountTypeName: 'REVENUE',   description: 'Zakat, Fitra, Qurbani and other donations' },
+    { glCode: '3020000', accountName: 'Donations & Other Income',parentCode: '3000000', accountTypeName: 'REVENUE',   description: 'Zakat, Fitra, Qurbani and other donations' },
     // Under Expenses (4000000)
     { glCode: '4010000', accountName: 'Salaries & Wages',       parentCode: '4000000', accountTypeName: 'EXPENSE',   description: 'All payroll related expenses' },
     { glCode: '4020000', accountName: 'Hall Expenses',          parentCode: '4000000', accountTypeName: 'EXPENSE',   description: 'Operational costs for hall management' },
     { glCode: '4030000', accountName: 'Transport',              parentCode: '4000000', accountTypeName: 'EXPENSE',   description: 'Transportation and vehicle expenses' },
+    { glCode: '4040000', accountName: 'Rent, Rates & Taxes',    parentCode: '4000000', accountTypeName: 'EXPENSE',   description: 'Rent, rates, and tax expenses' },
+    { glCode: '4050000', accountName: 'Repair & Maintenance',   parentCode: '4000000', accountTypeName: 'EXPENSE',   description: 'Repair and maintenance costs' },
+    { glCode: '4060000', accountName: 'Donations Paid',         parentCode: '4000000', accountTypeName: 'EXPENSE',   description: 'Donations distributed' },
+    { glCode: '4070000', accountName: 'Professional Fees',      parentCode: '4000000', accountTypeName: 'EXPENSE',   description: 'Legal, audit, and professional fees' },
+    { glCode: '4080000', accountName: 'Administrative Expenses',parentCode: '4000000', accountTypeName: 'EXPENSE',   description: 'Other administrative costs' },
   ];
 
   const seededParentAccounts: Record<string, any> = {};
@@ -303,14 +310,28 @@ async function main() {
     { glCode: '2020100', accountName: 'Long Term Loans',      parentCode: '2020000', accountTypeName: 'LIABILITY', detailType: 'Header', description: 'Loans repayable beyond 12 months' },
     // Under Hall & Garden Income (3010000)
     { glCode: '3010100', accountName: 'Hall Booking',         parentCode: '3010000', accountTypeName: 'REVENUE',   detailType: 'Header', description: 'Revenue categorized by individual hall' },
-    // Under Donations Income (3020000)
+    // Under Donations & Other Income (3020000)
     { glCode: '3020100', accountName: 'Zakat',                parentCode: '3020000', accountTypeName: 'REVENUE',   detailType: 'Header', description: 'Islamic charitable contribution income' },
-    // Under Salaries & Wages (4010000)
+    { glCode: '3020200', accountName: 'Fitra',                parentCode: '3020000', accountTypeName: 'REVENUE',   detailType: 'Header', description: 'Fitra collection' },
+    { glCode: '3020300', accountName: 'Qurbani',              parentCode: '3020000', accountTypeName: 'REVENUE',   detailType: 'Header', description: 'Qurbani space/fees' },
+    { glCode: '3020400', accountName: 'Other Income',         parentCode: '3020000', accountTypeName: 'REVENUE',   detailType: 'Header', description: 'Bus booking, membership fee, decoration commission, etc.' },
+    // Under Salaries & Wages (4010100)
     { glCode: '4010100', accountName: 'Salaries Expense',     parentCode: '4010000', accountTypeName: 'EXPENSE',   detailType: 'Header', description: 'Monthly payroll cost' },
     // Under Hall Expenses (4020000)
     { glCode: '4020100', accountName: 'Hall Operating Costs', parentCode: '4020000', accountTypeName: 'EXPENSE',   detailType: 'Header', description: 'Day-to-day operational costs for halls' },
     // Under Transport (4030000)
     { glCode: '4030100', accountName: 'Bus Expenses',         parentCode: '4030000', accountTypeName: 'EXPENSE',   detailType: 'Header', description: 'Bus maintenance and fuel' },
+    // Under Rent, Rates & Taxes (4040000)
+    { glCode: '4040100', accountName: 'Rent',                 parentCode: '4040000', accountTypeName: 'EXPENSE',   detailType: 'Header', description: 'Rent expenses' },
+    { glCode: '4040200', accountName: 'Rates & Taxes',        parentCode: '4040000', accountTypeName: 'EXPENSE',   detailType: 'Header', description: 'Rates and taxes' },
+    // Under Repair & Maintenance (4050000)
+    { glCode: '4050100', accountName: 'Repairs',              parentCode: '4050000', accountTypeName: 'EXPENSE',   detailType: 'Header', description: 'All repair costs' },
+    // Under Donations Paid (4060000)
+    { glCode: '4060100', accountName: 'Donations',            parentCode: '4060000', accountTypeName: 'EXPENSE',   detailType: 'Header', description: 'Monthly, marriage, medical donations' },
+    // Under Professional Fees (4070000)
+    { glCode: '4070100', accountName: 'Professional Fees',    parentCode: '4070000', accountTypeName: 'EXPENSE',   detailType: 'Header', description: 'Legal, audit, professional fees' },
+    // Under Administrative Expenses (4080000)
+    { glCode: '4080100', accountName: 'Admin Costs',          parentCode: '4080000', accountTypeName: 'EXPENSE',   detailType: 'Header', description: 'Entertainment, security, bank charges, etc.' },
   ];
 
   const seededSubsidiaryAccounts: Record<string, any> = {};
@@ -356,15 +377,48 @@ async function main() {
     { glCode: '3010104', accountName: 'Annexy Hall',           parentCode: '3010100', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Annexy Hall booking income — rate: Rs 33,000' },
     // Under Zakat (3020100)
     { glCode: '3020101', accountName: 'Zakat 2024-25',         parentCode: '3020100', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Zakat collected for the year 2024-25' },
+    // Under Fitra (3020200)
+    { glCode: '3020201', accountName: 'Fitra Collection',      parentCode: '3020200', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Fitra collected' },
+    // Under Qurbani (3020300)
+    { glCode: '3020301', accountName: 'Qurbani Fees',          parentCode: '3020300', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Qurbani space/fees' },
+    // Under Other Income (3020400)
+    { glCode: '3020401', accountName: 'Bus Booking Income',    parentCode: '3020400', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Bus booking income' },
+    { glCode: '3020402', accountName: 'Membership Fee',        parentCode: '3020400', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Membership fee income' },
+    { glCode: '3020403', accountName: 'Decoration Commission', parentCode: '3020400', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Decoration/lighting commission' },
+    { glCode: '3020404', accountName: 'Marriage Donation Received', parentCode: '3020400', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Marriage donation received' },
     // Under Salaries Expense (4010100)
     { glCode: '4010101', accountName: 'Staff Salary',         parentCode: '4010100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Monthly staff salary disbursement' },
+    { glCode: '4010102', accountName: 'Staff Bonus',          parentCode: '4010100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Staff bonus' },
     // Under Bus Expenses (4030100)
-    { glCode: '4030101', accountName: 'Diesel - June',        parentCode: '4030100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Diesel cost for the month of June' },
+    { glCode: '4030101', accountName: 'Bus Diesel',           parentCode: '4030100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Bus diesel expenses' },
+    // Under Rent (4040100)
+    { glCode: '4040101', accountName: 'Building Rent',         parentCode: '4040100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Building rent expense' },
+    // Under Rates & Taxes (4040200)
+    { glCode: '4040201', accountName: 'Rates & Taxes',         parentCode: '4040200', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Rates and taxes paid' },
+    // Under Repairs (4050100)
+    { glCode: '4050101', accountName: 'Bus Repairs',           parentCode: '4050100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Bus repair costs' },
+    { glCode: '4050102', accountName: 'Generator Repairs',     parentCode: '4050100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Generator repair costs' },
+    { glCode: '4050103', accountName: 'Hall Repairs',          parentCode: '4050100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Hall repair costs' },
+    // Under Donations (4060100)
+    { glCode: '4060101', accountName: 'Monthly Donations',     parentCode: '4060100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Monthly donations paid' },
+    { glCode: '4060102', accountName: 'Marriage Donations',    parentCode: '4060100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Marriage donations paid' },
+    { glCode: '4060103', accountName: 'Medical Donations',     parentCode: '4060100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Medical donations paid' },
+    // Under Professional Fees (4070100)
+    { glCode: '4070101', accountName: 'Legal Fees',            parentCode: '4070100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Legal fees paid' },
+    { glCode: '4070102', accountName: 'Audit Fees',            parentCode: '4070100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Audit fees paid' },
+    { glCode: '4070103', accountName: 'Professional Fees',     parentCode: '4070100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Other professional fees' },
+    // Under Admin Costs (4080100)
+    { glCode: '4080101', accountName: 'Entertainment',         parentCode: '4080100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Entertainment expenses' },
+    { glCode: '4080102', accountName: 'Security',              parentCode: '4080100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Security expenses' },
+    { glCode: '4080103', accountName: 'Bank Charges',          parentCode: '4080100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Bank charges' },
+    { glCode: '4080104', accountName: 'Generator Fuel',        parentCode: '4080100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Generator diesel/petrol' },
+    { glCode: '4080105', accountName: 'Meeting Expenses',      parentCode: '4080100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Meeting expenses' },
   ];
 
+  const seededGLAccounts: Record<string, any> = {};
   for (const acc of glAccounts) {
     const parentRecord = seededSubsidiaryAccounts[acc.parentCode];
-    await prisma.account.upsert({
+    const record = await prisma.account.upsert({
       where: { glCode: acc.glCode },
       update: {
         accountName: acc.accountName,
@@ -388,85 +442,141 @@ async function main() {
         isReserved: false,
       },
     });
+    seededGLAccounts[acc.accountName] = record;
   }
 
-
-
-
-  // 7. Seed Revenue Heads
+  // 10. Seed Revenue Heads and link to GL accounts
   console.log('Seeding Revenue Heads...');
   const revenueCategories = [
     {
       category: 'Hall Bookings',
-      heads: ['Bagh-e-Hajiani Garden', 'Sadaya-Hall', 'Zikarya-Hall', 'Anexy-Hall']
+      heads: [
+        { name: 'Bagh-e-Hajiani Garden', glAccountName: 'Bagh-e-Hajiani Garden' },
+        { name: 'Sadaya Hall', glAccountName: 'Sadaya Hall' },
+        { name: 'Zikarya Hall', glAccountName: 'Zikarya Hall' },
+        { name: 'Annexy Hall', glAccountName: 'Annexy Hall' }
+      ]
     },
     {
       category: 'Other Income & Donations',
-      heads: ['Bus booking', 'Membership fee', 'Qurbani space', 'Zakat', 'Fitra', 'Marriage donation', 'Decoration/Lighting commission']
+      heads: [
+        { name: 'Bus booking', glAccountName: 'Bus Booking Income' },
+        { name: 'Membership fee', glAccountName: 'Membership Fee' },
+        { name: 'Qurbani space', glAccountName: 'Qurbani Fees' },
+        { name: 'Zakat', glAccountName: 'Zakat 2024-25' },
+        { name: 'Fitra', glAccountName: 'Fitra Collection' },
+        { name: 'Marriage donation', glAccountName: 'Marriage Donation Received' },
+        { name: 'Decoration/Lighting commission', glAccountName: 'Decoration Commission' }
+      ]
     }
   ];
 
   for (const group of revenueCategories) {
-    for (const headName of group.heads) {
+    for (const head of group.heads) {
+      const glAccount = seededGLAccounts[head.glAccountName];
       const existingHead = await prisma.revenueHead.findFirst({
-        where: { name: headName, category: group.category }
+        where: { name: head.name, category: group.category }
       });
       if (!existingHead) {
         await prisma.revenueHead.create({
           data: {
-            name: headName,
+            name: head.name,
             category: group.category,
-            isActive: true
+            isActive: true,
+            accountId: glAccount?.id
+          }
+        });
+      } else {
+        await prisma.revenueHead.update({
+          where: { id: existingHead.id },
+          data: {
+            accountId: glAccount?.id
           }
         });
       }
     }
   }
 
-  // 8. Seed Expense Heads
+  // 11. Seed Expense Heads and link to GL accounts
   console.log('Seeding Expense Heads...');
   const expenseCategories = [
     {
       category: 'Salaries & Benefits',
-      heads: ['Salary', 'Bonus']
+      heads: [
+        { name: 'Salary', glAccountName: 'Staff Salary' },
+        { name: 'Bonus', glAccountName: 'Staff Bonus' }
+      ]
     },
     {
       category: 'Rent, Rates, and Taxes',
-      heads: ['Rent', 'Rates', 'Taxes']
+      heads: [
+        { name: 'Rent', glAccountName: 'Building Rent' },
+        { name: 'Rates', glAccountName: 'Rates & Taxes' },
+        { name: 'Taxes', glAccountName: 'Rates & Taxes' }
+      ]
     },
     {
       category: 'Fuel and Power',
-      heads: ['Bus diesel', 'Generator diesel/petrol']
+      heads: [
+        { name: 'Bus diesel', glAccountName: 'Bus Diesel' },
+        { name: 'Generator diesel/petrol', glAccountName: 'Generator Fuel' }
+      ]
     },
     {
       category: 'Repair and Maintenance',
-      heads: ['Bus repair', 'Generator repair', 'Hall repair']
+      heads: [
+        { name: 'Bus repair', glAccountName: 'Bus Repairs' },
+        { name: 'Generator repair', glAccountName: 'Generator Repairs' },
+        { name: 'Hall repair', glAccountName: 'Hall Repairs' }
+      ]
     },
     {
       category: 'Donations',
-      heads: ['Monthly donations', 'Marriage donations', 'Medical donations']
+      heads: [
+        { name: 'Monthly donations', glAccountName: 'Monthly Donations' },
+        { name: 'Marriage donations', glAccountName: 'Marriage Donations' },
+        { name: 'Medical donations', glAccountName: 'Medical Donations' }
+      ]
     },
     {
       category: 'Legal, Professional, and Audit Fees',
-      heads: ['Legal Fees', 'Professional Fees', 'Audit Fees']
+      heads: [
+        { name: 'Legal Fees', glAccountName: 'Legal Fees' },
+        { name: 'Professional Fees', glAccountName: 'Professional Fees' },
+        { name: 'Audit Fees', glAccountName: 'Audit Fees' }
+      ]
     },
     {
       category: 'Other Administrative Expenses',
-      heads: ['Entertainment', 'Meetings', 'Security', 'Bank Charges']
+      heads: [
+        { name: 'Entertainment', glAccountName: 'Entertainment' },
+        { name: 'Meetings', glAccountName: 'Meeting Expenses' },
+        { name: 'Security', glAccountName: 'Security' },
+        { name: 'Bank Charges', glAccountName: 'Bank Charges' }
+      ]
     }
   ];
 
   for (const group of expenseCategories) {
-    for (const headName of group.heads) {
+    for (const head of group.heads) {
+      const glAccount = seededGLAccounts[head.glAccountName];
       const existingHead = await prisma.expenseHead.findFirst({
-        where: { name: headName, category: group.category }
+        where: { name: head.name, category: group.category }
       });
       if (!existingHead) {
         await prisma.expenseHead.create({
           data: {
-            name: headName,
+            name: head.name,
             category: group.category,
-            isActive: true
+            isActive: true,
+            accountId: glAccount?.id
+          }
+        });
+      } else {
+        await prisma.expenseHead.update({
+          where: { id: existingHead.id },
+          data: {
+            accountId: glAccount?.id
           }
         });
       }

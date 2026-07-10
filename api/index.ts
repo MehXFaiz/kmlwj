@@ -44,6 +44,7 @@ import cashFlowHandler from './_v1/reports/cash-flow.js';
 import searchHandler from './_v1/search.js';
 import simpleExpenseHandler from './_v1/simple-expense.js';
 import simpleIncomeHandler from './_v1/simple-income.js';
+import accountingHealthHandler from './_v1/accounting-health.js';
 
 const app = express();
 
@@ -211,5 +212,8 @@ app.get('/api/v1/simple-expense', makeExpress(simpleExpenseHandler));
 app.post('/api/v1/simple-expense', makeExpress(simpleExpenseHandler));
 app.get('/api/v1/simple-income', makeExpress(simpleIncomeHandler));
 app.post('/api/v1/simple-income', makeExpress(simpleIncomeHandler));
+
+// Accounting Health Check Route
+app.get('/api/v1/accounting-health', makeExpress(accountingHealthHandler));
 
 export default app;

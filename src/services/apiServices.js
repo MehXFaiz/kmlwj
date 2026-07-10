@@ -71,3 +71,7 @@ export const searchService = {
 
 export { customerService } from './customerService';
 export { invoiceService } from './invoiceService';
+
+export const accountingHealthService = {
+  getCheck: () => api.get('/api/v1/accounting-health').then((r) => r.data),
+};
