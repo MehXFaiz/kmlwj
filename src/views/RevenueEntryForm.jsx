@@ -101,26 +101,41 @@ export const RevenueEntryForm = () => {
 
     switch (revenueSource) {
       case 'Donation':
-        parentCode = '3200000'; parentName = 'Donations'; name = 'General Donation'; break;
+        parentCode = '3020400'; parentName = 'Other Income'; name = 'General Donation'; break;
       case 'Zakat':
-        parentCode = '3200000'; parentName = 'Donations'; name = 'Zakat Revenue'; break;
+        parentCode = '3020100'; parentName = 'Zakat'; name = 'Zakat Revenue'; break;
       case 'Fitra':
-        parentCode = '3200000'; parentName = 'Donations'; name = 'Fitra Revenue'; break;
+        parentCode = '3020200'; parentName = 'Fitra'; name = 'Fitra Revenue'; break;
       case 'Membership Fee':
-        parentCode = '3300000'; parentName = 'Other Income'; name = 'Membership Fee Revenue'; break;
+        parentCode = '3020400'; parentName = 'Other Income'; name = 'Membership Fee Revenue'; break;
       case 'Bus Booking':
-        parentCode = '3300000'; parentName = 'Other Income'; name = 'Bus Booking Revenue'; break;
+        parentCode = '3020400'; parentName = 'Other Income'; name = 'Bus Booking Revenue'; break;
       case 'Hall Booking':
-        parentCode = '3100000'; parentName = 'Hall Income'; name = 'General Hall Booking'; break;
+        parentCode = '3010100'; parentName = 'Hall Booking'; name = 'General Hall Booking'; break;
       default:
         return null;
     }
 
-    // Auto-calculate GL code
+    // Verify parentCode exists in flatAccounts. If not found, fallback to any existing Revenue SUBSIDIARY or PARENT account
+    const existingParent = flatAccounts.find(a => a.code === parentCode);
+    if (existingParent) {
+      parentName = existingParent.name;
+    } else {
+      const fallbackParent = flatAccounts.find(a => a.type === 'Revenue' && (a.level === 'SUBSIDIARY' || a.level === 'PARENT'));
+      if (fallbackParent) {
+        parentCode = fallbackParent.code;
+        parentName = fallbackParent.name;
+      }
+    }
+
+    // Auto-calculate unique GL code under parentCode
     const siblings = flatAccounts.filter(a => a.parentCode === parentCode);
     const sibNumeric = siblings.map(a => parseInt(a.code, 10)).filter(Number.isFinite);
     const sibMax = sibNumeric.length ? Math.max(...sibNumeric) : parseInt(parentCode, 10);
-    const nextCode = String(sibMax + 1).padStart(7, '0');
+    let nextCode = String(sibMax + 1).padStart(7, '0');
+    while (flatAccounts.some(a => a.code === nextCode)) {
+      nextCode = String(parseInt(nextCode, 10) + 1).padStart(7, '0');
+    }
 
     return { parentCode, parentName, name, nextCode };
   }, [revenueSource, matchedAccounts, flatAccounts]);

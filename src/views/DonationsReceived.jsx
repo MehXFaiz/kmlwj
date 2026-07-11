@@ -297,45 +297,45 @@ export const DonationsReceived = () => {
               >
                 {/* Card Top: Checkbox, Avatar/Icon, Name & Status Badge */}
                 <div>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
                       <input
                         type="checkbox"
                         checked={selectedIds.includes(d.id)}
                         onChange={(e) => handleSelectOne(d.id, e)}
                         className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer shrink-0"
                       />
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/30 flex items-center justify-center text-amber-400 font-extrabold text-lg shadow-inner shrink-0">
-                        {d.donor?.fullName ? d.donor.fullName.charAt(0).toUpperCase() : <DollarSign className="w-5 h-5 text-amber-400" />}
+                      <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/30 flex items-center justify-center text-amber-400 font-extrabold text-base shadow-inner shrink-0">
+                        {d.donor?.fullName ? d.donor.fullName.charAt(0).toUpperCase() : <DollarSign className="w-4 h-4 text-amber-400" />}
                       </div>
-                      <div>
-                        <h4 className="text-base font-bold text-amber-400 group-hover:text-amber-300 transition-colors leading-tight tracking-tight">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-sm sm:text-base font-bold text-amber-400 group-hover:text-amber-300 transition-colors leading-tight tracking-tight truncate">
                           {d.donor?.fullName || 'Anonymous Donor'}
                         </h4>
-                        <p className="text-xs text-slate-400 font-medium mt-0.5 flex items-center gap-1">
+                        <p className="text-xs text-slate-400 font-medium mt-0.5 flex items-center gap-1 truncate">
                           {d.donor?.donorCode ? (
                             <>
-                              <CreditCard className="w-3 h-3 text-amber-400/80 shrink-0" /> {d.donor.donorCode}
+                              <CreditCard className="w-3 h-3 text-amber-400/80 shrink-0" /> <span className="truncate">{d.donor.donorCode}</span>
                             </>
                           ) : 'General Contribution'}
                         </p>
                       </div>
                     </div>
 
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] font-bold uppercase tracking-wide shrink-0 ${
+                    <span className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full border text-[10px] font-extrabold uppercase tracking-wide shrink-0 whitespace-nowrap ${
                       d.status === 'POSTED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : d.status === 'DRAFT' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
                     }`}>
                       {d.status === 'POSTED' ? (
                         <>
-                          <CheckCircle className="w-3.5 h-3.5" /> POSTED
+                          <CheckCircle className="w-3 h-3 shrink-0" /> POSTED
                         </>
                       ) : d.status === 'DRAFT' ? (
                         <>
-                          <AlertTriangle className="w-3.5 h-3.5" /> PENDING POST
+                          <AlertTriangle className="w-3 h-3 shrink-0" /> PENDING POST
                         </>
                       ) : (
                         <>
-                          <XCircle className="w-3.5 h-3.5" /> VOIDED
+                          <XCircle className="w-3 h-3 shrink-0" /> VOIDED
                         </>
                       )}
                     </span>

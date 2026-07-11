@@ -128,35 +128,50 @@ export const ExpenseEntryForm = () => {
 
     switch (expenseType) {
       case 'Salary':
-        parentCode = '4100000'; parentName = 'Administrative Expenses'; name = 'Staff Salaries'; break;
+        parentCode = '4010100'; parentName = 'Salaries Expense'; name = 'Staff Salaries'; break;
       case 'Rent':
-        parentCode = '4100000'; parentName = 'Administrative Expenses'; name = 'Office/Hall Rent'; break;
+        parentCode = '4040100'; parentName = 'Rent'; name = 'Office/Hall Rent'; break;
       case 'Fuel':
-        parentCode = '4200000'; parentName = 'Utility Expenses'; name = 'Fuel Expense'; break;
+        parentCode = '4080100'; parentName = 'Admin Costs'; name = 'Fuel Expense'; break;
       case 'Bus Repair':
-        parentCode = '4100000'; parentName = 'Administrative Expenses'; name = 'Bus Repair Expense'; break;
+        parentCode = '4050100'; parentName = 'Repairs'; name = 'Bus Repair Expense'; break;
       case 'Generator Repair':
-        parentCode = '4100000'; parentName = 'Administrative Expenses'; name = 'Generator Repair Expense'; break;
+        parentCode = '4050100'; parentName = 'Repairs'; name = 'Generator Repair Expense'; break;
       case 'Legal Fee':
-        parentCode = '4100000'; parentName = 'Administrative Expenses'; name = 'Legal Fee Expense'; break;
+        parentCode = '4070100'; parentName = 'Professional Fees'; name = 'Legal Fee Expense'; break;
       case 'Medical Donation':
-        parentCode = '4300000'; parentName = 'Donation Expenses'; name = 'Medical Donation Expense'; break;
+        parentCode = '4060100'; parentName = 'Donations'; name = 'Medical Donation Expense'; break;
       case 'Zakat Distribution':
-        parentCode = '4300000'; parentName = 'Donation Expenses'; name = 'Zakat Distribution Expense'; break;
+        parentCode = '4060100'; parentName = 'Donations'; name = 'Zakat Distribution Expense'; break;
       case 'Other':
-        parentCode = '4100000';
-        parentName = 'Administrative Expenses';
+        parentCode = '4080100';
+        parentName = 'Admin Costs';
         name = customExpenseName.trim() ? customExpenseName.trim() : 'Miscellaneous Expense';
         break;
       default:
         return null;
     }
 
-    // Auto-calculate GL code
+    // Verify parentCode exists in flatAccounts. If not found, fallback to any existing Expense SUBSIDIARY or PARENT account
+    const existingParent = flatAccounts.find(a => a.code === parentCode);
+    if (existingParent) {
+      parentName = existingParent.name;
+    } else {
+      const fallbackParent = flatAccounts.find(a => a.type === 'Expense' && (a.level === 'SUBSIDIARY' || a.level === 'PARENT'));
+      if (fallbackParent) {
+        parentCode = fallbackParent.code;
+        parentName = fallbackParent.name;
+      }
+    }
+
+    // Auto-calculate unique GL code under parentCode
     const siblings = flatAccounts.filter(a => a.parentCode === parentCode);
     const sibNumeric = siblings.map(a => parseInt(a.code, 10)).filter(Number.isFinite);
     const sibMax = sibNumeric.length ? Math.max(...sibNumeric) : parseInt(parentCode, 10);
-    const nextCode = String(sibMax + 1).padStart(7, '0');
+    let nextCode = String(sibMax + 1).padStart(7, '0');
+    while (flatAccounts.some(a => a.code === nextCode)) {
+      nextCode = String(parseInt(nextCode, 10) + 1).padStart(7, '0');
+    }
 
     return { parentCode, parentName, name, nextCode };
   }, [expenseType, customExpenseName, matchedAccounts, flatAccounts]);
