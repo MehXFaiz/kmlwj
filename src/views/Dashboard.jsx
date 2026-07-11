@@ -518,19 +518,6 @@ export const Dashboard = () => {
           <RefreshCw className="h-3.5 w-3.5" />
           Refresh
         </button>
-        <button
-          onClick={() =>
-            addNotification({
-              title: 'Test Notification',
-              message: 'This is a test notification to verify functionality!',
-              action: () => navigate('/settings'),
-            })
-          }
-          className="flex items-center gap-2 px-3 py-2 rounded-xl border border-brand-500/30 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 hover:text-brand-300 transition-all text-xs font-bold self-start sm:self-auto"
-        >
-          <Bell className="h-3.5 w-3.5" />
-          Test Notification
-        </button>
       </div>
 
 
