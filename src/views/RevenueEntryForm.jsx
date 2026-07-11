@@ -223,7 +223,8 @@ export const RevenueEntryForm = () => {
       showToast('Income recorded and posted to your accounts!', 'success');
       navigate('/bank-vouchers');
     } catch (err) {
-      showToast(err.message || "Couldn't save the revenue entry. Please try again.", 'error');
+      const errMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message || "Couldn't save the revenue entry. Please try again.";
+      showToast(errMsg, 'error');
     } finally {
       setLoading(false);
       setCreationStatus('');

@@ -28,10 +28,10 @@ export const useCoaStore = create((set, get) => ({
   fetchAccountsList: async (params = {}) => {
     set({ loading: true, error: null });
     try {
-      const response = await accountService.getAll(params);
+      const response = await accountService.getAll({ limit: 1000, ...params });
       set({ 
         flatAccounts: response.data, 
-        meta: response.meta || { total: 0, page: 1, limit: 100 },
+        meta: response.meta || { total: 0, page: 1, limit: 1000 },
         loading: false 
       });
     } catch (err) {
