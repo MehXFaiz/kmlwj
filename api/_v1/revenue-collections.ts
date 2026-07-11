@@ -126,6 +126,37 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(200).json({ status: 200, data: result.approvedItem, message: `${item.category} posted to ledger successfully` });
     }
 
+    if (action === 'revert') {
+      const { id } = req.body;
+      if (!id) return res.status(400).json({ error: { message: 'Collection ID is required', status: 400 } });
+
+      const item = await prisma.revenueCollection.findUnique({ where: { id } });
+      if (!item) return res.status(404).json({ error: { message: 'Record not found', status: 404 } });
+      if (item.status !== 'POSTED') return res.status(400).json({ error: { message: 'Record is not posted to ledger', status: 400 } });
+
+      const result = await prisma.$transaction(async (tx) => {
+        if (item.journalEntryId) {
+          try {
+            await AccountingService.deleteJournalEntry(tx, item.journalEntryId, req.user!.id, `Reverted ${item.category}`);
+          } catch (e) {}
+        }
+
+        const revertedItem = await tx.revenueCollection.update({
+          where: { id },
+          data: { 
+            status: 'Confirmed',
+            journalEntryId: null
+          }
+        });
+
+        return revertedItem;
+      });
+
+      await logAudit(req.user.id, `Revert ${item.category}`, 'REVENUE', item, result, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+
+      return res.status(200).json({ status: 200, data: result, message: `${item.category} reverted from ledger successfully` });
+    }
+
     // Action: Create Record & Auto-Post to Ledger
     const { category, title, subTitle, mobile, eventDate, quantity, rate, destination, amount, paymentMethod, bankAccountId, chequeNumber, remarks } = req.body;
 

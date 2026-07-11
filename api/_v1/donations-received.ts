@@ -256,11 +256,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           }
         }
       } 
-      // If changing from POSTED to CANCELLED
-      else if (existing.status === 'POSTED' && newStatus === 'CANCELLED') {
+      // If changing from POSTED to another status (DRAFT/CANCELLED)
+      else if (existing.status === 'POSTED' && newStatus !== 'POSTED') {
         if (existing.journalEntryId) {
           try {
-            await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user!.id, 'Donation Receipt Cancelled');
+            await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user!.id, `Donation Receipt status changed to ${newStatus}`);
             journalEntryId = null;
           } catch (e) {}
         }

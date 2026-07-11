@@ -208,7 +208,7 @@
 @layer base {
   html {
     background-color: var(--slate-950);
-    color-scheme: dark;
+    color-scheme: light dark;
   }
 
   body {
@@ -335,7 +335,7 @@
 .nav-active {
   background: linear-gradient(90deg, rgba(72, 47, 30, 0.22) 0%, rgba(72, 47, 30, 0.05) 100%);
   border-left: 2px solid #482F1E;
-  color: #FAF6F2;
+  color: var(--slate-100);
 }
 
 /* ─────────────────────────────────────────

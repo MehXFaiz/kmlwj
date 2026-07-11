@@ -208,19 +208,25 @@ export const JournalEntries = () => {
                         {line.description && <span className="col-span-2 text-slate-500 truncate">{line.description}</span>}
                       </div>
                     ))}
-                    {(je.status === 'Draft' || canEditOrDelete) && (
-                      <div className="flex gap-2 pt-2 border-t border-slate-800/60 mt-2">
-                        {je.status === 'Draft' && canPostToLedger && (
-                          <>
-                            <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => handleUpdateStatus(je.dbId, 'Cancelled')}>Cancel Draft</Button>
-                            <Button size="sm" variant="primary" className="flex-1 text-xs" onClick={() => handleUpdateStatus(je.dbId, 'Posted')}>Post Now</Button>
-                          </>
-                        )}
-                        {canEditOrDelete && (
-                          <Button size="sm" variant="danger" className="text-xs px-2" onClick={() => handleDeleteJournal(je.dbId || je.id, je.voucherNo)}>Delete</Button>
-                        )}
-                      </div>
-                    )}
+                    {(je.status === 'Draft' || je.status === 'Cancelled' || canEditOrDelete) && (
+                        <div className="flex gap-2 pt-2 border-t border-slate-800/60 mt-2">
+                          {je.status === 'Draft' && canPostToLedger && (
+                            <>
+                              <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => handleUpdateStatus(je.dbId, 'Cancelled')}>Cancel Draft</Button>
+                              <Button size="sm" variant="primary" className="flex-1 text-xs" onClick={() => handleUpdateStatus(je.dbId, 'Posted')}>Post Now</Button>
+                            </>
+                          )}
+                          {je.status === 'Cancelled' && canPostToLedger && (
+                            <>
+                              <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => handleUpdateStatus(je.dbId, 'Draft')}>Restore to Draft</Button>
+                              <Button size="sm" variant="primary" className="flex-1 text-xs" onClick={() => handleUpdateStatus(je.dbId, 'Posted')}>Restore & Post</Button>
+                            </>
+                          )}
+                          {canEditOrDelete && (
+                            <Button size="sm" variant="danger" className="text-xs px-2" onClick={() => handleDeleteJournal(je.dbId || je.id, je.voucherNo)}>Delete</Button>
+                          )}
+                        </div>
+                      )}
                   </div>
                 )}
               </div>
@@ -317,7 +323,7 @@ export const JournalEntries = () => {
                                 </span>
                                 <div className="flex items-center gap-3">
                                   <span className="text-[10px] text-slate-500">Posted by: <span className="font-semibold text-slate-400">{je.postedBy}</span></span>
-                                  {(je.status === 'Draft' || canEditOrDelete) && (
+                                  {(je.status === 'Draft' || je.status === 'Cancelled' || canEditOrDelete) && (
                                     <div className="flex gap-2 ml-4 border-l border-slate-800 pl-4">
                                       {je.status === 'Draft' && canPostToLedger && (
                                         <>
@@ -326,6 +332,16 @@ export const JournalEntries = () => {
                                           </Button>
                                           <Button size="sm" variant="primary" className="h-6 text-[10px] gap-1 px-2" onClick={() => handleUpdateStatus(je.dbId, 'Posted')}>
                                             <Check className="h-3 w-3" /> Post
+                                          </Button>
+                                        </>
+                                      )}
+                                      {je.status === 'Cancelled' && canPostToLedger && (
+                                        <>
+                                          <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 px-2" onClick={() => handleUpdateStatus(je.dbId, 'Draft')}>
+                                            <X className="h-3 w-3" /> Restore to Draft
+                                          </Button>
+                                          <Button size="sm" variant="primary" className="h-6 text-[10px] gap-1 px-2" onClick={() => handleUpdateStatus(je.dbId, 'Posted')}>
+                                            <Check className="h-3 w-3" /> Restore & Post
                                           </Button>
                                         </>
                                       )}
