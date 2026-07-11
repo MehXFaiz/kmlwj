@@ -213,10 +213,10 @@ export const SpecializedRevenueSection = ({
                         <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-amber-500/0 via-amber-500/0 to-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
                         <div>
-                          <div className="flex items-start justify-between gap-3 relative z-10">
-                            <div className="flex items-start gap-3.5">
+                          <div className="flex items-start justify-between gap-2 relative z-10">
+                            <div className="flex items-start gap-2.5 min-w-0 flex-1">
                               {canEditOrDelete && (
-                                <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+                                <div className="pt-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                                   <input
                                     type="checkbox"
                                     checked={selectedIds.includes(item.id)}
@@ -225,39 +225,39 @@ export const SpecializedRevenueSection = ({
                                   />
                                 </div>
                               )}
-                              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/30 flex items-center justify-center text-amber-400 font-extrabold text-lg shadow-inner shrink-0 group-hover:scale-105 transition-transform">
-                                {item.title ? item.title.charAt(0).toUpperCase() : <User className="w-5 h-5 text-amber-400" />}
+                              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/30 flex items-center justify-center text-amber-400 font-extrabold text-base shadow-inner shrink-0 group-hover:scale-105 transition-transform">
+                                {item.title ? item.title.charAt(0).toUpperCase() : <User className="w-4 h-4 text-amber-400" />}
                               </div>
-                              <div>
-                                <h4 className="text-base font-bold text-slate-100 group-hover:text-amber-400 transition-colors leading-tight tracking-tight">
+                              <div className="min-w-0 flex-1">
+                                <h4 className="text-sm sm:text-base font-bold text-slate-100 group-hover:text-amber-400 transition-colors leading-tight tracking-tight truncate">
                                   {item.title || 'Unknown'}
                                 </h4>
-                                <p className="text-xs text-slate-400 font-medium mt-1 flex items-center gap-1.5">
+                                <p className="text-xs text-slate-400 font-medium mt-1 flex items-center gap-1.5 truncate">
                                   {item.mobile ? (
                                     <>
-                                      <Phone className="w-3 h-3 text-amber-400/80 shrink-0" /> {item.mobile}
+                                      <Phone className="w-3 h-3 text-amber-400/80 shrink-0" /> <span className="truncate">{item.mobile}</span>
                                     </>
                                   ) : (
                                     <>
-                                      <User className="w-3 h-3 text-amber-400/80 shrink-0" /> {category} Record
+                                      <User className="w-3 h-3 text-amber-400/80 shrink-0" /> <span className="truncate">{category} Record</span>
                                     </>
                                   )}
                                 </p>
                               </div>
                             </div>
 
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider shrink-0 ${
+                            <span className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full border text-[10px] font-extrabold uppercase tracking-wide shrink-0 whitespace-nowrap ${
                               isConfirmed
                                 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                                 : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                             }`}>
                               {isConfirmed ? (
                                 <>
-                                  <AlertTriangle className="w-3.5 h-3.5" /> Pending Post
+                                  <AlertTriangle className="w-3 h-3 shrink-0" /> PENDING POST
                                 </>
                               ) : (
                                 <>
-                                  <CheckCircle className="w-3.5 h-3.5" /> Posted
+                                  <CheckCircle className="w-3 h-3 shrink-0" /> POSTED
                                 </>
                               )}
                             </span>
