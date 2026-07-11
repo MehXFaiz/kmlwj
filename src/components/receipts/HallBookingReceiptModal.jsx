@@ -341,8 +341,8 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
   if (!booking) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md print:p-0 print:bg-white print:backdrop-blur-none overflow-y-auto">
-      <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[96vh] print:max-h-none print:shadow-none print:rounded-none overflow-hidden border border-slate-200">
+    <div id="print-receipt-modal" className="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md print:absolute print:inset-auto print:top-0 print:left-0 print:w-full print:h-auto print:bg-white print:z-0 print:block print:overflow-visible overflow-y-auto">
+      <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[96vh] print:max-h-none print:shadow-none print:rounded-none print:border-none print:w-full print:max-w-full print:overflow-visible overflow-hidden border border-slate-200">
         
         {/* Actions & Copy Mode Selector Bar (Hidden in Print) */}
         <div className="flex flex-col sm:flex-row justify-between items-center gap-3 px-6 py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white print:hidden shrink-0">
@@ -411,8 +411,24 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
         <div className="overflow-y-auto print:overflow-visible bg-slate-100/60 print:bg-white flex flex-col items-center p-4 sm:p-8 print:p-0">
           <style>{`
             @media print {
+              /* Hide standard web app elements */
+              #root > div > *:not(.flex-1),
+              aside, nav, header, footer, .sidebar, .topbar {
+                display: none !important;
+              }
+              
+              /* Hide all page content siblings of the print modal */
+              .space-y-4 > *:not(#print-receipt-modal),
+              .space-y-6 > *:not(#print-receipt-modal),
+              .space-y-8 > *:not(#print-receipt-modal) {
+                display: none !important;
+              }
+
               body * {
                 visibility: hidden !important;
+              }
+              #print-receipt-modal, #print-receipt-modal * {
+                visibility: visible !important;
               }
               #print-receipt-wrapper, #print-receipt-wrapper * {
                 visibility: visible !important;
