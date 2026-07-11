@@ -298,16 +298,7 @@ export const HallBookings = () => {
                           >
                             <Printer className="w-3.5 h-3.5" />
                           </button>
-                          {booking.status === 'POSTED' && (
-                            <button
-                              type="button"
-                              onClick={() => setGlItem(booking)}
-                              className="w-8 h-8 rounded-full bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 border border-brand-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
-                              title="Print GL Voucher"
-                            >
-                              <FileText className="w-3.5 h-3.5" />
-                            </button>
-                          )}
+
                           {(booking.status === 'Confirmed' || booking.status === 'Pending') && canPostToLedger && (
                             <button
                               type="button"
