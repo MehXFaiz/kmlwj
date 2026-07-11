@@ -7,6 +7,7 @@ import { useAuthStore } from '../store/authStore';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { showToast } from '../components/ui/Toast';
 import { HallBookingReceiptModal } from '../components/receipts/HallBookingReceiptModal';
+import { HallBookingGLModal } from '../components/receipts/HallBookingGLModal';
 import HallBookingCalendar from '../components/common/HallBookingCalendar';
 
 const formatHallName = (booking) => {
@@ -27,6 +28,7 @@ export const HallBookings = () => {
   const canPostToLedger = useAuthStore((s) => s.canPostToLedger);
   const [search, setSearch] = useState('');
   const [printItem, setPrintItem] = useState(null);
+  const [glItem, setGlItem] = useState(null);
   const [viewMode, setViewMode] = useState('cards');
 
   const [selectedIds, setSelectedIds] = useState([]);
@@ -296,7 +298,17 @@ export const HallBookings = () => {
                           >
                             <Printer className="w-3.5 h-3.5" />
                           </button>
-                          {booking.status === 'Confirmed' && canPostToLedger && (
+                          {booking.status === 'POSTED' && (
+                            <button
+                              type="button"
+                              onClick={() => setGlItem(booking)}
+                              className="w-8 h-8 rounded-full bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 border border-brand-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                              title="Print GL Voucher"
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          {(booking.status === 'Confirmed' || booking.status === 'Pending') && canPostToLedger && (
                             <button
                               type="button"
                               onClick={() => handlePost(booking.id)}
@@ -412,7 +424,7 @@ export const HallBookings = () => {
                         )}
                       </td>
                       <td className="px-6 py-4 text-right space-x-2">
-                        {booking.status === 'Confirmed' && canPostToLedger && (
+                        {(booking.status === 'Confirmed' || booking.status === 'Pending') && canPostToLedger && (
                           <button onClick={() => handlePost(booking.id)}
                             className="p-1.5 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-950/40 rounded transition-colors inline-flex"
                             title="Post to Ledger">
@@ -431,6 +443,13 @@ export const HallBookings = () => {
                           title="Print Receipt">
                           <Printer className="h-4 w-4" />
                         </button>
+                        {booking.status === 'POSTED' && (
+                          <button onClick={() => setGlItem(booking)}
+                            className="p-1.5 text-brand-400 hover:text-brand-300 hover:bg-brand-500/10 rounded transition-colors inline-flex"
+                            title="Print GL Voucher">
+                            <FileText className="h-4 w-4" />
+                          </button>
+                        )}
                         {canEditOrDelete && (
                           <Link to={`/hall-bookings/edit/${booking.id}`}
                             className="p-1.5 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 rounded transition-colors inline-flex ml-1"
@@ -465,6 +484,10 @@ export const HallBookings = () => {
       
       {printItem && (
         <HallBookingReceiptModal booking={printItem} onClose={() => setPrintItem(null)} />
+      )}
+
+      {glItem && (
+        <HallBookingGLModal booking={glItem} onClose={() => setGlItem(null)} />
       )}
 
       {showBulkConfirm && (

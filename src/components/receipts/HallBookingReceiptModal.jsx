@@ -56,7 +56,7 @@ const SpaciousReceiptPage = ({ booking, copyType, copyUrduTitle, copyEnglishTitl
 
   return (
     <div
-      className={`w-full max-w-[780px] print:max-w-full bg-white border border-slate-300 print:border-none p-8 sm:p-10 print:p-6 font-urdu relative text-slate-900 mx-auto leading-relaxed shadow-xl print:shadow-none rounded-2xl print:rounded-none box-border ${
+      className={`w-full max-w-[960px] print:max-w-full bg-white border border-slate-300 print:border-none p-6 sm:p-8 print:p-5 font-urdu relative text-slate-900 mx-auto leading-relaxed shadow-xl print:shadow-none rounded-2xl print:rounded-none box-border ${
         !isLast ? 'print:break-after-page mb-10 print:mb-0' : ''
       }`}
       style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
@@ -77,7 +77,7 @@ const SpaciousReceiptPage = ({ booking, copyType, copyUrduTitle, copyEnglishTitl
 
           {/* Center Main Title */}
           <div className="flex-1 text-center pt-1">
-            <h1 className="text-3xl sm:text-[40px] font-extrabold text-[#1a6e35] leading-tight">
+            <h1 className="text-2xl sm:text-[28px] font-extrabold text-[#1a6e35] leading-tight">
               کچھی مسلم لوھارواڑھا ویلفیئر جماعت
             </h1>
             <p className="text-xs sm:text-sm font-bold text-slate-600 mt-2">
@@ -414,13 +414,13 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
                 padding: 0 !important;
               }
               @page {
-                size: A4 portrait;
-                margin: 12mm;
+                size: A4 landscape;
+                margin: 8mm;
               }
             }
           `}</style>
 
-          <div id="print-receipt-wrapper" className="w-full max-w-[800px] print:max-w-full flex flex-col items-center">
+          <div id="print-receipt-wrapper" className="w-full max-w-[1000px] print:max-w-full flex flex-col items-center">
             {/* Customer Copy */}
             {(printMode === 'both' || printMode === 'customer') && (
               <SpaciousReceiptPage

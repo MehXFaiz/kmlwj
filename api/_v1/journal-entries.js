@@ -28,7 +28,45 @@ var journal_entries_default = makeHandler(async (req, res) => {
     }
   }
   if (method === "GET") {
-    const { subsidiary, limit = "100", page = "1", type } = req.query;
+    const { id, subsidiary, limit = "100", page = "1", type } = req.query;
+
+    // ── Single journal entry by database ID ──
+    if (id) {
+      const je = await prisma.journalEntry.findUnique({
+        where: { id },
+        include: {
+          lines: { include: { account: true } }
+        }
+      });
+      if (!je) return res.status(404).json({ error: { message: "Journal entry not found", status: 404 } });
+      return res.status(200).json({
+        status: 200,
+        data: {
+          id: je.voucherNo,
+          dbId: je.id,
+          voucherNo: je.voucherNo,
+          date: je.postingDate,
+          postingDate: je.postingDate.toISOString().split("T")[0],
+          subsidiary: je.subsidiary,
+          reference: je.reference,
+          referenceNo: je.referenceNo || je.reference,
+          description: je.description,
+          postedBy: je.postedBy,
+          status: je.status,
+          voucherType: je.voucherType,
+          lines: je.lines.map((line) => ({
+            id: line.id,
+            account: { name: line.account.name, glCode: line.account.glCode },
+            accountName: line.account.name,
+            glCode: line.account.glCode,
+            description: line.description,
+            debit: line.debit,
+            credit: line.credit
+          }))
+        }
+      });
+    }
+
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
     const skip = (pageNum - 1) * limitNum;

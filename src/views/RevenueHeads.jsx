@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRevenueStore } from '../store/revenueStore';
 import { useCoaStore } from '../store/coaStore';
 import { useAuthStore } from '../store/authStore';
+import { useNotificationStore } from '../store/notificationStore';
 import {
   TrendingUp, Search, Plus, ChevronDown, ChevronUp,
   CheckCircle2, XCircle, Edit2, Trash2,
@@ -96,7 +97,7 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
                 onChange={e => setForm(f => ({ ...f, category: e.target.value, hall: e.target.value === 'Hall Bookings' ? '' : f.hall }))}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-amber-500/60 transition-all font-medium"
               >
-                {['Hall Bookings', 'Other Income'].map(c => (
+                {['Hall Bookings', 'Other Income', 'Other Income & Donations', 'Commission Income'].map(c => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
@@ -174,6 +175,8 @@ const STATUS_COLORS = {
 const CAT_COLORS = {
   'Hall Bookings': 'bg-blue-950/50 text-blue-400 border-blue-900/40',
   'Other Income': 'bg-violet-950/50 text-violet-400 border-violet-900/40',
+  'Other Income & Donations': 'bg-violet-950/50 text-violet-400 border-violet-900/40',
+  'Commission Income': 'bg-amber-950/50 text-amber-400 border-amber-900/40',
   'Other': 'bg-slate-800/50 text-slate-400 border-slate-700/40',
 };
 
@@ -272,6 +275,7 @@ export const RevenueHeads = () => {
   const { heads, fetchHeads, addHead, updateHead, deleteHead } = useRevenueStore();
   const canEditOrDelete = useAuthStore((s) => s.canEditOrDelete);
   const { flatAccounts, fetchAccountsList } = useCoaStore();
+  const { addNotification } = useNotificationStore();
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterCat, setFilterCat] = useState('All');
@@ -324,14 +328,27 @@ export const RevenueHeads = () => {
     try {
       if (editItem) {
         await updateHead(editItem.id, data);
+        addNotification({
+          title: 'Revenue Head Updated',
+          message: `Successfully updated revenue head "${data.name}"`
+        });
       } else {
         await addHead(data);
+        addNotification({
+          title: 'Revenue Head Created',
+          message: `Successfully created revenue head "${data.name}"`
+        });
       }
       setEditItem(null);
       setModalOpen(false);
       showToast(editItem ? 'Revenue head updated successfully' : 'Revenue head created successfully', 'success');
     } catch (err) {
-      showToast(err?.response?.data?.error?.message || err.message || 'Failed to save. Please ensure inputs are correct.', 'error');
+      const errorMsg = err?.response?.data?.error?.message || err.message || 'Failed to save. Please ensure inputs are correct.';
+      addNotification({
+        title: 'Error Saving Revenue Head',
+        message: errorMsg
+      });
+      showToast(errorMsg, 'error');
     }
   };
 
