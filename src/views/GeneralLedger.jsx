@@ -5,9 +5,20 @@ import { Badge } from '../components/ui/Badge';
 import { useLedgerStore } from '../store/ledgerStore';
 import { useCoaStore } from '../store/coaStore';
 import { useAuthStore } from '../store/authStore';
-import { Search, Calendar, Filter, Trash2, AlertCircle } from 'lucide-react';
+import { Search, Calendar, Filter, Trash2, AlertCircle, Printer } from 'lucide-react';
 import { showToast, ToastPlaceholder } from '../components/ui/Toast';
 import { MobileOnly, DesktopOnly } from '../components/common/responsive';
+import logoImg from '../assets/logo.png';
+
+const formatDateDDMMYYYY = (dateVal) => {
+  if (!dateVal) return '—';
+  const d = new Date(dateVal);
+  if (isNaN(d)) return '—';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+};
 
 export const GeneralLedger = () => {
   const { ledgerData, fetchLedger, isLoading } = useLedgerStore();
@@ -163,8 +174,60 @@ export const GeneralLedger = () => {
 
   return (
     <div className="space-y-6">
+      {/* Landscape Print Styles */}
+      <style>{`
+        @media print {
+          @page {
+            size: A4 landscape;
+            margin: 10mm;
+          }
+          body {
+            background-color: white !important;
+            color: black !important;
+          }
+        }
+      `}</style>
+
+      {/* Print-only Header */}
+      <div className="hidden print:block border-b-2 border-slate-800 pb-4 mb-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="w-16 h-16 shrink-0 flex items-center justify-center">
+            <img src={logoImg} alt="Logo" className="w-14 h-14 object-contain" />
+          </div>
+          <div className="flex-1 text-center">
+            <h1
+              className="text-xl font-extrabold text-slate-900 leading-snug font-urdu"
+            >
+              کچھی مسلم لوھارواڑھا ویلفیئر جماعت
+            </h1>
+            <p className="text-[11px] font-bold text-slate-600 mt-1">
+              جمعہ بلوچ روڈ، نزد K.E گرڈ اسٹیشن، نیو کلری، لیاری، کراچی
+            </p>
+            <p className="text-[10px] font-bold text-slate-500 mt-0.5">REGISTERED NO: 1319</p>
+          </div>
+          <div className="shrink-0 text-right">
+            <div className="inline-block px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-900 text-white mb-2">
+              General Ledger Report
+            </div>
+            <div className="text-[10px] text-slate-600 font-bold uppercase block tracking-wider">
+              Printed On: {new Date().toLocaleDateString('en-GB')}
+            </div>
+          </div>
+        </div>
+        
+        {/* Date Filter Range info */}
+        <div className="mt-4 flex justify-between text-xs text-slate-700 font-medium">
+          <div>
+            <span className="font-bold text-slate-900">Period:</span> {filters.startDate ? formatDateDDMMYYYY(filters.startDate) : 'Beginning'} to {filters.endDate ? formatDateDDMMYYYY(filters.endDate) : 'Present'}
+          </div>
+          <div>
+            <span className="font-bold text-slate-900">Account:</span> {accountInfo ? `${accountInfo.name} (${accountInfo.glCode})` : 'All Accounts'}
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div className="flex flex-col gap-1">
           <h2 className="text-lg sm:text-xl font-bold text-slate-100 uppercase tracking-wider">General Ledger</h2>
           <p className="text-xs text-slate-400">View detailed transaction history and balances for specific accounts.</p>
@@ -179,11 +242,18 @@ export const GeneralLedger = () => {
               <Trash2 className="h-3.5 w-3.5 pointer-events-none" /> Bulk Delete ({selectedIds.length})
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700 transition-all text-xs font-semibold cursor-pointer shadow-sm"
+          >
+            <Printer className="h-3.5 w-3.5" /> Print GL
+          </button>
         </div>
       </div>
 
       {/* Filters */}
-      <Card className="bg-slate-900/50">
+      <Card className="bg-slate-900/50 print:hidden">
         <CardContent className="p-4 flex flex-col sm:flex-row gap-4 items-end">
           <div className="flex-1 space-y-1 w-full">
             <label className="text-xs text-slate-400">Account</label>
