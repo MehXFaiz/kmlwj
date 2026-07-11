@@ -266,8 +266,23 @@ const SpaciousReceiptPage = ({ booking, copyType, copyUrduTitle, copyEnglishTitl
           </div>
         </div>
 
+        {/* Additional Signature Fields: Received By & Discount Approval */}
+        <div className="pt-6 pb-2 grid grid-cols-2 divide-x divide-slate-300 divide-x-reverse items-end gap-6 text-center border-t border-slate-200">
+          <div className="flex flex-col items-center">
+            <div className="w-64 border-b border-slate-800 pb-1 mb-2"></div>
+            <span className="text-base font-bold text-slate-800">وصول کنندہ</span>
+            <span className="text-xs font-sans text-slate-500 font-bold">Received By</span>
+          </div>
+
+          <div className="flex flex-col items-center">
+            <div className="w-64 border-b border-slate-800 pb-1 mb-2"></div>
+            <span className="text-base font-bold text-slate-800">رعایت کی منظوری (دستخط اور نام)</span>
+            <span className="text-xs font-sans text-slate-500 font-bold">Discount Approval Signature & Name</span>
+          </div>
+        </div>
+
         {/* Signatures & Official Stamp */}
-        <div className="pt-12 pb-4 grid grid-cols-3 items-end gap-8 text-center">
+        <div className="pt-8 pb-4 grid grid-cols-3 items-end gap-8 text-center border-t border-slate-200">
           <div className="flex flex-col items-center">
             <div className="w-48 border-b-2 border-slate-800 pb-1 mb-2"></div>
             <span className="text-base font-bold text-slate-800">دستخط بکنگ کلرک</span>
@@ -424,6 +439,7 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
             {/* Customer Copy */}
             {(printMode === 'both' || printMode === 'customer') && (
               <SpaciousReceiptPage
+                key="customer-copy"
                 booking={booking}
                 copyType="customer"
                 copyUrduTitle="صارف کاپی (Customer Copy)"
@@ -435,6 +451,7 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
             {/* Office Copy */}
             {(printMode === 'both' || printMode === 'office') && (
               <SpaciousReceiptPage
+                key="office-copy"
                 booking={booking}
                 copyType="office"
                 copyUrduTitle="دفتری ریکارڈ کاپی (Office Record Copy)"
