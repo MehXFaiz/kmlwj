@@ -309,29 +309,29 @@ export const GeneralLedger = () => {
 
       {/* Summary Cards */}
       {accountInfo && (
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-          <Card className="bg-slate-900/50">
-            <CardContent className="p-4 flex flex-col items-center justify-center">
-              <span className="text-xs text-slate-400 uppercase tracking-wider mb-1">Opening Balance</span>
-              <span className="text-xl font-mono font-semibold text-slate-200">PKR {summary.openingBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 print:grid-cols-4 print:gap-2 print:mb-6">
+          <Card className="bg-slate-900/50 print:bg-white print:border-slate-300 print:shadow-none">
+            <CardContent className="p-4 flex flex-col items-center justify-center print:p-2">
+              <span className="text-xs text-slate-400 uppercase tracking-wider mb-1 print:text-slate-500">Opening Balance</span>
+              <span className="text-xl font-mono font-semibold text-slate-200 print:text-black print:text-sm">PKR {summary.openingBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </CardContent>
           </Card>
-          <Card className="bg-slate-900/50">
-            <CardContent className="p-4 flex flex-col items-center justify-center">
-              <span className={`text-xs uppercase tracking-wider mb-1 ${debitColor}`}>{debitLabel}</span>
-              <span className={`text-xl font-mono font-semibold ${debitColor}`}>PKR {summary.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+          <Card className="bg-slate-900/50 print:bg-white print:border-slate-300 print:shadow-none">
+            <CardContent className="p-4 flex flex-col items-center justify-center print:p-2">
+              <span className={`text-xs uppercase tracking-wider mb-1 ${debitColor} print:text-slate-500`}>{debitLabel}</span>
+              <span className={`text-xl font-mono font-semibold ${debitColor} print:text-emerald-600 print:text-sm`}>PKR {summary.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </CardContent>
           </Card>
-          <Card className="bg-slate-900/50">
-            <CardContent className="p-4 flex flex-col items-center justify-center">
-              <span className={`text-xs uppercase tracking-wider mb-1 ${creditColor}`}>{creditLabel}</span>
-              <span className={`text-xl font-mono font-semibold ${creditColor}`}>PKR {summary.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+          <Card className="bg-slate-900/50 print:bg-white print:border-slate-300 print:shadow-none">
+            <CardContent className="p-4 flex flex-col items-center justify-center print:p-2">
+              <span className={`text-xs uppercase tracking-wider mb-1 ${creditColor} print:text-slate-500`}>{creditLabel}</span>
+              <span className={`text-xl font-mono font-semibold ${creditColor} print:text-rose-600 print:text-sm`}>PKR {summary.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </CardContent>
           </Card>
-          <Card className="bg-slate-900/50 border-brand-500/30">
-            <CardContent className="p-4 flex flex-col items-center justify-center">
-              <span className="text-xs text-slate-400 uppercase tracking-wider mb-1 text-brand-400">Closing Balance</span>
-              <span className="text-xl font-mono font-bold text-brand-400">PKR {summary.closingBalance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+          <Card className="bg-slate-900/50 border-brand-500/30 print:bg-white print:border-slate-300 print:shadow-none">
+            <CardContent className="p-4 flex flex-col items-center justify-center print:p-2">
+              <span className="text-xs text-slate-400 uppercase tracking-wider mb-1 text-brand-400 print:text-slate-500">Closing Balance</span>
+              <span className="text-xl font-mono font-bold text-brand-400 print:text-black print:text-sm">PKR {summary.closingBalance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </CardContent>
           </Card>
         </div>
