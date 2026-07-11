@@ -41,6 +41,7 @@ export const HallBookingForm = () => {
       bookerName: '',
       mobile: '',
       address: '',
+      bookingDate: new Date().toISOString().split('T')[0],
       programDate: '',
       programType: '',
       timings: 'Evening',
@@ -75,6 +76,7 @@ export const HallBookingForm = () => {
         const booking = await fetchBookingById(id);
         if (booking) {
           const formattedDate = booking.programDate ? new Date(booking.programDate).toISOString().split('T')[0] : '';
+          const formattedBookingDate = booking.bookingDate ? new Date(booking.bookingDate).toISOString().split('T')[0] : (booking.createdAt ? new Date(booking.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
           let resolvedHallId = booking.hallId || '';
           if (resolvedHallId && flatAccounts) {
             const acc = flatAccounts.find(a => a.id === resolvedHallId);
@@ -90,6 +92,7 @@ export const HallBookingForm = () => {
             bookerName: booking.bookerName || '',
             mobile: booking.mobile || '',
             address: booking.address || '',
+            bookingDate: formattedBookingDate,
             programDate: formattedDate,
             programType: booking.programType || '',
             timings: booking.timings || 'Evening',
@@ -206,14 +209,14 @@ export const HallBookingForm = () => {
   // Fixed payment rates removed per user request so amounts can be entered manually
 
   const onSubmit = async (data) => {
-    if (!data.bookerName || !data.programDate || !data.hallId || !data.amount) {
+    if (!data.bookerName || !data.bookingDate || !data.programDate || !data.hallId || !data.amount) {
       showToast('Please fill all required fields.', 'warning');
       return;
     }
 
     const todayStr = new Date().toISOString().split('T')[0];
     if (data.programDate < todayStr) {
-      showToast('Booking date must be today or a future date.', 'warning');
+      showToast('Program date must be today or a future date.', 'warning');
       return;
     }
 
@@ -509,6 +512,21 @@ export const HallBookingForm = () => {
                 <div className="p-5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
+                      <label className={labelClass}>{t('receipt.bookingDate') || 'Booking Date'} *</label>
+                      <input type="date" {...register('bookingDate', {
+                        required: 'Booking date is required',
+                        pattern: {
+                          value: /^\d{4}-\d{2}-\d{2}$/,
+                          message: 'Date must be in YYYY-MM-DD format'
+                        }
+                      })} required
+                        className={inputClass(errors.bookingDate)} />
+                      {errors.bookingDate && (
+                        <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.bookingDate.message}</span>
+                      )}
+                    </div>
+
+                    <div>
                       <label className={labelClass}>{t('receipt.programDate')} *</label>
                       <input type="date" {...register('programDate', {
                         required: 'Program date is required',
@@ -588,8 +606,8 @@ export const HallBookingForm = () => {
                       )}
                     </div>
 
-                    <div className="sm:col-span-2">
-                      <label className="flex items-center gap-3 cursor-pointer p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:bg-slate-800/60 transition-colors">
+                    <div className="flex items-end">
+                      <label className="w-full flex items-center gap-3 cursor-pointer p-2.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:bg-slate-800/60 transition-colors">
                         <input type="checkbox" {...register('isForJamaat')} className="w-4 h-4 accent-amber-500" />
                         <span className="text-sm font-semibold text-slate-300">{t('receipt.forJamaat')}</span>
                       </label>
