@@ -518,41 +518,7 @@ export const Dashboard = () => {
         </button>
       </div>
 
-      {/* ── Quick Actions ── horizontal pill-style row ── */}
-      <div>
-        <h3 className="text-[9px] font-bold text-slate-600 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-          <span className="w-1 h-1 rounded-full bg-slate-700" />
-          {t('dashboard.quickActions')}
-        </h3>
-        <div className="flex items-stretch gap-2 sm:gap-3 overflow-x-auto pb-1 scrollbar-none">
-          {[
-            { label: t('dashboard.addIncome'),    desc: t('dashboard.addIncomeDesc'),    icon: TrendingUp,  color: 'text-emerald-400', ring: 'ring-emerald-500/20', glow: 'shadow-emerald-950/40', iconBg: 'bg-emerald-500/10 border-emerald-500/20', line: 'bg-emerald-500', path: '/bank-vouchers/revenue/new' },
-            { label: t('dashboard.addExpense'),   desc: t('dashboard.addExpenseDesc'),   icon: TrendingDown, color: 'text-red-400',    ring: 'ring-red-500/20',     glow: 'shadow-red-950/40',     iconBg: 'bg-red-500/10 border-red-500/20',         line: 'bg-red-500',     path: '/bank-vouchers/expense/new' },
-            { label: t('dashboard.journalEntry'), desc: t('dashboard.journalEntryDesc'), icon: FileText,     color: 'text-amber-400', ring: 'ring-amber-500/20',  glow: 'shadow-amber-950/40',  iconBg: 'bg-amber-500/10 border-amber-500/20',   line: 'bg-amber-500', path: '/journals' },
-            { label: t('dashboard.transferMoney'),desc: t('dashboard.transferMoneyDesc'),icon: RefreshCw,    color: 'text-violet-400', ring: 'ring-violet-500/20',  glow: 'shadow-violet-950/40',  iconBg: 'bg-violet-500/10 border-violet-500/20',   line: 'bg-violet-500', path: '/bank-vouchers/transfer/new' },
-          ].map((action) => (
-            <button
-              key={action.path}
-              onClick={() => startTransition(() => navigate(action.path))}
-              className={`group relative flex-shrink-0 flex flex-col items-start gap-3 w-44 sm:w-48 p-4 rounded-2xl border border-slate-800/60 bg-slate-900/60 backdrop-blur-sm hover:bg-slate-800/60 hover:border-slate-700/80 hover:shadow-xl ${action.glow} hover:ring-1 ${action.ring} transition-all duration-300 cursor-pointer text-left overflow-hidden`}
-            >
-              {/* Accent line top */}
-              <div className={`absolute top-0 left-4 right-4 h-[2px] rounded-b-full ${action.line} opacity-60 group-hover:opacity-100 transition-opacity`} />
-              {/* Icon */}
-              <div className={`h-9 w-9 rounded-xl flex items-center justify-center border ${action.iconBg} group-hover:scale-105 transition-transform duration-200`}>
-                <action.icon className={`h-4 w-4 ${action.color}`} />
-              </div>
-              {/* Text */}
-              <div className="space-y-0.5">
-                <p className={`text-sm font-bold ${action.color} leading-tight`}>{action.label}</p>
-                <p className="text-[10px] text-slate-500 leading-snug">{action.desc}</p>
-              </div>
-              {/* Arrow */}
-              <ChevronRight className={`absolute bottom-3.5 right-3.5 h-3.5 w-3.5 ${action.color} opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-0 group-hover:translate-x-0.5`} />
-            </button>
-          ))}
-        </div>
-      </div>
+
 
 
       {/* ── Financial KPI Cards ── premium redesign ── */}
