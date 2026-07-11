@@ -371,29 +371,29 @@ export const GeneralLedger = () => {
             return (
               <div
                 key={group.glCode}
-                className="bg-slate-900/90 rounded-2xl border border-slate-800/80 shadow-2xl overflow-hidden transition-all duration-300 hover:border-slate-700/80"
+                className="bg-slate-900/90 rounded-2xl border border-slate-800/80 shadow-2xl overflow-hidden transition-all duration-300 hover:border-slate-700/80 print:bg-white print:border-slate-300 print:shadow-none print:rounded-none print:break-inside-avoid"
               >
                 {/* Textbook-inspired Modern Ledger Header */}
-                <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:bg-none print:border-slate-300 print:px-0 print:py-2">
                   <div>
-                    <div className="text-[11px] font-extrabold tracking-widest uppercase text-amber-500 mb-1 flex items-center gap-1.5">
+                    <div className="text-[11px] font-extrabold tracking-widest uppercase text-amber-500 mb-1 flex items-center gap-1.5 print:hidden">
                       <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
                       GENERAL LEDGER
                     </div>
-                    <h3 className="text-lg sm:text-xl font-extrabold text-slate-100 flex flex-wrap items-center gap-2">
-                      Account Name: <span className="text-amber-400 underline decoration-amber-500/40 underline-offset-4 font-black">{group.accountName}</span>
+                    <h3 className="text-lg sm:text-xl font-extrabold text-slate-100 flex flex-wrap items-center gap-2 print:text-black">
+                      Account Name: <span className="text-amber-400 underline decoration-amber-500/40 underline-offset-4 font-black print:text-black print:no-underline">{group.accountName}</span>
                     </h3>
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
-                    <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl px-4 py-2 flex flex-col items-start sm:items-end min-w-[140px]">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Account Number</span>
-                      <span className="text-base font-mono font-black text-slate-200">{group.glCode}</span>
+                    <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl px-4 py-2 flex flex-col items-start sm:items-end min-w-[140px] print:bg-transparent print:border-none print:p-0 print:min-w-0">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider print:text-slate-500">Account Number</span>
+                      <span className="text-base font-mono font-black text-slate-200 print:text-black">{group.glCode}</span>
                     </div>
-                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-2 flex flex-col items-start sm:items-end min-w-[160px]">
-                      <span className="text-[10px] uppercase font-bold text-amber-400/90 tracking-wider">Closing Balance</span>
-                      <span className="text-base font-mono font-bold text-amber-400">
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-2 flex flex-col items-start sm:items-end min-w-[160px] print:bg-transparent print:border-none print:p-0 print:min-w-0">
+                      <span className="text-[10px] uppercase font-bold text-amber-400/90 tracking-wider print:text-slate-500">Closing Balance</span>
+                      <span className="text-base font-mono font-bold text-amber-400 print:text-black">
                         PKR {Math.abs(closingBal).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        <span className="text-xs ml-1 opacity-80">{closingBal < 0 ? '(Cr)' : '(Dr)'}</span>
+                        <span className="text-xs ml-1 opacity-80 print:text-slate-600">{closingBal < 0 ? '(Cr)' : '(Dr)'}</span>
                       </span>
                     </div>
                   </div>
@@ -401,11 +401,11 @@ export const GeneralLedger = () => {
 
                 {/* Table for this Account */}
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[750px]">
+                  <table className="w-full text-left border-collapse min-w-[750px] print:min-w-full">
                     <thead>
-                      <tr className="border-b border-slate-800 text-[11px] font-extrabold text-slate-400 uppercase tracking-wider bg-slate-950/60">
+                      <tr className="border-b border-slate-800 text-[11px] font-extrabold text-slate-400 uppercase tracking-wider bg-slate-950/60 print:bg-slate-100 print:border-slate-300">
                         {canEditOrDelete && (
-                          <th className="py-3 px-4 w-10 text-center">
+                          <th className="py-3 px-4 w-10 text-center print:hidden">
                             <input
                               type="checkbox"
                               checked={group.entries.length > 0 && group.entries.every(ent => selectedIds.includes(ent.id))}
@@ -422,28 +422,28 @@ export const GeneralLedger = () => {
                             />
                           </th>
                         )}
-                        <th className="py-3 px-4 w-28">Date</th>
-                        <th className="py-3 px-4">Explanation / Description</th>
-                        <th className="py-3 px-4 w-24">Ref</th>
-                        <th className="py-3 px-4 w-32 text-right text-emerald-400/90">Debit</th>
-                        <th className="py-3 px-4 w-32 text-right text-rose-400/90">Credit</th>
-                        <th className="py-3 px-4 w-36 text-right font-black text-amber-400">Balance</th>
-                        {canEditOrDelete && <th className="py-3 px-4 w-16 text-center">Actions</th>}
+                        <th className="py-3 px-4 w-28 print:text-slate-700">Date</th>
+                        <th className="py-3 px-4 print:text-slate-700">Explanation / Description</th>
+                        <th className="py-3 px-4 w-24 print:text-slate-700">Ref</th>
+                        <th className="py-3 px-4 w-32 text-right text-emerald-400/90 print:text-slate-700">Debit</th>
+                        <th className="py-3 px-4 w-32 text-right text-rose-400/90 print:text-slate-700">Credit</th>
+                        <th className="py-3 px-4 w-36 text-right font-black text-amber-400 print:text-slate-700">Balance</th>
+                        {canEditOrDelete && <th className="py-3 px-4 w-16 text-center print:hidden">Actions</th>}
                       </tr>
                     </thead>
-                    <tbody className="text-xs divide-y divide-slate-800/40">
+                    <tbody className="text-xs divide-y divide-slate-800/40 print:divide-slate-200">
                       {/* Beginning Balance Row */}
-                      <tr className="bg-slate-800/20 text-slate-400 font-medium italic">
-                        {canEditOrDelete && <td className="py-3 px-4" />}
-                        <td className="py-3 px-4 text-slate-300 font-semibold">{filters.startDate || 'Beg. Balance'}</td>
-                        <td className="py-3 px-4 text-slate-300 font-semibold">Beg. Balance</td>
-                        <td className="py-3 px-4 font-mono text-slate-500">—</td>
-                        <td className="py-3 px-4 text-right font-mono text-slate-500">—</td>
-                        <td className="py-3 px-4 text-right font-mono text-slate-500">—</td>
-                        <td className="py-3 px-4 text-right font-mono font-bold text-slate-300">
+                      <tr className="bg-slate-800/20 text-slate-400 font-medium italic print:bg-transparent print:text-slate-600 print:border-b print:border-slate-200">
+                        {canEditOrDelete && <td className="py-3 px-4 print:hidden" />}
+                        <td className="py-3 px-4 text-slate-300 font-semibold print:text-slate-800">{filters.startDate || 'Beg. Balance'}</td>
+                        <td className="py-3 px-4 text-slate-300 font-semibold print:text-slate-800">Beg. Balance</td>
+                        <td className="py-3 px-4 font-mono text-slate-500 print:text-slate-400">—</td>
+                        <td className="py-3 px-4 text-right font-mono text-slate-500 print:text-slate-400">—</td>
+                        <td className="py-3 px-4 text-right font-mono text-slate-500 print:text-slate-400">—</td>
+                        <td className="py-3 px-4 text-right font-mono font-bold text-slate-300 print:text-slate-800">
                           {group.openingBalance === 0 ? '—' : `PKR ${group.openingBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
                         </td>
-                        {canEditOrDelete && <td className="py-3 px-4" />}
+                        {canEditOrDelete && <td className="py-3 px-4 print:hidden" />}
                       </tr>
 
                       {/* Transaction Rows */}
@@ -451,7 +451,13 @@ export const GeneralLedger = () => {
                         <tr>
                           <td
                             colSpan={canEditOrDelete ? 8 : 7}
-                            className="py-6 px-4 text-center text-slate-500 italic bg-slate-900/10"
+                            className="py-6 px-4 text-center text-slate-500 italic bg-slate-900/10 print:hidden"
+                          >
+                            No transaction entries found for this account in the selected period.
+                          </td>
+                          <td
+                            colSpan={6}
+                            className="hidden print:table-cell py-6 px-4 text-center text-slate-500 italic"
                           >
                             No transaction entries found for this account in the selected period.
                           </td>
@@ -460,10 +466,10 @@ export const GeneralLedger = () => {
                         rowsWithBal.map((entry) => (
                           <tr
                             key={entry.id}
-                            className={`hover:bg-slate-900/40 transition-colors ${selectedIds.includes(entry.id) ? 'bg-amber-500/10' : ''}`}
+                            className={`hover:bg-slate-900/40 transition-colors ${selectedIds.includes(entry.id) ? 'bg-amber-500/10' : ''} print:bg-transparent print:border-b print:border-slate-100`}
                           >
                             {canEditOrDelete && (
-                              <td className="py-3 px-4 text-center">
+                              <td className="py-3 px-4 text-center print:hidden">
                                 <input
                                   type="checkbox"
                                   checked={selectedIds.includes(entry.id)}
@@ -473,21 +479,21 @@ export const GeneralLedger = () => {
                                 />
                               </td>
                             )}
-                            <td className="py-3 px-4 text-slate-300 font-medium whitespace-nowrap">{entry.date}</td>
-                            <td className="py-3 px-4 text-slate-200">{entry.description || '—'}</td>
-                            <td className="py-3 px-4 font-mono text-amber-400/90 whitespace-nowrap">{entry.reference}</td>
-                            <td className="py-3 px-4 text-right font-mono text-emerald-400">
+                            <td className="py-3 px-4 text-slate-300 font-medium whitespace-nowrap print:text-slate-800">{entry.date}</td>
+                            <td className="py-3 px-4 text-slate-200 print:text-slate-800">{entry.description || '—'}</td>
+                            <td className="py-3 px-4 font-mono text-amber-400/90 whitespace-nowrap print:text-slate-800">{entry.reference}</td>
+                            <td className="py-3 px-4 text-right font-mono text-emerald-400 print:text-slate-800">
                               {entry.debit > 0 ? `PKR ${entry.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
                             </td>
-                            <td className="py-3 px-4 text-right font-mono text-rose-400">
+                            <td className="py-3 px-4 text-right font-mono text-rose-400 print:text-slate-800">
                               {entry.credit > 0 ? `PKR ${entry.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
                             </td>
-                            <td className="py-3 px-4 text-right font-mono font-extrabold text-slate-100 bg-slate-900/40">
+                            <td className="py-3 px-4 text-right font-mono font-extrabold text-slate-100 bg-slate-900/40 print:bg-transparent print:text-slate-900">
                               PKR {Math.abs(entry.runningBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                              <span className="text-[10px] ml-1 opacity-70 font-normal">{entry.runningBalance < 0 ? '(Cr)' : ''}</span>
+                              <span className="text-[10px] ml-1 opacity-70 font-normal print:text-slate-600">{entry.runningBalance < 0 ? '(Cr)' : ''}</span>
                             </td>
                             {canEditOrDelete && (
-                              <td className="py-3 px-4 text-center">
+                              <td className="py-3 px-4 text-center print:hidden">
                                 <button
                                   type="button"
                                   onClick={(e) => handleDeleteEntry(entry, e)}
@@ -503,23 +509,29 @@ export const GeneralLedger = () => {
                       )}
 
                       {/* Account Period Totals Row */}
-                      <tr className="bg-slate-950/80 font-extrabold border-t-2 border-slate-800 text-xs">
+                      <tr className="bg-slate-950/80 font-extrabold border-t-2 border-slate-800 text-xs print:bg-slate-50 print:border-t-2 print:border-slate-300">
                         <td
                           colSpan={canEditOrDelete ? 4 : 3}
-                          className="py-3.5 px-4 text-right text-slate-400 uppercase tracking-wider"
+                          className="py-3.5 px-4 text-right text-slate-400 uppercase tracking-wider print:hidden"
                         >
                           Account Totals
                         </td>
-                        <td className="py-3.5 px-4 text-right font-mono text-emerald-400">
+                        <td
+                          colSpan={3}
+                          className="hidden print:table-cell py-3.5 px-4 text-right text-slate-700 uppercase tracking-wider font-extrabold"
+                        >
+                          Account Totals
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-mono text-emerald-400 print:text-slate-800">
                           PKR {totalGroupDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </td>
-                        <td className="py-3.5 px-4 text-right font-mono text-rose-400">
+                        <td className="py-3.5 px-4 text-right font-mono text-rose-400 print:text-slate-800">
                           PKR {totalGroupCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </td>
-                        <td className="py-3.5 px-4 text-right font-mono text-amber-400">
+                        <td className="py-3.5 px-4 text-right font-mono text-amber-400 print:text-slate-900">
                           PKR {Math.abs(closingBal).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </td>
-                        {canEditOrDelete && <td className="py-3.5 px-4" />}
+                        {canEditOrDelete && <td className="py-3.5 px-4 print:hidden" />}
                       </tr>
                     </tbody>
                   </table>
