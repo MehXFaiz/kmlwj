@@ -230,15 +230,15 @@ export const HallBookings = () => {
                           </div>
 
                           <span className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full border text-[10px] font-extrabold uppercase tracking-wide shrink-0 whitespace-nowrap ${
-                            booking.status === 'Confirmed' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            booking.status === 'POSTED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                           }`}>
-                            {booking.status === 'Confirmed' ? (
+                            {booking.status === 'POSTED' ? (
                               <>
-                                <AlertTriangle className="w-3 h-3 shrink-0" /> PENDING POST
+                                <CheckCircle className="w-3 h-3 shrink-0" /> POSTED
                               </>
                             ) : (
                               <>
-                                <CheckCircle className="w-3 h-3 shrink-0" /> POSTED
+                                <AlertTriangle className="w-3 h-3 shrink-0" /> PENDING POST
                               </>
                             )}
                           </span>
@@ -401,13 +401,13 @@ export const HallBookings = () => {
                       </td>
                       <td className="px-6 py-4 font-bold text-emerald-400">Rs. {Math.round(booking.amount).toLocaleString()}</td>
                       <td className="px-6 py-4">
-                        {booking.status === 'Confirmed' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold uppercase tracking-wider">
-                            <AlertTriangle className="h-3 w-3" /> Pending Post
-                          </span>
-                        ) : (
+                        {booking.status === 'POSTED' ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold uppercase tracking-wider">
                             <CheckCircle className="h-3 w-3" /> Posted
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold uppercase tracking-wider">
+                            <AlertTriangle className="h-3 w-3" /> Pending Post
                           </span>
                         )}
                       </td>
