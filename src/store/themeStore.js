@@ -5,10 +5,10 @@ import { persist } from 'zustand/middleware';
 export const COLOR_PALETTES = [
   {
     id: 'copper',
-    name: 'Copper',
-    hue: 23,
-    saturation: 55,
-    swatch: 'hsl(23, 55%, 53%)',
+    name: 'Mocha Brown',
+    hue: 24,
+    saturation: 41,
+    swatch: '#482F1E',
   },
   {
     id: 'gold',
@@ -43,9 +43,21 @@ export const COLOR_PALETTES = [
 /** Applies the chosen palette by writing CSS variables onto :root */
 function applyPalette(palette) {
   const root = document.documentElement;
+  if (palette.id === 'copper') {
+    root.style.setProperty('--brand-50',  '#FAF6F2');
+    root.style.setProperty('--brand-100', '#F3EBE3');
+    root.style.setProperty('--brand-200', '#E4D3C3');
+    root.style.setProperty('--brand-300', '#CFAEA0');
+    root.style.setProperty('--brand-400', '#9C735B');
+    root.style.setProperty('--brand-500', '#64432C');
+    root.style.setProperty('--brand-600', '#482F1E');
+    root.style.setProperty('--brand-700', '#382416');
+    root.style.setProperty('--brand-800', '#291A10');
+    root.style.setProperty('--brand-900', '#1C120B');
+    return;
+  }
   const { hue: h, saturation: s } = palette;
 
-  // Generate copper/bronze/gold tone variables dynamically based on selection
   root.style.setProperty('--brand-50',  `hsl(${h}, 100%, 97%)`);
   root.style.setProperty('--brand-100', `hsl(${h}, 100%, 93%)`);
   root.style.setProperty('--brand-200', `hsl(${h}, 95%, 85%)`);

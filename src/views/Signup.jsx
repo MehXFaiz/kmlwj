@@ -297,7 +297,7 @@ export const Signup = () => {
               type="submit"
               id="signup-submit"
               disabled={loading}
-              className="w-full py-3.5 px-4 mt-2 bg-amber-600 hover:bg-amber-500 active:scale-[0.98] text-white font-semibold text-sm rounded-xl shadow-lg shadow-amber-600/25 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+              className="w-full py-3.5 px-4 mt-2 bg-[#482F1E] hover:bg-[#5A3D28] active:scale-[0.98] text-white font-semibold text-sm rounded-xl shadow-lg shadow-[#482F1E]/25 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

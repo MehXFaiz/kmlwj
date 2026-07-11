@@ -6,8 +6,32 @@ export const accountService = {
     return api.get(`/api/v1/accounts${qs ? `?${qs}` : ''}`).then((r) => r.data);
   },
   getTree: () => api.get('/api/v1/accounts/tree').then((r) => r.data.data),
-  create: (data) => api.post('/api/v1/accounts', data).then((r) => r.data.data),
-  update: (id, data) => api.put(`/api/v1/accounts?id=${id}`, data).then((r) => r.data.data),
+  create: (data) => api.post('/api/v1/accounts', data).then((r) => {
+    const rawAcc = r.data.data;
+    return {
+      id: rawAcc.id,
+      code: rawAcc.glCode,
+      name: rawAcc.accountName,
+      level: rawAcc.accountLevel,
+      detailType: rawAcc.detailType,
+      currency: rawAcc.currency,
+      initialBalance: rawAcc.initialBalance,
+      currentBalance: rawAcc.currentBalance,
+    };
+  }),
+  update: (id, data) => api.put(`/api/v1/accounts?id=${id}`, data).then((r) => {
+    const rawAcc = r.data.data;
+    return {
+      id: rawAcc.id,
+      code: rawAcc.glCode,
+      name: rawAcc.accountName,
+      level: rawAcc.accountLevel,
+      detailType: rawAcc.detailType,
+      currency: rawAcc.currency,
+      initialBalance: rawAcc.initialBalance,
+      currentBalance: rawAcc.currentBalance,
+    };
+  }),
   delete: (id) => api.delete(`/api/v1/accounts?id=${id}`).then((r) => r.data),
 };
 

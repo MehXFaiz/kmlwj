@@ -22,38 +22,38 @@
   --slate-50:  #080808;          /* inverse text / deepest black */
 
   --glass-bg:          rgba(245, 242, 235, 0.70);
-  --glass-border:      rgba(200, 122, 71, 0.12);
+  --glass-border:      rgba(72, 47, 30, 0.15);
   --glass-hover-bg:    rgba(245, 242, 235, 0.90);
-  --glass-hover-border:rgba(200, 122, 71, 0.35);   /* copper tint on hover */
+  --glass-hover-border:rgba(72, 47, 30, 0.35);   /* mocha tint on hover */
 
-  /* ── Accent Palette: Metallic Copper ── */
-  --brand-50:  hsl(23, 100%, 97%);
-  --brand-100: hsl(23, 100%, 93%);
-  --brand-200: hsl(23, 95%, 85%);
-  --brand-300: hsl(23, 85%, 72%);
-  --brand-400: hsl(23, 55%, 53%);   /* primary metallic copper */
-  --brand-500: hsl(23, 65%, 46%);   /* darker brand accent for text/borders */
-  --brand-600: hsl(23, 70%, 38%);
-  --brand-700: hsl(23, 75%, 30%);
-  --brand-800: hsl(23, 80%, 22%);
-  --brand-900: hsl(23, 85%, 15%);   /* copper-dark */
+  /* ── Accent Palette: Mocha Brown (#482F1E) ── */
+  --brand-50:  #FAF6F2;
+  --brand-100: #F3EBE3;
+  --brand-200: #E4D3C3;
+  --brand-300: #CFAEA0;
+  --brand-400: #9C735B;
+  --brand-500: #64432C;
+  --brand-600: #482F1E;   /* primary mocha brown */
+  --brand-700: #382416;
+  --brand-800: #291A10;
+  --brand-900: #1C120B;
 
-  /* ── Copper tones for System Integrity / special cards ── */
-  --copper-900: #3f1c07;
-  --copper-800: #5e2e10;
-  --copper-700: #7d411b;
-  --copper-600: #9c5528;
-  --copper-500: #b96b3a;
-  --copper-400: #c87a47;
-  --copper-300: #eec1a6;
-  --copper-200: #f6dbcc;
-  --copper-100: #fbeee6;
-  --copper-50:  #fdf8f5;
+  /* ── Mocha tones for System Integrity / special cards ── */
+  --copper-900: #1C120B;
+  --copper-800: #291A10;
+  --copper-700: #382416;
+  --copper-600: #482F1E;
+  --copper-500: #64432C;
+  --copper-400: #9C735B;
+  --copper-300: #CFAEA0;
+  --copper-200: #E4D3C3;
+  --copper-100: #F3EBE3;
+  --copper-50:  #FAF6F2;
 
   /* Chart Colors — warm status colors */
   --chart-revenue:  #10b981; /* Emerald Green */
   --chart-expense:  #dc2626; /* Deep Red */
-  --chart-asset:    #c87a47; /* Copper */
+  --chart-asset:    #482F1E; /* Mocha Brown */
   --chart-liability:#c59b27; /* Burnished Gold */
   --chart-equity:   #4682b4; /* Steel Blue */
   --chart-grid:     rgba(0, 0, 0, 0.05);
@@ -77,23 +77,23 @@
   --glass-bg:          rgba(26, 26, 26, 0.70);
   --glass-border:      rgba(255, 255, 255, 0.04);
   --glass-hover-bg:    rgba(26, 26, 26, 0.90);
-  --glass-hover-border:rgba(200, 122, 71, 0.25);   /* copper glow on hover */
+  --glass-hover-border:rgba(72, 47, 30, 0.35);   /* mocha glow on hover */
 
-  /* brand defaults to copper accent in dark mode */
-  --brand-50:  hsl(23, 100%, 97%);
-  --brand-100: hsl(23, 100%, 93%);
-  --brand-200: hsl(23, 95%, 85%);
-  --brand-300: hsl(23, 85%, 72%);
-  --brand-400: hsl(23, 55%, 53%);   /* primary metallic copper */
-  --brand-500: hsl(23, 71%, 61%);   /* hover accent: Brighter Metallic Copper */
-  --brand-600: hsl(23, 65%, 46%);
-  --brand-700: hsl(23, 75%, 30%);
-  --brand-800: hsl(23, 80%, 22%);
-  --brand-900: hsl(23, 85%, 15%);
+  /* brand defaults to mocha brown accent in dark mode */
+  --brand-50:  #FAF6F2;
+  --brand-100: #F3EBE3;
+  --brand-200: #E4D3C3;
+  --brand-300: #CFAEA0;
+  --brand-400: #9C735B;
+  --brand-500: #64432C;   /* hover accent */
+  --brand-600: #482F1E;   /* primary #482F1E */
+  --brand-700: #382416;
+  --brand-800: #291A10;
+  --brand-900: #1C120B;
 
   --chart-revenue:  #10b981;
   --chart-expense:  #ef4444;
-  --chart-asset:    #c87a47;
+  --chart-asset:    #482F1E;
   --chart-liability:#c59b27;
   --chart-equity:   #4682b4;
   --chart-grid:     rgba(255, 255, 255, 0.04);
@@ -141,6 +141,31 @@
   --color-copper-200: var(--copper-200);
   --color-copper-100: var(--copper-100);
   --color-copper-50:  var(--copper-50);
+
+  /* ── Override Amber & Orange palette to Mocha Brown (#482F1E) across entire project ── */
+  --color-amber-50:  #FAF6F2;
+  --color-amber-100: #F3EBE3;
+  --color-amber-200: #E4D3C3;
+  --color-amber-300: #CFAEA0;
+  --color-amber-400: #9C735B;
+  --color-amber-500: #64432C;
+  --color-amber-600: #482F1E;
+  --color-amber-700: #382416;
+  --color-amber-800: #291A10;
+  --color-amber-900: #1C120B;
+  --color-amber-950: #120B07;
+
+  --color-orange-50:  #FAF6F2;
+  --color-orange-100: #F3EBE3;
+  --color-orange-200: #E4D3C3;
+  --color-orange-300: #CFAEA0;
+  --color-orange-400: #9C735B;
+  --color-orange-500: #64432C;
+  --color-orange-600: #482F1E;
+  --color-orange-700: #382416;
+  --color-orange-800: #291A10;
+  --color-orange-900: #1C120B;
+  --color-orange-950: #120B07;
 
   /* Status colors */
   --color-success-bg: hsl(142, 76%, 36%);
@@ -195,8 +220,8 @@
   /* Custom scrollbar */
   ::-webkit-scrollbar        { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track  { background: transparent; }
-  ::-webkit-scrollbar-thumb  { background: rgba(200, 122, 71, 0.25); border-radius: 9999px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(200, 122, 71, 0.45); }
+  ::-webkit-scrollbar-thumb  { background: rgba(72, 47, 30, 0.35); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(72, 47, 30, 0.55); }
 
   /* Focus rings — copper */
   :focus-visible {
@@ -242,10 +267,10 @@
    GLOW HELPERS
 ───────────────────────────────────────── */
 .glow-amber {
-  box-shadow: 0 0 40px -10px rgba(200, 122, 71, 0.2);
+  box-shadow: 0 0 40px -10px rgba(72, 47, 30, 0.25);
 }
 .glow-subtle {
-  box-shadow: 0 0 40px -10px rgba(200, 122, 71, 0.12);
+  box-shadow: 0 0 40px -10px rgba(72, 47, 30, 0.15);
 }
 .glow-emerald {
   box-shadow: 0 0 40px -10px rgba(16, 185, 129, 0.15);
@@ -265,8 +290,8 @@
    COPPER / SYSTEM-INTEGRITY CARD
 ───────────────────────────────────────── */
 .copper-card {
-  background: linear-gradient(135deg, #2e1608 0%, #1e0f06 100%);
-  border: 1px solid #522a10;
+  background: linear-gradient(135deg, #291A10 0%, #1C120B 100%);
+  border: 1px solid #482F1E;
 }
 
 /* ─────────────────────────────────────────
@@ -308,9 +333,9 @@
    SIDEBAR ACTIVE ITEM
 ───────────────────────────────────────── */
 .nav-active {
-  background: linear-gradient(90deg, rgba(200, 122, 71, 0.12) 0%, rgba(200, 122, 71, 0.04) 100%);
-  border-left: 2px solid var(--brand-400);
-  color: var(--brand-300);
+  background: linear-gradient(90deg, rgba(72, 47, 30, 0.22) 0%, rgba(72, 47, 30, 0.05) 100%);
+  border-left: 2px solid #482F1E;
+  color: #FAF6F2;
 }
 
 /* ─────────────────────────────────────────

@@ -65,8 +65,8 @@ export const useCoaStore = create((set, get) => ({
         isLocked: account.isLocked || false,
         isReserved: account.isReserved || false,
       });
-      // Try to update both views if they were in use, but normally the component will re-fetch.
-      await get().fetchAccountsTree();
+      // Update both tree and list views
+      await Promise.all([get().fetchAccountsTree(), get().fetchAccountsList()]);
       set({ loading: false });
       return newAcc;
     } catch (err) {

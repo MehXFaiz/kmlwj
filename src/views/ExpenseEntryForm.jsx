@@ -184,7 +184,7 @@ export const ExpenseEntryForm = () => {
       return;
     }
 
-    const bankAcc = bankAccounts.find(a => a.id === bankAccountId);
+    let bankAcc = bankAccounts.find(a => a.id === bankAccountId);
     if (bankAcc) {
       const { localBalances } = calculateAccountBalances(flatAccounts, journals, 'Global');
       const avail = localBalances[bankAcc.code] !== undefined ? localBalances[bankAcc.code] : (bankAcc.initialBalance || 0);
@@ -198,11 +198,12 @@ export const ExpenseEntryForm = () => {
     try {
       let finalOffsetAccountId = selectedSubAccountId;
       let finalOffsetAccountCode = '';
+      let newAcc = null;
 
       // If we need to auto-create the account
       if (!finalOffsetAccountId && autoCreationDetails) {
         setCreationStatus(`Creating '${autoCreationDetails.name}' ledger account...`);
-        const newAcc = await addAccount({
+        newAcc = await addAccount({
           code: autoCreationDetails.nextCode,
           name: autoCreationDetails.name,
           type: 'Expense',
@@ -214,15 +215,31 @@ export const ExpenseEntryForm = () => {
         });
 
         finalOffsetAccountId = newAcc.id;
-        finalOffsetAccountCode = newAcc.glCode;
+        finalOffsetAccountCode = newAcc.code;
       }
 
-      // Re-fetch list to ensure states are aligned
-      const bankAcc = bankAccounts.find(a => a.id === bankAccountId);
+      // Re-fetch account list and bank accounts after creating new account
+      await fetchAccountsList();
+      
+      // Re-get bankAcc and offsetAcc now with fresh data
+      const freshBankAccounts = flatAccounts.filter(acc =>
+        acc.type === 'Asset' &&
+        acc.detailType !== 'Header' &&
+        (acc.level === 'GL' || acc.level === 'SUBSIDIARY') &&
+        (acc.detailType === 'Cash' || (acc.name || '').toLowerCase().includes('bank') || (acc.name || '').toLowerCase().includes('cash'))
+      );
+      bankAcc = freshBankAccounts.find(a => a.id === bankAccountId);
+      
       let offsetAcc = flatAccounts.find(a => a.id === finalOffsetAccountId);
-
-      // Fallback code if not found in cache yet
-      if (!offsetAcc && finalOffsetAccountCode) {
+      
+      // If not found in flatAccounts, use newAcc details if available
+      if (!offsetAcc && newAcc) {
+        offsetAcc = { 
+          id: newAcc.id,
+          code: newAcc.code, 
+          name: newAcc.name 
+        };
+      } else if (!offsetAcc && finalOffsetAccountCode) {
         offsetAcc = { code: finalOffsetAccountCode };
       }
 
