@@ -285,11 +285,11 @@ export const HallBookings = () => {
                       </div>
 
                       {/* Card Footer: Date & Action Icons */}
-                      <div className="flex items-center justify-between gap-2 pt-3.5 border-t border-slate-800/80">
-                        <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3.5 border-t border-slate-800/80">
+                        <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1 shrink-0">
                           <Calendar className="w-3.5 h-3.5 text-slate-400" /> {booking.programDate ? new Date(booking.programDate).toLocaleDateString() : 'N/A'}
                         </span>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center justify-end gap-1.5 min-w-0">
                           <button
                             type="button"
                             onClick={() => setPrintItem(booking)}
