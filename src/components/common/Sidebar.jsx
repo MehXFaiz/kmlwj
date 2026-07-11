@@ -300,18 +300,12 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
         </button>
 
         {/* ── Brand Header ── */}
-        <div className={`h-14 flex-shrink-0 flex items-center border-b border-slate-800/60 relative ${isCollapsed ? 'lg:justify-center lg:px-0 px-4' : 'px-4 gap-3'}`}>
+        <div className="h-16 flex-shrink-0 flex items-center justify-center border-b border-slate-800/60 relative px-4">
           <img
             src={logoImg}
             alt="KMLWJ Logo"
-            className="w-8 h-8 object-contain flex-shrink-0"
+            className="w-12 h-12 object-contain flex-shrink-0 filter drop-shadow(0 0 8px rgba(72,47,30,0.3))"
           />
-          {!isCollapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-extrabold text-slate-50 tracking-tight leading-none">KMLWJ</p>
-              <p className="text-[10px] text-slate-500 mt-0.5 font-medium tracking-wide">Finance ERP</p>
-            </div>
-          )}
           <button
             onClick={() => setIsMobileOpen(false)}
             className="absolute right-3 p-1.5 rounded-lg text-slate-500 hover:text-slate-100 hover:bg-slate-800/50 transition-colors lg:hidden"
@@ -368,7 +362,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
               <div key={secIdx} className={secIdx === 0 ? 'space-y-0.5' : 'mt-5 space-y-0.5'}>
                 {/* Section label */}
                 {!isCollapsed ? (
-                  <h4 className="flex items-center gap-2 text-[9px] font-bold text-slate-600 uppercase tracking-[0.18em] px-2 pb-1 pt-1 select-none">
+                  <h4 className="flex items-center gap-2 text-[9px] font-extrabold text-[#382416] dark:text-slate-500 uppercase tracking-[0.18em] px-2 pb-1 pt-1 select-none">
                     <span className="w-1 h-1 rounded-full bg-slate-700 flex-shrink-0" />
                     {section.title}
                   </h4>
@@ -390,8 +384,8 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
                           flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 group relative cursor-pointer
                           ${isCollapsed ? 'lg:justify-center lg:px-2' : ''}
                           ${active
-                            ? 'bg-brand-600/12 text-brand-200 font-semibold'
-                            : 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/60'
+                            ? 'bg-[#482F1E]/15 text-[#1C120B] dark:text-brand-200 font-bold'
+                            : 'text-slate-700 dark:text-slate-400 hover:text-slate-950 dark:hover:text-slate-200 hover:bg-slate-800/60'
                           }
                         `}
                         onClick={(e) => {
@@ -447,8 +441,8 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
                                 className={`
                                   flex items-center gap-2.5 py-1.5 px-2.5 rounded-md text-xs font-medium transition-all duration-150 select-none
                                   ${subActive
-                                    ? 'text-brand-300 font-semibold bg-brand-500/5'
-                                    : 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/40'
+                                    ? 'text-[#1C120B] dark:text-brand-300 font-bold bg-[#482F1E]/15 dark:bg-brand-500/10'
+                                    : 'text-slate-700 dark:text-slate-400 hover:text-slate-950 dark:hover:text-slate-200 hover:bg-slate-800/40'
                                   }
                                 `}
                               >

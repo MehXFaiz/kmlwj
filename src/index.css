@@ -14,11 +14,11 @@
   --slate-800: #f5f2eb;          /* card / panel background: Light Beige */
   --slate-700: #ede9df;          /* elevated card background / hover state */
   --slate-600: #e3dec9;          /* input borders, dividers */
-  --slate-500: #8c8574;          /* muted text, placeholders */
-  --slate-400: #706a5b;          /* secondary labels */
-  --slate-300: #4a463b;          /* body text */
-  --slate-200: #2b2922;          /* primary labels */
-  --slate-100: #1c1a16;          /* headings / strong text */
+  --slate-500: #4A3A2C;          /* muted text, placeholders */
+  --slate-400: #2C2118;          /* secondary labels */
+  --slate-300: #1E1610;          /* body text */
+  --slate-200: #140E0A;          /* primary labels */
+  --slate-100: #0D0906;          /* headings / strong text */
   --slate-50:  #080808;          /* inverse text / deepest black */
 
   --glass-bg:          rgba(245, 242, 235, 0.70);
