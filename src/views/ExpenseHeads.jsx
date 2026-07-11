@@ -11,8 +11,22 @@ import { MobileOnly, DesktopOnly, pageActionsClass, statGridClass } from '../com
 import { showToast } from '../components/ui/Toast';
 
 const EXPENSE_CATEGORIES = [
-  'Salary', 'Bonus', 'Rent', 'Fuel', 'Diesel', 'Generator',
-  'Repairs', 'Audit Fees', 'Legal Fees', 'Security', 'Bank Charges'
+  'Salaries & Benefits',
+  'Rent, Rates & Taxes',
+  'Fuel & Power',
+  'Repair & Maintenance',
+  'Computer Expenses',
+  'Printing & Stationery',
+  'Donations',
+  'Legal & Professional',
+  'Audit Expenses',
+  'Travelling & Conveyance',
+  'General Office Expenses',
+  'Reception, Meetings & Functions',
+  'Security Expenses',
+  'Subscription Expenses',
+  'Other Expenses',
+  'Financial Charges',
 ];
 
 /* ─── Stat Card ─── */
@@ -38,7 +52,7 @@ function StatCard({ title, value, prefix = '', icon: Icon, iconBg, iconColor, su
 const nullsToEmpty = (obj) =>
   Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === null ? '' : v]));
 
-const DEFAULT_EXPENSE_HEAD = { name: '', category: 'Salary', accountId: '', isActive: true };
+const DEFAULT_EXPENSE_HEAD = { name: '', category: 'Salaries & Benefits', accountId: '', isActive: true };
 
 /* ─── Modal ─── */
 function ExpenseHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
@@ -89,13 +103,13 @@ function ExpenseHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
             <label className="block text-xs font-semibold text-slate-400 mb-1.5">Expense Head Name *</label>
             <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
               placeholder="e.g. Executive Salaries"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 transition-all font-medium" />
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-red-600/50 transition-all font-medium" />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-400 mb-1.5">Category</label>
             <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-amber-500/60 transition-all font-medium">
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-red-600/50 transition-all font-medium">
               {EXPENSE_CATEGORIES.map(c => (
                 <option key={c} value={c}>{c}</option>
               ))}
@@ -105,7 +119,7 @@ function ExpenseHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
           <div>
             <label className="block text-xs font-semibold text-slate-400 mb-1.5">Linked Account (Optional)</label>
             <select value={form.accountId || ''} onChange={e => setForm(f => ({ ...f, accountId: e.target.value }))}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-amber-500/60 transition-all font-medium">
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-red-600/50 transition-all font-medium">
               <option value="">-- None --</option>
               {accounts.map(acc => (
                 <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
@@ -125,7 +139,7 @@ function ExpenseHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
         <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-4 border-t border-slate-800 shrink-0">
           <button onClick={onClose} className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">Cancel</button>
           <button onClick={handleSave} disabled={!form.name.trim()}
-            className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all shadow-lg shadow-amber-600/25 active:scale-95">
+            className="px-5 py-2.5 rounded-xl bg-red-700 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all shadow-lg shadow-red-900/40 active:scale-95">
             {initial ? 'Save Changes' : 'Create Expense Head'}
           </button>
         </div>

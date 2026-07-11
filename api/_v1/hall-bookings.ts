@@ -213,7 +213,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     // Action: Create Booking & Auto-Post to Ledger
-    const { bookingDate, bookerName, address, mobile, programDate, programType, timings, hallId, isForJamaat, amount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
+    const { bookingDate, bookerName, fatherHusbandName, address, mobile, programDate, programType, functionType, timeFrom, timeTo, timings, hallId, isForJamaat, amount, discount, netAmount, receivedAmount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
 
     if (!bookerName || !programDate || !hallId || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: 'Missing required fields', status: 400 } });
@@ -292,14 +292,21 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           bookingDate: bookingDate ? new Date(bookingDate) : undefined,
           receiptNo: nextReceiptNo,
           bookerName,
+          fatherHusbandName: fatherHusbandName || null,
           address: address || null,
           mobile: mobile || null,
           programDate: new Date(programDate),
           programType: programType || null,
+          functionType: functionType || null,
+          timeFrom: timeFrom || null,
+          timeTo: timeTo || null,
           timings: timings || null,
           hallId,
           isForJamaat: Boolean(isForJamaat),
           amount: parsedAmount,
+          discount: discount != null ? parseFloat(discount) : 0,
+          netAmount: netAmount != null ? parseFloat(netAmount) : null,
+          receivedAmount: receivedAmount != null ? parseFloat(receivedAmount) : null,
           paymentMethod,
           bankAccountId: bankAccountId || null,
           chequeNumber: chequeNumber || null,
@@ -420,7 +427,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(404).json({ error: { message: 'Booking not found', status: 404 } });
     }
 
-    const { bookingDate, bookerName, address, mobile, programDate, programType, timings, hallId, isForJamaat, amount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
+    const { bookingDate, bookerName, fatherHusbandName, address, mobile, programDate, programType, functionType, timeFrom, timeTo, timings, hallId, isForJamaat, amount, discount, netAmount, receivedAmount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
 
     if (!bookerName || !programDate || !hallId || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: 'Missing required fields', status: 400 } });
@@ -522,14 +529,21 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           data: {
             bookingDate: bookingDate ? new Date(bookingDate) : undefined,
             bookerName,
+            fatherHusbandName: fatherHusbandName || null,
             address: address || null,
             mobile: mobile || null,
             programDate: new Date(programDate),
             programType: programType || null,
+            functionType: functionType || null,
+            timeFrom: timeFrom || null,
+            timeTo: timeTo || null,
             timings: timings || null,
             hallId,
             isForJamaat: Boolean(isForJamaat),
             amount: parsedAmount,
+            discount: discount != null ? parseFloat(discount) : 0,
+            netAmount: netAmount != null ? parseFloat(netAmount) : null,
+            receivedAmount: receivedAmount != null ? parseFloat(receivedAmount) : null,
             paymentMethod,
             bankAccountId: bankAccountId || null,
             chequeNumber: chequeNumber || null,
