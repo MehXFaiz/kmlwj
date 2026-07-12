@@ -57,7 +57,7 @@ const SpaciousReceiptPage = ({ booking, copyType, copyUrduTitle, copyEnglishTitl
   return (
     <div
       className={`w-full max-w-[780px] print:max-w-full bg-white border border-slate-300 print:border-none p-8 sm:p-10 print:p-6 font-urdu relative text-slate-900 mx-auto leading-relaxed shadow-xl print:shadow-none rounded-2xl print:rounded-none box-border ${
-        !isLast ? 'print:break-after-page mb-10 print:mb-0' : ''
+        !isLast ? 'receipt-page-break mb-10 print:mb-0' : ''
       }`}
       style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
       dir="rtl"
@@ -326,8 +326,8 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
   if (!booking) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md print:p-0 print:bg-white print:backdrop-blur-none overflow-y-auto">
-      <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[96vh] print:max-h-none print:shadow-none print:rounded-none overflow-hidden border border-slate-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md print:p-0 print:bg-white print:backdrop-blur-none overflow-y-auto print:overflow-visible print:static print:inset-auto print:block">
+      <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[96vh] print:max-h-none print:shadow-none print:rounded-none overflow-hidden print:overflow-visible border border-slate-200 print:border-none print:static print:block print:w-full">
         
         {/* Actions & Copy Mode Selector Bar (Hidden in Print) */}
         <div className="flex flex-col sm:flex-row justify-between items-center gap-3 px-6 py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white print:hidden shrink-0">
@@ -393,7 +393,7 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
         </div>
 
         {/* Receipt Container */}
-        <div className="overflow-y-auto print:overflow-visible bg-slate-100/60 print:bg-white flex flex-col items-center p-4 sm:p-8 print:p-0">
+        <div className="overflow-y-auto print:overflow-visible bg-slate-100/60 print:bg-white flex flex-col items-center p-4 sm:p-8 print:p-0 print:static print:block">
           <style>{`
             @media print {
               body * {
@@ -412,6 +412,10 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
                 max-width: 100% !important;
                 margin: 0 !important;
                 padding: 0 !important;
+              }
+              .receipt-page-break {
+                page-break-after: always !important;
+                break-after: page !important;
               }
               @page {
                 size: A4 portrait;
