@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Printer, Copy, Check, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import logoImg from '../../assets/logo.png';
@@ -340,7 +341,7 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
 
   if (!booking) return null;
 
-  return (
+  return createPortal(
     <div id="print-receipt-modal" className="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md print:p-0 print:bg-white print:backdrop-blur-none overflow-y-auto print:overflow-visible print:static print:inset-auto print:block">
       <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[96vh] print:max-h-none print:shadow-none print:rounded-none overflow-hidden print:overflow-visible border border-slate-200 print:border-none print:static print:block print:w-full">
         
@@ -411,24 +412,8 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
         <div className="overflow-y-auto print:overflow-visible bg-slate-100/60 print:bg-white flex flex-col items-center p-4 sm:p-8 print:p-0 print:static print:block">
           <style>{`
             @media print {
-              /* Hide standard web app elements */
-              #root > div > *:not(.flex-1),
-              aside, nav, header, footer, .sidebar, .topbar {
-                display: none !important;
-              }
-              
-              /* Hide all page content siblings of the print modal */
-              .space-y-4 > *:not(#print-receipt-modal),
-              .space-y-6 > *:not(#print-receipt-modal),
-              .space-y-8 > *:not(#print-receipt-modal) {
-                display: none !important;
-              }
-
               body * {
                 visibility: hidden !important;
-              }
-              #print-receipt-modal, #print-receipt-modal * {
-                visibility: visible !important;
               }
               #print-receipt-wrapper, #print-receipt-wrapper * {
                 visibility: visible !important;
@@ -449,12 +434,8 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
                 break-after: page !important;
               }
               @page {
-                size: A4 landscape;
-                margin: 6mm;
-              }
-              .print-page-break {
-                page-break-after: always !important;
-                break-after: page !important;
+                size: A4 portrait;
+                margin: 10mm;
               }
             }
           `}</style>
@@ -486,7 +467,8 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
