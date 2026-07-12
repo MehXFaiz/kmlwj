@@ -346,7 +346,7 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
       <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[96vh] print:max-h-none print:shadow-none print:rounded-none overflow-hidden print:overflow-visible border border-slate-200 print:border-none print:static print:block print:w-full">
         
         {/* Actions & Copy Mode Selector Bar (Hidden in Print) */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 px-6 py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white print:hidden shrink-0">
+        <div className="print-hide-bar flex flex-col sm:flex-row justify-between items-center gap-3 px-6 py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white print:hidden shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
               <Printer className="h-5 w-5" />
@@ -415,19 +415,37 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
               body * {
                 visibility: hidden !important;
               }
-              #print-receipt-wrapper, #print-receipt-wrapper * {
+              .print-hide-bar,
+              .print-hide-bar * {
+                display: none !important;
+              }
+              #print-receipt-modal,
+              #print-receipt-modal * {
                 visibility: visible !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
               }
-              #print-receipt-wrapper {
+              #print-receipt-modal {
                 position: absolute !important;
                 left: 0 !important;
                 top: 0 !important;
                 width: 100% !important;
+                height: auto !important;
+                min-height: 100% !important;
+                background: white !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                overflow: visible !important;
+                z-index: 999999 !important;
+                display: block !important;
+              }
+              #print-receipt-wrapper {
+                position: static !important;
+                width: 100% !important;
                 max-width: 100% !important;
                 margin: 0 !important;
                 padding: 0 !important;
+                display: block !important;
               }
               .receipt-page-break {
                 page-break-after: always !important;
