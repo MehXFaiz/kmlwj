@@ -56,13 +56,8 @@ const SpaciousReceiptPage = ({ booking, copyType, copyUrduTitle, copyEnglishTitl
 
   return (
     <div
-<<<<<<< HEAD
       className={`w-full max-w-[780px] print:max-w-full bg-white border border-slate-300 print:border-none p-8 sm:p-10 print:p-6 font-urdu relative text-slate-900 mx-auto leading-relaxed shadow-xl print:shadow-none rounded-2xl print:rounded-none box-border ${
         !isLast ? 'receipt-page-break mb-10 print:mb-0' : ''
-=======
-      className={`w-full max-w-[960px] print:max-w-full bg-white border border-slate-300 print:border-none p-6 sm:p-8 print:p-2 print:py-1 font-urdu relative text-slate-900 mx-auto leading-relaxed shadow-xl print:shadow-none rounded-2xl print:rounded-none box-border ${
-        !isLast ? 'print-page-break mb-6 print:mb-0' : ''
->>>>>>> 12f7fcf08298d056e96ebe155c3993d93cee6226
       }`}
       style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
       dir="rtl"
@@ -346,13 +341,8 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
   if (!booking) return null;
 
   return (
-<<<<<<< HEAD
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md print:p-0 print:bg-white print:backdrop-blur-none overflow-y-auto print:overflow-visible print:static print:inset-auto print:block">
+    <div id="print-receipt-modal" className="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md print:p-0 print:bg-white print:backdrop-blur-none overflow-y-auto print:overflow-visible print:static print:inset-auto print:block">
       <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[96vh] print:max-h-none print:shadow-none print:rounded-none overflow-hidden print:overflow-visible border border-slate-200 print:border-none print:static print:block print:w-full">
-=======
-    <div id="print-receipt-modal" className="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md print:absolute print:inset-auto print:top-0 print:left-0 print:w-full print:h-auto print:bg-white print:z-0 print:block print:overflow-visible overflow-y-auto">
-      <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[96vh] print:max-h-none print:shadow-none print:rounded-none print:border-none print:w-full print:max-w-full print:overflow-visible overflow-hidden border border-slate-200">
->>>>>>> 12f7fcf08298d056e96ebe155c3993d93cee6226
         
         {/* Actions & Copy Mode Selector Bar (Hidden in Print) */}
         <div className="flex flex-col sm:flex-row justify-between items-center gap-3 px-6 py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white print:hidden shrink-0">
