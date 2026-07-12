@@ -144,8 +144,8 @@ export const VoucherSlipModal = ({
             </div>
 
             {/* Background Emblem/Watermark */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-20 opacity-[0.18] print:opacity-[0.25]">
-              <img src={logoImg} alt="KMLWJ Logo Watermark" className="w-72 h-72 sm:w-96 sm:h-96 object-contain" />
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0 opacity-[0.08] print:opacity-[0.10]">
+              <img src={logoImg} alt="KMLWJ Logo Watermark" className="w-[440px] h-[440px] sm:w-[560px] sm:h-[560px] object-contain" />
             </div>
 
             {/* Main Content Area */}
