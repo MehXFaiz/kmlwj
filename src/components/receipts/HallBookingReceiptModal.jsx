@@ -57,7 +57,7 @@ const SpaciousReceiptPage = ({ booking, copyType, copyUrduTitle, copyEnglishTitl
 
   return (
     <div
-      className="w-full max-w-[780px] print:max-w-full bg-white border border-slate-300 print:border-slate-300 p-4 sm:p-5 print:py-1.5 print:px-3.5 font-urdu relative text-slate-900 mx-auto leading-relaxed shadow-xl print:shadow-none rounded-2xl print:rounded-lg box-border"
+      className="w-full max-w-[780px] print:max-w-full bg-white border-0 print:border-none p-4 sm:p-5 print:py-1.5 print:px-2 font-urdu relative text-slate-900 mx-auto leading-relaxed shadow-none print:shadow-none box-border"
       style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
       dir="rtl"
     >
