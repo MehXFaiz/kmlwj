@@ -57,204 +57,256 @@ const SpaciousReceiptPage = ({ booking, copyType, copyUrduTitle, copyEnglishTitl
 
   return (
     <div
-      className="w-full max-w-[780px] print:max-w-full bg-white border-0 print:border-none p-2 sm:p-3 print:py-1 print:px-2 font-urdu relative text-slate-900 mx-auto leading-relaxed shadow-none print:shadow-none box-border"
+      className="w-full max-w-[780px] print:max-w-full bg-white border-0 print:border-none p-3 sm:p-4 print:py-1.5 print:px-2 font-urdu relative text-slate-900 mx-auto leading-relaxed shadow-none print:shadow-none box-border"
       style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
       dir="rtl"
     >
-      {/* Formal Treasury Double-Border Frame */}
-      <div className="border-2 border-slate-800 print:border-slate-800 p-3 sm:p-4 print:py-1.5 print:px-3 relative bg-white">
-        {/* Subtle Background Seal Watermark */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] select-none z-0">
+      {/* Subtle Corporate Accent Border */}
+      <div className="border border-slate-300 print:border-slate-300 rounded-lg p-3 sm:p-4 print:py-1.5 print:px-3 relative bg-white">
+        {/* Subtle Background Watermark */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.025] select-none z-0">
           <img src={logoImg} alt="Watermark" className="w-[220px] h-[220px] object-contain" />
         </div>
 
-        {/* Header Block: Formal Bank Draft Lockup */}
-        <div className="relative z-10 border-b-2 border-slate-800 pb-2 mb-2 print:pb-1 print:mb-1.5 flex items-center justify-between gap-3">
-          {/* Right Section: Crest & Organization Header */}
+        {/* Executive Header Lockup */}
+        <div className="relative z-10 border-b-2 border-[#065f46] pb-2 sm:pb-2.5 mb-2 print:pb-1 print:mb-1.5 flex items-center justify-between gap-3">
+          {/* Right Section: Crest & Corporate Title */}
           <div className="flex items-center gap-3">
             <div className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 flex items-center justify-center print:w-15 print:h-15">
-              <img src={logoImg} alt="Logo" className="w-full h-full object-contain" />
+              <img src={logoImg} alt="Logo" className="w-full h-full object-contain drop-shadow-2xs" />
             </div>
             <div className="text-right">
-              <h1 className="text-lg sm:text-xl font-black text-[#0f5132] leading-normal print:text-lg print:leading-normal">
+              <h1 className="text-lg sm:text-xl font-extrabold text-[#065f46] leading-normal print:text-lg print:leading-normal tracking-tight">
                 کچھی مسلم لوھارواڑھا ویلفیئر جماعت
               </h1>
               <p className="text-xs font-bold text-slate-700 leading-relaxed print:text-[11px] print:leading-relaxed">
-                جمعہ بلوچ روڈ، نزد K.E گرڈ اسٹیشن، نیو کلری، لیاری، کراچی — <span className="font-sans font-bold text-slate-600">REG NO: 1319</span>
+                جمعہ بلوچ روڈ، نزد K.E گرڈ اسٹیشن، نیو کلری، لیاری، کراچی
               </p>
+              <div className="inline-block mt-0.5 px-2 py-0.5 bg-slate-100 border border-slate-300 rounded print:py-0">
+                <span className="text-[10px] sm:text-xs font-sans font-bold text-slate-700">
+                  REGISTRATION NO: 1319
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Left Section: Sharp Official Ledger Badge Box */}
-          <div className="shrink-0 border-2 border-slate-800 bg-slate-50 print:bg-white text-center font-sans">
+          {/* Left Section: Executive Voucher Seal */}
+          <div className="shrink-0 flex flex-col items-end text-left font-sans">
             <div
-              className="px-2.5 py-0.5 text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-white print:px-2 print:py-0.5"
+              className="px-3 py-0.5 rounded text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-white mb-1 print:mb-0.5 print:px-2.5 print:py-0.5 print:text-[9px]"
               style={{
-                backgroundColor: isCustomer ? '#0f5132' : '#1e293b',
+                backgroundColor: isCustomer ? '#065f46' : '#1e3a8a',
                 WebkitPrintColorAdjust: 'exact',
                 printColorAdjust: 'exact'
               }}
             >
               {copyEnglishTitle}
             </div>
-            <div className="px-3 py-1 print:py-0.5">
-              <span className="text-[8px] text-slate-500 font-bold uppercase block tracking-wider">VOUCHER NO</span>
-              <span className="text-lg sm:text-xl font-black text-slate-900 block leading-none">
+            <div className="text-right">
+              <span className="text-[9px] text-slate-500 font-bold uppercase block tracking-wider print:text-[8px]">RECEIPT NO</span>
+              <span className="text-lg sm:text-xl font-black text-[#065f46] block leading-none print:text-lg">
                 #{booking.receiptNo || '1'}
               </span>
-            </div>
-            <div className="border-t border-slate-800 px-2 py-0.5 bg-slate-100 print:bg-slate-100 text-[10px] sm:text-xs font-bold text-slate-800 font-urdu">
-              {copyUrduTitle}
+              <span className="text-xs sm:text-sm font-bold text-slate-700 font-urdu block leading-relaxed print:text-xs mt-0.5">
+                {copyUrduTitle}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Master Architectural Ledger Table */}
-        <div className="relative z-10 border-2 border-slate-800 divide-y-2 divide-slate-800 text-slate-900 bg-white">
-          {/* Row 1: Customer Name & Mobile/Booking Date */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-slate-800">
-            <div className="p-1.5 sm:p-2 flex items-center justify-between print:py-1 print:px-2 bg-slate-50/40">
-              <span className="text-xs sm:text-sm font-bold text-slate-600 print:text-xs">نام بکنگ کنندہ (Booker Name):</span>
-              <span className="text-sm sm:text-base font-black text-slate-900 print:text-sm">{booking.bookerName || '—'}</span>
-            </div>
-            <div className="p-1.5 sm:p-2 flex items-center justify-between print:py-1 print:px-2">
-              <div>
-                <span className="text-xs sm:text-sm font-bold text-slate-600 print:text-xs">رابطہ نمبر (Mobile No): </span>
-                <span className="text-xs sm:text-sm font-sans font-black text-[#0f5132] print:text-xs" dir="ltr">{booking.mobile || '—'}</span>
-              </div>
-              <span className="text-[10px] sm:text-xs font-sans font-bold text-slate-500 print:text-[10px]">Date: {bookingDateStr}</span>
-            </div>
-          </div>
-
-          {/* Row 2: Address & Community Member Status */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-slate-800">
-            <div className="p-1.5 sm:p-2 flex items-center justify-between print:py-1 print:px-2">
-              <span className="text-xs sm:text-sm font-bold text-slate-600 print:text-xs">پتہ (Address):</span>
-              <span className="text-xs sm:text-sm font-bold text-slate-800 print:text-xs">{booking.address || '—'}</span>
-            </div>
-            <div className="p-1.5 sm:p-2 flex items-center justify-between print:py-1 print:px-2 bg-slate-50/40">
-              <span className="text-xs sm:text-sm font-bold text-slate-600 print:text-xs">بکنگ برائے جماعت (Jamaat Member):</span>
-              <span className="text-xs font-black text-slate-900 print:text-xs">
-                {booking.isForJamaat ? 'ہاں (Yes — Member)' : 'نہیں (No — General)'}
-              </span>
-            </div>
-          </div>
-
-          {/* Row 3: Event Date, Day, Type & Shift */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-slate-800 bg-slate-50/60 print:bg-slate-50">
-            <div className="p-1.5 sm:p-2 print:py-1 print:px-2 flex items-center justify-between">
-              <div>
-                <span className="text-[9px] font-sans font-bold text-slate-500 uppercase block print:text-[8px]">EVENT DATE / تاریخِ تقریب</span>
-                <span className="text-sm sm:text-base font-sans font-black text-[#0f5132] print:text-sm">{programDateStr}</span>
-              </div>
-              <span className="text-xs font-bold text-slate-700 print:text-xs">بروز: {programDayUrdu}</span>
-            </div>
-
-            <div className="p-1.5 sm:p-2 print:py-1 print:px-2 flex items-center justify-between">
-              <span className="text-[9px] font-sans font-bold text-slate-500 uppercase print:text-[8px]">PROGRAM TYPE / نوعیت:</span>
-              <span className="text-sm sm:text-base font-black text-slate-900 print:text-sm">{booking.programType || 'تقریب'}</span>
-            </div>
-
-            <div className="p-1.5 sm:p-2 print:py-1 print:px-2 flex items-center justify-between">
-              <span className="text-[9px] font-sans font-bold text-slate-500 uppercase print:text-[8px]">SHIFT / اوقات:</span>
-              <span className="text-sm sm:text-base font-sans font-black text-slate-900 print:text-sm">{booking.timings || 'Evening'}</span>
-            </div>
-          </div>
-
-          {/* Row 4: Allocated Community Hall Horizontal Strip */}
-          <div className="p-1.5 sm:p-2 print:p-1.5">
-            <div className="flex items-center justify-between mb-1 print:mb-0.5">
-              <span className="text-xs font-bold text-slate-700 print:text-[11px]">منتخب کردہ ہال (Allocated Community Hall):</span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 border border-slate-800 divide-x divide-x-reverse divide-slate-800">
-              {hallsList.map((hall) => (
-                <div
-                  key={hall.id}
-                  className="p-1 sm:p-1.5 text-center print:py-1 print:px-1"
-                  style={
-                    hall.selected
-                      ? {
-                          backgroundColor: '#0f5132',
-                          color: '#ffffff',
-                          WebkitPrintColorAdjust: 'exact',
-                          printColorAdjust: 'exact'
-                        }
-                      : {
-                          backgroundColor: '#f8fafc',
-                          color: '#64748b'
-                        }
-                  }
-                >
-                  <div className="flex items-center justify-center gap-1">
-                    {hall.selected && <Check className="h-3 w-3 text-white stroke-[3]" />}
-                    <span className={`text-xs sm:text-sm font-bold print:text-xs ${hall.selected ? 'text-white' : 'text-slate-500'}`}>
-                      {hall.urduName}
-                    </span>
-                  </div>
-                  <span className={`text-[8px] sm:text-[9px] font-sans block print:text-[8px] ${hall.selected ? 'text-emerald-100 font-bold' : 'text-slate-400'}`}>
-                    {hall.englishName}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Row 5: Financial Treasury Summary Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-slate-800">
-            <div className="sm:col-span-2 p-1.5 sm:p-2 print:py-1 print:px-2.5 flex flex-col justify-center">
-              <span className="text-[9px] font-sans font-bold text-slate-500 uppercase tracking-wider block print:text-[8px]">AMOUNT RECEIVED IN WORDS / مبلغ حرفی</span>
-              <p className="text-xs sm:text-sm font-sans font-extrabold italic text-slate-900 mt-0.5 capitalize print:text-xs">
-                {amountWords}
-              </p>
-            </div>
-
+        {/* Professional Document Sections */}
+        <div className="relative z-10 space-y-2 print:space-y-1.5">
+          {/* Section 1: Customer & Booking Information */}
+          <div className="border border-slate-300 rounded-lg overflow-hidden print:rounded-md">
             <div
-              className="p-2 sm:p-2.5 print:py-1.5 print:px-3 flex flex-col justify-center items-center text-center"
+              className="px-3 py-1 sm:px-4 sm:py-1 flex items-center justify-between text-xs font-bold border-b border-slate-300 print:px-2.5 print:py-0.5"
               style={{
-                backgroundColor: '#1e293b',
+                backgroundColor: '#065f46',
                 color: '#ffffff',
                 WebkitPrintColorAdjust: 'exact',
                 printColorAdjust: 'exact'
               }}
             >
-              <span className="text-[8px] font-sans uppercase tracking-widest font-bold text-slate-300 print:text-[7px]">TOTAL AMOUNT PAID</span>
-              <div className="text-base sm:text-lg font-sans font-black text-white print:text-base mt-0.5">
+              <span className="text-xs sm:text-sm font-bold text-white print:text-xs leading-relaxed">معلوماتِ بکنگ کنندہ (Customer &amp; Booking Information)</span>
+              <span className="font-sans font-bold text-emerald-100 text-[11px] print:text-[10px]">Booking Date: {bookingDateStr}</span>
+            </div>
+
+            <div className="divide-y divide-slate-200 text-slate-800 bg-white">
+              {/* Row 1 */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-slate-200">
+                <div className="p-1.5 sm:p-2 flex items-center justify-between print:py-1 print:px-2.5">
+                  <span className="text-xs sm:text-sm font-bold text-slate-600 print:text-xs leading-relaxed">نام بکنگ کنندہ (Booker Name):</span>
+                  <span className="text-sm sm:text-base font-extrabold text-slate-900 print:text-sm leading-relaxed">{booking.bookerName || '—'}</span>
+                </div>
+                <div className="p-1.5 sm:p-2 flex items-center justify-between print:py-1 print:px-2.5">
+                  <span className="text-xs sm:text-sm font-bold text-slate-600 print:text-xs leading-relaxed">رابطہ نمبر (Mobile No):</span>
+                  <span className="text-xs sm:text-sm font-sans font-extrabold text-[#065f46] print:text-xs" dir="ltr">{booking.mobile || '—'}</span>
+                </div>
+              </div>
+
+              {/* Row 2 */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-slate-200">
+                <div className="p-1.5 sm:p-2 flex items-center justify-between print:py-1 print:px-2.5">
+                  <span className="text-xs sm:text-sm font-bold text-slate-600 print:text-xs leading-relaxed">بکنگ برائے جماعت (Jamaat Member):</span>
+                  <span
+                    className="text-[11px] sm:text-xs font-bold px-2.5 py-0.5 rounded border print:text-[10px] print:px-2 leading-relaxed"
+                    style={{
+                      backgroundColor: booking.isForJamaat ? '#ecfdf5' : '#f8fafc',
+                      color: booking.isForJamaat ? '#065f46' : '#475569',
+                      borderColor: booking.isForJamaat ? '#6ee7b7' : '#cbd5e1',
+                      WebkitPrintColorAdjust: 'exact',
+                      printColorAdjust: 'exact'
+                    }}
+                  >
+                    {booking.isForJamaat ? 'ہاں (Yes — Community Member)' : 'نہیں (No — General)'}
+                  </span>
+                </div>
+                <div className="p-1.5 sm:p-2 flex items-center justify-between print:py-1 print:px-2.5">
+                  <span className="text-xs sm:text-sm font-bold text-slate-600 print:text-xs leading-relaxed">پتہ (Address):</span>
+                  <span className="text-xs sm:text-sm font-semibold text-slate-800 text-left print:text-xs leading-relaxed">{booking.address || '—'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Event Schedule & Allocated Hall */}
+          <div className="border border-slate-300 rounded-lg overflow-hidden print:rounded-md">
+            <div
+              className="px-3 py-1 sm:px-4 sm:py-1 flex items-center justify-between text-xs font-bold border-b border-slate-300 print:px-2.5 print:py-0.5"
+              style={{
+                backgroundColor: '#065f46',
+                color: '#ffffff',
+                WebkitPrintColorAdjust: 'exact',
+                printColorAdjust: 'exact'
+              }}
+            >
+              <span className="text-xs sm:text-sm font-bold text-white print:text-xs leading-relaxed">تفصیلاتِ تقریب و ہال (Event Schedule &amp; Venue Details)</span>
+              <span className="font-bold text-emerald-100 text-[11px] print:text-[10px]">بروز: {programDayUrdu}</span>
+            </div>
+
+            <div className="divide-y divide-slate-200 text-slate-800 bg-white">
+              {/* Row 1 */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-slate-200">
+                <div className="p-1.5 sm:p-2 print:py-1 print:px-2.5">
+                  <span className="text-[9px] sm:text-[10px] font-sans font-bold text-slate-500 uppercase block print:text-[8px]">Program Date / تاریخِ تقریب</span>
+                  <span className="text-sm sm:text-base font-sans font-black text-[#065f46] block print:text-sm mt-0.5">{programDateStr}</span>
+                  <span className="text-[11px] text-slate-600 font-bold block print:text-[10px] leading-relaxed">بروز: {programDayUrdu}</span>
+                </div>
+
+                <div className="p-1.5 sm:p-2 print:py-1 print:px-2.5">
+                  <span className="text-[9px] sm:text-[10px] font-sans font-bold text-slate-500 uppercase block print:text-[8px]">Event Type / پروگرام کی نوعیت</span>
+                  <span className="text-sm sm:text-base font-bold text-slate-900 block print:text-sm mt-0.5 leading-relaxed">{booking.programType || 'تقریب'}</span>
+                </div>
+
+                <div className="p-1.5 sm:p-2 print:py-1 print:px-2.5">
+                  <span className="text-[9px] sm:text-[10px] font-sans font-bold text-slate-500 uppercase block print:text-[8px]">Event Timings / اوقات</span>
+                  <span className="text-sm sm:text-base font-sans font-bold text-slate-900 block print:text-sm mt-0.5">{booking.timings || 'Evening'}</span>
+                </div>
+              </div>
+
+              {/* Row 2: Professional Venue Allocation Grid */}
+              <div className="p-1.5 sm:p-2 bg-slate-50/70 print:p-1.5">
+                <span className="text-[11px] font-sans font-bold text-slate-600 uppercase block mb-1 print:text-[10px] print:mb-1 leading-relaxed">Allocated Community Hall / منتخب کردہ ہال:</span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
+                  {hallsList.map((hall) => (
+                    <div
+                      key={hall.id}
+                      className={`p-1 sm:p-1.5 rounded-md border text-center transition-all print:py-0.5 print:px-1 ${
+                        hall.selected
+                          ? 'border-[#065f46] shadow-2xs'
+                          : 'border-slate-200 bg-white opacity-45'
+                      }`}
+                      style={
+                        hall.selected
+                          ? {
+                              backgroundColor: '#065f46',
+                              color: '#ffffff',
+                              borderColor: '#065f46',
+                              WebkitPrintColorAdjust: 'exact',
+                              printColorAdjust: 'exact'
+                            }
+                          : {}
+                      }
+                    >
+                      <div className="flex items-center justify-center gap-1 mb-0.5">
+                        {hall.selected && <Check className="h-3 w-3 text-white stroke-[3]" />}
+                        <span className={`text-xs sm:text-sm font-bold print:text-xs leading-relaxed ${hall.selected ? 'text-white' : 'text-slate-600'}`}>
+                          {hall.urduName}
+                        </span>
+                      </div>
+                      <span className={`text-[8px] sm:text-[9px] font-sans block print:text-[8px] ${hall.selected ? 'text-emerald-100 font-medium' : 'text-slate-400'}`}>
+                        {hall.englishName}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Executive Financial Summary Block */}
+          <div
+            className="border border-slate-300 rounded-lg p-2 sm:p-3 flex flex-col sm:flex-row items-center justify-between gap-2 print:py-1.5 print:px-3 print:rounded-md"
+            style={{
+              backgroundColor: '#f8fafc',
+              WebkitPrintColorAdjust: 'exact',
+              printColorAdjust: 'exact'
+            }}
+          >
+            <div className="flex-1 border-l-4 border-[#065f46] pl-2.5 print:pl-2">
+              <span className="text-[9px] font-sans font-bold text-[#065f46] uppercase tracking-wider block print:text-[8px]">AMOUNT RECEIVED IN WORDS / مبلغ حرفی</span>
+              <p className="text-xs sm:text-sm font-sans font-bold italic text-slate-800 mt-0.5 capitalize print:text-xs leading-relaxed">
+                {amountWords}
+              </p>
+            </div>
+
+            <div
+              className="px-4 py-1.5 sm:px-5 sm:py-2 rounded-md text-center min-w-[160px] sm:min-w-[180px] print:px-3.5 print:py-1 print:min-w-[160px]"
+              style={{
+                backgroundColor: '#065f46',
+                color: '#ffffff',
+                WebkitPrintColorAdjust: 'exact',
+                printColorAdjust: 'exact'
+              }}
+            >
+              <span className="text-[9px] font-sans uppercase tracking-wider block font-bold text-emerald-100 print:text-[8px]">TOTAL AMOUNT PAID</span>
+              <div className="text-base sm:text-lg font-sans font-black tracking-tight text-white mt-0.5 print:text-base">
                 Rs. {Number(booking.amount || 0).toLocaleString()}/-
               </div>
             </div>
           </div>
+
+          {/* Section 4: Professional Executive Signature Block */}
+          <div className="pt-2 sm:pt-2.5 pb-0.5 grid grid-cols-4 items-end gap-2 text-center border-t border-slate-200 print:pt-1.5 print:pb-0">
+            <div className="flex flex-col items-center">
+              <div className="w-20 sm:w-26 border-b-2 border-slate-700 pb-0.5 mb-1 print:w-20"></div>
+              <span className="text-xs sm:text-sm font-bold text-slate-800 print:text-xs leading-relaxed">وصول کنندہ</span>
+              <span className="text-[8px] font-sans text-slate-500 font-bold print:text-[7px] uppercase tracking-wider">Received By</span>
+            </div>
+
+            <div className="flex flex-col items-center">
+              <div className="w-20 sm:w-26 border-b-2 border-slate-700 pb-0.5 mb-1 print:w-20"></div>
+              <span className="text-xs sm:text-sm font-bold text-slate-800 print:text-xs leading-relaxed">رعایت کی منظوری</span>
+              <span className="text-[8px] font-sans text-slate-500 font-bold print:text-[7px] uppercase tracking-wider">Discount Approval</span>
+            </div>
+
+            <div className="flex flex-col items-center">
+              <div className="w-20 sm:w-26 border-b-2 border-slate-700 pb-0.5 mb-1 print:w-20"></div>
+              <span className="text-xs sm:text-sm font-bold text-slate-800 print:text-xs leading-relaxed">بکنگ کلرک</span>
+              <span className="text-[8px] font-sans text-slate-500 font-bold print:text-[7px] uppercase tracking-wider">Booking Officer</span>
+            </div>
+
+            <div className="flex flex-col items-center">
+              <div className="w-20 sm:w-26 border-b-2 border-slate-700 pb-0.5 mb-1 print:w-20"></div>
+              <span className="text-xs sm:text-sm font-bold text-slate-800 print:text-xs leading-relaxed">جنرل سیکریٹری</span>
+              <span className="text-[8px] font-sans text-slate-500 font-bold print:text-[7px] uppercase tracking-wider">General Secretary</span>
+            </div>
+          </div>
         </div>
 
-        {/* Formal Signature Lockup Row */}
-        <div className="relative z-10 pt-2 sm:pt-2.5 pb-0.5 grid grid-cols-4 items-end gap-2 text-center mt-2 print:mt-1.5">
-          <div className="flex flex-col items-center">
-            <div className="w-18 sm:w-24 border-b border-slate-800 pb-0.5 mb-0.5 print:w-18"></div>
-            <span className="text-xs font-bold text-slate-800 print:text-xs">وصول کنندہ</span>
-            <span className="text-[7px] font-sans text-slate-500 font-bold uppercase tracking-wider print:text-[6px]">Received By</span>
-          </div>
-
-          <div className="flex flex-col items-center">
-            <div className="w-18 sm:w-24 border-b border-slate-800 pb-0.5 mb-0.5 print:w-18"></div>
-            <span className="text-xs font-bold text-slate-800 print:text-xs">رعایت کی منظوری</span>
-            <span className="text-[7px] font-sans text-slate-500 font-bold uppercase tracking-wider print:text-[6px]">Discount Approval</span>
-          </div>
-
-          <div className="flex flex-col items-center">
-            <div className="w-18 sm:w-24 border-b border-slate-800 pb-0.5 mb-0.5 print:w-18"></div>
-            <span className="text-xs font-bold text-slate-800 print:text-xs">بکنگ کلرک</span>
-            <span className="text-[7px] font-sans text-slate-500 font-bold uppercase tracking-wider print:text-[6px]">Booking Officer</span>
-          </div>
-
-          <div className="flex flex-col items-center">
-            <div className="w-18 sm:w-24 border-b border-slate-800 pb-0.5 mb-0.5 print:w-18"></div>
-            <span className="text-xs font-bold text-slate-800 print:text-xs">جنرل سیکریٹری</span>
-            <span className="text-[7px] font-sans text-slate-500 font-bold uppercase tracking-wider print:text-[6px]">General Secretary</span>
-          </div>
-        </div>
-
-        {/* Footer Terms */}
-        <div className="relative z-10 mt-1.5 pt-1 border-t border-slate-300 text-center print:mt-1 print:pt-0.5">
-          <p className="text-[10px] sm:text-[11px] font-bold text-slate-600 print:text-[9px]">
+        {/* Footer Notice */}
+        <div className="mt-1.5 pt-1 sm:mt-2 sm:pt-1.5 border-t border-slate-200 text-center print:mt-1 print:pt-0.5">
+          <p className="text-[11px] sm:text-xs font-bold text-slate-600 print:text-[10px] leading-relaxed">
             ہدایات: پشت پر لکھی ہوئی تمام قواعد و ضوابط کی پابندی لازمی ہے۔ خلاف ورزی کی صورت میں جماعت کو بکنگ منسوخ کرنے کا اختیار ہوگا۔
           </p>
         </div>
