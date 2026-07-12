@@ -263,11 +263,14 @@ var hall_bookings_default = makeHandler(async (req, res) => {
             discount: discount != null ? parseFloat(discount) : 0,
             netAmount: netAmount != null ? parseFloat(netAmount) : null,
             receivedAmount: receivedAmount != null ? parseFloat(receivedAmount) : null,
+            refundAmount: req.body.refundAmount != null ? parseFloat(req.body.refundAmount) : 0,
+            refundDate: req.body.refundDate ? new Date(req.body.refundDate) : null,
+            refundReason: req.body.refundReason || null,
             paymentMethod,
             bankAccountId: bankAccountId || null,
             chequeNumber: chequeNumber || null,
             chequeBankName: chequeBankName || null,
-            status: "Confirmed",
+            status: req.body.status || "Confirmed",
             remarks: remarks || null,
             createdById: req.user.id
           },
@@ -437,7 +440,8 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         }
         const wasPosted = existingBooking.status === "POSTED" || Boolean(existingBooking.journalEntryId);
         let newJournalEntryId = null;
-        if (wasPosted && debitAccountId && hallId) {
+        const targetStatus = req.body.status || existingBooking.status;
+        if (wasPosted && debitAccountId && hallId && targetStatus !== "Cancelled" && targetStatus !== "Refunded") {
           const postingResult = await AccountingService.postReceipt(tx, {
             amount: parsedAmount,
             cashOrBankAccountId: debitAccountId,
@@ -453,6 +457,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
             newJournalEntryId = postingResult.journalEntry.id;
           }
         }
+        const finalStatus = targetStatus === "Cancelled" || targetStatus === "Refunded" ? targetStatus : wasPosted && newJournalEntryId ? "POSTED" : "Confirmed";
         return await tx.hallBooking.update({
           where: { id },
           data: {
@@ -473,11 +478,14 @@ var hall_bookings_default = makeHandler(async (req, res) => {
             discount: discount != null ? parseFloat(discount) : 0,
             netAmount: netAmount != null ? parseFloat(netAmount) : null,
             receivedAmount: receivedAmount != null ? parseFloat(receivedAmount) : null,
+            refundAmount: req.body.refundAmount != null ? parseFloat(req.body.refundAmount) : 0,
+            refundDate: req.body.refundDate ? new Date(req.body.refundDate) : null,
+            refundReason: req.body.refundReason || null,
             paymentMethod,
             bankAccountId: bankAccountId || null,
             chequeNumber: chequeNumber || null,
             chequeBankName: chequeBankName || null,
-            status: wasPosted && newJournalEntryId ? "POSTED" : "Confirmed",
+            status: finalStatus,
             remarks: remarks || null,
             journalEntryId: newJournalEntryId
           },

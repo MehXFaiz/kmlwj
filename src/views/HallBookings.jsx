@@ -233,11 +233,22 @@ export const HallBookings = () => {
                           </div>
 
                           <span className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full border text-[10px] font-extrabold uppercase tracking-wide shrink-0 whitespace-nowrap ${
-                            booking.status === 'POSTED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                            booking.status === 'POSTED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                            booking.status === 'Cancelled' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
+                            booking.status === 'Refunded' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
+                            'bg-amber-500/10 text-amber-400 border-amber-500/20'
                           }`}>
                             {booking.status === 'POSTED' ? (
                               <>
                                 <CheckCircle className="w-3 h-3 shrink-0" /> POSTED
+                              </>
+                            ) : booking.status === 'Cancelled' ? (
+                              <>
+                                <AlertTriangle className="w-3 h-3 shrink-0" /> CANCELLED
+                              </>
+                            ) : booking.status === 'Refunded' ? (
+                              <>
+                                <RotateCcw className="w-3 h-3 shrink-0" /> REFUNDED
                               </>
                             ) : (
                               <>
@@ -408,6 +419,14 @@ export const HallBookings = () => {
                         {booking.status === 'POSTED' ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold uppercase tracking-wider">
                             <CheckCircle className="h-3 w-3" /> Posted
+                          </span>
+                        ) : booking.status === 'Cancelled' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[10px] font-bold uppercase tracking-wider">
+                            <AlertTriangle className="h-3 w-3" /> Cancelled
+                          </span>
+                        ) : booking.status === 'Refunded' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[10px] font-bold uppercase tracking-wider">
+                            <RotateCcw className="h-3 w-3" /> Refunded
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold uppercase tracking-wider">

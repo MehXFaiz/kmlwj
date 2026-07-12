@@ -342,6 +342,9 @@ model HallBooking {
   discount          Float?         @default(0)
   netAmount         Float?
   receivedAmount    Float?
+  refundAmount      Float?         @default(0)
+  refundDate        DateTime?
+  refundReason      String?
   paymentMethod     PaymentMethod
   bankAccountId     String?        @db.Uuid
   bankAccount       Account?       @relation("HallBookingBankAccount", fields: [bankAccountId], references: [id])

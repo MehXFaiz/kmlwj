@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useForm, Controller } from 'react-hook-form';
 import { PhoneInput, validatePhoneNumber } from '../components/ui/PhoneInput';
-import { Save, ChevronLeft, Calendar, User, Phone, MapPin, Clock, CreditCard, Landmark, Info } from 'lucide-react';
+import { Save, ChevronLeft, Calendar, User, Phone, MapPin, Clock, CreditCard, Landmark, Info, RotateCcw, AlertTriangle } from 'lucide-react';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { useHallBookingStore } from '../store/hallBookingStore';
 import { useCoaStore } from '../store/coaStore';
@@ -60,7 +60,11 @@ export const HallBookingForm = () => {
       bankAccountId: '',
       chequeNumber: '',
       chequeBankName: '',
-      remarks: ''
+      remarks: '',
+      status: 'Confirmed',
+      refundAmount: '',
+      refundDate: new Date().toISOString().split('T')[0],
+      refundReason: ''
     }
   });
 
@@ -122,7 +126,11 @@ export const HallBookingForm = () => {
             bankAccountId: booking.bankAccountId || '',
             chequeNumber: booking.chequeNumber || '',
             chequeBankName: booking.chequeBankName || '',
-            remarks: booking.remarks || ''
+            remarks: booking.remarks || '',
+            status: booking.status || 'Confirmed',
+            refundAmount: booking.refundAmount != null ? String(booking.refundAmount) : '',
+            refundDate: booking.refundDate ? new Date(booking.refundDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            refundReason: booking.refundReason || ''
           });
         }
       } catch (err) {
@@ -248,6 +256,7 @@ export const HallBookingForm = () => {
     const parsedDiscount = parseFloat(data.discount) || 0;
     const parsedNetAmount = data.netAmount ? Math.round(parseFloat(data.netAmount)) : parsedAmount - parsedDiscount;
     const parsedReceivedAmount = data.receivedAmount ? Math.round(parseFloat(data.receivedAmount)) : null;
+    const parsedRefundAmount = data.refundAmount ? parseFloat(data.refundAmount) : 0;
 
     try {
       let savedBooking;
@@ -258,6 +267,10 @@ export const HallBookingForm = () => {
         discount: parsedDiscount,
         netAmount: parsedNetAmount,
         receivedAmount: parsedReceivedAmount,
+        refundAmount: parsedRefundAmount,
+        refundDate: data.refundDate || null,
+        refundReason: data.refundReason || null,
+        status: data.status || 'Confirmed',
       };
       if (id) {
         savedBooking = await updateBooking(id, payload);
@@ -888,6 +901,75 @@ export const HallBookingForm = () => {
                     </>
                   )}
                 </div>
+              </div>
+
+              {/* Card 04: Cancellation & Refund Options */}
+              <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-800/40">
+                  <div className="flex items-center gap-3">
+                    <span className="w-6 h-6 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400 font-bold text-xs flex items-center justify-center shrink-0">
+                      04
+                    </span>
+                    <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                      <RotateCcw className="h-4 w-4 text-rose-400" /> Cancellation & Refund Settlement
+                    </h3>
+                  </div>
+                  <span className="text-xs text-rose-300/80 font-medium bg-rose-950/50 px-2.5 py-1 rounded-lg border border-rose-500/20">
+                    Use when booking is cancelled or refunded
+                  </span>
+                </div>
+                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelClass}>Booking Status</label>
+                    <select {...register('status')}
+                      className={inputClass(errors.status)}>
+                      <option value="Confirmed">Confirmed (تصدیق شدہ)</option>
+                      <option value="POSTED">Posted to Ledger (پوسٹڈ)</option>
+                      <option value="Cancelled">Cancelled (منسوخ)</option>
+                      <option value="Refunded">Refunded (ریفنڈ شدہ)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Refund Amount (Rs)</label>
+                    <input type="text" {...register('refundAmount', {
+                      pattern: {
+                        value: /^\d*(\.\d+)?$/,
+                        message: 'Must be a non-negative number'
+                      }
+                    })}
+                      placeholder="e.g. 15000 (if refund issued)"
+                      className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border text-lg font-bold text-rose-400 focus:outline-none focus:border-rose-500/60 transition-all ${errors.refundAmount ? 'border-red-500/60' : 'border-slate-800'}`} />
+                    {errors.refundAmount && (
+                      <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.refundAmount.message}</span>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Refund Date</label>
+                    <input type="date" {...register('refundDate')}
+                      className={inputClass(errors.refundDate)} />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Refund / Cancellation Reason</label>
+                    <input type="text" {...register('refundReason')}
+                      placeholder="e.g. Customer cancelled event / Date changed"
+                      className={inputClass(errors.refundReason)} />
+                  </div>
+                </div>
+
+                {(watch('status') === 'Cancelled' || watch('status') === 'Refunded' || parseFloat(watch('refundAmount') || 0) > 0) && (
+                  <div className="mx-5 mb-5 p-3.5 rounded-xl bg-rose-950/40 border border-rose-500/40 text-rose-200 text-xs flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-rose-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold text-rose-300">Cancellation & Refund Active:</p>
+                      <p className="mt-0.5 text-rose-200/90 leading-relaxed">
+                        Saving will record this hall booking as <strong>{watch('status') || 'Refunded'}</strong> with a refund amount of <strong>Rs. {Number(watch('refundAmount') || 0).toLocaleString()}</strong>.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Submit Bar */}

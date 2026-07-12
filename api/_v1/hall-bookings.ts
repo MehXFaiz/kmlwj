@@ -307,11 +307,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           discount: discount != null ? parseFloat(discount) : 0,
           netAmount: netAmount != null ? parseFloat(netAmount) : null,
           receivedAmount: receivedAmount != null ? parseFloat(receivedAmount) : null,
+          refundAmount: req.body.refundAmount != null ? parseFloat(req.body.refundAmount) : 0,
+          refundDate: req.body.refundDate ? new Date(req.body.refundDate) : null,
+          refundReason: req.body.refundReason || null,
           paymentMethod,
           bankAccountId: bankAccountId || null,
           chequeNumber: chequeNumber || null,
           chequeBankName: chequeBankName || null,
-          status: 'Confirmed',
+          status: req.body.status || 'Confirmed',
           remarks: remarks || null,
           createdById: req.user!.id
         },
@@ -506,8 +509,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
         const wasPosted = existingBooking.status === 'POSTED' || Boolean(existingBooking.journalEntryId);
         let newJournalEntryId: string | null = null;
+        const targetStatus = req.body.status || existingBooking.status;
 
-        if (wasPosted && debitAccountId && hallId) {
+        if (wasPosted && debitAccountId && hallId && targetStatus !== 'Cancelled' && targetStatus !== 'Refunded') {
           const postingResult = await AccountingService.postReceipt(tx, {
             amount: parsedAmount,
             cashOrBankAccountId: debitAccountId,
@@ -523,6 +527,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             newJournalEntryId = postingResult.journalEntry.id;
           }
         }
+
+        const finalStatus = targetStatus === 'Cancelled' || targetStatus === 'Refunded'
+          ? targetStatus
+          : (wasPosted && newJournalEntryId ? 'POSTED' : 'Confirmed');
 
         return await tx.hallBooking.update({
           where: { id },
@@ -544,11 +552,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             discount: discount != null ? parseFloat(discount) : 0,
             netAmount: netAmount != null ? parseFloat(netAmount) : null,
             receivedAmount: receivedAmount != null ? parseFloat(receivedAmount) : null,
+            refundAmount: req.body.refundAmount != null ? parseFloat(req.body.refundAmount) : 0,
+            refundDate: req.body.refundDate ? new Date(req.body.refundDate) : null,
+            refundReason: req.body.refundReason || null,
             paymentMethod,
             bankAccountId: bankAccountId || null,
             chequeNumber: chequeNumber || null,
             chequeBankName: chequeBankName || null,
-            status: wasPosted && newJournalEntryId ? 'POSTED' : 'Confirmed',
+            status: finalStatus,
             remarks: remarks || null,
             journalEntryId: newJournalEntryId
           },

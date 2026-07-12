@@ -436,29 +436,59 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
             {/* Total Paid Currency Card */}
             <div
               className="p-2 flex flex-col justify-center items-end text-right"
-              style={{
-                backgroundColor: '#ecfdf5',
-                borderLeft: '2px solid #10b981',
-                color: '#064e3b'
-              }}
+              style={
+                Number(booking.refundAmount || 0) > 0 || booking.status === 'Cancelled' || booking.status === 'Refunded'
+                  ? {
+                      backgroundColor: '#fff1f2',
+                      borderLeft: '2px solid #e11d48',
+                      color: '#881337'
+                    }
+                  : {
+                      backgroundColor: '#ecfdf5',
+                      borderLeft: '2px solid #10b981',
+                      color: '#064e3b'
+                    }
+              }
             >
               <span
                 className="text-[8px] font-bold uppercase tracking-widest block"
-                style={{ color: '#065f46' }}
+                style={{
+                  color: Number(booking.refundAmount || 0) > 0 || booking.status === 'Cancelled' || booking.status === 'Refunded'
+                    ? '#9f1239'
+                    : '#065f46'
+                }}
               >
-                SETTLED AMOUNT / کل رقم
+                {Number(booking.refundAmount || 0) > 0 || booking.status === 'Cancelled' || booking.status === 'Refunded'
+                  ? 'REFUNDED / SETTLED AMOUNT'
+                  : 'SETTLED AMOUNT / کل رقم'}
               </span>
               <div
                 className="text-base sm:text-lg font-black font-mono mt-0.5 tracking-tight"
-                style={{ color: '#064e3b' }}
+                style={{
+                  color: Number(booking.refundAmount || 0) > 0 || booking.status === 'Cancelled' || booking.status === 'Refunded'
+                    ? '#be123c'
+                    : '#064e3b'
+                }}
               >
                 Rs. {Number(booking.amount || 0).toLocaleString()}/-
               </div>
+              {Number(booking.refundAmount || 0) > 0 && (
+                <div className="text-[10px] font-bold text-rose-600">
+                  Refunded: -Rs. {Number(booking.refundAmount).toLocaleString()}/-
+                </div>
+              )}
               <span
                 className="inline-flex items-center gap-1 text-[8px] font-bold uppercase tracking-wider mt-0.5"
-                style={{ color: '#059669' }}
+                style={{
+                  color: Number(booking.refundAmount || 0) > 0 || booking.status === 'Cancelled' || booking.status === 'Refunded'
+                    ? '#e11d48'
+                    : '#059669'
+                }}
               >
-                <CheckCircle2 className="h-2.5 w-2.5" /> SETTLED
+                <CheckCircle2 className="h-2.5 w-2.5" />{' '}
+                {Number(booking.refundAmount || 0) > 0 || booking.status === 'Cancelled' || booking.status === 'Refunded'
+                  ? (booking.status ? booking.status.toUpperCase() : 'REFUNDED')
+                  : 'SETTLED'}
               </span>
             </div>
           </div>
