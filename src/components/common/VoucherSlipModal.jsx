@@ -120,50 +120,50 @@ export const VoucherSlipModal = ({
             }
           `}</style>
           
-          {/* Classic Vintage Slip Box */}
+          {/* Classic Official Voucher Slip Box */}
           <div 
             id="print-voucher-slip"
             style={{ 
-              backgroundColor: '#000000', 
-              color: '#432921',
+              backgroundColor: '#ffffff', 
+              color: '#0f172a',
               fontFamily: "'Times New Roman', Times, serif",
               WebkitPrintColorAdjust: 'exact',
               printColorAdjust: 'exact'
             }}
-            className="relative rounded-lg border-2 border-[#432921] shadow-2xl overflow-hidden flex p-4 sm:p-6 print:border-[#432921] print:shadow-none print:rounded-none min-h-[480px]"
+            className="relative rounded-xl border-2 border-slate-700 shadow-2xl overflow-hidden flex p-4 sm:p-6 print:border-slate-800 print:shadow-none print:rounded-none min-h-[480px]"
           >
             {/* Left Spiral Notebook Punch Holes Column */}
-            <div className="flex flex-col justify-between items-center pr-3 sm:pr-4 border-r border-[#432921] mr-4 sm:mr-6 select-none py-1">
+            <div className="flex flex-col justify-between items-center pr-3 sm:pr-4 border-r-2 border-slate-300 mr-4 sm:mr-6 select-none py-1">
               {punchHoles.map((_, idx) => (
                 <div 
                   key={idx} 
-                  style={{ backgroundColor: '#432921', borderColor: '#432921' }}
-                  className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border shadow-inner my-1" 
+                  style={{ backgroundColor: '#f8fafc', borderColor: '#cbd5e1' }}
+                  className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border-2 shadow-inner my-1" 
                 />
               ))}
             </div>
 
             {/* Background Emblem/Watermark */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0 opacity-[0.08] print:opacity-[0.1]">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0 opacity-[0.06] print:opacity-[0.08]">
               <img src={logoImg} alt="KMLWJ Logo Watermark" className="w-64 h-64 sm:w-80 sm:h-80 object-contain grayscale" />
             </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 relative z-1 flex flex-col justify-between">
+            <div className="flex-1 relative z-10 flex flex-col justify-between">
               
               {/* Header Section */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b border-[#432921] gap-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b-2 border-slate-800 gap-4">
                 <div className="flex items-start gap-4">
                   <img
                     src={logoImg}
                     alt="Logo"
                     className="w-16 h-16 object-contain"
                   />
-                  <div className="text-left font-bold tracking-wider text-sm sm:text-base text-[#432921]">
-                    <div className="font-semibold text-[#432921]" style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif", fontSize: '1rem' }}>
+                  <div className="text-left font-bold tracking-wider text-sm sm:text-base text-slate-900">
+                    <div className="font-semibold text-slate-900" style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif", fontSize: '1.15rem' }}>
                       کچھی مسلم لوہار واڈہ ویلفیئر جماعت
                     </div>
-                    <div className="text-base sm:text-xl uppercase font-black tracking-wide border-b-2 border-[#432921] pb-0.5 inline-block">
+                    <div className="text-base sm:text-xl uppercase font-black tracking-wide border-b-2 border-slate-800 pb-0.5 inline-block">
                       {title}
                     </div>
                   </div>
@@ -172,18 +172,18 @@ export const VoucherSlipModal = ({
                 {/* Clean Pill Title Banner */}
                 <div 
                   style={{ 
-                    backgroundColor: '#000000', 
-                    color: '#432921',
-                    borderColor: '#432921'
+                    backgroundColor: '#f8fafc', 
+                    color: '#0f172a',
+                    borderColor: '#334155'
                   }}
-                  className="px-6 sm:px-8 py-1 sm:py-1.5 rounded-full font-extrabold text-base sm:text-xl tracking-[0.25em] uppercase border-2 shadow-sm mx-auto sm:mx-0 print:border-[#432921] print:bg-[#000000]"
+                  className="px-6 sm:px-8 py-1 sm:py-1.5 rounded-full font-extrabold text-base sm:text-xl tracking-[0.25em] uppercase border-2 shadow-sm mx-auto sm:mx-0 print:border-slate-800 print:bg-[#f8fafc]"
                 >
                   VOUCHER
                 </div>
 
-                <div className="text-right font-bold text-xs sm:text-sm text-[#432921] self-end sm:self-center">
+                <div className="text-right font-bold text-xs sm:text-sm text-slate-800 self-end sm:self-center">
                   <span>Date : </span>
-                  <span className="font-normal border-b border-[#432921] px-2 inline-block min-w-[100px] text-center">
+                  <span className="font-normal border-b border-slate-800 px-2 inline-block min-w-[100px] text-center">
                     {formattedDate}
                   </span>
                 </div>
@@ -192,55 +192,55 @@ export const VoucherSlipModal = ({
               {/* Top Details (Name, Address, Voucher No, File No) */}
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 py-4 items-end">
                 {/* Left lines: Name & Address */}
-                <div className="sm:col-span-7 space-y-3 text-xs sm:text-sm font-semibold text-[#432921]">
+                <div className="sm:col-span-7 space-y-3 text-xs sm:text-sm font-semibold text-slate-800">
                   <div className="flex items-baseline">
-                    <span className="w-16 shrink-0">Name</span>
-                    <span className="flex-1 border-b border-dotted border-[#432921] px-2 font-bold text-[#432921]">
+                    <span className="w-16 shrink-0 font-bold">Name:</span>
+                    <span className="flex-1 border-b border-dotted border-slate-600 px-2 font-black text-slate-900">
                       {name || '__________________________________________'}
                     </span>
                   </div>
                   <div className="flex items-baseline">
-                    <span className="w-16 shrink-0">Address</span>
-                    <span className="flex-1 border-b border-dotted border-[#432921] px-2 font-normal">
+                    <span className="w-16 shrink-0 font-bold">Address:</span>
+                    <span className="flex-1 border-b border-dotted border-slate-600 px-2 font-normal text-slate-800">
                       {address || '__________________________________________'}
                     </span>
                   </div>
                 </div>
 
                 {/* Right box: Voucher No & File No */}
-                <div className="sm:col-span-5 border-2 border-[#432921] p-2 sm:p-2.5 rounded bg-[#000000]/60 text-xs sm:text-sm font-semibold space-y-1.5">
-                  <div className="flex justify-between items-baseline border-b border-[#432921] pb-1">
-                    <span>Voucher No. :</span>
-                    <span className="font-mono font-bold text-[#432921]">{voucherNo || '—'}</span>
+                <div className="sm:col-span-5 border-2 border-slate-800 p-2.5 rounded bg-slate-50 text-xs sm:text-sm font-semibold space-y-1.5">
+                  <div className="flex justify-between items-baseline border-b border-slate-300 pb-1">
+                    <span className="text-slate-600">Voucher No. :</span>
+                    <span className="font-mono font-black text-slate-900">{voucherNo || '—'}</span>
                   </div>
                   <div className="flex justify-between items-baseline pt-0.5">
-                    <span>File / Ref No. :</span>
-                    <span className="font-mono font-bold text-[#432921]">{fileNo || '—'}</span>
+                    <span className="text-slate-600">File / Ref No. :</span>
+                    <span className="font-mono font-bold text-slate-900">{fileNo || '—'}</span>
                   </div>
                 </div>
               </div>
 
               {/* Debit / Credit A/c Line */}
-              <div className="flex items-baseline text-xs sm:text-sm font-semibold text-[#432921] pb-3">
-                <span className="shrink-0">Debit / Credit</span>
-                <span className="flex-1 border-b border-[#432921] px-3 mx-2 font-bold text-center">
+              <div className="flex items-baseline text-xs sm:text-sm font-semibold text-slate-800 pb-3">
+                <span className="shrink-0 font-bold">Debit / Credit:</span>
+                <span className="flex-1 border-b-2 border-slate-800 px-3 mx-2 font-black text-center text-slate-900">
                   {debitCredit ? `${debitCredit} ${accountName ? `— (${accountName})` : ''}` : accountName || 'Cash / Bank Account'}
                 </span>
                 <span className="shrink-0 font-bold">A/c</span>
               </div>
 
               {/* Main Particulars Table */}
-              <div className="border-2 border-[#432921] my-2 bg-[#000000]/30">
+              <div className="border-2 border-slate-800 my-2 bg-white rounded overflow-hidden">
                 <table className="w-full border-collapse text-xs sm:text-sm">
                   <thead>
-                    <tr className="border-b-2 border-[#432921] bg-[#000000]/80 font-bold text-[#432921]">
-                      <th className="py-2 px-3 text-left w-3/4 border-r-2 border-[#432921] uppercase tracking-wider">
+                    <tr className="border-b-2 border-slate-800 bg-slate-100 font-bold text-slate-900">
+                      <th className="py-2 px-3 text-left w-3/4 border-r-2 border-slate-800 uppercase tracking-wider">
                         PARTICULARS
                       </th>
                       <th colSpan={2} className="py-1 px-2 text-center uppercase tracking-wider">
-                        <div className="border-b border-[#432921] pb-0.5">Amount</div>
-                        <div className="grid grid-cols-4 pt-0.5 text-xs">
-                          <span className="col-span-3 border-r border-[#432921]">Rs.</span>
+                        <div className="border-b border-slate-800 pb-0.5">Amount</div>
+                        <div className="grid grid-cols-4 pt-0.5 text-xs font-semibold">
+                          <span className="col-span-3 border-r border-slate-800">Rs.</span>
                           <span className="col-span-1">P.</span>
                         </div>
                       </th>
@@ -248,42 +248,42 @@ export const VoucherSlipModal = ({
                   </thead>
                   <tbody>
                     {/* Row 1: Main line item */}
-                    <tr className="border-b border-[#432921]">
-                      <td className="py-2.5 px-3 border-r-2 border-[#432921] font-semibold text-[#432921]">
+                    <tr className="border-b border-slate-300">
+                      <td className="py-3 px-3 border-r-2 border-slate-800 font-semibold text-slate-900">
                         {particulars || 'Contribution / Disbursed Amount'}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-bold font-mono w-[18%] border-r border-[#432921]">
+                      <td className="py-3 px-3 text-right font-black font-mono text-sm w-[18%] border-r border-slate-800 text-slate-900">
                         {amountRs}
                       </td>
-                      <td className="py-2.5 px-1 text-center font-mono w-[7%]">
+                      <td className="py-3 px-1 text-center font-mono font-bold w-[7%] text-slate-700">
                         00
                       </td>
                     </tr>
 
                     {/* Empty spacer rows for authentic physical voucher feel */}
-                    <tr className="border-b border-[#432921] h-7">
-                      <td className="border-r-2 border-[#432921]"></td>
-                      <td className="border-r border-[#432921]"></td>
+                    <tr className="border-b border-slate-300 h-8">
+                      <td className="border-r-2 border-slate-800"></td>
+                      <td className="border-r border-slate-800"></td>
                       <td></td>
                     </tr>
-                    <tr className="border-b border-[#432921] h-7">
-                      <td className="border-r-2 border-[#432921]"></td>
-                      <td className="border-r border-[#432921]"></td>
+                    <tr className="border-b border-slate-800 h-8">
+                      <td className="border-r-2 border-slate-800"></td>
+                      <td className="border-r border-slate-800"></td>
                       <td></td>
                     </tr>
 
                     {/* Bottom Total Row */}
-                    <tr className="bg-[#000000]/50 font-bold">
-                      <td className="py-2 px-3 border-r-2 border-[#432921] flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                        <span className="italic font-serif text-xs sm:text-sm font-normal text-[#432921]">
-                          Rupees in words : <span className="font-semibold underline capitalize">{words} Only</span>
+                    <tr className="bg-slate-100 font-bold">
+                      <td className="py-2.5 px-3 border-r-2 border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                        <span className="italic font-serif text-xs sm:text-sm font-normal text-slate-700">
+                          Rupees in words : <span className="font-semibold underline capitalize text-slate-900">{words} Only</span>
                         </span>
-                        <span className="tracking-widest uppercase font-black text-sm mt-1 sm:mt-0 self-end">TOTAL</span>
+                        <span className="tracking-widest uppercase font-black text-sm mt-1 sm:mt-0 self-end text-slate-900">TOTAL</span>
                       </td>
-                      <td className="py-2 px-3 text-right font-black font-mono text-sm border-r border-[#432921] text-[#432921]">
+                      <td className="py-2.5 px-3 text-right font-black font-mono text-sm border-r border-slate-800 text-slate-900">
                         {amountRs}
                       </td>
-                      <td className="py-2 px-1 text-center font-mono font-bold text-[#432921]">
+                      <td className="py-2.5 px-1 text-center font-mono font-bold text-slate-900">
                         00
                       </td>
                     </tr>
@@ -292,26 +292,26 @@ export const VoucherSlipModal = ({
               </div>
 
               {/* Footer Signatures Area */}
-              <div className="grid grid-cols-3 gap-2 pt-8 mt-2 items-end text-center font-serif italic text-xs sm:text-sm text-[#432921]">
+              <div className="grid grid-cols-3 gap-2 pt-8 mt-2 items-end text-center font-serif italic text-xs sm:text-sm text-slate-800">
                 <div className="text-left">
-                  <div className="border-t border-[#432921] pt-1 inline-block min-w-[120px] sm:min-w-[140px]">
-                    Prepared by
+                  <div className="border-t-2 border-slate-800 pt-1.5 inline-block min-w-[120px] sm:min-w-[140px] font-semibold">
+                    Prepared by: <span className="not-italic font-bold text-slate-900">{preparedBy}</span>
                   </div>
                 </div>
 
                 <div className="text-center">
-                  <div className="border-t border-[#432921] pt-1 inline-block min-w-[100px] sm:min-w-[140px]">
+                  <div className="border-t-2 border-slate-800 pt-1.5 inline-block min-w-[100px] sm:min-w-[140px] font-semibold">
                     Passed by
                   </div>
                 </div>
 
                 <div className="text-right flex flex-col items-end">
-                  <div className="flex items-end gap-2">
-                    <div className="border-t border-[#432921] pt-1 inline-block">
+                  <div className="flex items-end gap-3">
+                    <div className="border-t-2 border-slate-800 pt-1.5 inline-block font-semibold">
                       {payeeLabel}
                     </div>
                     {/* Stamp / Signature Box */}
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 border-2 border-[#432921] bg-[#000000]/40 shadow-inner flex items-center justify-center text-[8px] uppercase tracking-tighter text-[#432921] font-sans not-italic">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 border-2 border-slate-800 bg-slate-50 shadow-inner flex items-center justify-center text-[8px] uppercase tracking-tighter text-slate-500 font-sans not-italic font-bold">
                       Stamp
                     </div>
                   </div>
