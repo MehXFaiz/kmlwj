@@ -57,29 +57,29 @@ const SpaciousReceiptPage = ({ booking, copyType, copyUrduTitle, copyEnglishTitl
 
   return (
     <div
-      className="w-full max-w-[780px] print:max-w-full bg-white border border-slate-300 print:border-slate-300 p-5 sm:p-6 print:py-2.5 print:px-4 font-urdu relative text-slate-900 mx-auto leading-relaxed shadow-xl print:shadow-none rounded-2xl print:rounded-xl box-border"
+      className="w-full max-w-[780px] print:max-w-full bg-white border border-slate-300 print:border-slate-300 p-4 sm:p-5 print:py-1.5 print:px-3.5 font-urdu relative text-slate-900 mx-auto leading-relaxed shadow-xl print:shadow-none rounded-2xl print:rounded-lg box-border"
       style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
       dir="rtl"
     >
       {/* Subtle Background Watermark */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.02] select-none z-0">
-        <img src={logoImg} alt="Watermark" className="w-[260px] h-[260px] object-contain" />
+        <img src={logoImg} alt="Watermark" className="w-[240px] h-[240px] object-contain" />
       </div>
 
       {/* Header Block */}
-      <div className="relative z-10 border-b-2 border-[#1a6e35] pb-2.5 sm:pb-3 mb-2.5 sm:mb-3 print:pb-1.5 print:mb-2">
-        <div className="flex items-center justify-between gap-4">
-          {/* Right Emblem - Made Larger */}
-          <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 flex items-center justify-center print:w-20 print:h-20">
-            <img src={logoImg} alt="Logo" className="w-19 h-19 sm:w-23 sm:h-23 print:w-19 print:h-19 object-contain" />
+      <div className="relative z-10 border-b-2 border-[#1a6e35] pb-2 sm:pb-2.5 mb-2 sm:mb-2.5 print:pb-1 print:mb-1.5">
+        <div className="flex items-center justify-between gap-3">
+          {/* Right Emblem - Big & Clear */}
+          <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 flex items-center justify-center print:w-18 print:h-18">
+            <img src={logoImg} alt="Logo" className="w-15 h-15 sm:w-19 sm:h-19 print:w-17 print:h-17 object-contain" />
           </div>
 
           {/* Center Main Title */}
           <div className="flex-1 text-center">
-            <h1 className="text-xl sm:text-2xl font-extrabold text-[#1a6e35] leading-normal print:text-xl print:leading-normal">
+            <h1 className="text-lg sm:text-xl font-extrabold text-[#1a6e35] leading-normal print:text-lg print:leading-normal">
               کچھی مسلم لوھارواڑھا ویلفیئر جماعت
             </h1>
-            <p className="text-xs sm:text-sm font-bold text-slate-700 mt-0.5 leading-relaxed print:text-xs print:leading-relaxed">
+            <p className="text-xs sm:text-sm font-bold text-slate-700 mt-0.5 leading-relaxed print:text-[11px] print:leading-relaxed">
               جمعہ بلوچ روڈ، نزد K.E گرڈ اسٹیشن، نیو کلری، لیاری، کراچی
             </p>
             <p className="text-[10px] sm:text-xs font-sans font-bold text-slate-500">
@@ -90,7 +90,7 @@ const SpaciousReceiptPage = ({ booking, copyType, copyUrduTitle, copyEnglishTitl
           {/* Left Receipt Number & Copy Type */}
           <div className="shrink-0 flex flex-col items-end text-left font-sans">
             <div
-              className="px-3 py-0.5 rounded-full text-[11px] sm:text-xs font-bold uppercase tracking-wider text-white mb-1 print:mb-0.5 print:px-2.5 print:py-0.5 print:text-[10px]"
+              className="px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider text-white mb-0.5 print:mb-0.5 print:px-2 print:py-0.5 print:text-[9px]"
               style={{
                 backgroundColor: isCustomer ? '#1a6e35' : '#1e3a8a',
                 WebkitPrintColorAdjust: 'exact',
@@ -100,8 +100,8 @@ const SpaciousReceiptPage = ({ booking, copyType, copyUrduTitle, copyEnglishTitl
               {copyEnglishTitle}
             </div>
             <div className="text-right">
-              <span className="text-[10px] text-slate-500 font-bold uppercase block tracking-wider print:text-[9px]">RECEIPT NO</span>
-              <span className="text-xl sm:text-2xl font-black text-[#1a6e35] block leading-none print:text-xl">
+              <span className="text-[9px] text-slate-500 font-bold uppercase block tracking-wider print:text-[8px]">RECEIPT NO</span>
+              <span className="text-lg sm:text-xl font-black text-[#1a6e35] block leading-none print:text-lg">
                 #{booking.receiptNo || '1'}
               </span>
               <span className="text-xs sm:text-sm font-bold text-slate-700 font-urdu block leading-relaxed print:text-xs">
@@ -113,45 +113,45 @@ const SpaciousReceiptPage = ({ booking, copyType, copyUrduTitle, copyEnglishTitl
       </div>
 
       {/* Main Tables */}
-      <div className="relative z-10 space-y-2.5 sm:space-y-3 print:space-y-1.5">
+      <div className="relative z-10 space-y-2 sm:space-y-2.5 print:space-y-1">
         {/* Customer & Booking Details Table */}
         <div className="border border-slate-300 rounded-xl overflow-hidden print:rounded-lg">
           <div
-            className="px-4 py-1 sm:px-5 sm:py-1.5 flex items-center justify-between text-sm font-bold border-b border-slate-300 print:px-3 print:py-1"
+            className="px-3 py-1 sm:px-4 sm:py-1 flex items-center justify-between text-xs font-bold border-b border-slate-300 print:px-2.5 print:py-0.5"
             style={{
               backgroundColor: '#f8fafc',
               WebkitPrintColorAdjust: 'exact',
               printColorAdjust: 'exact'
             }}
           >
-            <span className="text-sm sm:text-base font-bold text-[#1a6e35] print:text-sm leading-relaxed">معلوماتِ بکنگ کنندہ (Customer &amp; Booking Information)</span>
-            <span className="font-sans font-bold text-slate-700 text-xs print:text-[11px]">Booking Date: {bookingDateStr}</span>
+            <span className="text-xs sm:text-sm font-bold text-[#1a6e35] print:text-xs leading-relaxed">معلوماتِ بکنگ کنندہ (Customer &amp; Booking Information)</span>
+            <span className="font-sans font-bold text-slate-700 text-[11px] print:text-[10px]">Booking Date: {bookingDateStr}</span>
           </div>
 
           <div className="divide-y divide-slate-200 text-slate-800">
             {/* Row 1 */}
             <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-slate-200">
-              <div className="p-2 sm:p-2.5 flex items-center justify-between print:py-1 print:px-2.5">
-                <span className="text-sm font-bold text-slate-600 print:text-sm leading-relaxed">نام بکنگ کنندہ (Booker Name):</span>
-                <span className="text-base sm:text-lg font-bold text-slate-900 print:text-base leading-relaxed">{booking.bookerName || '—'}</span>
+              <div className="p-1.5 sm:p-2 flex items-center justify-between print:py-0.5 print:px-2">
+                <span className="text-xs sm:text-sm font-bold text-slate-600 print:text-xs leading-relaxed">نام بکنگ کنندہ (Booker Name):</span>
+                <span className="text-sm sm:text-base font-bold text-slate-900 print:text-sm leading-relaxed">{booking.bookerName || '—'}</span>
               </div>
-              <div className="p-2 sm:p-2.5 flex items-center justify-between print:py-1 print:px-2.5">
-                <span className="text-sm font-bold text-slate-600 print:text-sm leading-relaxed">رابطہ نمبر (Mobile No):</span>
-                <span className="text-sm sm:text-base font-sans font-bold text-[#1a6e35] print:text-sm" dir="ltr">{booking.mobile || '—'}</span>
+              <div className="p-1.5 sm:p-2 flex items-center justify-between print:py-0.5 print:px-2">
+                <span className="text-xs sm:text-sm font-bold text-slate-600 print:text-xs leading-relaxed">رابطہ نمبر (Mobile No):</span>
+                <span className="text-xs sm:text-sm font-sans font-bold text-[#1a6e35] print:text-xs" dir="ltr">{booking.mobile || '—'}</span>
               </div>
             </div>
 
             {/* Row 2 */}
             <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-slate-200">
-              <div className="p-2 sm:p-2.5 flex items-center justify-between print:py-1 print:px-2.5">
-                <span className="text-sm font-bold text-slate-600 print:text-sm leading-relaxed">بکنگ برائے جماعت (Jamaat Member):</span>
-                <span className="text-xs sm:text-sm font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-300 print:text-xs print:px-2 leading-relaxed">
+              <div className="p-1.5 sm:p-2 flex items-center justify-between print:py-0.5 print:px-2">
+                <span className="text-xs sm:text-sm font-bold text-slate-600 print:text-xs leading-relaxed">بکنگ برائے جماعت (Jamaat Member):</span>
+                <span className="text-[11px] sm:text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-300 print:text-[10px] print:px-1.5 leading-relaxed">
                   {booking.isForJamaat ? 'ہاں (Yes - Community Member)' : 'نہیں (No - General)'}
                 </span>
               </div>
-              <div className="p-2 sm:p-2.5 flex items-center justify-between print:py-1 print:px-2.5">
-                <span className="text-sm font-bold text-slate-600 print:text-sm leading-relaxed">پتہ (Address):</span>
-                <span className="text-sm sm:text-base font-medium text-slate-800 text-left print:text-sm leading-relaxed">{booking.address || '—'}</span>
+              <div className="p-1.5 sm:p-2 flex items-center justify-between print:py-0.5 print:px-2">
+                <span className="text-xs sm:text-sm font-bold text-slate-600 print:text-xs leading-relaxed">پتہ (Address):</span>
+                <span className="text-xs sm:text-sm font-medium text-slate-800 text-left print:text-xs leading-relaxed">{booking.address || '—'}</span>
               </div>
             </div>
           </div>
@@ -160,45 +160,45 @@ const SpaciousReceiptPage = ({ booking, copyType, copyUrduTitle, copyEnglishTitl
         {/* Event Schedule & Venue Table */}
         <div className="border border-slate-300 rounded-xl overflow-hidden print:rounded-lg">
           <div
-            className="px-4 py-1 sm:px-5 sm:py-1.5 flex items-center justify-between text-sm font-bold border-b border-slate-300 print:px-3 print:py-1"
+            className="px-3 py-1 sm:px-4 sm:py-1 flex items-center justify-between text-xs font-bold border-b border-slate-300 print:px-2.5 print:py-0.5"
             style={{
               backgroundColor: '#f8fafc',
               WebkitPrintColorAdjust: 'exact',
               printColorAdjust: 'exact'
             }}
           >
-            <span className="text-sm sm:text-base font-bold text-[#1a6e35] print:text-sm leading-relaxed">تفصیلاتِ تقریب و ہال (Event Schedule &amp; Venue Details)</span>
-            <span className="font-bold text-slate-700 text-xs print:text-[11px]">بروز: {programDayUrdu}</span>
+            <span className="text-xs sm:text-sm font-bold text-[#1a6e35] print:text-xs leading-relaxed">تفصیلاتِ تقریب و ہال (Event Schedule &amp; Venue Details)</span>
+            <span className="font-bold text-slate-700 text-[11px] print:text-[10px]">بروز: {programDayUrdu}</span>
           </div>
 
           <div className="divide-y divide-slate-200 text-slate-800">
             {/* Row 1 */}
             <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-slate-200">
-              <div className="p-2 sm:p-2.5 print:py-1 print:px-2">
-                <span className="text-[10px] sm:text-xs font-sans font-bold text-slate-500 uppercase block print:text-[10px]">Program Date / تاریخِ تقریب</span>
-                <span className="text-base sm:text-lg font-sans font-extrabold text-[#1a6e35] block print:text-base mt-0.5">{programDateStr}</span>
-                <span className="text-xs text-slate-600 font-bold block print:text-xs mt-0.5 leading-relaxed">بروز: {programDayUrdu}</span>
+              <div className="p-1.5 sm:p-2 print:py-0.5 print:px-2">
+                <span className="text-[9px] sm:text-[10px] font-sans font-bold text-slate-500 uppercase block print:text-[8px]">Program Date / تاریخِ تقریب</span>
+                <span className="text-sm sm:text-base font-sans font-extrabold text-[#1a6e35] block print:text-sm mt-0.5">{programDateStr}</span>
+                <span className="text-[11px] text-slate-600 font-bold block print:text-[10px] leading-relaxed">بروز: {programDayUrdu}</span>
               </div>
 
-              <div className="p-2 sm:p-2.5 print:py-1 print:px-2">
-                <span className="text-[10px] sm:text-xs font-sans font-bold text-slate-500 uppercase block print:text-[10px]">Event Type / پروگرام کی نوعیت</span>
-                <span className="text-base sm:text-lg font-bold text-slate-900 block print:text-base mt-0.5 leading-relaxed">{booking.programType || 'تقریب'}</span>
+              <div className="p-1.5 sm:p-2 print:py-0.5 print:px-2">
+                <span className="text-[9px] sm:text-[10px] font-sans font-bold text-slate-500 uppercase block print:text-[8px]">Event Type / پروگرام کی نوعیت</span>
+                <span className="text-sm sm:text-base font-bold text-slate-900 block print:text-sm mt-0.5 leading-relaxed">{booking.programType || 'تقریب'}</span>
               </div>
 
-              <div className="p-2 sm:p-2.5 print:py-1 print:px-2">
-                <span className="text-[10px] sm:text-xs font-sans font-bold text-slate-500 uppercase block print:text-[10px]">Event Timings / اوقات</span>
-                <span className="text-base sm:text-lg font-sans font-bold text-slate-900 block print:text-base mt-0.5">{booking.timings || 'Evening'}</span>
+              <div className="p-1.5 sm:p-2 print:py-0.5 print:px-2">
+                <span className="text-[9px] sm:text-[10px] font-sans font-bold text-slate-500 uppercase block print:text-[8px]">Event Timings / اوقات</span>
+                <span className="text-sm sm:text-base font-sans font-bold text-slate-900 block print:text-sm mt-0.5">{booking.timings || 'Evening'}</span>
               </div>
             </div>
 
             {/* Row 2: Selected Hall Checklist */}
-            <div className="p-2 sm:p-2.5 bg-slate-50/50 print:p-1.5">
-              <span className="text-xs font-sans font-bold text-slate-600 uppercase block mb-1 print:text-xs print:mb-1 leading-relaxed">Selected Community Hall / منتخب کردہ ہال:</span>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
+            <div className="p-1.5 sm:p-2 bg-slate-50/50 print:p-1">
+              <span className="text-[11px] font-sans font-bold text-slate-600 uppercase block mb-1 print:text-[10px] print:mb-0.5 leading-relaxed">Selected Community Hall / منتخب کردہ ہال:</span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
                 {hallsList.map((hall) => (
                   <div
                     key={hall.id}
-                    className={`p-1.5 sm:p-2 rounded-lg border text-center transition-all print:py-1 print:px-1.5 ${
+                    className={`p-1 sm:p-1.5 rounded-lg border text-center transition-all print:py-0.5 print:px-1 ${
                       hall.selected
                         ? 'border-[#1a6e35] bg-emerald-50 shadow-xs'
                         : 'border-slate-200 bg-white opacity-40'
@@ -214,13 +214,13 @@ const SpaciousReceiptPage = ({ booking, copyType, copyUrduTitle, copyEnglishTitl
                         : {}
                     }
                   >
-                    <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                      {hall.selected && <Check className="h-3.5 w-3.5 text-[#1a6e35] stroke-[3]" />}
+                    <div className="flex items-center justify-center gap-1 mb-0.5">
+                      {hall.selected && <Check className="h-3 w-3 text-[#1a6e35] stroke-[3]" />}
                       <span className={`text-xs sm:text-sm font-bold print:text-xs leading-relaxed ${hall.selected ? 'text-[#1a6e35]' : 'text-slate-600'}`}>
                         {hall.urduName}
                       </span>
                     </div>
-                    <span className="text-[9px] sm:text-[10px] font-sans text-slate-500 block print:text-[9px]">
+                    <span className="text-[8px] sm:text-[9px] font-sans text-slate-500 block print:text-[8px]">
                       {hall.englishName}
                     </span>
                   </div>
@@ -232,7 +232,7 @@ const SpaciousReceiptPage = ({ booking, copyType, copyUrduTitle, copyEnglishTitl
 
         {/* Financial Banner */}
         <div
-          className="border border-[#1a6e35] rounded-xl p-2.5 sm:p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 print:py-1.5 print:px-3 print:rounded-lg"
+          className="border border-[#1a6e35] rounded-xl p-2 sm:p-3 flex flex-col sm:flex-row items-center justify-between gap-2 print:py-1 print:px-2.5 print:rounded-lg"
           style={{
             backgroundColor: '#f8fafc',
             WebkitPrintColorAdjust: 'exact',
@@ -240,14 +240,14 @@ const SpaciousReceiptPage = ({ booking, copyType, copyUrduTitle, copyEnglishTitl
           }}
         >
           <div className="flex-1">
-            <span className="text-[10px] font-sans font-bold text-slate-500 uppercase tracking-wider block print:text-[9px]">AMOUNT RECEIVED IN WORDS / مبلغ حرفی</span>
+            <span className="text-[9px] font-sans font-bold text-slate-500 uppercase tracking-wider block print:text-[8px]">AMOUNT RECEIVED IN WORDS / مبلغ حرفی</span>
             <p className="text-xs sm:text-sm font-sans font-bold italic text-slate-800 mt-0.5 capitalize print:text-xs leading-relaxed">
               {amountWords}
             </p>
           </div>
 
           <div
-            className="px-4 py-1.5 sm:px-5 sm:py-2 rounded-xl text-center min-w-[170px] sm:min-w-[190px] print:px-3.5 print:py-1 print:min-w-[170px]"
+            className="px-3.5 py-1 sm:px-4 sm:py-1.5 rounded-xl text-center min-w-[150px] sm:min-w-[170px] print:px-3 print:py-0.5 print:min-w-[150px]"
             style={{
               backgroundColor: '#1a6e35',
               color: '#ffffff',
@@ -255,44 +255,44 @@ const SpaciousReceiptPage = ({ booking, copyType, copyUrduTitle, copyEnglishTitl
               printColorAdjust: 'exact'
             }}
           >
-            <span className="text-[10px] font-sans uppercase tracking-wider block font-bold text-emerald-100 print:text-[9px]">TOTAL AMOUNT PAID</span>
-            <div className="text-lg sm:text-xl font-sans font-black tracking-tight text-white mt-0.5 print:text-lg">
+            <span className="text-[9px] font-sans uppercase tracking-wider block font-bold text-emerald-100 print:text-[8px]">TOTAL AMOUNT PAID</span>
+            <div className="text-base sm:text-lg font-sans font-black tracking-tight text-white mt-0.5 print:text-base">
               Rs. {Number(booking.amount || 0).toLocaleString()}/-
             </div>
           </div>
         </div>
 
         {/* 4-Column Compact Signatures Row */}
-        <div className="pt-2 sm:pt-3 pb-1 grid grid-cols-4 items-end gap-3 text-center border-t border-slate-200 print:pt-1.5 print:pb-0.5">
+        <div className="pt-2 sm:pt-2.5 pb-0.5 grid grid-cols-4 items-end gap-2 text-center border-t border-slate-200 print:pt-1 print:pb-0">
           <div className="flex flex-col items-center">
-            <div className="w-24 sm:w-32 border-b border-slate-800 pb-0.5 mb-1 print:w-22"></div>
+            <div className="w-20 sm:w-28 border-b border-slate-800 pb-0.5 mb-1 print:w-20"></div>
             <span className="text-xs sm:text-sm font-bold text-slate-800 print:text-xs leading-relaxed">وصول کنندہ</span>
-            <span className="text-[9px] font-sans text-slate-500 font-bold print:text-[8px]">Received By</span>
+            <span className="text-[8px] font-sans text-slate-500 font-bold print:text-[7px]">Received By</span>
           </div>
 
           <div className="flex flex-col items-center">
-            <div className="w-24 sm:w-32 border-b border-slate-800 pb-0.5 mb-1 print:w-22"></div>
+            <div className="w-20 sm:w-28 border-b border-slate-800 pb-0.5 mb-1 print:w-20"></div>
             <span className="text-xs sm:text-sm font-bold text-slate-800 print:text-xs leading-relaxed">رعایت کی منظوری</span>
-            <span className="text-[9px] font-sans text-slate-500 font-bold print:text-[8px]">Discount Approval</span>
+            <span className="text-[8px] font-sans text-slate-500 font-bold print:text-[7px]">Discount Approval</span>
           </div>
 
           <div className="flex flex-col items-center">
-            <div className="w-24 sm:w-32 border-b border-slate-800 pb-0.5 mb-1 print:w-22"></div>
+            <div className="w-20 sm:w-28 border-b border-slate-800 pb-0.5 mb-1 print:w-20"></div>
             <span className="text-xs sm:text-sm font-bold text-slate-800 print:text-xs leading-relaxed">بکنگ کلرک</span>
-            <span className="text-[9px] font-sans text-slate-500 font-bold print:text-[8px]">Booking Officer</span>
+            <span className="text-[8px] font-sans text-slate-500 font-bold print:text-[7px]">Booking Officer</span>
           </div>
 
           <div className="flex flex-col items-center">
-            <div className="w-24 sm:w-32 border-b border-slate-800 pb-0.5 mb-1 print:w-22"></div>
+            <div className="w-20 sm:w-28 border-b border-slate-800 pb-0.5 mb-1 print:w-20"></div>
             <span className="text-xs sm:text-sm font-bold text-slate-800 print:text-xs leading-relaxed">جنرل سیکریٹری</span>
-            <span className="text-[9px] font-sans text-slate-500 font-bold print:text-[8px]">General Secretary</span>
+            <span className="text-[8px] font-sans text-slate-500 font-bold print:text-[7px]">General Secretary</span>
           </div>
         </div>
       </div>
 
       {/* Footer Notice */}
-      <div className="mt-2 pt-1 sm:mt-2.5 sm:pt-2 border-t border-slate-200 text-center print:mt-1.5 print:pt-1">
-        <p className="text-xs sm:text-sm font-bold text-slate-700 print:text-xs leading-relaxed">
+      <div className="mt-1.5 pt-1 sm:mt-2 sm:pt-1.5 border-t border-slate-200 text-center print:mt-1 print:pt-0.5">
+        <p className="text-[11px] sm:text-xs font-bold text-slate-700 print:text-[10px] leading-relaxed">
           ہدایات: پشت پر لکھی ہوئی تمام قواعد و ضوابط کی پابندی لازمی ہے۔ خلاف ورزی کی صورت میں جماعت کو بکنگ منسوخ کرنے کا اختیار ہوگا۔
         </p>
       </div>
@@ -428,7 +428,7 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
               }
               @page {
                 size: A4 portrait;
-                margin: 5mm;
+                margin: 4mm;
               }
             }
           `}</style>
@@ -448,9 +448,9 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
 
             {/* Scissor Cut Line Separator */}
             {printMode === 'both' && (
-              <div className="w-full my-3 print:my-1.5 flex items-center gap-3 text-slate-500 select-none">
+              <div className="w-full my-2 print:my-1 flex items-center gap-2 text-slate-500 select-none">
                 <div className="flex-1 border-b-2 border-dashed border-slate-400"></div>
-                <span className="text-xl print:text-base text-slate-600 font-bold">✂</span>
+                <span className="text-lg print:text-sm text-slate-600 font-bold">✂</span>
                 <div className="flex-1 border-b-2 border-dashed border-slate-400"></div>
               </div>
             )}
