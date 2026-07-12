@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCoaStore } from '../store/coaStore';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
+import { useNotificationStore } from '../store/notificationStore';
 import { ChevronLeft, Save, Sparkles, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +12,7 @@ export const RevenueEntryForm = () => {
   const navigate = useNavigate();
   const { flatAccounts, fetchAccountsList, addAccount } = useCoaStore();
   const { addVoucher } = useBankVoucherStore();
+  const { addNotification } = useNotificationStore();
 
   const [postingDate, setPostingDate] = useState(new Date().toISOString().split('T')[0]);
   const [reference, setReference] = useState('');
@@ -220,10 +222,19 @@ export const RevenueEntryForm = () => {
       };
 
       await addVoucher(payload);
+      addNotification({
+        title: 'Revenue Entry Saved',
+        message: `Successfully recorded revenue of Rs. ${val.toLocaleString()} for ${revenueSource}`
+      });
       showToast('Income recorded and posted to your accounts!', 'success');
       navigate('/bank-vouchers');
     } catch (err) {
-      showToast(err.message || "Couldn't save the revenue entry. Please try again.", 'error');
+      const errMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message || "Couldn't save the revenue entry. Please try again.";
+      addNotification({
+        title: 'Error Saving Revenue Entry',
+        message: errMsg
+      });
+      showToast(errMsg, 'error');
     } finally {
       setLoading(false);
       setCreationStatus('');

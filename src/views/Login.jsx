@@ -75,13 +75,13 @@ export const Login = () => {
         <div className="absolute -inset-[2px] bg-gradient-to-r from-emerald-500/20 via-blue-500/20 to-amber-500/20 rounded-[26px] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 hidden sm:block pointer-events-none" />
 
         {/* Main card */}
-        <div className="relative w-full box-border bg-slate-900/70 backdrop-blur-2xl border border-slate-800/60 rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-9 shadow-2xl shadow-black/30">
+        <div className="relative w-full box-border bg-slate-800/80 dark:bg-slate-900/70 backdrop-blur-2xl border border-slate-600/40 dark:border-slate-800/60 rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-9 shadow-2xl shadow-black/10 dark:shadow-black/30">
           {/* Header */}
           <div className="text-center mb-6 sm:mb-8">
-            <h2 className="text-xl sm:text-2xl lg:text-[28px] font-extrabold tracking-tight text-white">
+            <h2 className="text-xl sm:text-2xl lg:text-[28px] font-extrabold tracking-tight text-slate-100">
               Welcome back
             </h2>
-            <p className="text-slate-500 text-[13px] mt-1.5 font-medium">
+            <p className="text-slate-400 dark:text-slate-500 text-[13px] mt-1.5 font-medium">
               Sign in to your financial workspace
             </p>
           </div>
@@ -105,12 +105,12 @@ export const Login = () => {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+              <label className="block text-xs font-semibold text-slate-300 dark:text-slate-400 mb-1.5">
                 Email
               </label>
               <div className="relative group/input">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Mail className="h-[15px] w-[15px] text-slate-600 group-focus-within/input:text-amber-400 transition-colors" />
+                  <Mail className="h-[15px] w-[15px] text-slate-400 dark:text-slate-600 group-focus-within/input:text-amber-400 transition-colors" />
                 </div>
                 <input
                   type="email"
@@ -119,7 +119,7 @@ export const Login = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
                   title="Please enter a valid email address (e.g. name@company.com)"
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 text-sm transition-all duration-200 font-medium"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-700/50 dark:bg-slate-950/60 border border-slate-500/50 dark:border-slate-800 text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-amber-500/60 text-sm transition-all duration-200 font-medium"
                   placeholder="name@company.com"
                   autoComplete="email"
                   required
@@ -128,19 +128,19 @@ export const Login = () => {
             </div>            {/* Password */}
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mb-1.5">
-                <label className="block text-xs font-semibold text-slate-400">
+                <label className="block text-xs font-semibold text-slate-300 dark:text-slate-400">
                   Password
                 </label>
                 <Link
                   to="/forgot-password"
-                  className="text-[11px] font-semibold text-slate-500 hover:text-amber-400 transition-colors duration-200"
+                  className="text-[11px] font-semibold text-slate-300 dark:text-slate-500 hover:text-amber-400 transition-colors duration-200"
                 >
                   Forgot?
                 </Link>
               </div>
               <div className="relative group/input">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Lock className="h-[15px] w-[15px] text-slate-600 group-focus-within/input:text-amber-400 transition-colors" />
+                  <Lock className="h-[15px] w-[15px] text-slate-400 dark:text-slate-600 group-focus-within/input:text-amber-400 transition-colors" />
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -149,7 +149,7 @@ export const Login = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   pattern="^.{6,}$"
                   title="Password must be at least 6 characters long."
-                  className="w-full pl-10 pr-11 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 text-sm transition-all duration-200 font-medium"
+                  className="w-full pl-10 pr-11 py-3 rounded-xl bg-slate-700/50 dark:bg-slate-950/60 border border-slate-500/50 dark:border-slate-800 text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-amber-500/60 text-sm transition-all duration-200 font-medium"
                   placeholder="••••••••"
                   autoComplete="current-password"
                   required
@@ -157,7 +157,7 @@ export const Login = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-600 hover:text-slate-300 transition-colors cursor-pointer"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 dark:text-slate-600 hover:text-slate-200 dark:hover:text-slate-300 transition-colors cursor-pointer"
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -185,9 +185,9 @@ export const Login = () => {
 
           {/* Divider */}
           <div className="flex items-center gap-4 my-6">
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-800 to-transparent" />
-            <span className="text-[10px] text-slate-600 font-bold uppercase tracking-[0.2em]">or</span>
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-800 to-transparent" />
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-500/50 dark:via-slate-800 to-transparent" />
+            <span className="text-[10px] text-slate-300 dark:text-slate-600 font-bold uppercase tracking-[0.2em]">or</span>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-500/50 dark:via-slate-800 to-transparent" />
           </div>
 
           {/* Guest Mode */}
@@ -202,18 +202,18 @@ export const Login = () => {
                 });
               }
             }}
-            className="w-full py-3 px-4 bg-white/[0.03] hover:bg-white/[0.06] border border-slate-800/80 hover:border-slate-700 text-slate-400 hover:text-slate-200 font-semibold text-sm rounded-xl focus:outline-none transition-all duration-200 flex items-center justify-center gap-2.5 cursor-pointer active:scale-[0.98]"
+            className="w-full py-3 px-4 bg-slate-700/30 dark:bg-white/[0.03] hover:bg-slate-600/30 dark:hover:bg-white/[0.06] border border-slate-500/50 dark:border-slate-800/80 hover:border-slate-400 dark:hover:border-slate-700 text-slate-200 dark:text-slate-400 hover:text-slate-100 dark:hover:text-slate-200 font-semibold text-sm rounded-xl focus:outline-none transition-all duration-200 flex items-center justify-center gap-2.5 cursor-pointer active:scale-[0.98]"
           >
             <UserCircle className="h-4 w-4" />
             Explore as Guest
           </button>
-          <p className="text-center text-[10px] text-slate-600 mt-2.5 tracking-wide">
+          <p className="text-center text-[10px] text-slate-300 dark:text-slate-600 mt-2.5 tracking-wide">
             Read-only access · No credentials required
           </p>
 
           {/* Footer */}
-          <div className="text-center mt-5 sm:mt-7 pt-5 sm:pt-6 border-t border-slate-800/50">
-            <span className="text-slate-600 text-xs">New to AccuLedger? </span>
+          <div className="text-center mt-5 sm:mt-7 pt-5 sm:pt-6 border-t border-slate-500/30 dark:border-slate-800/50">
+            <span className="text-slate-300 dark:text-slate-600 text-xs">New to AccuLedger? </span>
             <Link
               to="/signup"
               className="text-amber-400/80 hover:text-amber-300 text-xs font-bold transition-colors duration-200"

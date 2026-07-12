@@ -386,6 +386,9 @@ async function main() {
     { glCode: '3020402', accountName: 'Membership Fee',        parentCode: '3020400', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Membership fee income' },
     { glCode: '3020403', accountName: 'Decoration Commission', parentCode: '3020400', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Decoration/lighting commission' },
     { glCode: '3020404', accountName: 'Marriage Donation Received', parentCode: '3020400', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Marriage donation received' },
+    { glCode: '3020405', accountName: 'Coconut Income', parentCode: '3020400', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Coconut income' },
+    { glCode: '3020406', accountName: 'Qurbani Cow Hide Income', parentCode: '3020400', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Qurbani cow hide income' },
+    { glCode: '3020407', accountName: 'Lighting Commission', parentCode: '3020400', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Lighting commission' },
     // Under Salaries Expense (4010100)
     { glCode: '4010101', accountName: 'Staff Salary',         parentCode: '4010100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Monthly staff salary disbursement' },
     { glCode: '4010102', accountName: 'Staff Bonus',          parentCode: '4010100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Staff bonus' },
@@ -460,13 +463,21 @@ async function main() {
     {
       category: 'Other Income & Donations',
       heads: [
-        { name: 'Bus booking', glAccountName: 'Bus Booking Income' },
-        { name: 'Membership fee', glAccountName: 'Membership Fee' },
-        { name: 'Qurbani space', glAccountName: 'Qurbani Fees' },
+        { name: 'Bus Booking', glAccountName: 'Bus Booking Income' },
+        { name: 'Membership Fee', glAccountName: 'Membership Fee' },
+        { name: 'Qurbani Space', glAccountName: 'Qurbani Fees' },
+        { name: 'Qurbani Cow Hide', glAccountName: 'Qurbani Cow Hide Income' },
         { name: 'Zakat', glAccountName: 'Zakat 2024-25' },
         { name: 'Fitra', glAccountName: 'Fitra Collection' },
-        { name: 'Marriage donation', glAccountName: 'Marriage Donation Received' },
-        { name: 'Decoration/Lighting commission', glAccountName: 'Decoration Commission' }
+        { name: 'Coconut Income', glAccountName: 'Coconut Income' },
+        { name: 'Marriage Donation Received', glAccountName: 'Marriage Donation Received' }
+      ]
+    },
+    {
+      category: 'Commission Income',
+      heads: [
+        { name: 'Decoration Commission', glAccountName: 'Decoration Commission' },
+        { name: 'Lighting Commission', glAccountName: 'Lighting Commission' }
       ]
     }
   ];

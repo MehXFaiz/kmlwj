@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Search, Printer, AlertTriangle, CheckCircle, Trash2, X, DollarSign, Calendar, Users, Building, Edit2, CheckCircle2, ChevronDown, LayoutGrid, Table as TableIcon, MapPin, Tag, Phone, Bus, Heart, User, Hash } from 'lucide-react';
+import { Plus, Search, Printer, AlertTriangle, CheckCircle, Trash2, X, DollarSign, Calendar, Users, Building, Edit2, CheckCircle2, ChevronDown, LayoutGrid, Table as TableIcon, MapPin, Tag, Phone, Bus, Heart, User, Hash, RotateCcw } from 'lucide-react';
 import { useRevenueCollectionStore } from '../store/revenueCollectionStore';
 import { useAuthStore } from '../store/authStore';
 import { useCoaStore } from '../store/coaStore';
@@ -25,7 +25,7 @@ export const SpecializedRevenueSection = ({
   destLabel = 'Destination'
 }) => {
   const { t } = useTranslation();
-  const { collections, loading, fetchCollections, addCollection, updateCollection, postCollection, deleteCollection, bulkDeleteCollections } = useRevenueCollectionStore();
+  const { collections, loading, fetchCollections, addCollection, updateCollection, postCollection, revertCollection, deleteCollection, bulkDeleteCollections } = useRevenueCollectionStore();
   const { canEditOrDelete } = useAuthStore();
   const canPostToLedger = useAuthStore((s) => s.canPostToLedger);
   const { flatAccounts, fetchAccountsList } = useCoaStore();
@@ -64,6 +64,17 @@ export const SpecializedRevenueSection = ({
       showToast(`${category} posted to ledger successfully!`, 'success');
     } catch (err) {
       showToast(err.message || `Failed to post ${category}`, 'error');
+    }
+  };
+
+  const handleRevert = async (id) => {
+    if (window.confirm(`Are you sure you want to revert this ${category} record? Its journal entries will be deleted and status reset to Pending Post.`)) {
+      try {
+        await revertCollection(id);
+        showToast(`${category} reverted from ledger successfully!`, 'success');
+      } catch (err) {
+        showToast(err.message || `Failed to revert ${category}`, 'error');
+      }
     }
   };
 
@@ -351,6 +362,15 @@ export const SpecializedRevenueSection = ({
                                 <CheckCircle2 className="h-3.5 w-3.5" /> Post
                               </button>
                             )}
+                            {!isConfirmed && canPostToLedger && (
+                              <button
+                                onClick={() => handleRevert(item.id)}
+                                className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/30 transition-all"
+                                title="Revert from Ledger"
+                              >
+                                <RotateCcw className="h-3.5 w-3.5" /> Revert
+                              </button>
+                            )}
                             <button
                               onClick={() => setPrintItem(item)}
                               className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors inline-flex border border-slate-800 hover:border-slate-700"
@@ -456,6 +476,13 @@ export const SpecializedRevenueSection = ({
                             className="p-1.5 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-950/40 rounded transition-colors inline-flex"
                             title="Post to Ledger">
                             <CheckCircle2 className="h-4 w-4" />
+                          </button>
+                        )}
+                        {item.status !== 'Confirmed' && canPostToLedger && (
+                          <button onClick={() => handleRevert(item.id)}
+                            className="p-1.5 text-rose-500 hover:text-rose-400 hover:bg-rose-950/40 rounded transition-colors inline-flex"
+                            title="Revert from Ledger">
+                            <RotateCcw className="h-4 w-4" />
                           </button>
                         )}
                         <button onClick={() => setPrintItem(item)}

@@ -131,6 +131,9 @@ var journal_entries_default = makeHandler(async (req, res) => {
           if (je.status === "Posted" && status === "Cancelled") {
             return await AccountingService.reverseJournalEntry(tx, id, req.user.id, req.body.reason);
           }
+          if (je.status === "Cancelled") {
+            return await AccountingService.restoreCancelledJournalEntry(tx, id, status, req.user.id);
+          }
           const updatedJe = await tx.journalEntry.update({
             where: { id },
             data: { status }

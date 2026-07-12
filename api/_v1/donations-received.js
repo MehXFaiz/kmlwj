@@ -222,10 +222,10 @@ var donations_received_default = makeHandler(async (req, res) => {
             journalEntryId = postingResult.journalEntry.id;
           }
         }
-      } else if (existing.status === "POSTED" && newStatus === "CANCELLED") {
+      } else if (existing.status === "POSTED" && newStatus !== "POSTED") {
         if (existing.journalEntryId) {
           try {
-            await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user.id, "Donation Receipt Cancelled");
+            await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user.id, `Donation Receipt status changed to ${newStatus}`);
             journalEntryId = null;
           } catch (e) {
           }

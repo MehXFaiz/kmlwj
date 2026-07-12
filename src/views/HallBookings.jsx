@@ -7,6 +7,7 @@ import { useAuthStore } from '../store/authStore';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { showToast } from '../components/ui/Toast';
 import { HallBookingReceiptModal } from '../components/receipts/HallBookingReceiptModal';
+import { HallBookingGLModal } from '../components/receipts/HallBookingGLModal';
 import HallBookingCalendar from '../components/common/HallBookingCalendar';
 
 const formatHallName = (booking) => {
@@ -27,6 +28,7 @@ export const HallBookings = () => {
   const canPostToLedger = useAuthStore((s) => s.canPostToLedger);
   const [search, setSearch] = useState('');
   const [printItem, setPrintItem] = useState(null);
+  const [glItem, setGlItem] = useState(null);
   const [viewMode, setViewMode] = useState('cards');
 
   const [selectedIds, setSelectedIds] = useState([]);
@@ -230,15 +232,15 @@ export const HallBookings = () => {
                           </div>
 
                           <span className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full border text-[10px] font-extrabold uppercase tracking-wide shrink-0 whitespace-nowrap ${
-                            booking.status === 'Confirmed' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            booking.status === 'POSTED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                           }`}>
-                            {booking.status === 'Confirmed' ? (
+                            {booking.status === 'POSTED' ? (
                               <>
-                                <AlertTriangle className="w-3 h-3 shrink-0" /> PENDING POST
+                                <CheckCircle className="w-3 h-3 shrink-0" /> POSTED
                               </>
                             ) : (
                               <>
-                                <CheckCircle className="w-3 h-3 shrink-0" /> POSTED
+                                <AlertTriangle className="w-3 h-3 shrink-0" /> PENDING POST
                               </>
                             )}
                           </span>
@@ -283,11 +285,11 @@ export const HallBookings = () => {
                       </div>
 
                       {/* Card Footer: Date & Action Icons */}
-                      <div className="flex items-center justify-between gap-2 pt-3.5 border-t border-slate-800/80">
+                      <div className="flex flex-col gap-3 pt-3.5 border-t border-slate-800/80">
                         <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
                           <Calendar className="w-3.5 h-3.5 text-slate-400" /> {booking.programDate ? new Date(booking.programDate).toLocaleDateString() : 'N/A'}
                         </span>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-end gap-2 w-full">
                           <button
                             type="button"
                             onClick={() => setPrintItem(booking)}
@@ -296,7 +298,8 @@ export const HallBookings = () => {
                           >
                             <Printer className="w-3.5 h-3.5" />
                           </button>
-                          {booking.status === 'Confirmed' && canPostToLedger && (
+
+                          {(booking.status === 'Confirmed' || booking.status === 'Pending') && canPostToLedger && (
                             <button
                               type="button"
                               onClick={() => handlePost(booking.id)}
@@ -401,18 +404,18 @@ export const HallBookings = () => {
                       </td>
                       <td className="px-6 py-4 font-bold text-emerald-400">Rs. {Math.round(booking.amount).toLocaleString()}</td>
                       <td className="px-6 py-4">
-                        {booking.status === 'Confirmed' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold uppercase tracking-wider">
-                            <AlertTriangle className="h-3 w-3" /> Pending Post
-                          </span>
-                        ) : (
+                        {booking.status === 'POSTED' ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold uppercase tracking-wider">
                             <CheckCircle className="h-3 w-3" /> Posted
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold uppercase tracking-wider">
+                            <AlertTriangle className="h-3 w-3" /> Pending Post
                           </span>
                         )}
                       </td>
                       <td className="px-6 py-4 text-right space-x-2">
-                        {booking.status === 'Confirmed' && canPostToLedger && (
+                        {(booking.status === 'Confirmed' || booking.status === 'Pending') && canPostToLedger && (
                           <button onClick={() => handlePost(booking.id)}
                             className="p-1.5 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-950/40 rounded transition-colors inline-flex"
                             title="Post to Ledger">
@@ -431,6 +434,13 @@ export const HallBookings = () => {
                           title="Print Receipt">
                           <Printer className="h-4 w-4" />
                         </button>
+                        {booking.status === 'POSTED' && (
+                          <button onClick={() => setGlItem(booking)}
+                            className="p-1.5 text-brand-400 hover:text-brand-300 hover:bg-brand-500/10 rounded transition-colors inline-flex"
+                            title="Print GL Voucher">
+                            <FileText className="h-4 w-4" />
+                          </button>
+                        )}
                         {canEditOrDelete && (
                           <Link to={`/hall-bookings/edit/${booking.id}`}
                             className="p-1.5 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 rounded transition-colors inline-flex ml-1"
@@ -465,6 +475,10 @@ export const HallBookings = () => {
       
       {printItem && (
         <HallBookingReceiptModal booking={printItem} onClose={() => setPrintItem(null)} />
+      )}
+
+      {glItem && (
+        <HallBookingGLModal booking={glItem} onClose={() => setGlItem(null)} />
       )}
 
       {showBulkConfirm && (

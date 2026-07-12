@@ -899,6 +899,82 @@ export class AccountingService {
   }
 
   /**
+   * Restores a Cancelled Journal Entry: removes reversal Ledger Entries and updates Account running balances.
+   */
+  static async restoreCancelledJournalEntry(tx: any, journalEntryId: string, newStatus: string, postedBy?: string) {
+    const je = await tx.journalEntry.findUnique({
+      where: { id: journalEntryId },
+      include: { lines: true }
+    });
+
+    if (!je) throw new Error('Accounting Engine Error: Journal entry not found.');
+    if (je.status !== 'Cancelled') return je;
+
+    // Delete the reversal ledger entries (-REV)
+    const revReference = `${je.voucherNo}-REV`;
+    await tx.ledgerEntry.deleteMany({
+      where: { reference: revReference }
+    });
+
+    // Restore the account balances (reverse the reversal)
+    for (const line of je.lines) {
+      const netChange = line.debit - line.credit; // opposite of reversal
+      if (netChange !== 0) {
+        await tx.account.update({
+          where: { id: line.accountId },
+          data: {
+            currentBalance: {
+              increment: netChange
+            }
+          }
+        });
+      }
+    }
+
+    // Re-create ledger entries if restoring to Posted status
+    if (newStatus === 'Posted') {
+      for (const line of je.lines) {
+        await tx.ledgerEntry.create({
+          data: {
+            accountId: line.accountId,
+            debit: line.debit,
+            credit: line.credit,
+            reference: je.voucherNo,
+            description: line.description || je.description,
+            postingDate: je.postingDate,
+          }
+        });
+      }
+    }
+
+    // Update the journal entry status (and remove the [Cancelled/Reversed] from description)
+    const newDescription = je.description ? je.description.replace(/\[Cancelled\/Reversed[^\]]*\]/, '').trim() : '';
+    const updatedJe = await tx.journalEntry.update({
+      where: { id: je.id },
+      data: { 
+        status: newStatus,
+        description: newDescription
+      }
+    });
+
+    try {
+      await tx.auditLog.create({
+        data: {
+          userId: postedBy && postedBy.length === 36 ? postedBy : null,
+          action: `Restore Journal (${je.voucherNo})`,
+          module: 'Journal Entries',
+          oldValues: { status: 'Cancelled' },
+          newValues: { status: newStatus, voucherNo: je.voucherNo },
+        }
+      });
+    } catch (e) {
+      // ignore non-uuid audit user
+    }
+
+    return updatedJe;
+  }
+
+  /**
    * Permanently deletes a Journal Entry, its lines, and associated Ledger Entries from the database,
    * while recalculating account balances.
    */

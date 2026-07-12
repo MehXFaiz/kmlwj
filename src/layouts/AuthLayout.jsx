@@ -54,7 +54,7 @@ export const AuthLayout = ({ children }) => {
           >
             کچھی مسلم لوہار واڈہ ویلفیئر جماعت
           </div>
-          <p className="text-slate-400 text-sm font-medium mt-2 max-w-xs">
+          <p className="text-slate-400 dark:text-slate-400 text-sm font-medium mt-2 max-w-xs">
             Enterprise Resource Planning for modern finance teams
           </p>
         </div>
@@ -62,14 +62,14 @@ export const AuthLayout = ({ children }) => {
         {/* Hero headline */}
         <div className="relative z-10 -mt-8">
           <h1 className="text-4xl xl:text-5xl font-black leading-[1.15] tracking-tight">
-            <span className="text-white">Financial </span>
+            <span className="text-slate-100">Financial </span>
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-brand-300 via-brand-450 to-brand-500">
               clarity
             </span>
             <br />
-            <span className="text-white">starts here.</span>
+            <span className="text-slate-100">starts here.</span>
           </h1>
-          <p className="text-slate-400 text-sm leading-relaxed mt-5 max-w-sm">
+          <p className="text-slate-300 dark:text-slate-400 text-sm leading-relaxed mt-5 max-w-sm">
             Manage your chart of accounts, journal entries, and financial reports
             with confidence and precision.
           </p>
@@ -86,8 +86,8 @@ export const AuthLayout = ({ children }) => {
                 <Icon className="w-4 h-4 text-brand-400" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-200">{label}</p>
-                <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{desc}</p>
+                <p className="text-xs font-bold text-slate-100 dark:text-slate-200">{label}</p>
+                <p className="text-[11px] text-slate-300 dark:text-slate-500 mt-0.5 leading-snug">{desc}</p>
               </div>
             </div>
           ))}

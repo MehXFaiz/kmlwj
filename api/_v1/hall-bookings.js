@@ -177,7 +177,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
       await logAudit(req.user.id, "Revert Hall Booking", "REVENUE", booking, result, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, data: result, message: "Booking reverted from ledger successfully" });
     }
-    const { bookingDate, bookerName, address, mobile, programDate, programType, timings, hallId, isForJamaat, amount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
+    const { bookingDate, bookerName, fatherHusbandName, address, mobile, programDate, programType, functionType, timeFrom, timeTo, timings, hallId, isForJamaat, amount, discount, netAmount, receivedAmount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
     if (!bookerName || !programDate || !hallId || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: "Missing required fields", status: 400 } });
     }
@@ -248,14 +248,21 @@ var hall_bookings_default = makeHandler(async (req, res) => {
             bookingDate: bookingDate ? new Date(bookingDate) : void 0,
             receiptNo: nextReceiptNo,
             bookerName,
+            fatherHusbandName: fatherHusbandName || null,
             address: address || null,
             mobile: mobile || null,
             programDate: new Date(programDate),
             programType: programType || null,
+            functionType: functionType || null,
+            timeFrom: timeFrom || null,
+            timeTo: timeTo || null,
             timings: timings || null,
             hallId,
             isForJamaat: Boolean(isForJamaat),
             amount: parsedAmount,
+            discount: discount != null ? parseFloat(discount) : 0,
+            netAmount: netAmount != null ? parseFloat(netAmount) : null,
+            receivedAmount: receivedAmount != null ? parseFloat(receivedAmount) : null,
             paymentMethod,
             bankAccountId: bankAccountId || null,
             chequeNumber: chequeNumber || null,
@@ -357,7 +364,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     if (!existingBooking) {
       return res.status(404).json({ error: { message: "Booking not found", status: 404 } });
     }
-    const { bookingDate, bookerName, address, mobile, programDate, programType, timings, hallId, isForJamaat, amount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
+    const { bookingDate, bookerName, fatherHusbandName, address, mobile, programDate, programType, functionType, timeFrom, timeTo, timings, hallId, isForJamaat, amount, discount, netAmount, receivedAmount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
     if (!bookerName || !programDate || !hallId || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: "Missing required fields", status: 400 } });
     }
@@ -451,14 +458,21 @@ var hall_bookings_default = makeHandler(async (req, res) => {
           data: {
             bookingDate: bookingDate ? new Date(bookingDate) : void 0,
             bookerName,
+            fatherHusbandName: fatherHusbandName || null,
             address: address || null,
             mobile: mobile || null,
             programDate: new Date(programDate),
             programType: programType || null,
+            functionType: functionType || null,
+            timeFrom: timeFrom || null,
+            timeTo: timeTo || null,
             timings: timings || null,
             hallId,
             isForJamaat: Boolean(isForJamaat),
             amount: parsedAmount,
+            discount: discount != null ? parseFloat(discount) : 0,
+            netAmount: netAmount != null ? parseFloat(netAmount) : null,
+            receivedAmount: receivedAmount != null ? parseFloat(receivedAmount) : null,
             paymentMethod,
             bankAccountId: bankAccountId || null,
             chequeNumber: chequeNumber || null,

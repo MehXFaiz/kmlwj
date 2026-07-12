@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRevenueStore } from '../store/revenueStore';
 import { useCoaStore } from '../store/coaStore';
 import { useAuthStore } from '../store/authStore';
+import { useNotificationStore } from '../store/notificationStore';
 import {
   TrendingUp, Search, Plus, ChevronDown, ChevronUp,
   CheckCircle2, XCircle, Edit2, Trash2,
@@ -48,65 +49,68 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl max-h-[92dvh] flex flex-col">
-        <div className="flex items-start sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-slate-800 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-emerald-950/60 border border-emerald-800/40 flex items-center justify-center">
-              <TrendingUp className="h-4 w-4 text-emerald-400" />
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-md" onClick={onClose} />
+      <div className="relative z-10 w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border border-brand-600/30 bg-slate-900 shadow-2xl shadow-black/60 max-h-[92dvh] flex flex-col">
+
+        {/* Header */}
+        <div className="flex items-start sm:items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b border-brand-600/20 shrink-0 bg-gradient-to-r from-brand-900/30 to-transparent">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-brand-600/30 to-brand-900/50 border border-brand-600/40 flex items-center justify-center shadow-inner">
+              <TrendingUp className="h-4.5 w-4.5 text-brand-300" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-200">{initial ? 'Edit Revenue Head' : 'New Revenue Head'}</h3>
+              <h3 className="text-sm font-bold text-slate-100">{initial ? 'Edit Revenue Head' : 'New Revenue Head'}</h3>
               <p className="text-[11px] text-slate-500">Define a revenue classification</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors">
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800/80 text-slate-500 hover:text-slate-200 transition-colors border border-transparent hover:border-slate-700/50">
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
+        {/* Body */}
+        <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Name *</label>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Name *</label>
               <input
                 value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                 placeholder="e.g. Zakat"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 transition-all font-medium"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-slate-700/60 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500/70 focus:bg-slate-950/90 transition-all font-medium hover:border-slate-600/60"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Amount (PKR)</label>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Amount (PKR)</label>
               <input
                 type="number"
                 value={form.amount || ''}
                 onChange={e => setForm(f => ({ ...f, amount: parseFloat(e.target.value) || 0 }))}
                 placeholder="0.00"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 transition-all font-medium"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-slate-700/60 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500/70 focus:bg-slate-950/90 transition-all font-medium hover:border-slate-600/60"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Category *</label>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Category *</label>
               <select
                 value={form.category}
                 onChange={e => setForm(f => ({ ...f, category: e.target.value, hall: e.target.value === 'Hall Bookings' ? '' : f.hall }))}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-amber-500/60 transition-all font-medium"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-slate-700/60 text-sm text-slate-100 focus:outline-none focus:border-brand-500/70 focus:bg-slate-950/90 transition-all font-medium hover:border-slate-600/60 cursor-pointer"
               >
-                {['Hall Bookings', 'Other Income'].map(c => (
+                {['Hall Bookings', 'Other Income', 'Other Income & Donations', 'Commission Income'].map(c => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Linked Account ID</label>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Linked Account ID</label>
               <select
                 value={form.accountId || ''}
                 onChange={e => setForm(f => ({ ...f, accountId: e.target.value }))}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-amber-500/60 transition-all font-medium"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-slate-700/60 text-sm text-slate-100 focus:outline-none focus:border-brand-500/70 focus:bg-slate-950/90 transition-all font-medium hover:border-slate-600/60 cursor-pointer"
               >
                 <option value="">No Linked Account (Optional)</option>
                 {accounts.map(a => (
@@ -117,46 +121,52 @@ function RevenueHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
           </div>
 
           {form.category === 'Hall Bookings' && (
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Hall Name</label>
-                <select
-                  value={form.hall || ''}
-                  onChange={e => setForm(f => ({ ...f, hall: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-amber-500/60 transition-all font-medium"
-                >
-                  <option value="">Select a hall...</option>
-                  <option value="Bagh-e-Hajiani Garden">Bagh-e-Hajiani Garden</option>
-                  <option value="Sadaya Hall">Sadaya Hall</option>
-                  <option value="Zikarya Hall">Zikarya Hall</option>
-                  <option value="Annexy Hall">Annexy Hall</option>
-                </select>
-              </div>
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Hall Name</label>
+              <select
+                value={form.hall || ''}
+                onChange={e => setForm(f => ({ ...f, hall: e.target.value }))}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-slate-700/60 text-sm text-slate-100 focus:outline-none focus:border-brand-500/70 focus:bg-slate-950/90 transition-all font-medium hover:border-slate-600/60 cursor-pointer"
+              >
+                <option value="">Select a hall...</option>
+                <option value="Bagh-e-Hajiani Garden">Bagh-e-Hajiani Garden</option>
+                <option value="Sadaya Hall">Sadaya Hall</option>
+                <option value="Zikarya Hall">Zikarya Hall</option>
+                <option value="Annexy Hall">Annexy Hall</option>
+              </select>
             </div>
           )}
 
-          <div className="flex items-center gap-3 pt-2">
+          {/* Active Stream toggle */}
+          <div className="flex items-center gap-3 pt-1 px-3.5 py-3 rounded-xl bg-slate-800/30 border border-slate-700/40 hover:border-brand-600/30 transition-all">
             <input
               type="checkbox"
               id="isActive"
               checked={form.isActive}
               onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
-              className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-emerald-600 focus:ring-emerald-600 focus:ring-offset-slate-900 transition-all cursor-pointer"
+              className="h-4 w-4 rounded border-brand-700 bg-slate-800/60 text-brand-600 focus:ring-brand-600 focus:ring-offset-slate-900 transition-all cursor-pointer accent-brand-600"
             />
-            <label htmlFor="isActive" className="text-sm font-medium text-slate-300 cursor-pointer">
-              Active Stream
-            </label>
+            <div>
+              <label htmlFor="isActive" className="text-sm font-semibold text-slate-200 cursor-pointer block">
+                Active Stream
+              </label>
+              <span className="text-[11px] text-slate-500">This revenue head will appear in income forms</span>
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-4 border-t border-slate-800 shrink-0">
-          <button onClick={onClose} className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">
+        {/* Footer */}
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 px-5 sm:px-6 py-4 border-t border-brand-600/20 bg-gradient-to-r from-brand-900/20 to-transparent shrink-0">
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-slate-100 text-sm font-semibold border border-slate-700/60 hover:border-slate-600 transition-all"
+          >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={!form.name.trim() || !form.category.trim()}
-            className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all shadow-lg shadow-amber-600/25 active:scale-95"
+            className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-40 disabled:cursor-not-allowed text-slate-100 text-sm font-bold transition-all shadow-lg shadow-brand-900/40 active:scale-95 border border-brand-500/30"
           >
             {initial ? 'Save Changes' : 'Create Revenue Head'}
           </button>
@@ -174,6 +184,8 @@ const STATUS_COLORS = {
 const CAT_COLORS = {
   'Hall Bookings': 'bg-blue-950/50 text-blue-400 border-blue-900/40',
   'Other Income': 'bg-violet-950/50 text-violet-400 border-violet-900/40',
+  'Other Income & Donations': 'bg-violet-950/50 text-violet-400 border-violet-900/40',
+  'Commission Income': 'bg-amber-950/50 text-amber-400 border-amber-900/40',
   'Other': 'bg-slate-800/50 text-slate-400 border-slate-700/40',
 };
 
@@ -272,6 +284,7 @@ export const RevenueHeads = () => {
   const { heads, fetchHeads, addHead, updateHead, deleteHead } = useRevenueStore();
   const canEditOrDelete = useAuthStore((s) => s.canEditOrDelete);
   const { flatAccounts, fetchAccountsList } = useCoaStore();
+  const { addNotification } = useNotificationStore();
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterCat, setFilterCat] = useState('All');
@@ -324,14 +337,27 @@ export const RevenueHeads = () => {
     try {
       if (editItem) {
         await updateHead(editItem.id, data);
+        addNotification({
+          title: 'Revenue Head Updated',
+          message: `Successfully updated revenue head "${data.name}"`
+        });
       } else {
         await addHead(data);
+        addNotification({
+          title: 'Revenue Head Created',
+          message: `Successfully created revenue head "${data.name}"`
+        });
       }
       setEditItem(null);
       setModalOpen(false);
       showToast(editItem ? 'Revenue head updated successfully' : 'Revenue head created successfully', 'success');
     } catch (err) {
-      showToast(err?.response?.data?.error?.message || err.message || 'Failed to save. Please ensure inputs are correct.', 'error');
+      const errorMsg = err?.response?.data?.error?.message || err.message || 'Failed to save. Please ensure inputs are correct.';
+      addNotification({
+        title: 'Error Saving Revenue Head',
+        message: errorMsg
+      });
+      showToast(errorMsg, 'error');
     }
   };
 

@@ -39,15 +39,23 @@ export const HallBookingForm = () => {
   const { register, handleSubmit, watch, setValue, reset, formState: { isSubmitting, dirtyFields, errors }, control } = useForm({
     defaultValues: {
       bookerName: '',
+      fatherHusbandName: '',
       mobile: '',
       address: '',
       bookingDate: new Date().toISOString().split('T')[0],
       programDate: '',
       programType: '',
+      functionType: '',
+      functionTypeOther: '',
+      timeFrom: '',
+      timeTo: '',
       timings: 'Evening',
       hallId: '',
       isForJamaat: false,
       amount: '',
+      discount: '0',
+      netAmount: '',
+      receivedAmount: '',
       paymentMethod: 'CASH',
       bankAccountId: '',
       chequeNumber: '',
@@ -61,6 +69,9 @@ export const HallBookingForm = () => {
   const isForJamaat = watch('isForJamaat');
   const programDate = watch('programDate');
   const timings = watch('timings');
+  const functionType = watch('functionType');
+  const amountVal = watch('amount');
+  const discountVal = watch('discount');
 
   useEffect(() => {
     fetchAccountsList();
@@ -90,15 +101,23 @@ export const HallBookingForm = () => {
           }
           reset({
             bookerName: booking.bookerName || '',
+            fatherHusbandName: booking.fatherHusbandName || '',
             mobile: booking.mobile || '',
             address: booking.address || '',
             bookingDate: formattedBookingDate,
             programDate: formattedDate,
             programType: booking.programType || '',
+            functionType: booking.functionType || '',
+            functionTypeOther: '',
+            timeFrom: booking.timeFrom || '',
+            timeTo: booking.timeTo || '',
             timings: booking.timings || 'Evening',
             hallId: resolvedHallId,
             isForJamaat: booking.isForJamaat || false,
             amount: booking.amount || '',
+            discount: booking.discount != null ? String(booking.discount) : '0',
+            netAmount: booking.netAmount != null ? String(booking.netAmount) : '',
+            receivedAmount: booking.receivedAmount != null ? String(booking.receivedAmount) : '',
             paymentMethod: booking.paymentMethod || 'CASH',
             bankAccountId: booking.bankAccountId || '',
             chequeNumber: booking.chequeNumber || '',
@@ -220,19 +239,31 @@ export const HallBookingForm = () => {
       return;
     }
 
+    // Resolve functionType: if 'Other' use the free-text field
+    const resolvedFunctionType = data.functionType === 'Other'
+      ? (data.functionTypeOther || 'Other')
+      : data.functionType;
+
+    const parsedAmount = Math.round(parseFloat(data.amount));
+    const parsedDiscount = parseFloat(data.discount) || 0;
+    const parsedNetAmount = data.netAmount ? Math.round(parseFloat(data.netAmount)) : parsedAmount - parsedDiscount;
+    const parsedReceivedAmount = data.receivedAmount ? Math.round(parseFloat(data.receivedAmount)) : null;
+
     try {
       let savedBooking;
+      const payload = {
+        ...data,
+        functionType: resolvedFunctionType,
+        amount: parsedAmount,
+        discount: parsedDiscount,
+        netAmount: parsedNetAmount,
+        receivedAmount: parsedReceivedAmount,
+      };
       if (id) {
-        savedBooking = await updateBooking(id, {
-          ...data,
-          amount: Math.round(parseFloat(data.amount))
-        });
+        savedBooking = await updateBooking(id, payload);
         showToast('Booking updated successfully!', 'success');
       } else {
-        savedBooking = await addBooking({
-          ...data,
-          amount: Math.round(parseFloat(data.amount))
-        });
+        savedBooking = await addBooking(payload);
         showToast('Booking saved successfully!', 'success');
       }
       setNewlyCreatedBooking(savedBooking);
@@ -458,6 +489,24 @@ export const HallBookingForm = () => {
                   </div>
 
                   <div>
+                    <label className={labelClass}>Father / Husband Name</label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                      <input {...register('fatherHusbandName', {
+                        pattern: {
+                          value: /^$|^[a-zA-Z\s.-]{3,50}$/,
+                          message: 'Only letters, spaces, hyphens, and dots (3-50 chars)'
+                        }
+                      })}
+                        placeholder="Father or Husband name"
+                        className={inputWithIconClass(errors.fatherHusbandName)} />
+                    </div>
+                    {errors.fatherHusbandName && (
+                      <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.fatherHusbandName.message}</span>
+                    )}
+                  </div>
+
+                  <div>
                     <label className={labelClass}>{t('receipt.mobile')}</label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
@@ -549,17 +598,35 @@ export const HallBookingForm = () => {
                       )}
                     </div>
 
-                    <div>
-                      <label className={labelClass}>{t('receipt.programType')}</label>
-                      <input {...register('programType', {
-                        pattern: {
-                          value: /^$|^[a-zA-Z\s.-]{3,30}$/,
-                          message: 'Only letters, spaces, hyphens, and dots (3-30 chars)'
-                        }
-                      })} placeholder="e.g. Wedding, Valima"
-                        className={inputClass(errors.programType)} />
-                      {errors.programType && (
-                        <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.programType.message}</span>
+                    {/* Function Type */}
+                    <div className="sm:col-span-2">
+                      <label className={labelClass}>Function Type</label>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {['Nikah', 'Wedding', 'Mehndi', 'Birthday', 'Meeting', 'Other'].map((type) => (
+                          <label
+                            key={type}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer text-xs font-semibold transition-all ${
+                              functionType === type
+                                ? 'bg-amber-500/20 border-amber-500/60 text-amber-300'
+                                : 'bg-slate-950/60 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300'
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              value={type}
+                              {...register('functionType')}
+                              className="sr-only"
+                            />
+                            {type}
+                          </label>
+                        ))}
+                      </div>
+                      {functionType === 'Other' && (
+                        <input
+                          {...register('functionTypeOther')}
+                          placeholder="Specify function type..."
+                          className={`${inputClass(false)} mt-2`}
+                        />
                       )}
                     </div>
 
@@ -584,6 +651,24 @@ export const HallBookingForm = () => {
                       {errors.timings && (
                         <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.timings.message}</span>
                       )}
+                    </div>
+
+                    {/* Time From / To */}
+                    <div>
+                      <label className={labelClass}>Time: From – To</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="time"
+                          {...register('timeFrom')}
+                          className={`${inputClass(false)} flex-1`}
+                        />
+                        <span className="text-slate-500 text-xs font-semibold shrink-0">to</span>
+                        <input
+                          type="time"
+                          {...register('timeTo')}
+                          className={`${inputClass(false)} flex-1`}
+                        />
+                      </div>
                     </div>
 
                     <div>
@@ -627,8 +712,9 @@ export const HallBookingForm = () => {
                   </h3>
                 </div>
                 <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Hall Charges */}
                   <div>
-                    <label className={labelClass}>{t('receipt.totalAmount')} (Rs) *</label>
+                    <label className={labelClass}>Hall Charges (Rs) *</label>
                     <input type="text" {...register('amount', {
                       required: 'Amount is required',
                       pattern: {
@@ -636,12 +722,74 @@ export const HallBookingForm = () => {
                         message: 'Positive whole number'
                       }
                     })} required
+                      onChange={(e) => {
+                        register('amount').onChange(e);
+                        const amt = parseFloat(e.target.value) || 0;
+                        const disc = parseFloat(discountVal) || 0;
+                        setValue('netAmount', String(Math.max(0, amt - disc)));
+                      }}
                       className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border text-lg font-bold text-emerald-400 focus:outline-none focus:border-amber-500/60 transition-all ${errors.amount ? 'border-red-500/60' : 'border-slate-800'}`} />
                     {errors.amount && (
                       <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.amount.message}</span>
                     )}
                   </div>
 
+                  {/* Discount */}
+                  <div>
+                    <label className={labelClass}>Discount (Rs)</label>
+                    <input type="text" {...register('discount', {
+                      pattern: {
+                        value: /^\d*(\.\d+)?$/,
+                        message: 'Must be a non-negative number'
+                      }
+                    })}
+                      placeholder="0"
+                      onChange={(e) => {
+                        register('discount').onChange(e);
+                        const amt = parseFloat(amountVal) || 0;
+                        const disc = parseFloat(e.target.value) || 0;
+                        setValue('netAmount', String(Math.max(0, amt - disc)));
+                      }}
+                      className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border text-lg font-bold text-orange-400 focus:outline-none focus:border-amber-500/60 transition-all ${errors.discount ? 'border-red-500/60' : 'border-slate-800'}`} />
+                    {errors.discount && (
+                      <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.discount.message}</span>
+                    )}
+                  </div>
+
+                  {/* Net Amount */}
+                  <div>
+                    <label className={labelClass}>Net Amount (Rs)</label>
+                    <input type="text" {...register('netAmount', {
+                      pattern: {
+                        value: /^\d*(\.\d+)?$/,
+                        message: 'Must be a non-negative number'
+                      }
+                    })}
+                      placeholder="Auto-computed"
+                      className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border text-lg font-bold text-amber-400 focus:outline-none focus:border-amber-500/60 transition-all ${errors.netAmount ? 'border-red-500/60' : 'border-slate-700'}`} />
+                    {errors.netAmount && (
+                      <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.netAmount.message}</span>
+                    )}
+                    <p className="text-xs text-slate-500 mt-1">Auto-filled as Hall Charges − Discount. Editable.</p>
+                  </div>
+
+                  {/* Received Amount */}
+                  <div>
+                    <label className={labelClass}>Received Amount (Rs)</label>
+                    <input type="text" {...register('receivedAmount', {
+                      pattern: {
+                        value: /^\d*(\.\d+)?$/,
+                        message: 'Must be a non-negative number'
+                      }
+                    })}
+                      placeholder="Amount received"
+                      className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border text-lg font-bold text-sky-400 focus:outline-none focus:border-amber-500/60 transition-all ${errors.receivedAmount ? 'border-red-500/60' : 'border-slate-800'}`} />
+                    {errors.receivedAmount && (
+                      <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.receivedAmount.message}</span>
+                    )}
+                  </div>
+
+                  {/* Payment Method */}
                   <div>
                     <label className={labelClass}>Payment Method *</label>
                     <select {...register('paymentMethod', {

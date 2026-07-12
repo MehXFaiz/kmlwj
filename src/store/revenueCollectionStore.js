@@ -51,6 +51,18 @@ export const useRevenueCollectionStore = create((set, get) => ({
     }
   },
 
+  revertCollection: async (id) => {
+    try {
+      const response = await api.post('/api/v1/revenue-collections?action=revert', { id });
+      set((state) => ({
+        collections: state.collections.map(c => c.id === id ? { ...c, ...response.data.data } : c)
+      }));
+      return response.data.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   deleteCollection: async (id) => {
     try {
       await api.delete(`/api/v1/revenue-collections?id=${id}`);

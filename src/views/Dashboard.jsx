@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCoaStore } from '../store/coaStore';
 import { useDashboardStore } from '../store/dashboardStore';
 import { useJournalStore, calculateAccountBalances } from '../store/journalStore';
+import { useNotificationStore } from '../store/notificationStore';
 import {
   ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell,
   BarChart, Bar, XAxis, YAxis, Tooltip as ChartTooltip, CartesianGrid,
@@ -355,6 +356,7 @@ export const Dashboard = () => {
   const { accounts, fetchAccounts, selectedSubsidiary } = useCoaStore();
   const { journals, auditLogs, fetchJournals } = useJournalStore();
   const { stats: dbStats, fetchStats } = useDashboardStore();
+  const { addNotification } = useNotificationStore();
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {

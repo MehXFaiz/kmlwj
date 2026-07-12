@@ -7,7 +7,7 @@ import { useAuthStore } from '../store/authStore';
 import {
   DollarSign, Search, Plus, Printer, CheckCircle, Clock, XCircle,
   Eye, Trash2, UserPlus, Calendar, CreditCard, Building2, Filter,
-  ArrowDownLeft, FileText, Check, AlertCircle, X, AlertTriangle, Edit2
+  ArrowDownLeft, FileText, Check, AlertCircle, X, AlertTriangle, Edit2, RotateCcw
 } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
@@ -98,6 +98,16 @@ export const DonationsReceived = () => {
       showToast('Receipt posted to ledger successfully', 'success');
     } catch (err) {
       showToast(err.message || 'Failed to post receipt', 'error');
+    }
+  };
+
+  const handleRevert = async (item) => {
+    if (!window.confirm(`Are you sure you want to revert receipt "${item.receiptNo}"? Its journal entries will be deleted and status reset to Pending Post.`)) return;
+    try {
+      await updateDonationStatus(item.id, 'DRAFT');
+      showToast('Receipt reverted from ledger successfully', 'success');
+    } catch (err) {
+      showToast(err.message || 'Failed to revert receipt', 'error');
     }
   };
 
@@ -393,7 +403,7 @@ export const DonationsReceived = () => {
                     >
                       <Printer className="w-3.5 h-3.5" />
                     </button>
-                    {d.status === 'DRAFT' && canPostToLedger && (
+                     {d.status === 'DRAFT' && canPostToLedger && (
                       <button
                         type="button"
                         onClick={() => handlePostDraft(d)}
@@ -401,6 +411,16 @@ export const DonationsReceived = () => {
                         title="Post Receipt to Ledger"
                       >
                         <CheckCircle className="w-3.5 h-3.5" /> Post
+                      </button>
+                    )}
+                    {d.status === 'POSTED' && canPostToLedger && (
+                      <button
+                        type="button"
+                        onClick={() => handleRevert(d)}
+                        className="px-3 py-1.5 rounded-full bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 flex items-center gap-1 font-bold text-xs transition-all cursor-pointer shadow-sm"
+                        title="Revert Receipt from Ledger"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" /> Revert
                       </button>
                     )}
                     {canEditOrDelete && (
