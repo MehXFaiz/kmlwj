@@ -144,8 +144,8 @@ export const VoucherSlipModal = ({
             </div>
 
             {/* Background Emblem/Watermark */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0 opacity-[0.06] print:opacity-[0.08]">
-              <img src={logoImg} alt="KMLWJ Logo Watermark" className="w-64 h-64 sm:w-80 sm:h-80 object-contain grayscale" />
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-20 opacity-[0.18] print:opacity-[0.25]">
+              <img src={logoImg} alt="KMLWJ Logo Watermark" className="w-72 h-72 sm:w-96 sm:h-96 object-contain" />
             </div>
 
             {/* Main Content Area */}
@@ -230,7 +230,7 @@ export const VoucherSlipModal = ({
               </div>
 
               {/* Main Particulars Table */}
-              <div className="border-2 border-slate-800 my-2 bg-white rounded overflow-hidden">
+              <div className="border-2 border-slate-800 my-2 bg-white/75 print:bg-transparent rounded overflow-hidden">
                 <table className="w-full border-collapse text-xs sm:text-sm">
                   <thead>
                     <tr className="border-b-2 border-slate-800 bg-slate-100 font-bold text-slate-900">
