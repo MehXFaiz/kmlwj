@@ -12,12 +12,13 @@ import HallBookingCalendar from '../components/common/HallBookingCalendar';
 
 const formatHallName = (booking) => {
   if (!booking) return 'N/A';
-  const raw = typeof booking === 'string' ? booking : (booking.hallName || booking.hallAccount?.accountName || booking.hallAccount?.name || '');
+  let raw = typeof booking === 'string' ? booking : (booking.hallName || booking.hallAccount?.accountName || booking.hallAccount?.name || '');
   if (!raw) return 'N/A';
   const parenMatch = raw.match(/(?:Hall Booking Revenue|Hall Booking)\s*\((.+?)\)/i);
-  if (parenMatch && parenMatch[1]) return parenMatch[1].trim();
+  if (parenMatch && parenMatch[1]) raw = parenMatch[1].trim();
   const dashMatch = raw.match(/(?:Hall Booking Revenue|Hall Booking)\s*[-:]\s*(.+)/i);
-  if (dashMatch && dashMatch[1]) return dashMatch[1].trim();
+  if (dashMatch && dashMatch[1]) raw = dashMatch[1].trim();
+  if (/bagh/i.test(raw) || /hajiani/i.test(raw) || /hajiyani/i.test(raw)) return 'Bagh-e-Hajiani Kareema';
   return raw;
 };
 

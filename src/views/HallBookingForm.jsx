@@ -16,7 +16,7 @@ import HallBookingCalendar from '../components/common/HallBookingCalendar';
 const getNormalizedHallName = (name) => {
   if (!name) return null;
   const n = name.toLowerCase();
-  if (n.includes('bagh') || n.includes('hajiani') || n.includes('hajiyani')) return 'Bagh-e-Hajiani Garden';
+  if (n.includes('bagh') || n.includes('hajiani') || n.includes('hajiyani') || n.includes('kareema')) return 'Bagh-e-Hajiani Kareema';
   if (n.includes('sadaya') || n.includes('sada')) return 'Sadaya Hall';
   if (n.includes('zikarya') || n.includes('zikriya') || n.includes('zakaria') || n.includes('zakriya')) return 'Zikarya Hall';
   if (n.includes('annexy') || n.includes('anexy') || n.includes('gosha') || n.includes('anxy')) return 'Annexy Hall';
@@ -139,7 +139,7 @@ export const HallBookingForm = () => {
   const hallAccounts = React.useMemo(() => {
     const seen = new Set();
     const result = [];
-    const standardHalls = ['Bagh-e-Hajiani Garden', 'Sadaya Hall', 'Zikarya Hall', 'Annexy Hall'];
+    const standardHalls = ['Bagh-e-Hajiani Kareema', 'Sadaya Hall', 'Zikarya Hall', 'Annexy Hall'];
 
     (flatAccounts || []).forEach(a => {
       if (a.type === 'Revenue' || a.accountTypeName === 'REVENUE' || a.accountTypeName === 'Revenue') {

@@ -98,7 +98,10 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
     rawHallName.includes('bagh') ||
     rawHallName.includes('hajiani') ||
     rawHallName.includes('hajiyani') ||
+    rawHallName.includes('kareema') ||
+    rawHallName.includes('karima') ||
     rawHallName.includes('باغ') ||
+    rawHallName.includes('کریمہ') ||
     rawHallName.includes('گارڈن');
 
   const isSadaBahar =
@@ -125,8 +128,8 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
   const hallsList = [
     {
       id: 'bagh',
-      urduName: 'باغ حاجیانی گارڈن',
-      englishName: 'Bagh-e-Hajiani Garden',
+      urduName: 'باغ حاجیانی کریمہ',
+      englishName: 'Bagh-e-Hajiani Kareema',
       selected: isBagh || (!isSadaBahar && !isZakaria && !isGosha && rawHallName.includes('bagh'))
     },
     {
