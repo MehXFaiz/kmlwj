@@ -228,7 +228,7 @@ export const VoucherSlipModal = ({
               <div className="relative border-2 border-slate-800 my-2 bg-white/75 print:bg-transparent rounded overflow-hidden">
                 {/* Fixed Watermark Inside Particulars Table */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0 opacity-[0.10] print:opacity-[0.12]">
-                  <img src={logoImg} alt="KMLWJ Logo Watermark" className="w-40 h-40 sm:w-48 sm:h-48 object-contain" />
+                  <img src={logoImg} alt="KMLWJ Logo Watermark" className="w-72 h-72 sm:w-80 sm:h-80 object-contain" />
                 </div>
                 <table className="relative z-10 w-full border-collapse text-xs sm:text-sm">
                   <thead>
