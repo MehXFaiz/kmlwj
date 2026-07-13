@@ -12,6 +12,7 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
   const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], expenseHeadId: '', paidTo: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
   const [subType, setSubType] = useState('Repair');
   const [customSubType, setCustomSubType] = useState('');
+  const [selectedHallName, setSelectedHallName] = useState('Bagh-e-Hajiani Garden');
 
   useEffect(() => {
     if (isOpen) {
@@ -19,9 +20,11 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
         const head = expenseHeads.find(h => h.id === editingExpense.expenseHeadId);
         const headName = head ? head.name : '';
         const isBusOrGen = headName === 'Bus Expense' || headName === 'Generator Expense' || headName === 'Bus repair' || headName === 'Generator repair';
+        const isHall = headName === 'Hall Expense' || headName === 'Hall repair' || headName === 'Hall Repairs';
         
         let initialSubType = 'Repair';
         let initialCustomSubType = '';
+        let initialHallName = 'Bagh-e-Hajiani Garden';
         let extraDesc = editingExpense.description || '';
         
         if (isBusOrGen && editingExpense.description) {
@@ -61,6 +64,35 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
           if (!prefixFound) {
             extraDesc = editingExpense.description;
           }
+        } else if (isHall && editingExpense.description) {
+          const parts = editingExpense.description.split(' - ');
+          if (parts.length >= 3) {
+            let hall = parts[1];
+            let subAndDesc = parts.slice(2).join(' - ');
+            
+            const colonIndex = subAndDesc.indexOf(': ');
+            let typeVal = subAndDesc;
+            let customVal = '';
+            if (colonIndex !== -1) {
+              typeVal = subAndDesc.substring(0, colonIndex);
+              customVal = subAndDesc.substring(colonIndex + 2);
+            }
+            
+            let finalSubType = typeVal;
+            let finalCustomSubType = '';
+            
+            if (typeVal.startsWith('Other (') && typeVal.endsWith(')')) {
+              finalSubType = 'Other';
+              finalCustomSubType = typeVal.slice(7, -1);
+            }
+            
+            initialSubType = finalSubType;
+            initialCustomSubType = finalCustomSubType;
+            extraDesc = customVal;
+            initialHallName = hall;
+          } else {
+            extraDesc = editingExpense.description;
+          }
         }
         
         setForm({
@@ -75,10 +107,12 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
         });
         setSubType(initialSubType);
         setCustomSubType(initialCustomSubType);
+        setSelectedHallName(initialHallName);
       } else {
         setForm({ date: new Date().toISOString().split('T')[0], expenseHeadId: '', paidTo: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
         setSubType('Repair');
         setCustomSubType('');
+        setSelectedHallName('Bagh-e-Hajiani Garden');
       }
     }
   }, [isOpen, editingExpense, expenseHeads]);
@@ -96,6 +130,7 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
     const selectedHead = expenseHeads.find(h => h.id === form.expenseHeadId);
     const selectedHeadName = selectedHead ? selectedHead.name : '';
     const isBusOrGen = selectedHeadName === 'Bus Expense' || selectedHeadName === 'Generator Expense' || selectedHeadName === 'Bus repair' || selectedHeadName === 'Generator repair';
+    const isHall = selectedHeadName === 'Hall Expense' || selectedHeadName === 'Hall repair' || selectedHeadName === 'Hall Repairs';
     
     let finalDescription = form.description;
     if (isBusOrGen) {
@@ -106,6 +141,13 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
       }
       const categoryLabel = selectedHeadName.toLowerCase().includes('bus') ? 'Bus Expense' : 'Generator Expense';
       finalDescription = `${categoryLabel} - ${typeLabel}${form.description ? `: ${form.description}` : ''}`;
+    } else if (isHall) {
+      const typeLabel = subType === 'Other' ? `Other (${customSubType.trim()})` : subType;
+      if (!typeLabel) {
+        showToast('Please specify the expense type.', 'warning');
+        return;
+      }
+      finalDescription = `Hall Expense - ${selectedHallName} - ${typeLabel}${form.description ? `: ${form.description}` : ''}`;
     }
 
     const { localBalances } = calculateAccountBalances(accounts, journals, 'Global');
@@ -197,29 +239,78 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
           {(() => {
             const selectedHeadName = form.expenseHeadId ? (expenseHeads.find(h => h.id === form.expenseHeadId)?.name || '') : '';
             const isBusOrGen = selectedHeadName === 'Bus Expense' || selectedHeadName === 'Generator Expense' || selectedHeadName === 'Bus repair' || selectedHeadName === 'Generator repair';
-            if (!isBusOrGen) return null;
-            return (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fadeIn">
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Expense Type *</label>
-                  <select value={subType} onChange={e => setSubType(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all">
-                    <option value="Repair">Repair</option>
-                    <option value="Maintenance">Maintenance</option>
-                    <option value="Fuel">Fuel</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                {subType === 'Other' && (
+            const isHall = selectedHeadName === 'Hall Expense' || selectedHeadName === 'Hall repair' || selectedHeadName === 'Hall Repairs';
+            
+            if (isBusOrGen) {
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fadeIn">
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Specify Custom Expense Type *</label>
-                    <input type="text" value={customSubType} onChange={e => setCustomSubType(e.target.value)}
-                      placeholder="e.g. Battery Replacement" required
-                      className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all" />
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Expense Type *</label>
+                    <select value={subType} onChange={e => setSubType(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all">
+                      <option value="Repair">Repair</option>
+                      <option value="Maintenance">Maintenance</option>
+                      <option value="Fuel">Fuel</option>
+                      <option value="Other">Other</option>
+                    </select>
                   </div>
-                )}
-              </div>
-            );
+                  {subType === 'Other' && (
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Specify Custom Expense Type *</label>
+                      <input type="text" value={customSubType} onChange={e => setCustomSubType(e.target.value)}
+                        placeholder="e.g. Battery Replacement" required
+                        className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all" />
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            
+            if (isHall) {
+              return (
+                <div className="space-y-4 animate-fadeIn">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Hall *</label>
+                      <select value={selectedHallName} onChange={e => setSelectedHallName(e.target.value)}
+                        className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all">
+                        <option value="Bagh-e-Hajiani Garden">Bagh-e-Hajiani Garden</option>
+                        <option value="Sadaya Hall">Sadaya Hall</option>
+                        <option value="Zakariya Hall">Zakariya Hall</option>
+                        <option value="Annexy Hall">Annexy Hall</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Expense Type *</label>
+                      <select value={subType} onChange={e => setSubType(e.target.value)}
+                        className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all">
+                        <option value="Repair">Repair</option>
+                        <option value="Maintenance">Maintenance</option>
+                        <option value="Cleaning">Cleaning</option>
+                        <option value="Electricity">Electricity</option>
+                        <option value="Water">Water</option>
+                        <option value="Gas">Gas</option>
+                        <option value="Decoration">Decoration</option>
+                        <option value="Furniture">Furniture</option>
+                        <option value="Sound System">Sound System</option>
+                        <option value="Air Conditioning">Air Conditioning</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+                  {subType === 'Other' && (
+                    <div className="max-w-md">
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Specify Custom Expense Type *</label>
+                      <input type="text" value={customSubType} onChange={e => setCustomSubType(e.target.value)}
+                        placeholder="e.g. Glass Replacement" required
+                        className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all" />
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            
+            return null;
           })()}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-800">

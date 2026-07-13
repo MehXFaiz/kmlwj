@@ -168,6 +168,39 @@ test.describe('ERP E2E QA Test Suite', () => {
     await expect(customInput).toBeVisible({ timeout: 15000 });
   });
 
+  test('Module 5.7: Hall Expense Dynamic Sub-Type Form Logic', async ({ page }) => {
+    page.setDefaultTimeout(15000);
+
+    // Login
+    await page.goto(`${BASE_URL}/login`);
+    await page.fill('input[type="email"]', 'admin@erp.com');
+    await page.fill('input[type="password"]', 'admin123');
+    await page.click('button[type="submit"]');
+    await expect(page).toHaveURL(`${BASE_URL}/`);
+
+    // Navigate to quick add expense
+    await page.goto(`${BASE_URL}/bank-vouchers/expense/new`);
+    await expect(page.locator('text=Add Expense').first()).toBeVisible({ timeout: 15000 });
+
+    // Click "Hall Expense" button
+    await page.click('button:has-text("Hall Expense")');
+
+    // Verify Hall dropdown is visible
+    const hallSelect = page.locator('select:near(label:has-text("Hall"))').first();
+    await expect(hallSelect).toBeVisible({ timeout: 15000 });
+
+    // Verify Expense Type dropdown is visible
+    const selectDropdown = page.locator('select:near(label:has-text("Expense Type"))').first();
+    await expect(selectDropdown).toBeVisible({ timeout: 15000 });
+
+    // Select "Other" option from dropdown
+    await selectDropdown.selectOption({ value: 'Other' });
+
+    // Verify custom expense name input is visible
+    const customInput = page.locator('input[placeholder="e.g. Glass Replacement"]');
+    await expect(customInput).toBeVisible({ timeout: 15000 });
+  });
+
   test('Module 6: Role Based Access Control (RBAC)', async ({ page }) => {
     page.setDefaultTimeout(15000);
 
