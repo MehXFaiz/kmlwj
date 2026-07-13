@@ -10,25 +10,78 @@ import { MinusCircle, Search, X, CheckCircle2, TrendingDown, Building2, Banknote
 function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editingExpense }) {
   const { journals } = useJournalStore();
   const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], expenseHeadId: '', paidTo: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
+  const [subType, setSubType] = useState('Repair');
+  const [customSubType, setCustomSubType] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       if (editingExpense) {
+        const head = expenseHeads.find(h => h.id === editingExpense.expenseHeadId);
+        const headName = head ? head.name : '';
+        const isBusOrGen = headName === 'Bus Expense' || headName === 'Generator Expense' || headName === 'Bus repair' || headName === 'Generator repair';
+        
+        let initialSubType = 'Repair';
+        let initialCustomSubType = '';
+        let extraDesc = editingExpense.description || '';
+        
+        if (isBusOrGen && editingExpense.description) {
+          const normalizedHeadName = headName.toLowerCase().includes('bus') ? 'Bus Expense' : 'Generator Expense';
+          const possiblePrefixes = [
+            `${headName} - `,
+            `${normalizedHeadName} - `,
+            `Bus repair - `,
+            `Generator repair - `
+          ];
+          
+          let prefixFound = false;
+          for (const prefix of possiblePrefixes) {
+            if (editingExpense.description.startsWith(prefix)) {
+              const rest = editingExpense.description.slice(prefix.length);
+              const colonIndex = rest.indexOf(': ');
+              let typeVal = rest;
+              let customVal = '';
+              if (colonIndex !== -1) {
+                typeVal = rest.substring(0, colonIndex);
+                customVal = rest.substring(colonIndex + 2);
+              }
+              
+              const standardTypes = ['Repair', 'Maintenance', 'Fuel'];
+              if (standardTypes.includes(typeVal)) {
+                initialSubType = typeVal;
+                extraDesc = customVal;
+              } else {
+                initialSubType = 'Other';
+                initialCustomSubType = typeVal;
+                extraDesc = customVal;
+              }
+              prefixFound = true;
+              break;
+            }
+          }
+          if (!prefixFound) {
+            extraDesc = editingExpense.description;
+          }
+        }
+        
         setForm({
           date: editingExpense.date ? new Date(editingExpense.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
           expenseHeadId: editingExpense.expenseHeadId || '',
           paidTo: editingExpense.paidTo || '',
-          description: editingExpense.description || '',
+          description: extraDesc,
           amount: editingExpense.amount !== undefined ? editingExpense.amount.toString() : '',
           paymentMethod: editingExpense.paymentMethod || 'CASH',
           bankAccountId: editingExpense.bankAccountId || '',
           reference: editingExpense.reference || ''
         });
+        setSubType(initialSubType);
+        setCustomSubType(initialCustomSubType);
       } else {
         setForm({ date: new Date().toISOString().split('T')[0], expenseHeadId: '', paidTo: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
+        setSubType('Repair');
+        setCustomSubType('');
       }
     }
-  }, [isOpen, editingExpense]);
+  }, [isOpen, editingExpense, expenseHeads]);
 
   if (!isOpen) return null;
 
@@ -38,6 +91,21 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
     if (val <= 0) {
       showToast('Amount must be a positive number.', 'warning');
       return;
+    }
+
+    const selectedHead = expenseHeads.find(h => h.id === form.expenseHeadId);
+    const selectedHeadName = selectedHead ? selectedHead.name : '';
+    const isBusOrGen = selectedHeadName === 'Bus Expense' || selectedHeadName === 'Generator Expense' || selectedHeadName === 'Bus repair' || selectedHeadName === 'Generator repair';
+    
+    let finalDescription = form.description;
+    if (isBusOrGen) {
+      const typeLabel = subType === 'Other' ? customSubType.trim() : subType;
+      if (!typeLabel) {
+        showToast('Please specify the expense type.', 'warning');
+        return;
+      }
+      const categoryLabel = selectedHeadName.toLowerCase().includes('bus') ? 'Bus Expense' : 'Generator Expense';
+      finalDescription = `${categoryLabel} - ${typeLabel}${form.description ? `: ${form.description}` : ''}`;
     }
 
     const { localBalances } = calculateAccountBalances(accounts, journals, 'Global');
@@ -62,7 +130,7 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
       return;
     }
 
-    onSave({ ...form, amount: val });
+    onSave({ ...form, amount: val, description: finalDescription });
     onClose();
   };
 
@@ -125,6 +193,34 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
               placeholder="e.g. Utility bill for May"
               className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all" />
           </div>
+
+          {(() => {
+            const selectedHeadName = form.expenseHeadId ? (expenseHeads.find(h => h.id === form.expenseHeadId)?.name || '') : '';
+            const isBusOrGen = selectedHeadName === 'Bus Expense' || selectedHeadName === 'Generator Expense' || selectedHeadName === 'Bus repair' || selectedHeadName === 'Generator repair';
+            if (!isBusOrGen) return null;
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fadeIn">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Expense Type *</label>
+                  <select value={subType} onChange={e => setSubType(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all">
+                    <option value="Repair">Repair</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Fuel">Fuel</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                {subType === 'Other' && (
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Specify Custom Expense Type *</label>
+                    <input type="text" value={customSubType} onChange={e => setCustomSubType(e.target.value)}
+                      placeholder="e.g. Battery Replacement" required
+                      className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all" />
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-800">
             <div>

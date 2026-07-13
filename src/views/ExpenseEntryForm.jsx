@@ -27,12 +27,20 @@ export const ExpenseEntryForm = () => {
   // Selected high-level expense type
   const [expenseType, setExpenseType] = useState('Salary');
   const [customExpenseName, setCustomExpenseName] = useState('');
+  const [subExpenseType, setSubExpenseType] = useState('Repair');
+  const [customSubExpenseName, setCustomSubExpenseName] = useState('');
 
   useEffect(() => {
     if (typeParam) {
-      const allowedTypes = ['Salary', 'Rent', 'Fuel', 'Bus Repair', 'Generator Repair', 'Legal Fee', 'Medical Donation', 'Zakat Distribution', 'Other'];
+      const allowedTypes = ['Salary', 'Rent', 'Fuel', 'Bus Expense', 'Generator Expense', 'Legal Fee', 'Medical Donation', 'Zakat Distribution', 'Other', 'Bus Repair', 'Generator Repair'];
       if (allowedTypes.includes(typeParam)) {
-        setExpenseType(typeParam);
+        if (typeParam === 'Bus Repair') {
+          setExpenseType('Bus Expense');
+        } else if (typeParam === 'Generator Repair') {
+          setExpenseType('Generator Expense');
+        } else {
+          setExpenseType(typeParam);
+        }
       }
     }
   }, [typeParam]);
@@ -40,6 +48,10 @@ export const ExpenseEntryForm = () => {
   useEffect(() => {
     if (expenseType !== 'Other') {
       setCustomExpenseName('');
+    }
+    if (expenseType !== 'Bus Expense' && expenseType !== 'Generator Expense') {
+      setSubExpenseType('Repair');
+      setCustomSubExpenseName('');
     }
   }, [expenseType]);
 
@@ -87,10 +99,12 @@ export const ExpenseEntryForm = () => {
           return nameLower.includes('rent');
         case 'Fuel':
           return nameLower.includes('fuel') || nameLower.includes('diesel') || nameLower.includes('petrol');
+        case 'Bus Expense':
         case 'Bus Repair':
-          return nameLower.includes('bus repair') || nameLower.includes('bus maintenance');
+          return nameLower.includes('bus expense') || nameLower.includes('bus repair') || nameLower.includes('bus maintenance');
+        case 'Generator Expense':
         case 'Generator Repair':
-          return nameLower.includes('generator repair') || nameLower.includes('generator maintenance');
+          return nameLower.includes('generator expense') || nameLower.includes('generator repair') || nameLower.includes('generator maintenance');
         case 'Legal Fee':
           return nameLower.includes('legal') || nameLower.includes('lawyer') || nameLower.includes('professional fee') || nameLower.includes('audit');
         case 'Medical Donation':
@@ -135,10 +149,10 @@ export const ExpenseEntryForm = () => {
         parentCode = '4040100'; parentName = 'Rent'; name = 'Office/Hall Rent'; break;
       case 'Fuel':
         parentCode = '4080100'; parentName = 'Admin Costs'; name = 'Fuel Expense'; break;
-      case 'Bus Repair':
-        parentCode = '4050100'; parentName = 'Repairs'; name = 'Bus Repair Expense'; break;
-      case 'Generator Repair':
-        parentCode = '4050100'; parentName = 'Repairs'; name = 'Generator Repair Expense'; break;
+      case 'Bus Expense':
+        parentCode = '4050100'; parentName = 'Repairs'; name = 'Bus Expense'; break;
+      case 'Generator Expense':
+        parentCode = '4050100'; parentName = 'Repairs'; name = 'Generator Expense'; break;
       case 'Legal Fee':
         parentCode = '4070100'; parentName = 'Professional Fees'; name = 'Legal Fee Expense'; break;
       case 'Medical Donation':
@@ -182,6 +196,11 @@ export const ExpenseEntryForm = () => {
     e.preventDefault();
     if (expenseType === 'Other' && !customExpenseName.trim()) {
       showToast('Please enter a custom expense name.', 'warning');
+      return;
+    }
+
+    if ((expenseType === 'Bus Expense' || expenseType === 'Generator Expense') && subExpenseType === 'Other' && !customSubExpenseName.trim()) {
+      showToast('Please enter a custom expense type.', 'warning');
       return;
     }
 
@@ -270,10 +289,17 @@ export const ExpenseEntryForm = () => {
       // Debit: Offset Account (Expense Subsidiary)
       // Credit: Bank Account (Asset)
       const resolvedExpenseName = expenseType === 'Other' && customExpenseName.trim() ? customExpenseName.trim() : expenseType;
-      const memo = description || `Paid for ${resolvedExpenseName}`;
+      
+      let displayExpenseName = resolvedExpenseName;
+      if (expenseType === 'Bus Expense' || expenseType === 'Generator Expense') {
+        const subName = subExpenseType === 'Other' ? customSubExpenseName.trim() : subExpenseType;
+        displayExpenseName = `${expenseType} - ${subName}`;
+      }
+
+      const memo = description ? `${displayExpenseName}: ${description}` : displayExpenseName;
       const lines = [
-        { accountCode: offsetAcc.code, debit: val, credit: 0, description: `Bank Payout (${resolvedExpenseName}): ${memo}` },
-        { accountCode: bankAcc.code, debit: 0, credit: val, description: `Bank Payout (${resolvedExpenseName}): ${memo}` }
+        { accountCode: offsetAcc.code, debit: val, credit: 0, description: `Bank Payout (${displayExpenseName}): ${memo}` },
+        { accountCode: bankAcc.code, debit: 0, credit: val, description: `Bank Payout (${displayExpenseName}): ${memo}` }
       ];
 
       const prefix = 'BP';
@@ -284,7 +310,7 @@ export const ExpenseEntryForm = () => {
         voucherNo,
         postingDate: new Date(postingDate).toISOString(),
         subsidiary: 'Global',
-        reference: reference || `${resolvedExpenseName} Payout`,
+        reference: reference || `${displayExpenseName} Payout`,
         description: memo,
         status: 'Posted',
         voucherType: 'BP',
@@ -294,7 +320,7 @@ export const ExpenseEntryForm = () => {
       await addVoucher(payload);
       addNotification({
         title: 'Expense Entry Saved',
-        message: `Successfully recorded expense of Rs. ${val.toLocaleString()} for ${expenseType === 'Other' && customExpenseName ? customExpenseName : expenseType}`
+        message: `Successfully recorded expense of Rs. ${val.toLocaleString()} for ${displayExpenseName}`
       });
       showToast('Expense recorded and posted to your accounts!', 'success');
       navigate('/bank-vouchers');
@@ -355,8 +381,8 @@ export const ExpenseEntryForm = () => {
                     { key: 'Salary', label: t('forms.sources.salary', 'Salary') },
                     { key: 'Rent', label: t('forms.sources.rent', 'Rent') },
                     { key: 'Fuel', label: t('forms.sources.fuel', 'Fuel') },
-                    { key: 'Bus Repair', label: t('forms.sources.busRepair', 'Bus Repair') },
-                    { key: 'Generator Repair', label: t('forms.sources.generatorRepair', 'Generator Repair') },
+                    { key: 'Bus Expense', label: t('forms.sources.busExpense', 'Bus Expense') },
+                    { key: 'Generator Expense', label: t('forms.sources.generatorExpense', 'Generator Expense') },
                     { key: 'Legal Fee', label: t('forms.sources.legalFee', 'Legal Fee') },
                     { key: 'Medical Donation', label: t('forms.sources.medicalDonation', 'Medical Donation') },
                     { key: 'Zakat Distribution', label: t('forms.sources.zakatDistribution', 'Zakat Distribution') },
@@ -376,6 +402,40 @@ export const ExpenseEntryForm = () => {
                     </button>
                   ))}
                 </div>
+
+                {(expenseType === 'Bus Expense' || expenseType === 'Generator Expense') && (
+                  <div className="mt-4 max-w-md animate-fadeIn space-y-4">
+                    <div>
+                      <label className={labelClass}>Expense Type *</label>
+                      <select
+                        value={subExpenseType}
+                        onChange={e => setSubExpenseType(e.target.value)}
+                        className={inputClass}
+                        required
+                      >
+                        <option value="Repair">Repair</option>
+                        <option value="Maintenance">Maintenance</option>
+                        <option value="Fuel">Fuel</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+
+                    {subExpenseType === 'Other' && (
+                      <div className="animate-fadeIn">
+                        <label className={labelClass}>Specify Custom Expense Type *</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Battery Replacement"
+                          value={customSubExpenseName}
+                          onChange={e => setCustomSubExpenseName(e.target.value)}
+                          className={inputClass}
+                          required={subExpenseType === 'Other'}
+                          maxLength={40}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {expenseType === 'Other' && (
                   <div className="mt-4 max-w-md animate-fadeIn">
