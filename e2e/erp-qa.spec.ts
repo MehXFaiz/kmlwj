@@ -95,13 +95,48 @@ test.describe('ERP E2E QA Test Suite', () => {
     await page.click('button[type="submit"]');
     await expect(page).toHaveURL(`${BASE_URL}/`);
 
-    // Hall bookings
+    // Hall bookings list
     await page.goto(`${BASE_URL}/hall-bookings`);
     await expect(page.locator('h1:has-text("Hall Bookings"), h2:has-text("Hall Bookings")').first()).toBeVisible({ timeout: 15000 });
 
     // Members list
     await page.goto(`${BASE_URL}/members`);
     await expect(page.locator('h1:has-text("Community Members Directory"), h2:has-text("Community Members Directory")').first()).toBeVisible({ timeout: 15000 });
+  });
+
+  test('Module 5.5: Hall Booking Auto-Fill Charges Logic', async ({ page }) => {
+    page.setDefaultTimeout(15000);
+
+    // Login
+    await page.goto(`${BASE_URL}/login`);
+    await page.fill('input[type="email"]', 'admin@erp.com');
+    await page.fill('input[type="password"]', 'admin123');
+    await page.click('button[type="submit"]');
+    await expect(page).toHaveURL(`${BASE_URL}/`);
+
+    // Go directly to the new booking form
+    await page.goto(`${BASE_URL}/hall-bookings/new`);
+    await expect(page.locator('text=Booker Details').first()).toBeVisible({ timeout: 15000 });
+
+    // Select Sadaya Hall from dropdown
+    await page.selectOption('select[name="hallId"]', { label: 'Sadaya Hall' });
+    
+    // Assert amount fields are filled with 28000 automatically
+    const amountVal = await page.inputValue('input[name="amount"]');
+    expect(amountVal).toBe('28000');
+
+    const netAmountVal = await page.inputValue('input[name="netAmount"]');
+    expect(netAmountVal).toBe('28000');
+
+    const receivedAmountVal = await page.inputValue('input[name="receivedAmount"]');
+    expect(receivedAmountVal).toBe('28000');
+
+    // Select Bagh-e-Hajiani Kareema from dropdown
+    await page.selectOption('select[name="hallId"]', { label: 'Bagh-e-Hajiani Kareema' });
+
+    // Assert amount fields are updated to 46000 automatically
+    const amountVal2 = await page.inputValue('input[name="amount"]');
+    expect(amountVal2).toBe('46000');
   });
 
   test('Module 6: Role Based Access Control (RBAC)', async ({ page }) => {
