@@ -45,6 +45,218 @@ const numberToWords = (num) => {
 };
 
 // Printable Modal
+// Render a single copy of the voucher receipt/slip matching the reference slip design
+function VoucherReceiptSlip({ voucher, amount, copyType, t }) {
+  const isBank = useMemo(() => {
+    return voucher.lines?.some(line => 
+      line.accountCode?.startsWith('102') || 
+      line.description?.toLowerCase().includes('bank') || 
+      line.accountName?.toLowerCase().includes('bank')
+    ) || voucher.reference?.length > 0;
+  }, [voucher]);
+
+  return (
+    <div 
+      style={{ 
+        backgroundColor: '#ffffff', 
+        color: '#4a2c11',
+        fontFamily: "'Inter', 'Plus Jakarta Sans', system-ui, sans-serif",
+        borderColor: '#4a2c11',
+        WebkitPrintColorAdjust: 'exact',
+        printColorAdjust: 'exact'
+      }}
+      className="relative rounded-2xl border-4 border-double p-5 shadow-sm overflow-hidden flex flex-col justify-between min-h-[580px] bg-white text-[#4a2c11] print:shadow-none print:rounded-none"
+    >
+      {/* Watermark Logo */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0 opacity-[0.035]">
+        <img src={logoImg} alt="Watermark" className="w-64 h-64 object-contain" />
+      </div>
+
+      <div className="relative z-10 flex-1 flex flex-col justify-between">
+        {/* Header Block */}
+        <div>
+          <div className="flex items-center gap-3 pb-3 border-b-2 border-[#4a2c11]">
+            <img
+              src={logoImg}
+              alt="KMLWJ Logo"
+              style={{ filter: 'sepia(1) saturate(1.5) hue-rotate(330deg) brightness(0.5)' }}
+              className="w-14 h-14 object-contain shrink-0"
+            />
+            <div className="flex-1 text-left">
+              <h2 className="text-sm font-bold text-[#4a2c11] leading-tight" style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif", fontSize: '1.25rem' }}>کچھی مسلم لوہار واڈہ ویلفیئر جماعت</h2>
+              <p className="text-[9px] text-[#4a2c11]/85 uppercase tracking-wider font-extrabold">Kutchi Muslim Loharwada Welfare Jamat</p>
+            </div>
+          </div>
+
+          {/* Badge & Meta Row */}
+          <div className="flex justify-between items-center mt-3 gap-2">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-extrabold uppercase text-[#4a2c11]/70">Voucher No:</span>
+              <span className="px-2 py-0.5 border border-[#4a2c11] rounded-md font-mono font-bold text-[11px] text-red-700 bg-red-50/40">
+                {voucher.voucherNo}
+              </span>
+            </div>
+
+            <div className="px-3.5 py-1 bg-[#4a2c11] text-white rounded-full font-black text-[10px] uppercase tracking-wider text-center">
+              {voucher.voucherType === 'BP' ? 'BANK PAYMENT SLIP' : 'BANK RECEIPT SLIP'}
+            </div>
+
+            <div className="flex items-center gap-1 text-[10px]">
+              <span className="font-extrabold text-[#4a2c11]/70">Date:</span>
+              <span className="border-b border-[#4a2c11] px-1 font-bold min-w-[75px] text-center text-[10px]">
+                {new Date(voucher.postingDate || voucher.date).toLocaleDateString('en-GB')}
+              </span>
+            </div>
+          </div>
+
+          {/* Field lines (Paid To & Remarks) */}
+          <div className="space-y-2 mt-4 text-xs font-semibold">
+            <div className="flex items-baseline">
+              <span className="w-20 font-bold uppercase tracking-wider text-[9px] text-[#4a2c11]/80">Paid To:</span>
+              <span className="flex-1 border-b border-dotted border-[#4a2c11] px-1 font-extrabold text-slate-800">
+                {voucher.reference || '__________________________________________________'}
+              </span>
+            </div>
+            <div className="flex items-baseline">
+              <span className="w-20 font-bold uppercase tracking-wider text-[9px] text-[#4a2c11]/80">Remarks:</span>
+              <span className="flex-1 border-b border-dotted border-[#4a2c11] px-1 font-medium text-slate-700">
+                {voucher.description || '__________________________________________________'}
+              </span>
+            </div>
+          </div>
+
+          {/* Accounting Ledger Lines Box */}
+          <div className="mt-4">
+            <div className="flex justify-center mb-1.5">
+              <span className="px-3 py-0.5 bg-[#4a2c11] text-white text-[8px] font-black uppercase tracking-wider rounded">
+                ACCOUNTING LEDGER LINES
+              </span>
+            </div>
+            <div className="border border-[#4a2c11] rounded-lg overflow-hidden bg-white text-xs">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-amber-50/20 border-b border-[#4a2c11] text-[8px] font-black uppercase text-[#4a2c11]">
+                    <th className="px-2.5 py-1.5 border-r border-[#4a2c11]">Account Code & Name</th>
+                    <th className="px-2.5 py-1.5 text-right w-20 border-r border-[#4a2c11]">Debit (Rs.)</th>
+                    <th className="px-2.5 py-1.5 text-right w-20">Credit (Rs.)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#4a2c11]/30 font-medium">
+                  {voucher.lines?.map((line, idx) => (
+                    <tr key={line.id || idx} className="text-slate-800 text-[10px]">
+                      <td className="px-2.5 py-1.5 border-r border-[#4a2c11] flex items-center gap-1">
+                        <span className="font-mono text-[9px] font-extrabold text-[#4a2c11] bg-amber-50 border border-[#4a2c11]/35 px-1 py-0.2 rounded shrink-0">
+                          {line.accountCode}
+                        </span>
+                        <span className="font-semibold text-slate-800 truncate max-w-[160px]">
+                          {line.description || line.accountName || t('tables.bankVouchers.entry')}
+                        </span>
+                      </td>
+                      <td className="px-2.5 py-1.5 text-right font-mono font-bold border-r border-[#4a2c11]">
+                        {line.debit > 0 ? line.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '—'}
+                      </td>
+                      <td className="px-2.5 py-1.5 text-right font-mono font-bold">
+                        {line.credit > 0 ? line.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                  {Array.from({ length: Math.max(0, 3 - (voucher.lines?.length || 0)) }).map((_, idx) => (
+                    <tr key={`empty-${idx}`} className="h-6 opacity-30">
+                      <td className="px-2.5 py-1.5 border-r border-[#4a2c11]"></td>
+                      <td className="px-2.5 py-1.5 border-r border-[#4a2c11]"></td>
+                      <td className="px-2.5 py-1.5"></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Payment details box */}
+          <div className="mt-4 border border-[#4a2c11] rounded-lg p-2.5 bg-amber-50/5 text-xs space-y-1.5">
+            <div className="flex justify-center mb-1">
+              <span className="px-3 py-0.5 bg-[#4a2c11] text-white text-[8px] font-black uppercase tracking-wider rounded">
+                PAYMENT DETAILS
+              </span>
+            </div>
+            
+            <div className="space-y-1">
+              <div className="flex items-baseline">
+                <span className="text-[8px] font-bold uppercase tracking-wider text-[#4a2c11] mr-1 shrink-0">Amount in Words:</span>
+                <span className="flex-1 border-b border-dotted border-[#4a2c11] font-bold text-slate-800 italic text-[10px] truncate">
+                  {numberToWords(amount)}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5 pt-1">
+                <div className="flex items-center justify-between border border-[#4a2c11] rounded px-2 py-0.5 bg-white shrink-0">
+                  <span className="text-[8px] font-bold uppercase text-[#4a2c11]">Total Debit:</span>
+                  <span className="font-mono font-black text-[#4a2c11] text-xs">Rs. {amount.toLocaleString()}/-</span>
+                </div>
+                <div className="flex items-center justify-between border border-[#4a2c11] rounded px-2 py-0.5 bg-white shrink-0">
+                  <span className="text-[8px] font-bold uppercase text-[#4a2c11]">Total Credit:</span>
+                  <span className="font-mono font-black text-[#4a2c11] text-xs">Rs. {amount.toLocaleString()}/-</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-[9px] font-bold pt-1 border-t border-[#4a2c11]/20">
+                <span className="text-[#4a2c11] uppercase tracking-wider text-[8px]">Payment Method:</span>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-1 text-slate-800">
+                    <input 
+                      type="checkbox" 
+                      checked={!isBank} 
+                      readOnly
+                      className="accent-[#4a2c11] h-3 w-3 border-[#4a2c11] rounded" 
+                    />
+                    <span>Cash</span>
+                  </label>
+                  <label className="flex items-center gap-1 text-slate-800">
+                    <input 
+                      type="checkbox" 
+                      checked={isBank} 
+                      readOnly
+                      className="accent-[#4a2c11] h-3 w-3 border-[#4a2c11] rounded" 
+                    />
+                    <span>Bank Transfer / Cheque</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Signatures & Bottom */}
+        <div>
+          <div className="mt-5 grid grid-cols-3 gap-1 text-center text-[#4a2c11] text-[8px] font-bold uppercase tracking-wider pt-2 border-t border-[#4a2c11]/10">
+            <div className="flex flex-col items-center">
+              <div className="w-16 border-b border-[#4a2c11] mb-1"></div>
+              <span>Prepared By</span>
+            </div>
+
+            <div className="flex flex-col items-center border-l border-r border-[#4a2c11]/25 px-0.5">
+              <div className="w-16 border-b border-[#4a2c11] mb-1"></div>
+              <span>Verified / Checked</span>
+            </div>
+
+            <div className="flex flex-col items-center">
+              <div className="w-16 border-b border-[#4a2c11] mb-1"></div>
+              <span>Authorized Sign</span>
+            </div>
+          </div>
+
+          <div className="mt-3 flex justify-center">
+            <span className="px-6 py-0.5 bg-[#4a2c11] text-white text-[9px] font-black uppercase tracking-[0.2em] rounded shadow-sm">
+              {copyType === 'office' ? 'OFFICE COPY' : 'CUSTOMER COPY'}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Printable Modal
 function BankVoucherPrintModal({ voucher, onClose }) {
   const { t } = useTranslation();
   
@@ -58,13 +270,13 @@ function BankVoucherPrintModal({ voucher, onClose }) {
   }, [voucher]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 print:p-0 print:static print:inset-auto print:block">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 print:p-0 print:static print:inset-auto print:block overflow-y-auto">
       <div className="absolute inset-0 bg-black/75 backdrop-blur-sm print:hidden" onClick={onClose} />
       
-      <div className="relative z-10 w-full max-w-2xl rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:border-none print:bg-white print:w-full print:static print:block animate-in zoom-in-95 duration-150">
+      <div className="relative z-10 w-full max-w-6xl rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden flex flex-col max-h-[96vh] print:max-h-none print:shadow-none print:border-none print:bg-white print:w-full print:static print:block animate-in zoom-in-95 duration-150">
         
         {/* Header - Hidden when printing */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0 print:hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0 print:hidden bg-slate-950/80">
           <div className="flex items-center gap-2">
             <Printer className="h-4 w-4 text-amber-400" />
             <h3 className="text-sm font-bold text-slate-200">
@@ -72,17 +284,17 @@ function BankVoucherPrintModal({ voucher, onClose }) {
             </h3>
           </div>
           <div className="flex gap-2">
-            <button onClick={handlePrint} className="px-3 py-1.5 rounded-lg bg-amber-650 hover:bg-amber-550 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+            <button onClick={handlePrint} className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-amber-900/30">
               <Printer className="h-3.5 w-3.5" /> {t('tables.bankVouchers.print')}
             </button>
             <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-350">
-              <XCircle className="h-4 w-4" />
+              <XCircle className="h-5 w-5" />
             </button>
           </div>
         </div>
 
         {/* Printable content */}
-        <div id="print-receipt" className="p-8 space-y-6 overflow-y-auto flex-1 bg-slate-900 text-slate-300 print:bg-white print:text-black print:overflow-visible print:p-0 print:static print:w-full print:block">
+        <div id="print-receipt" className="p-6 overflow-y-auto flex-1 bg-slate-100 print:bg-white print:overflow-visible print:p-0 print:static print:w-full print:block">
           <style>{`
             @media print {
               body * {
@@ -92,96 +304,26 @@ function BankVoucherPrintModal({ voucher, onClose }) {
                 visibility: visible !important;
               }
               #print-receipt {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 16px !important;
+              }
+              @page {
+                size: A4 landscape;
+                margin: 5mm;
               }
             }
           `}</style>
           
-          <div className="flex justify-between items-start border-b border-slate-800 pb-6 print:border-black print:pb-4 gap-4">
-            <div className="flex items-center gap-3">
-              <img
-                src={logoImg}
-                alt="KMLWJ Logo"
-                className="w-12 h-12 object-contain shrink-0"
-              />
-              <div>
-                <h2 className="text-lg font-bold text-slate-100 print:text-black" style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif", lineHeight: 1.6 }}>کچھی مسلم لوہار واڈہ ویلفیئر جماعت</h2>
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold print:text-black">Kutchi Muslim Loharwada Welfare Jamaat</p>
-                <p className="text-xs text-slate-400 font-bold mt-1 print:text-black">
-                  {voucher.voucherType === 'BP' ? t('tables.bankVouchers.bankPaymentVoucher') : t('tables.bankVouchers.bankReceiptVoucher')}
-                </p>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-xs font-mono text-slate-550 print:text-black">{t('tables.bankVouchers.voucher')} <span className="font-bold text-slate-300 print:text-black">{voucher.voucherNo}</span></div>
-              <div className="text-xs text-slate-550 print:text-black mt-1">{t('tables.bankVouchers.date')}: {new Date(voucher.postingDate).toLocaleDateString(undefined, { dateStyle: 'long' })}</div>
-              <div className="text-xs text-slate-550 print:text-black mt-1">{t('tables.bankVouchers.referenceCheque')} <span className="font-bold text-slate-350 print:text-black">{voucher.reference}</span></div>
-            </div>
-          </div>
-
-          {/* Description */}
-          {voucher.description && (
-            <div className="bg-slate-950/30 border border-slate-850 p-4 rounded-xl print:border-black print:rounded-none print:bg-transparent">
-              <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 print:text-black">{t('tables.bankVouchers.remarksMemo')}</h4>
-              <p className="text-xs text-slate-350 print:text-black font-semibold">{voucher.description}</p>
-            </div>
-          )}
-
-          {/* Double-entry rows */}
-          <div className="space-y-2">
-            <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider print:text-black">{t('tables.bankVouchers.accountingLedgerLines')}</h4>
-            <div className="rounded-xl border border-slate-850 bg-slate-950/20 overflow-hidden print:border-black print:rounded-none">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-slate-800 bg-slate-950/40 print:bg-gray-100 print:border-black text-[10px] font-bold uppercase text-slate-500 print:text-black">
-                    <th className="px-4 py-2.5">{t('tables.bankVouchers.accountCodeAndName')}</th>
-                    <th className="px-4 py-2.5 text-right w-28">{t('tables.bankVouchers.debit')}</th>
-                    <th className="px-4 py-2.5 text-right w-28">{t('tables.bankVouchers.credit')}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-850 print:divide-black text-xs">
-                  {voucher.lines.map(line => (
-                    <tr key={line.id}>
-                      <td className="px-4 py-3 text-slate-300 print:text-black font-medium">
-                        <span className="font-mono text-slate-500 bg-slate-800/25 border border-slate-700/20 px-1 py-0.2 rounded mr-1.5 print:bg-transparent print:border-none print:text-black">{line.accountCode}</span>
-                        {line.description || t('tables.bankVouchers.entry')}
-                      </td>
-                      <td className="px-4 py-3 text-right text-slate-200 print:text-black font-semibold">
-                        {line.debit > 0 ? `PKR ${line.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-right text-slate-200 print:text-black font-semibold">
-                        {line.credit > 0 ? `PKR ${line.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Amount in words */}
-          <div className="bg-slate-950/20 border border-slate-850/60 p-3.5 rounded-xl text-xs print:bg-transparent print:border-black print:rounded-none">
-            <span className="font-semibold text-slate-500 print:text-black mr-2 uppercase tracking-wide text-[10px]">{t('tables.bankVouchers.amountInWords')}</span>
-            <span className="font-bold text-slate-300 print:text-black italic">{numberToWords(amount)}</span>
-          </div>
-
-          {/* Signatures */}
-          <div className="pt-10 flex justify-between items-end gap-12 print:pt-8">
-            <div className="text-center flex-1">
-              <div className="w-32 border-b border-slate-800 print:border-black mb-1.5 mx-auto"></div>
-              <p className="text-[9px] text-slate-500 uppercase tracking-wider print:text-black">{t('tables.bankVouchers.preparedBy')}</p>
-            </div>
-            <div className="text-center flex-1">
-              <div className="w-32 border-b border-slate-800 print:border-black mb-1.5 mx-auto"></div>
-              <p className="text-[9px] text-slate-500 uppercase tracking-wider print:text-black">{t('tables.bankVouchers.verifiedBy')}</p>
-            </div>
-            <div className="text-center flex-1">
-              <div className="w-32 border-b border-slate-800 print:border-black mb-1.5 mx-auto"></div>
-              <p className="text-[9px] text-slate-500 uppercase tracking-wider print:text-black">{t('tables.bankVouchers.authorizedSign')}</p>
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full print:grid-cols-2 print:gap-4 print:w-full">
+            <VoucherReceiptSlip voucher={voucher} amount={amount} copyType="office" t={t} />
+            <VoucherReceiptSlip voucher={voucher} amount={amount} copyType="customer" t={t} />
           </div>
         </div>
 
