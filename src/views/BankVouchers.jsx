@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, Link } from 'react-router-dom';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
 import { useAuthStore } from '../store/authStore';
@@ -257,6 +258,7 @@ function VoucherReceiptSlip({ voucher, amount, copyType, t }) {
 }
 
 // Printable Modal
+// Printable Modal
 function BankVoucherPrintModal({ voucher, onClose }) {
   const { t } = useTranslation();
   
@@ -269,14 +271,14 @@ function BankVoucherPrintModal({ voucher, onClose }) {
     return voucher.lines.reduce((sum, line) => sum + (line.debit || 0), 0);
   }, [voucher]);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 print:p-0 print:static print:inset-auto print:block overflow-y-auto">
+  return createPortal(
+    <div id="print-modal-portal" className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 print:p-0 print:static print:inset-auto print:block overflow-y-auto">
       <div className="absolute inset-0 bg-black/75 backdrop-blur-sm print:hidden" onClick={onClose} />
       
-      <div className="relative z-10 w-full max-w-6xl rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden flex flex-col max-h-[96vh] print:max-h-none print:shadow-none print:border-none print:bg-white print:w-full print:static print:block animate-in zoom-in-95 duration-150">
+      <div className="relative z-10 w-full max-w-6xl rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden flex flex-col max-h-[96vh] print:max-h-none print:shadow-none print:border-none print:bg-white print:w-full print:static print:block print:max-w-none animate-in zoom-in-95 duration-150">
         
         {/* Header - Hidden when printing */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0 print:hidden bg-slate-950/80">
+        <div className="print-hide flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0 print:hidden bg-slate-950/80">
           <div className="flex items-center gap-2">
             <Printer className="h-4 w-4 text-amber-400" />
             <h3 className="text-sm font-bold text-slate-200">
@@ -287,7 +289,7 @@ function BankVoucherPrintModal({ voucher, onClose }) {
             <button onClick={handlePrint} className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-amber-900/30">
               <Printer className="h-3.5 w-3.5" /> {t('tables.bankVouchers.print')}
             </button>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-350">
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-300">
               <XCircle className="h-5 w-5" />
             </button>
           </div>
@@ -300,19 +302,35 @@ function BankVoucherPrintModal({ voucher, onClose }) {
               body * {
                 visibility: hidden !important;
               }
-              #print-receipt, #print-receipt * {
+              #print-modal-portal, #print-modal-portal * {
                 visibility: visible !important;
               }
-              #print-receipt {
+              #print-modal-portal {
                 position: absolute !important;
                 left: 0 !important;
                 top: 0 !important;
                 width: 100% !important;
+                max-width: 100% !important;
+                height: auto !important;
+                min-height: 100% !important;
+                background: white !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                overflow: visible !important;
+                z-index: 999999 !important;
+                display: block !important;
+              }
+              .print-hide {
+                display: none !important;
+              }
+              #print-receipt {
+                width: 100% !important;
+                max-width: 100% !important;
                 margin: 0 !important;
                 padding: 0 !important;
                 display: grid !important;
                 grid-template-columns: 1fr 1fr !important;
-                gap: 16px !important;
+                gap: 20px !important;
               }
               @page {
                 size: A4 landscape;
@@ -328,13 +346,14 @@ function BankVoucherPrintModal({ voucher, onClose }) {
         </div>
 
         {/* Footer actions - Hidden when printing */}
-        <div className="bg-slate-955/40 border-t border-slate-800 px-6 py-4 flex justify-end gap-3 shrink-0 print:hidden">
+        <div className="print-hide bg-slate-955/40 border-t border-slate-800 px-6 py-4 flex justify-end gap-3 shrink-0 print:hidden">
           <button onClick={onClose} className="px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-xs font-semibold hover:bg-slate-800 hover:text-slate-200 transition-all cursor-pointer">
             {t('tables.bankVouchers.close')}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
