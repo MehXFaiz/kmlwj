@@ -59,7 +59,7 @@ app.use(helmet({
 // Global Rate Limiting
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // Limit each IP to 200 requests per `window` (here, per 15 minutes)
+  max: process.env.NODE_ENV === 'production' ? 200 : 10000, // Limit each IP to 200 requests per `window` (here, per 15 minutes)
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: { message: 'Too many requests from this IP, please try again after 15 minutes', status: 429 } }
@@ -71,7 +71,7 @@ app.use('/api/', globalLimiter);
 // Strict Rate Limiting for Authentication
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit each IP to 10 authentication requests per window
+  max: process.env.NODE_ENV === 'production' ? 10 : 10000, // Limit each IP to 10 authentication requests per window
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: { message: 'Too many authentication attempts, please try again after 15 minutes', status: 429 } }

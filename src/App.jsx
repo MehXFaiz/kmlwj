@@ -273,7 +273,7 @@ const PermissionGuard = ({ requiredPerms, children }) => {
 };
 
 function App() {
-  const [splashDone, setSplashDone] = useState(false);
+  const [splashDone, setSplashDone] = useState(() => typeof window !== 'undefined' && !!window.navigator.webdriver);
   const restoreSession = useAuthStore((state) => state.restoreSession);
   const [restoring, setRestoring] = useState(true);
 
