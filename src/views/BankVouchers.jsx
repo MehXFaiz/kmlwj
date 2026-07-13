@@ -328,9 +328,7 @@ function BankVoucherPrintModal({ voucher, onClose }) {
                 max-width: 100% !important;
                 margin: 0 !important;
                 padding: 0 !important;
-                display: grid !important;
-                grid-template-columns: 1fr 1fr !important;
-                gap: 20px !important;
+                display: block !important;
               }
               @page {
                 size: A4 landscape;
