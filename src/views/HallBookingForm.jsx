@@ -686,14 +686,38 @@ export const HallBookingForm = () => {
 
                     <div>
                       <label className={labelClass}>{t('receipt.hall')} *</label>
-                      <select {...register('hallId', {
-                        required: 'Hall selection is required',
-                        pattern: {
-                          value: /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
-                          message: 'Invalid Hall selection'
-                        }
-                      })} required
-                        className={inputClass(errors.hallId)}>
+                      <select
+                        {...register('hallId', {
+                          required: 'Hall selection is required',
+                          pattern: {
+                            value: /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
+                            message: 'Invalid Hall selection'
+                          }
+                        })}
+                        required
+                        onChange={(e) => {
+                          register('hallId').onChange(e);
+                          const val = e.target.value;
+                          const selectedHall = hallAccounts.find(h => h.id === val);
+                          if (selectedHall) {
+                            let amt = 0;
+                            const name = selectedHall.name;
+                            if (name === 'Bagh-e-Hajiani Kareema') amt = 46000;
+                            else if (name === 'Sadaya Hall') amt = 28000;
+                            else if (name === 'Annexy Hall') amt = 36000;
+                            else if (name === 'Zikarya Hall') amt = 28000;
+
+                            if (amt > 0) {
+                              setValue('amount', String(amt));
+                              const disc = parseFloat(discountVal) || 0;
+                              const net = Math.max(0, amt - disc);
+                              setValue('netAmount', String(net));
+                              setValue('receivedAmount', String(net));
+                            }
+                          }
+                        }}
+                        className={inputClass(errors.hallId)}
+                      >
                         <option value="">-- Select Hall --</option>
                         {hallAccounts.map(h => (
                           <option key={h.id} value={h.id}>{h.name}</option>
