@@ -52,7 +52,7 @@ export const AuthLayout = ({ children }) => {
               lineHeight: 2,
             }}
           >
-            کچھی مسلم لوہار واڈہ ویلفیئر جماعت
+            کچھی مسلم لوہارواڈھا ویلفیئر جماعت
           </div>
           <p className="text-slate-400 dark:text-slate-400 text-sm font-medium mt-2 max-w-xs">
             Enterprise Resource Planning for modern finance teams
@@ -119,7 +119,7 @@ export const AuthLayout = ({ children }) => {
                 lineHeight: 2,
               }}
             >
-              کچھی مسلم لوہار واڈہ ویلفیئر جماعت
+              کچھی مسلم لوہارواڈھا ویلفیئر جماعت
             </div>
           </div>
 

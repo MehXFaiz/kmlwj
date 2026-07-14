@@ -390,7 +390,7 @@ export function SplashScreen({ onComplete }) {
                 padding: '10px 0',
               }}
             >
-              کچھی مسلم لوہار واڈہ ویلفیئر جماعت
+              کچھی مسلم لوہارواڈھا ویلفیئر جماعت
             </div>
             <p
               style={{

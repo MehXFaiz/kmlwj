@@ -483,6 +483,7 @@ model DonationReceived {
   donorId           String            @db.Uuid
   donor             Donor             @relation(fields: [donorId], references: [id])
   donationType      DonationType
+  customDonationType String?
   amount            Float
   paymentMethod     PaymentMethod
   cashAccountId     String?           @db.Uuid

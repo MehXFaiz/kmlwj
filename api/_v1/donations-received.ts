@@ -30,6 +30,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         { referenceNo: { contains: search, mode: 'insensitive' } },
         { chequeNo: { contains: search, mode: 'insensitive' } },
         { narration: { contains: search, mode: 'insensitive' } },
+        { customDonationType: { contains: search, mode: 'insensitive' } },
         { donor: { fullName: { contains: search, mode: 'insensitive' } } },
       ];
     }
@@ -90,6 +91,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       receiptDate,
       donorId,
       donationType,
+      customDonationType,
       amount,
       paymentMethod,
       cashAccountId,
@@ -103,6 +105,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     if (!donorId || !donationType || amount === undefined || !paymentMethod) {
       return res.status(400).json({ error: { message: 'Missing required fields (donorId, donationType, amount, paymentMethod)', status: 400 } });
+    }
+
+    if (donationType === 'CUSTOM' && (!customDonationType || !customDonationType.trim())) {
+      return res.status(400).json({ error: { message: 'Custom Donation Type is required when CUSTOM is selected', status: 400 } });
     }
 
     const parsedAmount = Math.round(parseFloat(amount) * 100) / 100;
@@ -151,9 +157,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         const postingResult = await AccountingService.postReceipt(tx, {
           amount: parsedAmount,
           cashOrBankAccountId: debitAccountId!,
-          incomeAccountKeyword: donationType,
+          incomeAccountKeyword: donationType === 'CUSTOM' ? 'General Donation' : donationType,
           reference: receiptNo,
-          description: narration || `Received ${donationType} from ${donor.fullName} (${donor.donorCode})`,
+          description: narration || `Received ${donationType === 'CUSTOM' ? customDonationType : donationType} from ${donor.fullName} (${donor.donorCode})`,
           module: 'Donations Received',
           postedBy: req.user!.id,
           postingDate: receiptDate || new Date(),
@@ -172,6 +178,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           receiptDate: receiptDate ? new Date(receiptDate) : new Date(),
           donorId,
           donationType,
+          customDonationType: donationType === 'CUSTOM' ? customDonationType : null,
           amount: parsedAmount,
           paymentMethod,
           cashAccountId: paymentMethod === 'CASH' ? debitAccountId : null,
@@ -209,7 +216,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     });
     if (!existing) return res.status(404).json({ error: { message: 'Donation receipt not found', status: 404 } });
 
-    const { status, narration, referenceNo, chequeNo, chequeDate, amount, donorId, donationType, paymentMethod, receiptDate, cashAccountId, bankAccountId } = req.body;
+    const { status, narration, referenceNo, chequeNo, chequeDate, amount, donorId, donationType, customDonationType, paymentMethod, receiptDate, cashAccountId, bankAccountId } = req.body;
+
+    const finalDonationType = donationType !== undefined ? donationType : existing.donationType;
+    const finalCustomType = customDonationType !== undefined ? customDonationType : existing.customDonationType;
+    if (finalDonationType === 'CUSTOM' && (!finalCustomType || !finalCustomType.trim())) {
+      return res.status(400).json({ error: { message: 'Custom Donation Type is required when CUSTOM is selected', status: 400 } });
+    }
 
     const result = await prisma.$transaction(async (tx) => {
       let journalEntryId = existing.journalEntryId;
@@ -235,15 +248,16 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         if (debitAccountId) {
           const updatedAmount = amount !== undefined ? parseFloat(amount) : existing.amount;
           const updatedType = donationType !== undefined ? donationType : existing.donationType;
+          const updatedCustomType = customDonationType !== undefined ? customDonationType : existing.customDonationType;
           const updatedNarration = narration !== undefined ? narration : existing.narration;
           const updatedDate = receiptDate !== undefined ? new Date(receiptDate) : existing.receiptDate;
 
           const postingResult = await AccountingService.postReceipt(tx, {
             amount: updatedAmount,
             cashOrBankAccountId: debitAccountId,
-            incomeAccountKeyword: updatedType,
+            incomeAccountKeyword: updatedType === 'CUSTOM' ? 'General Donation' : updatedType,
             reference: existing.receiptNo,
-            description: updatedNarration || `Received ${updatedType} from ${existing.donor.fullName}`,
+            description: updatedNarration || `Received ${updatedType === 'CUSTOM' ? updatedCustomType : updatedType} from ${existing.donor.fullName}`,
             module: 'Donations Received',
             postedBy: req.user!.id,
             postingDate: updatedDate,
@@ -278,6 +292,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           amount: amount !== undefined ? Math.round(Number(amount) * 100) / 100 : undefined,
           donorId: donorId !== undefined ? donorId : undefined,
           donationType: donationType !== undefined ? donationType : undefined,
+          customDonationType: donationType !== undefined
+            ? (donationType === 'CUSTOM' ? customDonationType : null)
+            : (customDonationType !== undefined ? (existing.donationType === 'CUSTOM' ? customDonationType : null) : undefined),
           paymentMethod: paymentMethod !== undefined ? paymentMethod : undefined,
           receiptDate: receiptDate !== undefined ? (receiptDate ? new Date(receiptDate) : undefined) : undefined,
           cashAccountId: cashAccountId !== undefined ? (cashAccountId || null) : undefined,

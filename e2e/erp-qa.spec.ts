@@ -201,6 +201,52 @@ test.describe('ERP E2E QA Test Suite', () => {
     await expect(customInput).toBeVisible({ timeout: 15000 });
   });
 
+  test('Module 5.8: Donation Received Custom Type Form Logic', async ({ page }) => {
+    page.setDefaultTimeout(15000);
+
+    // 1. Login
+    await page.goto(`${BASE_URL}/login`);
+    await page.fill('input[type="email"]', 'admin@erp.com');
+    await page.fill('input[type="password"]', 'admin123');
+    await page.click('button[type="submit"]');
+    await expect(page).toHaveURL(`${BASE_URL}/`);
+
+    // 2. Navigate to new donation received form
+    await page.goto(`${BASE_URL}/donations-received/new`);
+
+    // 3. Verify custom input is not visible initially
+    const customInput = page.locator('input[placeholder="Enter Donation Type"]');
+    await expect(customInput).not.toBeVisible();
+
+    // 4. Select CUSTOM and verify custom input is visible
+    await page.selectOption('select[required]:has(option:has-text("GENERAL DONATION"))', 'CUSTOM');
+    await expect(customInput).toBeVisible();
+
+    // 5. Select ZAKAT and verify custom input is hidden
+    await page.selectOption('select[required]:has(option:has-text("GENERAL DONATION"))', 'ZAKAT');
+    await expect(customInput).not.toBeVisible();
+
+    // 6. Select CUSTOM again, fill details, and submit
+    await page.selectOption('select[required]:has(option:has-text("GENERAL DONATION"))', 'CUSTOM');
+    await customInput.fill('Water Cooler Donation');
+    
+    // Quick Add Donor
+    await page.click('button:has-text("Quick Add Donor")');
+    await page.fill('input[placeholder="e.g. Muhammad Ali"]', 'Test E2E Donor');
+    await page.click('button:has-text("Create & Select")');
+    await page.waitForTimeout(1000);
+
+    // Fill amount
+    await page.fill('input[placeholder="0"]', '5000');
+
+    // Submit form
+    await page.click('button[type="submit"]');
+
+    // 7. Verify redirection and that the custom label is displayed in the list
+    await expect(page).toHaveURL(`${BASE_URL}/donations-received`);
+    await expect(page.locator('text=Water Cooler Donation').first()).toBeVisible({ timeout: 15000 });
+  });
+
   test('Module 6: Role Based Access Control (RBAC)', async ({ page }) => {
     page.setDefaultTimeout(15000);
 

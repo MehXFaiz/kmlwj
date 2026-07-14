@@ -191,7 +191,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
                     color: '#0f172a'
                   }}
                 >
-                  کچھی مسلم لوھارواڑھا ویلفیئر جماعت
+                  کچھی مسلم لوہارواڈھا ویلفیئر جماعت
                 </h1>
                 <span
                   className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border"

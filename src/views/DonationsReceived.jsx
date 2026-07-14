@@ -28,7 +28,9 @@ const nullsToEmpty = (obj) =>
 function PrintReceiptModal({ donation, onClose }) {
   if (!donation) return null;
 
-  const categoryLabel = donation.donationType ? donation.donationType.replace(/_/g, ' ') : 'Donation';
+  const categoryLabel = donation.donationType === 'CUSTOM'
+    ? (donation.customDonationType || 'Custom Donation')
+    : (donation.donationType ? donation.donationType.replace(/_/g, ' ') : 'Donation');
 
   return (
     <VoucherSlipModal
@@ -374,7 +376,7 @@ export const DonationsReceived = () => {
                         <DollarSign className="w-3.5 h-3.5 text-amber-400" /> CATEGORY
                       </span>
                       <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded bg-slate-800/90 text-slate-200 border border-slate-700/60">
-                        {d.donationType?.replace(/_/g, ' ') || 'GENERAL'}
+                        {d.donationType === 'CUSTOM' ? (d.customDonationType || 'Custom Donation') : (d.donationType?.replace(/_/g, ' ') || 'GENERAL')}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">

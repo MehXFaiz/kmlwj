@@ -198,7 +198,7 @@ export const GeneralLedger = () => {
             <h1
               className="text-xl font-extrabold text-slate-900 leading-snug font-urdu"
             >
-              کچھی مسلم لوھارواڑھا ویلفیئر جماعت
+              کچھی مسلم لوہارواڈھا ویلفیئر جماعت
             </h1>
             <p className="text-[11px] font-bold text-slate-600 mt-1">
               جمعہ بلوچ روڈ، نزد K.E گرڈ اسٹیشن، نیو کلری، لیاری، کراچی

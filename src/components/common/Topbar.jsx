@@ -114,7 +114,7 @@ export const Topbar = ({ onMobileMenuToggle }) => {
               letterSpacing: '0.01em',
             }}
           >
-            کچھی مسلم لوہار واڈہ ویلفیئر جماعت
+            کچھی مسلم لوہارواڈھا ویلفیئر جماعت
           </span>
         </div>
 

@@ -156,7 +156,7 @@ export const VoucherSlipModal = ({
                   />
                   <div className="text-left font-bold tracking-wider text-sm sm:text-base text-slate-900">
                     <div className="font-semibold text-slate-900" style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif", fontSize: '1.15rem' }}>
-                      کچھی مسلم لوہار واڈہ ویلفیئر جماعت
+                      کچھی مسلم لوہارواڈھا ویلفیئر جماعت
                     </div>
                     <div className="text-base sm:text-xl uppercase font-black tracking-wide border-b-2 border-slate-800 pb-0.5 inline-block">
                       {title}

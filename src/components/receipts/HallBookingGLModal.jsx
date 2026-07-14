@@ -136,7 +136,7 @@ export const HallBookingGLModal = ({ booking, onClose }) => {
                         className="text-xl font-extrabold text-[#482F1E] leading-snug"
                         style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
                       >
-                        کچھی مسلم لوھارواڑھا ویلفیئر جماعت
+                        کچھی مسلم لوہارواڈھا ویلفیئر جماعت
                       </h1>
                       <p className="text-[11px] font-bold text-slate-500 mt-1">
                         جمعہ بلوچ روڈ، نزد K.E گرڈ اسٹیشن، نیو کلری، لیاری، کراچی

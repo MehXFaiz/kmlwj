@@ -110,6 +110,7 @@ export const DonationReceiptForm = () => {
     receiptDate: new Date().toISOString().slice(0, 10),
     donorId: '',
     donationType: 'GENERAL_DONATION',
+    customDonationType: '',
     amount: '',
     paymentMethod: 'CASH',
     cashAccountId: '',
@@ -164,6 +165,7 @@ export const DonationReceiptForm = () => {
           ...nullsToEmpty(existing),
           receiptDate: existing.receiptDate ? new Date(existing.receiptDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
           chequeDate: existing.chequeDate ? new Date(existing.chequeDate).toISOString().slice(0, 10) : '',
+          customDonationType: existing.customDonationType || '',
         });
       }
     }
@@ -173,6 +175,10 @@ export const DonationReceiptForm = () => {
     e.preventDefault();
     if (!form.donorId) {
       setToast({ type: 'error', message: 'Please select a donor' });
+      return;
+    }
+    if (form.donationType === 'CUSTOM' && (!form.customDonationType || !form.customDonationType.trim())) {
+      setToast({ type: 'error', message: 'Custom Donation Type is required when CUSTOM is selected' });
       return;
     }
     if (!form.amount || isNaN(form.amount) || Number(form.amount) <= 0 || !/^[1-9]\d*$/.test(String(form.amount))) {
@@ -333,12 +339,38 @@ export const DonationReceiptForm = () => {
 
                 <div>
                   <label className={labelClass}>Donation Type *</label>
-                  <select required value={form.donationType} onChange={e => setForm({ ...form, donationType: e.target.value })} className={inputClass}>
+                  <select
+                    required
+                    value={form.donationType}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setForm(prev => ({
+                        ...prev,
+                        donationType: val,
+                        customDonationType: val === 'CUSTOM' ? prev.customDonationType : ''
+                      }));
+                    }}
+                    className={inputClass}
+                  >
                     {DONATION_TYPES.map(t => (
                       <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
                     ))}
                   </select>
                 </div>
+
+                {form.donationType === 'CUSTOM' && (
+                  <div className="sm:col-span-2">
+                    <label className={labelClass}>Custom Donation Type *</label>
+                    <input
+                      type="text"
+                      required
+                      value={form.customDonationType}
+                      onChange={e => setForm({ ...form, customDonationType: e.target.value })}
+                      placeholder="Enter Donation Type"
+                      className={inputClass}
+                    />
+                  </div>
+                )}
 
                 <div>
                   <label className={labelClass}>Amount (PKR) *</label>
