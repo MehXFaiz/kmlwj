@@ -241,6 +241,7 @@ test.describe('ERP E2E QA Test Suite', () => {
 
     // Submit form
     await page.click('button[type="submit"]');
+    await page.waitForTimeout(3000);
 
     // 7. Verify redirection and that the custom label is displayed in the list
     await expect(page).toHaveURL(`${BASE_URL}/donations-received`);
