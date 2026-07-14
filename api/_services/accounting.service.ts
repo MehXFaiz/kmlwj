@@ -155,9 +155,23 @@ export class AccountingService {
     let account = null;
 
     if (line.accountId) {
-      account = await tx.account.findUnique({ where: { id: line.accountId } });
+      account = await tx.account.findUnique({
+        where: { id: line.accountId },
+        include: { accountType: true }
+      });
     } else if (line.accountCode) {
-      account = await tx.account.findUnique({ where: { glCode: line.accountCode } });
+      account = await tx.account.findUnique({
+        where: { glCode: line.accountCode },
+        include: { accountType: true }
+      });
+    }
+
+    // Validate account type if directly looked up and accountType is specified
+    if (account && line.accountType) {
+      const typeName = (account.accountType?.name || '').toUpperCase();
+      if (typeName !== line.accountType.toUpperCase()) {
+        throw new Error(`Accounting Engine Error: Account '${account.glCode} - ${account.accountName}' is of type '${typeName}', but type '${line.accountType}' was expected.`);
+      }
     }
 
     // Ensure directly looked-up account resolves to a leaf account if it is a header
@@ -173,9 +187,19 @@ export class AccountingService {
             children: { none: {} },
             isLocked: false
           },
+          include: { accountType: true },
           orderBy: { glCode: 'asc' }
         });
-        if (leaf) account = leaf;
+        if (leaf) {
+          // Re-validate leaf account type
+          if (line.accountType) {
+            const leafTypeName = (leaf.accountType?.name || '').toUpperCase();
+            if (leafTypeName !== line.accountType.toUpperCase()) {
+              throw new Error(`Accounting Engine Error: Resolved leaf account '${leaf.glCode} - ${leaf.accountName}' is of type '${leafTypeName}', but type '${line.accountType}' was expected.`);
+            }
+          }
+          account = leaf;
+        }
       }
     }
 
@@ -201,10 +225,12 @@ export class AccountingService {
               { detailType: { equals: cleanKeyword, mode: 'insensitive' } },
               { detailType: { equals: keyword, mode: 'insensitive' } }
             ],
+            accountType: line.accountType ? { name: { equals: line.accountType, mode: 'insensitive' } } : undefined,
             isLocked: false,
             children: { none: {} },
             accountLevel: { in: ['GL', 'SUBSIDIARY'] }
           },
+          include: { accountType: true },
           orderBy: { glCode: 'asc' }
         });
       }
@@ -218,10 +244,64 @@ export class AccountingService {
               { accountName: { contains: keyword.split(' ')[0], mode: 'insensitive' } },
               { description: { contains: cleanKeyword, mode: 'insensitive' } }
             ],
+            accountType: line.accountType ? { name: { equals: line.accountType, mode: 'insensitive' } } : undefined,
             isLocked: false,
             children: { none: {} },
             accountLevel: { in: ['GL', 'SUBSIDIARY'] }
           },
+          include: { accountType: true },
+          orderBy: { glCode: 'asc' }
+        });
+      }
+
+      // Special fallback for REVENUE when looking for generic Donation/Income
+      if (!account && line.accountType === 'REVENUE') {
+        // Try to find a General Donation account first
+        account = await tx.account.findFirst({
+          where: {
+            accountName: { contains: 'General Donation', mode: 'insensitive' },
+            accountType: { name: { equals: 'REVENUE', mode: 'insensitive' } },
+            isLocked: false,
+            children: { none: {} },
+            accountLevel: { in: ['GL', 'SUBSIDIARY'] }
+          },
+          include: { accountType: true },
+          orderBy: { glCode: 'asc' }
+        });
+
+        if (!account) {
+          account = await tx.account.findFirst({
+            where: {
+              OR: [
+                { accountName: { contains: 'Donation', mode: 'insensitive' } },
+                { accountName: { contains: 'Income', mode: 'insensitive' } }
+              ],
+              accountType: { name: { equals: 'REVENUE', mode: 'insensitive' } },
+              isLocked: false,
+              children: { none: {} },
+              accountLevel: { in: ['GL', 'SUBSIDIARY'] }
+            },
+            include: { accountType: true },
+            orderBy: { glCode: 'asc' }
+          });
+        }
+      }
+
+      // Special fallback for EXPENSE when looking for generic Expense/Welfare/Aid
+      if (!account && line.accountType === 'EXPENSE') {
+        account = await tx.account.findFirst({
+          where: {
+            OR: [
+              { accountName: { contains: 'Expense', mode: 'insensitive' } },
+              { accountName: { contains: 'Welfare', mode: 'insensitive' } },
+              { accountName: { contains: 'Aid', mode: 'insensitive' } }
+            ],
+            accountType: { name: { equals: 'EXPENSE', mode: 'insensitive' } },
+            isLocked: false,
+            children: { none: {} },
+            accountLevel: { in: ['GL', 'SUBSIDIARY'] }
+          },
+          include: { accountType: true },
           orderBy: { glCode: 'asc' }
         });
       }
@@ -236,9 +316,11 @@ export class AccountingService {
               { accountName: { equals: keyword, mode: 'insensitive' } },
               { accountName: { contains: keyword, mode: 'insensitive' } }
             ],
+            accountType: line.accountType ? { name: { equals: line.accountType, mode: 'insensitive' } } : undefined,
             isLocked: false,
             children: { none: {} }
           },
+          include: { accountType: true },
           orderBy: { glCode: 'asc' }
         });
       }
@@ -253,6 +335,7 @@ export class AccountingService {
           children: { none: {} },
           accountLevel: { in: ['GL', 'SUBSIDIARY'] }
         },
+        include: { accountType: true },
         orderBy: { glCode: 'asc' }
       });
     }
@@ -461,6 +544,7 @@ export class AccountingService {
         accountId: params.cashOrBankAccountId,
         accountCode: params.cashOrBankAccountCode,
         accountKeyword: params.cashOrBankAccountKeyword || (!params.cashOrBankAccountId && !params.cashOrBankAccountCode ? 'Cash' : undefined),
+        accountType: 'ASSET',
         debit: params.amount,
         credit: 0,
         description: `Receipt: ${params.description || params.reference}`
@@ -469,6 +553,7 @@ export class AccountingService {
         accountId: params.incomeAccountId,
         accountCode: params.incomeAccountCode,
         accountKeyword: params.incomeAccountKeyword || 'Income',
+        accountType: 'REVENUE',
         debit: 0,
         credit: params.amount,
         description: `Revenue: ${params.description || params.reference}`
@@ -503,6 +588,7 @@ export class AccountingService {
         accountId: params.expenseAccountId,
         accountCode: params.expenseAccountCode,
         accountKeyword: params.expenseAccountKeyword || 'Expense',
+        accountType: 'EXPENSE',
         debit: params.amount,
         credit: 0,
         description: `Expense: ${params.description || params.reference}`
@@ -511,6 +597,7 @@ export class AccountingService {
         accountId: params.cashOrBankAccountId,
         accountCode: params.cashOrBankAccountCode,
         accountKeyword: params.cashOrBankAccountKeyword || (!params.cashOrBankAccountId && !params.cashOrBankAccountCode ? 'Cash' : undefined),
+        accountType: 'ASSET',
         debit: 0,
         credit: params.amount,
         description: `Payment: ${params.description || params.reference}`
@@ -544,6 +631,7 @@ export class AccountingService {
       {
         accountId: params.toAccountId,
         accountCode: params.toAccountCode,
+        accountType: 'ASSET',
         debit: params.amount,
         credit: 0,
         description: `Transfer In: ${params.description || params.reference}`
@@ -551,6 +639,7 @@ export class AccountingService {
       {
         accountId: params.fromAccountId,
         accountCode: params.fromAccountCode,
+        accountType: 'ASSET',
         debit: 0,
         credit: params.amount,
         description: `Transfer Out: ${params.description || params.reference}`
@@ -807,6 +896,9 @@ export class AccountingService {
             }
           }
         });
+        try {
+          await AccountingService.recalculateAccountBalance(tx, line.accountId);
+        } catch (e) {}
       }
     }
 
@@ -870,6 +962,9 @@ export class AccountingService {
             }
           }
         });
+        try {
+          await AccountingService.recalculateAccountBalance(tx, line.accountId);
+        } catch (e) {}
       }
     }
 
@@ -928,6 +1023,9 @@ export class AccountingService {
             }
           }
         });
+        try {
+          await AccountingService.recalculateAccountBalance(tx, line.accountId);
+        } catch (e) {}
       }
     }
 
