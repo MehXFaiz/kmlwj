@@ -62,8 +62,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
   }
 
-  // Ensure any accidentally posted header lines are migrated to leaf accounts and balances recalculated
-  await AccountingService.ensureLeafPostingsAndBalances(prisma);
+  // Ensure any accidentally posted header lines are migrated to leaf accounts and balances recalculated in the background
+  AccountingService.ensureLeafPostingsAndBalances(prisma).catch((err) => {
+    console.error("Error in background ensureLeafPostingsAndBalances:", err);
+  });
 
   // Calculate live financial summary from accounts table
   const allAccounts = await prisma.account.findMany({
