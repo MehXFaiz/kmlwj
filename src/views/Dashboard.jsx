@@ -353,11 +353,13 @@ function AccountTypeStat({ label, count, pct, color, dotColor }) {
 export const Dashboard = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { accounts, fetchAccounts, selectedSubsidiary } = useCoaStore();
-  const { journals, auditLogs, fetchJournals } = useJournalStore();
-  const { stats: dbStats, fetchStats } = useDashboardStore();
+  const { accounts, fetchAccounts, selectedSubsidiary, loading: coaLoading } = useCoaStore();
+  const { journals, auditLogs, fetchJournals, isLoading: journalsLoading } = useJournalStore();
+  const { stats: dbStats, fetchStats, loading: statsLoading } = useDashboardStore();
   const { addNotification } = useNotificationStore();
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const isRefreshing = statsLoading || coaLoading || journalsLoading;
 
   useEffect(() => {
     fetchAccounts();
@@ -513,10 +515,11 @@ export const Dashboard = () => {
         </div>
         <button
           onClick={handleRefresh}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 hover:border-slate-700 text-slate-500 hover:text-slate-200 transition-all text-xs font-semibold self-start sm:self-auto"
+          disabled={isRefreshing}
+          className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 hover:border-slate-700 text-slate-500 hover:text-slate-200 transition-all text-xs font-semibold self-start sm:self-auto disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <RefreshCw className="h-3.5 w-3.5" />
-          Refresh
+          <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin text-brand-400' : ''}`} />
+          {isRefreshing ? 'Refreshing...' : 'Refresh'}
         </button>
       </div>
 

@@ -25,6 +25,9 @@ if (!connectionString) {
 
 export const pool = globalForDb.pool ?? new pg.Pool({
   connectionString,
+  max: 20,
+  idleTimeoutMillis: 10000,
+  connectionTimeoutMillis: 5000,
   ssl: connectionString.includes('sslmode=require') || connectionString.includes('neon.tech')
     ? { rejectUnauthorized: false }
     : undefined,
