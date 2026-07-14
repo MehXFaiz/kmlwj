@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import api from '../services/api';
+import { useDashboardStore } from './dashboardStore';
 
 export const useSimpleExpenseStore = create((set, get) => ({
   expenses: [],
@@ -23,6 +24,7 @@ export const useSimpleExpenseStore = create((set, get) => ({
     try {
       const { data } = await api.post('/api/v1/simple-expense', expenseData);
       set(state => ({ expenses: [data.data, ...state.expenses] }));
+      useDashboardStore.getState().fetchStats();
       return true;
     } catch (error) {
       set({ error: error.response?.data?.error?.message || 'Failed to record expense' });
@@ -37,6 +39,7 @@ export const useSimpleExpenseStore = create((set, get) => ({
       set(state => ({
         expenses: state.expenses.map(e => e.id === id ? data.data : e)
       }));
+      useDashboardStore.getState().fetchStats();
       return true;
     } catch (error) {
       set({ error: error.response?.data?.error?.message || 'Failed to update expense' });
@@ -51,6 +54,7 @@ export const useSimpleExpenseStore = create((set, get) => ({
       set(state => ({
         expenses: state.expenses.filter(e => e.id !== id)
       }));
+      useDashboardStore.getState().fetchStats();
       return true;
     } catch (error) {
       set({ error: error.response?.data?.error?.message || 'Failed to delete expense' });

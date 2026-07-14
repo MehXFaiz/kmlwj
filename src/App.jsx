@@ -58,6 +58,7 @@ const InvoiceForm = lazy(() => import('./views/InvoiceForm').then(m => ({ defaul
 const InvoiceDetail = lazy(() => import('./views/InvoiceDetail').then(m => ({ default: m.InvoiceDetail })));
 const Members = lazy(() => import('./views/Members').then(m => ({ default: m.Members })));
 const MemberForm = lazy(() => import('./views/MemberForm').then(m => ({ default: m.MemberForm })));
+const MembershipCards = lazy(() => import('./views/MembershipCards').then(m => ({ default: m.MembershipCards })));
 
 // Bank Voucher Module Views
 const BankVouchers = lazy(() => import('./views/BankVouchers').then(m => ({ default: m.BankVouchers })));
@@ -395,6 +396,7 @@ function App() {
             <Route path="/members" element={<Members />} />
             <Route path="/members/new" element={<MemberForm />} />
             <Route path="/members/edit/:id" element={<MemberForm />} />
+            <Route path="/membership-cards" element={<MembershipCards />} />
             <Route path="/invoices" element={
               <PermissionGuard requiredPerms={['VIEW_INVOICES']}>
                 <Invoices />

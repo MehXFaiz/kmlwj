@@ -38,6 +38,7 @@ import {
   PlusCircle,
   MinusCircle,
   FileText,
+  CreditCard,
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -199,6 +200,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
       title: t('sidebar.invoicesClients'),
       items: [
         { name: t('sidebar.members', 'Community Members'), hint: t('sidebar.membersHint', 'Manage Jamia member registrations & records'), icon: Users, path: '/members' },
+        { name: 'Membership Cards', hint: 'Generate & print CR80 membership ID cards', icon: CreditCard, path: '/membership-cards' },
       ],
     },
     {

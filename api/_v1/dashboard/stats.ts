@@ -86,7 +86,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const nameLower = (acc.accountName || '').toLowerCase();
     const detailType = (acc.detailType || '').toLowerCase();
 
-    const isLeaf = !allAccounts.some(a => a.parentId === acc.id) || Math.abs(bal) > 0.001;
+    const isLeaf = !allAccounts.some(a => a.parentId === acc.id);
 
     if (isLeaf) {
       if (typeName === 'ASSET' || typeName === 'ASSETS') {
@@ -102,7 +102,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         totalEquity += (bal < 0 ? Math.abs(bal) : bal);
       } else if (typeName === 'REVENUE' || typeName === 'INCOME') {
         totalRevenue += (bal < 0 ? Math.abs(bal) : bal);
-      } else if (typeName === 'EXPENSE' || typeName === 'EXPENSES') {
+      } else if (typeName === 'EXPENSE' || typeName === 'EXPENSES' || (acc.glCode.startsWith('4') && !acc.glCode.startsWith('3') && !acc.glCode.startsWith('1') && !acc.glCode.startsWith('2'))) {
         totalExpense += bal;
       }
     }

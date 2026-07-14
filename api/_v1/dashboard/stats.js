@@ -45,7 +45,9 @@ var stats_default = makeHandler(async (req, res) => {
       monthlyData[monthIndex].Expenses += (Number(entry.debit) || 0) - (Number(entry.credit) || 0);
     }
   }
-  await AccountingService.ensureLeafPostingsAndBalances(prisma);
+  AccountingService.ensureLeafPostingsAndBalances(prisma).catch((err) => {
+    console.error("Error in background ensureLeafPostingsAndBalances:", err);
+  });
   const allAccounts = await prisma.account.findMany({
     include: { accountType: true }
   });
@@ -61,7 +63,7 @@ var stats_default = makeHandler(async (req, res) => {
     const bal = Number(acc.currentBalance) || 0;
     const nameLower = (acc.accountName || "").toLowerCase();
     const detailType = (acc.detailType || "").toLowerCase();
-    const isLeaf = !allAccounts.some((a) => a.parentId === acc.id) || Math.abs(bal) > 1e-3;
+    const isLeaf = !allAccounts.some((a) => a.parentId === acc.id);
     if (isLeaf) {
       if (typeName === "ASSET" || typeName === "ASSETS") {
         totalAssets += bal;
@@ -76,7 +78,7 @@ var stats_default = makeHandler(async (req, res) => {
         totalEquity += bal < 0 ? Math.abs(bal) : bal;
       } else if (typeName === "REVENUE" || typeName === "INCOME") {
         totalRevenue += bal < 0 ? Math.abs(bal) : bal;
-      } else if (typeName === "EXPENSE" || typeName === "EXPENSES") {
+      } else if (typeName === "EXPENSE" || typeName === "EXPENSES" || acc.glCode.startsWith("4") && !acc.glCode.startsWith("3") && !acc.glCode.startsWith("1") && !acc.glCode.startsWith("2")) {
         totalExpense += bal;
       }
     }

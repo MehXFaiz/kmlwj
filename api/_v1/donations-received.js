@@ -25,6 +25,7 @@ var donations_received_default = makeHandler(async (req, res) => {
         { referenceNo: { contains: search, mode: "insensitive" } },
         { chequeNo: { contains: search, mode: "insensitive" } },
         { narration: { contains: search, mode: "insensitive" } },
+        { customDonationType: { contains: search, mode: "insensitive" } },
         { donor: { fullName: { contains: search, mode: "insensitive" } } }
       ];
     }
@@ -78,6 +79,7 @@ var donations_received_default = makeHandler(async (req, res) => {
       receiptDate,
       donorId,
       donationType,
+      customDonationType,
       amount,
       paymentMethod,
       cashAccountId,
@@ -90,6 +92,9 @@ var donations_received_default = makeHandler(async (req, res) => {
     } = req.body;
     if (!donorId || !donationType || amount === void 0 || !paymentMethod) {
       return res.status(400).json({ error: { message: "Missing required fields (donorId, donationType, amount, paymentMethod)", status: 400 } });
+    }
+    if (donationType === "CUSTOM" && (!customDonationType || !customDonationType.trim())) {
+      return res.status(400).json({ error: { message: "Custom Donation Type is required when CUSTOM is selected", status: 400 } });
     }
     const parsedAmount = Math.round(parseFloat(amount) * 100) / 100;
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
@@ -130,9 +135,9 @@ var donations_received_default = makeHandler(async (req, res) => {
         const postingResult = await AccountingService.postReceipt(tx, {
           amount: parsedAmount,
           cashOrBankAccountId: debitAccountId,
-          incomeAccountKeyword: donationType,
+          incomeAccountKeyword: donationType === "CUSTOM" ? "General Donation" : donationType,
           reference: receiptNo,
-          description: narration || `Received ${donationType} from ${donor.fullName} (${donor.donorCode})`,
+          description: narration || `Received ${donationType === "CUSTOM" ? customDonationType : donationType} from ${donor.fullName} (${donor.donorCode})`,
           module: "Donations Received",
           postedBy: req.user.id,
           postingDate: receiptDate || /* @__PURE__ */ new Date(),
@@ -150,6 +155,7 @@ var donations_received_default = makeHandler(async (req, res) => {
           receiptDate: receiptDate ? new Date(receiptDate) : /* @__PURE__ */ new Date(),
           donorId,
           donationType,
+          customDonationType: donationType === "CUSTOM" ? customDonationType : null,
           amount: parsedAmount,
           paymentMethod,
           cashAccountId: paymentMethod === "CASH" ? debitAccountId : null,
@@ -181,7 +187,12 @@ var donations_received_default = makeHandler(async (req, res) => {
       include: { donor: true }
     });
     if (!existing) return res.status(404).json({ error: { message: "Donation receipt not found", status: 404 } });
-    const { status, narration, referenceNo, chequeNo, chequeDate, amount, donorId, donationType, paymentMethod, receiptDate, cashAccountId, bankAccountId } = req.body;
+    const { status, narration, referenceNo, chequeNo, chequeDate, amount, donorId, donationType, customDonationType, paymentMethod, receiptDate, cashAccountId, bankAccountId } = req.body;
+    const finalDonationType = donationType !== void 0 ? donationType : existing.donationType;
+    const finalCustomType = customDonationType !== void 0 ? customDonationType : existing.customDonationType;
+    if (finalDonationType === "CUSTOM" && (!finalCustomType || !finalCustomType.trim())) {
+      return res.status(400).json({ error: { message: "Custom Donation Type is required when CUSTOM is selected", status: 400 } });
+    }
     const result = await prisma.$transaction(async (tx) => {
       let journalEntryId = existing.journalEntryId;
       let newStatus = status !== void 0 ? status : existing.status;
@@ -203,14 +214,15 @@ var donations_received_default = makeHandler(async (req, res) => {
         if (debitAccountId) {
           const updatedAmount = amount !== void 0 ? parseFloat(amount) : existing.amount;
           const updatedType = donationType !== void 0 ? donationType : existing.donationType;
+          const updatedCustomType = customDonationType !== void 0 ? customDonationType : existing.customDonationType;
           const updatedNarration = narration !== void 0 ? narration : existing.narration;
           const updatedDate = receiptDate !== void 0 ? new Date(receiptDate) : existing.receiptDate;
           const postingResult = await AccountingService.postReceipt(tx, {
             amount: updatedAmount,
             cashOrBankAccountId: debitAccountId,
-            incomeAccountKeyword: updatedType,
+            incomeAccountKeyword: updatedType === "CUSTOM" ? "General Donation" : updatedType,
             reference: existing.receiptNo,
-            description: updatedNarration || `Received ${updatedType} from ${existing.donor.fullName}`,
+            description: updatedNarration || `Received ${updatedType === "CUSTOM" ? updatedCustomType : updatedType} from ${existing.donor.fullName}`,
             module: "Donations Received",
             postedBy: req.user.id,
             postingDate: updatedDate,
@@ -243,6 +255,7 @@ var donations_received_default = makeHandler(async (req, res) => {
           amount: amount !== void 0 ? Math.round(Number(amount) * 100) / 100 : void 0,
           donorId: donorId !== void 0 ? donorId : void 0,
           donationType: donationType !== void 0 ? donationType : void 0,
+          customDonationType: donationType !== void 0 ? donationType === "CUSTOM" ? customDonationType : null : customDonationType !== void 0 ? existing.donationType === "CUSTOM" ? customDonationType : null : void 0,
           paymentMethod: paymentMethod !== void 0 ? paymentMethod : void 0,
           receiptDate: receiptDate !== void 0 ? receiptDate ? new Date(receiptDate) : void 0 : void 0,
           cashAccountId: cashAccountId !== void 0 ? cashAccountId || null : void 0,

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useMemberStore } from '../store/memberStore';
 import {
   Users, UserPlus, Search, Edit2, Trash2, Phone, MapPin,
-  Briefcase, CheckCircle, ArrowRight, Building, AlertTriangle
+  Briefcase, CheckCircle, ArrowRight, Building, AlertTriangle, CreditCard
 } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
 import { useAuthStore } from '../store/authStore';
@@ -109,6 +109,15 @@ export const Members = () => {
           >
             <Building className="w-4 h-4 text-amber-400" />
             <span>Fee Ledger</span>
+          </Link>
+
+          <Link
+            to="/membership-cards"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all border"
+            style={{ background: 'rgba(13,78,43,0.2)', borderColor: 'rgba(201,162,39,0.35)', color: '#C9A227' }}
+          >
+            <CreditCard className="w-4 h-4" />
+            <span>Print Cards</span>
           </Link>
 
           <Link
