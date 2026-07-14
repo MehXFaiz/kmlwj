@@ -45,6 +45,7 @@ import searchHandler from './_v1/search.js';
 import simpleExpenseHandler from './_v1/simple-expense.js';
 import simpleIncomeHandler from './_v1/simple-income.js';
 import accountingHealthHandler from './_v1/accounting-health.js';
+import { memberVerifyHandler } from './_v1/member-verify.js';
 
 const app = express();
 
@@ -215,5 +216,10 @@ app.post('/api/v1/simple-income', makeExpress(simpleIncomeHandler));
 
 // Accounting Health Check Route
 app.get('/api/v1/accounting-health', makeExpress(accountingHealthHandler));
+
+// Public Member Verification Route (no JWT — scanned from QR code)
+app.get('/api/v1/member/verify/:id', async (req: any, res: any) => {
+  await memberVerifyHandler(req, res);
+});
 
 export default app;
