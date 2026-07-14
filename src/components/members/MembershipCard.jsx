@@ -27,7 +27,12 @@ function fmtDate(val) {
 
 /* ─────────────────────────────────── FRONT ─────────────────────────────────── */
 export function CardFront({ member }) {
-  const qrValue = member?.memberNo || member?.id || 'N/A';
+  const BASE_URL = 'https://kmlwj.com/member/verify';
+  const qrValue = member?.memberNo
+    ? `${BASE_URL}/${member.memberNo}`
+    : member?.id
+    ? `${BASE_URL}/${member.id}`
+    : 'https://kmlwj.com';
 
   return (
     <div className="id-card-front" style={{ position: 'relative', overflow: 'hidden' }}>

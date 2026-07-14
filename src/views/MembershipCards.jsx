@@ -1,14 +1,23 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useMemberStore } from '../store/memberStore';
+import { useAuthStore } from '../store/authStore';
 import { CardFront, CardBack } from '../components/members/MembershipCard';
 import {
   CreditCard, Search, Printer, Download, ChevronLeft,
-  Users, RefreshCw, Grid3X3, LayoutList, X, Check, Eye, Filter
+  Users, RefreshCw, Grid3X3, LayoutList, X, Check, Eye, Filter,
+  Link2, Copy, ExternalLink
 } from 'lucide-react';
 
 /* ── Org constants ── */
 const ORG_NAME_SHORT = 'KMLWJ';
+const VERIFY_BASE_URL = 'https://kmlwj.com/member/verify';
+
+/* ── Build QR verification URL for a member ── */
+function getMemberQrUrl(member) {
+  const key = member?.memberNo || member?.id || null;
+  return key ? `${VERIFY_BASE_URL}/${key}` : null;
+}
 
 /* ── Print styles injected once ── */
 const PRINT_STYLES = `
@@ -111,7 +120,8 @@ function chunk(arr, size) {
 }
 
 /* ─────────── Preview modal ─────────── */
-function PreviewModal({ member, onClose, onPrint }) {
+function PreviewModal({ member, onClose, onPrint, onCopyQr }) {
+  const qrUrl = getMemberQrUrl(member);
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9999,
@@ -152,21 +162,50 @@ function PreviewModal({ member, onClose, onPrint }) {
           </div>
         </div>
 
+        {/* QR URL display (if available) */}
+        {qrUrl && (
+          <div style={{
+            marginTop: '16px', padding: '10px 14px', borderRadius: '10px',
+            background: 'rgba(13,78,43,0.12)', border: '1px solid rgba(74,222,128,0.15)',
+            display: 'flex', alignItems: 'center', gap: '8px'
+          }}>
+            <Link2 size={13} style={{ color: '#4ade80', flexShrink: 0 }} />
+            <span style={{
+              fontSize: '11px', color: '#4ade80', fontFamily: 'monospace',
+              flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+            }}>{qrUrl}</span>
+          </div>
+        )}
+
         {/* Actions */}
-        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap' }}>
           <button onClick={onClose} style={{
             flex: 1, padding: '10px', borderRadius: '10px',
             background: '#1e293b', border: '1px solid #334155',
-            color: '#94a3b8', cursor: 'pointer', fontSize: '13px', fontWeight: 600
+            color: '#94a3b8', cursor: 'pointer', fontSize: '13px', fontWeight: 600,
+            minWidth: '70px'
           }}>
             Close
           </button>
+          {onCopyQr && (
+            <button onClick={() => { onCopyQr(member); onClose(); }} style={{
+              flex: 1, padding: '10px', borderRadius: '10px',
+              background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.25)',
+              color: '#4ade80', cursor: 'pointer', fontSize: '13px', fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
+              minWidth: '120px'
+            }}>
+              <Copy size={14} />
+              Copy QR Link
+            </button>
+          )}
           <button onClick={() => onPrint(member)} style={{
             flex: 2, padding: '10px', borderRadius: '10px',
             background: 'linear-gradient(135deg, #0D4E2B, #1A6B3C)',
             border: '1px solid #C9A22788',
             color: '#C9A227', cursor: 'pointer', fontSize: '13px', fontWeight: 700,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            minWidth: '100px'
           }}>
             <Printer size={15} />
             Print Card
@@ -180,6 +219,8 @@ function PreviewModal({ member, onClose, onPrint }) {
 /* ═══════════════════════ MAIN VIEW ═══════════════════════ */
 export const MembershipCards = () => {
   const { members, fetchMembers, loading } = useMemberStore();
+  const user = useAuthStore((state) => state.user);
+  const isAdmin = user?.role === 'Super Admin' || user?.permissions?.includes('MANAGE_USERS');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // all | active | inactive
   const [selectedIds, setSelectedIds] = useState([]);
@@ -187,8 +228,22 @@ export const MembershipCards = () => {
   const [printMode, setPrintMode] = useState(null); // 'single' | 'a4-bulk'
   const [printMember, setPrintMember] = useState(null);
   const [view, setView] = useState('grid'); // grid | list
+  const [toast, setToast] = useState(null); // { message, type }
   const singlePrintRef = useRef(null);
   const bulkPrintRef = useRef(null);
+
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 2500);
+  }, []);
+
+  const copyQrLink = useCallback((member) => {
+    const url = getMemberQrUrl(member);
+    if (!url) { showToast('No membership number assigned yet', 'error'); return; }
+    navigator.clipboard.writeText(url)
+      .then(() => showToast(`QR link copied for ${member.fullName}`))
+      .catch(() => showToast('Failed to copy — try again', 'error'));
+  }, [showToast]);
 
   useEffect(() => {
     injectPrintStyles();
@@ -240,6 +295,27 @@ export const MembershipCards = () => {
   /* ─────────── RENDER ─────────── */
   return (
     <div className="space-y-6">
+      <style>{`@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }`}</style>
+
+      {/* ── Inline toast notification ── */}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: '28px', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 99999, padding: '10px 22px', borderRadius: '12px',
+          background: toast.type === 'error' ? 'rgba(127,29,29,0.97)' : 'rgba(13,78,43,0.97)',
+          border: `1px solid ${toast.type === 'error' ? 'rgba(239,68,68,0.5)' : 'rgba(74,222,128,0.4)'}`,
+          color: '#fff', fontSize: '13px', fontWeight: 600,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+          display: 'flex', alignItems: 'center', gap: '8px',
+          animation: 'fadeUp 0.25s ease',
+          whiteSpace: 'nowrap',
+        }}>
+          {toast.type === 'error'
+            ? <X size={14} style={{ color: '#f87171' }} />
+            : <Check size={14} style={{ color: '#4ade80' }} />}
+          {toast.message}
+        </div>
+      )}
 
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -270,20 +346,36 @@ export const MembershipCards = () => {
 
         <div className="flex items-center gap-2.5 flex-wrap">
           {selectedIds.length > 0 && (
-            <button
-              onClick={printBulk}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '7px',
-                padding: '9px 16px', borderRadius: '10px', cursor: 'pointer',
-                background: 'linear-gradient(135deg, #0D4E2B, #1A6B3C)',
-                border: '1.5px solid rgba(201,162,39,0.5)',
-                color: '#C9A227', fontSize: '13px', fontWeight: 700,
-                boxShadow: '0 4px 12px rgba(13,78,43,0.4)'
-              }}
-            >
-              <Printer size={15} />
-              Print {selectedIds.length} Cards (A4)
-            </button>
+            <>
+              <button
+                onClick={printBulk}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '7px',
+                  padding: '9px 16px', borderRadius: '10px', cursor: 'pointer',
+                  background: 'linear-gradient(135deg, #0D4E2B, #1A6B3C)',
+                  border: '1.5px solid rgba(201,162,39,0.5)',
+                  color: '#C9A227', fontSize: '13px', fontWeight: 700,
+                  boxShadow: '0 4px 12px rgba(13,78,43,0.4)'
+                }}
+              >
+                <Printer size={15} />
+                Print {selectedIds.length} Cards (A4)
+              </button>
+              <button
+                onClick={() => { setPrintMode('a4-bulk'); setTimeout(() => { window.print(); setTimeout(() => setPrintMode(null), 500); }, 300); }}
+                title="Opens print dialog — choose 'Save as PDF' to download"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '7px',
+                  padding: '9px 16px', borderRadius: '10px', cursor: 'pointer',
+                  background: '#0f172a',
+                  border: '1.5px solid rgba(100,116,139,0.4)',
+                  color: '#94a3b8', fontSize: '13px', fontWeight: 700,
+                }}
+              >
+                <Download size={15} />
+                Download PDF
+              </button>
+            </>
           )}
           <button
             onClick={() => fetchMembers()}
@@ -428,6 +520,7 @@ export const MembershipCards = () => {
               onToggle={() => toggleSelect(member.id)}
               onPreview={() => setPreviewMember(member)}
               onPrint={() => printSingle(member)}
+              onCopyQr={isAdmin ? () => copyQrLink(member) : null}
             />
           ))}
         </div>
@@ -438,6 +531,7 @@ export const MembershipCards = () => {
           onToggle={toggleSelect}
           onPreview={setPreviewMember}
           onPrint={printSingle}
+          onCopyQr={isAdmin ? copyQrLink : null}
         />
       )}
 
@@ -447,6 +541,7 @@ export const MembershipCards = () => {
           member={previewMember}
           onClose={() => setPreviewMember(null)}
           onPrint={printSingle}
+          onCopyQr={isAdmin ? copyQrLink : null}
         />
       )}
 
@@ -462,7 +557,7 @@ export const MembershipCards = () => {
 };
 
 /* ─────────── Card tile ─────────── */
-function MemberCardTile({ member, selected, onToggle, onPreview, onPrint }) {
+function MemberCardTile({ member, selected, onToggle, onPreview, onPrint, onCopyQr }) {
   const initials = (member.fullName || 'M').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
   return (
@@ -538,7 +633,7 @@ function MemberCardTile({ member, selected, onToggle, onPreview, onPrint }) {
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', gap: '6px', marginTop: 'auto', paddingTop: '2px' }}>
+      <div style={{ display: 'flex', gap: '5px', marginTop: 'auto', paddingTop: '2px', flexWrap: 'wrap' }}>
         <button
           onClick={e => { e.stopPropagation(); onPreview(); }}
           style={{
@@ -566,18 +661,34 @@ function MemberCardTile({ member, selected, onToggle, onPreview, onPrint }) {
           <Printer size={12} />
           Print
         </button>
+        {onCopyQr && (
+          <button
+            onClick={e => { e.stopPropagation(); onCopyQr(); }}
+            title="Copy QR verification link to clipboard"
+            style={{
+              padding: '7px 10px', borderRadius: '8px', cursor: 'pointer',
+              background: 'rgba(74,222,128,0.07)',
+              border: '1px solid rgba(74,222,128,0.2)',
+              color: '#4ade80', fontSize: '11px', fontWeight: 600,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+              transition: 'all 0.15s'
+            }}
+          >
+            <Link2 size={11} />
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
 /* ─────────── List view ─────────── */
-function MemberListView({ members, selectedIds, onToggle, onPreview, onPrint }) {
+function MemberListView({ members, selectedIds, onToggle, onPreview, onPrint, onCopyQr }) {
   return (
     <div style={{ background: '#0f0f0f', border: '1px solid #1e293b', borderRadius: '14px', overflow: 'hidden' }}>
       {/* Table header */}
       <div style={{
-        display: 'grid', gridTemplateColumns: '32px 44px 1fr 130px 130px 100px 140px',
+        display: 'grid', gridTemplateColumns: `32px 44px 1fr 130px 130px 100px ${onCopyQr ? '180px' : '140px'}`,
         padding: '10px 16px', borderBottom: '1px solid #1e293b',
         background: '#080808'
       }}>
@@ -590,7 +701,7 @@ function MemberListView({ members, selectedIds, onToggle, onPreview, onPrint }) 
         const initials = (m.fullName || 'M').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
         return (
           <div key={m.id} style={{
-            display: 'grid', gridTemplateColumns: '32px 44px 1fr 130px 130px 100px 140px',
+            display: 'grid', gridTemplateColumns: `32px 44px 1fr 130px 130px 100px ${onCopyQr ? '180px' : '140px'}`,
             padding: '10px 16px', borderBottom: idx < members.length - 1 ? '1px solid #1e293b' : 'none',
             alignItems: 'center',
             background: selected ? 'rgba(201,162,39,0.04)' : 'transparent',
@@ -633,7 +744,7 @@ function MemberListView({ members, selectedIds, onToggle, onPreview, onPrint }) 
             {/* Gham */}
             <span style={{ fontSize: '11px', color: '#94a3b8' }}>{m.ghamName || '—'}</span>
             {/* Actions */}
-            <div style={{ display: 'flex', gap: '6px' }}>
+            <div style={{ display: 'flex', gap: '5px' }}>
               <button
                 onClick={() => onPreview(m)}
                 style={{
@@ -658,6 +769,20 @@ function MemberListView({ members, selectedIds, onToggle, onPreview, onPrint }) 
                 <Printer size={11} />
                 Print
               </button>
+              {onCopyQr && (
+                <button
+                  onClick={() => onCopyQr(m)}
+                  title="Copy QR verification link"
+                  style={{
+                    padding: '5px 8px', borderRadius: '7px', cursor: 'pointer',
+                    background: 'rgba(74,222,128,0.07)', border: '1px solid rgba(74,222,128,0.2)',
+                    color: '#4ade80', fontSize: '11px', fontWeight: 600,
+                    display: 'flex', alignItems: 'center', gap: '4px'
+                  }}
+                >
+                  <Link2 size={11} />
+                </button>
+              )}
             </div>
           </div>
         );

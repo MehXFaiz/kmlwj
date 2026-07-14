@@ -59,6 +59,7 @@ const InvoiceDetail = lazy(() => import('./views/InvoiceDetail').then(m => ({ de
 const Members = lazy(() => import('./views/Members').then(m => ({ default: m.Members })));
 const MemberForm = lazy(() => import('./views/MemberForm').then(m => ({ default: m.MemberForm })));
 const MembershipCards = lazy(() => import('./views/MembershipCards').then(m => ({ default: m.MembershipCards })));
+const MemberVerify = lazy(() => import('./views/MemberVerify').then(m => ({ default: m.MemberVerify })));
 
 // Bank Voucher Module Views
 const BankVouchers = lazy(() => import('./views/BankVouchers').then(m => ({ default: m.BankVouchers })));
@@ -314,6 +315,9 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+
+          {/* Public Member Verification — no auth required (QR scan target) */}
+          <Route path="/member/verify/:id" element={<MemberVerify />} />
 
           {/* Secure ERP Interface */}
           <Route element={<ProtectedRoutesWrapper />}>
