@@ -57,6 +57,27 @@ async function getExpenseAccountForDonation(donationType: string, tx: any) {
   return acc;
 }
 
+async function checkMonthlyRestriction(beneficiaryId: string | null | undefined, donationDate: Date, excludeId?: string) {
+  if (!beneficiaryId) return false;
+
+  const startOfMonth = new Date(donationDate.getFullYear(), donationDate.getMonth(), 1, 0, 0, 0, 0);
+  const endOfMonth = new Date(donationDate.getFullYear(), donationDate.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  const existingApproved = await prisma.donation.findFirst({
+    where: {
+      beneficiaryId,
+      status: 'APPROVED',
+      createdAt: {
+        gte: startOfMonth,
+        lte: endOfMonth,
+      },
+      ...(excludeId ? { NOT: { id: excludeId } } : {}),
+    },
+  });
+
+  return !!existingApproved;
+}
+
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -96,6 +117,18 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       const donation = await prisma.donation.findUnique({ where: { id }, include: { beneficiary: true } });
       if (!donation) return res.status(404).json({ error: { message: 'Donation not found', status: 404 } });
       if (donation.status === 'APPROVED') return res.status(400).json({ error: { message: 'Donation is already approved', status: 400 } });
+
+      if (donation.beneficiaryId) {
+        const hasDuplicate = await checkMonthlyRestriction(donation.beneficiaryId, donation.createdAt, donation.id);
+        if (hasDuplicate) {
+          return res.status(400).json({
+            error: {
+              message: 'This beneficiary has already received a donation for this month. The next donation can only be issued next month.',
+              status: 400
+            }
+          });
+        }
+      }
 
       let cashOrBankAccountId: string | null = null;
       if (donation.paymentMethod === 'CASH') {
@@ -145,6 +178,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         });
 
         return { approvedDonation, journalEntry: postingResult.journalEntry };
+      }, {
+        timeout: 15000,
       });
 
       await logAudit(req.user.id, 'Approve Donation', 'DONATION', donation, result.approvedDonation, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
@@ -166,6 +201,18 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
     if (paymentMethod === 'CHEQUE' && !chequeNumber) {
       return res.status(400).json({ error: { message: 'Cheque number is required for Cheque payment method', status: 400 } });
+    }
+
+    if (beneficiaryId) {
+      const hasDuplicate = await checkMonthlyRestriction(beneficiaryId, new Date());
+      if (hasDuplicate) {
+        return res.status(400).json({
+          error: {
+            message: 'This beneficiary has already received a donation for this month. The next donation can only be issued next month.',
+            status: 400
+          }
+        });
+      }
     }
 
     const newDonation = await prisma.$transaction(async (tx) => {
@@ -213,6 +260,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       }
 
       return createdDonation;
+    }, {
+      timeout: 15000,
     });
 
     await logAudit(req.user.id, 'Create Donation', 'DONATION', null, newDonation, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
@@ -228,6 +277,21 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if (!existingDonation) return res.status(404).json({ error: { message: 'Donation not found', status: 404 } });
 
     const { beneficiaryId, donorName, donorMobile, donationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks, status } = req.body;
+
+    const targetBeneficiaryId = beneficiaryId !== undefined ? beneficiaryId : existingDonation.beneficiaryId;
+    const targetStatus = status !== undefined ? status : existingDonation.status;
+
+    if (targetStatus === 'APPROVED' && targetBeneficiaryId) {
+      const hasDuplicate = await checkMonthlyRestriction(targetBeneficiaryId, existingDonation.createdAt, existingDonation.id);
+      if (hasDuplicate) {
+        return res.status(400).json({
+          error: {
+            message: 'This beneficiary has already received a donation for this month. The next donation can only be issued next month.',
+            status: 400
+          }
+        });
+      }
+    }
 
     const updatedDonation = await prisma.$transaction(async (tx) => {
       // If already approved, delete previous accounting journal entry so we can re-post with updated figures
@@ -290,6 +354,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       }
 
       return updated;
+    }, {
+      timeout: 15000,
     });
 
     await logAudit(req.user.id, 'Update Donation', 'DONATION', existingDonation, updatedDonation, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
@@ -342,6 +408,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         });
 
         return donations;
+      }, {
+        timeout: 15000,
       });
 
       await logAudit(

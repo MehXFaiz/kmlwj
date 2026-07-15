@@ -3,13 +3,14 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useDonationStore } from '../store/donationStore';
 import { useCoaStore } from '../store/coaStore';
 import { useBeneficiaryStore } from '../store/beneficiaryStore';
-import { Heart, ChevronLeft, Save, ShieldCheck, CheckCircle2, Users, UserCheck, Sparkles } from 'lucide-react';
+import { Heart, ChevronLeft, Save, ShieldCheck, CheckCircle2, Users, UserCheck, Sparkles, AlertCircle } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
 
 const nullsToEmpty = (obj) =>
   Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === null ? '' : v]));
 
 const DEFAULT_DONATION = {
+  beneficiaryId: '',
   donorName: '', donorMobile: '', donationType: 'MONTHLY', amount: '',
   paymentMethod: 'CASH', bankAccountId: '', chequeNumber: '', donorBankName: '', remarks: ''
 };
@@ -31,7 +32,7 @@ export const DonationForm = () => {
 
   const [form, setForm] = useState(DEFAULT_DONATION);
   const [loading, setLoading] = useState(false);
-  const [selectedBeneficiaryId, setSelectedBeneficiaryId] = useState('');
+  const [isCustom, setIsCustom] = useState(false);
 
   useEffect(() => {
     fetchDonations();
@@ -42,9 +43,28 @@ export const DonationForm = () => {
   useEffect(() => {
     if (id && donations.length > 0) {
       const existing = donations.find(d => d.id === id);
-      if (existing) setForm(nullsToEmpty(existing));
+      if (existing) {
+        setForm(nullsToEmpty(existing));
+        setIsCustom(!existing.beneficiaryId && !!existing.donorName);
+      }
     }
   }, [id, donations]);
+
+  const hasDonationThisMonth = useMemo(() => {
+    if (!form.beneficiaryId) return false;
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    return donations.some(d => {
+      if (id && d.id === id) return false;
+      if (d.beneficiaryId !== form.beneficiaryId) return false;
+      if (d.status !== 'APPROVED') return false;
+
+      const dDate = new Date(d.createdAt);
+      return dDate.getFullYear() === currentYear && dDate.getMonth() === currentMonth;
+    });
+  }, [form.beneficiaryId, donations, id]);
 
   const bankAccounts = useMemo(() => {
     return flatAccounts.filter(a =>
@@ -170,27 +190,45 @@ export const DonationForm = () => {
                   </div>
                   <select
                     required
-                    value={form.donorName}
+                    value={isCustom ? 'Custom / Other Recipient' : (form.beneficiaryId || '')}
                     onChange={(e) => {
                       const val = e.target.value;
-                      const b = beneficiaries.find(item => item.name === val || item.id === val);
-                      if (b) {
+                      if (val === 'Custom / Other Recipient') {
+                        setIsCustom(true);
                         setForm(f => ({
                           ...f,
-                          donorName: b.name || '',
-                          donorMobile: b.mobile || '',
-                          remarks: f.remarks ? `${f.remarks} (Beneficiary CNIC: ${b.cnic || 'N/A'})` : `Beneficiary CNIC: ${b.cnic || 'N/A'}`
+                          beneficiaryId: '',
+                          donorName: 'Custom / Other Recipient',
+                          donorMobile: '',
                         }));
-                        showToast(`Selected beneficiary: ${b.name}`, 'success');
+                      } else if (val === '') {
+                        setIsCustom(false);
+                        setForm(f => ({
+                          ...f,
+                          beneficiaryId: '',
+                          donorName: '',
+                          donorMobile: '',
+                        }));
                       } else {
-                        setForm(f => ({ ...f, donorName: val }));
+                        setIsCustom(false);
+                        const b = beneficiaries.find(item => item.id === val);
+                        if (b) {
+                          setForm(f => ({
+                            ...f,
+                            beneficiaryId: b.id,
+                            donorName: b.name || '',
+                            donorMobile: b.mobile || '',
+                            remarks: f.remarks ? `${f.remarks} (Beneficiary CNIC: ${b.cnic || 'N/A'})` : `Beneficiary CNIC: ${b.cnic || 'N/A'}`
+                          }));
+                          showToast(`Selected beneficiary: ${b.name}`, 'success');
+                        }
                       }
                     }}
                     className="w-full px-3.5 py-3 rounded-xl bg-slate-900 border border-amber-500/40 text-sm font-bold text-slate-100 focus:outline-none focus:border-amber-500 transition-all cursor-pointer shadow-md"
                   >
                     <option value="">-- Select Recipient from People We Help (Dropdown) --</option>
                     {beneficiaries.map(b => (
-                      <option key={b.id} value={b.name} className="bg-slate-900 text-slate-200 py-1 font-semibold">
+                      <option key={b.id} value={b.id} className="bg-slate-900 text-slate-200 py-1 font-semibold">
                         {b.name} {b.mobile ? `• Ph: ${b.mobile}` : ''} {b.cnic ? `• CNIC: ${b.cnic}` : ''}
                       </option>
                     ))}
@@ -198,14 +236,25 @@ export const DonationForm = () => {
                       ➕ Other / Custom Recipient (Not in list)...
                     </option>
                   </select>
-                  {form.donorName === 'Custom / Other Recipient' && (
+                  {isCustom && (
                     <input
                       type="text"
                       required
                       placeholder="Type custom recipient name here..."
+                      value={form.donorName === 'Custom / Other Recipient' ? '' : form.donorName}
                       onChange={e => setForm(f => ({ ...f, donorName: e.target.value }))}
                       className="w-full mt-3 px-3.5 py-2.5 rounded-xl bg-slate-950/90 border border-amber-500 text-sm font-semibold text-amber-300 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
                     />
+                  )}
+                  {hasDonationThisMonth && (
+                    <div className="mt-3 p-3.5 rounded-xl bg-red-500/10 border border-red-500/25 flex items-start gap-2.5 animate-pulse animate-duration-1000">
+                      <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-semibold text-red-400">
+                          This beneficiary has already received a donation for this month. The next donation can only be issued next month.
+                        </p>
+                      </div>
+                    </div>
                   )}
                   <div className="flex items-center gap-1.5 mt-2 text-[11px] text-slate-400">
                     <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
@@ -301,8 +350,8 @@ export const DonationForm = () => {
               <Link to="/donations" className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">
                 Cancel
               </Link>
-              <button type="submit" disabled={loading}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold transition-all shadow-lg shadow-amber-600/25 active:scale-95 disabled:opacity-50 cursor-pointer">
+              <button type="submit" disabled={loading || hasDonationThisMonth}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold transition-all shadow-lg shadow-amber-600/25 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
                 <Save className="w-4 h-4" />
                 <span>{loading ? 'Saving...' : (id ? 'Update Donation' : 'Log Donation')}</span>
               </button>
