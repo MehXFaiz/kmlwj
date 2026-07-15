@@ -271,8 +271,9 @@ model Donation {
   beneficiary    Beneficiary?   @relation(fields: [beneficiaryId], references: [id])
   donorName      String?
   donorMobile    String?
-  donationType   DonationType
-  amount         Float
+  donationType       DonationType
+  customDonationType String?
+  amount             Float
   paymentMethod  PaymentMethod
   bankAccountId  String?        @db.Uuid
   bankAccount    Account?       @relation("DonationBankAccount", fields: [bankAccountId], references: [id])

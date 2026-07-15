@@ -169,7 +169,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           cashOrBankAccountId: cashOrBankAccountId!,
           expenseAccountId: expenseAccount.id,
           reference: `DON-${donation.id.substring(0, 8)}`,
-          description: `Donation Given / Disbursement to ${donation.donorName || 'Beneficiary'} - ${donation.donationType}`,
+          description: `Donation Given / Disbursement to ${donation.donorName || 'Beneficiary'} - ${donation.donationType === 'CUSTOM' ? ((donation as any).customDonationType || 'Custom') : donation.donationType}`,  
           module: 'Donations Given',
           voucherType: 'BP',
           postedBy: req.user!.id,
@@ -188,10 +188,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     // Action: Create Donation
-    const { beneficiaryId, donorName, donorMobile, donationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks } = req.body;
+    const { beneficiaryId, donorName, donorMobile, donationType, customDonationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks } = req.body;
 
     if (!donorName || !donationType || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: 'Missing required fields', status: 400 } });
+    }
+    if (donationType === 'CUSTOM' && (!customDonationType || !String(customDonationType).trim())) {
+      return res.status(400).json({ error: { message: 'Custom Donation / Aid Type is required when "Custom" is selected.', status: 400 } });
     }
     if (amount <= 0) {
       return res.status(400).json({ error: { message: 'Amount must be greater than 0', status: 400 } });
@@ -222,6 +225,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           donorName,
           donorMobile: donorMobile || null,
           donationType,
+          customDonationType: donationType === 'CUSTOM' ? (customDonationType || null) : null,
           amount: parseFloat(amount),
           paymentMethod,
           bankAccountId: bankAccountId || null,
@@ -249,7 +253,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             cashOrBankAccountId,
             expenseAccountId: expenseAccount.id,
             reference: `DON-${createdDonation.id.substring(0, 8)}`,
-            description: `Donation Given / Disbursement to ${donorName || 'Beneficiary'} - ${donationType}`,
+            description: `Donation Given / Disbursement to ${donorName || 'Beneficiary'} - ${donationType === 'CUSTOM' ? (customDonationType || 'Custom') : donationType}`,  
             module: 'Donations Given',
             voucherType: 'BP',
             postedBy: req.user!.id,
@@ -276,7 +280,16 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const existingDonation = await prisma.donation.findUnique({ where: { id } });
     if (!existingDonation) return res.status(404).json({ error: { message: 'Donation not found', status: 404 } });
 
-    const { beneficiaryId, donorName, donorMobile, donationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks, status } = req.body;
+    const { beneficiaryId, donorName, donorMobile, donationType, customDonationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks, status } = req.body;
+
+    // Validate custom type on update
+    const effectiveDonationType = donationType !== undefined ? donationType : existingDonation.donationType;
+    if (effectiveDonationType === 'CUSTOM') {
+      const effectiveCustomType = customDonationType !== undefined ? customDonationType : (existingDonation as any).customDonationType;
+      if (!effectiveCustomType || !String(effectiveCustomType).trim()) {
+        return res.status(400).json({ error: { message: 'Custom Donation / Aid Type is required when "Custom" is selected.', status: 400 } });
+      }
+    }
 
     const targetBeneficiaryId = beneficiaryId !== undefined ? beneficiaryId : existingDonation.beneficiaryId;
     const targetStatus = status !== undefined ? status : existingDonation.status;
@@ -314,6 +327,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           donorName: donorName || undefined,
           donorMobile: donorMobile !== undefined ? (donorMobile || null) : undefined,
           donationType: donationType || undefined,
+          customDonationType: donationType !== undefined
+            ? (donationType === 'CUSTOM' ? (customDonationType || null) : null)
+            : (customDonationType !== undefined ? ((existingDonation as any).donationType === 'CUSTOM' ? customDonationType : null) : undefined),
           amount: amount !== undefined ? parseFloat(amount) : undefined,
           paymentMethod: paymentMethod || undefined,
           bankAccountId: bankAccountId !== undefined ? (bankAccountId || null) : undefined,
@@ -342,7 +358,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
               cashOrBankAccountId,
               expenseAccountId: expenseAccount.id,
               reference: `DON-${updated.id.substring(0, 8)}`,
-              description: `Donation Given / Disbursement to ${updated.donorName || 'Beneficiary'} - ${updated.donationType}`,
+              description: `Donation Given / Disbursement to ${updated.donorName || 'Beneficiary'} - ${updated.donationType === 'CUSTOM' ? ((updated as any).customDonationType || 'Custom') : updated.donationType}`,  
               module: 'Donations Given',
               voucherType: 'BP',
               postedBy: req.user!.id,

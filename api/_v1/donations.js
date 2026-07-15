@@ -144,7 +144,7 @@ var donations_default = makeHandler(async (req, res) => {
           cashOrBankAccountId,
           expenseAccountId: expenseAccount.id,
           reference: `DON-${donation.id.substring(0, 8)}`,
-          description: `Donation Given / Disbursement to ${donation.donorName || "Beneficiary"} - ${donation.donationType}`,
+          description: `Donation Given / Disbursement to ${donation.donorName || "Beneficiary"} - ${donation.donationType === "CUSTOM" ? donation.customDonationType || "Custom" : donation.donationType}`,
           module: "Donations Given",
           voucherType: "BP",
           postedBy: req.user.id,
@@ -158,9 +158,12 @@ var donations_default = makeHandler(async (req, res) => {
       await logAudit(req.user.id, "Approve Donation", "DONATION", donation, result.approvedDonation, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, data: result.approvedDonation, message: "Donation approved and journal entries created successfully" });
     }
-    const { beneficiaryId, donorName, donorMobile, donationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks } = req.body;
+    const { beneficiaryId, donorName, donorMobile, donationType, customDonationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks } = req.body;
     if (!donorName || !donationType || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: "Missing required fields", status: 400 } });
+    }
+    if (donationType === "CUSTOM" && (!customDonationType || !String(customDonationType).trim())) {
+      return res.status(400).json({ error: { message: 'Custom Donation / Aid Type is required when "Custom" is selected.', status: 400 } });
     }
     if (amount <= 0) {
       return res.status(400).json({ error: { message: "Amount must be greater than 0", status: 400 } });
@@ -189,6 +192,7 @@ var donations_default = makeHandler(async (req, res) => {
           donorName,
           donorMobile: donorMobile || null,
           donationType,
+          customDonationType: donationType === "CUSTOM" ? customDonationType || null : null,
           amount: parseFloat(amount),
           paymentMethod,
           bankAccountId: bankAccountId || null,
@@ -214,7 +218,7 @@ var donations_default = makeHandler(async (req, res) => {
             cashOrBankAccountId,
             expenseAccountId: expenseAccount.id,
             reference: `DON-${createdDonation.id.substring(0, 8)}`,
-            description: `Donation Given / Disbursement to ${donorName || "Beneficiary"} - ${donationType}`,
+            description: `Donation Given / Disbursement to ${donorName || "Beneficiary"} - ${donationType === "CUSTOM" ? customDonationType || "Custom" : donationType}`,
             module: "Donations Given",
             voucherType: "BP",
             postedBy: req.user.id,
@@ -235,7 +239,14 @@ var donations_default = makeHandler(async (req, res) => {
     if (!id) return res.status(400).json({ error: { message: "Donation ID is required", status: 400 } });
     const existingDonation = await prisma.donation.findUnique({ where: { id } });
     if (!existingDonation) return res.status(404).json({ error: { message: "Donation not found", status: 404 } });
-    const { beneficiaryId, donorName, donorMobile, donationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks, status } = req.body;
+    const { beneficiaryId, donorName, donorMobile, donationType, customDonationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks, status } = req.body;
+    const effectiveDonationType = donationType !== void 0 ? donationType : existingDonation.donationType;
+    if (effectiveDonationType === "CUSTOM") {
+      const effectiveCustomType = customDonationType !== void 0 ? customDonationType : existingDonation.customDonationType;
+      if (!effectiveCustomType || !String(effectiveCustomType).trim()) {
+        return res.status(400).json({ error: { message: 'Custom Donation / Aid Type is required when "Custom" is selected.', status: 400 } });
+      }
+    }
     const targetBeneficiaryId = beneficiaryId !== void 0 ? beneficiaryId : existingDonation.beneficiaryId;
     const targetStatus = status !== void 0 ? status : existingDonation.status;
     if (targetStatus === "APPROVED" && targetBeneficiaryId) {
@@ -267,6 +278,7 @@ var donations_default = makeHandler(async (req, res) => {
           donorName: donorName || void 0,
           donorMobile: donorMobile !== void 0 ? donorMobile || null : void 0,
           donationType: donationType || void 0,
+          customDonationType: donationType !== void 0 ? donationType === "CUSTOM" ? customDonationType || null : null : customDonationType !== void 0 ? existingDonation.donationType === "CUSTOM" ? customDonationType : null : void 0,
           amount: amount !== void 0 ? parseFloat(amount) : void 0,
           paymentMethod: paymentMethod || void 0,
           bankAccountId: bankAccountId !== void 0 ? bankAccountId || null : void 0,
@@ -293,7 +305,7 @@ var donations_default = makeHandler(async (req, res) => {
               cashOrBankAccountId,
               expenseAccountId: expenseAccount.id,
               reference: `DON-${updated.id.substring(0, 8)}`,
-              description: `Donation Given / Disbursement to ${updated.donorName || "Beneficiary"} - ${updated.donationType}`,
+              description: `Donation Given / Disbursement to ${updated.donorName || "Beneficiary"} - ${updated.donationType === "CUSTOM" ? updated.customDonationType || "Custom" : updated.donationType}`,
               module: "Donations Given",
               voucherType: "BP",
               postedBy: req.user.id,

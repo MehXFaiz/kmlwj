@@ -13,7 +13,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 const nullsToEmpty = (obj) =>
   Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === null ? '' : v]));
 
-const DEFAULT_DONATION = { donorName: '', donorMobile: '', donationType: 'MONTHLY', amount: '', paymentMethod: 'CASH', bankAccountId: '', chequeNumber: '', donorBankName: '', remarks: '' };
+const DEFAULT_DONATION = { donorName: '', donorMobile: '', donationType: 'ZAKAT', amount: '', paymentMethod: 'CASH', bankAccountId: '', chequeNumber: '', donorBankName: '', remarks: '', customDonationType: '' };
 
 function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
   const [form, setForm] = useState(
@@ -55,6 +55,10 @@ function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
     }
     if (form.paymentMethod === 'CHEQUE' && form.chequeNumber && !/^[0-9]{6,20}$/.test(form.chequeNumber)) {
       showToast('Cheque number must be between 6 and 20 digits.', 'warning');
+      return;
+    }
+    if (form.donationType === 'CUSTOM' && !form.customDonationType?.trim()) {
+      showToast('Custom Donation / Aid Type is required when "Custom" is selected.', 'warning');
       return;
     }
     onSave({ ...form });
@@ -137,13 +141,31 @@ function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
                       placeholder="E.g. 0300-1234567" className={inputClass} />
                   </div>
                   <div>
-                    <label className={labelClass}>Donation Type *</label>
-                    <select value={form.donationType} onChange={e => setForm(f => ({ ...f, donationType: e.target.value }))}
+                    <label className={labelClass}>Donation / Aid Type *</label>
+                    <select
+                      value={form.donationType}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setForm(f => ({ ...f, donationType: val, customDonationType: val !== 'CUSTOM' ? '' : f.customDonationType }));
+                      }}
                       className={inputClass}>
-                      {['MONTHLY', 'MARRIAGE', 'MEDICAL', 'EMERGENCY', 'EDUCATION', 'CUSTOM'].map(t => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
+                      <option value="ZAKAT">Zakat</option>
+                      <option value="FITRA">Fitra</option>
+                      <option value="CUSTOM">Custom</option>
                     </select>
+                    {form.donationType === 'CUSTOM' && (
+                      <div className="mt-2">
+                        <input
+                          type="text"
+                          required
+                          value={form.customDonationType || ''}
+                          onChange={e => setForm(f => ({ ...f, customDonationType: e.target.value }))}
+                          placeholder="Enter Donation / Aid Type"
+                          className={`${inputClass} border-amber-500/50`}
+                        />
+                        <p className="text-[11px] text-slate-500 mt-1">e.g. Water Filter Assistance</p>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className={labelClass}>Amount *</label>
@@ -282,13 +304,13 @@ function DonationInvoiceModal({ donation, onClose }) {
       onClose={onClose}
       title="DONATION VOUCHER"
       voucherNo={donation.id?.slice(0, 8)?.toUpperCase()}
-      fileNo={donation.donationType || ''}
+      fileNo={donation.donationType === 'CUSTOM' ? (donation.customDonationType || 'Custom') : (donation.donationType || '')}
       date={donation.createdAt}
       name={donation.donorName}
       address={donation.donorMobile || donation.donorBankName || ''}
       debitCredit={donation.paymentMethod}
       accountName="Donation Disbursement A/c"
-      particulars={`Donation Given / Disbursement - ${donation.donationType}${donation.remarks ? ` (${donation.remarks})` : ''}${donation.chequeNumber ? ` [Cheque #${donation.chequeNumber}]` : ''}`}
+      particulars={`Donation Given / Disbursement - ${donation.donationType === 'CUSTOM' ? (donation.customDonationType || 'Custom') : donation.donationType}${donation.remarks ? ` (${donation.remarks})` : ''}${donation.chequeNumber ? ` [Cheque #${donation.chequeNumber}]` : ''}`}
       amount={donation.amount}
       preparedBy={donation.createdBy?.fullName || 'Operator'}
       payeeLabel="Payee's Signature"
@@ -324,10 +346,11 @@ export const Donations = () => {
   }, [searchParams]);
 
   const filtered = useMemo(() => {
-    return donations.filter(d => 
-      (d.donorName || '').toLowerCase().includes(search.toLowerCase()) || 
-      (d.donorMobile || '').includes(search) || 
+    return donations.filter(d =>
+      (d.donorName || '').toLowerCase().includes(search.toLowerCase()) ||
+      (d.donorMobile || '').includes(search) ||
       (d.donationType || '').toLowerCase().includes(search.toLowerCase()) ||
+      (d.customDonationType || '').toLowerCase().includes(search.toLowerCase()) ||
       (d.paymentMethod || '').toLowerCase().includes(search.toLowerCase())
     );
   }, [donations, search]);
@@ -508,7 +531,7 @@ export const Donations = () => {
                         <Heart className="w-3.5 h-3.5 text-amber-400" /> AID TYPE
                       </span>
                       <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded bg-slate-800/90 text-slate-200 border border-slate-700/60">
-                        {d.donationType || 'GENERAL'}
+                        {d.donationType === 'CUSTOM' ? (d.customDonationType || 'Custom') : (d.donationType || 'GENERAL')}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">

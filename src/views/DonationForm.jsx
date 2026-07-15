@@ -11,8 +11,9 @@ const nullsToEmpty = (obj) =>
 
 const DEFAULT_DONATION = {
   beneficiaryId: '',
-  donorName: '', donorMobile: '', donationType: 'MONTHLY', amount: '',
-  paymentMethod: 'CASH', bankAccountId: '', chequeNumber: '', donorBankName: '', remarks: ''
+  donorName: '', donorMobile: '', donationType: 'ZAKAT', amount: '',
+  paymentMethod: 'CASH', bankAccountId: '', chequeNumber: '', donorBankName: '', remarks: '',
+  customDonationType: ''
 };
 
 const PAKISTANI_BANKS = [
@@ -44,7 +45,7 @@ export const DonationForm = () => {
     if (id && donations.length > 0) {
       const existing = donations.find(d => d.id === id);
       if (existing) {
-        setForm(nullsToEmpty(existing));
+        setForm(nullsToEmpty({ ...existing, customDonationType: existing.customDonationType || '' }));
         setIsCustom(!existing.beneficiaryId && !!existing.donorName);
       }
     }
@@ -94,6 +95,9 @@ export const DonationForm = () => {
     }
     if (form.paymentMethod === 'CHEQUE' && form.chequeNumber && !/^[0-9]{6,20}$/.test(form.chequeNumber)) {
       showToast('Cheque number must be between 6 and 20 digits.', 'warning'); return;
+    }
+    if (form.donationType === 'CUSTOM' && !form.customDonationType?.trim()) {
+      showToast('Custom Donation / Aid Type is required when "Custom" is selected.', 'warning'); return;
     }
 
     setLoading(true);
@@ -269,12 +273,34 @@ export const DonationForm = () => {
                 </div>
                 <div>
                   <label className={labelClass}>Donation / Aid Type *</label>
-                  <select value={form.donationType} onChange={e => setForm(f => ({ ...f, donationType: e.target.value }))}
+                  <select
+                    value={form.donationType}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setForm(f => ({
+                        ...f,
+                        donationType: val,
+                        customDonationType: val !== 'CUSTOM' ? '' : f.customDonationType
+                      }));
+                    }}
                     className={inputClass}>
-                    {['MONTHLY', 'MARRIAGE', 'MEDICAL', 'EMERGENCY', 'EDUCATION', 'CUSTOM'].map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
+                    <option value="ZAKAT">Zakat</option>
+                    <option value="FITRA">Fitra</option>
+                    <option value="CUSTOM">Custom</option>
                   </select>
+                  {form.donationType === 'CUSTOM' && (
+                    <div className="mt-2">
+                      <input
+                        type="text"
+                        required
+                        value={form.customDonationType || ''}
+                        onChange={e => setForm(f => ({ ...f, customDonationType: e.target.value }))}
+                        placeholder="Enter Donation / Aid Type"
+                        className={`${inputClass} border-amber-500/50 focus:border-amber-400`}
+                      />
+                      <p className="text-[11px] text-slate-500 mt-1">Describe the specific type of aid (e.g. Water Filter Assistance)</p>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className={labelClass}>Amount (PKR) *</label>
