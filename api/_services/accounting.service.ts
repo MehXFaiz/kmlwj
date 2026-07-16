@@ -874,6 +874,14 @@ export class AccountingService {
     if (je.status === 'Posted') return je;
     if (je.status !== 'Draft') throw new Error(`Accounting Engine Error: Cannot post journal entry with status '${je.status}'.`);
 
+    // Flip status before recalculating balances: recalculateAccountBalance aggregates
+    // only 'Posted' lines, so it must see the new status or it silently excludes this
+    // entry's own lines and discards the increment applied a moment earlier.
+    const updatedJe = await tx.journalEntry.update({
+      where: { id: je.id },
+      data: { status: 'Posted' }
+    });
+
     for (const line of je.lines) {
       await tx.ledgerEntry.create({
         data: {
@@ -901,11 +909,6 @@ export class AccountingService {
         } catch (e) {}
       }
     }
-
-    const updatedJe = await tx.journalEntry.update({
-      where: { id: je.id },
-      data: { status: 'Posted' }
-    });
 
     try {
       await tx.auditLog.create({
@@ -940,6 +943,17 @@ export class AccountingService {
     const revReference = `${je.voucherNo}-REV`;
     const revDescription = `Reversal: ${reason || je.description || je.reference}`;
 
+    // Flip status before recalculating balances (see postDraft for why: recalculateAccountBalance
+    // only aggregates 'Posted' lines, so cancelling first would make it drop this entry's lines
+    // instead of removing them, discarding the reversal's increment silently).
+    const updatedJe = await tx.journalEntry.update({
+      where: { id: je.id },
+      data: {
+        status: 'Cancelled',
+        description: `${je.description ? je.description + ' ' : ''}[Cancelled/Reversed${reason ? ': ' + reason : ''}]`
+      }
+    });
+
     for (const line of je.lines) {
       await tx.ledgerEntry.create({
         data: {
@@ -967,14 +981,6 @@ export class AccountingService {
         } catch (e) {}
       }
     }
-
-    const updatedJe = await tx.journalEntry.update({
-      where: { id: je.id },
-      data: { 
-        status: 'Cancelled',
-        description: `${je.description ? je.description + ' ' : ''}[Cancelled/Reversed${reason ? ': ' + reason : ''}]`
-      }
-    });
 
     try {
       await tx.auditLog.create({
@@ -1011,6 +1017,19 @@ export class AccountingService {
       where: { reference: revReference }
     });
 
+    // Flip status before recalculating balances (see postDraft for why): recalculateAccountBalance
+    // only aggregates lines whose parent entry is 'Posted', so it must already see newStatus —
+    // otherwise restoring to Posted silently drops this entry's lines from the recalculated balance,
+    // and restoring to Draft would incorrectly still count them.
+    const newDescription = je.description ? je.description.replace(/\[Cancelled\/Reversed[^\]]*\]/, '').trim() : '';
+    const updatedJe = await tx.journalEntry.update({
+      where: { id: je.id },
+      data: {
+        status: newStatus,
+        description: newDescription
+      }
+    });
+
     // Restore the account balances (reverse the reversal)
     for (const line of je.lines) {
       const netChange = line.debit - line.credit; // opposite of reversal
@@ -1045,16 +1064,6 @@ export class AccountingService {
       }
     }
 
-    // Update the journal entry status (and remove the [Cancelled/Reversed] from description)
-    const newDescription = je.description ? je.description.replace(/\[Cancelled\/Reversed[^\]]*\]/, '').trim() : '';
-    const updatedJe = await tx.journalEntry.update({
-      where: { id: je.id },
-      data: { 
-        status: newStatus,
-        description: newDescription
-      }
-    });
-
     try {
       await tx.auditLog.create({
         data: {
@@ -1085,10 +1094,11 @@ export class AccountingService {
     if (!je) return null;
 
     const accountIds = Array.from(new Set(je.lines.map((l: any) => l.accountId)));
+    // LedgerEntry.reference is always set to the journal entry's unique voucherNo (see
+    // postTransaction/postDraft/reverseJournalEntry) — never to the free-text JournalEntry.reference
+    // field, which isn't unique (many entries default to the literal "Journal Entry"). Matching on
+    // je.reference here would risk deleting an unrelated entry's ledger rows on a string collision.
     const voucherRefs = [je.voucherNo, `${je.voucherNo}-REV`];
-    if (je.reference) {
-      voucherRefs.push(je.reference, `${je.reference}-REV`);
-    }
 
     // Delete associated ledger entries
     await tx.ledgerEntry.deleteMany({

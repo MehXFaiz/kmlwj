@@ -192,6 +192,20 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         // If amount changed without custom lines array
         if (amount !== undefined && !lines && je.lines.length > 0) {
           const numAmount = Number(amount);
+          if (!Number.isFinite(numAmount) || numAmount <= 0) {
+            throw new Error('Accounting Engine Error: Amount must be a positive number.');
+          }
+
+          const plannedLines = je.lines.map((l: any) => ({
+            debit: l.debit > 0 ? numAmount : l.debit,
+            credit: l.credit > 0 ? numAmount : l.credit,
+          }));
+          const plannedDebit = plannedLines.reduce((sum: number, l: any) => sum + l.debit, 0);
+          const plannedCredit = plannedLines.reduce((sum: number, l: any) => sum + l.credit, 0);
+          if (Math.abs(plannedDebit - plannedCredit) > 0.001) {
+            throw new Error(`Accounting Engine Error: Transaction must follow Double Entry Accounting. Total Debit (${plannedDebit.toFixed(2)}) does not equal Total Credit (${plannedCredit.toFixed(2)}).`);
+          }
+
           for (const l of je.lines) {
             const newDebit = l.debit > 0 ? numAmount : l.debit;
             const newCredit = l.credit > 0 ? numAmount : l.credit;
@@ -207,6 +221,31 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             });
           }
         } else if (lines && Array.isArray(lines) && lines.length > 0) {
+          if (lines.length < 2) {
+            throw new Error('Accounting Engine Error: Transaction must contain at least two accounting lines for double-entry posting.');
+          }
+
+          let totalDebit = 0;
+          let totalCredit = 0;
+          for (const l of lines) {
+            const debitVal = Number(l.debit) || 0;
+            const creditVal = Number(l.credit) || 0;
+            if (debitVal < 0 || creditVal < 0) {
+              throw new Error('Accounting Engine Error: Debit and Credit amounts cannot be negative.');
+            }
+            if (!l.accountId) {
+              throw new Error('Accounting Engine Error: Every line must reference an account.');
+            }
+            totalDebit += debitVal;
+            totalCredit += creditVal;
+          }
+          if (Math.abs(totalDebit - totalCredit) > 0.001) {
+            throw new Error(`Accounting Engine Error: Transaction must follow Double Entry Accounting. Total Debit (${totalDebit.toFixed(2)}) does not equal Total Credit (${totalCredit.toFixed(2)}).`);
+          }
+          if (totalDebit <= 0) {
+            throw new Error('Accounting Engine Error: Transaction amount must be greater than zero.');
+          }
+
           await tx.journalEntryLine.deleteMany({
             where: { journalEntryId: je.id }
           });
