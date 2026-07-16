@@ -12,6 +12,10 @@ async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12); // secure salt rounds
 }
 
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 // Helper to generate access & refresh tokens
 function generateAccessToken(userId: string, email: string, role: string): string {
   const secret = process.env.JWT_SECRET;
@@ -51,7 +55,8 @@ function mapRoleName(input?: string): string {
 }
 
 export async function register(data: any) {
-  const existing = await prisma.user.findUnique({ where: { email: data.email } });
+  const normalizedEmail = normalizeEmail(data.email);
+  const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (existing) {
     throw { status: 400, message: 'A user with this email already exists' };
   }
@@ -73,7 +78,7 @@ export async function register(data: any) {
   // Create user
   const user = await prisma.user.create({
     data: {
-      email: data.email,
+      email: normalizedEmail,
       password: hashedPassword,
       fullName,
       roleId: roleRecord.id,
@@ -97,12 +102,17 @@ export async function register(data: any) {
 }
 
 export async function login(data: any) {
+  const normalizedEmail = normalizeEmail(data.email);
+  logger.info({ email: normalizedEmail }, 'Login email received');
+
   let user = await prisma.user.findUnique({
-    where: { email: data.email },
+    where: { email: normalizedEmail },
     include: { role: true },
   });
 
-  if (data.email === 'guest@erp.com') {
+  logger.info({ email: normalizedEmail, userFound: Boolean(user) }, 'User lookup result');
+
+  if (normalizedEmail === 'guest@erp.com') {
     if (process.env.GUEST_MODE !== 'true') {
       throw { status: 403, message: 'Guest access is disabled' };
     }
@@ -123,6 +133,7 @@ export async function login(data: any) {
     }
   } else {
     if (!user) {
+      logger.warn({ email: normalizedEmail }, 'Login attempted with unknown email');
       throw { status: 401, message: 'Invalid credentials' };
     }
 
@@ -131,6 +142,7 @@ export async function login(data: any) {
     }
 
     const matches = await bcrypt.compare(data.password, user.password);
+    logger.info({ userId: user.id, passwordComparison: matches }, 'Password comparison result');
     if (!matches) {
       throw { status: 401, message: 'Invalid credentials' };
     }
@@ -141,6 +153,7 @@ export async function login(data: any) {
     throw { status: 403, message: 'This account has been deactivated' };
   }
 
+  logger.info({ userId: user.id, role: user.role.name }, 'JWT generation');
   const accessToken = generateAccessToken(user.id, user.email, user.role.name);
   const refreshTokenStr = generateRefreshTokenString();
 
