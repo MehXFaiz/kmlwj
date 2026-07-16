@@ -339,10 +339,11 @@ model HallBooking {
   hallId            String?        @db.Uuid
   hallAccount       Account?       @relation("HallBookingAccount", fields: [hallId], references: [id])
   isForJamaat       Boolean        @default(false)
-  amount            Float
-  discount          Float?         @default(0)
-  netAmount         Float?
-  receivedAmount    Float?
+  hallCharges       Decimal        @db.Decimal
+  discount          Decimal        @db.Decimal @default(0)
+  netAmount         Decimal?       @db.Decimal
+  receivedAmount    Decimal?       @db.Decimal
+  remainingAmount   Decimal?       @db.Decimal
   refundAmount      Float?         @default(0)
   refundDate        DateTime?
   refundReason      String?
