@@ -94,10 +94,10 @@ export const useAuthStore = create((set, get) => {
       return get().login('guest@erp.com', 'guest_access_token_request');
     },
 
-    register: async (email, password, name, role) => {
+    register: async (email, password, name) => {
       set({ loading: true, error: null });
       try {
-        await authService.register(email, password, name, role);
+        await authService.register(email, password, name);
         set({ loading: false, successMessage: 'Registration successful! You can now log in.' });
         return true;
       } catch (err) {

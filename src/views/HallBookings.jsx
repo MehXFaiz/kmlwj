@@ -260,12 +260,38 @@ export const HallBookings = () => {
 
                         {/* Inner Details Well */}
                         <div className="bg-slate-950/70 rounded-xl border border-slate-800/80 p-4 my-4 space-y-2.5 shadow-inner">
+                          <div className="grid grid-cols-2 gap-x-3 gap-y-2 border-b border-slate-800/60 pb-2.5">
+                            <div>
+                              <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider block">Hall Charges</span>
+                              <span className="font-bold text-slate-200 text-sm">
+                                Rs. {Math.round(Number(booking.hallCharges ?? booking.amount ?? 0)).toLocaleString()}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider block">Discount</span>
+                              <span className="font-bold text-orange-400 text-sm">
+                                Rs. {Math.round(Number(booking.discount || 0)).toLocaleString()}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider block">Received</span>
+                              <span className="font-bold text-sky-400 text-sm">
+                                Rs. {Math.round(Number(booking.receivedAmount || 0)).toLocaleString()}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider block">Remaining</span>
+                              <span className={`font-bold text-sm ${Number(booking.remainingAmount || 0) > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                                Rs. {Math.round(Number(booking.remainingAmount || 0)).toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
                           <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
                             <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
-                              <DollarSign className="w-3.5 h-3.5 text-amber-400" /> TOTAL AMOUNT
+                              <DollarSign className="w-3.5 h-3.5 text-amber-400" /> NET AMOUNT
                             </span>
                             <span className="font-bold text-emerald-400 text-sm">
-                              Rs. {Math.round(Number(booking.amount || 0)).toLocaleString()}
+                              Rs. {Math.round(Number(booking.netAmount ?? ((booking.hallCharges ?? booking.amount ?? 0) - (booking.discount || 0)))).toLocaleString()}
                             </span>
                           </div>
                           <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
@@ -382,7 +408,10 @@ export const HallBookings = () => {
                     <th className="px-6 py-4">{t('receipt.bookerName')}</th>
                     <th className="px-6 py-4">{t('receipt.programDate')}</th>
                     <th className="px-6 py-4">{t('receipt.hall')}</th>
-                    <th className="px-6 py-4">{t('receipt.totalAmount')}</th>
+                    <th className="px-6 py-4">Hall Charges</th>
+                    <th className="px-6 py-4">Discount</th>
+                    <th className="px-6 py-4">Received</th>
+                    <th className="px-6 py-4">Remaining</th>
                     <th className="px-6 py-4">{t('tables.status', 'STATUS')}</th>
                     <th className="px-6 py-4 text-right">{t('tables.actions', 'ACTIONS')}</th>
                   </tr>
@@ -414,7 +443,10 @@ export const HallBookings = () => {
                           {formatHallName(booking)}
                         </span>
                       </td>
-                      <td className="px-6 py-4 font-bold text-emerald-400">Rs. {Math.round(booking.amount).toLocaleString()}</td>
+                      <td className="px-6 py-4 font-bold text-slate-200">Rs. {Math.round(Number(booking.hallCharges ?? booking.amount ?? 0)).toLocaleString()}</td>
+                      <td className="px-6 py-4 font-bold text-orange-400">Rs. {Math.round(Number(booking.discount || 0)).toLocaleString()}</td>
+                      <td className="px-6 py-4 font-bold text-sky-400">Rs. {Math.round(Number(booking.receivedAmount || 0)).toLocaleString()}</td>
+                      <td className={`px-6 py-4 font-bold ${Number(booking.remainingAmount || 0) > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>Rs. {Math.round(Number(booking.remainingAmount || 0)).toLocaleString()}</td>
                       <td className="px-6 py-4">
                         {booking.status === 'POSTED' ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold uppercase tracking-wider">
@@ -480,7 +512,7 @@ export const HallBookings = () => {
                   ))}
                   {filtered.length === 0 && (
                     <tr>
-                      <td colSpan={canEditOrDelete ? "8" : "7"} className="px-6 py-12 text-center text-slate-500 text-sm">
+                      <td colSpan={canEditOrDelete ? "11" : "10"} className="px-6 py-12 text-center text-slate-500 text-sm">
                         {t('tables.hallBookings.noBookingsFound')}
                       </td>
                     </tr>

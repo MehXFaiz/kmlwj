@@ -133,11 +133,11 @@ export const authService = {
     return user;
   },
 
-  register: async (email, password, name, role) => {
+  register: async (email, password, name) => {
     const res = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name, role }),
+      body: JSON.stringify({ email, password, name }),
     });
 
     const data = await safeJson(res);

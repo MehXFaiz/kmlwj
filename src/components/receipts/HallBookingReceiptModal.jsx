@@ -85,7 +85,14 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
   const programDateStr = formatDateDDMMYYYY(booking.programDate);
   const programDayUrdu = getDayNameUrdu(booking.programDate);
   const programDayEnglish = getDayNameEnglish(booking.programDate);
-  const amountWords = numberToWordsPKR(booking.amount);
+
+  const hallCharges = Number(booking.hallCharges ?? booking.amount ?? 0);
+  const discountAmt = Number(booking.discount || 0);
+  const netAmount = booking.netAmount != null ? Number(booking.netAmount) : Math.max(0, hallCharges - discountAmt);
+  const receivedAmount = Number(booking.receivedAmount || 0);
+  const remainingAmount = booking.remainingAmount != null ? Number(booking.remainingAmount) : Math.max(0, netAmount - receivedAmount);
+  const isRefundish = Number(booking.refundAmount || 0) > 0 || booking.status === 'Cancelled' || booking.status === 'Refunded';
+  const amountWords = numberToWordsPKR(receivedAmount);
 
   const rawHallName = (
     booking.hallName ||
@@ -419,6 +426,40 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
            4. FINANCIAL ASSESSMENT & SETTLEMENT BOX (SECTION 3)
            ══════════════════════════════════════════════════════════ */}
         <div className="relative z-10 border border-slate-300 rounded overflow-hidden mb-1.5 bg-white">
+          <div className="grid grid-cols-4 divide-x divide-slate-300 border-b border-slate-300">
+            <div className="p-1.5 text-center">
+              <span className="text-[7px] font-bold text-slate-500 uppercase tracking-wider block">
+                Hall Charges
+              </span>
+              <div className="text-xs font-black mt-0.5" style={{ color: '#0f172a' }}>
+                Rs. {Math.round(hallCharges).toLocaleString()}
+              </div>
+            </div>
+            <div className="p-1.5 text-center">
+              <span className="text-[7px] font-bold text-slate-500 uppercase tracking-wider block">
+                Discount
+              </span>
+              <div className="text-xs font-black mt-0.5" style={{ color: '#c2410c' }}>
+                - Rs. {Math.round(discountAmt).toLocaleString()}
+              </div>
+            </div>
+            <div className="p-1.5 text-center" style={{ backgroundColor: '#f8fafc' }}>
+              <span className="text-[7px] font-bold text-slate-500 uppercase tracking-wider block">
+                Net Amount
+              </span>
+              <div className="text-xs font-black mt-0.5" style={{ color: '#0f172a' }}>
+                Rs. {Math.round(netAmount).toLocaleString()}
+              </div>
+            </div>
+            <div className="p-1.5 text-center">
+              <span className="text-[7px] font-bold text-slate-500 uppercase tracking-wider block">
+                Received
+              </span>
+              <div className="text-xs font-black mt-0.5" style={{ color: '#0369a1' }}>
+                Rs. {Math.round(receivedAmount).toLocaleString()}
+              </div>
+            </div>
+          </div>
           <div className="grid grid-cols-3 divide-x divide-slate-300">
             {/* Amount in Words */}
             <div className="p-2 col-span-2 bg-slate-50 flex flex-col justify-center">
@@ -433,44 +474,32 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
               </p>
             </div>
 
-            {/* Total Paid Currency Card */}
+            {/* Balance / Settled Currency Card */}
             <div
               className="p-2 flex flex-col justify-center items-end text-right"
               style={
-                Number(booking.refundAmount || 0) > 0 || booking.status === 'Cancelled' || booking.status === 'Refunded'
-                  ? {
-                      backgroundColor: '#fff1f2',
-                      borderLeft: '2px solid #e11d48',
-                      color: '#881337'
-                    }
-                  : {
-                      backgroundColor: '#ecfdf5',
-                      borderLeft: '2px solid #10b981',
-                      color: '#064e3b'
-                    }
+                isRefundish
+                  ? { backgroundColor: '#fff1f2', borderLeft: '2px solid #e11d48', color: '#881337' }
+                  : remainingAmount > 0
+                    ? { backgroundColor: '#fffbeb', borderLeft: '2px solid #d97706', color: '#78350f' }
+                    : { backgroundColor: '#ecfdf5', borderLeft: '2px solid #10b981', color: '#064e3b' }
               }
             >
               <span
                 className="text-[8px] font-bold uppercase tracking-widest block"
-                style={{
-                  color: Number(booking.refundAmount || 0) > 0 || booking.status === 'Cancelled' || booking.status === 'Refunded'
-                    ? '#9f1239'
-                    : '#065f46'
-                }}
+                style={{ color: isRefundish ? '#9f1239' : remainingAmount > 0 ? '#92400e' : '#065f46' }}
               >
-                {Number(booking.refundAmount || 0) > 0 || booking.status === 'Cancelled' || booking.status === 'Refunded'
+                {isRefundish
                   ? 'REFUNDED / SETTLED AMOUNT'
-                  : 'SETTLED AMOUNT / کل رقم'}
+                  : remainingAmount > 0
+                    ? 'BALANCE DUE / بقایا رقم'
+                    : 'SETTLED AMOUNT / کل رقم'}
               </span>
               <div
                 className="text-base sm:text-lg font-black font-mono mt-0.5 tracking-tight"
-                style={{
-                  color: Number(booking.refundAmount || 0) > 0 || booking.status === 'Cancelled' || booking.status === 'Refunded'
-                    ? '#be123c'
-                    : '#064e3b'
-                }}
+                style={{ color: isRefundish ? '#be123c' : remainingAmount > 0 ? '#b45309' : '#064e3b' }}
               >
-                Rs. {Number(booking.amount || 0).toLocaleString()}/-
+                Rs. {Math.round(isRefundish ? netAmount : (remainingAmount > 0 ? remainingAmount : netAmount)).toLocaleString()}/-
               </div>
               {Number(booking.refundAmount || 0) > 0 && (
                 <div className="text-[10px] font-bold text-rose-600">
@@ -479,16 +508,12 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
               )}
               <span
                 className="inline-flex items-center gap-1 text-[8px] font-bold uppercase tracking-wider mt-0.5"
-                style={{
-                  color: Number(booking.refundAmount || 0) > 0 || booking.status === 'Cancelled' || booking.status === 'Refunded'
-                    ? '#e11d48'
-                    : '#059669'
-                }}
+                style={{ color: isRefundish ? '#e11d48' : remainingAmount > 0 ? '#d97706' : '#059669' }}
               >
                 <CheckCircle2 className="h-2.5 w-2.5" />{' '}
-                {Number(booking.refundAmount || 0) > 0 || booking.status === 'Cancelled' || booking.status === 'Refunded'
+                {isRefundish
                   ? (booking.status ? booking.status.toUpperCase() : 'REFUNDED')
-                  : 'SETTLED'}
+                  : remainingAmount > 0 ? 'PARTIALLY PAID' : 'SETTLED'}
               </span>
             </div>
           </div>

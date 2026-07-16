@@ -32,28 +32,6 @@ function hashResetToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
-// Helper to map old role enums to seeded role names
-function mapRoleName(input?: string): string {
-  if (!input) return 'Accountant';
-  const roleUpper = input.toUpperCase();
-  if (roleUpper === 'ADMIN' || roleUpper === 'SUPER ADMIN') {
-    return 'Super Admin';
-  }
-  if (roleUpper === 'ACCOUNTANT') {
-    return 'Accountant';
-  }
-  if (roleUpper === 'AUDITOR' || roleUpper === 'VIEWER') {
-    return 'Auditor';
-  }
-  if (roleUpper === 'DATA_ENTRY' || roleUpper === 'DATA ENTRY OPERATOR') {
-    return 'Data Entry Operator';
-  }
-  if (roleUpper === 'DONATION_MANAGER') {
-    return 'Donation and Zakat Manager';
-  }
-  return input;
-}
-
 export async function register(data: any) {
   const normalizedEmail = normalizeEmail(data.email);
   const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
@@ -62,7 +40,10 @@ export async function register(data: any) {
   }
 
   const hashedPassword = await hashPassword(data.password);
-  const targetRoleName = mapRoleName(data.role);
+  // Self-registration must never trust a client-supplied role — that would let anyone
+  // sign up as Super Admin. New accounts always start read-only; an existing Admin
+  // must promote them via Users & Roles.
+  const targetRoleName = 'Auditor';
 
   let roleRecord = await prisma.role.findUnique({ where: { name: targetRoleName } });
   if (!roleRecord) {
