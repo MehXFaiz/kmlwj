@@ -532,15 +532,36 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(404).json({ error: { message: 'Booking not found', status: 404 } });
     }
 
-    const { bookingDate, bookerName, fatherHusbandName, address, mobile, programDate, programType, functionType, timeFrom, timeTo, timings, hallId, isForJamaat, amount, discount, netAmount, receivedAmount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
+    const { bookingDate, bookerName, fatherHusbandName, address, mobile, programDate, programType, functionType, timeFrom, timeTo, timings, hallId, isForJamaat, amount, hallCharges, discount, receivedAmount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
 
-    if (!bookerName || !programDate || !hallId || !amount || !paymentMethod) {
+    const rawHallCharges = hallCharges ?? amount;
+    if (!bookerName || !programDate || !hallId || rawHallCharges == null || !paymentMethod) {
       return res.status(400).json({ error: { message: 'Missing required fields', status: 400 } });
     }
-    const parsedAmount = parseFloat(amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      return res.status(400).json({ error: { message: 'Amount must be greater than 0', status: 400 } });
+    const parsedHallCharges = parseFloat(rawHallCharges);
+    if (isNaN(parsedHallCharges) || parsedHallCharges <= 0) {
+      return res.status(400).json({ error: { message: 'Hall Charges must be greater than 0', status: 400 } });
     }
+    const parsedDiscount = discount != null ? parseFloat(discount) : 0;
+    if (isNaN(parsedDiscount) || parsedDiscount < 0) {
+      return res.status(400).json({ error: { message: 'Discount cannot be negative', status: 400 } });
+    }
+    if (parsedDiscount > parsedHallCharges) {
+      return res.status(400).json({ error: { message: 'Discount cannot exceed Hall Charges', status: 400 } });
+    }
+
+    const calculatedNetAmount = parsedHallCharges - parsedDiscount;
+
+    const parsedReceivedAmount = receivedAmount != null ? parseFloat(receivedAmount) : 0;
+    if (isNaN(parsedReceivedAmount) || parsedReceivedAmount < 0) {
+      return res.status(400).json({ error: { message: 'Received Amount cannot be negative', status: 400 } });
+    }
+    if (parsedReceivedAmount > calculatedNetAmount) {
+      return res.status(400).json({ error: { message: 'Received Amount cannot exceed Net Amount', status: 400 } });
+    }
+
+    const calculatedRemainingAmount = calculatedNetAmount - parsedReceivedAmount;
+
     if ((paymentMethod === 'BANK' || paymentMethod === 'CHEQUE') && !bankAccountId) {
       return res.status(400).json({ error: { message: 'Bank account is required for Bank/Cheque payment methods', status: 400 } });
     }
@@ -614,18 +635,48 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         const targetStatus = req.body.status || existingBooking.status;
 
         if (wasPosted && debitAccountId && hallId && targetStatus !== 'Cancelled' && targetStatus !== 'Refunded') {
-          const postingResult = await AccountingService.postReceipt(tx, {
-            amount: parsedAmount,
-            cashOrBankAccountId: debitAccountId,
-            incomeAccountId: hallId,
-            reference: `HB-${existingBooking.receiptNo}`,
-            description: `Hall Booking Receipt for ${bookerName}`,
-            module: 'Hall Booking',
-            voucherType: 'BR',
-            postedBy: req.user!.id,
-            postingDate: new Date(programDate),
-          });
-          if (postingResult?.journalEntry) {
+          const lines: any[] = [];
+
+          if (parsedReceivedAmount > 0) {
+            lines.push({
+              accountId: debitAccountId,
+              debit: parsedReceivedAmount,
+              credit: 0,
+              description: `Receipt: Hall Booking Receipt for ${bookerName}`
+            });
+          }
+
+          if (calculatedRemainingAmount > 0) {
+            const arAccount = await getOrCreateAccountsReceivable(tx);
+            lines.push({
+              accountId: arAccount.id,
+              debit: calculatedRemainingAmount,
+              credit: 0,
+              description: `Outstanding Receivable: Hall Booking Receipt for ${bookerName}`
+            });
+          }
+
+          if (calculatedNetAmount > 0) {
+            lines.push({
+              accountId: hallId,
+              debit: 0,
+              credit: calculatedNetAmount,
+              description: `Revenue: Hall Booking Receipt for ${bookerName}`
+            });
+          }
+
+          if (lines.length > 0) {
+            const postingResult = await AccountingService.postTransaction(tx, {
+              voucherType: 'BR',
+              postingDate: new Date(programDate),
+              reference: `HB-${existingBooking.receiptNo}`,
+              description: `Hall Booking Receipt for ${bookerName}`,
+              module: 'Hall Booking',
+              postedBy: req.user!.id,
+              lines,
+              ipAddress: req.headers['x-forwarded-for'] as string,
+              userAgent: req.headers['user-agent']
+            });
             newJournalEntryId = postingResult.journalEntry.id;
           }
         }
@@ -650,10 +701,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             timings: timings || null,
             hallId,
             isForJamaat: Boolean(isForJamaat),
-            amount: parsedAmount,
-            discount: discount != null ? parseFloat(discount) : 0,
-            netAmount: netAmount != null ? parseFloat(netAmount) : null,
-            receivedAmount: receivedAmount != null ? parseFloat(receivedAmount) : null,
+            hallCharges: parsedHallCharges,
+            discount: parsedDiscount,
+            netAmount: calculatedNetAmount,
+            receivedAmount: parsedReceivedAmount,
+            remainingAmount: calculatedRemainingAmount,
             refundAmount: req.body.refundAmount != null ? parseFloat(req.body.refundAmount) : 0,
             refundDate: req.body.refundDate ? new Date(req.body.refundDate) : null,
             refundReason: req.body.refundReason || null,

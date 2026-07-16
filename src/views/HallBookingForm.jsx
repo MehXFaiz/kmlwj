@@ -37,6 +37,7 @@ export const HallBookingForm = () => {
   const [showConflictModal, setShowConflictModal] = useState(false);
 
   const { register, handleSubmit, watch, setValue, reset, formState: { isSubmitting, dirtyFields, errors }, control } = useForm({
+    mode: 'onChange',
     defaultValues: {
       bookerName: '',
       fatherHusbandName: '',
@@ -56,6 +57,7 @@ export const HallBookingForm = () => {
       discount: '0',
       netAmount: '',
       receivedAmount: '',
+      remainingAmount: '',
       paymentMethod: 'CASH',
       bankAccountId: '',
       chequeNumber: '',
@@ -76,6 +78,33 @@ export const HallBookingForm = () => {
   const functionType = watch('functionType');
   const amountVal = watch('amount');
   const discountVal = watch('discount');
+  const receivedAmountVal = watch('receivedAmount');
+
+  // Safe numeric conversion: empty/invalid values are treated as 0, never used in string arithmetic.
+  const toNumber = (val) => {
+    const n = parseFloat(val);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const hallChargesNum = toNumber(amountVal);
+  const discountNum = toNumber(discountVal);
+  const receivedNum = toNumber(receivedAmountVal);
+
+  const computedNetAmount = React.useMemo(
+    () => Math.max(0, hallChargesNum - discountNum),
+    [hallChargesNum, discountNum]
+  );
+  const computedRemainingAmount = React.useMemo(
+    () => Math.max(0, computedNetAmount - receivedNum),
+    [computedNetAmount, receivedNum]
+  );
+
+  // Net Amount and Remaining Amount are derived values — recalculated instantly whenever
+  // Hall Charges, Discount, or Received Amount change, and never edited directly.
+  useEffect(() => {
+    setValue('netAmount', String(computedNetAmount), { shouldValidate: false });
+    setValue('remainingAmount', String(computedRemainingAmount), { shouldValidate: false });
+  }, [computedNetAmount, computedRemainingAmount, setValue]);
 
   useEffect(() => {
     fetchAccountsList();
@@ -118,10 +147,11 @@ export const HallBookingForm = () => {
             timings: booking.timings || 'Evening',
             hallId: resolvedHallId,
             isForJamaat: booking.isForJamaat || false,
-            amount: booking.amount || '',
+            amount: booking.hallCharges != null ? String(booking.hallCharges) : (booking.amount != null ? String(booking.amount) : ''),
             discount: booking.discount != null ? String(booking.discount) : '0',
             netAmount: booking.netAmount != null ? String(booking.netAmount) : '',
             receivedAmount: booking.receivedAmount != null ? String(booking.receivedAmount) : '',
+            remainingAmount: booking.remainingAmount != null ? String(booking.remainingAmount) : '',
             paymentMethod: booking.paymentMethod || 'CASH',
             bankAccountId: booking.bankAccountId || '',
             chequeNumber: booking.chequeNumber || '',
@@ -252,11 +282,22 @@ export const HallBookingForm = () => {
       ? (data.functionTypeOther || 'Other')
       : data.functionType;
 
-    const parsedAmount = Math.round(parseFloat(data.amount));
-    const parsedDiscount = parseFloat(data.discount) || 0;
-    const parsedNetAmount = data.netAmount ? Math.round(parseFloat(data.netAmount)) : parsedAmount - parsedDiscount;
-    const parsedReceivedAmount = data.receivedAmount ? Math.round(parseFloat(data.receivedAmount)) : null;
-    const parsedRefundAmount = data.refundAmount ? parseFloat(data.refundAmount) : 0;
+    // Numeric validation: empty/invalid values are treated as 0, never used as strings in arithmetic.
+    const parsedAmount = toNumber(data.amount);
+    const parsedDiscount = toNumber(data.discount);
+    const parsedNetAmount = Math.max(0, parsedAmount - parsedDiscount);
+    const parsedReceivedAmount = toNumber(data.receivedAmount);
+    const parsedRemainingAmount = Math.max(0, parsedNetAmount - parsedReceivedAmount);
+    const parsedRefundAmount = toNumber(data.refundAmount);
+
+    if (parsedDiscount > parsedAmount) {
+      showToast('Discount cannot be greater than Hall Charges.', 'warning');
+      return;
+    }
+    if (parsedReceivedAmount > parsedNetAmount) {
+      showToast('Received Amount cannot exceed Net Amount.', 'warning');
+      return;
+    }
 
     try {
       let savedBooking;
@@ -264,9 +305,11 @@ export const HallBookingForm = () => {
         ...data,
         functionType: resolvedFunctionType,
         amount: parsedAmount,
+        hallCharges: parsedAmount,
         discount: parsedDiscount,
         netAmount: parsedNetAmount,
         receivedAmount: parsedReceivedAmount,
+        remainingAmount: parsedRemainingAmount,
         refundAmount: parsedRefundAmount,
         refundDate: data.refundDate || null,
         refundReason: data.refundReason || null,
@@ -708,11 +751,10 @@ export const HallBookingForm = () => {
                             else if (name === 'Zikarya Hall') amt = 28000;
 
                             if (amt > 0) {
-                              setValue('amount', String(amt));
-                              const disc = parseFloat(discountVal) || 0;
+                              setValue('amount', String(amt), { shouldValidate: true });
+                              const disc = toNumber(discountVal);
                               const net = Math.max(0, amt - disc);
-                              setValue('netAmount', String(net));
-                              setValue('receivedAmount', String(net));
+                              setValue('receivedAmount', String(net), { shouldValidate: true });
                             }
                           }
                         }}
@@ -753,18 +795,13 @@ export const HallBookingForm = () => {
                   <div>
                     <label className={labelClass}>Hall Charges (Rs) *</label>
                     <input type="text" {...register('amount', {
-                      required: 'Amount is required',
+                      required: 'Hall Charges is required',
                       pattern: {
                         value: /^[1-9]\d*$/,
-                        message: 'Positive whole number'
-                      }
+                        message: 'Hall Charges must be a positive whole number'
+                      },
+                      validate: (value) => toNumber(value) >= 0 || 'Negative values are not allowed'
                     })} required
-                      onChange={(e) => {
-                        register('amount').onChange(e);
-                        const amt = parseFloat(e.target.value) || 0;
-                        const disc = parseFloat(discountVal) || 0;
-                        setValue('netAmount', String(Math.max(0, amt - disc)));
-                      }}
                       className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border text-lg font-bold text-emerald-400 focus:outline-none focus:border-amber-500/60 transition-all ${errors.amount ? 'border-red-500/60' : 'border-slate-800'}`} />
                     {errors.amount && (
                       <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.amount.message}</span>
@@ -778,36 +815,29 @@ export const HallBookingForm = () => {
                       pattern: {
                         value: /^\d*(\.\d+)?$/,
                         message: 'Must be a non-negative number'
+                      },
+                      validate: (value) => {
+                        const disc = toNumber(value);
+                        if (disc < 0) return 'Negative values are not allowed';
+                        if (disc > hallChargesNum) return 'Discount cannot be greater than Hall Charges';
+                        return true;
                       }
                     })}
                       placeholder="0"
-                      onChange={(e) => {
-                        register('discount').onChange(e);
-                        const amt = parseFloat(amountVal) || 0;
-                        const disc = parseFloat(e.target.value) || 0;
-                        setValue('netAmount', String(Math.max(0, amt - disc)));
-                      }}
                       className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border text-lg font-bold text-orange-400 focus:outline-none focus:border-amber-500/60 transition-all ${errors.discount ? 'border-red-500/60' : 'border-slate-800'}`} />
                     {errors.discount && (
                       <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.discount.message}</span>
                     )}
                   </div>
 
-                  {/* Net Amount */}
+                  {/* Net Amount (derived, read-only) */}
                   <div>
                     <label className={labelClass}>Net Amount (Rs)</label>
-                    <input type="text" {...register('netAmount', {
-                      pattern: {
-                        value: /^\d*(\.\d+)?$/,
-                        message: 'Must be a non-negative number'
-                      }
-                    })}
+                    <input type="text" {...register('netAmount')}
+                      readOnly
                       placeholder="Auto-computed"
-                      className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border text-lg font-bold text-amber-400 focus:outline-none focus:border-amber-500/60 transition-all ${errors.netAmount ? 'border-red-500/60' : 'border-slate-700'}`} />
-                    {errors.netAmount && (
-                      <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.netAmount.message}</span>
-                    )}
-                    <p className="text-xs text-slate-500 mt-1">Auto-filled as Hall Charges − Discount. Editable.</p>
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/40 border border-slate-800 text-lg font-bold text-amber-400 cursor-not-allowed" />
+                    <p className="text-xs text-slate-500 mt-1">Hall Charges − Discount. Recalculates automatically.</p>
                   </div>
 
                   {/* Received Amount */}
@@ -817,6 +847,12 @@ export const HallBookingForm = () => {
                       pattern: {
                         value: /^\d*(\.\d+)?$/,
                         message: 'Must be a non-negative number'
+                      },
+                      validate: (value) => {
+                        const rec = toNumber(value);
+                        if (rec < 0) return 'Negative values are not allowed';
+                        if (rec > computedNetAmount) return 'Received Amount cannot exceed Net Amount';
+                        return true;
                       }
                     })}
                       placeholder="Amount received"
@@ -824,6 +860,16 @@ export const HallBookingForm = () => {
                     {errors.receivedAmount && (
                       <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.receivedAmount.message}</span>
                     )}
+                  </div>
+
+                  {/* Remaining Amount (derived, read-only) */}
+                  <div>
+                    <label className={labelClass}>Remaining Amount (Rs)</label>
+                    <input type="text" {...register('remainingAmount')}
+                      readOnly
+                      placeholder="Auto-computed"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/40 border border-slate-800 text-lg font-bold text-rose-400 cursor-not-allowed" />
+                    <p className="text-xs text-slate-500 mt-1">Net Amount − Received Amount. Recalculates automatically.</p>
                   </div>
 
                   {/* Payment Method */}
