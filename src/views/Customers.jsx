@@ -35,7 +35,7 @@ function CustomerModal({ isOpen, onClose, onSave, initial }) {
       showToast('Name should only contain letters, spaces, hyphens, and dots (3-50 chars)', 'warning');
       return;
     }
-    if (form.email && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(form.email)) {
+    if (form.email && !/^[\w.+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(form.email)) {
       showToast('Please enter a valid email address', 'warning');
       return;
     }
