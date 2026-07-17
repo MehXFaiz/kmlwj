@@ -151,10 +151,7 @@ var revenue_collections_default = makeHandler(async (req, res) => {
     }
     let debitAccountId = null;
     if (paymentMethod === "CASH") {
-      const cashAccount = await prisma.account.findFirst({
-        where: { accountName: { contains: "Cash", mode: "insensitive" } }
-      });
-      if (!cashAccount) return res.status(400).json({ error: { message: "Cash account not found in Chart of Accounts", status: 400 } });
+      const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
       debitAccountId = cashAccount.id;
     } else {
       debitAccountId = bankAccountId;
