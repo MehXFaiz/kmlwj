@@ -111,16 +111,18 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: `Account code ${code} is already in use`, status: 400 } });
     }
 
-    // Reserved accounts cannot be assigned unless explicitly marked as reserved
-    if (!isReserved) {
-      const allReserved = await prisma.reservedCode.findMany({ where: { isActive: true } });
-      const reservedMatch = allReserved.find(r => 
-        compareCodes(r.reserveStart, code) <= 0 && 
-        compareCodes(r.reserveEnd, code) >= 0
-      );
-      if (reservedMatch) {
-        return res.status(400).json({ error: { message: `Code ${code} falls within a reserved range: ${reservedMatch.reserveReason}`, status: 400 } });
-      }
+    // Reserved-range collision check: this must always run regardless of what the client sends
+    // for `isReserved` — that flag is client-controlled and trusting it to skip the check would
+    // let anyone with plain CREATE_ACCOUNT bypass the Reserved Codes governance feature entirely.
+    // Only MANAGE_RESERVED_CODES (or Super Admin) may knowingly create an account inside a
+    // reserved range.
+    const allReserved = await prisma.reservedCode.findMany({ where: { isActive: true } });
+    const reservedMatch = allReserved.find(r =>
+      compareCodes(r.reserveStart, code) <= 0 &&
+      compareCodes(r.reserveEnd, code) >= 0
+    );
+    if (reservedMatch && !checkPerm('MANAGE_RESERVED_CODES')) {
+      return res.status(400).json({ error: { message: `Code ${code} falls within a reserved range: ${reservedMatch.reserveReason}`, status: 400 } });
     }
 
     const typeNameUpper = type.toUpperCase();

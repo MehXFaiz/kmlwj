@@ -40,6 +40,8 @@ async function main() {
     { name: 'MANAGE_ROLES', description: 'Manage system roles and their permissions' },
     { name: 'MANAGE_RESERVED_CODES', description: 'Manage reserved account codes' },
     { name: 'POST_JOURNAL', description: 'Post journal entries and transactions' },
+    { name: 'RECORD_INCOME', description: 'Record income and revenue collections that post to the General Ledger' },
+    { name: 'RECORD_EXPENSE', description: 'Record expenses and disbursements that post to the General Ledger' },
   ];
 
   console.log('Seeding Permissions...');
@@ -93,8 +95,8 @@ async function main() {
     });
   }
 
-  // Accountant permissions: CREATE_ACCOUNT, UPDATE_ACCOUNT, VIEW_REPORTS, POST_JOURNAL
-  const accountantPerms = ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'VIEW_REPORTS', 'POST_JOURNAL'];
+  // Accountant permissions: CREATE_ACCOUNT, UPDATE_ACCOUNT, VIEW_REPORTS, POST_JOURNAL, RECORD_INCOME, RECORD_EXPENSE
+  const accountantPerms = ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'VIEW_REPORTS', 'POST_JOURNAL', 'RECORD_INCOME', 'RECORD_EXPENSE'];
   for (const permName of accountantPerms) {
     await prisma.rolePermission.upsert({
       where: {
@@ -142,6 +144,25 @@ async function main() {
       update: {},
       create: {
         roleId: seededRoles['Data Entry Operator'].id,
+        permissionId: seededPermissions[permName].id,
+      },
+    });
+  }
+
+  // Donation and Zakat Manager permissions: VIEW_REPORTS, RECORD_INCOME, RECORD_EXPENSE
+  // (this role previously had zero permissions granted despite its stated purpose)
+  const donationManagerPerms = ['VIEW_REPORTS', 'RECORD_INCOME', 'RECORD_EXPENSE'];
+  for (const permName of donationManagerPerms) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: seededRoles['Donation and Zakat Manager'].id,
+          permissionId: seededPermissions[permName].id,
+        },
+      },
+      update: {},
+      create: {
+        roleId: seededRoles['Donation and Zakat Manager'].id,
         permissionId: seededPermissions[permName].id,
       },
     });

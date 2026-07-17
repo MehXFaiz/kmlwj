@@ -15,6 +15,15 @@ var simple_expense_default = makeHandler(async (req, res) => {
     });
     return res.status(200).json({ status: 200, data: expenses });
   }
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    include: { role: { include: { rolePermissions: { include: { permission: true } } } } }
+  });
+  const userPerms = user?.role.rolePermissions.map((rp) => rp.permission.name) || [];
+  const isSuperAdmin = user?.role.name === "Super Admin";
+  if (!isSuperAdmin && !userPerms.includes("RECORD_EXPENSE")) {
+    return res.status(403).json({ error: { message: "Forbidden: Insufficient permissions", status: 403 } });
+  }
   if (req.method === "POST") {
     const { date, expenseHeadId, paidTo, description, amount, paymentMethod, bankAccountId, reference } = req.body;
     if (!expenseHeadId || !amount) {
@@ -68,7 +77,7 @@ var simple_expense_default = makeHandler(async (req, res) => {
             userId: req.user.id,
             action: "Create Simple Expense",
             module: "Expense",
-            details: `Added expense of ${numAmount} for ${expenseHead.name}`
+            newValues: { amount: numAmount, expenseHead: expenseHead.name, paidTo, description }
           }
         });
       } catch (e) {
@@ -138,7 +147,8 @@ var simple_expense_default = makeHandler(async (req, res) => {
             userId: req.user.id,
             action: "Update Simple Expense",
             module: "Expense",
-            details: `Updated expense of ${numAmount} for ${expenseHead.name}`
+            oldValues: { amount: existing.amount, expenseHeadId: existing.expenseHeadId },
+            newValues: { amount: numAmount, expenseHead: expenseHead.name, paidTo, description }
           }
         });
       } catch (e) {

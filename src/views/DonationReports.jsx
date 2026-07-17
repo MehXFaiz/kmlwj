@@ -3,6 +3,7 @@ import { useDonationStore } from '../store/donationStore';
 import { useBeneficiaryStore } from '../store/beneficiaryStore';
 import { FileText, Download, LayoutGrid, Table as TableIcon, Heart, Calendar, CreditCard, Banknote, CheckCircle2, Clock, User, Phone } from 'lucide-react';
 import { pageActionsClass } from '../components/common/responsive';
+import { DONATION_TYPES, donationTypeDisplay } from '../constants/donationTypes';
 
 export const DonationReports = () => {
   const { donations, fetchDonations } = useDonationStore();
@@ -62,7 +63,7 @@ export const DonationReports = () => {
   const handleExportExcel = () => {
     const header = "Beneficiary,Type,Amount,Method,Status,Date\n";
     const csv = filtered.map(d => 
-      `"${getBeneficiaryName(d)}","${d.donationType || ''}",${Number(d.amount) || 0},"${d.paymentMethod || ''}","${d.status || 'PENDING'}","${new Date(d.createdAt).toLocaleDateString()}"`
+      `"${getBeneficiaryName(d)}","${donationTypeDisplay(d.donationType, d.customDonationType)}",${Number(d.amount) || 0},"${d.paymentMethod || ''}","${d.status || 'PENDING'}","${new Date(d.createdAt).toLocaleDateString()}"`
     ).join("\n");
     const blob = new Blob([header + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -121,7 +122,7 @@ export const DonationReports = () => {
           <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1.5">Donation Type</label>
           <select value={filterType} onChange={e => setFilterType(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-sm text-slate-300 focus:outline-none focus:border-cyan-600/50 cursor-pointer">
             <option value="All">All Types</option>
-            {['MONTHLY', 'MARRIAGE', 'MEDICAL', 'EMERGENCY', 'EDUCATION', 'CUSTOM'].map(t => <option key={t} value={t}>{t}</option>)}
+            {DONATION_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
         </div>
         <div>
@@ -248,7 +249,7 @@ export const DonationReports = () => {
                         <Heart className="w-3.5 h-3.5 text-cyan-400 print:text-black" /> AID TYPE
                       </span>
                       <span className="inline-flex items-center text-xs font-bold px-2.5 py-0.5 rounded bg-slate-800/90 text-cyan-300 border border-slate-700/60 font-mono uppercase print:bg-transparent print:border-black print:text-black">
-                        {d.donationType || 'GENERAL'}
+                        {donationTypeDisplay(d.donationType, d.customDonationType) || 'GENERAL'}
                       </span>
                     </div>
 
@@ -304,7 +305,7 @@ export const DonationReports = () => {
                 {filtered.map(d => (
                   <tr key={d.id} className="hover:bg-slate-800/20 transition-colors">
                     <td className="px-4 py-3.5"><p className="text-sm font-semibold text-slate-200 print:text-black">{getBeneficiaryName(d)}</p></td>
-                    <td className="px-4 py-3.5 text-xs text-slate-400 print:text-black">{d.donationType}</td>
+                    <td className="px-4 py-3.5 text-xs text-slate-400 print:text-black">{donationTypeDisplay(d.donationType, d.customDonationType)}</td>
                     <td className="px-4 py-3.5 text-sm font-bold text-emerald-400 print:text-black">PKR {(Number(d.amount) || 0).toLocaleString()}</td>
                     <td className="px-4 py-3.5 text-xs text-slate-400 print:text-black">{d.paymentMethod}</td>
                     <td className="px-4 py-3.5 text-xs text-slate-400 print:text-black">{d.status || 'PENDING'}</td>

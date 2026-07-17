@@ -8,6 +8,7 @@ import { Heart, Search, Plus, Edit2, Trash2, CheckCircle2, X, AlertTriangle, Pri
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 import { EmptyState } from '../components/ui/EmptyState';
+import { DONATION_TYPES, donationTypeDisplay } from '../constants/donationTypes';
 
 // Replace null DB values with '' so controlled inputs stay controlled
 const nullsToEmpty = (obj) =>
@@ -149,9 +150,9 @@ function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
                         setForm(f => ({ ...f, donationType: val, customDonationType: val !== 'CUSTOM' ? '' : f.customDonationType }));
                       }}
                       className={inputClass}>
-                      <option value="ZAKAT">Zakat</option>
-                      <option value="FITRA">Fitra</option>
-                      <option value="CUSTOM">Custom</option>
+                      {DONATION_TYPES.map(t => (
+                        <option key={t.value} value={t.value}>{t.label}</option>
+                      ))}
                     </select>
                     {form.donationType === 'CUSTOM' && (
                       <div className="mt-2">
@@ -304,13 +305,13 @@ function DonationInvoiceModal({ donation, onClose }) {
       onClose={onClose}
       title="DONATION VOUCHER"
       voucherNo={donation.id?.slice(0, 8)?.toUpperCase()}
-      fileNo={donation.donationType === 'CUSTOM' ? (donation.customDonationType || 'Custom') : (donation.donationType || '')}
+      fileNo={donationTypeDisplay(donation.donationType, donation.customDonationType)}
       date={donation.createdAt}
       name={donation.donorName}
       address={donation.donorMobile || donation.donorBankName || ''}
       debitCredit={donation.paymentMethod}
       accountName="Donation Disbursement A/c"
-      particulars={`Donation Given / Disbursement - ${donation.donationType === 'CUSTOM' ? (donation.customDonationType || 'Custom') : donation.donationType}${donation.remarks ? ` (${donation.remarks})` : ''}${donation.chequeNumber ? ` [Cheque #${donation.chequeNumber}]` : ''}`}
+      particulars={`Donation Given / Disbursement - ${donationTypeDisplay(donation.donationType, donation.customDonationType)}${donation.remarks ? ` (${donation.remarks})` : ''}${donation.chequeNumber ? ` [Cheque #${donation.chequeNumber}]` : ''}`}
       amount={donation.amount}
       preparedBy={donation.createdBy?.fullName || 'Operator'}
       payeeLabel="Payee's Signature"
@@ -531,7 +532,7 @@ export const Donations = () => {
                         <Heart className="w-3.5 h-3.5 text-amber-400" /> AID TYPE
                       </span>
                       <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded bg-slate-800/90 text-slate-200 border border-slate-700/60">
-                        {d.donationType === 'CUSTOM' ? (d.customDonationType || 'Custom') : (d.donationType || 'GENERAL')}
+                        {donationTypeDisplay(d.donationType, d.customDonationType) || 'GENERAL'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">

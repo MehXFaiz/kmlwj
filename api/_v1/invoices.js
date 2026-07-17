@@ -23,12 +23,12 @@ async function getOrCreateAccountsReceivable(tx) {
   });
   if (!arAccount) {
     const currentAsset = await tx.account.findFirst({
-      where: { glCode: "1100000" }
+      where: { glCode: "1010000" }
     });
     if (!currentAsset) {
-      throw new Error("Current Asset account (1100000) not found in Chart of Accounts.");
+      throw new Error("Current Assets account (1010000) not found in Chart of Accounts.");
     }
-    let newGlCode = "1100100";
+    let newGlCode = "1010200";
     let codeExists = true;
     while (codeExists) {
       const existing = await tx.account.findFirst({ where: { glCode: newGlCode } });
@@ -151,15 +151,16 @@ var invoices_default = makeHandler(async (req, res) => {
           },
           include: { customer: true, items: true, bankAccount: true }
         });
-        const postingResult = await AccountingService.postReceipt(tx, {
-          amount: invoice.total,
-          cashOrBankAccountId: destAccount.id,
-          incomeAccountId: arAccount.id,
+        const postingResult = await AccountingService.postTransaction(tx, {
+          voucherType: "BR",
           reference: `PAY-${invoice.invoiceNo}`,
           description: `Invoice payment received from ${invoice.customer.name} - Inv #${invoice.invoiceNo}`,
           module: "Invoices",
-          voucherType: "BR",
           postedBy: req.user.id,
+          lines: [
+            { accountId: destAccount.id, debit: invoice.total, credit: 0, description: "Cash/Bank Debit" },
+            { accountId: arAccount.id, debit: 0, credit: invoice.total, description: "Accounts Receivable Credit" }
+          ],
           ipAddress: req.headers["x-forwarded-for"],
           userAgent: req.headers["user-agent"]
         });

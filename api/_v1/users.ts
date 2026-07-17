@@ -55,6 +55,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Email, password, full name, and role are required', status: 400 } });
     }
 
+    // Only an actual Super Admin may grant the Super Admin role — otherwise a custom role
+    // holding only MANAGE_USERS (delegated for ordinary staff administration) could mint a
+    // brand-new Super Admin account and self-escalate.
+    if (role === 'Super Admin' && !isSuperAdmin) {
+      return res.status(403).json({ error: { message: 'Forbidden: Only a Super Admin can grant the Super Admin role', status: 403 } });
+    }
+
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return res.status(400).json({ error: { message: 'Email already registered', status: 400 } });
@@ -113,6 +120,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     if (role !== undefined) {
+      if (role === 'Super Admin' && !isSuperAdmin) {
+        return res.status(403).json({ error: { message: 'Forbidden: Only a Super Admin can grant the Super Admin role', status: 403 } });
+      }
       let roleRecord = await prisma.role.findUnique({ where: { name: role } });
       if (!roleRecord) {
         roleRecord = await prisma.role.create({ data: { name: role, description: `${role} Role` } });

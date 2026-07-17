@@ -41,6 +41,9 @@ var users_default = makeHandler(async (req, res) => {
     if (!email || !password || !fullName || !role) {
       return res.status(400).json({ error: { message: "Email, password, full name, and role are required", status: 400 } });
     }
+    if (role === "Super Admin" && !isSuperAdmin) {
+      return res.status(403).json({ error: { message: "Forbidden: Only a Super Admin can grant the Super Admin role", status: 403 } });
+    }
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return res.status(400).json({ error: { message: "Email already registered", status: 400 } });
@@ -88,6 +91,9 @@ var users_default = makeHandler(async (req, res) => {
       updateData.password = await bcrypt.hash(password, 12);
     }
     if (role !== void 0) {
+      if (role === "Super Admin" && !isSuperAdmin) {
+        return res.status(403).json({ error: { message: "Forbidden: Only a Super Admin can grant the Super Admin role", status: 403 } });
+      }
       let roleRecord = await prisma.role.findUnique({ where: { name: role } });
       if (!roleRecord) {
         roleRecord = await prisma.role.create({ data: { name: role, description: `${role} Role` } });

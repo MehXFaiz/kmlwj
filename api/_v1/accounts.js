@@ -92,14 +92,12 @@ var accounts_default = makeHandler(async (req, res) => {
     if (codeExists) {
       return res.status(400).json({ error: { message: `Account code ${code} is already in use`, status: 400 } });
     }
-    if (!isReserved) {
-      const allReserved = await prisma.reservedCode.findMany({ where: { isActive: true } });
-      const reservedMatch = allReserved.find(
-        (r) => compareCodes(r.reserveStart, code) <= 0 && compareCodes(r.reserveEnd, code) >= 0
-      );
-      if (reservedMatch) {
-        return res.status(400).json({ error: { message: `Code ${code} falls within a reserved range: ${reservedMatch.reserveReason}`, status: 400 } });
-      }
+    const allReserved = await prisma.reservedCode.findMany({ where: { isActive: true } });
+    const reservedMatch = allReserved.find(
+      (r) => compareCodes(r.reserveStart, code) <= 0 && compareCodes(r.reserveEnd, code) >= 0
+    );
+    if (reservedMatch && !checkPerm("MANAGE_RESERVED_CODES")) {
+      return res.status(400).json({ error: { message: `Code ${code} falls within a reserved range: ${reservedMatch.reserveReason}`, status: 400 } });
     }
     const typeNameUpper = type.toUpperCase();
     let accountType = await prisma.accountType.findUnique({ where: { name: typeNameUpper } });

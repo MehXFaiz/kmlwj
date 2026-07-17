@@ -12,13 +12,7 @@ import {
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
-
-const DONATION_TYPES = [
-  'GENERAL_DONATION', 'ZAKAT', 'FITRA', 'SADQA', 'QURBANI',
-  'HALL_DONATION', 'MARRIAGE_DONATION', 'BUILDING_FUND',
-  'MEDICAL_DONATION', 'EDUCATION_DONATION', 'MONTHLY',
-  'MARRIAGE', 'MEDICAL', 'EMERGENCY', 'EDUCATION', 'CUSTOM'
-];
+import { DONATION_TYPES, donationTypeDisplay } from '../constants/donationTypes';
 
 const PAYMENT_METHODS = ['CASH', 'BANK', 'CHEQUE', 'ONLINE'];
 
@@ -30,7 +24,7 @@ function PrintReceiptModal({ donation, onClose }) {
 
   const categoryLabel = donation.donationType === 'CUSTOM'
     ? (donation.customDonationType || 'Custom Donation')
-    : (donation.donationType ? donation.donationType.replace(/_/g, ' ') : 'Donation');
+    : (donationTypeDisplay(donation.donationType) || 'Donation');
 
   return (
     <VoucherSlipModal
@@ -264,7 +258,7 @@ export const DonationsReceived = () => {
           >
             <option value="">All Categories</option>
             {DONATION_TYPES.map(t => (
-              <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
+              <option key={t.value} value={t.value}>{t.label}</option>
             ))}
           </select>
 
@@ -376,7 +370,7 @@ export const DonationsReceived = () => {
                         <DollarSign className="w-3.5 h-3.5 text-amber-400" /> CATEGORY
                       </span>
                       <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded bg-slate-800/90 text-slate-200 border border-slate-700/60">
-                        {d.donationType === 'CUSTOM' ? (d.customDonationType || 'Custom Donation') : (d.donationType?.replace(/_/g, ' ') || 'GENERAL')}
+                        {d.donationType === 'CUSTOM' ? (d.customDonationType || 'Custom Donation') : (donationTypeDisplay(d.donationType) || 'GENERAL')}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">

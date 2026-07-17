@@ -9,13 +9,7 @@ import {
   ArrowDownLeft, Receipt, CreditCard, ChevronLeft, CheckCircle, AlertCircle, Save, UserPlus
 } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
-
-const DONATION_TYPES = [
-  'GENERAL_DONATION', 'ZAKAT', 'FITRA', 'SADQA', 'QURBANI',
-  'HALL_DONATION', 'MARRIAGE_DONATION', 'BUILDING_FUND',
-  'MEDICAL_DONATION', 'EDUCATION_DONATION', 'MONTHLY',
-  'MARRIAGE', 'MEDICAL', 'EMERGENCY', 'EDUCATION', 'CUSTOM'
-];
+import { DONATION_TYPES } from '../constants/donationTypes';
 
 const PAYMENT_METHODS = ['CASH', 'BANK', 'CHEQUE', 'ONLINE'];
 
@@ -353,7 +347,7 @@ export const DonationReceiptForm = () => {
                     className={inputClass}
                   >
                     {DONATION_TYPES.map(t => (
-                      <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
+                      <option key={t.value} value={t.value}>{t.label}</option>
                     ))}
                   </select>
                 </div>

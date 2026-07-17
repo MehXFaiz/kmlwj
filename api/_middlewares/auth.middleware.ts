@@ -35,7 +35,7 @@ export function isEditOrDeleteRequest(req: any): boolean {
   }
   if (method === 'POST') {
     const action = String(req.body?.action || req.query?.action || '').toLowerCase().trim();
-    if (['cancel', 'delete', 'edit', 'update', 'remove', 'bulk-delete', 'reverse'].includes(action)) {
+    if (['cancel', 'delete', 'edit', 'update', 'remove', 'bulk-delete', 'reverse', 'revert'].includes(action)) {
       return true;
     }
   }
@@ -65,7 +65,7 @@ export function isPostToLedgerRequest(req: any): boolean {
     return true;
   }
   const action = String(req.body?.action || req.query?.action || '').toLowerCase().trim();
-  if (['post', 'post-draft', 'post-to-ledger', 'posttoledger', 'approve'].includes(action)) {
+  if (['post', 'post-draft', 'post-to-ledger', 'posttoledger', 'approve', 'revert', 'reverse'].includes(action)) {
     return true;
   }
   const status = String(req.body?.status || '').toUpperCase().trim();

@@ -5,6 +5,7 @@ import { useCoaStore } from '../store/coaStore';
 import { useBeneficiaryStore } from '../store/beneficiaryStore';
 import { Heart, ChevronLeft, Save, ShieldCheck, CheckCircle2, Users, UserCheck, Sparkles, AlertCircle } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
+import { DONATION_TYPES } from '../constants/donationTypes';
 
 const nullsToEmpty = (obj) =>
   Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === null ? '' : v]));
@@ -284,9 +285,9 @@ export const DonationForm = () => {
                       }));
                     }}
                     className={inputClass}>
-                    <option value="ZAKAT">Zakat</option>
-                    <option value="FITRA">Fitra</option>
-                    <option value="CUSTOM">Custom</option>
+                    {DONATION_TYPES.map(t => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
                   </select>
                   {form.donationType === 'CUSTOM' && (
                     <div className="mt-2">

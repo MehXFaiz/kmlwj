@@ -59,6 +59,15 @@ var revenue_collections_default = makeHandler(async (req, res) => {
     });
     return res.status(200).json({ status: 200, data: collections });
   }
+  const actingUser = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    include: { role: { include: { rolePermissions: { include: { permission: true } } } } }
+  });
+  const actingUserPerms = actingUser?.role.rolePermissions.map((rp) => rp.permission.name) || [];
+  const actingUserIsSuperAdmin = actingUser?.role.name === "Super Admin";
+  if (!actingUserIsSuperAdmin && !actingUserPerms.includes("RECORD_INCOME")) {
+    return res.status(403).json({ error: { message: "Forbidden: Insufficient permissions", status: 403 } });
+  }
   if (method === "POST") {
     if (action === "approve") {
       const { id } = req.body;

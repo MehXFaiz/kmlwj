@@ -108,6 +108,21 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     return res.status(200).json({ status: 200, data: donations, meta: { total, page: pageNum, limit: limitNum } });
   }
 
+  // Every write below immediately posts a real disbursement to the General Ledger. Note this
+  // can't rely on the coarse checkPostToLedgerPermission middleware: status is always set
+  // server-side ('APPROVED' on create), never read from the client body, so that middleware's
+  // body-sniffing never detects this as a ledger-posting request. Require RECORD_EXPENSE
+  // (or Super Admin) explicitly here instead.
+  const actingUser = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    include: { role: { include: { rolePermissions: { include: { permission: true } } } } },
+  });
+  const actingUserPerms = actingUser?.role.rolePermissions.map((rp) => rp.permission.name) || [];
+  const actingUserIsSuperAdmin = actingUser?.role.name === 'Super Admin';
+  if (!actingUserIsSuperAdmin && !actingUserPerms.includes('RECORD_EXPENSE')) {
+    return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
+  }
+
   if (method === 'POST') {
     // Action: Approve Donation
     if (action === 'approve') {

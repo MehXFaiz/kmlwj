@@ -15,6 +15,15 @@ var simple_income_default = makeHandler(async (req, res) => {
     });
     return res.status(200).json({ status: 200, data: incomes });
   }
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    include: { role: { include: { rolePermissions: { include: { permission: true } } } } }
+  });
+  const userPerms = user?.role.rolePermissions.map((rp) => rp.permission.name) || [];
+  const isSuperAdmin = user?.role.name === "Super Admin";
+  if (!isSuperAdmin && !userPerms.includes("RECORD_INCOME")) {
+    return res.status(403).json({ error: { message: "Forbidden: Insufficient permissions", status: 403 } });
+  }
   if (req.method === "POST") {
     const { date, revenueHeadId, description, amount, paymentMethod, bankAccountId, reference } = req.body;
     if (!revenueHeadId || !amount) {
@@ -67,7 +76,7 @@ var simple_income_default = makeHandler(async (req, res) => {
             userId: req.user.id,
             action: "Create Simple Income",
             module: "Income",
-            details: `Added income of ${numAmount} for ${revenueHead.name}`
+            newValues: { amount: numAmount, revenueHead: revenueHead.name, description }
           }
         });
       } catch (e) {
@@ -136,7 +145,8 @@ var simple_income_default = makeHandler(async (req, res) => {
             userId: req.user.id,
             action: "Update Simple Income",
             module: "Income",
-            details: `Updated income of ${numAmount} for ${revenueHead.name}`
+            oldValues: { amount: existing.amount, revenueHeadId: existing.revenueHeadId },
+            newValues: { amount: numAmount, revenueHead: revenueHead.name, description }
           }
         });
       } catch (e) {
