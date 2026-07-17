@@ -41,7 +41,13 @@ export function makeHandler(fn: ServerlessFunction) {
       }
 
       const status = error.status || 500;
-      const message = error.message || 'Internal Server Error';
+      // Errors thrown deliberately by application code (status < 500, e.g. validation/not-found)
+      // carry a message meant for the user. Anything that fell through uncaught to here (status
+      // 500 by default) is an internal failure — its message can contain raw Prisma/Postgres
+      // internals, file paths, and stack details, so it must never reach the client directly.
+      const message = status < 500
+        ? (error.message || 'Request failed')
+        : 'An unexpected error occurred. Please try again or contact support if the problem persists.';
 
       logger.error({
         err: {

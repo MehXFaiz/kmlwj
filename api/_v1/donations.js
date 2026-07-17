@@ -10,6 +10,10 @@ function generateVoucherNumber() {
   const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
   return `JV-${year}${month}-${randomStr}`;
 }
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isValidBeneficiaryId(beneficiaryId) {
+  return typeof beneficiaryId === "string" && UUID_RE.test(beneficiaryId);
+}
 async function getExpenseAccountForDonation(donationType, tx) {
   let acc = await tx.account.findFirst({
     where: {
@@ -183,6 +187,9 @@ var donations_default = makeHandler(async (req, res) => {
     if (paymentMethod === "CHEQUE" && !chequeNumber) {
       return res.status(400).json({ error: { message: "Cheque number is required for Cheque payment method", status: 400 } });
     }
+    if (beneficiaryId && !isValidBeneficiaryId(beneficiaryId)) {
+      return res.status(400).json({ error: { message: "Selected recipient is invalid or out of date. Please re-select the recipient from People We Help and try again.", status: 400 } });
+    }
     if (beneficiaryId) {
       const hasDuplicate = await checkMonthlyRestriction(beneficiaryId, /* @__PURE__ */ new Date());
       if (hasDuplicate) {
@@ -258,6 +265,9 @@ var donations_default = makeHandler(async (req, res) => {
     }
     const targetBeneficiaryId = beneficiaryId !== void 0 ? beneficiaryId : existingDonation.beneficiaryId;
     const targetStatus = status !== void 0 ? status : existingDonation.status;
+    if (targetBeneficiaryId && !isValidBeneficiaryId(targetBeneficiaryId)) {
+      return res.status(400).json({ error: { message: "Selected recipient is invalid or out of date. Please re-select the recipient from People We Help and try again.", status: 400 } });
+    }
     if (targetStatus === "APPROVED" && targetBeneficiaryId) {
       const hasDuplicate = await checkMonthlyRestriction(targetBeneficiaryId, existingDonation.createdAt, existingDonation.id);
       if (hasDuplicate) {

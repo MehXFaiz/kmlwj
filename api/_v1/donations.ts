@@ -13,6 +13,16 @@ function generateVoucherNumber() {
   return `JV-${year}${month}-${randomStr}`;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// beneficiaryId is a Postgres UUID column — an unrecognized/malformed id (e.g. stale client-side
+// data) must be rejected with a clean 400 here, not passed through to Prisma where Postgres
+// rejects it with a raw "invalid input syntax for type uuid" error that would otherwise surface
+// as an uncaught 500.
+function isValidBeneficiaryId(beneficiaryId: unknown): beneficiaryId is string {
+  return typeof beneficiaryId === 'string' && UUID_RE.test(beneficiaryId);
+}
+
 async function getExpenseAccountForDonation(donationType: string, tx: any) {
   // First try: find a welfare/aid account matching donationType or general aid
   let acc = await tx.account.findFirst({
@@ -220,6 +230,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if (paymentMethod === 'CHEQUE' && !chequeNumber) {
       return res.status(400).json({ error: { message: 'Cheque number is required for Cheque payment method', status: 400 } });
     }
+    if (beneficiaryId && !isValidBeneficiaryId(beneficiaryId)) {
+      return res.status(400).json({ error: { message: 'Selected recipient is invalid or out of date. Please re-select the recipient from People We Help and try again.', status: 400 } });
+    }
 
     if (beneficiaryId) {
       const hasDuplicate = await checkMonthlyRestriction(beneficiaryId, new Date());
@@ -308,6 +321,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     const targetBeneficiaryId = beneficiaryId !== undefined ? beneficiaryId : existingDonation.beneficiaryId;
     const targetStatus = status !== undefined ? status : existingDonation.status;
+
+    if (targetBeneficiaryId && !isValidBeneficiaryId(targetBeneficiaryId)) {
+      return res.status(400).json({ error: { message: 'Selected recipient is invalid or out of date. Please re-select the recipient from People We Help and try again.', status: 400 } });
+    }
 
     if (targetStatus === 'APPROVED' && targetBeneficiaryId) {
       const hasDuplicate = await checkMonthlyRestriction(targetBeneficiaryId, existingDonation.createdAt, existingDonation.id);
