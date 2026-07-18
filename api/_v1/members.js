@@ -2,6 +2,7 @@ import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
+import { createNotification } from "../_utils/notify.js";
 var members_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -74,6 +75,16 @@ var members_default = makeHandler(async (req, res) => {
       }
     });
     await logAudit(req.user.id, "Register Member", "MEMBER", null, newMember, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    await createNotification({
+      title: "New Member Registered",
+      message: `New member registered: ${fullName}.${memberNo ? ` Member No: ${memberNo}.` : ""}`,
+      module: "Members",
+      recordId: newMember.id,
+      actionType: "CREATE",
+      userName: req.user.email,
+      userRole: req.user.role,
+      userId: req.user.id
+    });
     return res.status(201).json({ status: 201, data: newMember });
   }
   if (method === "PUT") {
@@ -126,6 +137,16 @@ var members_default = makeHandler(async (req, res) => {
       }
     });
     await logAudit(req.user.id, "Update Member", "MEMBER", existingMember, updatedMember, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    await createNotification({
+      title: "Member Record Updated",
+      message: `Member record updated for ${updatedMember.fullName}.`,
+      module: "Members",
+      recordId: updatedMember.id,
+      actionType: "UPDATE",
+      userName: req.user.email,
+      userRole: req.user.role,
+      userId: req.user.id
+    });
     return res.status(200).json({ status: 200, data: updatedMember });
   }
   if (method === "DELETE") {

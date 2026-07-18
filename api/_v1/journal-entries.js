@@ -3,6 +3,7 @@ import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
+import { createNotification } from "../_utils/notify.js";
 const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };
 var journal_entries_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
@@ -106,6 +107,17 @@ var journal_entries_default = makeHandler(async (req, res) => {
           userAgent: req.headers["user-agent"]
         });
       }, accountingTxOptions);
+      await createNotification({
+        title: "Journal Entry Posted",
+        message: `Journal entry ${result.journalEntry.voucherNo} (${voucherType}) posted. ${description || reference || ""}`.trim(),
+        module: "Journal Entries",
+        recordId: result.journalEntry.id,
+        actionType: "POST",
+        userName: user?.fullName || req.user.email,
+        userRole: user?.role.name || req.user.role,
+        userId: req.user.id,
+        visibility: "ADMIN_ONLY"
+      });
       return res.status(201).json({ status: 201, data: result.journalEntry });
     } catch (err) {
       return res.status(400).json({ error: { message: err.message, status: 400 } });
@@ -242,6 +254,18 @@ var journal_entries_default = makeHandler(async (req, res) => {
         return await tx.journalEntry.findUnique({ where: { id }, include: { lines: true } });
       }, accountingTxOptions);
       await logAudit(req.user.id, "Update Journal Entry", "Journal Entries", null, { id, status, reference, amount }, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      const updatedJe = Array.isArray(result) ? result : result;
+      await createNotification({
+        title: status === "Cancelled" ? "Journal Entry Cancelled" : "Journal Entry Updated",
+        message: `Journal entry ${updatedJe?.voucherNo || id} ${status ? `status changed to ${status}` : "updated"}.`,
+        module: "Journal Entries",
+        recordId: id,
+        actionType: status === "Cancelled" ? "CANCEL" : "UPDATE",
+        userName: user?.fullName || req.user.email,
+        userRole: user?.role.name || req.user.role,
+        userId: req.user.id,
+        visibility: "ADMIN_ONLY"
+      });
       return res.status(200).json({ status: 200, data: result });
     } catch (err) {
       return res.status(400).json({ error: { message: err.message, status: 400 } });
@@ -274,6 +298,16 @@ var journal_entries_default = makeHandler(async (req, res) => {
         req.headers["x-forwarded-for"],
         req.headers["user-agent"]
       );
+      await createNotification({
+        title: "Journal Entry Deleted",
+        message: `${deletedEntries.length} journal entry(s) deleted.`,
+        module: "Journal Entries",
+        actionType: "DELETE",
+        userName: user?.fullName || req.user.email,
+        userRole: user?.role.name || req.user.role,
+        userId: req.user.id,
+        visibility: "ADMIN_ONLY"
+      });
       return res.status(200).json({
         status: 200,
         message: `${deletedEntries.length} journal entry(s) deleted successfully`,

@@ -3,6 +3,7 @@ import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
+import { createNotification } from "../_utils/notify.js";
 async function generateCardNumber(tx) {
   const count = await tx.zakatCard.count();
   const seq = (count + 1).toString().padStart(6, "0");
@@ -150,6 +151,16 @@ var zakat_cards_default = makeHandler(async (req, res) => {
       req.headers["x-forwarded-for"],
       req.headers["user-agent"]
     );
+    await createNotification({
+      title: "Zakat Card Issued",
+      message: `Zakat card ${result.cardNumber} issued to ${member.fullName} — PKR ${parsedAmount.toLocaleString()}.`,
+      module: "Zakat",
+      recordId: result.id,
+      actionType: "CREATE",
+      userName: req.user.email,
+      userRole: req.user.role,
+      userId: req.user.id
+    });
     return res.status(201).json({ status: 201, data: result, message: "Zakat card issued successfully" });
   }
   if (method === "DELETE") {
@@ -174,6 +185,17 @@ var zakat_cards_default = makeHandler(async (req, res) => {
       req.headers["x-forwarded-for"],
       req.headers["user-agent"]
     );
+    await createNotification({
+      title: "Zakat Card Deleted",
+      message: `Zakat card ${card.cardNumber} deleted.`,
+      module: "Zakat",
+      recordId: id,
+      actionType: "DELETE",
+      userName: req.user.email,
+      userRole: req.user.role,
+      userId: req.user.id,
+      visibility: "ADMIN_ONLY"
+    });
     return res.status(200).json({ status: 200, message: "Zakat card deleted successfully" });
   }
   return res.status(405).json({ error: { message: "Method not allowed", status: 405 } });
