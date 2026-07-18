@@ -12,6 +12,7 @@ import {
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
+import { useConfirm } from '../components/ui/ConfirmationModal';
 import { DONATION_TYPES, donationTypeDisplay } from '../constants/donationTypes';
 
 const PAYMENT_METHODS = ['CASH', 'BANK', 'CHEQUE', 'ONLINE'];
@@ -53,6 +54,7 @@ export const DonationsReceived = () => {
   const { donations, stats, loading, fetchDonations, updateDonationStatus, deleteDonation, bulkDeleteDonations } = useDonationReceivedStore();
   const { canEditOrDelete } = useAuthStore();
   const canPostToLedger = useAuthStore((s) => s.canPostToLedger);
+  const confirm = useConfirm();
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [printItem, setPrintItem] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -88,43 +90,80 @@ export const DonationsReceived = () => {
 
 
   const handlePostDraft = async (item) => {
-    if (!window.confirm(`Are you sure you want to post receipt "${item.receiptNo}" to the ledger?`)) return;
-    try {
-      await updateDonationStatus(item.id, 'POSTED');
-      showToast('Receipt posted to ledger successfully', 'success');
-    } catch (err) {
-      showToast(err.message || 'Failed to post receipt', 'error');
-    }
+    await confirm({
+      title: 'Post Receipt to General Ledger',
+      description: 'Are you sure you want to post this receipt to the General Ledger?',
+      details: {
+        'Receipt Number': item.receiptNo,
+        'Donor Name': item.donor?.fullName || '—',
+        'Amount': `Rs. ${item.amount?.toLocaleString()}`,
+        'Warning': 'This action will create Journal Entries and update the General Ledger. It cannot be undone.'
+      },
+      type: 'warning',
+      confirmLabel: 'Post',
+      loadingLabel: 'Posting...',
+      successMessage: 'Receipt has been posted successfully.',
+      action: async () => {
+        await updateDonationStatus(item.id, 'POSTED');
+      }
+    });
   };
 
   const handleRevert = async (item) => {
-    if (!window.confirm(`Are you sure you want to revert receipt "${item.receiptNo}"? Its journal entries will be deleted and status reset to Pending Post.`)) return;
-    try {
-      await updateDonationStatus(item.id, 'DRAFT');
-      showToast('Receipt reverted from ledger successfully', 'success');
-    } catch (err) {
-      showToast(err.message || 'Failed to revert receipt', 'error');
-    }
+    await confirm({
+      title: 'Revert Receipt Status',
+      description: 'Are you sure you want to revert this receipt to Draft?',
+      details: {
+        'Receipt Number': item.receiptNo,
+        'Amount': `Rs. ${item.amount?.toLocaleString()}`,
+        'Warning': 'Its journal entries will be deleted and status reset to Pending Post.'
+      },
+      type: 'warning',
+      confirmLabel: 'Yes, Revert',
+      loadingLabel: 'Reverting...',
+      successMessage: 'Receipt status reverted to Draft.',
+      action: async () => {
+        await updateDonationStatus(item.id, 'DRAFT');
+      }
+    });
   };
 
   const handleCancelReceipt = async (item) => {
-    if (!window.confirm(`Are you sure you want to CANCEL/VOID receipt "${item.receiptNo}"? This will reverse/remove the general ledger entry.`)) return;
-    try {
-      await updateDonationStatus(item.id, 'CANCELLED');
-      showToast('Receipt voided and ledger entry reversed', 'success');
-    } catch (err) {
-      showToast(err.message || 'Failed to void receipt', 'error');
-    }
+    await confirm({
+      title: 'Cancel / Void Receipt',
+      description: 'Are you sure you want to cancel/void this receipt?',
+      details: {
+        'Receipt Number': item.receiptNo,
+        'Amount': `Rs. ${item.amount?.toLocaleString()}`,
+        'Warning': 'This will reverse/remove the general ledger entry.'
+      },
+      type: 'warning',
+      confirmLabel: 'Yes, Cancel',
+      loadingLabel: 'Cancelling...',
+      successMessage: 'Receipt has been cancelled and ledger entry reversed.',
+      action: async () => {
+        await updateDonationStatus(item.id, 'CANCELLED');
+      }
+    });
   };
 
   const handleDelete = async (item) => {
-    if (!window.confirm(`Are you sure you want to permanently delete receipt "${item.receiptNo}" from database and ledger?`)) return;
-    try {
-      await deleteDonation(item.id);
-      showToast('Donation receipt deleted permanently', 'success');
-    } catch (err) {
-      showToast(err.message || 'Failed to delete donation receipt', 'error');
-    }
+    await confirm({
+      title: 'Delete Receipt',
+      description: `Are you sure you want to permanently delete receipt "${item.receiptNo}"?`,
+      details: {
+        'Receipt Number': item.receiptNo,
+        'Amount': `Rs. ${item.amount?.toLocaleString()}`,
+        'Warning': 'This will permanently remove the receipt from the database and general ledger. This action cannot be undone.'
+      },
+      type: 'error',
+      confirmLabel: 'Delete',
+      loadingLabel: 'Deleting...',
+      successMessage: 'Receipt deleted permanently.',
+      action: async () => {
+        await deleteDonation(item.id);
+      }
+    });
   };
 
   const handleSelectAll = (e) => {

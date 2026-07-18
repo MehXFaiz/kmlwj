@@ -7,6 +7,7 @@ import { FileSpreadsheet, Search, Plus, Printer, CheckCircle, XCircle, Trash2, A
 import { pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 import { useTranslation } from 'react-i18next';
+import { useConfirm } from '../components/ui/ConfirmationModal';
 import logoImg from '../assets/logo.png';
 
 // Helper to render number to English words for standard printed receipt
@@ -452,6 +453,7 @@ export const BankVouchers = () => {
   const { vouchers, fetchVouchers, updateVoucher, updateVoucherStatus, deleteVoucher, bulkDeleteVouchers, loading } = useBankVoucherStore();
   const { canEditOrDelete } = useAuthStore();
   const canPostToLedger = useAuthStore((s) => s.canPostToLedger);
+  const confirm = useConfirm();
   
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('BP'); // BP (Payments), BR (Receipts)
@@ -521,39 +523,61 @@ export const BankVouchers = () => {
     return v.reference || '—';
   };
 
-  const handlePost = async (id) => {
-    setStatusLoading(true);
-    try {
-      await updateVoucherStatus(id, 'Posted', activeTab);
-    } catch (err) {
-      alert(err.message || "Failed to post voucher");
-    } finally {
-      setStatusLoading(false);
-    }
+  const handlePost = async (v) => {
+    await confirm({
+      title: 'Post Voucher to General Ledger',
+      description: 'Are you sure you want to post this voucher to the General Ledger?',
+      details: {
+        'Voucher No': v.voucherNo,
+        'Amount': `Rs. ${v.amount?.toLocaleString()}`,
+        'Warning': 'This action will create Ledger Entries and post this transaction to the General Ledger. It cannot be undone.'
+      },
+      type: 'warning',
+      confirmLabel: 'Post',
+      loadingLabel: 'Posting...',
+      successMessage: 'Voucher has been posted successfully.',
+      action: async () => {
+        await updateVoucherStatus(v.dbId, 'Posted', activeTab);
+      }
+    });
   };
 
-  const handleCancel = async (id) => {
-    if (!confirm("Are you sure you want to void this voucher and reverse ledger records?")) return;
-    setStatusLoading(true);
-    try {
-      await updateVoucherStatus(id, 'Cancelled', activeTab);
-    } catch (err) {
-      alert(err.message || "Failed to cancel voucher");
-    } finally {
-      setStatusLoading(false);
-    }
+  const handleCancel = async (v) => {
+    await confirm({
+      title: 'Void Voucher',
+      description: 'Are you sure you want to void this voucher and reverse ledger records?',
+      details: {
+        'Voucher No': v.voucherNo,
+        'Amount': `Rs. ${v.amount?.toLocaleString()}`,
+        'Warning': 'This will cancel the voucher and automatically reverse/remove its ledger postings.'
+      },
+      type: 'warning',
+      confirmLabel: 'Yes, Void',
+      loadingLabel: 'Voiding...',
+      successMessage: 'Voucher has been voided successfully.',
+      action: async () => {
+        await updateVoucherStatus(v.dbId, 'Cancelled', activeTab);
+      }
+    });
   };
 
-  const handleDeleteVoucher = async (id, voucherNo) => {
-    if (!confirm(`Are you sure you want to permanently delete bank voucher ${voucherNo}? This will remove it from the database and adjust account balances.`)) return;
-    setStatusLoading(true);
-    try {
-      await deleteVoucher(id, activeTab);
-    } catch (err) {
-      alert(err.message || "Failed to delete voucher");
-    } finally {
-      setStatusLoading(false);
-    }
+  const handleDeleteVoucher = async (v) => {
+    await confirm({
+      title: 'Delete Bank Voucher',
+      description: `Are you sure you want to permanently delete bank voucher ${v.voucherNo}?`,
+      details: {
+        'Voucher No': v.voucherNo,
+        'Amount': `Rs. ${v.amount?.toLocaleString()}`,
+        'Warning': 'This will remove the voucher from the database and adjust account balances.'
+      },
+      type: 'error',
+      confirmLabel: 'Delete',
+      loadingLabel: 'Deleting...',
+      successMessage: 'Voucher has been deleted successfully.',
+      action: async () => {
+        await deleteVoucher(v.dbId, activeTab);
+      }
+    });
   };
 
   const handleSelectAll = (e) => {
@@ -844,21 +868,21 @@ export const BankVouchers = () => {
                       </button>
                     )}
                     {v.status === 'Draft' && canPostToLedger && (
-                      <button onClick={() => handlePost(v.dbId)} disabled={statusLoading}
+                      <button onClick={() => handlePost(v)} disabled={statusLoading}
                         className="w-8 h-8 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
                         title={t('tables.bankVouchers.post') || "Post Voucher"}>
                         <CheckCircle className="h-3.5 w-3.5" />
                       </button>
                     )}
                     {v.status === 'Posted' && (
-                      <button onClick={() => handleCancel(v.dbId)} disabled={statusLoading}
+                      <button onClick={() => handleCancel(v)} disabled={statusLoading}
                         className="w-8 h-8 rounded-full bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
                         title={t('tables.bankVouchers.void') || "Void Voucher & Reverse Ledger Entry"}>
                         <XCircle className="h-3.5 w-3.5" />
                       </button>
                     )}
                     {canEditOrDelete && (
-                      <button onClick={() => handleDeleteVoucher(v.dbId, v.voucherNo)} disabled={statusLoading}
+                      <button onClick={() => handleDeleteVoucher(v)} disabled={statusLoading}
                         className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
                         title="Delete from database">
                         <Trash2 className="h-3.5 w-3.5" />

@@ -5,6 +5,7 @@ import { AccountTypeBadge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { useCoaStore } from '../../store/coaStore';
 import { showToast } from '../ui/Toast';
+import { useConfirm } from '../ui/ConfirmationModal';
 
 // Recursively collect all codes at a given level to build initial collapse state
 function collectCodesByLevel(nodes, targetLevels) {
@@ -35,12 +36,12 @@ export const CoaTreeView = ({
 }) => {
   const navigate = useNavigate();
   const { deleteAccount } = useCoaStore();
-  
+  const confirm = useConfirm();
+
   // All non-GL nodes start collapsed — user must expand level by level
   const [collapsedCodes, setCollapsedCodes] = useState(() => {
     return collectCodesByLevel(accounts, ['MAIN', 'PARENT', 'SUBSIDIARY']);
   });
-  const [confirmDelete, setConfirmDelete] = useState(null);
 
   // Re-initialize collapse state whenever the account tree changes (e.g. after seed/fetch)
   useEffect(() => {
@@ -65,23 +66,7 @@ export const CoaTreeView = ({
     });
   }, []);
 
-  // Fix 17 — Handle delete with reserved check
-  const handleDeleteConfirmed = useCallback(async () => {
-    if (!confirmDelete) return;
-    // Fix 7 — Block reserved accounts
-    if (confirmDelete.isReserved || reservedCodes.some(r => r.isActive && confirmDelete.code >= r.reserveStart && confirmDelete.code <= r.reserveEnd)) {
-      showToast('This is a reserved code and cannot be deleted.', 'error');
-      setConfirmDelete(null);
-      return;
-    }
-    try {
-      await deleteAccount(confirmDelete.id);
-      showToast(`✅ Account ${confirmDelete.code} deleted successfully`, 'success');
-    } catch (e) {
-      showToast(e.message || 'Failed to delete account', 'error');
-    }
-    setConfirmDelete(null);
-  }, [confirmDelete, deleteAccount, reservedCodes]);
+
 
   // Fix 12 — Normalize search (handle leading zeros)
   const normalizeSearch = (val) => val?.replace(/^0+/, '') || '';
@@ -161,23 +146,6 @@ export const CoaTreeView = ({
 
   return (
     <div className="w-full overflow-x-auto">
-      {/* Fix 17 — Delete confirmation dialog */}
-      {confirmDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 max-w-sm w-full shadow-2xl space-y-4">
-            <h3 className="text-base font-bold text-slate-100">Confirm Deletion</h3>
-            <p className="text-sm text-slate-400">
-              Are you sure you want to delete <span className="font-semibold text-slate-200">{confirmDelete.name}</span>{' '}
-              (<span className="font-mono text-brand-400">{confirmDelete.code}</span>)?
-              This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3 pt-2">
-              <Button variant="outline" size="sm" onClick={() => setConfirmDelete(null)}>Cancel</Button>
-              <Button variant="primary" size="sm" className="bg-red-600 hover:bg-red-500 text-white" onClick={handleDeleteConfirmed}>Delete</Button>
-            </div>
-          </div>
-        </div>
-      )}
       <table className="w-full text-left border-collapse min-w-[800px]">
         <thead>
           <tr className="border-b border-slate-800 text-xs font-semibold text-slate-400 uppercase bg-slate-900/20">
@@ -385,12 +353,27 @@ export const CoaTreeView = ({
                           <Button
                             variant="ghost" size="sm"
                             className={`h-7 w-7 p-0 ${isReservedNode ? 'opacity-30 cursor-not-allowed text-slate-600' : 'cursor-pointer text-slate-400 hover:text-red-400'}`}
-                            onClick={() => {
+                            onClick={async () => {
                               if (isReservedNode) {
                                 showToast('Reserved codes cannot be deleted.', 'error');
-                              } else {
-                                setConfirmDelete(account);
+                                return;
                               }
+                              await confirm({
+                                title: 'Delete GL Account',
+                                description: `Are you sure you want to delete ${account.name} (${account.code})?`,
+                                details: {
+                                  'Account Name': account.name,
+                                  'GL Code': account.code,
+                                  'Warning': 'This action will permanently delete this account from the Chart of Accounts and cannot be undone.'
+                                },
+                                type: 'error',
+                                confirmLabel: 'Delete',
+                                loadingLabel: 'Deleting...',
+                                action: async () => {
+                                  await deleteAccount(account.id);
+                                  showToast(`✅ Account ${account.code} deleted successfully`, 'success');
+                                }
+                              });
                             }}
                             title={isReservedNode ? "Reserved accounts cannot be deleted" : "Delete GL Account"}
                           >

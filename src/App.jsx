@@ -7,6 +7,7 @@ import { Topbar } from './components/common/Topbar';
 import { useAuthStore } from './store/authStore';
 import { ThemeProvider } from './components/theme/ThemeProvider';
 import { ToastContainer } from './components/ui/Toast';
+import { ConfirmationModal } from './components/ui/ConfirmationModal';
 
 // Lazy-loaded views for code splitting
 const Dashboard = lazy(() => import('./views/Dashboard').then(m => ({ default: m.Dashboard })));
@@ -298,6 +299,9 @@ function App() {
     <ThemeProvider>
       {/* Global toast notifications — replaces all alert() calls */}
       <ToastContainer />
+      
+      {/* Global confirmation & alert modals */}
+      <ConfirmationModal />
 
       {/* Splash screen — shown until loading sequence completes */}
       {!splashDone && <SplashScreen onComplete={() => setSplashDone(true)} />}

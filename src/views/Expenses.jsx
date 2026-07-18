@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/authStore';
 import { useJournalStore, calculateAccountBalances } from '../store/journalStore';
 import { showToast } from '../components/ui/Toast';
 import { MinusCircle, Search, X, CheckCircle2, TrendingDown, Building2, Banknote, Edit, Trash2 } from 'lucide-react';
+import { useConfirm } from '../components/ui/ConfirmationModal';
 
 function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editingExpense }) {
   const { journals } = useJournalStore();
@@ -359,6 +360,7 @@ export const Expenses = () => {
   const canEditOrDelete = useAuthStore((s) => s.canEditOrDelete);
   const { heads: expenseHeads, fetchHeads } = useExpenseStore();
   const { accounts, fetchAccounts } = useCoaStore();
+  const confirm = useConfirm();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
@@ -457,7 +459,25 @@ export const Expenses = () => {
                               title="Edit Expense">
                               <Edit className="h-3.5 w-3.5" />
                             </button>
-                            <button onClick={async () => { if (window.confirm('Delete this expense?')) await deleteExpense(exp.id); }}
+                            <button onClick={async () => {
+                              await confirm({
+                                title: 'Delete Expense',
+                                description: `Are you sure you want to permanently delete this expense?`,
+                                details: {
+                                  'Expense Head': exp.expenseHead?.name || '—',
+                                  'Paid To': exp.paidTo || '—',
+                                  'Amount': `Rs. ${exp.amount?.toLocaleString()}`,
+                                  'Warning': 'This will remove the expense from the system and reverse its ledger entry.'
+                                },
+                                type: 'error',
+                                confirmLabel: 'Delete',
+                                loadingLabel: 'Deleting...',
+                                successMessage: 'Expense deleted successfully.',
+                                action: async () => {
+                                  await deleteExpense(exp.id);
+                                }
+                              });
+                            }}
                               className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-red-400 transition-colors"
                               title="Delete Expense">
                               <Trash2 className="h-3.5 w-3.5" />

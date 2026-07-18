@@ -5,12 +5,14 @@ import { useAuthStore } from '../store/authStore';
 import { Users, Search, Plus, Edit2, Trash2, X, Mail, Phone, CreditCard, MapPin, AlertTriangle, CheckCircle } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
+import { useConfirm } from '../components/ui/ConfirmationModal';
 
 
 export const Donors = () => {
   const navigate = useNavigate();
   const canEditOrDelete = useAuthStore((s) => s.canEditOrDelete);
   const { donors, loading, fetchDonors, deleteDonor, bulkDeleteDonors } = useDonorStore();
+  const confirm = useConfirm();
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
@@ -32,13 +34,23 @@ export const Donors = () => {
   }, [donors, search]);
 
   const handleDelete = async (donor) => {
-    if (!window.confirm(`Are you sure you want to delete donor "${donor.fullName}" (${donor.donorCode})?`)) return;
-    try {
-      await deleteDonor(donor.id);
-      showToast('Donor deleted successfully', 'success');
-    } catch (err) {
-      showToast(err.message || 'Failed to delete donor', 'error');
-    }
+    await confirm({
+      title: 'Delete Donor',
+      description: `Are you sure you want to permanently delete donor "${donor.fullName}"?`,
+      details: {
+        'Donor Code': donor.donorCode,
+        'Donor Name': donor.fullName,
+        'CNIC': donor.cnic || '—',
+        'Warning': 'This will remove the donor and all their records from the system. This action cannot be undone.'
+      },
+      type: 'error',
+      confirmLabel: 'Delete',
+      loadingLabel: 'Deleting...',
+      successMessage: 'Donor has been deleted successfully.',
+      action: async () => {
+        await deleteDonor(donor.id);
+      }
+    });
   };
 
   const handleSelectAll = (e) => {

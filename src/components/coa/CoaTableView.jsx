@@ -27,6 +27,7 @@ import { AccountTypeBadge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { useCoaStore } from '../../store/coaStore';
 import { showToast } from '../ui/Toast';
+import { useConfirm } from '../ui/ConfirmationModal';
 
 export const CoaTableView = ({
   accounts,
@@ -52,7 +53,7 @@ export const CoaTableView = ({
 }) => {
   const navigate = useNavigate();
   const { deleteAccount } = useCoaStore();
-  const [confirmDelete, setConfirmDelete] = useState(null);
+  const confirm = useConfirm();
 
   // Filter subsidiary locally if it's not supported by API yet
   // However, API pagination is global. For now, we will just pass accounts directly
@@ -237,10 +238,17 @@ export const CoaTableView = ({
                     ? 'cursor-pointer text-slate-400 hover:text-amber-400'
                     : 'text-slate-600 cursor-pointer hover:text-amber-400'
                 }`}
-                onClick={() => {
+                onClick={async () => {
                   if (acc.level === 'MAIN') return;
                   if (acc.level === 'PARENT' || acc.level === 'SUBSIDIARY') {
-                    if (!window.confirm(`⚠️ Warning: "${acc.name}" is a system-level account (Level ${acc.level === 'PARENT' ? '2' : '3'}). Are you sure?`)) return;
+                    const proceed = await confirm({
+                      title: 'Edit System Account',
+                      description: `Are you sure you want to edit "${acc.name}"? This is a system-level account (Level ${acc.level === 'PARENT' ? '2' : '3'}).`,
+                      type: 'warning',
+                      confirmLabel: 'Yes, Edit',
+                      cancelLabel: 'Cancel'
+                    });
+                    if (!proceed) return;
                   }
                   onEditAccount(acc);
                 }}
@@ -255,9 +263,24 @@ export const CoaTableView = ({
                 <Button
                   variant="ghost" size="sm"
                   className={`h-8 w-8 p-0 ${isReservedNode ? 'opacity-35 cursor-not-allowed text-slate-600' : 'cursor-pointer text-slate-400 hover:text-red-400'}`}
-                  onClick={() => {
+                  onClick={async () => {
                     if (isReservedNode) { showToast('Reserved codes cannot be deleted.', 'error'); return; }
-                    setConfirmDelete(acc);
+                    await confirm({
+                      title: 'Delete GL Account',
+                      description: `Are you sure you want to delete ${acc.name} (${acc.code})?`,
+                      details: {
+                        'Account Name': acc.name,
+                        'GL Code': acc.code,
+                        'Warning': 'This action will permanently delete this account from the Chart of Accounts and cannot be undone.'
+                      },
+                      type: 'error',
+                      confirmLabel: 'Delete',
+                      loadingLabel: 'Deleting...',
+                      action: async () => {
+                        await deleteAccount(acc.id);
+                        showToast(`✅ Account ${acc.code} deleted`, 'success');
+                      }
+                    });
                   }}
                   title={isReservedNode ? 'Reserved accounts cannot be deleted' : 'Delete GL Account'}
                 >
@@ -282,34 +305,6 @@ export const CoaTableView = ({
 
   return (
     <div className="space-y-4">
-      {/* Fix 17 — Delete confirmation dialog */}
-      {confirmDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 max-w-sm w-full shadow-2xl space-y-4">
-            <h3 className="text-base font-bold text-slate-100">Confirm Deletion</h3>
-            <p className="text-sm text-slate-400">
-              Are you sure you want to delete <span className="font-semibold text-slate-200">{confirmDelete.name}</span>{' '}
-              (<span className="font-mono text-brand-400">{confirmDelete.code}</span>)? This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3 pt-2">
-              <Button variant="outline" size="sm" onClick={() => setConfirmDelete(null)}>Cancel</Button>
-              <Button
-                variant="primary" size="sm"
-                className="bg-red-600 hover:bg-red-500 text-white"
-                onClick={async () => {
-                  try {
-                    await deleteAccount(confirmDelete.id);
-                    showToast(`✅ Account ${confirmDelete.code} deleted`, 'success');
-                  } catch (e) {
-                    showToast(e.message || 'Delete failed', 'error');
-                  }
-                  setConfirmDelete(null);
-                }}
-              >Delete</Button>
-            </div>
-          </div>
-        </div>
-      )}
       {/* Table grid */}
       <div className="w-full overflow-x-auto">
         <table className="w-full text-left border-collapse min-w-[800px]">
