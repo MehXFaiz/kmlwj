@@ -43,9 +43,15 @@ async function main() {
   const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
   const bankAccounts = await prisma.account.findMany({
     where: {
-      accountName: { contains: 'Bank' },
       accountLevel: 'GL',
       isLocked: false,
+      accountType: {
+        name: { in: ['ASSET', 'Asset'], mode: 'insensitive' },
+      },
+      OR: [
+        { accountName: { contains: 'Bank', mode: 'insensitive' } },
+        { detailType: { equals: 'Bank', mode: 'insensitive' } },
+      ],
     },
   });
 
@@ -182,10 +188,10 @@ async function createIncomeTransaction(
   bankAccountId: string | null,
   userId: string
 ) {
-  return prisma.$transaction(async (tx) => {
-    const incomeAccountId = revenueHead.accountId || revenueHead.account?.id;
+  const incomeAccountId = revenueHead.accountId || revenueHead.account?.id;
 
-    const postingResult = await AccountingService.postReceipt(tx, {
+  const postingResult = await prisma.$transaction((tx) =>
+    AccountingService.postReceipt(tx, {
       amount,
       cashOrBankAccountId: paymentMethod === 'BANK' && bankAccountId ? bankAccountId : undefined,
       cashOrBankAccountKeyword: paymentMethod !== 'BANK' ? 'Cash' : undefined,
@@ -196,22 +202,22 @@ async function createIncomeTransaction(
       module: 'Test Suite',
       postedBy: userId,
       postingDate: date,
-    });
+    })
+  );
 
-    return tx.simpleIncome.create({
-      data: {
-        date,
-        revenueHeadId: revenueHead.id,
-        description: `Test income: ${revenueHead.name}`,
-        amount,
-        paymentMethod,
-        bankAccountId: paymentMethod === 'BANK' ? bankAccountId : null,
-        reference: 'Test Receipt',
-        journalEntryId: postingResult.journalEntry.id,
-        createdById: userId,
-      },
-      include: { revenueHead: true },
-    });
+  return prisma.simpleIncome.create({
+    data: {
+      date,
+      revenueHeadId: revenueHead.id,
+      description: `Test income: ${revenueHead.name}`,
+      amount,
+      paymentMethod,
+      bankAccountId: paymentMethod === 'BANK' ? bankAccountId : null,
+      reference: 'Test Receipt',
+      journalEntryId: postingResult.journalEntry.id,
+      createdById: userId,
+    },
+    include: { revenueHead: true },
   });
 }
 
@@ -223,10 +229,10 @@ async function createExpenseTransaction(
   bankAccountId: string | null,
   userId: string
 ) {
-  return prisma.$transaction(async (tx) => {
-    const expenseAccountId = expenseHead.accountId || expenseHead.account?.id;
+  const expenseAccountId = expenseHead.accountId || expenseHead.account?.id;
 
-    const postingResult = await AccountingService.postPayment(tx, {
+  const postingResult = await prisma.$transaction((tx) =>
+    AccountingService.postPayment(tx, {
       amount,
       cashOrBankAccountId: paymentMethod === 'BANK' && bankAccountId ? bankAccountId : undefined,
       cashOrBankAccountKeyword: paymentMethod !== 'BANK' ? 'Cash' : undefined,
@@ -237,23 +243,23 @@ async function createExpenseTransaction(
       module: 'Test Suite',
       postedBy: userId,
       postingDate: date,
-    });
+    })
+  );
 
-    return tx.simpleExpense.create({
-      data: {
-        date,
-        expenseHeadId: expenseHead.id,
-        paidTo: 'Test Vendor',
-        description: `Test expense: ${expenseHead.name}`,
-        amount,
-        paymentMethod,
-        bankAccountId: paymentMethod === 'BANK' ? bankAccountId : null,
-        reference: 'Test Payment',
-        journalEntryId: postingResult.journalEntry.id,
-        createdById: userId,
-      },
-      include: { expenseHead: true },
-    });
+  return prisma.simpleExpense.create({
+    data: {
+      date,
+      expenseHeadId: expenseHead.id,
+      paidTo: 'Test Vendor',
+      description: `Test expense: ${expenseHead.name}`,
+      amount,
+      paymentMethod,
+      bankAccountId: paymentMethod === 'BANK' ? bankAccountId : null,
+      reference: 'Test Payment',
+      journalEntryId: postingResult.journalEntry.id,
+      createdById: userId,
+    },
+    include: { expenseHead: true },
   });
 }
 

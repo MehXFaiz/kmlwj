@@ -468,58 +468,32 @@ export class AccountingService {
               }
             }
           });
-          try {
-            await AccountingService.recalculateAccountBalance(tx, line.account.id);
-          } catch (e) {
-            // fallback if recalculation fails
-          }
+          await AccountingService.recalculateAccountBalance(tx, line.account.id);
         }
       }
     }
 
     // 3. Automatically Log Audit Trail inside transaction
-    try {
-      await tx.auditLog.create({
-        data: {
-          userId: payload.postedBy && payload.postedBy !== 'system' && payload.postedBy.length === 36 ? payload.postedBy : null,
-          action: `Auto Post Journal (${voucherNo})`,
-          module: payload.module,
-          oldValues: null,
-          newValues: {
-            voucherNo,
-            voucherType,
-            reference,
-            totalDebit,
-            totalCredit,
-            linesCount: resolvedLines.length,
-            status
-          },
-          ipAddress: payload.ipAddress || null,
-          userAgent: payload.userAgent || null
-        }
-      });
-    } catch (auditErr) {
-      // If audit logging fails due to non-UUID postedBy string, still log without userId
-      await tx.auditLog.create({
-        data: {
-          userId: null,
-          action: `Auto Post Journal (${voucherNo}) [user: ${payload.postedBy}]`,
-          module: payload.module,
-          oldValues: null,
-          newValues: {
-            voucherNo,
-            voucherType,
-            reference,
-            totalDebit,
-            totalCredit,
-            linesCount: resolvedLines.length,
-            status
-          },
-          ipAddress: payload.ipAddress || null,
-          userAgent: payload.userAgent || null
-        }
-      });
-    }
+    await tx.auditLog.create({
+      data: {
+        userId: payload.postedBy && payload.postedBy !== 'system' && payload.postedBy.length === 36 ? payload.postedBy : null,
+        action: `Auto Post Journal (${voucherNo})`,
+        module: payload.module,
+        oldValues: null,
+        newValues: {
+          voucherNo,
+          voucherType,
+          reference,
+          totalDebit,
+          totalCredit,
+          linesCount: resolvedLines.length,
+          status,
+          postedBy: payload.postedBy || null
+        },
+        ipAddress: payload.ipAddress || null,
+        userAgent: payload.userAgent || null
+      }
+    });
 
     return {
       journalEntry,
@@ -1143,4 +1117,3 @@ export class AccountingService {
     return deletedJe;
   }
 }
-
