@@ -55,30 +55,37 @@ function SingleCardPrintArea({ card, areaRef }) {
   );
 }
 
-function IssueModal({ members, membersLoading, onClose, onSubmit }) {
-  const [memberId, setMemberId] = useState('');
+function IssueModal({ beneficiaries, beneficiariesLoading, onClose, onSubmit }) {
+  const [beneficiaryId, setBeneficiaryId] = useState('');
   const [zakatAmount, setZakatAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [bankAccountId, setBankAccountId] = useState('');
   const [issueDate, setIssueDate] = useState(new Date().toISOString().slice(0, 10));
-  const [memberSearch, setMemberSearch] = useState('');
+  const [search, setSearch] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const filteredMembers = members.filter(m => {
-    if (!memberSearch) return true;
-    const term = memberSearch.toLowerCase();
-    return m.fullName?.toLowerCase().includes(term) ||
-      m.memberNo?.toLowerCase().includes(term) ||
-      m.cnic?.toLowerCase().includes(term);
+  const filtered = beneficiaries.filter(b => {
+    if (!search) return true;
+    const term = search.toLowerCase();
+    return b.name?.toLowerCase().includes(term) ||
+      b.cnic?.toLowerCase().includes(term) ||
+      b.mobile?.toLowerCase().includes(term);
   });
 
-  const selectedMember = members.find(m => m.id === memberId);
+  const selected = beneficiaries.find(b => b.id === beneficiaryId);
+
+  const selectBeneficiary = (b) => {
+    setBeneficiaryId(b.id);
+    setSearch(b.name);
+    // Auto-fill last recorded zakat amount
+    if (b.lastZakatAmount) setZakatAmount(String(b.lastZakatAmount));
+  };
 
   const handleSubmit = async () => {
-    if (!memberId || !zakatAmount) return;
+    if (!beneficiaryId || !zakatAmount) return;
     setSubmitting(true);
     try {
-      await onSubmit({ memberId, zakatAmount, paymentMethod, bankAccountId: bankAccountId || undefined, issueDate });
+      await onSubmit({ beneficiaryId, zakatAmount, paymentMethod, bankAccountId: bankAccountId || undefined, issueDate });
       onClose();
     } catch (err) {
       alert(err?.response?.data?.error?.message || err.message || 'Failed to issue card');
@@ -86,6 +93,9 @@ function IssueModal({ members, membersLoading, onClose, onSubmit }) {
       setSubmitting(false);
     }
   };
+
+  const fmtAmt = (v) => v ? `Rs ${Number(v).toLocaleString('en-PK')}` : '—';
+  const fmtDt = (v) => v ? new Date(v).toLocaleDateString('en-PK', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
 
   return (
     <div style={{
@@ -104,7 +114,7 @@ function IssueModal({ members, membersLoading, onClose, onSubmit }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div>
             <div style={{ fontSize: '16px', fontWeight: 700, color: '#f1f5f9' }}>Issue New Zakat Card</div>
-            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>Select a member and enter zakat amount</div>
+            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>Select a Zakat beneficiary from Donation Given</div>
           </div>
           <button onClick={onClose} style={{
             background: '#1e293b', border: '1px solid #334155',
@@ -114,39 +124,39 @@ function IssueModal({ members, membersLoading, onClose, onSubmit }) {
           </button>
         </div>
 
-        {/* Member search & select — only members with an approved zakat donation */}
+        {/* Beneficiary search & select */}
         <div style={{ marginBottom: '16px' }}>
           <label style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, marginBottom: '6px', display: 'block' }}>
-            Select Member * <span style={{ color: '#64748b', fontWeight: 500 }}>(members with an approved zakat donation)</span>
+            Select Beneficiary * <span style={{ color: '#64748b', fontWeight: 500 }}>(approved Zakat recipients from Donation Given)</span>
           </label>
-          {membersLoading ? (
+          {beneficiariesLoading ? (
             <div style={{
               padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
               background: '#0a0f1a', borderRadius: '8px', border: '1px solid #1e293b',
               color: '#64748b', fontSize: '12px',
             }}>
               <RefreshCw size={14} className="animate-spin" />
-              Loading eligible members...
+              Loading eligible beneficiaries...
             </div>
-          ) : members.length === 0 ? (
+          ) : beneficiaries.length === 0 ? (
             <div style={{
               padding: '20px 16px', textAlign: 'center',
               background: 'rgba(127,29,29,0.1)', borderRadius: '10px', border: '1px solid rgba(239,68,68,0.25)',
             }}>
               <div style={{ fontSize: '12px', color: '#f87171', fontWeight: 600, lineHeight: 1.5 }}>
-                No members with zakat donations recorded.
+                No beneficiaries with approved Zakat distributions found.
               </div>
               <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
-                Record a zakat donation first to issue a card.
+                Record and approve a Zakat distribution in the Donation Given module first.
               </div>
             </div>
           ) : (
             <>
               <input
                 type="text"
-                value={memberSearch}
-                onChange={e => setMemberSearch(e.target.value)}
-                placeholder="Search by name, member no, CNIC..."
+                value={search}
+                onChange={e => { setSearch(e.target.value); if (selected && e.target.value !== selected.name) setBeneficiaryId(''); }}
+                placeholder="Search by name, CNIC, mobile..."
                 style={{
                   width: '100%', padding: '10px 12px', borderRadius: '10px',
                   background: '#0f172a', border: '1px solid #334155',
@@ -154,43 +164,53 @@ function IssueModal({ members, membersLoading, onClose, onSubmit }) {
                   boxSizing: 'border-box',
                 }}
               />
-              <div style={{
-                maxHeight: '150px', overflowY: 'auto', marginTop: '6px',
-                background: '#0a0f1a', borderRadius: '8px', border: '1px solid #1e293b',
-              }}>
-                {filteredMembers.slice(0, 50).map(m => (
-                  <div
-                    key={m.id}
-                    onClick={() => { setMemberId(m.id); setMemberSearch(m.fullName); }}
-                    style={{
-                      padding: '8px 12px', cursor: 'pointer',
-                      background: memberId === m.id ? 'rgba(13,78,43,0.3)' : 'transparent',
-                      borderBottom: '1px solid #1e293b',
-                      transition: 'background 0.15s',
-                    }}
-                  >
-                    <div style={{ fontSize: '12px', fontWeight: 600, color: '#e2e8f0' }}>{m.fullName}</div>
-                    <div style={{ fontSize: '10px', color: '#64748b' }}>
-                      {m.memberNo || 'No ID'} {m.fatherName ? `• s/o ${m.fatherName}` : ''} {m.area ? `• ${m.area}` : ''}
+              {(!beneficiaryId || search !== selected?.name) && (
+                <div style={{
+                  maxHeight: '180px', overflowY: 'auto', marginTop: '6px',
+                  background: '#0a0f1a', borderRadius: '8px', border: '1px solid #1e293b',
+                }}>
+                  {filtered.slice(0, 50).map(b => (
+                    <div
+                      key={b.id}
+                      onClick={() => selectBeneficiary(b)}
+                      style={{
+                        padding: '10px 12px', cursor: 'pointer',
+                        background: beneficiaryId === b.id ? 'rgba(13,78,43,0.3)' : 'transparent',
+                        borderBottom: '1px solid #1e293b',
+                        transition: 'background 0.15s',
+                      }}
+                    >
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#e2e8f0' }}>{b.name}</div>
+                      <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        {b.cnic && <span>CNIC: {b.cnic}</span>}
+                        {b.mobile && <span>Mobile: {b.mobile}</span>}
+                        <span style={{ color: '#4ade80' }}>Last: {fmtAmt(b.lastZakatAmount)} on {fmtDt(b.lastZakatDate)}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-                {filteredMembers.length === 0 && (
-                  <div style={{ padding: '12px', color: '#475569', fontSize: '12px', textAlign: 'center' }}>No members found</div>
-                )}
-              </div>
+                  ))}
+                  {filtered.length === 0 && (
+                    <div style={{ padding: '12px', color: '#475569', fontSize: '12px', textAlign: 'center' }}>No beneficiaries found</div>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
 
-        {selectedMember && (
+        {/* Selected beneficiary summary */}
+        {selected && (
           <div style={{
-            padding: '10px 14px', borderRadius: '10px', marginBottom: '16px',
+            padding: '12px 14px', borderRadius: '10px', marginBottom: '16px',
             background: 'rgba(13,78,43,0.12)', border: '1px solid rgba(74,222,128,0.15)',
           }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#4ade80' }}>Selected: {selectedMember.fullName}</div>
-            <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>
-              {selectedMember.memberNo || 'No Member No'} • {selectedMember.area || selectedMember.ghamName || '—'}
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#4ade80' }}>{selected.name}</div>
+            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              {selected.cnic && <span>CNIC: {selected.cnic}</span>}
+              {selected.mobile && <span>Mobile: {selected.mobile}</span>}
+              {selected.address && <span>Address: {selected.address}</span>}
+              <span style={{ color: '#64748b', marginTop: '2px' }}>
+                Last Zakat: {fmtAmt(selected.lastZakatAmount)} · {fmtDt(selected.lastZakatDate)}
+              </span>
             </div>
           </div>
         )}
@@ -265,14 +285,14 @@ function IssueModal({ members, membersLoading, onClose, onSubmit }) {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!memberId || !zakatAmount || submitting}
+            disabled={!beneficiaryId || !zakatAmount || submitting}
             style={{
               flex: 2, padding: '10px', borderRadius: '10px',
-              background: (!memberId || !zakatAmount || submitting) ? '#1e293b' : 'linear-gradient(135deg, #0D4E2B, #1A6B3C)',
+              background: (!beneficiaryId || !zakatAmount || submitting) ? '#1e293b' : 'linear-gradient(135deg, #0D4E2B, #1A6B3C)',
               border: '1px solid',
-              borderColor: (!memberId || !zakatAmount || submitting) ? '#334155' : 'rgba(201,162,39,0.5)',
-              color: (!memberId || !zakatAmount || submitting) ? '#475569' : '#C9A227',
-              cursor: (!memberId || !zakatAmount || submitting) ? 'not-allowed' : 'pointer',
+              borderColor: (!beneficiaryId || !zakatAmount || submitting) ? '#334155' : 'rgba(201,162,39,0.5)',
+              color: (!beneficiaryId || !zakatAmount || submitting) ? '#475569' : '#C9A227',
+              cursor: (!beneficiaryId || !zakatAmount || submitting) ? 'not-allowed' : 'pointer',
               fontSize: '13px', fontWeight: 700,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
             }}
@@ -385,7 +405,7 @@ export const ZakatCards = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [previewCard, setPreviewCard] = useState(null);
   const [showIssueModal, setShowIssueModal] = useState(false);
-  const [eligibleMembers, setEligibleMembers] = useState([]);
+  const [eligibleBeneficiaries, setEligibleBeneficiaries] = useState([]);
   const [eligibleLoading, setEligibleLoading] = useState(false);
   const [printMode, setPrintMode] = useState(null);
   const [printCard, setPrintCard] = useState(null);
@@ -414,16 +434,18 @@ export const ZakatCards = () => {
     setShowIssueModal(true);
     setEligibleLoading(true);
     zakatCardService.getEligibleMembers()
-      .then(res => setEligibleMembers(res.data || []))
-      .catch(() => setEligibleMembers([]))
+      .then(res => setEligibleBeneficiaries(res.data || []))
+      .catch(() => setEligibleBeneficiaries([]))
       .finally(() => setEligibleLoading(false));
   }, []);
 
   const filtered = cards.filter(c => {
     const term = searchTerm.toLowerCase();
     if (!term) return true;
-    return c.member?.fullName?.toLowerCase().includes(term) ||
+    const displayName = c.beneficiary?.name || c.member?.fullName || '';
+    return displayName.toLowerCase().includes(term) ||
       c.cardNumber?.toLowerCase().includes(term) ||
+      c.beneficiary?.cnic?.toLowerCase().includes(term) ||
       c.member?.memberNo?.toLowerCase().includes(term);
   });
 
@@ -625,9 +647,14 @@ export const ZakatCards = () => {
             }}>
               <span style={{ fontSize: '12px', color: '#C9A227', fontWeight: 600 }}>{card.cardNumber}</span>
               <div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0' }}>{card.member?.fullName}</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0' }}>
+                  {card.beneficiary?.name || card.member?.fullName}
+                </div>
                 <div style={{ fontSize: '11px', color: '#64748b' }}>
-                  {card.member?.fatherName ? `s/o ${card.member.fatherName}` : ''} {card.member?.area ? `• ${card.member.area}` : ''}
+                  {card.beneficiary
+                    ? [card.beneficiary.cnic && `CNIC: ${card.beneficiary.cnic}`, card.beneficiary.mobile].filter(Boolean).join(' • ')
+                    : [card.member?.fatherName && `s/o ${card.member.fatherName}`, card.member?.area].filter(Boolean).join(' • ')
+                  }
                 </div>
               </div>
               <span style={{ fontSize: '13px', color: '#4ade80', fontWeight: 700 }}>Rs {fmtAmount(card.zakatAmount)}</span>
@@ -704,8 +731,8 @@ export const ZakatCards = () => {
       {/* Issue Modal */}
       {showIssueModal && (
         <IssueModal
-          members={eligibleMembers}
-          membersLoading={eligibleLoading}
+          beneficiaries={eligibleBeneficiaries}
+          beneficiariesLoading={eligibleLoading}
           onClose={() => setShowIssueModal(false)}
           onSubmit={handleIssue}
         />

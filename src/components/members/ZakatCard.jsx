@@ -60,10 +60,16 @@ function CardShell({ children }) {
 
 /* ─────────────────────────────────── FRONT ─────────────────────────────────── */
 export function ZakatCardFront({ card }) {
-  const member = card?.member || {};
+  // Prefer beneficiary (new cards) over member (legacy cards)
+  const beneficiary = card?.beneficiary || null;
+  const member = card?.member || null;
+  const displayName = beneficiary?.name || member?.fullName || '';
+  const displayCnic = beneficiary?.cnic || null;
   const BASE_URL = 'https://kmlwj.com/member/verify';
   const qrValue = member?.memberNo
     ? `${BASE_URL}/${member.memberNo}`
+    : beneficiary?.id
+    ? `${BASE_URL}/${beneficiary.id}`
     : member?.id
     ? `${BASE_URL}/${member.id}`
     : 'https://kmlwj.com';
@@ -155,16 +161,17 @@ export function ZakatCardFront({ card }) {
           </div>
         </div>
 
-        {/* Card details — Zakat variant: no CNIC, has Zakat Amount */}
+        {/* Card details */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3.5px', paddingLeft: '6px' }}>
           {[
             ['Zakat Card No', card?.cardNumber],
-            ['Name',          member?.fullName],
+            ['Name',          displayName],
+            ['CNIC',          displayCnic || member?.cnic],
             ['S/O',           member?.fatherName],
             ['Area / Jamaat', member?.area || member?.ghamName],
             ['Zakat Amount',  fmtAmount(card?.zakatAmount)],
             ['Issue Date',    fmtDate(card?.issueDate)],
-          ].map(([label, value]) => (
+          ].filter(([, v]) => v).map(([label, value]) => (
             <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
               <span style={{
                 fontSize: '7px', color: GOLD_TEXT, fontWeight: 800,
@@ -205,7 +212,10 @@ export function ZakatCardFront({ card }) {
 
 /* ─────────────────────────────────── BACK ─────────────────────────────────── */
 export function ZakatCardBack({ card }) {
-  const member = card?.member || {};
+  const beneficiary = card?.beneficiary || null;
+  const member = card?.member || null;
+  const address = beneficiary?.address || member?.address;
+  const mobile = beneficiary?.mobile || member?.mobile;
 
   return (
     <CardShell>
@@ -218,7 +228,7 @@ export function ZakatCardBack({ card }) {
           fontSize: '8px', fontWeight: 800, color: GOLD_TEXT,
           letterSpacing: '0.2em', textTransform: 'uppercase',
         }}>
-          MEMBER INFORMATION
+          BENEFICIARY INFORMATION
         </div>
         <div style={{
           height: '1px', background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)`,
@@ -234,10 +244,10 @@ export function ZakatCardBack({ card }) {
       }}>
         {[
           ['Ghaam',        member?.ghamName],
-          ['Address',      member?.address ? (member.address.length > 40 ? member.address.slice(0, 40) + '…' : member.address) : null],
-          ['Contact',      member?.mobile],
+          ['Address',      address ? (address.length > 40 ? address.slice(0, 40) + '…' : address) : null],
+          ['Contact',      mobile],
           ['Issuing Date', fmtDate(card?.issueDate)],
-        ].map(([label, value]) => (
+        ].filter(([, v]) => v).map(([label, value]) => (
           <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
             <span style={{
               fontSize: '7px', color: GOLD_TEXT, fontWeight: 800,

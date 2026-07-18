@@ -175,6 +175,209 @@ export const GeneralLedger = () => {
   const debitLabel = isDebitNormal ? "Period Debits (In)" : (accountInfo ? "Period Debits (Out)" : "Period Debits");
   const creditLabel = isDebitNormal ? "Period Credits (Out)" : (accountInfo ? "Period Credits (In)" : "Period Credits");
 
+  // ── Print GL ──────────────────────────────────────────────────────────────
+  // Opens a clean, isolated print window — bypasses all SPA chrome & dark CSS.
+  const handlePrintGL = () => {
+    const user = useAuthStore.getState().user;
+    const userName = user?.fullName || user?.email || 'System';
+
+    const fmtAmt = (v) =>
+      v == null ? '—' : `PKR ${Math.abs(Number(v)).toLocaleString('en-PK', { minimumFractionDigits: 2 })}`;
+    const fmtAmtRaw = (v) =>
+      v > 0 ? `PKR ${Number(v).toLocaleString('en-PK', { minimumFractionDigits: 2 })}` : '—';
+    const fmtDate = (v) => {
+      if (!v) return '—';
+      const d = new Date(v);
+      if (isNaN(d)) return v;
+      return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+    };
+    const balSuffix = (bal, isDebitNorm) => {
+      if (!bal) return '';
+      return isDebitNorm ? (bal < 0 ? ' Cr' : ' Dr') : (bal < 0 ? ' Dr' : ' Cr');
+    };
+
+    const now = new Date();
+    const printedOn = now.toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric' }) +
+      ' ' + now.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+
+    const periodFrom = filters.startDate ? fmtDate(filters.startDate) : 'Beginning';
+    const periodTo   = filters.endDate   ? fmtDate(filters.endDate)   : 'Present';
+    const accountLabel = accountInfo
+      ? `${accountInfo.name} (${accountInfo.glCode})`
+      : 'All Accounts';
+
+    // Build account table rows
+    const buildAccountHTML = (group) => {
+      const isDebitNorm = ['ASSET','EXPENSE'].includes((group.type||'').toUpperCase());
+      let running = group.openingBalance;
+      let totDr = 0, totCr = 0;
+
+      const rows = group.entries.map((e) => {
+        const deb = e.debit || 0;
+        const crd = e.credit || 0;
+        totDr += deb; totCr += crd;
+        running = isDebitNorm ? running + deb - crd : running + crd - deb;
+        const bal = running;
+        return `
+          <tr>
+            <td>${fmtDate(e.date)}</td>
+            <td class="ref">${e.reference || '—'}</td>
+            <td>${e.description || '—'}</td>
+            <td class="num">${deb > 0 ? fmtAmtRaw(deb) : '—'}</td>
+            <td class="num">${crd > 0 ? fmtAmtRaw(crd) : '—'}</td>
+            <td class="num bal">${fmtAmt(bal)}${balSuffix(bal, isDebitNorm)}</td>
+          </tr>`;
+      }).join('');
+
+      const emptyRow = group.entries.length === 0
+        ? `<tr><td colspan="6" class="empty">No transaction entries found for this account in the selected period.</td></tr>`
+        : '';
+
+      const closingBal = running;
+
+      return `
+        <div class="account-block">
+          <div class="account-header">
+            <div>
+              <div class="account-name">${group.accountName}</div>
+              <div class="account-num">Account No: ${group.glCode}</div>
+            </div>
+            <div class="closing-badge">
+              Closing Balance: ${fmtAmt(closingBal)}${balSuffix(closingBal, isDebitNorm)}
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Reference No.</th>
+                <th>Description</th>
+                <th class="num">Debit</th>
+                <th class="num">Credit</th>
+                <th class="num">Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="opening-row">
+                <td>${periodFrom !== 'Beginning' ? periodFrom : '—'}</td>
+                <td class="ref">—</td>
+                <td>Beginning Balance</td>
+                <td class="num">—</td>
+                <td class="num">—</td>
+                <td class="num bal">${group.openingBalance !== 0 ? fmtAmt(group.openingBalance) + balSuffix(group.openingBalance, isDebitNorm) : '—'}</td>
+              </tr>
+              ${rows}${emptyRow}
+              <tr class="totals-row">
+                <td colspan="3" class="totals-label">Account Totals</td>
+                <td class="num">${fmtAmtRaw(totDr)}</td>
+                <td class="num">${fmtAmtRaw(totCr)}</td>
+                <td class="num bal">${fmtAmt(closingBal)}${balSuffix(closingBal, isDebitNorm)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>`;
+    };
+
+    const accountsHTML = groupedLedgers.length === 0
+      ? `<div class="no-data">No General Ledger records found for the selected filters.</div>`
+      : groupedLedgers.map(buildAccountHTML).join('');
+
+    // Use the Vite-resolved logo URL (absolute path works in a new window same origin)
+    const logoUrl = window.location.origin + logoImg;
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>General Ledger — ${accountLabel}</title>
+  <style>
+    @page { size: A4 portrait; margin: 12mm 10mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 9pt; color: #1a1a1a; background: #fff; }
+
+    /* ── Report Header ── */
+    .report-header { display: flex; align-items: flex-start; gap: 12px; padding-bottom: 8px; border-bottom: 2px solid #1a1a1a; margin-bottom: 8px; }
+    .report-header img { width: 52px; height: 52px; object-fit: contain; }
+    .org-block { flex: 1; text-align: center; }
+    .org-urdu { font-size: 13pt; font-weight: 900; line-height: 1.3; }
+    .org-sub { font-size: 7.5pt; color: #444; margin-top: 2px; }
+    .org-reg { font-size: 7pt; color: #666; }
+    .report-badge { text-align: right; min-width: 130px; }
+    .report-badge .title { background: #1a1a1a; color: #fff; font-size: 8pt; font-weight: 800; padding: 3px 8px; border-radius: 4px; display: inline-block; letter-spacing: 0.05em; text-transform: uppercase; }
+    .report-badge .printed { font-size: 7pt; color: #555; margin-top: 4px; }
+
+    /* ── Meta strip ── */
+    .meta-strip { display: flex; justify-content: space-between; font-size: 7.5pt; color: #333; padding: 4px 0 8px; border-bottom: 1px solid #ccc; margin-bottom: 10px; gap: 8px; flex-wrap: wrap; }
+    .meta-strip span { white-space: nowrap; }
+    .meta-strip strong { color: #1a1a1a; }
+
+    /* ── Account block ── */
+    .account-block { margin-bottom: 16px; page-break-inside: avoid; }
+    .account-header { display: flex; justify-content: space-between; align-items: flex-end; background: #f0f0f0; border: 1px solid #bbb; border-bottom: none; padding: 5px 8px; border-radius: 4px 4px 0 0; }
+    .account-name { font-size: 10pt; font-weight: 800; color: #1a1a1a; }
+    .account-num { font-size: 7.5pt; color: #555; margin-top: 1px; font-family: monospace; }
+    .closing-badge { font-size: 8pt; font-weight: 700; color: #1a1a1a; white-space: nowrap; }
+
+    /* ── Table ── */
+    table { width: 100%; border-collapse: collapse; font-size: 8pt; }
+    thead { display: table-header-group; }
+    th { background: #2c2c2c; color: #fff; font-weight: 700; padding: 4px 6px; text-align: left; font-size: 7.5pt; letter-spacing: 0.03em; border: 1px solid #1a1a1a; }
+    th.num { text-align: right; }
+    td { padding: 3.5px 6px; border: 1px solid #d8d8d8; vertical-align: top; }
+    td.num { text-align: right; font-family: monospace; white-space: nowrap; }
+    td.ref { font-family: monospace; font-size: 7.5pt; color: #444; white-space: nowrap; }
+    td.bal { font-weight: 700; }
+    tbody tr:nth-child(even) { background: #f9f9f9; }
+    .opening-row td { background: #f5f5f0; font-style: italic; font-weight: 600; color: #444; }
+    .totals-row td { background: #e8e8e8; font-weight: 800; border-top: 2px solid #888; font-size: 8pt; }
+    .totals-label { text-align: right; text-transform: uppercase; letter-spacing: 0.05em; color: #333; font-size: 7.5pt; }
+    .empty td, td.empty { text-align: center; color: #888; font-style: italic; padding: 10px; }
+    .no-data { text-align: center; color: #888; font-style: italic; padding: 24px; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0; }
+
+    @media print {
+      .account-block { page-break-inside: avoid; }
+      thead { display: table-header-group; }
+    }
+  </style>
+</head>
+<body>
+  <div class="report-header">
+    <img src="${logoUrl}" alt="KMLWJ Logo" onerror="this.style.display='none'" />
+    <div class="org-block">
+      <div class="org-urdu">کچھی مسلم لوہارواڈھا ویلفیئر جماعت</div>
+      <div class="org-sub">جمعہ بلوچ روڈ، نزد K.E گرڈ اسٹیشن، نیو کلری، لیاری، کراچی</div>
+      <div class="org-reg">REGISTERED NO: 1319 &nbsp;|&nbsp; info@kmlwj.org &nbsp;|&nbsp; www.kmlwj.org</div>
+    </div>
+    <div class="report-badge">
+      <div class="title">General Ledger</div>
+      <div class="printed">Printed: ${printedOn}</div>
+    </div>
+  </div>
+
+  <div class="meta-strip">
+    <span><strong>Period:</strong> ${periodFrom} to ${periodTo}</span>
+    <span><strong>Account:</strong> ${accountLabel}</span>
+    <span><strong>Prepared By:</strong> ${userName}</span>
+  </div>
+
+  ${accountsHTML}
+</body>
+</html>`;
+
+    const win = window.open('', '_blank', 'width=900,height=700');
+    if (!win) {
+      alert('Pop-up blocked. Please allow pop-ups for this site to print the GL.');
+      return;
+    }
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => {
+      win.focus();
+      win.print();
+      win.onafterprint = () => win.close();
+    };
+  };
+
   const debitColor = isDebitNormal ? "text-emerald-400" : (accountInfo ? "text-red-400" : "text-emerald-400");
   const creditColor = isDebitNormal ? "text-red-400" : (accountInfo ? "text-emerald-400" : "text-red-400");
   const tableDebitColor = isDebitNormal ? "text-emerald-400" : (accountInfo ? "text-red-400" : "text-emerald-400");
@@ -182,57 +385,6 @@ export const GeneralLedger = () => {
 
   return (
     <div className="space-y-6">
-      {/* Landscape Print Styles */}
-      <style>{`
-        @media print {
-          @page {
-            size: A4 landscape;
-            margin: 10mm;
-          }
-          body {
-            background-color: white !important;
-            color: black !important;
-          }
-        }
-      `}</style>
-
-      {/* Print-only Header */}
-      <div className="hidden print:block border-b-2 border-slate-800 pb-4 mb-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="w-16 h-16 shrink-0 flex items-center justify-center">
-            <img src={logoImg} alt="Logo" className="w-14 h-14 object-contain" />
-          </div>
-          <div className="flex-1 text-center">
-            <h1
-              className="text-xl font-extrabold text-slate-900 leading-snug font-urdu"
-            >
-              کچھی مسلم لوہارواڈھا ویلفیئر جماعت
-            </h1>
-            <p className="text-[11px] font-bold text-slate-600 mt-1">
-              جمعہ بلوچ روڈ، نزد K.E گرڈ اسٹیشن، نیو کلری، لیاری، کراچی
-            </p>
-            <p className="text-[10px] font-bold text-slate-500 mt-0.5">REGISTERED NO: 1319</p>
-          </div>
-          <div className="shrink-0 text-right">
-            <div className="inline-block px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-900 text-white mb-2">
-              General Ledger Report
-            </div>
-            <div className="text-[10px] text-slate-600 font-bold uppercase block tracking-wider">
-              Printed On: {new Date().toLocaleDateString('en-GB')}
-            </div>
-          </div>
-        </div>
-        
-        {/* Date Filter Range info */}
-        <div className="mt-4 flex justify-between text-xs text-slate-700 font-medium">
-          <div>
-            <span className="font-bold text-slate-900">Period:</span> {filters.startDate ? formatDateDDMMYYYY(filters.startDate) : 'Beginning'} to {filters.endDate ? formatDateDDMMYYYY(filters.endDate) : 'Present'}
-          </div>
-          <div>
-            <span className="font-bold text-slate-900">Account:</span> {accountInfo ? `${accountInfo.name} (${accountInfo.glCode})` : 'All Accounts'}
-          </div>
-        </div>
-      </div>
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
@@ -252,7 +404,7 @@ export const GeneralLedger = () => {
           )}
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={handlePrintGL}
             className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700 transition-all text-xs font-semibold cursor-pointer shadow-sm"
           >
             <Printer className="h-3.5 w-3.5" /> Print GL
