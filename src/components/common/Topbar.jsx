@@ -40,6 +40,8 @@ export const Topbar = ({ onMobileMenuToggle }) => {
     markAllAsRead,
     removeNotification,
     clearAll,
+    startPolling,
+    stopPolling,
   } = useNotificationStore(
     useShallow((state) => ({
       notifications: state.notifications,
@@ -48,6 +50,8 @@ export const Topbar = ({ onMobileMenuToggle }) => {
       markAllAsRead: state.markAllAsRead,
       removeNotification: state.removeNotification,
       clearAll: state.clearAll,
+      startPolling: state.startPolling,
+      stopPolling: state.stopPolling,
     }))
   );
 
@@ -66,6 +70,12 @@ export const Topbar = ({ onMobileMenuToggle }) => {
   useEffect(() => {
     initPalette();
   }, []);
+
+  // Start polling notifications when the component mounts (user is authenticated)
+  useEffect(() => {
+    startPolling();
+    return () => stopPolling();
+  }, [startPolling, stopPolling]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -205,20 +215,17 @@ export const Topbar = ({ onMobileMenuToggle }) => {
                       {notifications.map((notification) => (
                         <div 
                           key={notification.id}
-                          className={`p-3.5 hover:bg-slate-800/50 transition-all cursor-pointer ${!notification.read ? 'bg-slate-800/30' : ''}`}
+                          className={`p-3.5 hover:bg-slate-800/50 transition-all cursor-pointer ${!notification.isRead ? 'bg-slate-800/30' : ''}`}
                           onClick={() => {
-                            if (!notification.read) {
+                            if (!notification.isRead) {
                               markAsRead(notification.id);
-                            }
-                            if (notification.action) {
-                              notification.action();
                             }
                           }}
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                {!notification.read && (
+                                {!notification.isRead && (
                                   <span className="w-2 h-2 rounded-full bg-brand-400 shrink-0"></span>
                                 )}
                                 <p className="text-xs font-bold text-slate-100 truncate">
@@ -229,7 +236,8 @@ export const Topbar = ({ onMobileMenuToggle }) => {
                                 {notification.message}
                               </p>
                               <p className="text-[10px] text-slate-500 mt-1.5 font-mono">
-                                {new Date(notification.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · {new Date(notification.timestamp).toLocaleDateString()}
+                                {notification.module && <span className="text-brand-500 mr-1">[{notification.module}]</span>}
+                                {new Date(notification.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · {new Date(notification.createdAt).toLocaleDateString()}
                               </p>
                             </div>
                             <button

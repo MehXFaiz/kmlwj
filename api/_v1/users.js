@@ -2,6 +2,7 @@ import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
+import { createNotification } from "../_utils/notify.js";
 import bcrypt from "bcrypt";
 var users_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
@@ -64,6 +65,17 @@ var users_default = makeHandler(async (req, res) => {
       include: { role: true }
     });
     await logAudit(req.user.id, "Create User", "USERS", null, { id: newUser.id, email: newUser.email, role: newUser.role.name }, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    await createNotification({
+      title: "New User Registered",
+      message: `New user ${newUser.fullName} (${newUser.email}) registered with role: ${newUser.role.name}.`,
+      module: "Users",
+      recordId: newUser.id,
+      actionType: "CREATE",
+      userName: user?.fullName || req.user.email,
+      userRole: user?.role.name || req.user.role,
+      userId: req.user.id,
+      visibility: "ADMIN_ONLY"
+    });
     return res.status(201).json({
       status: 201,
       data: {
@@ -106,6 +118,20 @@ var users_default = makeHandler(async (req, res) => {
       include: { role: true }
     });
     await logAudit(req.user.id, "Modify User", "USERS", { id: existingUser.id, fullName: existingUser.fullName, email: existingUser.email, role: existingUser.role.name, isActive: existingUser.isActive }, { id: updatedUser.id, fullName: updatedUser.fullName, email: updatedUser.email, role: updatedUser.role.name, isActive: updatedUser.isActive }, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    const roleChanged = role !== undefined && role !== existingUser.role.name;
+    const statusChanged = isActive !== undefined && isActive !== existingUser.isActive;
+    const changeDesc = roleChanged ? `Role changed to ${updatedUser.role.name}.` : statusChanged ? `Account ${updatedUser.isActive ? "activated" : "deactivated"}.` : "Profile updated.";
+    await createNotification({
+      title: "User Account Updated",
+      message: `User ${updatedUser.fullName} (${updatedUser.email}) — ${changeDesc}`,
+      module: "Users",
+      recordId: updatedUser.id,
+      actionType: roleChanged ? "ROLE_CHANGE" : "UPDATE",
+      userName: user?.fullName || req.user.email,
+      userRole: user?.role.name || req.user.role,
+      userId: req.user.id,
+      visibility: "SUPER_ADMIN_ONLY"
+    });
     return res.status(200).json({
       status: 200,
       data: {
