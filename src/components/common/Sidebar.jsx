@@ -201,6 +201,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
       items: [
         { name: t('sidebar.members', 'Community Members'), hint: t('sidebar.membersHint', 'Manage Jamia member registrations & records'), icon: Users, path: '/members' },
         { name: 'Membership Cards', hint: 'Generate & print CR80 membership ID cards', icon: CreditCard, path: '/membership-cards' },
+        { name: 'Zakat Cards', hint: 'Issue & print Zakat disbursement cards', icon: CreditCard, path: '/zakat-cards' },
       ],
     },
     {

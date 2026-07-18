@@ -29,6 +29,7 @@ model User {
   invoicesCreated          Invoice[]           @relation("InvoiceCreatedBy")
   revenueCollections       RevenueCollection[] @relation("RevenueCollectionCreatedBy")
   donationsReceivedCreated DonationReceived[]  @relation("DonationReceivedCreatedBy")
+  zakatCardsCreated        ZakatCard[]         @relation("ZakatCardCreatedBy")
 }
 
 model Role {
@@ -186,6 +187,7 @@ model JournalEntry {
   hallBooking HallBooking?       @relation("HallBookingJournalEntry")
   revenueCollection RevenueCollection? @relation("RevenueCollectionJournalEntry")
   donationReceived DonationReceived?   @relation("DonationReceivedJournalEntry")
+  zakatCard        ZakatCard?          @relation("ZakatCardJournalEntry")
 }
 
 model JournalEntryLine {
@@ -458,8 +460,29 @@ model Member {
   doi             String?
   photoUrl        String?        @db.Text
   isActive        Boolean        @default(true)
+  zakatCards      ZakatCard[]
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+}
+
+model ZakatCard {
+  id              String         @id @default(uuid()) @db.Uuid
+  memberId        String         @db.Uuid
+  member          Member         @relation(fields: [memberId], references: [id])
+  zakatAmount     Float
+  issueDate       DateTime       @default(now())
+  cardNumber      String         @unique
+  paymentMethod   PaymentMethod  @default(CASH)
+  bankAccountId   String?        @db.Uuid
+  journalEntryId  String?        @unique @db.Uuid
+  journalEntry    JournalEntry?  @relation("ZakatCardJournalEntry", fields: [journalEntryId], references: [id])
+  createdById     String?        @db.Uuid
+  createdBy       User?          @relation("ZakatCardCreatedBy", fields: [createdById], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([memberId])
+  @@index([cardNumber])
 }
 
 model Donor {

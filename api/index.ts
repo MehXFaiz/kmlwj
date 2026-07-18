@@ -45,6 +45,7 @@ import searchHandler from './_v1/search.js';
 import simpleExpenseHandler from './_v1/simple-expense.js';
 import simpleIncomeHandler from './_v1/simple-income.js';
 import accountingHealthHandler from './_v1/accounting-health.js';
+import zakatCardsHandler from './_v1/zakat-cards.js';
 import { memberVerifyHandler } from './_v1/member-verify.js';
 
 const app = express();
@@ -188,6 +189,11 @@ app.get('/api/v1/invoices', makeExpress(invoicesHandler));
 app.post('/api/v1/invoices', makeExpress(invoicesHandler));
 app.put('/api/v1/invoices', makeExpress(invoicesHandler));
 app.delete('/api/v1/invoices', makeExpress(invoicesHandler));
+
+// Zakat Card Routes
+app.get('/api/v1/zakat-cards', makeExpress(zakatCardsHandler));
+app.post('/api/v1/zakat-cards', makeExpress(zakatCardsHandler));
+app.delete('/api/v1/zakat-cards', makeExpress(zakatCardsHandler));
 
 // Ledger & Journals
 app.get('/api/v1/general-ledger', makeExpress(generalLedgerHandler));
