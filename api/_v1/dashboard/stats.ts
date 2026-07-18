@@ -174,6 +174,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   const netIncome = totalRevenue - totalExpense;
   totalEquity += openingRetainedEarnings;
+  const baseEquity = totalEquity;
   const totalEquityWithNetIncome = totalEquity + netIncome;
   const isEquationBalanced = Math.abs(totalAssets - (totalLiabilities + totalEquityWithNetIncome)) < 0.01;
 
@@ -274,7 +275,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       summary: {
         totalAssets,
         totalLiabilities,
-        totalEquity,
+        totalEquity: totalEquityWithNetIncome,
+        baseEquity,
         totalRevenue,
         totalExpense,
         cashBalance,

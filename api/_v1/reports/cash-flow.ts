@@ -25,6 +25,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const cashBankAccounts = await prisma.account.findMany({
       where: {
         accountType: { name: { in: ['Asset', 'ASSET'], mode: 'insensitive' } },
+        children: { none: {} },
         OR: [
           { accountName: { contains: 'bank', mode: 'insensitive' } },
           { accountName: { contains: 'cash', mode: 'insensitive' } },
@@ -37,7 +38,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     });
 
     const cashBankCodes = new Set(cashBankAccounts.map(a => a.glCode));
-    const endingCash = cashBankAccounts.reduce((sum, acc) => sum + Number(acc.currentBalance || 0), 0);
 
     // Optional date range filter — support ?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
     const { startDate, endDate } = (req.query || {}) as { startDate?: string; endDate?: string };
@@ -49,6 +49,28 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       end.setHours(23, 59, 59, 999);
       dateFilter.lte = end;
     }
+
+    const computeCashBalance = async (upto?: Date) => {
+      if (!upto) {
+        return cashBankAccounts.reduce((sum, acc) => sum + Number(acc.currentBalance || 0), 0);
+      }
+
+      let total = 0;
+      for (const account of cashBankAccounts) {
+        const agg = await prisma.ledgerEntry.aggregate({
+          where: {
+            accountId: account.id,
+            postingDate: { lte: upto }
+          },
+          _sum: { debit: true, credit: true }
+        });
+        const debit = Number(agg._sum.debit) || 0;
+        const credit = Number(agg._sum.credit) || 0;
+        total += (Number(account.initialBalance) || 0) + debit - credit;
+      }
+
+      return Math.round(total * 100) / 100;
+    };
 
     // 2. Fetch all posted journal entries and analyze transactions
     const postedJournals = await prisma.journalEntry.findMany({
@@ -122,7 +144,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const totalInflow = Math.round(inflows.reduce((sum, i) => sum + i.amount, 0) * 100) / 100;
     const totalOutflow = Math.round(outflows.reduce((sum, o) => sum + o.amount, 0) * 100) / 100;
     const netChange = Math.round((totalInflow - totalOutflow) * 100) / 100;
-    const beginningCash = Math.round((endingCash - netChange) * 100) / 100;
+    const endingCash = endDate
+      ? await computeCashBalance(new Date(dateFilter.lte))
+      : await computeCashBalance();
+    const beginningCash = startDate
+      ? await computeCashBalance(new Date(new Date(startDate).getTime() - 1))
+      : Math.round((endingCash - netChange) * 100) / 100;
 
     return res.status(200).json({
       status: 200,
@@ -134,7 +161,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           totalInflow,
           totalOutflow,
           netChange,
-          endingCash
+          endingCash,
+          periodLabel: startDate && endDate
+            ? `${startDate} to ${endDate}`
+            : startDate
+            ? `From ${startDate}`
+            : endDate
+            ? `Up to ${endDate}`
+            : 'All Time'
         }
       }
     });

@@ -456,9 +456,12 @@ export class AccountingService {
         });
         createdLedgerEntries.push(ledgerEntry);
 
-        // Update Account Running Balance
-        // Formula: Opening Balance + Total Debit - Total Credit = Current Balance
-        const netChange = line.debit - line.credit;
+        // Update Account Running Balance using the account's normal balance side.
+        const typeName = (line.account.accountType?.name || '').toUpperCase();
+        const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
+        const netChange = isDebitNormal
+          ? (line.debit - line.credit)
+          : (line.credit - line.debit);
         if (netChange !== 0) {
           await tx.account.update({
             where: { id: line.account.id },

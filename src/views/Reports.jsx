@@ -328,7 +328,7 @@ export const Reports = () => {
             <div className="p-4 sm:p-8 max-w-4xl mx-auto space-y-8 animate-in fade-in duration-200">
               <div className="text-center mb-8">
                 <h3 className="text-2xl font-bold text-slate-100 uppercase tracking-widest">Cash Flow Statement</h3>
-                <p className="text-sm text-slate-500 mt-1">{`FY ${fiscalYear}`}</p>
+                <p className="text-sm text-slate-500 mt-1">{cashFlowData.summary?.periodLabel || `FY ${fiscalYear}`}</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">

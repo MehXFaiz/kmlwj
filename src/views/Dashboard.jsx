@@ -393,6 +393,7 @@ export const Dashboard = () => {
         assets: dbStats.summary.totalAssets || 0,
         liabilities: dbStats.summary.totalLiabilities || 0,
         equity: dbStats.summary.totalEquity || 0,
+        baseEquity: dbStats.summary.baseEquity || 0,
         revenue: dbStats.summary.totalRevenue || 0,
         expenses: dbStats.summary.totalExpense || 0,
         // Do NOT clamp to 0 — overdrafts and losses must be visible
@@ -437,7 +438,7 @@ export const Dashboard = () => {
     const netIncome = revenue - expenses;
     const totalEquityWithNetIncome = equity + netIncome;
     return {
-      assets, liabilities, equity, revenue, expenses,
+      assets, liabilities, equity: totalEquityWithNetIncome, baseEquity: equity, revenue, expenses,
       // Do NOT clamp to 0 — overdrafts and losses must be visible
       cashBalance, bankBalance,
       netIncome,
@@ -474,7 +475,7 @@ export const Dashboard = () => {
   const balSheetData = useMemo(() => [
     { name: 'Assets', value: Math.round(stats.assets || 0), fill: 'var(--chart-asset)' },
     { name: 'Liabilities', value: Math.round(stats.liabilities || 0), fill: 'var(--chart-liability)' },
-    { name: 'Equity', value: Math.round((stats.equity || 0) + (stats.netIncome || 0)), fill: 'var(--chart-equity)' },
+    { name: 'Equity', value: Math.round(stats.equity || 0), fill: 'var(--chart-equity)' },
   ], [stats]);
 
   // Recent transactions from journals
@@ -534,7 +535,7 @@ export const Dashboard = () => {
 
 
       {/* ── Financial KPI Cards ── premium redesign ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 sm:gap-4">
         {[
           {
             // BUG FIX: Show gross revenue (Total Income), not net income
@@ -587,6 +588,18 @@ export const Dashboard = () => {
             accentBar: (stats.bankBalance || 0) < 0 ? 'from-red-500 to-red-400' : 'from-violet-500 to-violet-400',
             delay: 240,
           },
+          {
+            title: t('dashboard.netAfterExpenses'),
+            value: stats.netIncome || 0,
+            icon: Wallet,
+            iconColor: (stats.netIncome || 0) < 0 ? 'text-red-400' : 'text-emerald-400',
+            iconBg: (stats.netIncome || 0) < 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20',
+            trend: (stats.netIncome || 0) < 0 ? 'down' : 'up',
+            trendLabel: (stats.netIncome || 0) < 0 ? t('dashboard.netLoss') : t('dashboard.netSurplus'),
+            trendColor: (stats.netIncome || 0) < 0 ? 'text-red-400' : 'text-emerald-400',
+            accentBar: (stats.netIncome || 0) < 0 ? 'from-red-500 to-red-400' : 'from-emerald-500 to-emerald-400',
+            delay: 320,
+          },
         ].map((card) => (
           <StatCard key={card.title} {...card} />
         ))}
@@ -612,7 +625,7 @@ export const Dashboard = () => {
           <p className="text-[11px] text-slate-500 mt-0.5">
             {t('dashboard.assets')}: Rs {stats.assets.toLocaleString(undefined, { maximumFractionDigits: 0 })} &nbsp;·&nbsp;
             {t('dashboard.liabilities')}: Rs {stats.liabilities.toLocaleString(undefined, { maximumFractionDigits: 0 })} &nbsp;·&nbsp;
-            {t('dashboard.equity')}: Rs {(stats.equity + stats.netIncome).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            {t('dashboard.equity')}: Rs {stats.equity.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </p>
         </div>
       </div>

@@ -118,6 +118,29 @@ export const Topbar = ({ onMobileMenuToggle }) => {
           </span>
         </div>
 
+        <div className="hidden lg:flex items-center gap-2 shrink-0">
+          <select
+            value={selectedSubsidiary}
+            onChange={(e) => setSelectedSubsidiary(e.target.value)}
+            className="px-3 py-1.5 rounded-lg border border-slate-800 bg-slate-900/60 text-[11px] font-semibold text-slate-300 focus:outline-none focus:border-slate-700"
+            aria-label="Select subsidiary"
+          >
+            {subsidiaries.map((subsidiary) => (
+              <option key={subsidiary} value={subsidiary}>{subsidiary}</option>
+            ))}
+          </select>
+          <select
+            value={fiscalYear}
+            onChange={(e) => setFiscalYear(e.target.value)}
+            className="px-3 py-1.5 rounded-lg border border-slate-800 bg-slate-900/60 text-[11px] font-semibold text-slate-300 focus:outline-none focus:border-slate-700"
+            aria-label="Select fiscal year"
+          >
+            {fiscalYears.map((year) => (
+              <option key={year} value={year}>{`FY ${year}`}</option>
+            ))}
+          </select>
+        </div>
+
         {/* Right side - Actions & User Menu */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
 
