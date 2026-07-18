@@ -11,6 +11,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
+  const { startDate, endDate } = (req.query || {}) as { startDate?: string; endDate?: string };
 
   // 1. KPI Counts from database
   const totalAccounts = await prisma.account.count();
@@ -31,8 +32,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   // 2. Monthly Revenue vs Expenses Chart Data
   const currentYear = new Date().getFullYear();
-  const startOfYear = new Date(`${currentYear}-01-01T00:00:00Z`);
-  const endOfYear = new Date(`${currentYear + 1}-01-01T00:00:00Z`);
+  const chartYear = startDate ? new Date(startDate).getFullYear() : currentYear;
+  const startOfYear = new Date(`${chartYear}-01-01T00:00:00Z`);
+  const endOfYear = new Date(`${chartYear + 1}-01-01T00:00:00Z`);
 
   const ledgerEntries = await prisma.ledgerEntry.findMany({
     where: {
@@ -79,36 +81,99 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   let totalExpense = 0;
   let cashBalance = 0;
   let bankBalance = 0;
+  let openingRetainedEarnings = 0;
+  const hasDateFilter = Boolean(startDate || endDate);
 
   for (const acc of allAccounts) {
     const typeName = (acc.accountType?.name || '').toUpperCase();
-    const bal = Number(acc.currentBalance) || 0;
     const nameLower = (acc.accountName || '').toLowerCase();
     const detailType = (acc.detailType || '').toLowerCase();
 
     const isLeaf = !allAccounts.some(a => a.parentId === acc.id);
+    if (!isLeaf) continue;
 
-    if (isLeaf) {
-      if (typeName === 'ASSET' || typeName === 'ASSETS') {
-        totalAssets += bal;
-        if (detailType === 'bank' || nameLower.includes('bank') || nameLower.includes('al-habib') || nameLower.includes('meezan') || nameLower.includes('hbl') || nameLower.includes('mcb') || nameLower.includes('ubl') || nameLower.includes('allied') || nameLower.includes('faysal')) {
-          bankBalance += bal;
-        } else if (detailType === 'cash' || nameLower.includes('cash') || nameLower.includes('till') || nameLower.includes('petty') || nameLower.includes('hand')) {
-          cashBalance += bal;
+    let bal = Number(acc.currentBalance) || 0;
+
+    if (hasDateFilter) {
+      if (typeName === 'REVENUE' || typeName === 'EXPENSE') {
+        const periodFilter: any = {};
+        if (startDate) periodFilter.gte = new Date(startDate);
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          periodFilter.lte = end;
         }
-      } else if (typeName === 'LIABILITY' || typeName === 'LIABILITIES') {
-        totalLiabilities += (bal < 0 ? Math.abs(bal) : bal);
-      } else if (typeName === 'EQUITY') {
-        totalEquity += (bal < 0 ? Math.abs(bal) : bal);
-      } else if (typeName === 'REVENUE' || typeName === 'INCOME') {
-        totalRevenue += (bal < 0 ? Math.abs(bal) : bal);
-      } else if (typeName === 'EXPENSE' || typeName === 'EXPENSES' || (acc.glCode.startsWith('4') && !acc.glCode.startsWith('3') && !acc.glCode.startsWith('1') && !acc.glCode.startsWith('2'))) {
-        totalExpense += bal;
+
+        const agg = await prisma.ledgerEntry.aggregate({
+          where: {
+            accountId: acc.id,
+            postingDate: periodFilter
+          },
+          _sum: { debit: true, credit: true }
+        });
+
+        const d = Number(agg._sum.debit) || 0;
+        const c = Number(agg._sum.credit) || 0;
+        bal = typeName === 'REVENUE' ? (c - d) : (d - c);
+      } else if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        const agg = await prisma.ledgerEntry.aggregate({
+          where: {
+            accountId: acc.id,
+            postingDate: { lte: end }
+          },
+          _sum: { debit: true, credit: true }
+        });
+
+        const d = Number(agg._sum.debit) || 0;
+        const c = Number(agg._sum.credit) || 0;
+        const initialBal = Number(acc.initialBalance) || 0;
+        const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
+        bal = isDebitNormal ? initialBal + d - c : initialBal + c - d;
       }
+    }
+
+    if (typeName === 'ASSET' || typeName === 'ASSETS') {
+      totalAssets += bal;
+      if (detailType === 'bank' || nameLower.includes('bank') || nameLower.includes('al-habib') || nameLower.includes('meezan') || nameLower.includes('hbl') || nameLower.includes('mcb') || nameLower.includes('ubl') || nameLower.includes('allied') || nameLower.includes('faysal')) {
+        bankBalance += bal;
+      } else if (detailType === 'cash' || nameLower.includes('cash') || nameLower.includes('till') || nameLower.includes('petty') || nameLower.includes('hand')) {
+        cashBalance += bal;
+      }
+    } else if (typeName === 'LIABILITY' || typeName === 'LIABILITIES') {
+      totalLiabilities += (bal < 0 ? Math.abs(bal) : bal);
+    } else if (typeName === 'EQUITY') {
+      totalEquity += bal;
+    } else if (typeName === 'REVENUE' || typeName === 'INCOME') {
+      totalRevenue += bal;
+    } else if (typeName === 'EXPENSE' || typeName === 'EXPENSES' || (acc.glCode.startsWith('4') && !acc.glCode.startsWith('3') && !acc.glCode.startsWith('1') && !acc.glCode.startsWith('2'))) {
+      totalExpense += bal;
+    }
+  }
+
+  if (startDate) {
+    const start = new Date(startDate);
+    for (const acc of allAccounts) {
+      const typeName = (acc.accountType?.name || '').toUpperCase();
+      if (!['REVENUE', 'EXPENSE'].includes(typeName)) continue;
+
+      const priorAgg = await prisma.ledgerEntry.aggregate({
+        where: {
+          accountId: acc.id,
+          postingDate: { lt: start }
+        },
+        _sum: { debit: true, credit: true }
+      });
+
+      const d = Number(priorAgg._sum.debit) || 0;
+      const c = Number(priorAgg._sum.credit) || 0;
+      openingRetainedEarnings += typeName === 'REVENUE' ? (c - d) : (d - c) * -1;
     }
   }
 
   const netIncome = totalRevenue - totalExpense;
+  totalEquity += openingRetainedEarnings;
   const totalEquityWithNetIncome = totalEquity + netIncome;
   const isEquationBalanced = Math.abs(totalAssets - (totalLiabilities + totalEquityWithNetIncome)) < 0.01;
 

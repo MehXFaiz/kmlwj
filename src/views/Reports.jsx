@@ -3,6 +3,7 @@ import { DashboardLayout } from '../layouts/DashboardLayout';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { reportsService } from '../services/apiServices';
+import { useCoaStore } from '../store/coaStore';
 import { showToast } from '../components/ui/Toast';
 import { FileText, Banknote, PieChart, Activity, RefreshCw, BookOpen } from 'lucide-react';
 import { DesktopOnly, MobileOnly } from '../components/common/responsive';
@@ -20,6 +21,11 @@ export const Reports = () => {
   const [incomeStatementData, setIncomeStatementData] = useState(null);
   const [balanceSheetData, setBalanceSheetData] = useState(null);
   const [cashFlowData, setCashFlowData] = useState(null);
+  const { fiscalYear } = useCoaStore();
+  const reportParams = useMemo(() => ({
+    startDate: `${fiscalYear}-01-01`,
+    endDate: `${fiscalYear}-12-31`,
+  }), [fiscalYear]);
 
   useEffect(() => {
     const tabParam = searchParams.get('tab');
@@ -37,16 +43,16 @@ export const Reports = () => {
     setIsLoading(true);
     try {
       if (tab === 'trial-balance') {
-        const data = await reportsService.getTrialBalance();
+        const data = await reportsService.getTrialBalance(reportParams);
         setTrialBalanceData(data);
       } else if (tab === 'income-statement') {
-        const data = await reportsService.getIncomeStatement();
+        const data = await reportsService.getIncomeStatement(reportParams);
         setIncomeStatementData(data);
       } else if (tab === 'balance-sheet') {
-        const data = await reportsService.getBalanceSheet();
+        const data = await reportsService.getBalanceSheet(reportParams);
         setBalanceSheetData(data);
       } else if (tab === 'cash-flow') {
-        const data = await reportsService.getCashFlow();
+        const data = await reportsService.getCashFlow(reportParams);
         setCashFlowData(data);
       }
     } catch (err) {
@@ -59,7 +65,7 @@ export const Reports = () => {
 
   useEffect(() => {
     fetchReport(activeTab);
-  }, [activeTab]);
+  }, [activeTab, reportParams]);
 
   const handleRefresh = () => {
     fetchReport(activeTab);
@@ -142,6 +148,9 @@ export const Reports = () => {
           {/* TRIAL BALANCE */}
           {!isLoading && activeTab === 'trial-balance' && trialBalanceData && (
             <div className="overflow-x-auto">
+              <div className="px-4 pt-4 text-xs font-semibold text-slate-500">
+                Period: {trialBalanceData.summary?.periodLabel || `FY ${fiscalYear}`}
+              </div>
               <table className="w-full text-left border-collapse min-w-[600px]">
                 <thead>
                   <tr className="border-b border-slate-800 text-xs font-semibold text-slate-400 uppercase bg-slate-900/10">
@@ -185,7 +194,7 @@ export const Reports = () => {
             <div className="p-4 sm:p-8 max-w-4xl mx-auto space-y-8">
               <div className="text-center mb-8">
                 <h3 className="text-2xl font-bold text-slate-100 uppercase tracking-widest">Income Statement</h3>
-                <p className="text-sm text-slate-500 mt-1">As of {new Date().toLocaleDateString()}</p>
+                <p className="text-sm text-slate-500 mt-1">{incomeStatementData.summary?.periodLabel || `FY ${fiscalYear}`}</p>
               </div>
 
               {/* Revenues */}
@@ -237,7 +246,7 @@ export const Reports = () => {
             <div className="p-4 sm:p-8 max-w-5xl mx-auto space-y-8">
               <div className="text-center mb-8">
                 <h3 className="text-2xl font-bold text-slate-100 uppercase tracking-widest">Balance Sheet</h3>
-                <p className="text-sm text-slate-500 mt-1">As of {new Date().toLocaleDateString()}</p>
+                <p className="text-sm text-slate-500 mt-1">{balanceSheetData.summary?.periodLabel || `FY ${fiscalYear}`}</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
@@ -319,7 +328,7 @@ export const Reports = () => {
             <div className="p-4 sm:p-8 max-w-4xl mx-auto space-y-8 animate-in fade-in duration-200">
               <div className="text-center mb-8">
                 <h3 className="text-2xl font-bold text-slate-100 uppercase tracking-widest">Cash Flow Statement</h3>
-                <p className="text-sm text-slate-500 mt-1">As of {new Date().toLocaleDateString()}</p>
+                <p className="text-sm text-slate-500 mt-1">{`FY ${fiscalYear}`}</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
