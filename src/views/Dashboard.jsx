@@ -353,26 +353,30 @@ function AccountTypeStat({ label, count, pct, color, dotColor }) {
 export const Dashboard = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { accounts, fetchAccounts, selectedSubsidiary, loading: coaLoading } = useCoaStore();
+  const { accounts, fetchAccounts, selectedSubsidiary, fiscalYear, loading: coaLoading } = useCoaStore();
   const { journals, auditLogs, fetchJournals, isLoading: journalsLoading } = useJournalStore();
   const { stats: dbStats, fetchStats, loading: statsLoading } = useDashboardStore();
   const { addNotification } = useNotificationStore();
   const [refreshKey, setRefreshKey] = useState(0);
 
   const isRefreshing = statsLoading || coaLoading || journalsLoading;
+  const reportParams = useMemo(() => ({
+    startDate: `${fiscalYear}-01-01`,
+    endDate: `${fiscalYear}-12-31`,
+  }), [fiscalYear]);
 
   useEffect(() => {
     fetchAccounts();
-    fetchStats();
+    fetchStats(reportParams);
     if (fetchJournals) fetchJournals(selectedSubsidiary);
-  }, [fetchAccounts, fetchStats, fetchJournals, selectedSubsidiary]);
+  }, [fetchAccounts, fetchStats, fetchJournals, selectedSubsidiary, reportParams]);
 
   const handleRefresh = useCallback(() => {
     fetchAccounts();
-    fetchStats();
+    fetchStats(reportParams);
     if (fetchJournals) fetchJournals(selectedSubsidiary);
     setRefreshKey(k => k + 1);
-  }, [fetchAccounts, fetchStats, fetchJournals, selectedSubsidiary]);
+  }, [fetchAccounts, fetchStats, fetchJournals, selectedSubsidiary, reportParams]);
 
   // Live balances
   const { rollupBalances, localBalances } = useMemo(
@@ -514,7 +518,7 @@ export const Dashboard = () => {
             </span>
           </div>
           <h2 className="text-2xl font-extrabold text-slate-50 tracking-tight">{t('dashboard.title')}</h2>
-          <p className="text-xs text-slate-600 mt-0.5 font-medium">{selectedSubsidiary} &middot; FY 2026</p>
+          <p className="text-xs text-slate-600 mt-0.5 font-medium">{selectedSubsidiary} &middot; FY {fiscalYear}</p>
         </div>
         <button
           onClick={handleRefresh}
@@ -608,7 +612,7 @@ export const Dashboard = () => {
           <p className="text-[11px] text-slate-500 mt-0.5">
             {t('dashboard.assets')}: Rs {stats.assets.toLocaleString(undefined, { maximumFractionDigits: 0 })} &nbsp;·&nbsp;
             {t('dashboard.liabilities')}: Rs {stats.liabilities.toLocaleString(undefined, { maximumFractionDigits: 0 })} &nbsp;·&nbsp;
-            {t('dashboard.equity')}: Rs {stats.equity.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            {t('dashboard.equity')}: Rs {(stats.equity + stats.netIncome).toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </p>
         </div>
       </div>
@@ -623,7 +627,7 @@ export const Dashboard = () => {
             subtitle={t('dashboard.monthlyOperatingPerformance')}
             action={
               <span className="text-[10px] font-bold text-slate-500 bg-slate-800/60 border border-slate-700/50 px-2.5 py-1 rounded-full">
-                YTD 2026
+                FY {fiscalYear}
               </span>
             }
           />

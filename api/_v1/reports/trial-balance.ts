@@ -35,6 +35,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     let totalDebit = 0;
     let totalCredit = 0;
+    let openingRetainedEarnings = 0;
 
     const formatted: any[] = [];
 
@@ -123,6 +124,50 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         glCode: acc.glCode,
         accountName: acc.accountName,
         accountType: acc.accountType?.name || 'Unknown',
+        debit,
+        credit
+      });
+    }
+
+    if (startDate) {
+      const start = new Date(startDate);
+
+      for (const acc of activeAccounts) {
+        const typeName = (acc.accountType?.name || '').toUpperCase();
+        if (!['REVENUE', 'EXPENSE'].includes(typeName)) continue;
+
+        const priorAgg = await prisma.ledgerEntry.aggregate({
+          where: {
+            accountId: acc.id,
+            postingDate: { lt: start }
+          },
+          _sum: { debit: true, credit: true }
+        });
+
+        const d = Number(priorAgg._sum.debit) || 0;
+        const c = Number(priorAgg._sum.credit) || 0;
+        openingRetainedEarnings += typeName === 'REVENUE' ? (c - d) : (d - c) * -1;
+      }
+    }
+
+    if (startDate && openingRetainedEarnings !== 0) {
+      let debit = 0;
+      let credit = 0;
+
+      if (openingRetainedEarnings > 0) {
+        credit = openingRetainedEarnings;
+      } else {
+        debit = Math.abs(openingRetainedEarnings);
+      }
+
+      totalDebit += debit;
+      totalCredit += credit;
+
+      formatted.push({
+        id: 'virtual-opening-retained-earnings',
+        glCode: '-',
+        accountName: `Opening Retained Earnings (before ${startDate})`,
+        accountType: 'EQUITY',
         debit,
         credit
       });

@@ -20,6 +20,14 @@ const formatDateDDMMYYYY = (dateVal) => {
   return `${day}/${month}/${year}`;
 };
 
+const getBalanceSuffix = (balance, isDebitNormal) => {
+  if (!balance) return '';
+  if (isDebitNormal) {
+    return balance < 0 ? '(Cr)' : '(Dr)';
+  }
+  return balance < 0 ? '(Dr)' : '(Cr)';
+};
+
 export const GeneralLedger = () => {
   const { ledgerData, fetchLedger, isLoading } = useLedgerStore();
   const { accounts, fetchAccounts } = useCoaStore();
@@ -393,7 +401,7 @@ export const GeneralLedger = () => {
                       <span className="text-[10px] uppercase font-bold text-amber-400/90 tracking-wider print:text-slate-500">Closing Balance</span>
                       <span className="text-base font-mono font-bold text-amber-400 print:text-black">
                         PKR {Math.abs(closingBal).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        <span className="text-xs ml-1 opacity-80 print:text-slate-600">{closingBal < 0 ? '(Cr)' : '(Dr)'}</span>
+                        <span className="text-xs ml-1 opacity-80 print:text-slate-600">{getBalanceSuffix(closingBal, isDebitNorm)}</span>
                       </span>
                     </div>
                   </div>
@@ -490,7 +498,7 @@ export const GeneralLedger = () => {
                             </td>
                             <td className="py-3 px-4 text-right font-mono font-extrabold text-slate-100 bg-slate-900/40 print:bg-transparent print:text-slate-900">
                               PKR {Math.abs(entry.runningBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                              <span className="text-[10px] ml-1 opacity-70 font-normal print:text-slate-600">{entry.runningBalance < 0 ? '(Cr)' : ''}</span>
+                              <span className="text-[10px] ml-1 opacity-70 font-normal print:text-slate-600">{getBalanceSuffix(entry.runningBalance, isDebitNorm)}</span>
                             </td>
                             {canEditOrDelete && (
                               <td className="py-3 px-4 text-center print:hidden">

@@ -64,7 +64,10 @@ export const roleService = {
 };
 
 export const dashboardService = {
-  getStats: () => api.get('/api/v1/dashboard/stats').then((r) => r.data.data),
+  getStats: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return api.get(`/api/v1/dashboard/stats${qs ? `?${qs}` : ''}`).then((r) => r.data.data);
+  },
 };
 
 export const auditService = {
@@ -79,10 +82,22 @@ export const reservedCodeService = {
 };
 
 export const reportsService = {
-  getTrialBalance: () => api.get('/api/v1/reports/trial-balance').then((r) => r.data.data),
-  getIncomeStatement: () => api.get('/api/v1/reports/income-statement').then((r) => r.data.data),
-  getBalanceSheet: () => api.get('/api/v1/reports/balance-sheet').then((r) => r.data.data),
-  getCashFlow: () => api.get('/api/v1/reports/cash-flow').then((r) => r.data.data),
+  getTrialBalance: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return api.get(`/api/v1/reports/trial-balance${qs ? `?${qs}` : ''}`).then((r) => r.data.data);
+  },
+  getIncomeStatement: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return api.get(`/api/v1/reports/income-statement${qs ? `?${qs}` : ''}`).then((r) => r.data.data);
+  },
+  getBalanceSheet: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return api.get(`/api/v1/reports/balance-sheet${qs ? `?${qs}` : ''}`).then((r) => r.data.data);
+  },
+  getCashFlow: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return api.get(`/api/v1/reports/cash-flow${qs ? `?${qs}` : ''}`).then((r) => r.data.data);
+  },
   getGeneralLedger: (params = {}) => {
     const qs = new URLSearchParams(params).toString();
     return api.get(`/api/v1/general-ledger${qs ? `?${qs}` : ''}`).then((r) => r.data.data);

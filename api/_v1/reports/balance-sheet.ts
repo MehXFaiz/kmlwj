@@ -42,6 +42,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     
     let totalRevenue = 0;
     let totalExpense = 0;
+    let openingRetainedEarnings = 0;
 
     for (const acc of allAccounts) {
       const type = acc.accountType?.name;
@@ -111,9 +112,44 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       }
     }
 
+    if (startDate) {
+      const start = new Date(startDate);
+
+      for (const acc of allAccounts) {
+        const typeName = (acc.accountType?.name || '').toUpperCase();
+        if (!['REVENUE', 'EXPENSE'].includes(typeName)) continue;
+
+        const priorAgg = await prisma.ledgerEntry.aggregate({
+          where: {
+            accountId: acc.id,
+            postingDate: { lt: start }
+          },
+          _sum: { debit: true, credit: true }
+        });
+
+        const d = Number(priorAgg._sum.debit) || 0;
+        const c = Number(priorAgg._sum.credit) || 0;
+        openingRetainedEarnings += typeName === 'REVENUE' ? (c - d) : (d - c) * -1;
+      }
+    }
+
     // Net income is the P&L result for the period, added to equity section
     const netIncome = totalRevenue - totalExpense;
+    totalEquity += openingRetainedEarnings;
     totalEquity += netIncome; // Add retained earnings to total equity
+
+    if (openingRetainedEarnings !== 0) {
+      equity.push({
+        id: 'virtual-opening-retained-earnings',
+        glCode: '-',
+        accountName: startDate
+          ? `Opening Retained Earnings (before ${startDate})`
+          : 'Opening Retained Earnings',
+        balance: Math.abs(openingRetainedEarnings),
+        isRetainedEarnings: true,
+        sign: openingRetainedEarnings >= 0 ? 1 : -1
+      });
+    }
 
     // Create a virtual line item for Net Income in the Equity section
     if (netIncome !== 0) {
