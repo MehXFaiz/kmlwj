@@ -4,6 +4,7 @@ import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middlewar
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
+import { createNotification } from '../_utils/notify.js';
 
 async function generateCardNumber(tx: any): Promise<string> {
   const count = await tx.zakatCard.count();
@@ -36,21 +37,6 @@ async function resolveZakatExpenseAccount(tx: any) {
   return acc;
 }
 
-/* Zakat given to people is recorded as a Donation (disbursement) against a Beneficiary,
-   not a Member — so a member is matched to their donation by CNIC (primary) or full name. */
-function beneficiaryMatchesMember(beneficiary: { cnic: string | null; name: string }, member: { cnic: string | null; fullName: string }) {
-  if (member.cnic && beneficiary.cnic && member.cnic.trim() === beneficiary.cnic.trim()) return true;
-  return beneficiary.name.trim().toLowerCase() === member.fullName.trim().toLowerCase();
-}
-
-async function findApprovedZakatDonation(member: { cnic: string | null; fullName: string }) {
-  const donations = await prisma.donation.findMany({
-    where: { donationType: 'ZAKAT', status: 'APPROVED', beneficiaryId: { not: null } },
-    include: { beneficiary: { select: { cnic: true, name: true } } },
-  });
-  return donations.find((d) => d.beneficiary && beneficiaryMatchesMember(d.beneficiary, member)) || null;
-}
-
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -60,18 +46,50 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const action = req.query.action as string;
 
   if (method === 'GET') {
-    // Members eligible for a zakat card: those with an approved zakat donation on record
+    // Eligible beneficiaries: distinct beneficiaries from approved Zakat donations in Donation Given
     if (action === 'eligible-members') {
-      const [donations, members] = await Promise.all([
-        prisma.donation.findMany({
-          where: { donationType: 'ZAKAT', status: 'APPROVED', beneficiaryId: { not: null } },
-          include: { beneficiary: { select: { cnic: true, name: true } } },
-        }),
-        prisma.member.findMany({ orderBy: { fullName: 'asc' } }),
-      ]);
-      const eligible = members.filter((m) =>
-        donations.some((d) => d.beneficiary && beneficiaryMatchesMember(d.beneficiary, m))
-      );
+      const donations = await prisma.donation.findMany({
+        where: {
+          donationType: 'ZAKAT',
+          status: 'APPROVED',
+          beneficiaryId: { not: null },
+        },
+        include: {
+          beneficiary: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      // Deduplicate by beneficiaryId; first occurrence is the most recent (ordered desc)
+      const seen = new Set<string>();
+      const eligible: {
+        id: string;
+        name: string;
+        cnic: string | null;
+        mobile: string | null;
+        address: string | null;
+        lastZakatAmount: number;
+        lastZakatDate: Date;
+      }[] = [];
+
+      for (const d of donations) {
+        if (!d.beneficiaryId || !d.beneficiary) continue;
+        if (seen.has(d.beneficiaryId)) continue;
+        seen.add(d.beneficiaryId);
+        eligible.push({
+          id: d.beneficiary.id,
+          name: d.beneficiary.name,
+          cnic: d.beneficiary.cnic,
+          mobile: d.beneficiary.mobile,
+          address: d.beneficiary.address,
+          lastZakatAmount: d.amount,
+          lastZakatDate: d.createdAt,
+        });
+      }
+
+      // Sort alphabetically by name for the dropdown
+      eligible.sort((a, b) => a.name.localeCompare(b.name));
+
       return res.status(200).json({ status: 200, data: eligible });
     }
 
@@ -80,6 +98,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         where: { id },
         include: {
           member: true,
+          beneficiary: true,
           createdBy: { select: { id: true, fullName: true, email: true } },
         },
       });
@@ -90,6 +109,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const cards = await prisma.zakatCard.findMany({
       include: {
         member: true,
+        beneficiary: true,
         createdBy: { select: { id: true, fullName: true, email: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -98,10 +118,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'POST') {
-    const { memberId, zakatAmount, issueDate, paymentMethod, bankAccountId } = req.body;
+    const { beneficiaryId, zakatAmount, issueDate, paymentMethod, bankAccountId } = req.body;
 
-    if (!memberId || !zakatAmount) {
-      return res.status(400).json({ error: { message: 'Member and zakat amount are required', status: 400 } });
+    if (!beneficiaryId || !zakatAmount) {
+      return res.status(400).json({ error: { message: 'Beneficiary and zakat amount are required', status: 400 } });
     }
 
     const parsedAmount = parseFloat(zakatAmount);
@@ -109,13 +129,19 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Zakat amount must be greater than 0', status: 400 } });
     }
 
-    const member = await prisma.member.findUnique({ where: { id: memberId } });
-    if (!member) return res.status(404).json({ error: { message: 'Member not found', status: 404 } });
+    const beneficiary = await prisma.beneficiary.findUnique({ where: { id: beneficiaryId } });
+    if (!beneficiary) {
+      return res.status(404).json({ error: { message: 'Beneficiary not found', status: 404 } });
+    }
 
-    // A zakat card can only be issued to a member with an approved zakat donation on record
-    const zakatDonation = await findApprovedZakatDonation(member);
+    // Verify this beneficiary has an approved Zakat donation in the Donation Given module
+    const zakatDonation = await prisma.donation.findFirst({
+      where: { beneficiaryId, donationType: 'ZAKAT', status: 'APPROVED' },
+    });
     if (!zakatDonation) {
-      return res.status(400).json({ error: { message: 'Zakat card can only be issued to members with a recorded zakat donation', status: 400 } });
+      return res.status(400).json({
+        error: { message: 'Zakat card can only be issued to beneficiaries with an approved Zakat distribution on record', status: 400 },
+      });
     }
 
     if ((paymentMethod === 'BANK' || paymentMethod === 'CHEQUE') && !bankAccountId) {
@@ -127,7 +153,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       const zakatAccount = await resolveZakatExpenseAccount(tx);
       if (!zakatAccount) {
-        throw Object.assign(new Error('No Zakat expense/liability account found in Chart of Accounts. Please create one first.'), { status: 400 });
+        throw Object.assign(
+          new Error('No Zakat expense/liability account found in Chart of Accounts. Please create one first.'),
+          { status: 400 }
+        );
       }
 
       let debitAccountId: string;
@@ -141,13 +170,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       // Zakat disbursement: Debit Zakat Expense, Credit Cash/Bank
       const postingResult = await AccountingService.postTransaction(tx, {
         reference: cardNumber,
-        description: `Zakat Card issued to ${member.fullName} (${cardNumber})`,
+        description: `Zakat Card issued to ${beneficiary.name} (${cardNumber})`,
         module: 'Zakat Card',
         voucherType: 'JV',
         postedBy: req.user!.id,
         postingDate: issueDate ? new Date(issueDate) : new Date(),
         lines: [
-          { accountId: zakatAccount.id, debit: parsedAmount, credit: 0, description: `Zakat disbursement - ${member.fullName}` },
+          { accountId: zakatAccount.id, debit: parsedAmount, credit: 0, description: `Zakat disbursement - ${beneficiary.name}` },
           { accountId: debitAccountId, debit: 0, credit: parsedAmount, description: `Zakat payment - ${cardNumber}` },
         ],
         ipAddress: req.headers['x-forwarded-for'] as string,
@@ -156,7 +185,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       const card = await tx.zakatCard.create({
         data: {
-          memberId,
+          beneficiaryId,
+          memberId: null,
           zakatAmount: parsedAmount,
           issueDate: issueDate ? new Date(issueDate) : new Date(),
           cardNumber,
@@ -165,7 +195,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           journalEntryId: postingResult.journalEntry.id,
           createdById: req.user!.id,
         },
-        include: { member: true },
+        include: { beneficiary: true, member: true },
       });
 
       return card;
@@ -176,6 +206,17 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       null, result,
       req.headers['x-forwarded-for'] as string, req.headers['user-agent']
     );
+
+    await createNotification({
+      title: 'Zakat Card Issued',
+      message: `Zakat card ${result.cardNumber} issued to ${beneficiary.name} — PKR ${parsedAmount.toLocaleString()}.`,
+      module: 'Zakat',
+      recordId: result.id,
+      actionType: 'CREATE',
+      userName: req.user.email,
+      userRole: req.user.role,
+      userId: req.user.id,
+    });
 
     return res.status(201).json({ status: 201, data: result, message: 'Zakat card issued successfully' });
   }
@@ -200,6 +241,18 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       card, null,
       req.headers['x-forwarded-for'] as string, req.headers['user-agent']
     );
+
+    await createNotification({
+      title: 'Zakat Card Deleted',
+      message: `Zakat card ${card.cardNumber} deleted.`,
+      module: 'Zakat',
+      recordId: id,
+      actionType: 'DELETE',
+      userName: req.user.email,
+      userRole: req.user.role,
+      userId: req.user.id,
+      visibility: 'ADMIN_ONLY',
+    });
 
     return res.status(200).json({ status: 200, message: 'Zakat card deleted successfully' });
   }
