@@ -5,6 +5,8 @@ import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
 
+const accountingTxOptions = { maxWait: 10000, timeout: 30000 };
+
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -125,7 +127,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           ipAddress: req.headers['x-forwarded-for'] as string,
           userAgent: req.headers['user-agent']
         });
-      });
+      }, accountingTxOptions);
 
       return res.status(201).json({ status: 201, data: result.journalEntry });
     } catch (err: any) {
@@ -285,7 +287,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         }
 
         return await tx.journalEntry.findUnique({ where: { id }, include: { lines: true } });
-      });
+      }, accountingTxOptions);
 
       await logAudit(req.user.id, 'Update Journal Entry', 'Journal Entries', null, { id, status, reference, amount }, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
@@ -317,7 +319,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           if (resJe) results.push(resJe);
         }
         return results;
-      });
+      }, accountingTxOptions);
 
       await logAudit(
         req.user.id,
@@ -341,4 +343,3 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   return res.status(405).json({ error: { message: 'Method Not Allowed', status: 405 } });
 });
-

@@ -25,6 +25,7 @@ const pool = new pg.Pool({
 
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
+const accountingTxOptions = { maxWait: 10000, timeout: 30000 };
 
 async function main() {
   console.log('🚀 Starting Accounting Test Suite...');
@@ -202,7 +203,8 @@ async function createIncomeTransaction(
       module: 'Test Suite',
       postedBy: userId,
       postingDate: date,
-    })
+    }),
+    accountingTxOptions
   );
 
   return prisma.simpleIncome.create({
@@ -243,7 +245,8 @@ async function createExpenseTransaction(
       module: 'Test Suite',
       postedBy: userId,
       postingDate: date,
-    })
+    }),
+    accountingTxOptions
   );
 
   return prisma.simpleExpense.create({

@@ -4,6 +4,8 @@ import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middlewar
 import { prisma } from '../_prisma.js';
 import { AccountingService } from '../_services/accounting.service.js';
 
+const accountingTxOptions = { maxWait: 10000, timeout: 30000 };
+
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -101,7 +103,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       } catch (e) {}
 
       return expense;
-    });
+    }, accountingTxOptions);
 
     return res.status(201).json({ status: 201, data: result });
   }
@@ -181,7 +183,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       } catch (e) {}
 
       return updated;
-    });
+    }, accountingTxOptions);
 
     return res.status(200).json({ status: 200, data: result });
   }
@@ -200,7 +202,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       if (existing) {
         await tx.simpleExpense.delete({ where: { id: String(id) } });
       }
-    });
+    }, accountingTxOptions);
 
     return res.status(200).json({ status: 200, message: 'Expense deleted successfully' });
   }
