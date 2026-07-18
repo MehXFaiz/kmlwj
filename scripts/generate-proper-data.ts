@@ -53,11 +53,11 @@ async function main() {
   // Create 5 membership fee transactions
   const membershipAmounts = [500, 1000, 1500, 2500, 5000];
   const membershipDates = [
-    new Date(2025, 0, 15), // Jan 2025
-    new Date(2025, 2, 20), // March 2025
-    new Date(2024, 5, 10), // June 2024
-    new Date(2024, 8, 5), // September 2024
-    new Date(2025, 4, 1), // May 2025
+    new Date(2026, 0, 15), // Jan 2026
+    new Date(2026, 2, 20), // March 2026
+    new Date(2025, 5, 10), // June 2025
+    new Date(2025, 8, 5), // September 2025
+    new Date(2026, 4, 1), // May 2026
   ];
   const membershipPaymentMethods = ['CASH', 'BANK', 'CASH', 'BANK', 'CASH'];
 
@@ -78,9 +78,9 @@ async function main() {
   // Zakat 3 transactions
   const zakatAmounts = [10000, 25000, 15000];
   const zakatDates = [
-    new Date(2025, 1, 25),
-    new Date(2024, 10, 15),
-    new Date(2025, 3, 10),
+    new Date(2026, 1, 25),
+    new Date(2025, 10, 15),
+    new Date(2026, 3, 10),
   ];
   const zakatPaymentMethods = ['CASH', 'BANK', 'CASH'];
   for (let i = 0; i < zakatAmounts.length; i++) {
@@ -99,7 +99,7 @@ async function main() {
   console.log('Creating other income transactions...');
   // Other Income 2 transactions
   const otherAmounts = [8000, 12000];
-  const otherDates = [new Date(2024, 6, 20), new Date(2025, 5, 12)];
+  const otherDates = [new Date(2025, 6, 20), new Date(2026, 5, 12)];
   const otherPaymentMethods = ['BANK', 'CASH'];
   for (let i = 0; i < otherAmounts.length; i++) {
     console.log('Creating other income', i+1, otherAmounts[i]);
@@ -118,16 +118,16 @@ async function main() {
   // Create 10 expenses
   const expenseAmounts = [1000, 2500, 5000, 7500, 10000, 12000, 15000, 18000, 20000, 3000];
   const expenseDates = [
-    new Date(2025, 0, 20),
-    new Date(2024, 3, 15),
-    new Date(2025, 2, 10),
-    new Date(2024, 7, 5),
-    new Date(2025, 4, 25),
-    new Date(2024, 9, 18),
-    new Date(2025, 6, 8),
-    new Date(2024, 11, 30),
-    new Date(2025, 3, 12),
-    new Date(2024, 1, 22),
+    new Date(2026, 0, 20),
+    new Date(2025, 3, 15),
+    new Date(2026, 2, 10),
+    new Date(2025, 7, 5),
+    new Date(2026, 4, 25),
+    new Date(2025, 9, 18),
+    new Date(2026, 6, 8),
+    new Date(2025, 11, 30),
+    new Date(2026, 3, 12),
+    new Date(2025, 1, 22),
   ];
 
   for (let i = 0; i < 10; i++) {
