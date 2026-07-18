@@ -466,6 +466,16 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         req.headers["x-forwarded-for"],
         req.headers["user-agent"]
       );
+      await createNotification({
+        title: "Hall Booking Deleted",
+        message: `${deletedBookings.length} hall booking(s) deleted.`,
+        module: "Hall Booking",
+        actionType: "DELETE",
+        userName: req.user.email,
+        userRole: req.user.role,
+        userId: req.user.id,
+        visibility: "ADMIN_ONLY"
+      });
       return res.status(200).json({
         status: 200,
         message: `${deletedBookings.length} hall booking(s) deleted successfully`,
@@ -657,6 +667,16 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         });
       });
       await logAudit(req.user.id, "Update & Post Hall Booking", "REVENUE", existingBooking, updatedBooking, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      await createNotification({
+        title: "Hall Booking Updated",
+        message: `Hall booking for ${bookerName} on ${new Date(programDate).toLocaleDateString()} updated. Status: ${updatedBooking.status}.`,
+        module: "Hall Booking",
+        recordId: updatedBooking.id,
+        actionType: "UPDATE",
+        userName: req.user.email,
+        userRole: req.user.role,
+        userId: req.user.id
+      });
       return res.status(200).json({ status: 200, data: updatedBooking });
     } catch (err) {
       if (err.code === "P2002" || err.message?.includes("Unique constraint failed")) {
