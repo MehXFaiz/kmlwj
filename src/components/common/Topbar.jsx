@@ -119,7 +119,7 @@ export const Topbar = ({ onMobileMenuToggle }) => {
             dir="rtl"
             className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#1C120B] via-[#482F1E] to-[#291A10] dark:from-brand-300 dark:via-brand-200 dark:to-brand-400 truncate select-none text-[15px] sm:text-[18px] text-center leading-relaxed"
             style={{
-              fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
+              fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
               lineHeight: 2,
               letterSpacing: '0.01em',
             }}
@@ -285,7 +285,7 @@ export const Topbar = ({ onMobileMenuToggle }) => {
                 <button
                   onClick={() => { i18n.changeLanguage('ur'); setLanguageMenuOpen(false); }}
                   className={`w-full text-right px-3 py-2 text-xs font-semibold rounded-lg transition-all ${language === 'ur' ? 'bg-slate-800 text-brand-300' : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-100'}`}
-                  style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
+                  style={{ fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
                   dir="rtl"
                 >
                   اردو 🇵🇰

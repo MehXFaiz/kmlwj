@@ -47,7 +47,7 @@ export const AuthLayout = ({ children }) => {
           <div
             className="font-bold text-brand-300/90 mt-2"
             style={{
-              fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
+              fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
               fontSize: '1.25rem',
               lineHeight: 2,
             }}
@@ -114,7 +114,7 @@ export const AuthLayout = ({ children }) => {
             <div
               className="font-bold text-amber-200/90 text-center"
               style={{
-                fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
+                fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
                 fontSize: '1rem',
                 lineHeight: 2,
               }}

@@ -134,7 +134,7 @@ export const HallBookingGLModal = ({ booking, onClose }) => {
                     <div className="flex-1 text-center">
                       <h1
                         className="text-xl font-extrabold text-[#482F1E] leading-snug"
-                        style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
+                        style={{ fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
                       >
                         کچھی مسلم لوہارواڈھا ویلفیئر جماعت
                       </h1>

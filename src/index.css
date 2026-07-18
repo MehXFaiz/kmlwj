@@ -3,6 +3,32 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ═══════════════════════════════════════════════════════════════
+   URDU FONT — ALVI NASTALEEQ REGULAR (auto-applied via unicode-range)
+   Any Arabic/Urdu codepoint anywhere in the app is rendered in the
+   Alvi Nastaleeq stack, falling back to Jameel Noori / Noto Nastaliq
+   Urdu if Alvi isn't installed. English text remains on the sans stack.
+   ═══════════════════════════════════════════════════════════════ */
+@font-face {
+  font-family: "Alvi Nastaleeq";
+  src: local("Alvi Nastaleeq Regular"),
+       local("Alvi Nastaleeq"),
+       local("AlviNastaleeq-Regular"),
+       local("AlviNastaleeq"),
+       local("Jameel Noori Nastaleeq"),
+       local("Noto Nastaliq Urdu");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  /* Arabic + Arabic Supplement + Arabic Presentation Forms A/B + Urdu digits */
+  unicode-range:
+    U+0600-06FF,
+    U+0750-077F,
+    U+08A0-08FF,
+    U+FB50-FDFF,
+    U+FE70-FEFF;
+}
+
+/* ═══════════════════════════════════════════════════════════════
    KMLWJ DESIGN SYSTEM — "COPPER / BRONZE / GOLD" THEME
    Background: Deep Matte Black  |  Accent: Copper & Gold
    ═══════════════════════════════════════════════════════════════ */
@@ -102,8 +128,10 @@
 
 @theme {
   --breakpoint-xs: 30rem;
-  --font-sans: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-urdu: "Jameel Noori Nastaleeq", "Jameel Noori Nastaleeq Kasheeda", "Noto Nastaliq Urdu", serif;
+  /* English stack keeps Plus Jakarta / Inter first; Alvi Nastaleeq is appended so
+     browser per-glyph fallback handles any Urdu character embedded in mixed text. */
+  --font-sans: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Alvi Nastaleeq", sans-serif;
+  --font-urdu: "Alvi Nastaleeq", "Alvi Nastaleeq Regular", "Jameel Noori Nastaleeq", "Jameel Noori Nastaleeq Kasheeda", "Noto Nastaliq Urdu", serif;
 
   /* ── Remap Tailwind slate to our new premium palette ── */
   --color-slate-950: var(--slate-950);
@@ -377,8 +405,23 @@
 }
 
 @layer utilities {
-  .font-urdu {
-    font-family: "Jameel Noori Nastaleeq", "Jameel Noori Nastaleeq Kasheeda", "Noto Nastaliq Urdu", serif !important;
+  .font-urdu,
+  .urdu-font {
+    font-family: "Alvi Nastaleeq", "Alvi Nastaleeq Regular", "Jameel Noori Nastaleeq", "Jameel Noori Nastaleeq Kasheeda", "Noto Nastaliq Urdu", serif !important;
+    direction: rtl;
+    text-align: right;
+    line-height: 2;
+    letter-spacing: 0;
+    font-feature-settings: "kern", "liga", "calt";
+  }
+  .english-font {
+    font-family: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    direction: ltr;
+  }
+  /* Inline Urdu inside an LTR container (e.g. "BOOKER NAME / نام بکنگ کنندہ")
+     — no direction override, just font swap for the Urdu glyphs. */
+  .font-urdu-inline {
+    font-family: "Alvi Nastaleeq", "Alvi Nastaleeq Regular", "Jameel Noori Nastaleeq", "Jameel Noori Nastaleeq Kasheeda", "Noto Nastaliq Urdu", serif !important;
   }
 }
 

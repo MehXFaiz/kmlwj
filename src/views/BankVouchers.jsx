@@ -85,7 +85,7 @@ function VoucherReceiptSlip({ voucher, amount, copyType, t }) {
               className="w-14 h-14 object-contain shrink-0"
             />
             <div className="flex-1 text-left">
-              <h2 className="text-sm font-bold text-[#4a2c11] leading-tight" style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif", fontSize: '1.25rem' }}>کچھی مسلم لوہارواڈھا ویلفیئر جماعت</h2>
+              <h2 className="text-sm font-bold text-[#4a2c11] leading-tight" style={{ fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif", fontSize: '1.25rem' }}>کچھی مسلم لوہارواڈھا ویلفیئر جماعت</h2>
               <p className="text-[9px] text-[#4a2c11]/85 uppercase tracking-wider font-extrabold">Kutchi Muslim Loharwada Welfare Jamat</p>
             </div>
           </div>

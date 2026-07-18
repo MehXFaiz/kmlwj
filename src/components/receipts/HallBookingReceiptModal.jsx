@@ -225,7 +225,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
                 <h1
                   className="text-base font-bold text-slate-900 tracking-normal leading-relaxed"
                   style={{
-                    fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
+                    fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
                     color: '#0f172a'
                   }}
                 >
@@ -267,7 +267,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
               </span>
               <span
                 className="text-xs font-bold block leading-relaxed"
-                style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
+                style={{ fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
               >
                 {copyUrduTitle}
               </span>
@@ -299,7 +299,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
             <span>1. BOOKING SPECIFICATIONS & EVENT SCHEDULE</span>
             <span
               className="text-xs font-bold leading-normal"
-              style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
+              style={{ fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
             >
               تفصیلاتِ بکنگ کنندہ و تقریب
             </span>
@@ -408,7 +408,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
             <span>2. ASSIGNED VENUE VERIFICATION MATRIX</span>
             <span
               className="text-xs font-bold leading-normal"
-              style={{ fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
+              style={{ fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
             >
               منتخب کردہ ہال / تقریب کا مقام
             </span>
@@ -438,7 +438,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
                     <span
                       className="text-xs font-bold leading-relaxed"
                       style={{
-                        fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif'",
+                        fontFamily: "'Alvi Nastaleeq', 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
                         color: selected ? '#064e3b' : '#334155'
                       }}
                     >
@@ -578,7 +578,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
             <span
               className="text-xs font-bold block leading-relaxed"
               style={{
-                fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif'",
+                fontFamily: "'Alvi Nastaleeq', 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
                 color: '#0f172a'
               }}
             >
@@ -595,7 +595,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
             <span
               className="text-xs font-bold block leading-relaxed"
               style={{
-                fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif'",
+                fontFamily: "'Alvi Nastaleeq', 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
                 color: '#0f172a'
               }}
             >
@@ -612,7 +612,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
             <span
               className="text-xs font-bold block leading-relaxed"
               style={{
-                fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif'",
+                fontFamily: "'Alvi Nastaleeq', 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
                 color: '#0f172a'
               }}
             >
@@ -629,7 +629,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
             <span
               className="text-xs font-bold block leading-relaxed"
               style={{
-                fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif'",
+                fontFamily: "'Alvi Nastaleeq', 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
                 color: '#0f172a'
               }}
             >
@@ -646,7 +646,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
           <p
             className="text-[10px] font-bold leading-relaxed"
             style={{
-              fontFamily: "'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif'",
+              fontFamily: "'Alvi Nastaleeq', 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
               color: '#334155'
             }}
           >
