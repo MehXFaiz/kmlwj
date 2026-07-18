@@ -21,13 +21,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
     }
 
-    // Fetch all accounts
+    // Optional date range filter
+    const { startDate, endDate } = (req.query || {}) as { startDate?: string; endDate?: string };
+
+    // Fetch all accounts (including those with zero balance to avoid missing accounts)
     const allAccounts = await prisma.account.findMany({
-      where: {
-        NOT: {
-          currentBalance: 0
-        }
-      },
       include: {
         accountType: true
       },
@@ -47,30 +45,73 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     for (const acc of allAccounts) {
       const type = acc.accountType?.name;
+      let balance = acc.currentBalance;
+
+      // If date range provided, compute balance from ledger entries in range
+      // NOTE: For Balance Sheet (Balance/Asset/Liability/Equity accounts), we use cumulative
+      // all-time balance up to endDate (not just the period). Revenue/Expense use period totals.
+      if (type === 'REVENUE' || type === 'EXPENSE') {
+        if (startDate || endDate) {
+          const dateFilter: any = {};
+          if (startDate) dateFilter.gte = new Date(startDate);
+          if (endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            dateFilter.lte = end;
+          }
+          const agg = await prisma.ledgerEntry.aggregate({
+            where: { accountId: acc.id, postingDate: dateFilter },
+            _sum: { debit: true, credit: true }
+          });
+          const d = Number(agg._sum.debit) || 0;
+          const c = Number(agg._sum.credit) || 0;
+          balance = type === 'REVENUE' ? (c - d) : (d - c);
+        }
+      } else {
+        // For balance sheet items, use cumulative balance up to endDate
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          const agg = await prisma.ledgerEntry.aggregate({
+            where: { accountId: acc.id, postingDate: { lte: end } },
+            _sum: { debit: true, credit: true }
+          });
+          const d = Number(agg._sum.debit) || 0;
+          const c = Number(agg._sum.credit) || 0;
+          const initialBal = Number(acc.initialBalance) || 0;
+          const typeName = (type || '').toUpperCase();
+          const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
+          balance = isDebitNormal ? initialBal + d - c : initialBal + c - d;
+        }
+      }
+
+      // Skip accounts with no activity
+      if (balance === 0) continue;
       
       const formatted = {
         id: acc.id,
         glCode: acc.glCode,
         accountName: acc.accountName,
-        balance: acc.currentBalance
+        balance
       };
 
       if (type === 'ASSET') {
         assets.push(formatted);
-        totalAssets += acc.currentBalance;
+        totalAssets += balance;
       } else if (type === 'LIABILITY') {
         liabilities.push(formatted);
-        totalLiabilities += acc.currentBalance;
+        totalLiabilities += balance;
       } else if (type === 'EQUITY') {
         equity.push(formatted);
-        totalEquity += acc.currentBalance;
+        totalEquity += balance;
       } else if (type === 'REVENUE') {
-        totalRevenue += acc.currentBalance;
+        totalRevenue += balance;
       } else if (type === 'EXPENSE') {
-        totalExpense += acc.currentBalance;
+        totalExpense += balance;
       }
     }
 
+    // Net income is the P&L result for the period, added to equity section
     const netIncome = totalRevenue - totalExpense;
     totalEquity += netIncome; // Add retained earnings to total equity
 
@@ -79,7 +120,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       equity.push({
         id: 'virtual-net-income',
         glCode: '-',
-        accountName: 'Current Year Net Income',
+        accountName: startDate || endDate
+          ? `Net Income (${startDate || ''}${startDate && endDate ? ' to ' : ''}${endDate || ''})`
+          : 'Current Period Net Income',
         balance: Math.abs(netIncome),
         isNetIncome: true,
         sign: netIncome >= 0 ? 1 : -1
@@ -97,7 +140,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           totalLiabilities,
           totalEquity,
           totalLiabilitiesAndEquity: totalLiabilities + totalEquity,
-          isBalanced: Math.abs(totalAssets - (totalLiabilities + totalEquity)) < 0.001
+          isBalanced: Math.abs(totalAssets - (totalLiabilities + totalEquity)) < 0.001,
+          periodLabel: startDate && endDate
+            ? `${startDate} to ${endDate}`
+            : startDate
+            ? `From ${startDate}`
+            : endDate
+            ? `Up to ${endDate}`
+            : 'All Time'
         }
       }
     });

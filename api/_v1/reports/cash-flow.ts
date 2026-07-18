@@ -39,10 +39,22 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const cashBankCodes = new Set(cashBankAccounts.map(a => a.glCode));
     const endingCash = cashBankAccounts.reduce((sum, acc) => sum + Number(acc.currentBalance || 0), 0);
 
+    // Optional date range filter — support ?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+    const { startDate, endDate } = (req.query || {}) as { startDate?: string; endDate?: string };
+
+    const dateFilter: any = {};
+    if (startDate) dateFilter.gte = new Date(startDate);
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.lte = end;
+    }
+
     // 2. Fetch all posted journal entries and analyze transactions
     const postedJournals = await prisma.journalEntry.findMany({
       where: {
         status: 'Posted',
+        ...(Object.keys(dateFilter).length > 0 ? { postingDate: dateFilter } : {}),
       },
       include: {
         lines: {

@@ -21,13 +21,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
     }
 
+    // Optional date range filter
+    const { startDate, endDate } = (req.query || {}) as { startDate?: string; endDate?: string };
+
     // Fetch accounts with non-zero balances
+    // Use account.currentBalance (all-time) if no date filter, else compute from ledger entries
     const activeAccounts = await prisma.account.findMany({
-      where: {
-        NOT: {
-          currentBalance: 0
-        }
-      },
       include: {
         accountType: true
       },
@@ -37,9 +36,61 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     let totalDebit = 0;
     let totalCredit = 0;
 
-    const formatted = activeAccounts.map((acc) => {
-      let debit = 0;
-      let credit = 0;
+    const formatted: any[] = [];
+
+    for (const acc of activeAccounts) {
+      let balance = acc.currentBalance;
+
+      // If date filter is provided, compute balance from ledger entries in that range
+      if (startDate || endDate) {
+        const dateFilter: any = {};
+        if (startDate) dateFilter.gte = new Date(startDate);
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          dateFilter.lte = end;
+        }
+
+        const agg = await prisma.ledgerEntry.aggregate({
+          where: {
+            accountId: acc.id,
+            postingDate: dateFilter
+          },
+          _sum: { debit: true, credit: true }
+        });
+
+        const d = Number(agg._sum.debit) || 0;
+        const c = Number(agg._sum.credit) || 0;
+
+        // For balance sheet accounts (ASSET/LIABILITY/EQUITY): use initial balance + period movements
+        // For P&L accounts (REVENUE/EXPENSE): use only period movements
+        const typeName = (acc.accountType?.name || '').toUpperCase();
+        const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
+        const isPnl = ['REVENUE', 'EXPENSE'].includes(typeName);
+
+        if (isPnl) {
+          // P&L accounts: only period activity matters
+          balance = isDebitNormal ? d - c : c - d;
+        } else {
+          // Balance sheet accounts: initial + all prior movements + period movements
+          // For simplicity, use all ledger entries up to endDate
+          if (endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            const cumAgg = await prisma.ledgerEntry.aggregate({
+              where: { accountId: acc.id, postingDate: { lte: end } },
+              _sum: { debit: true, credit: true }
+            });
+            const cd = Number(cumAgg._sum.debit) || 0;
+            const cc = Number(cumAgg._sum.credit) || 0;
+            const initBal = Number(acc.initialBalance) || 0;
+            balance = isDebitNormal ? initBal + cd - cc : initBal + cc - cd;
+          }
+        }
+      }
+
+      // Skip accounts with zero balance
+      if (balance === 0) continue;
 
       // In our system, currentBalance is:
       // - (Sum of Debits) - (Sum of Credits) for ASSET and EXPENSE (debit-normal).
@@ -47,32 +98,35 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       const typeName = acc.accountType?.name?.toUpperCase() || 'ASSET';
       const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
 
+      let debit = 0;
+      let credit = 0;
+
       if (isDebitNormal) {
-        if (acc.currentBalance > 0) {
-          debit = acc.currentBalance;
-        } else if (acc.currentBalance < 0) {
-          credit = Math.abs(acc.currentBalance);
+        if (balance > 0) {
+          debit = balance;
+        } else if (balance < 0) {
+          credit = Math.abs(balance);
         }
       } else {
-        if (acc.currentBalance > 0) {
-          credit = acc.currentBalance;
-        } else if (acc.currentBalance < 0) {
-          debit = Math.abs(acc.currentBalance);
+        if (balance > 0) {
+          credit = balance;
+        } else if (balance < 0) {
+          debit = Math.abs(balance);
         }
       }
 
       totalDebit += debit;
       totalCredit += credit;
 
-      return {
+      formatted.push({
         id: acc.id,
         glCode: acc.glCode,
         accountName: acc.accountName,
         accountType: acc.accountType?.name || 'Unknown',
         debit,
         credit
-      };
-    });
+      });
+    }
 
     return res.status(200).json({
       status: 200,
@@ -81,7 +135,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         summary: {
           totalDebit,
           totalCredit,
-          isBalanced: Math.abs(totalDebit - totalCredit) < 0.001
+          isBalanced: Math.abs(totalDebit - totalCredit) < 0.001,
+          periodLabel: startDate && endDate
+            ? `${startDate} to ${endDate}`
+            : startDate
+            ? `From ${startDate}`
+            : endDate
+            ? `Up to ${endDate}`
+            : 'All Time'
         }
       }
     });

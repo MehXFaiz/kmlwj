@@ -383,6 +383,7 @@ export const Dashboard = () => {
   // Financial stats
   const stats = useMemo(() => {
     if (dbStats?.summary) {
+      const netIncome = (dbStats.summary.totalRevenue || 0) - (dbStats.summary.totalExpense || 0);
       return {
         ...dbStats.summary,
         assets: dbStats.summary.totalAssets || 0,
@@ -390,10 +391,11 @@ export const Dashboard = () => {
         equity: dbStats.summary.totalEquity || 0,
         revenue: dbStats.summary.totalRevenue || 0,
         expenses: dbStats.summary.totalExpense || 0,
-        cashBalance: Math.max(0, dbStats.summary.cashBalance || 0),
-        bankBalance: Math.max(0, dbStats.summary.bankBalance || 0),
-        netIncome: Math.max(0, dbStats.summary.netIncome || 0),
-        grossMargin: dbStats.summary.totalRevenue > 0 ? ((dbStats.summary.totalRevenue - dbStats.summary.totalExpense) / dbStats.summary.totalRevenue * 100) : 0,
+        // Do NOT clamp to 0 — overdrafts and losses must be visible
+        cashBalance: dbStats.summary.cashBalance || 0,
+        bankBalance: dbStats.summary.bankBalance || 0,
+        netIncome,
+        grossMargin: dbStats.summary.totalRevenue > 0 ? (netIncome / dbStats.summary.totalRevenue * 100) : 0,
         isEquationBalanced: dbStats.summary.isEquationBalanced ?? true,
       };
     }
@@ -432,9 +434,10 @@ export const Dashboard = () => {
     const totalEquityWithNetIncome = equity + netIncome;
     return {
       assets, liabilities, equity, revenue, expenses,
-      cashBalance: Math.max(0, cashBalance), bankBalance: Math.max(0, bankBalance),
-      netIncome: Math.max(0, netIncome),
-      grossMargin: revenue > 0 ? ((revenue - expenses) / revenue * 100) : 0,
+      // Do NOT clamp to 0 — overdrafts and losses must be visible
+      cashBalance, bankBalance,
+      netIncome,
+      grossMargin: revenue > 0 ? (netIncome / revenue * 100) : 0,
       isEquationBalanced: Math.abs(assets - (liabilities + totalEquityWithNetIncome)) < 0.01,
     };
   }, [accounts, localBalances, dbStats]);
@@ -530,20 +533,21 @@ export const Dashboard = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {[
           {
+            // BUG FIX: Show gross revenue (Total Income), not net income
             title: t('dashboard.totalIncome'),
-            value: Math.max(0, (stats.revenue || 0) - (stats.expenses || 0)),
+            value: stats.revenue || 0,
             icon: TrendingUp,
             iconColor: 'text-emerald-400',
             iconBg: 'bg-emerald-500/10 border-emerald-500/20',
             trend: 'up',
-            trendLabel: stats.expenses ? `Net after expenses (Gross: Rs ${Number(stats.revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })})` : t('dashboard.moneyReceived'),
+            trendLabel: t('dashboard.moneyReceived'),
             trendColor: 'text-emerald-400',
             accentBar: 'from-emerald-500 to-emerald-400',
             delay: 0,
           },
           {
             title: t('dashboard.totalSpent'),
-            value: Math.max(0, stats.expenses || 0),
+            value: stats.expenses || 0,
             icon: TrendingDown,
             iconColor: 'text-red-400',
             iconBg: 'bg-red-500/10 border-red-500/20',
@@ -554,27 +558,29 @@ export const Dashboard = () => {
             delay: 80,
           },
           {
+            // BUG FIX: Show actual cash balance (not clamped); overdraft shows as negative
             title: t('dashboard.cashInHand'),
-            value: Math.max(0, stats.cashBalance || 0),
+            value: stats.cashBalance || 0,
             icon: Banknote,
-            iconColor: 'text-blue-400',
-            iconBg: 'bg-blue-500/10 border-blue-500/20',
-            trend: 'neutral',
-            trendLabel: t('dashboard.availableCash'),
-            trendColor: 'text-slate-400',
-            accentBar: 'from-blue-500 to-blue-400',
+            iconColor: (stats.cashBalance || 0) < 0 ? 'text-red-400' : 'text-blue-400',
+            iconBg: (stats.cashBalance || 0) < 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-blue-500/10 border-blue-500/20',
+            trend: (stats.cashBalance || 0) < 0 ? 'down' : 'neutral',
+            trendLabel: (stats.cashBalance || 0) < 0 ? 'Overdraft' : t('dashboard.availableCash'),
+            trendColor: (stats.cashBalance || 0) < 0 ? 'text-red-400' : 'text-slate-400',
+            accentBar: (stats.cashBalance || 0) < 0 ? 'from-red-500 to-red-400' : 'from-blue-500 to-blue-400',
             delay: 160,
           },
           {
+            // BUG FIX: Show actual bank balance (not clamped); overdraft shows as negative
             title: t('dashboard.bankBalance'),
-            value: Math.max(0, stats.bankBalance || 0),
+            value: stats.bankBalance || 0,
             icon: Layers,
-            iconColor: 'text-violet-400',
-            iconBg: 'bg-violet-500/10 border-violet-500/20',
-            trend: 'neutral',
-            trendLabel: t('dashboard.inBankAccounts'),
-            trendColor: 'text-slate-400',
-            accentBar: 'from-violet-500 to-violet-400',
+            iconColor: (stats.bankBalance || 0) < 0 ? 'text-red-400' : 'text-violet-400',
+            iconBg: (stats.bankBalance || 0) < 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-violet-500/10 border-violet-500/20',
+            trend: (stats.bankBalance || 0) < 0 ? 'down' : 'neutral',
+            trendLabel: (stats.bankBalance || 0) < 0 ? 'Overdraft' : t('dashboard.inBankAccounts'),
+            trendColor: (stats.bankBalance || 0) < 0 ? 'text-red-400' : 'text-slate-400',
+            accentBar: (stats.bankBalance || 0) < 0 ? 'from-red-500 to-red-400' : 'from-violet-500 to-violet-400',
             delay: 240,
           },
         ].map((card) => (

@@ -21,14 +21,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
     }
 
-    // Fetch Revenue and Expense accounts
+    // Optional date range filter — if provided, calculate balances from ledger entries in range
+    // If not provided, use account.currentBalance (all-time cumulative)
+    const { startDate, endDate } = (req.query || {}) as { startDate?: string; endDate?: string };
+
+    // Fetch Revenue and Expense accounts (always show all, even zero balance)
     const pnlAccounts = await prisma.account.findMany({
       where: {
         accountType: {
           name: { in: ['REVENUE', 'EXPENSE'] }
-        },
-        NOT: {
-          currentBalance: 0
         }
       },
       include: {
@@ -44,19 +45,56 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     for (const acc of pnlAccounts) {
       const type = acc.accountType?.name;
+
+      let balance = acc.currentBalance;
+
+      // If date filter is provided, calculate balance from ledger entries in that date range
+      if (startDate || endDate) {
+        const dateFilter: any = {};
+        if (startDate) dateFilter.gte = new Date(startDate);
+        if (endDate) {
+          // Include the entire end date by going to end of day
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          dateFilter.lte = end;
+        }
+
+        const agg = await prisma.ledgerEntry.aggregate({
+          where: {
+            accountId: acc.id,
+            postingDate: dateFilter
+          },
+          _sum: { debit: true, credit: true }
+        });
+
+        const totalDebit = Number(agg._sum.debit) || 0;
+        const totalCredit = Number(agg._sum.credit) || 0;
+
+        // Revenue accounts: credit-normal (credit increases balance)
+        // Expense accounts: debit-normal (debit increases balance)
+        if (type === 'REVENUE') {
+          balance = totalCredit - totalDebit;
+        } else if (type === 'EXPENSE') {
+          balance = totalDebit - totalCredit;
+        }
+      }
+
+      // Skip accounts with zero activity (after date filtering)
+      if (balance === 0) continue;
+
       const formatted = {
         id: acc.id,
         glCode: acc.glCode,
         accountName: acc.accountName,
-        balance: acc.currentBalance
+        balance
       };
 
       if (type === 'REVENUE') {
         revenues.push(formatted);
-        totalRevenue += acc.currentBalance;
+        totalRevenue += balance;
       } else if (type === 'EXPENSE') {
         expenses.push(formatted);
-        totalExpense += acc.currentBalance;
+        totalExpense += balance;
       }
     }
 
@@ -70,7 +108,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         summary: {
           totalRevenue,
           totalExpense,
-          netIncome
+          netIncome,
+          // Include filter metadata so UI can label the report correctly
+          periodLabel: startDate && endDate
+            ? `${startDate} to ${endDate}`
+            : startDate
+            ? `From ${startDate}`
+            : endDate
+            ? `Up to ${endDate}`
+            : 'All Time'
         }
       }
     });
