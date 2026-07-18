@@ -70,17 +70,63 @@ function applyPalette(palette) {
   root.style.setProperty('--brand-900', `hsl(${h}, ${s}%, 15%)`);
 }
 
+/** Resolve 'system' to the OS preference; pass 'light'/'dark' through. */
+function resolveTheme(theme) {
+  if (theme === 'system') {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  return theme === 'light' ? 'light' : 'dark';
+}
+
+/** Swap the html class with a brief 250ms color transition. */
+function applyThemeClass(theme) {
+  const root = document.documentElement;
+  const resolved = resolveTheme(theme);
+  root.classList.add('theme-transition');
+  root.classList.remove('dark', 'light');
+  root.classList.add(resolved);
+  window.clearTimeout(applyThemeClass._t);
+  applyThemeClass._t = window.setTimeout(() => root.classList.remove('theme-transition'), 300);
+}
+
+// React to OS theme changes while in 'system' mode
+let systemListenerAttached = false;
+function ensureSystemListener(get) {
+  if (systemListenerAttached) return;
+  systemListenerAttached = true;
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (get().theme === 'system') applyThemeClass('system');
+  });
+}
+
+/** Persist the choice to the server for logged-in users (fire-and-forget). */
+async function saveThemeToServer(theme) {
+  try {
+    const { default: api } = await import('../services/api');
+    await api.patch('/api/v1/user-preferences', { themePreference: theme });
+  } catch {
+    // Guest / offline — localStorage persistence still applies
+  }
+}
+
 export const useThemeStore = create(
   persist(
     (set, get) => ({
-      theme: 'dark',
+      theme: 'dark', // 'light' | 'dark' | 'system'
       activePaletteId: 'copper',
 
-      setTheme: (newTheme) => {
-        const root = document.documentElement;
-        root.classList.remove('dark', 'light');
-        root.classList.add(newTheme);
+      setTheme: (newTheme, { skipServerSync = false } = {}) => {
+        applyThemeClass(newTheme);
+        ensureSystemListener(get);
         set({ theme: newTheme });
+        if (!skipServerSync) saveThemeToServer(newTheme);
+      },
+
+      /** Apply the server-stored preference after login without re-saving it. */
+      syncFromServer: (serverTheme) => {
+        if (!['light', 'dark', 'system'].includes(serverTheme)) return;
+        if (serverTheme === get().theme) return;
+        get().setTheme(serverTheme, { skipServerSync: true });
       },
 
       setPalette: (paletteId) => {
@@ -94,20 +140,18 @@ export const useThemeStore = create(
       initPalette: () => {
         const { activePaletteId, theme } = get();
         // Upgrade legacy 'amber' or invalid palettes to 'copper'
-        const resolvedId = ['copper', 'gold', 'bronze', 'rosegold', 'platinum'].includes(activePaletteId) 
-          ? activePaletteId 
+        const resolvedId = ['copper', 'gold', 'bronze', 'rosegold', 'platinum'].includes(activePaletteId)
+          ? activePaletteId
           : 'copper';
-          
+
         const palette = COLOR_PALETTES.find((p) => p.id === resolvedId);
         if (palette) {
           applyPalette(palette);
           if (resolvedId !== activePaletteId) set({ activePaletteId: resolvedId });
         }
 
-        // Apply theme classes
-        const root = document.documentElement;
-        root.classList.remove('dark', 'light');
-        root.classList.add(theme || 'dark');
+        applyThemeClass(theme || 'dark');
+        ensureSystemListener(get);
       },
     }),
     {

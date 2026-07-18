@@ -30,6 +30,12 @@ export function isAdminOrSuperAdmin(role?: string): boolean {
 
 export function isEditOrDeleteRequest(req: any): boolean {
   const method = (req.method || '').toUpperCase();
+  const url = req.url || req.path || '';
+  // Self-service writes exempt from the admin-only edit guard:
+  // user-preferences (own theme), notifications (own read/dismiss state)
+  if (url.includes('/user-preferences') || url.includes('/notifications')) {
+    return false;
+  }
   if (method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
     return true;
   }

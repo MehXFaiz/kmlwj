@@ -56,6 +56,10 @@ export const useAuthStore = create((set, get) => {
           isAuthenticated: true,
           loading: false,
         });
+        if (userData.themePreference) {
+          const { useThemeStore } = await import('./themeStore');
+          useThemeStore.getState().syncFromServer(userData.themePreference);
+        }
         return true;
       } catch (err) {
         if (err.response && (err.response.status === 401 || err.response.status === 403)) {
@@ -83,6 +87,10 @@ export const useAuthStore = create((set, get) => {
           isAuthenticated: true,
           loading: false
         });
+        if (userData.themePreference) {
+          const { useThemeStore } = await import('./themeStore');
+          useThemeStore.getState().syncFromServer(userData.themePreference);
+        }
         return true;
       } catch (err) {
         set({ error: err.message, loading: false });

@@ -18,6 +18,7 @@ model User {
   role                 Role            @relation(fields: [roleId], references: [id])
   resetPasswordToken   String?
   resetPasswordExpires DateTime?
+  themePreference      String?         // 'light' | 'dark' | 'system' — null = use client default
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
   refreshTokens            RefreshToken[]

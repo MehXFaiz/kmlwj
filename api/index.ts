@@ -17,6 +17,7 @@ import healthV1Handler from './_v1/health.js';
 
 // New dynamic api/v1 route handlers
 import meHandler from './_v1/auth/me.js';
+import userPreferencesHandler from './_v1/user-preferences.js';
 import statsHandler from './_v1/dashboard/stats.js';
 import accountsHandler from './_v1/accounts.js';
 import accountsTreeHandler from './_v1/accounts/tree.js';
@@ -113,6 +114,8 @@ app.all('/api/v1/health', makeExpress(healthV1Handler));
 
 // Register new API v1 route handlers
 app.get('/api/v1/auth/me', makeExpress(meHandler));
+app.get('/api/v1/user-preferences', makeExpress(userPreferencesHandler));
+app.patch('/api/v1/user-preferences', makeExpress(userPreferencesHandler));
 app.get('/api/v1/dashboard/stats', makeExpress(statsHandler));
 app.get('/api/v1/accounts/tree', makeExpress(accountsTreeHandler));
 app.get('/api/v1/accounts', makeExpress(accountsHandler));
