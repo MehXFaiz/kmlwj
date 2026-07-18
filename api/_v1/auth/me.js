@@ -35,7 +35,6 @@ var me_default = makeHandler(async (req, res) => {
       fullName: user.fullName,
       email: user.email,
       role: user.role.name,
-      themePreference: user.themePreference || null,
       permissions
     }
   });

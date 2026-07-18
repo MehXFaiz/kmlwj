@@ -4,13 +4,11 @@ import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { createNotification } from "../_utils/notify.js";
-
 async function generateCardNumber(tx) {
   const count = await tx.zakatCard.count();
   const seq = (count + 1).toString().padStart(6, "0");
   return `ZK-${seq}`;
 }
-
 async function resolveZakatExpenseAccount(tx) {
   let acc = await tx.account.findFirst({
     where: {
@@ -33,16 +31,13 @@ async function resolveZakatExpenseAccount(tx) {
   }
   return acc;
 }
-
 var zakat_cards_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
   const { method } = req;
   const id = req.query.id;
   const action = req.query.action;
-
   if (method === "GET") {
-    // Eligible beneficiaries: distinct beneficiaries from approved Zakat donations in Donation Given
     if (action === "eligible-members") {
       const donations = await prisma.donation.findMany({
         where: {
@@ -50,12 +45,12 @@ var zakat_cards_default = makeHandler(async (req, res) => {
           status: "APPROVED",
           beneficiaryId: { not: null }
         },
-        include: { beneficiary: true },
+        include: {
+          beneficiary: true
+        },
         orderBy: { createdAt: "desc" }
       });
-
-      // Deduplicate by beneficiaryId; first occurrence is the most recent (ordered desc)
-      const seen = new Set();
+      const seen = /* @__PURE__ */ new Set();
       const eligible = [];
       for (const d of donations) {
         if (!d.beneficiaryId || !d.beneficiary) continue;
@@ -71,13 +66,9 @@ var zakat_cards_default = makeHandler(async (req, res) => {
           lastZakatDate: d.createdAt
         });
       }
-
-      // Sort alphabetically by name for the dropdown
       eligible.sort((a, b) => a.name.localeCompare(b.name));
-
       return res.status(200).json({ status: 200, data: eligible });
     }
-
     if (id) {
       const card = await prisma.zakatCard.findUnique({
         where: { id },
@@ -90,7 +81,6 @@ var zakat_cards_default = makeHandler(async (req, res) => {
       if (!card) return res.status(404).json({ error: { message: "Zakat card not found", status: 404 } });
       return res.status(200).json({ status: 200, data: card });
     }
-
     const cards = await prisma.zakatCard.findMany({
       include: {
         member: true,
@@ -101,25 +91,19 @@ var zakat_cards_default = makeHandler(async (req, res) => {
     });
     return res.status(200).json({ status: 200, data: cards });
   }
-
   if (method === "POST") {
     const { beneficiaryId, zakatAmount, issueDate, paymentMethod, bankAccountId } = req.body;
-
     if (!beneficiaryId || !zakatAmount) {
       return res.status(400).json({ error: { message: "Beneficiary and zakat amount are required", status: 400 } });
     }
-
     const parsedAmount = parseFloat(zakatAmount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       return res.status(400).json({ error: { message: "Zakat amount must be greater than 0", status: 400 } });
     }
-
     const beneficiary = await prisma.beneficiary.findUnique({ where: { id: beneficiaryId } });
     if (!beneficiary) {
       return res.status(404).json({ error: { message: "Beneficiary not found", status: 404 } });
     }
-
-    // Verify this beneficiary has an approved Zakat donation in the Donation Given module
     const zakatDonation = await prisma.donation.findFirst({
       where: { beneficiaryId, donationType: "ZAKAT", status: "APPROVED" }
     });
@@ -128,11 +112,9 @@ var zakat_cards_default = makeHandler(async (req, res) => {
         error: { message: "Zakat card can only be issued to beneficiaries with an approved Zakat distribution on record", status: 400 }
       });
     }
-
     if ((paymentMethod === "BANK" || paymentMethod === "CHEQUE") && !bankAccountId) {
       return res.status(400).json({ error: { message: "Bank account is required for Bank/Cheque payments", status: 400 } });
     }
-
     const result = await prisma.$transaction(async (tx) => {
       const cardNumber = await generateCardNumber(tx);
       const zakatAccount = await resolveZakatExpenseAccount(tx);
@@ -142,7 +124,6 @@ var zakat_cards_default = makeHandler(async (req, res) => {
           { status: 400 }
         );
       }
-
       let debitAccountId;
       if (paymentMethod === "CASH" || !paymentMethod) {
         const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
@@ -150,15 +131,13 @@ var zakat_cards_default = makeHandler(async (req, res) => {
       } else {
         debitAccountId = bankAccountId;
       }
-
-      // Zakat disbursement: Debit Zakat Expense, Credit Cash/Bank
       const postingResult = await AccountingService.postTransaction(tx, {
         reference: cardNumber,
         description: `Zakat Card issued to ${beneficiary.name} (${cardNumber})`,
         module: "Zakat Card",
         voucherType: "JV",
         postedBy: req.user.id,
-        postingDate: issueDate ? new Date(issueDate) : new Date(),
+        postingDate: issueDate ? new Date(issueDate) : /* @__PURE__ */ new Date(),
         lines: [
           { accountId: zakatAccount.id, debit: parsedAmount, credit: 0, description: `Zakat disbursement - ${beneficiary.name}` },
           { accountId: debitAccountId, debit: 0, credit: parsedAmount, description: `Zakat payment - ${cardNumber}` }
@@ -166,13 +145,12 @@ var zakat_cards_default = makeHandler(async (req, res) => {
         ipAddress: req.headers["x-forwarded-for"],
         userAgent: req.headers["user-agent"]
       });
-
       const card = await tx.zakatCard.create({
         data: {
           beneficiaryId,
           memberId: null,
           zakatAmount: parsedAmount,
-          issueDate: issueDate ? new Date(issueDate) : new Date(),
+          issueDate: issueDate ? new Date(issueDate) : /* @__PURE__ */ new Date(),
           cardNumber,
           paymentMethod: paymentMethod || "CASH",
           bankAccountId: bankAccountId || null,
@@ -181,19 +159,20 @@ var zakat_cards_default = makeHandler(async (req, res) => {
         },
         include: { beneficiary: true, member: true }
       });
-
       return card;
     });
-
     await logAudit(
-      req.user.id, "Issue Zakat Card", "ZAKAT_CARD",
-      null, result,
-      req.headers["x-forwarded-for"], req.headers["user-agent"]
+      req.user.id,
+      "Issue Zakat Card",
+      "ZAKAT_CARD",
+      null,
+      result,
+      req.headers["x-forwarded-for"],
+      req.headers["user-agent"]
     );
-
     await createNotification({
       title: "Zakat Card Issued",
-      message: `Zakat card ${result.cardNumber} issued to ${beneficiary.name} — PKR ${parsedAmount.toLocaleString()}.`,
+      message: `Zakat card ${result.cardNumber} issued to ${beneficiary.name} \u2014 PKR ${parsedAmount.toLocaleString()}.`,
       module: "Zakat",
       recordId: result.id,
       actionType: "CREATE",
@@ -201,30 +180,30 @@ var zakat_cards_default = makeHandler(async (req, res) => {
       userRole: req.user.role,
       userId: req.user.id
     });
-
     return res.status(201).json({ status: 201, data: result, message: "Zakat card issued successfully" });
   }
-
   if (method === "DELETE") {
     if (!id) return res.status(400).json({ error: { message: "Card ID is required", status: 400 } });
     const card = await prisma.zakatCard.findUnique({ where: { id } });
     if (!card) return res.status(404).json({ error: { message: "Zakat card not found", status: 404 } });
-
     await prisma.$transaction(async (tx) => {
       if (card.journalEntryId) {
         try {
           await AccountingService.deleteJournalEntry(tx, card.journalEntryId, req.user.id, "Deleted Zakat Card");
-        } catch (e) {}
+        } catch (e) {
+        }
       }
       await tx.zakatCard.delete({ where: { id } });
     });
-
     await logAudit(
-      req.user.id, "Delete Zakat Card", "ZAKAT_CARD",
-      card, null,
-      req.headers["x-forwarded-for"], req.headers["user-agent"]
+      req.user.id,
+      "Delete Zakat Card",
+      "ZAKAT_CARD",
+      card,
+      null,
+      req.headers["x-forwarded-for"],
+      req.headers["user-agent"]
     );
-
     await createNotification({
       title: "Zakat Card Deleted",
       message: `Zakat card ${card.cardNumber} deleted.`,
@@ -236,11 +215,10 @@ var zakat_cards_default = makeHandler(async (req, res) => {
       userId: req.user.id,
       visibility: "ADMIN_ONLY"
     });
-
     return res.status(200).json({ status: 200, message: "Zakat card deleted successfully" });
   }
-
   return res.status(405).json({ error: { message: "Method not allowed", status: 405 } });
 });
-
-export { zakat_cards_default as default };
+export {
+  zakat_cards_default as default
+};

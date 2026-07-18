@@ -2,7 +2,6 @@ import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { AccountingService } from "../_services/accounting.service.js";
-import { createNotification } from "../_utils/notify.js";
 const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };
 var simple_expense_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
@@ -86,16 +85,6 @@ var simple_expense_default = makeHandler(async (req, res) => {
       }
       return expense;
     }, accountingTxOptions);
-    await createNotification({
-      title: "Expense Recorded",
-      message: `Expense of PKR ${numAmount.toLocaleString()} recorded under ${result.expenseHead?.name || "Expense"}.${paidTo ? ` Paid to: ${paidTo}.` : ""}`,
-      module: "Expense",
-      recordId: result.id,
-      actionType: "CREATE",
-      userName: user?.fullName || req.user.email,
-      userRole: user?.role.name || req.user.role,
-      userId: req.user.id
-    });
     return res.status(201).json({ status: 201, data: result });
   }
   if (req.method === "PUT" || req.method === "PATCH") {
@@ -167,16 +156,6 @@ var simple_expense_default = makeHandler(async (req, res) => {
       }
       return updated;
     }, accountingTxOptions);
-    await createNotification({
-      title: "Expense Updated",
-      message: `Expense updated to PKR ${numAmount.toLocaleString()} under ${result.expenseHead?.name || "Expense"}.`,
-      module: "Expense",
-      recordId: result.id,
-      actionType: "UPDATE",
-      userName: user?.fullName || req.user.email,
-      userRole: user?.role.name || req.user.role,
-      userId: req.user.id
-    });
     return res.status(200).json({ status: 200, data: result });
   }
   if (req.method === "DELETE") {
@@ -194,16 +173,6 @@ var simple_expense_default = makeHandler(async (req, res) => {
         await tx.simpleExpense.delete({ where: { id: String(id) } });
       }
     }, accountingTxOptions);
-    await createNotification({
-      title: "Expense Deleted",
-      message: `An expense record was deleted.`,
-      module: "Expense",
-      recordId: String(id),
-      actionType: "DELETE",
-      userName: user?.fullName || req.user.email,
-      userRole: user?.role.name || req.user.role,
-      userId: req.user.id
-    });
     return res.status(200).json({ status: 200, message: "Expense deleted successfully" });
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
