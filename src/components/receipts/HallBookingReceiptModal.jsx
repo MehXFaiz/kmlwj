@@ -80,11 +80,42 @@ const getDayNameEnglish = (dateVal) => {
   return daysEnglish[d.getDay()];
 };
 
+const format12HourTime = (timeVal) => {
+  if (!timeVal) return '';
+  const raw = String(timeVal).trim();
+  if (!raw || !/^\d{1,2}:\d{2}$/.test(raw)) return '';
+
+  const [hoursStr, minutesStr] = raw.split(':');
+  const hours = Number(hoursStr);
+  const minutes = Number(minutesStr);
+
+  if (Number.isNaN(hours) || Number.isNaN(minutes) || hours > 23 || minutes > 59) return '';
+
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
+  return date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+};
+
+const formatEventTiming = (booking) => {
+  const session = (booking?.timings || '').trim();
+  const from = format12HourTime(booking?.timeFrom);
+  const to = format12HourTime(booking?.timeTo);
+
+  if (!session || !from || !to) return 'N/A';
+  return `${session} (${from} - ${to})`;
+};
+
 const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => {
   const bookingDateStr = formatDateDDMMYYYY(booking.bookingDate || booking.createdAt || new Date());
   const programDateStr = formatDateDDMMYYYY(booking.programDate);
   const programDayUrdu = getDayNameUrdu(booking.programDate);
   const programDayEnglish = getDayNameEnglish(booking.programDate);
+
+  const eventName = (booking.programType || booking.functionType || '').trim() || 'N/A';
+  const eventTiming = formatEventTiming(booking);
 
   const hallCharges = Number(booking.hallCharges ?? booking.amount ?? 0);
   const discountAmt = Number(booking.discount || 0);
@@ -335,13 +366,31 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
               <span className="text-[8px] font-bold text-slate-500 uppercase block">
                 PROGRAM & TIMING / تقریب
               </span>
-              <div
-                className="text-xs font-black mt-1 truncate"
-                style={{ color: '#0f172a' }}
-              >
-                {booking.programType || 'Event'} — {booking.timings || 'Evening'}
+              <div className="mt-1 space-y-1">
+                <div>
+                  <span className="text-[7px] font-bold text-slate-500 uppercase block">
+                    EVENT NAME / نام تقریب
+                  </span>
+                  <div
+                    className="text-[10px] font-black truncate"
+                    style={{ color: '#0f172a' }}
+                  >
+                    {eventName}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[7px] font-bold text-slate-500 uppercase block">
+                    EVENT TIMING / اوقات تقریب
+                  </span>
+                  <div
+                    className="text-[10px] font-black truncate"
+                    style={{ color: '#0f172a' }}
+                  >
+                    {eventTiming}
+                  </div>
+                </div>
               </div>
-              <div className="text-[9px] text-slate-500 truncate">
+              <div className="text-[9px] text-slate-500 truncate mt-1">
                 {booking.address || 'KMLWJ Complex, Lyari'}
               </div>
             </div>
