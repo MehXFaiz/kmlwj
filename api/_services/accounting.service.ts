@@ -468,32 +468,36 @@ export class AccountingService {
               }
             }
           });
-          await AccountingService.recalculateAccountBalance(tx, line.account.id);
         }
       }
     }
 
     // 3. Automatically Log Audit Trail inside transaction
-    await tx.auditLog.create({
-      data: {
-        userId: payload.postedBy && payload.postedBy !== 'system' && payload.postedBy.length === 36 ? payload.postedBy : null,
-        action: `Auto Post Journal (${voucherNo})`,
-        module: payload.module,
-        oldValues: null,
-        newValues: {
-          voucherNo,
-          voucherType,
-          reference,
-          totalDebit,
-          totalCredit,
-          linesCount: resolvedLines.length,
-          status,
-          postedBy: payload.postedBy || null
-        },
-        ipAddress: payload.ipAddress || null,
-        userAgent: payload.userAgent || null
-      }
-    });
+    try {
+      await tx.auditLog.create({
+        data: {
+          userId: payload.postedBy && payload.postedBy !== 'system' && payload.postedBy.length === 36 ? payload.postedBy : null,
+          action: `Auto Post Journal (${voucherNo})`,
+          module: payload.module,
+          oldValues: null,
+          newValues: {
+            voucherNo,
+            voucherType,
+            reference,
+            totalDebit,
+            totalCredit,
+            linesCount: resolvedLines.length,
+            status,
+            postedBy: payload.postedBy || null
+          },
+          ipAddress: payload.ipAddress || null,
+          userAgent: payload.userAgent || null
+        }
+      });
+    } catch (e) {
+      // Ignore audit log errors for now
+      console.warn('Audit log creation failed:', e);
+    }
 
     return {
       journalEntry,
