@@ -22,44 +22,44 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log("=== RUNNING BANK ACCOUNTS RENAME MIGRATION ===");
 
-  // 1. Rename Meezan Bank Account (1100001) -> National Bank of Pakistan
-  const meezanSub = await prisma.account.findUnique({ where: { glCode: '1100001' } });
-  if (meezanSub) {
+  // 1. Ensure Subsidiary 1100001 is named National Bank of Pakistan
+  const sub1 = await prisma.account.findUnique({ where: { glCode: '1100001' } });
+  if (sub1) {
     await prisma.account.update({
-      where: { id: meezanSub.id },
+      where: { id: sub1.id },
       data: { accountName: 'National Bank of Pakistan' }
     });
-    console.log("✅ Renamed Subsidiary Meezan Bank Account (1100001 -> National Bank of Pakistan)");
+    console.log("✅ Updated Subsidiary 1100001 -> National Bank of Pakistan");
   }
 
-  // 2. Rename HBL Bank Account (1100002) -> NBP Zakat Account
-  const hblSub = await prisma.account.findUnique({ where: { glCode: '1100002' } });
-  if (hblSub) {
+  // 2. Ensure Subsidiary 1100002 is named NBP Zakat Account
+  const sub2 = await prisma.account.findUnique({ where: { glCode: '1100002' } });
+  if (sub2) {
     await prisma.account.update({
-      where: { id: hblSub.id },
+      where: { id: sub2.id },
       data: { accountName: 'NBP Zakat Account' }
     });
-    console.log("✅ Renamed Subsidiary HBL Bank Account (1100002 -> NBP Zakat Account)");
+    console.log("✅ Updated Subsidiary 1100002 -> NBP Zakat Account");
   }
 
-  // 3. Rename Meezan Bank Account (1010101) -> National Bank of Pakistan
-  const meezanGL = await prisma.account.findUnique({ where: { glCode: '1010101' } });
-  if (meezanGL) {
+  // 3. Ensure GL 1010101 is named National Bank of Pakistan
+  const gl1 = await prisma.account.findUnique({ where: { glCode: '1010101' } });
+  if (gl1) {
     await prisma.account.update({
-      where: { id: meezanGL.id },
+      where: { id: gl1.id },
       data: { accountName: 'National Bank of Pakistan' }
     });
-    console.log("✅ Renamed GL Meezan Bank Account (1010101 -> National Bank of Pakistan)");
+    console.log("✅ Updated GL 1010101 -> National Bank of Pakistan");
   }
 
-  // 4. Rename HBL Bank Account (1010102) -> NBP Zakat Account
-  const hblGL = await prisma.account.findUnique({ where: { glCode: '1010102' } });
-  if (hblGL) {
+  // 4. Ensure GL 1010102 is named NBP Zakat Bank
+  const gl2 = await prisma.account.findUnique({ where: { glCode: '1010102' } });
+  if (gl2) {
     await prisma.account.update({
-      where: { id: hblGL.id },
-      data: { accountName: 'NBP Zakat Account' }
+      where: { id: gl2.id },
+      data: { accountName: 'NBP Zakat Bank' }
     });
-    console.log("✅ Renamed GL HBL Bank Account (1010102 -> NBP Zakat Account)");
+    console.log("✅ Updated GL 1010102 -> NBP Zakat Bank");
   }
 
   console.log("=== BANK ACCOUNTS RENAME MIGRATION COMPLETED ===");

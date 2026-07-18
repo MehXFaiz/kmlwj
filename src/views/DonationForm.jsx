@@ -18,11 +18,11 @@ const DEFAULT_DONATION = {
 };
 
 const PAKISTANI_BANKS = [
-  'Habib Bank Limited (HBL)', 'National Bank of Pakistan (NBP)', 'Meezan Bank',
-  'United Bank Limited (UBL)', 'MCB Bank', 'Allied Bank Limited (ABL)', 'Bank Alfalah',
-  'Standard Chartered Bank', 'Askari Bank', 'Bank AL Habib', 'Faysal Bank', 'Soneri Bank',
-  'Bank of Punjab (BOP)', 'JS Bank', 'Dubai Islamic Bank', 'Al Baraka Bank', 'Bank Islami',
-  'Sindh Bank', 'Habib Metropolitan Bank', 'First Women Bank', 'Samba Bank', 'Silkbank', 'Summit Bank'
+  'National Bank of Pakistan (NBP)', 'United Bank Limited (UBL)', 'MCB Bank',
+  'Allied Bank Limited (ABL)', 'Bank Alfalah', 'Standard Chartered Bank', 'Askari Bank',
+  'Bank AL Habib', 'Faysal Bank', 'Soneri Bank', 'Bank of Punjab (BOP)', 'JS Bank',
+  'Dubai Islamic Bank', 'Al Baraka Bank', 'Bank Islami', 'Sindh Bank',
+  'Habib Metropolitan Bank', 'First Women Bank', 'Samba Bank', 'Silkbank', 'Summit Bank'
 ];
 
 export const DonationForm = () => {

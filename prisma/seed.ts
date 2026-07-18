@@ -389,8 +389,8 @@ async function main() {
   console.log('Seeding Level 4 GL Accounts...');
   const glAccounts = [
     // Under Cash & Bank Balances (1010100)
-    { glCode: '1010101', accountName: 'Meezan Bank Account', parentCode: '1010100', accountTypeName: 'ASSET',   detailType: 'Cash', description: 'Main Meezan Islamic Bank current account' },
-    { glCode: '1010102', accountName: 'HBL Bank Account',    parentCode: '1010100', accountTypeName: 'ASSET',   detailType: 'Cash', description: 'HBL commercial current account' },
+    { glCode: '1010101', accountName: 'National Bank of Pakistan', parentCode: '1010100', accountTypeName: 'ASSET',   detailType: 'Cash', description: 'National Bank of Pakistan — main current account' },
+    { glCode: '1010102', accountName: 'NBP Zakat Bank',            parentCode: '1010100', accountTypeName: 'ASSET',   detailType: 'Cash', description: 'NBP Zakat Bank — dedicated zakat collection account' },
     // Under Hall Booking (3010100)
     { glCode: '3010101', accountName: 'Bagh-e-Hajiani Garden', parentCode: '3010100', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Bagh-e-Hajiani Garden booking income — rate: Rs 43,000' },
     { glCode: '3010102', accountName: 'Sadaya Hall',           parentCode: '3010100', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Sadaya Hall booking income — rate: Rs 28,000' },

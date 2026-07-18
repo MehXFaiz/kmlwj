@@ -77,7 +77,7 @@ enum AccountLevel {
   MAIN       // Level 1 — Root categories (Assets, Liabilities, Revenue, Expenses)
   PARENT     // Level 2 — Sub-categories (Current Assets, Hall Income, etc.)
   SUBSIDIARY // Level 3 — Posting groups / headers (Cash & Bank, Hall Booking, etc.)
-  GL         // Level 4 — Individual GL accounts (HBL Bank, Bagh-e-Hajiani, etc.) — User editable
+  GL         // Level 4 — Individual GL accounts (NBP Bank, Bagh-e-Hajiani, etc.) — User editable
 }
 
 

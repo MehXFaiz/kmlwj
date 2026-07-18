@@ -107,7 +107,7 @@ var stats_default = makeHandler(async (req, res) => {
     }
     if (typeName === "ASSET" || typeName === "ASSETS") {
       totalAssets += bal;
-      if (detailType === "bank" || nameLower.includes("bank") || nameLower.includes("al-habib") || nameLower.includes("meezan") || nameLower.includes("hbl") || nameLower.includes("mcb") || nameLower.includes("ubl") || nameLower.includes("allied") || nameLower.includes("faysal")) {
+      if (detailType === "bank" || nameLower.includes("bank") || nameLower.includes("al-habib") || nameLower.includes("nbp") || nameLower.includes("national bank") || nameLower.includes("mcb") || nameLower.includes("ubl") || nameLower.includes("allied") || nameLower.includes("faysal")) {
         bankBalance += bal;
       } else if (detailType === "cash" || nameLower.includes("cash") || nameLower.includes("till") || nameLower.includes("petty") || nameLower.includes("hand")) {
         cashBalance += bal;

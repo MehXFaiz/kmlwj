@@ -44,7 +44,7 @@ async function main() {
 
   // Get accounts
   const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
-  const bankAccount = await prisma.account.findFirstOrThrow({ where: { accountName: { contains: 'Meezan' } } });
+  const bankAccount = await prisma.account.findFirstOrThrow({ where: { accountName: { contains: 'National Bank of Pakistan' } } });
 
   console.log('Cash account:', cashAccount.glCode, cashAccount.accountName);
   console.log('Bank account:', bankAccount.glCode, bankAccount.accountName);

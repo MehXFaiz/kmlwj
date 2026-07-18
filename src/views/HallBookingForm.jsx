@@ -947,8 +947,7 @@ export const HallBookingForm = () => {
                           })} required
                             className={inputWithIconClass(errors.chequeBankName)}>
                             <option value="">-- Select Bank --</option>
-                            <option value="Meezan Bank">Meezan Bank</option>
-                            <option value="Habib Bank Limited (HBL)">Habib Bank Limited (HBL)</option>
+                            <option value="National Bank of Pakistan">National Bank of Pakistan</option>
                             <option value="United Bank Limited (UBL)">United Bank Limited (UBL)</option>
                             <option value="MCB Bank">MCB Bank</option>
                             <option value="Allied Bank Limited (ABL)">Allied Bank Limited (ABL)</option>

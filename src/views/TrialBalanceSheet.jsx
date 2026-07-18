@@ -270,8 +270,8 @@ export const TrialBalanceSheet = () => {
 
     // Right Column: 20 Incomes (Receipts)
     const incomes = [
-      { sNo: '01', desc: 'General Account HBL (Opening)', val: getAssetBal(['1010102']) },
-      { sNo: '02', desc: 'Cash in Hand (Opening)', val: getAssetBal(['1010101']) },
+      { sNo: '01', desc: 'NBP Zakat Bank (Opening)', val: getAssetBal(['1010102']) },
+      { sNo: '02', desc: 'National Bank of Pakistan (Opening)', val: getAssetBal(['1010101']) },
       { sNo: '03', desc: 'Opening Advance Salary', val: getAssetBal([], /advance.*salary/i) },
       { sNo: '04', desc: 'Bus Booking', val: getRevenueBal(['3020401'], /bus.*booking/i) },
       { sNo: '05', desc: 'Decoration Income', val: getRevenueBal(['3020403'], /decoration.*commission|decoration.*income/i) },
@@ -289,7 +289,7 @@ export const TrialBalanceSheet = () => {
       { sNo: '17', desc: 'Zakat Income Ramzan 2021', val: getRevenueBal([], /zakat.*2021/i) },
       { sNo: '18', desc: 'Zakat Income Ramzan 2022', val: getRevenueBal([], /zakat.*2022/i) },
       { sNo: '19', desc: 'Zakat Income Ramzan 2023', val: getRevenueBal(['3020101'], /zakat/i) },
-      { sNo: '20', desc: 'Profit HBL General', val: getRevenueBal([], /profit.*hbl|interest.*hbl/i) },
+      { sNo: '20', desc: 'Profit NBP General', val: getRevenueBal([], /profit.*nbp|interest.*nbp/i) },
     ];
 
     // Compute residual balances from all ledger accounts and distribute to match main total

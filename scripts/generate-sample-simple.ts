@@ -38,7 +38,7 @@ async function main() {
     where: { accountName: { contains: 'Cash', mode: 'insensitive' }, accountLevel: { in: ['GL', 'SUBSIDIARY'] } }
   });
   const bankAccount = await prisma.account.findFirstOrThrow({
-    where: { accountName: { contains: 'Meezan', mode: 'insensitive' }, accountLevel: { in: ['GL', 'SUBSIDIARY'] } }
+    where: { accountName: { contains: 'National Bank of Pakistan', mode: 'insensitive' }, accountLevel: { in: ['GL', 'SUBSIDIARY'] } }
   });
 
   console.log('📝 Creating sample income transactions...');

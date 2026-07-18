@@ -31,11 +31,11 @@ if (!TOKEN) { console.error('LOGIN FAILED', JSON.stringify(lb).slice(0, 300)); p
 console.log('== Logged in as admin ==');
 
 // Account codes
-const CASH = '1010103', HBL = '1010102';
+const CASH = '1010103', NBP = '1010101';
 const accountsRes = await api('GET', '/api/v1/accounts');
 const accById = {};
 for (const a of accountsRes.body.data) accById[a.code] = a.id;
-const HBL_ID = accById[HBL];
+const NBP_ID = accById[NBP];
 
 // ── Seed data ─────────────────────────────────────────────
 // Membership fees via revenue-collections (real module flow)
@@ -54,18 +54,18 @@ const zakats = [
 ];
 // Other income via journal entries (BR)
 const otherIncome = [
-  { amount: 8000,  code: '3010101', pmCode: HBL,  date: '2026-06-01', name: 'Bagh-e-Hajiani Garden' },
+  { amount: 8000,  code: '3010101', pmCode: NBP,  date: '2026-06-01', name: 'Bagh-e-Hajiani Garden' },
   { amount: 12000, code: '3010102', pmCode: CASH, date: '2025-11-20', name: 'Sadaya Hall' },
 ];
 // Expenses via journal entries (BP)
 const expenses = [
-  { amount: 20000, code: '4010101', pmCode: HBL,  date: '2026-01-31', name: 'Staff Salary' },
+  { amount: 20000, code: '4010101', pmCode: NBP,  date: '2026-01-31', name: 'Staff Salary' },
   { amount: 15000, code: '4040101', pmCode: CASH, date: '2026-02-01', name: 'Building Rent' },
-  { amount: 3500,  code: '4040201', pmCode: HBL,  date: '2025-08-15', name: 'Rates & Taxes' },
+  { amount: 3500,  code: '4040201', pmCode: NBP,  date: '2025-08-15', name: 'Rates & Taxes' },
   { amount: 4200,  code: '4050101', pmCode: CASH, date: '2025-09-10', name: 'Bus Repairs' },
   { amount: 2800,  code: '4050102', pmCode: CASH, date: '2026-03-05', name: 'Generator Repairs' },
-  { amount: 7500,  code: '4050103', pmCode: HBL,  date: '2026-04-18', name: 'Hall Repairs' },
-  { amount: 5000,  code: '4070101', pmCode: HBL,  date: '2025-12-01', name: 'Legal Fees' },
+  { amount: 7500,  code: '4050103', pmCode: NBP,  date: '2026-04-18', name: 'Hall Repairs' },
+  { amount: 5000,  code: '4070101', pmCode: NBP,  date: '2025-12-01', name: 'Legal Fees' },
   { amount: 6000,  code: '4080102', pmCode: CASH, date: '2026-05-25', name: 'Security' },
   { amount: 1000,  code: '4080104', pmCode: CASH, date: '2025-10-30', name: 'Generator Fuel' },
   { amount: 2350,  code: '4080105', pmCode: CASH, date: '2026-06-15', name: 'Meeting Expenses' },
@@ -76,7 +76,7 @@ let i = 0;
 for (const f of membershipFees) {
   const r = await api('POST', '/api/v1/revenue-collections', {
     category: 'Membership Fee', title: `Test Member ${++i}`, amount: f.amount,
-    paymentMethod: f.pm, bankAccountId: f.pm === 'BANK' ? HBL_ID : undefined, eventDate: f.date,
+    paymentMethod: f.pm, bankAccountId: f.pm === 'BANK' ? NBP_ID : undefined, eventDate: f.date,
   });
   check(`seed membership fee Rs ${f.amount} (${f.pm})`, r.status === 200 || r.status === 201, r.status !== 200 && r.status !== 201 ? JSON.stringify(r.body).slice(0, 150) : '');
 }
@@ -84,7 +84,7 @@ i = 0;
 for (const z of zakats) {
   const r = await api('POST', '/api/v1/revenue-collections', {
     category: 'Zakat', title: `Zakat Donor ${++i}`, amount: z.amount,
-    paymentMethod: z.pm, bankAccountId: z.pm === 'BANK' ? HBL_ID : undefined, eventDate: z.date,
+    paymentMethod: z.pm, bankAccountId: z.pm === 'BANK' ? NBP_ID : undefined, eventDate: z.date,
   });
   check(`seed zakat Rs ${z.amount} (${z.pm})`, r.status === 200 || r.status === 201, r.status !== 200 && r.status !== 201 ? JSON.stringify(r.body).slice(0, 150) : '');
 }
@@ -140,8 +140,8 @@ check('BS total assets = 15,650', near(bs.summary.totalAssets, EXP.netIncome), `
 check('BS A = L + E (isBalanced)', bs.summary.isBalanced, `A=${bs.summary.totalAssets} L+E=${bs.summary.totalLiabilitiesAndEquity}`);
 const cashLine = bs.assets.find(a => a.glCode === CASH);
 check('BS Cash in Hand = 13,650', cashLine && near(cashLine.balance, EXP.cash), `got ${cashLine?.balance}`);
-const hblLine = bs.assets.find(a => a.glCode === HBL);
-check('BS HBL Bank = 2,000', hblLine && near(hblLine.balance, EXP.bank), `got ${hblLine?.balance}`);
+const nbpLine = bs.assets.find(a => a.glCode === NBP);
+check('BS NBP Bank = 2,000', nbpLine && near(nbpLine.balance, EXP.bank), `got ${nbpLine?.balance}`);
 check('BS equity includes net income 15,650', near(bs.summary.totalEquity, EXP.netIncome), `got ${bs.summary.totalEquity}`);
 
 // ── Trial Balance ──
@@ -232,7 +232,7 @@ const live2 = await api('POST', '/api/v1/journal-entries', {
   status: 'Posted', voucherType: 'BP',
   lines: [
     { accountCode: '4080103', debit: 500, credit: 0 },
-    { accountCode: HBL, debit: 0, credit: 500 },
+    { accountCode: NBP, debit: 0, credit: 500 },
   ],
 });
 check('live bank charges Rs 500 bank posted', live2.status === 200 || live2.status === 201, JSON.stringify(live2.body?.error ?? '').slice(0, 100));
