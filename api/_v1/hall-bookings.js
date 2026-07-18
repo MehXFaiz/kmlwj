@@ -3,6 +3,7 @@ import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
+import { createNotification } from "../_utils/notify.js";
 function generateVoucherNumber() {
   const date = /* @__PURE__ */ new Date();
   const year = date.getFullYear().toString().slice(-2);
@@ -217,6 +218,16 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         return { approvedBooking, journalEntry: postingResult.journalEntry };
       });
       await logAudit(req.user.id, "Post Hall Booking", "REVENUE", booking, result.approvedBooking, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      await createNotification({
+        title: "Hall Booking Posted to Ledger",
+        message: `Hall booking for ${booking.bookerName} on ${new Date(booking.programDate).toLocaleDateString()} posted to ledger (PKR ${Number(booking.netAmount || booking.hallCharges).toLocaleString()}).`,
+        module: "Hall Booking",
+        recordId: result.approvedBooking.id,
+        actionType: "POST",
+        userName: req.user.email,
+        userRole: req.user.role,
+        userId: req.user.id
+      });
       return res.status(200).json({ status: 200, data: result.approvedBooking, message: "Booking posted and journal entries created successfully" });
     }
     if (action === "revert") {
@@ -242,6 +253,17 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         return revertedBooking;
       });
       await logAudit(req.user.id, "Revert Hall Booking", "REVENUE", booking, result, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      await createNotification({
+        title: "Hall Booking Reverted",
+        message: `Hall booking for ${booking.bookerName} reverted from ledger.`,
+        module: "Hall Booking",
+        recordId: result.id,
+        actionType: "REVERT",
+        userName: req.user.email,
+        userRole: req.user.role,
+        userId: req.user.id,
+        visibility: "ADMIN_ONLY"
+      });
       return res.status(200).json({ status: 200, data: result, message: "Booking reverted from ledger successfully" });
     }
     const { bookingDate, bookerName, fatherHusbandName, address, mobile, programDate, programType, functionType, timeFrom, timeTo, timings, hallId, isForJamaat, amount, hallCharges, discount, netAmount, receivedAmount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
@@ -367,6 +389,16 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         return newBooking;
       });
       await logAudit(req.user.id, "Create & Post Hall Booking", "REVENUE", null, result, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      await createNotification({
+        title: "Hall Booking Created",
+        message: `Hall booking created for ${bookerName} on ${new Date(programDate).toLocaleDateString()} — ${result.hallAccount?.accountName || "Hall"}. PKR ${calculatedNetAmount.toLocaleString()}.`,
+        module: "Hall Booking",
+        recordId: result.id,
+        actionType: "CREATE",
+        userName: req.user.email,
+        userRole: req.user.role,
+        userId: req.user.id
+      });
       return res.status(201).json({ status: 201, data: result });
     } catch (err) {
       if (err.code === "P2002" || err.message?.includes("Unique constraint failed")) {

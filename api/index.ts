@@ -47,6 +47,7 @@ import simpleIncomeHandler from './_v1/simple-income.js';
 import accountingHealthHandler from './_v1/accounting-health.js';
 import zakatCardsHandler from './_v1/zakat-cards.js';
 import { memberVerifyHandler } from './_v1/member-verify.js';
+import notificationsHandler from './_v1/notifications.js';
 
 const app = express();
 
@@ -222,6 +223,10 @@ app.post('/api/v1/simple-income', makeExpress(simpleIncomeHandler));
 
 // Accounting Health Check Route
 app.get('/api/v1/accounting-health', makeExpress(accountingHealthHandler));
+
+// Notification Routes
+app.get('/api/v1/notifications', makeExpress(notificationsHandler));
+app.patch('/api/v1/notifications', makeExpress(notificationsHandler));
 
 // Public Member Verification Route (no JWT — scanned from QR code)
 app.get('/api/v1/member/verify/:id', async (req: any, res: any) => {

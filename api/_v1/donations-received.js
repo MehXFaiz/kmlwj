@@ -3,6 +3,7 @@ import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
+import { createNotification } from "../_utils/notify.js";
 var donations_received_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -178,6 +179,16 @@ var donations_received_default = makeHandler(async (req, res) => {
       return newReceipt;
     });
     await logAudit(req.user.id, "Create Donation Received", "DONATION_RECEIVED", null, result, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    await createNotification({
+      title: "Donation Received",
+      message: `Donation of PKR ${parsedAmount.toLocaleString()} received from ${donor.fullName} (${receiptNo}).${txStatus === "POSTED" ? " Posted to ledger." : ""}`,
+      module: "Donations Received",
+      recordId: result.id,
+      actionType: "CREATE",
+      userName: req.user.email,
+      userRole: req.user.role,
+      userId: req.user.id
+    });
     return res.status(201).json({ status: 201, data: result });
   }
   if (method === "PUT" || method === "PATCH") {
@@ -271,6 +282,16 @@ var donations_received_default = makeHandler(async (req, res) => {
       return updated;
     });
     await logAudit(req.user.id, "Update Donation Received", "DONATION_RECEIVED", existing, result, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    await createNotification({
+      title: "Donation Receipt Updated",
+      message: `Receipt ${existing.receiptNo} updated. Status: ${result.status}.`,
+      module: "Donations Received",
+      recordId: result.id,
+      actionType: "UPDATE",
+      userName: req.user.email,
+      userRole: req.user.role,
+      userId: req.user.id
+    });
     return res.status(200).json({ status: 200, data: result });
   }
   if (method === "DELETE") {
@@ -300,6 +321,15 @@ var donations_received_default = makeHandler(async (req, res) => {
     for (const item of existingItems) {
       await logAudit(req.user.id, "Delete Donation Received", "DONATION_RECEIVED", item, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     }
+    await createNotification({
+      title: "Donation Receipt Deleted",
+      message: `${existingItems.length} donation receipt(s) deleted.`,
+      module: "Donations Received",
+      actionType: "DELETE",
+      userName: req.user.email,
+      userRole: req.user.role,
+      userId: req.user.id
+    });
     return res.status(200).json({ status: 200, message: `${existingItems.length} donation receipt(s) deleted successfully` });
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });

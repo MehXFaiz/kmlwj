@@ -3,6 +3,7 @@ import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
+import { createNotification } from "../_utils/notify.js";
 function generateVoucherNumber() {
   const date = /* @__PURE__ */ new Date();
   const year = date.getFullYear().toString().slice(-2);
@@ -169,6 +170,16 @@ var donations_default = makeHandler(async (req, res) => {
         timeout: 15e3
       });
       await logAudit(req.user.id, "Approve Donation", "DONATION", donation, result.approvedDonation, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      await createNotification({
+        title: "Donation / Aid Disbursement Approved",
+        message: `Donation of PKR ${Number(donation.amount).toLocaleString()} disbursed to ${donation.donorName || "Beneficiary"} (${donation.donationType}).`,
+        module: "Donations",
+        recordId: result.approvedDonation.id,
+        actionType: "APPROVE",
+        userName: actingUser?.fullName || req.user.email,
+        userRole: actingUser?.role.name || req.user.role,
+        userId: req.user.id
+      });
       return res.status(200).json({ status: 200, data: result.approvedDonation, message: "Donation approved and journal entries created successfully" });
     }
     const { beneficiaryId, donorName, donorMobile, donationType, customDonationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks } = req.body;
@@ -248,6 +259,16 @@ var donations_default = makeHandler(async (req, res) => {
       timeout: 15e3
     });
     await logAudit(req.user.id, "Create Donation", "DONATION", null, newDonation, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    await createNotification({
+      title: "Donation / Aid Disbursement Recorded",
+      message: `Donation of PKR ${parseFloat(amount).toLocaleString()} disbursed to ${donorName} (${donationType === "CUSTOM" ? customDonationType || "Custom" : donationType}).`,
+      module: "Donations",
+      recordId: newDonation.id,
+      actionType: "CREATE",
+      userName: actingUser?.fullName || req.user.email,
+      userRole: actingUser?.role.name || req.user.role,
+      userId: req.user.id
+    });
     return res.status(201).json({ status: 201, data: newDonation });
   }
   if (method === "PUT" || method === "PATCH") {
@@ -339,6 +360,16 @@ var donations_default = makeHandler(async (req, res) => {
       timeout: 15e3
     });
     await logAudit(req.user.id, "Update Donation", "DONATION", existingDonation, updatedDonation, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    await createNotification({
+      title: "Donation / Aid Disbursement Updated",
+      message: `Donation record updated — PKR ${Number(updatedDonation.amount).toLocaleString()} to ${updatedDonation.donorName || "Beneficiary"}.`,
+      module: "Donations",
+      recordId: updatedDonation.id,
+      actionType: "UPDATE",
+      userName: actingUser?.fullName || req.user.email,
+      userRole: actingUser?.role.name || req.user.role,
+      userId: req.user.id
+    });
     return res.status(200).json({ status: 200, data: updatedDonation });
   }
   if (method === "DELETE") {
@@ -388,6 +419,15 @@ var donations_default = makeHandler(async (req, res) => {
         req.headers["x-forwarded-for"],
         req.headers["user-agent"]
       );
+      await createNotification({
+        title: "Donation Deleted",
+        message: `${deletedDonations.length} donation record(s) deleted.`,
+        module: "Donations",
+        actionType: "DELETE",
+        userName: actingUser?.fullName || req.user.email,
+        userRole: actingUser?.role.name || req.user.role,
+        userId: req.user.id
+      });
       return res.status(200).json({
         status: 200,
         message: `${deletedDonations.length} donation(s) deleted successfully`,
