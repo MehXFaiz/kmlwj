@@ -14,13 +14,11 @@ var income_statement_default = makeHandler(async (req, res) => {
     if (!isSuperAdmin && !userPerms.includes("VIEW_REPORTS")) {
       return res.status(403).json({ error: { message: "Forbidden: Insufficient permissions", status: 403 } });
     }
+    const { startDate, endDate } = req.query || {};
     const pnlAccounts = await prisma.account.findMany({
       where: {
         accountType: {
           name: { in: ["REVENUE", "EXPENSE"] }
-        },
-        NOT: {
-          currentBalance: 0
         }
       },
       include: {
@@ -34,18 +32,43 @@ var income_statement_default = makeHandler(async (req, res) => {
     let totalExpense = 0;
     for (const acc of pnlAccounts) {
       const type = acc.accountType?.name;
+      let balance = acc.currentBalance;
+      if (startDate || endDate) {
+        const dateFilter = {};
+        if (startDate) dateFilter.gte = new Date(startDate);
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          dateFilter.lte = end;
+        }
+        const agg = await prisma.ledgerEntry.aggregate({
+          where: {
+            accountId: acc.id,
+            postingDate: dateFilter
+          },
+          _sum: { debit: true, credit: true }
+        });
+        const totalDebit = Number(agg._sum.debit) || 0;
+        const totalCredit = Number(agg._sum.credit) || 0;
+        if (type === "REVENUE") {
+          balance = totalCredit - totalDebit;
+        } else if (type === "EXPENSE") {
+          balance = totalDebit - totalCredit;
+        }
+      }
+      if (balance === 0) continue;
       const formatted = {
         id: acc.id,
         glCode: acc.glCode,
         accountName: acc.accountName,
-        balance: acc.currentBalance
+        balance
       };
       if (type === "REVENUE") {
         revenues.push(formatted);
-        totalRevenue += acc.currentBalance;
+        totalRevenue += balance;
       } else if (type === "EXPENSE") {
         expenses.push(formatted);
-        totalExpense += acc.currentBalance;
+        totalExpense += balance;
       }
     }
     const netIncome = totalRevenue - totalExpense;
@@ -57,7 +80,9 @@ var income_statement_default = makeHandler(async (req, res) => {
         summary: {
           totalRevenue,
           totalExpense,
-          netIncome
+          netIncome,
+          // Include filter metadata so UI can label the report correctly
+          periodLabel: startDate && endDate ? `${startDate} to ${endDate}` : startDate ? `From ${startDate}` : endDate ? `Up to ${endDate}` : "All Time"
         }
       }
     });

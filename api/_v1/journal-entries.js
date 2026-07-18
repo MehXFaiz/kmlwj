@@ -3,6 +3,7 @@ import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
+const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };
 var journal_entries_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -104,7 +105,7 @@ var journal_entries_default = makeHandler(async (req, res) => {
           ipAddress: req.headers["x-forwarded-for"],
           userAgent: req.headers["user-agent"]
         });
-      });
+      }, accountingTxOptions);
       return res.status(201).json({ status: 201, data: result.journalEntry });
     } catch (err) {
       return res.status(400).json({ error: { message: err.message, status: 400 } });
@@ -239,7 +240,7 @@ var journal_entries_default = makeHandler(async (req, res) => {
           }
         }
         return await tx.journalEntry.findUnique({ where: { id }, include: { lines: true } });
-      });
+      }, accountingTxOptions);
       await logAudit(req.user.id, "Update Journal Entry", "Journal Entries", null, { id, status, reference, amount }, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, data: result });
     } catch (err) {
@@ -263,7 +264,7 @@ var journal_entries_default = makeHandler(async (req, res) => {
           if (resJe) results.push(resJe);
         }
         return results;
-      });
+      }, accountingTxOptions);
       await logAudit(
         req.user.id,
         "Delete Journal Entry",

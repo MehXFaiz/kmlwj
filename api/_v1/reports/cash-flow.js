@@ -17,6 +17,7 @@ var cash_flow_default = makeHandler(async (req, res) => {
     const cashBankAccounts = await prisma.account.findMany({
       where: {
         accountType: { name: { in: ["Asset", "ASSET"], mode: "insensitive" } },
+        children: { none: {} },
         OR: [
           { accountName: { contains: "bank", mode: "insensitive" } },
           { accountName: { contains: "cash", mode: "insensitive" } },
@@ -28,10 +29,37 @@ var cash_flow_default = makeHandler(async (req, res) => {
       }
     });
     const cashBankCodes = new Set(cashBankAccounts.map((a) => a.glCode));
-    const endingCash = cashBankAccounts.reduce((sum, acc) => sum + Number(acc.currentBalance || 0), 0);
+    const { startDate, endDate } = req.query || {};
+    const dateFilter = {};
+    if (startDate) dateFilter.gte = new Date(startDate);
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.lte = end;
+    }
+    const computeCashBalance = async (upto) => {
+      if (!upto) {
+        return cashBankAccounts.reduce((sum, acc) => sum + Number(acc.currentBalance || 0), 0);
+      }
+      let total = 0;
+      for (const account of cashBankAccounts) {
+        const agg = await prisma.ledgerEntry.aggregate({
+          where: {
+            accountId: account.id,
+            postingDate: { lte: upto }
+          },
+          _sum: { debit: true, credit: true }
+        });
+        const debit = Number(agg._sum.debit) || 0;
+        const credit = Number(agg._sum.credit) || 0;
+        total += (Number(account.initialBalance) || 0) + debit - credit;
+      }
+      return Math.round(total * 100) / 100;
+    };
     const postedJournals = await prisma.journalEntry.findMany({
       where: {
-        status: "Posted"
+        status: "Posted",
+        ...Object.keys(dateFilter).length > 0 ? { postingDate: dateFilter } : {}
       },
       include: {
         lines: {
@@ -87,7 +115,8 @@ var cash_flow_default = makeHandler(async (req, res) => {
     const totalInflow = Math.round(inflows.reduce((sum, i) => sum + i.amount, 0) * 100) / 100;
     const totalOutflow = Math.round(outflows.reduce((sum, o) => sum + o.amount, 0) * 100) / 100;
     const netChange = Math.round((totalInflow - totalOutflow) * 100) / 100;
-    const beginningCash = Math.round((endingCash - netChange) * 100) / 100;
+    const endingCash = endDate ? await computeCashBalance(new Date(dateFilter.lte)) : await computeCashBalance();
+    const beginningCash = startDate ? await computeCashBalance(new Date(new Date(startDate).getTime() - 1)) : Math.round((endingCash - netChange) * 100) / 100;
     return res.status(200).json({
       status: 200,
       data: {
@@ -98,7 +127,8 @@ var cash_flow_default = makeHandler(async (req, res) => {
           totalInflow,
           totalOutflow,
           netChange,
-          endingCash
+          endingCash,
+          periodLabel: startDate && endDate ? `${startDate} to ${endDate}` : startDate ? `From ${startDate}` : endDate ? `Up to ${endDate}` : "All Time"
         }
       }
     });

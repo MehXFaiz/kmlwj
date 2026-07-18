@@ -3,6 +3,7 @@ import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
+const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };
 async function getIncomeAccountForCategory(category, tx) {
   let searchKeyword = category;
   if (/membership/i.test(category)) searchKeyword = "Membership";
@@ -109,7 +110,7 @@ var revenue_collections_default = makeHandler(async (req, res) => {
           }
         });
         return { approvedItem, journalEntry: postingResult.journalEntry };
-      });
+      }, accountingTxOptions);
       await logAudit(req.user.id, `Post ${item.category}`, "REVENUE", item, result2.approvedItem, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, data: result2.approvedItem, message: `${item.category} posted to ledger successfully` });
     }
@@ -134,7 +135,7 @@ var revenue_collections_default = makeHandler(async (req, res) => {
           }
         });
         return revertedItem;
-      });
+      }, accountingTxOptions);
       await logAudit(req.user.id, `Revert ${item.category}`, "REVENUE", item, result2, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, data: result2, message: `${item.category} reverted from ledger successfully` });
     }
@@ -202,7 +203,7 @@ var revenue_collections_default = makeHandler(async (req, res) => {
         }
       });
       return newItem;
-    });
+    }, accountingTxOptions);
     await logAudit(req.user.id, `Create & Post ${category}`, "REVENUE", null, result, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     return res.status(201).json({ status: 201, data: result });
   }
@@ -235,7 +236,7 @@ var revenue_collections_default = makeHandler(async (req, res) => {
           where: { id: { in: items.map((i) => i.id) } }
         });
         return items;
-      });
+      }, accountingTxOptions);
       await logAudit(
         req.user.id,
         "Delete Revenue Collection",
@@ -329,7 +330,7 @@ var revenue_collections_default = makeHandler(async (req, res) => {
           journalEntry: true
         }
       });
-    });
+    }, accountingTxOptions);
     await logAudit(req.user.id, `Update & Post ${category}`, "REVENUE", existingItem, updatedItem, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     return res.status(200).json({ status: 200, data: updatedItem });
   }

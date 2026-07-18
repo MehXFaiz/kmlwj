@@ -2,6 +2,7 @@ import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { AccountingService } from "../_services/accounting.service.js";
+const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };
 var simple_expense_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -83,7 +84,7 @@ var simple_expense_default = makeHandler(async (req, res) => {
       } catch (e) {
       }
       return expense;
-    });
+    }, accountingTxOptions);
     return res.status(201).json({ status: 201, data: result });
   }
   if (req.method === "PUT" || req.method === "PATCH") {
@@ -154,7 +155,7 @@ var simple_expense_default = makeHandler(async (req, res) => {
       } catch (e) {
       }
       return updated;
-    });
+    }, accountingTxOptions);
     return res.status(200).json({ status: 200, data: result });
   }
   if (req.method === "DELETE") {
@@ -171,7 +172,7 @@ var simple_expense_default = makeHandler(async (req, res) => {
       if (existing) {
         await tx.simpleExpense.delete({ where: { id: String(id) } });
       }
-    });
+    }, accountingTxOptions);
     return res.status(200).json({ status: 200, message: "Expense deleted successfully" });
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
