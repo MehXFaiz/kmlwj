@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useZakatCardStore } from '../store/zakatCardStore';
-import { useMemberStore } from '../store/memberStore';
+import { zakatCardService } from '../services/zakatCardService';
 import { useAuthStore } from '../store/authStore';
 import { ZakatCardFront, ZakatCardBack } from '../components/members/ZakatCard';
 import {
@@ -55,7 +55,7 @@ function SingleCardPrintArea({ card, areaRef }) {
   );
 }
 
-function IssueModal({ members, onClose, onSubmit }) {
+function IssueModal({ members, membersLoading, onClose, onSubmit }) {
   const [memberId, setMemberId] = useState('');
   const [zakatAmount, setZakatAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('CASH');
@@ -114,48 +114,73 @@ function IssueModal({ members, onClose, onSubmit }) {
           </button>
         </div>
 
-        {/* Member search & select */}
+        {/* Member search & select — only members with an approved zakat donation */}
         <div style={{ marginBottom: '16px' }}>
           <label style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, marginBottom: '6px', display: 'block' }}>
-            Select Member *
+            Select Member * <span style={{ color: '#64748b', fontWeight: 500 }}>(members with an approved zakat donation)</span>
           </label>
-          <input
-            type="text"
-            value={memberSearch}
-            onChange={e => setMemberSearch(e.target.value)}
-            placeholder="Search by name, member no, CNIC..."
-            style={{
-              width: '100%', padding: '10px 12px', borderRadius: '10px',
-              background: '#0f172a', border: '1px solid #334155',
-              color: '#e2e8f0', fontSize: '13px', outline: 'none',
-              boxSizing: 'border-box',
-            }}
-          />
-          <div style={{
-            maxHeight: '150px', overflowY: 'auto', marginTop: '6px',
-            background: '#0a0f1a', borderRadius: '8px', border: '1px solid #1e293b',
-          }}>
-            {filteredMembers.slice(0, 50).map(m => (
-              <div
-                key={m.id}
-                onClick={() => { setMemberId(m.id); setMemberSearch(m.fullName); }}
-                style={{
-                  padding: '8px 12px', cursor: 'pointer',
-                  background: memberId === m.id ? 'rgba(13,78,43,0.3)' : 'transparent',
-                  borderBottom: '1px solid #1e293b',
-                  transition: 'background 0.15s',
-                }}
-              >
-                <div style={{ fontSize: '12px', fontWeight: 600, color: '#e2e8f0' }}>{m.fullName}</div>
-                <div style={{ fontSize: '10px', color: '#64748b' }}>
-                  {m.memberNo || 'No ID'} {m.fatherName ? `• s/o ${m.fatherName}` : ''} {m.area ? `• ${m.area}` : ''}
-                </div>
+          {membersLoading ? (
+            <div style={{
+              padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              background: '#0a0f1a', borderRadius: '8px', border: '1px solid #1e293b',
+              color: '#64748b', fontSize: '12px',
+            }}>
+              <RefreshCw size={14} className="animate-spin" />
+              Loading eligible members...
+            </div>
+          ) : members.length === 0 ? (
+            <div style={{
+              padding: '20px 16px', textAlign: 'center',
+              background: 'rgba(127,29,29,0.1)', borderRadius: '10px', border: '1px solid rgba(239,68,68,0.25)',
+            }}>
+              <div style={{ fontSize: '12px', color: '#f87171', fontWeight: 600, lineHeight: 1.5 }}>
+                No members with zakat donations recorded.
               </div>
-            ))}
-            {filteredMembers.length === 0 && (
-              <div style={{ padding: '12px', color: '#475569', fontSize: '12px', textAlign: 'center' }}>No members found</div>
-            )}
-          </div>
+              <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
+                Record a zakat donation first to issue a card.
+              </div>
+            </div>
+          ) : (
+            <>
+              <input
+                type="text"
+                value={memberSearch}
+                onChange={e => setMemberSearch(e.target.value)}
+                placeholder="Search by name, member no, CNIC..."
+                style={{
+                  width: '100%', padding: '10px 12px', borderRadius: '10px',
+                  background: '#0f172a', border: '1px solid #334155',
+                  color: '#e2e8f0', fontSize: '13px', outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+              <div style={{
+                maxHeight: '150px', overflowY: 'auto', marginTop: '6px',
+                background: '#0a0f1a', borderRadius: '8px', border: '1px solid #1e293b',
+              }}>
+                {filteredMembers.slice(0, 50).map(m => (
+                  <div
+                    key={m.id}
+                    onClick={() => { setMemberId(m.id); setMemberSearch(m.fullName); }}
+                    style={{
+                      padding: '8px 12px', cursor: 'pointer',
+                      background: memberId === m.id ? 'rgba(13,78,43,0.3)' : 'transparent',
+                      borderBottom: '1px solid #1e293b',
+                      transition: 'background 0.15s',
+                    }}
+                  >
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: '#e2e8f0' }}>{m.fullName}</div>
+                    <div style={{ fontSize: '10px', color: '#64748b' }}>
+                      {m.memberNo || 'No ID'} {m.fatherName ? `• s/o ${m.fatherName}` : ''} {m.area ? `• ${m.area}` : ''}
+                    </div>
+                  </div>
+                ))}
+                {filteredMembers.length === 0 && (
+                  <div style={{ padding: '12px', color: '#475569', fontSize: '12px', textAlign: 'center' }}>No members found</div>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
         {selectedMember && (
@@ -356,11 +381,12 @@ function PreviewModal({ card, onClose, onPrint, onCopyQr }) {
 
 export const ZakatCards = () => {
   const { cards, fetchCards, issueCard, deleteCard, loading } = useZakatCardStore();
-  const { members, fetchMembers } = useMemberStore();
   const user = useAuthStore((state) => state.user);
   const [searchTerm, setSearchTerm] = useState('');
   const [previewCard, setPreviewCard] = useState(null);
   const [showIssueModal, setShowIssueModal] = useState(false);
+  const [eligibleMembers, setEligibleMembers] = useState([]);
+  const [eligibleLoading, setEligibleLoading] = useState(false);
   const [printMode, setPrintMode] = useState(null);
   const [printCard, setPrintCard] = useState(null);
   const [toast, setToast] = useState(null);
@@ -382,8 +408,16 @@ export const ZakatCards = () => {
   useEffect(() => {
     injectPrintStyles();
     fetchCards();
-    fetchMembers();
-  }, [fetchCards, fetchMembers]);
+  }, [fetchCards]);
+
+  const openIssueModal = useCallback(() => {
+    setShowIssueModal(true);
+    setEligibleLoading(true);
+    zakatCardService.getEligibleMembers()
+      .then(res => setEligibleMembers(res.data || []))
+      .catch(() => setEligibleMembers([]))
+      .finally(() => setEligibleLoading(false));
+  }, []);
 
   const filtered = cards.filter(c => {
     const term = searchTerm.toLowerCase();
@@ -498,7 +532,7 @@ export const ZakatCards = () => {
             Refresh
           </button>
           <button
-            onClick={() => setShowIssueModal(true)}
+            onClick={openIssueModal}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-lg active:scale-95 cursor-pointer"
             style={{ background: 'linear-gradient(135deg, #0D4E2B, #1A6B3C)', border: '1px solid rgba(201,162,39,0.4)', color: '#C9A227' }}
           >
@@ -557,7 +591,7 @@ export const ZakatCards = () => {
           </div>
           {!searchTerm && (
             <button
-              onClick={() => setShowIssueModal(true)}
+              onClick={openIssueModal}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: '7px',
                 marginTop: '16px', padding: '9px 20px', borderRadius: '10px',
@@ -670,7 +704,8 @@ export const ZakatCards = () => {
       {/* Issue Modal */}
       {showIssueModal && (
         <IssueModal
-          members={members}
+          members={eligibleMembers}
+          membersLoading={eligibleLoading}
           onClose={() => setShowIssueModal(false)}
           onSubmit={handleIssue}
         />

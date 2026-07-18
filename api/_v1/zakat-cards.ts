@@ -36,14 +36,45 @@ async function resolveZakatExpenseAccount(tx: any) {
   return acc;
 }
 
+/* Zakat given to people is recorded as a Donation (disbursement) against a Beneficiary,
+   not a Member — so a member is matched to their donation by CNIC (primary) or full name. */
+function beneficiaryMatchesMember(beneficiary: { cnic: string | null; name: string }, member: { cnic: string | null; fullName: string }) {
+  if (member.cnic && beneficiary.cnic && member.cnic.trim() === beneficiary.cnic.trim()) return true;
+  return beneficiary.name.trim().toLowerCase() === member.fullName.trim().toLowerCase();
+}
+
+async function findApprovedZakatDonation(member: { cnic: string | null; fullName: string }) {
+  const donations = await prisma.donation.findMany({
+    where: { donationType: 'ZAKAT', status: 'APPROVED', beneficiaryId: { not: null } },
+    include: { beneficiary: { select: { cnic: true, name: true } } },
+  });
+  return donations.find((d) => d.beneficiary && beneficiaryMatchesMember(d.beneficiary, member)) || null;
+}
+
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
 
   const { method } = req;
   const id = req.query.id as string;
+  const action = req.query.action as string;
 
   if (method === 'GET') {
+    // Members eligible for a zakat card: those with an approved zakat donation on record
+    if (action === 'eligible-members') {
+      const [donations, members] = await Promise.all([
+        prisma.donation.findMany({
+          where: { donationType: 'ZAKAT', status: 'APPROVED', beneficiaryId: { not: null } },
+          include: { beneficiary: { select: { cnic: true, name: true } } },
+        }),
+        prisma.member.findMany({ orderBy: { fullName: 'asc' } }),
+      ]);
+      const eligible = members.filter((m) =>
+        donations.some((d) => d.beneficiary && beneficiaryMatchesMember(d.beneficiary, m))
+      );
+      return res.status(200).json({ status: 200, data: eligible });
+    }
+
     if (id) {
       const card = await prisma.zakatCard.findUnique({
         where: { id },
@@ -80,6 +111,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     const member = await prisma.member.findUnique({ where: { id: memberId } });
     if (!member) return res.status(404).json({ error: { message: 'Member not found', status: 404 } });
+
+    // A zakat card can only be issued to a member with an approved zakat donation on record
+    const zakatDonation = await findApprovedZakatDonation(member);
+    if (!zakatDonation) {
+      return res.status(400).json({ error: { message: 'Zakat card can only be issued to members with a recorded zakat donation', status: 400 } });
+    }
 
     if ((paymentMethod === 'BANK' || paymentMethod === 'CHEQUE') && !bankAccountId) {
       return res.status(400).json({ error: { message: 'Bank account is required for Bank/Cheque payments', status: 400 } });
