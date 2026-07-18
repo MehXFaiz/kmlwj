@@ -5,6 +5,8 @@ import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
 
+const accountingTxOptions = { maxWait: 10000, timeout: 30000 };
+
 async function getIncomeAccountForCategory(category: string, tx: any) {
   let searchKeyword = category;
   if (/membership/i.test(category)) searchKeyword = 'Membership';
@@ -131,7 +133,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         });
 
         return { approvedItem, journalEntry: postingResult.journalEntry };
-      });
+      }, accountingTxOptions);
 
       await logAudit(req.user.id, `Post ${item.category}`, 'REVENUE', item, result.approvedItem, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
@@ -162,7 +164,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         });
 
         return revertedItem;
-      });
+      }, accountingTxOptions);
 
       await logAudit(req.user.id, `Revert ${item.category}`, 'REVENUE', item, result, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
@@ -242,7 +244,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       });
 
       return newItem;
-    });
+    }, accountingTxOptions);
 
     await logAudit(req.user.id, `Create & Post ${category}`, 'REVENUE', null, result, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
@@ -288,7 +290,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         });
 
         return items;
-      });
+      }, accountingTxOptions);
 
       await logAudit(
         req.user.id,
@@ -392,7 +394,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           journalEntry: true
         }
       });
-    });
+    }, accountingTxOptions);
 
     await logAudit(req.user.id, `Update & Post ${category}`, 'REVENUE', existingItem, updatedItem, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
