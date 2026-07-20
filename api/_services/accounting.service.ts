@@ -1123,4 +1123,631 @@ export class AccountingService {
 
     return deletedJe;
   }
+
+  static isCashAccount(name: string, detailType: string): boolean {
+    const detailLower = (detailType || '').toLowerCase();
+    const nameLower = (name || '').toLowerCase();
+    return detailLower === 'cash' || nameLower.includes('cash') || nameLower.includes('till') || nameLower.includes('petty') || nameLower.includes('hand');
+  }
+
+  static isBankAccount(name: string, detailType: string): boolean {
+    const detailLower = (detailType || '').toLowerCase();
+    const nameLower = (name || '').toLowerCase();
+    return detailLower === 'bank' || nameLower.includes('bank') || nameLower.includes('al-habib') || nameLower.includes('nbp') || nameLower.includes('national bank') || nameLower.includes('mcb') || nameLower.includes('ubl') || nameLower.includes('allied') || nameLower.includes('faysal');
+  }
+
+  static async getGeneralLedger(params: { startDate?: string; endDate?: string; accountId?: string; glCode?: string; page?: string | number; limit?: string | number }) {
+    const { startDate, endDate, accountId, glCode, page = '1', limit = '100' } = params;
+
+    const pageNum = parseInt(page as string) || 1;
+    const limitNum = parseInt(limit as string) || 100;
+    const skip = (pageNum - 1) * limitNum;
+
+    // Resolve Account
+    let targetAccount = null;
+    if (accountId) {
+      targetAccount = await prisma.account.findUnique({ where: { id: accountId }, include: { accountType: true } });
+    } else if (glCode) {
+      targetAccount = await prisma.account.findUnique({ where: { glCode }, include: { accountType: true } });
+    }
+
+    if (!targetAccount && (accountId || glCode)) {
+      throw Object.assign(new Error('Account not found'), { status: 404 });
+    }
+
+    // Build Where Clause for Entries within Date Range
+    const entryWhere: any = {};
+    if (targetAccount) {
+      entryWhere.accountId = targetAccount.id;
+    }
+    
+    if (startDate || endDate) {
+      entryWhere.postingDate = {};
+      if (startDate) entryWhere.postingDate.gte = new Date(startDate);
+      if (endDate) entryWhere.postingDate.lte = new Date(endDate);
+    }
+
+    // Fetch entries
+    const [entries, total] = await Promise.all([
+      prisma.ledgerEntry.findMany({
+        where: entryWhere,
+        include: { account: { select: { glCode: true, accountName: true, initialBalance: true, accountType: { select: { name: true } } } } },
+        orderBy: { postingDate: 'asc' },
+        skip,
+        take: limitNum,
+      }),
+      prisma.ledgerEntry.count({ where: entryWhere })
+    ]);
+
+    // For each unique account present in the fetched entries, calculate its opening balance
+    const uniqueAccountIds = [...new Set(entries.map(e => e.accountId))];
+    const accountMeta: Record<string, { openingBalance: number; type: string; initialBalance: number; name: string }> = {};
+
+    for (const accId of uniqueAccountIds) {
+      const firstEntry = entries.find(e => e.accountId === accId);
+      const initialBal = firstEntry?.account?.initialBalance || 0;
+      const typeName = (firstEntry?.account as any)?.accountType?.name?.toUpperCase() || 'ASSET';
+      const glCodeVal = firstEntry?.account?.glCode || '';
+      const name = firstEntry?.account?.accountName || '';
+      
+      let opBal = initialBal;
+
+      if (startDate) {
+        const prior = await prisma.ledgerEntry.aggregate({
+          where: {
+            accountId: accId,
+            postingDate: { lt: new Date(startDate) }
+          },
+          _sum: { debit: true, credit: true }
+        });
+        const pDebit = prior._sum.debit || 0;
+        const pCredit = prior._sum.credit || 0;
+        if (['ASSET', 'EXPENSE'].includes(typeName)) {
+          opBal += (pDebit - pCredit);
+        } else {
+          opBal += (pCredit - pDebit);
+        }
+      }
+      accountMeta[glCodeVal] = { openingBalance: opBal, type: typeName, initialBalance: initialBal, name };
+    }
+
+    // Calculate Opening Balance
+    let openingBalance = 0;
+    
+    if (targetAccount) {
+      openingBalance = targetAccount.initialBalance || 0;
+      
+      // Calculate net activity before startDate
+      if (startDate) {
+        const priorEntries = await prisma.ledgerEntry.aggregate({
+          where: {
+            accountId: targetAccount.id,
+            postingDate: { lt: new Date(startDate) }
+          },
+          _sum: { debit: true, credit: true }
+        });
+        
+        const priorDebit = priorEntries._sum.debit || 0;
+        const priorCredit = priorEntries._sum.credit || 0;
+        
+        const typeName = targetAccount.accountType?.name?.toUpperCase() || 'ASSET';
+        
+        // Debit normal accounts
+        if (['ASSET', 'EXPENSE'].includes(typeName)) {
+          openingBalance += (priorDebit - priorCredit);
+        } else {
+          // Credit normal accounts (LIABILITY, EQUITY, REVENUE)
+          openingBalance += (priorCredit - priorDebit);
+        }
+      }
+    } else if (entries.length > 0) {
+        openingBalance = 0;
+    }
+
+    // Calculate Debit and Credit totals within range
+    let totalDebit = 0;
+    let totalCredit = 0;
+
+    const formattedEntries = entries.map(entry => {
+      totalDebit += entry.debit;
+      totalCredit += entry.credit;
+      
+      return {
+        id: entry.id,
+        date: entry.postingDate.toISOString().split('T')[0],
+        glCode: entry.account.glCode,
+        accountName: entry.account.accountName,
+        reference: entry.reference,
+        description: entry.description,
+        debit: entry.debit,
+        credit: entry.credit
+      };
+    });
+
+    let closingBalance = 0;
+    if (targetAccount) {
+        const typeName = targetAccount.accountType?.name?.toUpperCase() || 'ASSET';
+        if (['ASSET', 'EXPENSE'].includes(typeName)) {
+            closingBalance = openingBalance + totalDebit - totalCredit;
+        } else {
+            closingBalance = openingBalance + totalCredit - totalDebit;
+        }
+    }
+
+    return {
+      account: targetAccount ? {
+          glCode: targetAccount.glCode,
+          name: targetAccount.accountName,
+          type: targetAccount.accountType?.name || 'Unknown'
+      } : null,
+      summary: {
+        openingBalance,
+        totalDebit,
+        totalCredit,
+        closingBalance: targetAccount ? closingBalance : null
+      },
+      accountMeta,
+      entries: formattedEntries,
+      total,
+      page: pageNum,
+      limit: limitNum
+    };
+  }
+
+  static async getTrialBalance(startDate?: string, endDate?: string) {
+    const activeAccounts = await prisma.account.findMany({
+      include: {
+        accountType: true
+      },
+      orderBy: { glCode: 'asc' }
+    });
+
+    let totalDebit = 0;
+    let totalCredit = 0;
+    let openingRetainedEarnings = 0;
+
+    const formatted: any[] = [];
+
+    for (const acc of activeAccounts) {
+      let balance = acc.currentBalance;
+
+      // If date filter is provided, compute balance from ledger entries in that range
+      if (startDate || endDate) {
+        const dateFilter: any = {};
+        if (startDate) dateFilter.gte = new Date(startDate);
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          dateFilter.lte = end;
+        }
+
+        const agg = await prisma.ledgerEntry.aggregate({
+          where: {
+            accountId: acc.id,
+            postingDate: dateFilter
+          },
+          _sum: { debit: true, credit: true }
+        });
+
+        const d = Number(agg._sum.debit) || 0;
+        const c = Number(agg._sum.credit) || 0;
+
+        const typeName = (acc.accountType?.name || '').toUpperCase();
+        const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
+        const isPnl = ['REVENUE', 'EXPENSE'].includes(typeName);
+
+        if (isPnl) {
+          balance = isDebitNormal ? d - c : c - d;
+        } else {
+          if (endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            const cumAgg = await prisma.ledgerEntry.aggregate({
+              where: { accountId: acc.id, postingDate: { lte: end } },
+              _sum: { debit: true, credit: true }
+            });
+            const cd = Number(cumAgg._sum.debit) || 0;
+            const cc = Number(cumAgg._sum.credit) || 0;
+            const initBal = Number(acc.initialBalance) || 0;
+            balance = isDebitNormal ? initBal + cd - cc : initBal + cc - cd;
+          }
+        }
+      }
+
+      // Skip accounts with zero balance
+      if (balance === 0) continue;
+
+      const typeName = acc.accountType?.name?.toUpperCase() || 'ASSET';
+      const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
+
+      let debit = 0;
+      let credit = 0;
+
+      if (isDebitNormal) {
+        if (balance > 0) debit = balance;
+        else credit = Math.abs(balance);
+      } else {
+        if (balance > 0) credit = balance;
+        else debit = Math.abs(balance);
+      }
+
+      totalDebit += debit;
+      totalCredit += credit;
+
+      // Handle retained earnings opening balance from previous periods if we have a startDate
+      if (startDate && ['REVENUE', 'EXPENSE'].includes(typeName)) {
+        const priorAgg = await prisma.ledgerEntry.aggregate({
+          where: {
+            accountId: acc.id,
+            postingDate: { lt: new Date(startDate) }
+          },
+          _sum: { debit: true, credit: true }
+        });
+        const pd = Number(priorAgg._sum.debit) || 0;
+        const pc = Number(priorAgg._sum.credit) || 0;
+        if (typeName === 'REVENUE' || typeName === 'INCOME') {
+          openingRetainedEarnings += (pc - pd);
+        } else {
+          openingRetainedEarnings -= (pd - pc);
+        }
+      }
+
+      formatted.push({
+        id: acc.id,
+        glCode: acc.glCode,
+        accountName: acc.accountName,
+        accountType: acc.accountType?.name || 'Asset',
+        balance,
+        debit,
+        credit
+      });
+    }
+
+    if (startDate && openingRetainedEarnings !== 0) {
+      const isDebit = openingRetainedEarnings < 0;
+      const absAmt = Math.abs(openingRetainedEarnings);
+      formatted.push({
+        id: 'retained-earnings-opening-diff',
+        glCode: '3010199',
+        accountName: 'Retained Earnings (Prior Periods)',
+        accountType: 'EQUITY',
+        balance: openingRetainedEarnings,
+        debit: isDebit ? absAmt : 0,
+        credit: isDebit ? 0 : absAmt
+      });
+      if (isDebit) totalDebit += absAmt;
+      else totalCredit += absAmt;
+    }
+
+    return {
+      accounts: formatted,
+      totalDebit,
+      totalCredit,
+      difference: Math.abs(totalDebit - totalCredit)
+    };
+  }
+
+  static async getBalanceSheet(startDate?: string, endDate?: string) {
+    const allAccounts = await prisma.account.findMany({
+      include: {
+        accountType: true
+      },
+      orderBy: { glCode: 'asc' }
+    });
+
+    const assets: any[] = [];
+    const liabilities: any[] = [];
+    const equity: any[] = [];
+    
+    let totalAssets = 0;
+    let totalLiabilities = 0;
+    let totalEquity = 0;
+    
+    let totalRevenue = 0;
+    let totalExpense = 0;
+    let openingRetainedEarnings = 0;
+
+    for (const acc of allAccounts) {
+      const type = acc.accountType?.name;
+      let balance = acc.currentBalance;
+
+      if (type === 'REVENUE' || type === 'EXPENSE') {
+        if (startDate || endDate) {
+          const dateFilter: any = {};
+          if (startDate) dateFilter.gte = new Date(startDate);
+          if (endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            dateFilter.lte = end;
+          }
+          const agg = await prisma.ledgerEntry.aggregate({
+            where: { accountId: acc.id, postingDate: dateFilter },
+            _sum: { debit: true, credit: true }
+          });
+          const d = Number(agg._sum.debit) || 0;
+          const c = Number(agg._sum.credit) || 0;
+          balance = type === 'REVENUE' ? (c - d) : (d - c);
+        }
+      } else {
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          const agg = await prisma.ledgerEntry.aggregate({
+            where: { accountId: acc.id, postingDate: { lte: end } },
+            _sum: { debit: true, credit: true }
+          });
+          const d = Number(agg._sum.debit) || 0;
+          const c = Number(agg._sum.credit) || 0;
+          const initialBal = Number(acc.initialBalance) || 0;
+          const typeName = (type || '').toUpperCase();
+          const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
+          balance = isDebitNormal ? initialBal + d - c : initialBal + c - d;
+        }
+      }
+
+      if (balance === 0) continue;
+      
+      const formatted = {
+        id: acc.id,
+        glCode: acc.glCode,
+        accountName: acc.accountName,
+        balance
+      };
+
+      if (type === 'ASSET') {
+        assets.push(formatted);
+        totalAssets += balance;
+      } else if (type === 'LIABILITY') {
+        liabilities.push(formatted);
+        totalLiabilities += balance;
+      } else if (type === 'EQUITY') {
+        equity.push(formatted);
+        totalEquity += balance;
+      } else if (type === 'REVENUE') {
+        totalRevenue += balance;
+      } else if (type === 'EXPENSE') {
+        totalExpense += balance;
+      }
+
+      if (startDate && (type === 'REVENUE' || type === 'EXPENSE')) {
+        const priorAgg = await prisma.ledgerEntry.aggregate({
+          where: {
+            accountId: acc.id,
+            postingDate: { lt: new Date(startDate) }
+          },
+          _sum: { debit: true, credit: true }
+        });
+        const pd = Number(priorAgg._sum.debit) || 0;
+        const pc = Number(priorAgg._sum.credit) || 0;
+        if (type === 'REVENUE') {
+          openingRetainedEarnings += (pc - pd);
+        } else {
+          openingRetainedEarnings -= (pd - pc);
+        }
+      }
+    }
+
+    const netPeriodIncome = totalRevenue - totalExpense;
+    let retainedEarnings = netPeriodIncome;
+    if (startDate) {
+      retainedEarnings += openingRetainedEarnings;
+    }
+
+    if (retainedEarnings !== 0) {
+      equity.push({
+        id: 'retained-earnings-net',
+        glCode: '3010199',
+        accountName: 'Retained Earnings (P&L Transfer)',
+        balance: retainedEarnings
+      });
+      totalEquity += retainedEarnings;
+    }
+
+    return {
+      assets,
+      liabilities,
+      equity,
+      totalAssets,
+      totalLiabilities,
+      totalEquity,
+      netPeriodIncome,
+      openingRetainedEarnings,
+      totalLiabilitiesAndEquity: totalLiabilities + totalEquity
+    };
+  }
+
+  static async getIncomeStatement(startDate?: string, endDate?: string) {
+    const pnlAccounts = await prisma.account.findMany({
+      where: {
+        accountType: {
+          name: { in: ['REVENUE', 'EXPENSE'] }
+        }
+      },
+      include: {
+        accountType: true
+      },
+      orderBy: { glCode: 'asc' }
+    });
+
+    const revenues: any[] = [];
+    const expenses: any[] = [];
+    let totalRevenue = 0;
+    let totalExpense = 0;
+
+    for (const acc of pnlAccounts) {
+      const type = acc.accountType?.name;
+      let balance = acc.currentBalance;
+
+      if (startDate || endDate) {
+        const dateFilter: any = {};
+        if (startDate) dateFilter.gte = new Date(startDate);
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          dateFilter.lte = end;
+        }
+
+        const agg = await prisma.ledgerEntry.aggregate({
+          where: {
+            accountId: acc.id,
+            postingDate: dateFilter
+          },
+          _sum: { debit: true, credit: true }
+        });
+
+        const totalDebit = Number(agg._sum.debit) || 0;
+        const totalCredit = Number(agg._sum.credit) || 0;
+
+        if (type === 'REVENUE') {
+          balance = totalCredit - totalDebit;
+        } else if (type === 'EXPENSE') {
+          balance = totalDebit - totalCredit;
+        }
+      }
+
+      if (balance === 0) continue;
+
+      const formatted = {
+        id: acc.id,
+        glCode: acc.glCode,
+        accountName: acc.accountName,
+        balance
+      };
+
+      if (type === 'REVENUE') {
+        revenues.push(formatted);
+        totalRevenue += balance;
+      } else if (type === 'EXPENSE') {
+        expenses.push(formatted);
+        totalExpense += balance;
+      }
+    }
+
+    return {
+      revenues,
+      expenses,
+      totalRevenue,
+      totalExpense,
+      netProfit: totalRevenue - totalExpense
+    };
+  }
+
+  static async getFinancialSummary(startDate?: string, endDate?: string) {
+    const allAccounts = await prisma.account.findMany({
+      include: { accountType: true }
+    });
+
+    let totalAssets = 0;
+    let totalLiabilities = 0;
+    let totalEquity = 0;
+    let totalRevenue = 0;
+    let totalExpense = 0;
+    let cashBalance = 0;
+    let bankBalance = 0;
+    let openingRetainedEarnings = 0;
+    const hasDateFilter = Boolean(startDate || endDate);
+
+    for (const acc of allAccounts) {
+      const typeName = (acc.accountType?.name || '').toUpperCase();
+      const isLeaf = !allAccounts.some(a => a.parentId === acc.id);
+      if (!isLeaf) continue;
+
+      let bal = Number(acc.currentBalance) || 0;
+
+      if (hasDateFilter) {
+        if (typeName === 'REVENUE' || typeName === 'EXPENSE') {
+          const periodFilter: any = {};
+          if (startDate) periodFilter.gte = new Date(startDate);
+          if (endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            periodFilter.lte = end;
+          }
+
+          const agg = await prisma.ledgerEntry.aggregate({
+            where: {
+              accountId: acc.id,
+              postingDate: periodFilter
+            },
+            _sum: { debit: true, credit: true }
+          });
+
+          const d = Number(agg._sum.debit) || 0;
+          const c = Number(agg._sum.credit) || 0;
+          bal = typeName === 'REVENUE' ? (c - d) : (d - c);
+        } else if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          const agg = await prisma.ledgerEntry.aggregate({
+            where: {
+              accountId: acc.id,
+              postingDate: { lte: end }
+            },
+            _sum: { debit: true, credit: true }
+          });
+
+          const d = Number(agg._sum.debit) || 0;
+          const c = Number(agg._sum.credit) || 0;
+          const initialBal = Number(acc.initialBalance) || 0;
+          const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
+          bal = isDebitNormal ? initialBal + d - c : initialBal + c - d;
+        }
+      }
+
+      if (typeName === 'ASSET' || typeName === 'ASSETS') {
+        totalAssets += bal;
+        if (this.isBankAccount(acc.accountName, acc.detailType)) {
+          bankBalance += bal;
+        } else if (this.isCashAccount(acc.accountName, acc.detailType)) {
+          cashBalance += bal;
+        }
+      } else if (typeName === 'LIABILITY' || typeName === 'LIABILITIES') {
+        totalLiabilities += (bal < 0 ? Math.abs(bal) : bal);
+      } else if (typeName === 'EQUITY') {
+        totalEquity += bal;
+      } else if (typeName === 'REVENUE' || typeName === 'INCOME') {
+        totalRevenue += bal;
+      } else if (typeName === 'EXPENSE' || typeName === 'EXPENSES' || (acc.glCode.startsWith('4') && !acc.glCode.startsWith('3') && !acc.glCode.startsWith('1') && !acc.glCode.startsWith('2'))) {
+        totalExpense += bal;
+      }
+
+      if (startDate && (typeName === 'REVENUE' || typeName === 'EXPENSE')) {
+        const priorAgg = await prisma.ledgerEntry.aggregate({
+          where: {
+            accountId: acc.id,
+            postingDate: { lt: new Date(startDate) }
+          },
+          _sum: { debit: true, credit: true }
+        });
+        const pd = Number(priorAgg._sum.debit) || 0;
+        const pc = Number(priorAgg._sum.credit) || 0;
+        if (typeName === 'REVENUE' || typeName === 'INCOME') {
+          openingRetainedEarnings += (pc - pd);
+        } else {
+          openingRetainedEarnings -= (pd - pc);
+        }
+      }
+    }
+
+    const netPeriodIncome = totalRevenue - totalExpense;
+    let retainedEarnings = netPeriodIncome;
+    if (startDate) {
+      retainedEarnings += openingRetainedEarnings;
+    }
+
+    totalEquity += retainedEarnings;
+
+    return {
+      totalAssets,
+      totalLiabilities,
+      totalEquity,
+      totalRevenue,
+      totalExpense,
+      cashBalance,
+      bankBalance,
+      netPeriodIncome,
+      openingRetainedEarnings,
+      retainedEarnings
+    };
+  }
 }

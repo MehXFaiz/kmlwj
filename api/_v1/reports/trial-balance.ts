@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../../_utils/handler.js';
 import { verifyAuth, AuthenticatedRequest } from '../../_middlewares/auth.middleware.js';
 import { prisma } from '../../_prisma.js';
+import { AccountingService } from '../../_services/accounting.service.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
@@ -24,173 +25,51 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     // Optional date range filter
     const { startDate, endDate } = (req.query || {}) as { startDate?: string; endDate?: string };
 
-    // Fetch accounts with non-zero balances
-    // Use account.currentBalance (all-time) if no date filter, else compute from ledger entries
-    const activeAccounts = await prisma.account.findMany({
-      include: {
-        accountType: true
-      },
-      orderBy: { glCode: 'asc' }
-    });
+    try {
+      const tb = await AccountingService.getTrialBalance(startDate, endDate);
 
-    let totalDebit = 0;
-    let totalCredit = 0;
-    let openingRetainedEarnings = 0;
-
-    const formatted: any[] = [];
-
-    for (const acc of activeAccounts) {
-      let balance = acc.currentBalance;
-
-      // If date filter is provided, compute balance from ledger entries in that range
-      if (startDate || endDate) {
-        const dateFilter: any = {};
-        if (startDate) dateFilter.gte = new Date(startDate);
-        if (endDate) {
-          const end = new Date(endDate);
-          end.setHours(23, 59, 59, 999);
-          dateFilter.lte = end;
+      const entriesMapped = tb.accounts.map(acc => {
+        if (acc.id === 'retained-earnings-opening-diff') {
+          return {
+            id: 'virtual-opening-retained-earnings',
+            glCode: '-',
+            accountName: `Opening Retained Earnings (before ${startDate})`,
+            accountType: 'EQUITY',
+            debit: acc.debit,
+            credit: acc.credit
+          };
         }
+        return {
+          id: acc.id,
+          glCode: acc.glCode,
+          accountName: acc.accountName,
+          accountType: acc.accountType,
+          debit: acc.debit,
+          credit: acc.credit
+        };
+      });
 
-        const agg = await prisma.ledgerEntry.aggregate({
-          where: {
-            accountId: acc.id,
-            postingDate: dateFilter
-          },
-          _sum: { debit: true, credit: true }
-        });
-
-        const d = Number(agg._sum.debit) || 0;
-        const c = Number(agg._sum.credit) || 0;
-
-        // For balance sheet accounts (ASSET/LIABILITY/EQUITY): use initial balance + period movements
-        // For P&L accounts (REVENUE/EXPENSE): use only period movements
-        const typeName = (acc.accountType?.name || '').toUpperCase();
-        const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
-        const isPnl = ['REVENUE', 'EXPENSE'].includes(typeName);
-
-        if (isPnl) {
-          // P&L accounts: only period activity matters
-          balance = isDebitNormal ? d - c : c - d;
-        } else {
-          // Balance sheet accounts: initial + all prior movements + period movements
-          // For simplicity, use all ledger entries up to endDate
-          if (endDate) {
-            const end = new Date(endDate);
-            end.setHours(23, 59, 59, 999);
-            const cumAgg = await prisma.ledgerEntry.aggregate({
-              where: { accountId: acc.id, postingDate: { lte: end } },
-              _sum: { debit: true, credit: true }
-            });
-            const cd = Number(cumAgg._sum.debit) || 0;
-            const cc = Number(cumAgg._sum.credit) || 0;
-            const initBal = Number(acc.initialBalance) || 0;
-            balance = isDebitNormal ? initBal + cd - cc : initBal + cc - cd;
+      return res.status(200).json({
+        status: 200,
+        data: {
+          entries: entriesMapped,
+          summary: {
+            totalDebit: tb.totalDebit,
+            totalCredit: tb.totalCredit,
+            isBalanced: tb.difference < 0.001,
+            periodLabel: startDate && endDate
+              ? `${startDate} to ${endDate}`
+              : startDate
+              ? `From ${startDate}`
+              : endDate
+              ? `Up to ${endDate}`
+              : 'All Time'
           }
         }
-      }
-
-      // Skip accounts with zero balance
-      if (balance === 0) continue;
-
-      // In our system, currentBalance is:
-      // - (Sum of Debits) - (Sum of Credits) for ASSET and EXPENSE (debit-normal).
-      // - (Sum of Credits) - (Sum of Debits) for LIABILITY, EQUITY, and REVENUE (credit-normal).
-      const typeName = acc.accountType?.name?.toUpperCase() || 'ASSET';
-      const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
-
-      let debit = 0;
-      let credit = 0;
-
-      if (isDebitNormal) {
-        if (balance > 0) {
-          debit = balance;
-        } else if (balance < 0) {
-          credit = Math.abs(balance);
-        }
-      } else {
-        if (balance > 0) {
-          credit = balance;
-        } else if (balance < 0) {
-          debit = Math.abs(balance);
-        }
-      }
-
-      totalDebit += debit;
-      totalCredit += credit;
-
-      formatted.push({
-        id: acc.id,
-        glCode: acc.glCode,
-        accountName: acc.accountName,
-        accountType: acc.accountType?.name || 'Unknown',
-        debit,
-        credit
       });
+    } catch (err: any) {
+      return res.status(500).json({ error: { message: err.message, status: 500 } });
     }
-
-    if (startDate) {
-      const start = new Date(startDate);
-
-      for (const acc of activeAccounts) {
-        const typeName = (acc.accountType?.name || '').toUpperCase();
-        if (!['REVENUE', 'EXPENSE'].includes(typeName)) continue;
-
-        const priorAgg = await prisma.ledgerEntry.aggregate({
-          where: {
-            accountId: acc.id,
-            postingDate: { lt: start }
-          },
-          _sum: { debit: true, credit: true }
-        });
-
-        const d = Number(priorAgg._sum.debit) || 0;
-        const c = Number(priorAgg._sum.credit) || 0;
-        openingRetainedEarnings += typeName === 'REVENUE' ? (c - d) : (d - c) * -1;
-      }
-    }
-
-    if (startDate && openingRetainedEarnings !== 0) {
-      let debit = 0;
-      let credit = 0;
-
-      if (openingRetainedEarnings > 0) {
-        credit = openingRetainedEarnings;
-      } else {
-        debit = Math.abs(openingRetainedEarnings);
-      }
-
-      totalDebit += debit;
-      totalCredit += credit;
-
-      formatted.push({
-        id: 'virtual-opening-retained-earnings',
-        glCode: '-',
-        accountName: `Opening Retained Earnings (before ${startDate})`,
-        accountType: 'EQUITY',
-        debit,
-        credit
-      });
-    }
-
-    return res.status(200).json({
-      status: 200,
-      data: {
-        entries: formatted,
-        summary: {
-          totalDebit,
-          totalCredit,
-          isBalanced: Math.abs(totalDebit - totalCredit) < 0.001,
-          periodLabel: startDate && endDate
-            ? `${startDate} to ${endDate}`
-            : startDate
-            ? `From ${startDate}`
-            : endDate
-            ? `Up to ${endDate}`
-            : 'All Time'
-        }
-      }
-    });
   }
 
   return res.status(405).json({ error: { message: 'Method Not Allowed', status: 405 } });
