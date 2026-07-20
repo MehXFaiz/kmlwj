@@ -33,7 +33,18 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
   if (!cloudName || !apiKey || !apiSecret) {
-    logger.info('Cloudinary not configured — client will use local upload fallback');
+    if (process.env.VERCEL) {
+      // This is a misconfiguration, not a normal fallback: on Vercel the local-disk path
+      // is guaranteed to fail (read-only filesystem outside /tmp, which itself doesn't
+      // persist). Flag it loudly here so it surfaces before a user ever attempts an upload.
+      logger.error(
+        'Cloudinary is not configured but this is running on Vercel (process.env.VERCEL is set). ' +
+        'The local-disk upload fallback WILL fail here. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, ' +
+        'and CLOUDINARY_API_SECRET in the Vercel project environment variables.'
+      );
+    } else {
+      logger.info('Cloudinary not configured — client will use local upload fallback');
+    }
     return res.status(200).json({ status: 200, data: { mode: 'local' } });
   }
 

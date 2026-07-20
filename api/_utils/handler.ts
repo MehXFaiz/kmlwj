@@ -41,17 +41,21 @@ export function makeHandler(fn: ServerlessFunction) {
       }
 
       const status = error.status || 500;
+      const isProduction = process.env.NODE_ENV === 'production';
       // Errors thrown deliberately by application code (status < 500, e.g. validation/not-found)
-      // carry a message meant for the user. Anything that fell through uncaught to here (status
-      // 500 by default) is an internal failure — its message can contain raw Prisma/Postgres
-      // internals, file paths, and stack details, so it must never reach the client directly.
-      const message = status < 500
+      // always carry a message meant for the user. Anything that fell through uncaught to here
+      // (status 500 by default) is an internal failure — in production its message can contain
+      // raw Prisma/Postgres internals, file paths, and stack details, so it's masked from the
+      // client there. In development, the real message (and code, for OS-level errors like EROFS/
+      // EACCES) is surfaced directly so failures can be diagnosed without digging through logs.
+      const message = status < 500 || !isProduction
         ? (error.message || 'Request failed')
         : 'An unexpected error occurred. Please try again or contact support if the problem persists.';
 
       logger.error({
         err: {
           message: error.message,
+          code: error.code,
           stack: error.stack,
           status,
         },
@@ -65,6 +69,7 @@ export function makeHandler(fn: ServerlessFunction) {
         error: {
           message,
           status,
+          ...(!!error.code && !isProduction ? { code: error.code } : {}),
         },
       });
     }

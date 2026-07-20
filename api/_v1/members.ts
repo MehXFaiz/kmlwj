@@ -3,6 +3,7 @@ import { makeHandler } from '../_utils/handler.js';
 import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
+import { logger } from '../_utils/logger.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
@@ -53,6 +54,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       }
     }
 
+    logger.info({ photoUrl, cnicFrontUrl, cnicBackUrl }, 'Saving new member with image URLs');
+
     const newMember = await prisma.member.create({
       data: {
         memberNo: memberNo || null,
@@ -76,6 +79,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         isActive: isActive !== undefined ? Boolean(isActive) : true,
       },
     });
+
+    logger.info({ memberId: newMember.id, photoUrl: newMember.photoUrl }, 'Member saved to database successfully');
 
     await logAudit(req.user.id, 'Register Member', 'MEMBER', null, newMember, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
@@ -105,6 +110,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       }
     }
 
+    logger.info({ memberId: id, photoUrl, cnicFrontUrl, cnicBackUrl }, 'Updating member with image URLs');
+
     const updatedMember = await prisma.member.update({
       where: { id },
       data: {
@@ -129,6 +136,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         isActive: isActive !== undefined ? Boolean(isActive) : undefined,
       },
     });
+
+    logger.info({ memberId: updatedMember.id, photoUrl: updatedMember.photoUrl }, 'Member updated in database successfully');
 
     await logAudit(req.user.id, 'Update Member', 'MEMBER', existingMember, updatedMember, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 

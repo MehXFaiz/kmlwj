@@ -2,6 +2,7 @@ import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
+import { logger } from "../_utils/logger.js";
 var members_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -59,6 +60,7 @@ var members_default = makeHandler(async (req, res) => {
         return res.status(400).json({ error: { message: `${field}: send a URL, not a Base64 image. Use /api/v1/upload first.`, status: 400 } });
       }
     }
+    logger.info({ photoUrl, cnicFrontUrl, cnicBackUrl }, "Saving new member with image URLs");
     const newMember = await prisma.member.create({
       data: {
         memberNo: memberNo || null,
@@ -82,6 +84,7 @@ var members_default = makeHandler(async (req, res) => {
         isActive: isActive !== void 0 ? Boolean(isActive) : true
       }
     });
+    logger.info({ memberId: newMember.id, photoUrl: newMember.photoUrl }, "Member saved to database successfully");
     await logAudit(req.user.id, "Register Member", "MEMBER", null, newMember, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     return res.status(201).json({ status: 201, data: newMember });
   }
@@ -119,6 +122,7 @@ var members_default = makeHandler(async (req, res) => {
         return res.status(400).json({ error: { message: `${field}: send a URL, not a Base64 image. Use /api/v1/upload first.`, status: 400 } });
       }
     }
+    logger.info({ memberId: id, photoUrl, cnicFrontUrl, cnicBackUrl }, "Updating member with image URLs");
     const updatedMember = await prisma.member.update({
       where: { id },
       data: {
@@ -143,6 +147,7 @@ var members_default = makeHandler(async (req, res) => {
         isActive: isActive !== void 0 ? Boolean(isActive) : void 0
       }
     });
+    logger.info({ memberId: updatedMember.id, photoUrl: updatedMember.photoUrl }, "Member updated in database successfully");
     await logAudit(req.user.id, "Update Member", "MEMBER", existingMember, updatedMember, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     return res.status(200).json({ status: 200, data: updatedMember });
   }
