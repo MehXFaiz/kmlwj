@@ -1,13 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useCoaStore } from '../../store/coaStore';
+import { getCurrentFiscalYear, useCoaStore } from '../../store/coaStore';
 import { useAuthStore } from '../../store/authStore';
-import { useThemeStore } from '../../store/themeStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { Menu, User, Settings, LogOut, ChevronDown, Globe, Bell, X, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { ColorPalettePicker } from './ColorPalettePicker';
-import { ThemeToggle } from '../theme/ThemeToggle';
 import { useShallow } from 'zustand/react/shallow';
 
 export const Topbar = ({ onMobileMenuToggle }) => {
@@ -18,18 +15,13 @@ export const Topbar = ({ onMobileMenuToggle }) => {
       logout: state.logout,
     }))
   );
-  const initPalette = useThemeStore((state) => state.initPalette);
   const { 
-    selectedSubsidiary, 
-    setSelectedSubsidiary, 
-    fiscalYear, 
-    setFiscalYear 
+    fiscalYear,
+    syncFiscalYear,
   } = useCoaStore(
     useShallow((state) => ({
-      selectedSubsidiary: state.selectedSubsidiary,
-      setSelectedSubsidiary: state.setSelectedSubsidiary,
       fiscalYear: state.fiscalYear,
-      setFiscalYear: state.setFiscalYear,
+      syncFiscalYear: state.syncFiscalYear,
     }))
   );
 
@@ -63,13 +55,21 @@ export const Topbar = ({ onMobileMenuToggle }) => {
 
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
   const notificationMenuRef = useRef(null);
+  const [currentFiscalYear, setCurrentFiscalYear] = useState(getCurrentFiscalYear);
   
   const { i18n } = useTranslation();
   const language = i18n.language || 'en';
 
   useEffect(() => {
-    initPalette();
-  }, []);
+    const syncCurrentYear = () => {
+      const nextYear = syncFiscalYear();
+      setCurrentFiscalYear(nextYear);
+    };
+
+    syncCurrentYear();
+    const intervalId = window.setInterval(syncCurrentYear, 60 * 60 * 1000);
+    return () => window.clearInterval(intervalId);
+  }, [syncFiscalYear]);
 
   // Start polling notifications when the component mounts (user is authenticated)
   useEffect(() => {
@@ -98,8 +98,7 @@ export const Topbar = ({ onMobileMenuToggle }) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const subsidiaries = ['Global', 'Acme US', 'Acme Europe', 'Acme APAC'];
-  const fiscalYears = ['2025', '2026', '2027'];
+  const displayedFiscalYear = fiscalYear === currentFiscalYear ? fiscalYear : currentFiscalYear;
 
   return (
     <header className="print-hidden bg-slate-900 z-20 shrink-0 relative" style={{ boxShadow: '0 1px 0 0 rgba(255,255,255,0.04), 0 2px 12px 0 rgba(0,0,0,0.35)' }}>
@@ -130,24 +129,12 @@ export const Topbar = ({ onMobileMenuToggle }) => {
 
         <div className="hidden lg:flex items-center gap-2 shrink-0">
           <select
-            value={selectedSubsidiary}
-            onChange={(e) => setSelectedSubsidiary(e.target.value)}
-            className="px-3 py-1.5 rounded-lg border border-slate-800 bg-slate-900/60 text-[11px] font-semibold text-slate-300 focus:outline-none focus:border-slate-700"
-            aria-label="Select subsidiary"
-          >
-            {subsidiaries.map((subsidiary) => (
-              <option key={subsidiary} value={subsidiary}>{subsidiary}</option>
-            ))}
-          </select>
-          <select
-            value={fiscalYear}
-            onChange={(e) => setFiscalYear(e.target.value)}
-            className="px-3 py-1.5 rounded-lg border border-slate-800 bg-slate-900/60 text-[11px] font-semibold text-slate-300 focus:outline-none focus:border-slate-700"
+            value={displayedFiscalYear}
+            onChange={syncFiscalYear}
+            className="px-3 py-1.5 rounded-lg border border-slate-800 bg-slate-900/60 text-[11px] font-semibold text-slate-300 focus:outline-none focus:border-brand-500"
             aria-label="Select fiscal year"
           >
-            {fiscalYears.map((year) => (
-              <option key={year} value={year}>{`FY ${year}`}</option>
-            ))}
+            <option value={displayedFiscalYear}>{`FY ${displayedFiscalYear}`}</option>
           </select>
         </div>
 
@@ -293,12 +280,6 @@ export const Topbar = ({ onMobileMenuToggle }) => {
               </div>
             )}
           </div>
-
-          {/* Theme switcher */}
-          <ThemeToggle />
-
-          {/* Color Palette Picker */}
-          <ColorPalettePicker />
 
           {/* User menu */}
           <div className="relative" ref={userMenuRef}>

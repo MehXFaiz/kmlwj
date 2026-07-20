@@ -5,7 +5,6 @@ import { SplashScreen } from './components/common/SplashScreen';
 import { Sidebar } from './components/common/Sidebar';
 import { Topbar } from './components/common/Topbar';
 import { useAuthStore } from './store/authStore';
-import { ThemeProvider } from './components/theme/ThemeProvider';
 import { ToastContainer } from './components/ui/Toast';
 import { ConfirmationModal } from './components/ui/ConfirmationModal';
 
@@ -296,7 +295,7 @@ function App() {
   }
 
   return (
-    <ThemeProvider>
+    <>
       {/* Global toast notifications — replaces all alert() calls */}
       <ToastContainer />
       
@@ -462,7 +461,7 @@ function App() {
         </Suspense>
         </ChunkErrorBoundary>
       </Router>
-    </ThemeProvider>
+    </>
   );
 }
 

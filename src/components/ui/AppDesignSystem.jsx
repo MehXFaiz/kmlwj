@@ -1,15 +1,11 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTheme } from '../theme/ThemeContext';
-import { useThemeStore } from '../../store/themeStore';
-import { X, Search, ChevronDown, Laptop, Sun, Moon, Palette, Globe, Menu, Shield } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { X, Search, Menu } from 'lucide-react';
 
 // 1. AppThemeProvider
 export const AppThemeProvider = ({ children }) => {
-  const theme = useThemeStore((state) => state.theme);
   return (
-    <div className={`app-root ${theme} min-h-screen bg-black text-[#432921] antialiased selection:bg-[#432921]/30 selection:text-[#432921]`}>
+    <div className="app-root dark min-h-screen bg-black text-[#432921] antialiased selection:bg-[#432921]/30 selection:text-[#432921]">
       {children}
     </div>
   );

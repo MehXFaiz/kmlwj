@@ -10,46 +10,6 @@ function generateVoucherNumber() {
   const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
   return `BR-${year}${month}-${randomStr}`;
 }
-async function getOrCreateAccountsReceivable(tx) {
-  let arAccount = await tx.account.findFirst({
-    where: {
-      OR: [
-        { accountName: { contains: "Accounts Receivable", mode: "insensitive" } },
-        { glCode: "1010200" }
-      ]
-    }
-  });
-  if (!arAccount) {
-    const parentAccount = await tx.account.findFirst({
-      where: {
-        OR: [
-          { glCode: "1010000" },
-          { accountName: { contains: "Current Assets", mode: "insensitive" } }
-        ]
-      }
-    });
-    if (!parentAccount) {
-      throw new Error("Current Assets account not found in Chart of Accounts.");
-    }
-    arAccount = await tx.account.create({
-      data: {
-        glCode: "1010200",
-        accountName: "Accounts Receivable",
-        accountLevel: "SUBSIDIARY",
-        parentId: parentAccount.id,
-        accountTypeId: parentAccount.accountTypeId,
-        detailType: "Accounts Receivable",
-        description: "Standard Accounts Receivable account",
-        currency: "PKR",
-        subsidiary: ["Global"],
-        initialBalance: 0,
-        currentBalance: 0,
-        isSystemDefined: true
-      }
-    });
-  }
-  return arAccount;
-}
 var hall_bookings_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -180,7 +140,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
           });
         }
         if (remAmt > 0) {
-          const arAccount = await getOrCreateAccountsReceivable(tx);
+          const arAccount = await AccountingService.getOrCreateAccountsReceivable(tx);
           lines.push({
             accountId: arAccount.id,
             debit: remAmt,
@@ -554,7 +514,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
             });
           }
           if (calculatedRemainingAmount > 0) {
-            const arAccount = await getOrCreateAccountsReceivable(tx);
+            const arAccount = await AccountingService.getOrCreateAccountsReceivable(tx);
             lines.push({
               accountId: arAccount.id,
               debit: calculatedRemainingAmount,

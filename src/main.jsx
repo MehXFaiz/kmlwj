@@ -6,6 +6,9 @@ import './index.css'
 import './i18n'
 import App from './App.jsx'
 
+document.documentElement.classList.remove('light');
+document.documentElement.classList.add('dark');
+
 // Global fallback for chunk load errors
 window.addEventListener('unhandledrejection', (event) => {
   const msg = event.reason?.message || '';

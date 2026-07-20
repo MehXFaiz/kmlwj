@@ -1,18 +1,23 @@
 import { create } from 'zustand';
 import { accountService } from '../services/apiServices';
 
+export const getCurrentFiscalYear = () => String(new Date().getFullYear());
+
 export const useCoaStore = create((set, get) => ({
   accounts: [], // flat list fallback if needed globally
   treeAccounts: [], // Nested tree structure
   flatAccounts: [], // Paginated list
   meta: { total: 0, page: 1, limit: 100 },
   selectedSubsidiary: 'Global',
-  fiscalYear: '2026',
+  fiscalYear: getCurrentFiscalYear(),
   loading: false,
   error: null,
 
-  setSelectedSubsidiary: (subsidiary) => set({ selectedSubsidiary: subsidiary }),
-  setFiscalYear: (fiscalYear) => set({ fiscalYear }),
+  syncFiscalYear: () => {
+    const fiscalYear = getCurrentFiscalYear();
+    if (get().fiscalYear !== fiscalYear) set({ fiscalYear });
+    return fiscalYear;
+  },
 
   // Deprecated generic fetch, kept for backward compatibility if needed elsewhere
   fetchAccounts: async () => {

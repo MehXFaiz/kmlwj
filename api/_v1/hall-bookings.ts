@@ -13,51 +13,6 @@ function generateVoucherNumber() {
   return `BR-${year}${month}-${randomStr}`;
 }
 
-async function getOrCreateAccountsReceivable(tx: any) {
-  let arAccount = await tx.account.findFirst({
-    where: {
-      OR: [
-        { accountName: { contains: 'Accounts Receivable', mode: 'insensitive' } },
-        { glCode: '1010200' }
-      ]
-    }
-  });
-
-  if (!arAccount) {
-    const parentAccount = await tx.account.findFirst({
-      where: {
-        OR: [
-          { glCode: '1010000' },
-          { accountName: { contains: 'Current Assets', mode: 'insensitive' } }
-        ]
-      }
-    });
-
-    if (!parentAccount) {
-      throw new Error('Current Assets account not found in Chart of Accounts.');
-    }
-
-    arAccount = await tx.account.create({
-      data: {
-        glCode: '1010200',
-        accountName: 'Accounts Receivable',
-        accountLevel: 'SUBSIDIARY',
-        parentId: parentAccount.id,
-        accountTypeId: parentAccount.accountTypeId,
-        detailType: 'Accounts Receivable',
-        description: 'Standard Accounts Receivable account',
-        currency: 'PKR',
-        subsidiary: ['Global'],
-        initialBalance: 0,
-        currentBalance: 0,
-        isSystemDefined: true,
-      }
-    });
-  }
-
-  return arAccount;
-}
-
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -211,7 +166,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
         // Debit Accounts Receivable for remaining amount
         if (remAmt > 0) {
-          const arAccount = await getOrCreateAccountsReceivable(tx);
+          const arAccount = await AccountingService.getOrCreateAccountsReceivable(tx);
           lines.push({
             accountId: arAccount.id,
             debit: remAmt,
@@ -647,7 +602,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           }
 
           if (calculatedRemainingAmount > 0) {
-            const arAccount = await getOrCreateAccountsReceivable(tx);
+            const arAccount = await AccountingService.getOrCreateAccountsReceivable(tx);
             lines.push({
               accountId: arAccount.id,
               debit: calculatedRemainingAmount,

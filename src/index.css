@@ -35,55 +35,63 @@
 
 :root {
   /* ── LIGHT MODE: Warm White / Beige / Metallic accents ── */
-  --slate-950: #fcfbfa;          /* deepest page background: Warm White */
-  --slate-900: #faf8f5;          /* sidebar / nav background */
-  --slate-800: #f5f2eb;          /* card / panel background: Light Beige */
-  --slate-700: #ede9df;          /* elevated card background / hover state */
-  --slate-600: #e3dec9;          /* input borders, dividers */
-  --slate-500: #4A3A2C;          /* muted text, placeholders */
-  --slate-400: #2C2118;          /* secondary labels */
-  --slate-300: #1E1610;          /* body text */
-  --slate-200: #140E0A;          /* primary labels */
-  --slate-100: #0D0906;          /* headings / strong text */
-  --slate-50:  #080808;          /* inverse text / deepest black */
+  --slate-950: #080808;
+  --slate-900: #121212;
+  --slate-800: #1a1a1a;
+  --slate-700: #242424;
+  --slate-600: #333333;
+  --slate-500: #737373;
+  --slate-400: #a3a3a3;
+  --slate-300: #c8c8c8;
+  --slate-200: #e5e5e5;
+  --slate-100: #ffffff;
+  --slate-50:  #fcfbfa;
 
-  --glass-bg:          rgba(245, 242, 235, 0.70);
-  --glass-border:      rgba(72, 47, 30, 0.15);
-  --glass-hover-bg:    rgba(245, 242, 235, 0.90);
-  --glass-hover-border:rgba(72, 47, 30, 0.35);   /* mocha tint on hover */
+  --accent-primary: #967259;
+  --accent-hover: #A67C5B;
+  --accent-active: #7D5A44;
+  --accent-bg-light: rgba(150, 114, 89, 0.12);
+  --accent-border: rgba(150, 114, 89, 0.35);
+
+  --glass-bg:          rgba(26, 26, 26, 0.70);
+  --glass-border:      rgba(255, 255, 255, 0.04);
+  --glass-hover-bg:    rgba(26, 26, 26, 0.90);
+  --glass-hover-border:var(--accent-border);
 
   /* ── Accent Palette: Mocha Brown (#482F1E) ── */
-  --brand-50:  #FAF6F2;
-  --brand-100: #F3EBE3;
-  --brand-200: #E4D3C3;
-  --brand-300: #CFAEA0;
-  --brand-400: #9C735B;
-  --brand-500: #64432C;
-  --brand-600: #482F1E;   /* primary mocha brown */
-  --brand-700: #382416;
-  --brand-800: #291A10;
-  --brand-900: #1C120B;
+  --brand-50:  #F7F1ED;
+  --brand-100: #EBDDD4;
+  --brand-200: #D8C0AF;
+  --brand-300: #BD997F;
+  --brand-400: #A67C5B;
+  --brand-500: #967259;
+  --brand-600: #967259;
+  --brand-700: #7D5A44;
+  --brand-800: #5C4031;
+  --brand-900: #3A281F;
+  --brand-950: #211611;
 
   /* ── Mocha tones for System Integrity / special cards ── */
-  --copper-900: #1C120B;
-  --copper-800: #291A10;
-  --copper-700: #382416;
-  --copper-600: #482F1E;
-  --copper-500: #64432C;
-  --copper-400: #9C735B;
-  --copper-300: #CFAEA0;
-  --copper-200: #E4D3C3;
-  --copper-100: #F3EBE3;
-  --copper-50:  #FAF6F2;
+  --copper-950: var(--brand-950);
+  --copper-900: var(--brand-900);
+  --copper-800: var(--brand-800);
+  --copper-700: var(--brand-700);
+  --copper-600: var(--brand-600);
+  --copper-500: var(--brand-500);
+  --copper-400: var(--brand-400);
+  --copper-300: var(--brand-300);
+  --copper-200: var(--brand-200);
+  --copper-100: var(--brand-100);
+  --copper-50:  var(--brand-50);
 
   /* Chart Colors — warm status colors */
-  --chart-revenue:  #10b981; /* Emerald Green */
-  --chart-expense:  #dc2626; /* Deep Red */
-  --chart-asset:    #482F1E; /* Mocha Brown */
-  --chart-liability:#c59b27; /* Burnished Gold */
-  --chart-equity:   #4682b4; /* Steel Blue */
-  --chart-grid:     rgba(0, 0, 0, 0.05);
-  --chart-axis:     #706a5b;
+  --chart-revenue:  var(--accent-primary);
+  --chart-expense:  var(--accent-active);
+  --chart-asset:    var(--accent-primary);
+  --chart-liability:var(--accent-hover);
+  --chart-equity:   var(--accent-active);
+  --chart-grid:     rgba(255, 255, 255, 0.04);
+  --chart-axis:     #888888;
 }
 
 /* .dark overrides for Matte Black / Dark Graphite theme */
@@ -103,25 +111,26 @@
   --glass-bg:          rgba(26, 26, 26, 0.70);
   --glass-border:      rgba(255, 255, 255, 0.04);
   --glass-hover-bg:    rgba(26, 26, 26, 0.90);
-  --glass-hover-border:rgba(72, 47, 30, 0.35);   /* mocha glow on hover */
+  --glass-hover-border:var(--accent-border);
 
   /* brand defaults to mocha brown accent in dark mode */
-  --brand-50:  #FAF6F2;
-  --brand-100: #F3EBE3;
-  --brand-200: #E4D3C3;
-  --brand-300: #CFAEA0;
-  --brand-400: #9C735B;
-  --brand-500: #64432C;   /* hover accent */
-  --brand-600: #482F1E;   /* primary #482F1E */
-  --brand-700: #382416;
-  --brand-800: #291A10;
-  --brand-900: #1C120B;
+  --brand-50:  #F7F1ED;
+  --brand-100: #EBDDD4;
+  --brand-200: #D8C0AF;
+  --brand-300: #BD997F;
+  --brand-400: #A67C5B;
+  --brand-500: #967259;
+  --brand-600: #967259;
+  --brand-700: #7D5A44;
+  --brand-800: #5C4031;
+  --brand-900: #3A281F;
+  --brand-950: #211611;
 
-  --chart-revenue:  #10b981;
-  --chart-expense:  #ef4444;
-  --chart-asset:    #482F1E;
-  --chart-liability:#c59b27;
-  --chart-equity:   #4682b4;
+  --chart-revenue:  var(--accent-primary);
+  --chart-expense:  var(--accent-active);
+  --chart-asset:    var(--accent-primary);
+  --chart-liability:var(--accent-hover);
+  --chart-equity:   var(--accent-active);
   --chart-grid:     rgba(255, 255, 255, 0.04);
   --chart-axis:     #888888;
 }
@@ -157,8 +166,10 @@
   --color-brand-700: var(--brand-700);
   --color-brand-800: var(--brand-800);
   --color-brand-900: var(--brand-900);
+  --color-brand-950: var(--brand-950);
 
   /* ── Expose copper as extra color tokens ── */
+  --color-copper-950: var(--copper-950);
   --color-copper-900: var(--copper-900);
   --color-copper-800: var(--copper-800);
   --color-copper-700: var(--copper-700);
@@ -171,29 +182,29 @@
   --color-copper-50:  var(--copper-50);
 
   /* ── Override Amber & Orange palette to Mocha Brown (#482F1E) across entire project ── */
-  --color-amber-50:  #FAF6F2;
-  --color-amber-100: #F3EBE3;
-  --color-amber-200: #E4D3C3;
-  --color-amber-300: #CFAEA0;
-  --color-amber-400: #9C735B;
-  --color-amber-500: #64432C;
-  --color-amber-600: #482F1E;
-  --color-amber-700: #382416;
-  --color-amber-800: #291A10;
-  --color-amber-900: #1C120B;
-  --color-amber-950: #120B07;
+  --color-amber-50:  #F7F1ED;
+  --color-amber-100: #EBDDD4;
+  --color-amber-200: #D8C0AF;
+  --color-amber-300: #BD997F;
+  --color-amber-400: #A67C5B;
+  --color-amber-500: #A67C5B;
+  --color-amber-600: #967259;
+  --color-amber-700: #7D5A44;
+  --color-amber-800: #5C4031;
+  --color-amber-900: #3A281F;
+  --color-amber-950: #211611;
 
-  --color-orange-50:  #FAF6F2;
-  --color-orange-100: #F3EBE3;
-  --color-orange-200: #E4D3C3;
-  --color-orange-300: #CFAEA0;
-  --color-orange-400: #9C735B;
-  --color-orange-500: #64432C;
-  --color-orange-600: #482F1E;
-  --color-orange-700: #382416;
-  --color-orange-800: #291A10;
-  --color-orange-900: #1C120B;
-  --color-orange-950: #120B07;
+  --color-orange-50:  #F7F1ED;
+  --color-orange-100: #EBDDD4;
+  --color-orange-200: #D8C0AF;
+  --color-orange-300: #BD997F;
+  --color-orange-400: #A67C5B;
+  --color-orange-500: #A67C5B;
+  --color-orange-600: #967259;
+  --color-orange-700: #7D5A44;
+  --color-orange-800: #5C4031;
+  --color-orange-900: #3A281F;
+  --color-orange-950: #211611;
 
   /* Status colors */
   --color-success-bg: hsl(142, 76%, 36%);
@@ -236,7 +247,7 @@
 @layer base {
   html {
     background-color: var(--slate-950);
-    color-scheme: light dark;
+    color-scheme: dark;
   }
 
   body {
@@ -248,12 +259,12 @@
   /* Custom scrollbar */
   ::-webkit-scrollbar        { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track  { background: transparent; }
-  ::-webkit-scrollbar-thumb  { background: rgba(72, 47, 30, 0.35); border-radius: 9999px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(72, 47, 30, 0.55); }
+  ::-webkit-scrollbar-thumb  { background: var(--accent-border); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(150, 114, 89, 0.55); }
 
   /* Focus rings — copper */
   :focus-visible {
-    outline: 2px solid var(--brand-400);
+    outline: 2px solid var(--accent-hover);
     outline-offset: 2px;
     border-radius: 8px;
   }
@@ -261,6 +272,26 @@
 
   button, [role="button"], a, input[type="checkbox"], input[type="radio"] {
     min-height: 1px;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  ::selection {
+    background: var(--accent-bg-light);
+    color: var(--slate-100);
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: var(--accent-primary);
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    border-color: var(--accent-primary);
   }
 
   /* Date input calendar icon */
@@ -481,4 +512,3 @@ html.theme-transition *::after {
     height: auto !important;
   }
 }
-

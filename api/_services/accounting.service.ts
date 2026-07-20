@@ -147,6 +147,51 @@ export class AccountingService {
     return cashAccount;
   }
 
+  static async getOrCreateAccountsReceivable(tx: any) {
+    let arAccount = await tx.account.findFirst({
+      where: {
+        OR: [
+          { accountName: { contains: 'Accounts Receivable', mode: 'insensitive' } },
+          { glCode: '1010200' }
+        ]
+      }
+    });
+
+    if (!arAccount) {
+      const parentAccount = await tx.account.findFirst({
+        where: {
+          OR: [
+            { glCode: '1010000' },
+            { accountName: { contains: 'Current Assets', mode: 'insensitive' } }
+          ]
+        }
+      });
+
+      if (!parentAccount) {
+        throw new Error('Current Assets account not found in Chart of Accounts.');
+      }
+
+      arAccount = await tx.account.create({
+        data: {
+          glCode: '1010200',
+          accountName: 'Accounts Receivable',
+          accountLevel: 'SUBSIDIARY',
+          parentId: parentAccount.id,
+          accountTypeId: parentAccount.accountTypeId,
+          detailType: 'Accounts Receivable',
+          description: 'Standard Accounts Receivable account',
+          currency: 'PKR',
+          subsidiary: ['Global'],
+          initialBalance: 0,
+          currentBalance: 0,
+          isSystemDefined: true,
+        }
+      });
+    }
+
+    return arAccount;
+  }
+
   /**
    * Resolves an Account from the Chart of Accounts using ID, GL Code, keyword, or type fallback.
    * Enforces that the account exists and is not locked.
