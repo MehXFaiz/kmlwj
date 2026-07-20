@@ -451,7 +451,7 @@ html.theme-transition *::after {
 @layer utilities {
   .font-urdu,
   .urdu-font {
-    font-family: "Alvi Nastaleeq", "Alvi Nastaleeq Regular", "Jameel Noori Nastaleeq", "Jameel Noori Nastaleeq Kasheeda", "Noto Nastaliq Urdu", serif !important;
+    font-family: "Alvi Nastaleeq Regular", "Alvi Nastaleeq", "Jameel Noori Nastaleeq", "Jameel Noori Nastaleeq Kasheeda", "Noto Nastaliq Urdu", serif !important;
     direction: rtl;
     text-align: right;
     line-height: 2;
@@ -465,7 +465,7 @@ html.theme-transition *::after {
   /* Inline Urdu inside an LTR container (e.g. "BOOKER NAME / نام بکنگ کنندہ")
      — no direction override, just font swap for the Urdu glyphs. */
   .font-urdu-inline {
-    font-family: "Alvi Nastaleeq", "Alvi Nastaleeq Regular", "Jameel Noori Nastaleeq", "Jameel Noori Nastaleeq Kasheeda", "Noto Nastaliq Urdu", serif !important;
+    font-family: "Alvi Nastaleeq Regular", "Alvi Nastaleeq", "Jameel Noori Nastaleeq", "Jameel Noori Nastaleeq Kasheeda", "Noto Nastaliq Urdu", serif !important;
   }
 }
 

@@ -51,7 +51,7 @@ import accountingHealthHandler from './_v1/accounting-health.js';
 import zakatCardsHandler from './_v1/zakat-cards.js';
 import { memberVerifyHandler } from './_v1/member-verify.js';
 import notificationsHandler from './_v1/notifications.js';
-import { uploadFields } from './_middlewares/upload.middleware.js';
+import { uploadFields, handleUploadError } from './_middlewares/upload.middleware.js';
 
 const app = express();
 
@@ -191,8 +191,8 @@ app.post('/api/v1/customers', makeExpress(customersHandler));
 app.put('/api/v1/customers', makeExpress(customersHandler));
 app.delete('/api/v1/customers', makeExpress(customersHandler));
 
-// File upload endpoint — multer runs first, then the handler reads req.files
-app.post('/api/v1/upload', uploadFields, makeExpress(uploadHandler));
+// File upload endpoint — multer → handler → multer error converter (must be last, 4-arg signature)
+app.post('/api/v1/upload', uploadFields, makeExpress(uploadHandler), handleUploadError);
 
 app.get('/api/v1/members', makeExpress(membersHandler));
 app.post('/api/v1/members', makeExpress(membersHandler));
@@ -244,6 +244,18 @@ app.patch('/api/v1/notifications', makeExpress(notificationsHandler));
 // Public Member Verification Route (no JWT — scanned from QR code)
 app.get('/api/v1/member/verify/:id', async (req: any, res: any) => {
   await memberVerifyHandler(req, res);
+});
+
+// ── Global JSON error handler ────────────────────────────────────────────────
+// Must be the last middleware registered. Catches anything that reaches
+// next(err) without being handled above (including unhandled multer errors).
+app.use((err: any, _req: any, res: any, _next: any) => {
+  logger.error({ err }, 'Unhandled Express error');
+  const status  = err?.status ?? err?.statusCode ?? 500;
+  const message = status < 500
+    ? (err?.message || 'Request failed')
+    : 'An unexpected error occurred. Please try again.';
+  res.status(status).json({ error: { message, status } });
 });
 
 export default app;

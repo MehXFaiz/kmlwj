@@ -16,7 +16,10 @@ export const memberService = {
    */
   uploadFiles: (formData, onProgress) =>
     api.post('/api/v1/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      // Setting Content-Type to null removes the default 'application/json' header.
+      // The browser's XHR/fetch then sets 'multipart/form-data; boundary=...' automatically,
+      // which multer needs to parse the request body correctly.
+      headers: { 'Content-Type': null },
       onUploadProgress: (e) => {
         if (onProgress && e.total) {
           onProgress(Math.round((e.loaded * 100) / e.total));

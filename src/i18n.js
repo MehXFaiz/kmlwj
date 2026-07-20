@@ -31,7 +31,7 @@ i18n.on('languageChanged', (lng) => {
   document.documentElement.dir = 'ltr'; // Force LTR even for Urdu
   
   if (lng === 'ur') {
-    document.documentElement.style.fontFamily = "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif";
+    document.documentElement.style.fontFamily = "'Alvi Nastaleeq Regular', 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif";
   } else {
     document.documentElement.style.fontFamily = ""; // Revert to default in CSS
   }

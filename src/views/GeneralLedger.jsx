@@ -293,8 +293,8 @@ export const GeneralLedger = () => {
   <style>
     @page { size: A4 portrait; margin: 12mm 10mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', Arial, 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', sans-serif; font-size: 9pt; color: #1a1a1a; background: #fff; }
-    .org-urdu, .org-sub { font-family: 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif; direction: rtl; }
+    body { font-family: 'Segoe UI', Arial, 'Alvi Nastaleeq Regular', 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', sans-serif; font-size: 9pt; color: #1a1a1a; background: #fff; }
+    .org-urdu, .org-sub { font-family: 'Alvi Nastaleeq Regular', 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif; direction: rtl; }
 
     /* ── Report Header ── */
     .report-header { display: flex; align-items: flex-start; gap: 12px; padding-bottom: 8px; border-bottom: 2px solid #1a1a1a; margin-bottom: 8px; }
