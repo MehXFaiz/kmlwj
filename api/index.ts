@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
 import { logger } from './_utils/logger.js';
 
 // Import Vercel serverless handlers from the hidden directories
@@ -35,6 +36,7 @@ import hallBookingsHandler from './_v1/hall-bookings.js';
 import revenueCollectionsHandler from './_v1/revenue-collections.js';
 import customersHandler from './_v1/customers.js';
 import membersHandler from './_v1/members.js';
+import uploadHandler from './_v1/upload.js';
 import invoicesHandler from './_v1/invoices.js';
 import generalLedgerHandler from './_v1/general-ledger.js';
 import journalEntriesHandler from './_v1/journal-entries.js';
@@ -49,6 +51,7 @@ import accountingHealthHandler from './_v1/accounting-health.js';
 import zakatCardsHandler from './_v1/zakat-cards.js';
 import { memberVerifyHandler } from './_v1/member-verify.js';
 import notificationsHandler from './_v1/notifications.js';
+import { uploadFields } from './_middlewares/upload.middleware.js';
 
 const app = express();
 
@@ -86,8 +89,12 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Keep JSON body limit small — images must come via /api/v1/upload (multipart), not Base64 in JSON
+app.use(express.json({ limit: '500kb' }));
+app.use(express.urlencoded({ extended: true, limit: '500kb' }));
+
+// Serve uploaded files (development only — use Cloudinary in production)
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Helper to convert Vercel handler to Express-compatible middleware
 const makeExpress = (handler: any) => {
@@ -183,6 +190,9 @@ app.get('/api/v1/customers', makeExpress(customersHandler));
 app.post('/api/v1/customers', makeExpress(customersHandler));
 app.put('/api/v1/customers', makeExpress(customersHandler));
 app.delete('/api/v1/customers', makeExpress(customersHandler));
+
+// File upload endpoint — multer runs first, then the handler reads req.files
+app.post('/api/v1/upload', uploadFields, makeExpress(uploadHandler));
 
 app.get('/api/v1/members', makeExpress(membersHandler));
 app.post('/api/v1/members', makeExpress(membersHandler));

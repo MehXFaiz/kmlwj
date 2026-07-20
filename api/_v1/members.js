@@ -47,10 +47,17 @@ var members_default = makeHandler(async (req, res) => {
       company,
       doi,
       photoUrl,
+      cnicFrontUrl,
+      cnicBackUrl,
       isActive
     } = req.body;
     if (!fullName) {
       return res.status(400).json({ error: { message: "Full Member Name is required", status: 400 } });
+    }
+    for (const [field, value] of [["photoUrl", photoUrl], ["cnicFrontUrl", cnicFrontUrl], ["cnicBackUrl", cnicBackUrl]]) {
+      if (value && String(value).startsWith("data:")) {
+        return res.status(400).json({ error: { message: `${field}: send a URL, not a Base64 image. Use /api/v1/upload first.`, status: 400 } });
+      }
     }
     const newMember = await prisma.member.create({
       data: {
@@ -70,6 +77,8 @@ var members_default = makeHandler(async (req, res) => {
         company: company || null,
         doi: doi || null,
         photoUrl: photoUrl || null,
+        cnicFrontUrl: cnicFrontUrl || null,
+        cnicBackUrl: cnicBackUrl || null,
         isActive: isActive !== void 0 ? Boolean(isActive) : true
       }
     });
@@ -101,8 +110,15 @@ var members_default = makeHandler(async (req, res) => {
       company,
       doi,
       photoUrl,
+      cnicFrontUrl,
+      cnicBackUrl,
       isActive
     } = req.body;
+    for (const [field, value] of [["photoUrl", photoUrl], ["cnicFrontUrl", cnicFrontUrl], ["cnicBackUrl", cnicBackUrl]]) {
+      if (value && String(value).startsWith("data:")) {
+        return res.status(400).json({ error: { message: `${field}: send a URL, not a Base64 image. Use /api/v1/upload first.`, status: 400 } });
+      }
+    }
     const updatedMember = await prisma.member.update({
       where: { id },
       data: {
@@ -122,6 +138,8 @@ var members_default = makeHandler(async (req, res) => {
         company: company !== void 0 ? company || null : void 0,
         doi: doi !== void 0 ? doi || null : void 0,
         photoUrl: photoUrl !== void 0 ? photoUrl || null : void 0,
+        cnicFrontUrl: cnicFrontUrl !== void 0 ? cnicFrontUrl || null : void 0,
+        cnicBackUrl: cnicBackUrl !== void 0 ? cnicBackUrl || null : void 0,
         isActive: isActive !== void 0 ? Boolean(isActive) : void 0
       }
     });

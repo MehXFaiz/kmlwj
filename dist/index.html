@@ -8,15 +8,29 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Noto+Nastaliq+Urdu:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Remove any stale persisted theme; dark mode is now fixed -->
-    <script>try { localStorage.removeItem('theme-storage'); } catch(e) {}</script>
-    <script type="module" crossorigin src="/assets/index-Taw3odGw.js"></script>
-    <link rel="modulepreload" crossorigin href="/assets/jsx-dev-runtime-D2vMIKtM.js">
-    <link rel="modulepreload" crossorigin href="/assets/api-CMmBT2cI.js">
-    <link rel="modulepreload" crossorigin href="/assets/customerService-Cjeh7aLL.js">
-    <link rel="modulepreload" crossorigin href="/assets/invoiceService-LjhuvpaY.js">
-    <link rel="modulepreload" crossorigin href="/assets/proxy-CU9zFO1y.js">
-    <link rel="stylesheet" crossorigin href="/assets/index-BuyPc6Os.css">
+    <!-- Apply persisted theme before first paint to avoid a flash of wrong theme -->
+    <script>
+      try {
+        var s = JSON.parse(localStorage.getItem('kmlwj-theme') || '{}');
+        var t = s && s.state && s.state.theme;
+        if (t === 'system') {
+          t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        if (t === 'light' || t === 'dark') {
+          document.documentElement.classList.remove('dark', 'light');
+          document.documentElement.classList.add(t);
+        }
+      } catch (e) {}
+    </script>
+    <script type="module" crossorigin src="/assets/index-DQp8iv4X.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-CNC7AqOf.js">
+    <link rel="modulepreload" crossorigin href="/assets/react-Bu3GVtcb.js">
+    <link rel="modulepreload" crossorigin href="/assets/createLucideIcon-py_2Ymly.js">
+    <link rel="modulepreload" crossorigin href="/assets/api-DTUU7tvm.js">
+    <link rel="modulepreload" crossorigin href="/assets/customerService-Cd1W_fm2.js">
+    <link rel="modulepreload" crossorigin href="/assets/invoiceService-nmQbPJ5J.js">
+    <link rel="modulepreload" crossorigin href="/assets/proxy-BaFUH5hr.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-Bj4x5roc.css">
   </head>
   <body class="h-full font-sans antialiased text-slate-200">
     <div id="root" class="h-full"></div>

@@ -461,6 +461,8 @@ model Member {
   company         String?
   doi             String?
   photoUrl        String?        @db.Text
+  cnicFrontUrl    String?        @db.Text
+  cnicBackUrl     String?        @db.Text
   isActive        Boolean        @default(true)
   zakatCards      ZakatCard[]
   createdAt       DateTime       @default(now())

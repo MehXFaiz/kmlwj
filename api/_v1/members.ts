@@ -38,11 +38,19 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   if (method === 'POST') {
     const {
       memberNo, fullName, fatherName, cnic, dob, address, mobile,
-      email, city, area, ghamName, education, profession, company, doi, photoUrl, isActive
+      email, city, area, ghamName, education, profession, company, doi,
+      photoUrl, cnicFrontUrl, cnicBackUrl, isActive
     } = req.body;
 
     if (!fullName) {
       return res.status(400).json({ error: { message: 'Full Member Name is required', status: 400 } });
+    }
+
+    // Reject Base64 payloads — images must be uploaded via /api/v1/upload first
+    for (const [field, value] of [['photoUrl', photoUrl], ['cnicFrontUrl', cnicFrontUrl], ['cnicBackUrl', cnicBackUrl]] as const) {
+      if (value && String(value).startsWith('data:')) {
+        return res.status(400).json({ error: { message: `${field}: send a URL, not a Base64 image. Use /api/v1/upload first.`, status: 400 } });
+      }
     }
 
     const newMember = await prisma.member.create({
@@ -63,6 +71,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         company: company || null,
         doi: doi || null,
         photoUrl: photoUrl || null,
+        cnicFrontUrl: cnicFrontUrl || null,
+        cnicBackUrl: cnicBackUrl || null,
         isActive: isActive !== undefined ? Boolean(isActive) : true,
       },
     });
@@ -84,8 +94,16 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     const {
       memberNo, fullName, fatherName, cnic, dob, address, mobile,
-      email, city, area, ghamName, education, profession, company, doi, photoUrl, isActive
+      email, city, area, ghamName, education, profession, company, doi,
+      photoUrl, cnicFrontUrl, cnicBackUrl, isActive
     } = req.body;
+
+    // Reject Base64 payloads — images must be uploaded via /api/v1/upload first
+    for (const [field, value] of [['photoUrl', photoUrl], ['cnicFrontUrl', cnicFrontUrl], ['cnicBackUrl', cnicBackUrl]] as const) {
+      if (value && String(value).startsWith('data:')) {
+        return res.status(400).json({ error: { message: `${field}: send a URL, not a Base64 image. Use /api/v1/upload first.`, status: 400 } });
+      }
+    }
 
     const updatedMember = await prisma.member.update({
       where: { id },
@@ -106,6 +124,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         company: company !== undefined ? (company || null) : undefined,
         doi: doi !== undefined ? (doi || null) : undefined,
         photoUrl: photoUrl !== undefined ? (photoUrl || null) : undefined,
+        cnicFrontUrl: cnicFrontUrl !== undefined ? (cnicFrontUrl || null) : undefined,
+        cnicBackUrl: cnicBackUrl !== undefined ? (cnicBackUrl || null) : undefined,
         isActive: isActive !== undefined ? Boolean(isActive) : undefined,
       },
     });
