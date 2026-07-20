@@ -3,6 +3,49 @@ import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { logger } from "../_utils/logger.js";
+const MEMBER_NO_PREFIX = "KML-";
+async function nextMemberNo() {
+  const existing = await prisma.member.findMany({
+    where: { memberNo: { startsWith: MEMBER_NO_PREFIX } },
+    select: { memberNo: true }
+  });
+  const maxNum = existing.reduce((max, m) => {
+    const n = parseInt(m.memberNo.slice(MEMBER_NO_PREFIX.length), 10);
+    return Number.isFinite(n) && n > max ? n : max;
+  }, 0);
+  return `${MEMBER_NO_PREFIX}${String(maxNum + 1).padStart(4, "0")}`;
+}
+function isUniqueViolation(err) {
+  return err?.code === "P2002";
+}
+async function assignMemberNo(memberId) {
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    const candidate = await nextMemberNo();
+    try {
+      const updated = await prisma.member.updateMany({
+        where: { id: memberId, memberNo: null },
+        data: { memberNo: candidate }
+      });
+      if (updated.count === 0) {
+        const current = await prisma.member.findUnique({ where: { id: memberId }, select: { memberNo: true } });
+        return current?.memberNo ?? candidate;
+      }
+      logger.info({ memberId, memberNo: candidate }, "Assigned membership number");
+      return candidate;
+    } catch (err) {
+      if (isUniqueViolation(err) && attempt < 5) continue;
+      throw err;
+    }
+  }
+  throw new Error("Failed to assign a unique membership number");
+}
+async function backfillMemberNos(members) {
+  const missing = members.filter((m) => !m.memberNo);
+  for (const m of missing) {
+    m.memberNo = await assignMemberNo(m.id);
+  }
+  return members;
+}
 var members_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -14,6 +57,7 @@ var members_default = makeHandler(async (req, res) => {
       if (!member) {
         return res.status(404).json({ error: { message: "Member not found", status: 404 } });
       }
+      await backfillMemberNos([member]);
       return res.status(200).json({ status: 200, data: member });
     }
     const { limit = "100", page = "1" } = req.query;
@@ -28,6 +72,7 @@ var members_default = makeHandler(async (req, res) => {
       }),
       prisma.member.count()
     ]);
+    await backfillMemberNos(members);
     return res.status(200).json({ status: 200, data: members, meta: { total, page: pageNum, limit: limitNum } });
   }
   if (method === "POST") {
@@ -61,30 +106,46 @@ var members_default = makeHandler(async (req, res) => {
       }
     }
     logger.info({ photoUrl, cnicFrontUrl, cnicBackUrl }, "Saving new member with image URLs");
-    const newMember = await prisma.member.create({
-      data: {
-        memberNo: memberNo || null,
-        fullName,
-        fatherName: fatherName || null,
-        cnic: cnic || null,
-        dob: dob || null,
-        address: address || null,
-        mobile: mobile || null,
-        email: email || null,
-        city: city || null,
-        area: area || null,
-        ghamName: ghamName || null,
-        education: education || null,
-        profession: profession || null,
-        company: company || null,
-        doi: doi || null,
-        photoUrl: photoUrl || null,
-        cnicFrontUrl: cnicFrontUrl || null,
-        cnicBackUrl: cnicBackUrl || null,
-        isActive: isActive !== void 0 ? Boolean(isActive) : true
+    let newMember;
+    for (let attempt = 1; ; attempt++) {
+      const memberNoToUse = memberNo && String(memberNo).trim() || await nextMemberNo();
+      try {
+        newMember = await prisma.member.create({
+          data: {
+            memberNo: memberNoToUse,
+            fullName,
+            fatherName: fatherName || null,
+            cnic: cnic || null,
+            dob: dob || null,
+            address: address || null,
+            mobile: mobile || null,
+            email: email || null,
+            city: city || null,
+            area: area || null,
+            ghamName: ghamName || null,
+            education: education || null,
+            profession: profession || null,
+            company: company || null,
+            doi: doi || null,
+            photoUrl: photoUrl || null,
+            cnicFrontUrl: cnicFrontUrl || null,
+            cnicBackUrl: cnicBackUrl || null,
+            isActive: isActive !== void 0 ? Boolean(isActive) : true
+          }
+        });
+        break;
+      } catch (err) {
+        if (isUniqueViolation(err) && !memberNo && attempt < 5 && err.meta?.target?.includes("memberNo")) {
+          continue;
+        }
+        if (isUniqueViolation(err)) {
+          const target = err.meta?.target?.join(", ") || "field";
+          return res.status(400).json({ error: { message: `A member with this ${target} already exists.`, status: 400 } });
+        }
+        throw err;
       }
-    });
-    logger.info({ memberId: newMember.id, photoUrl: newMember.photoUrl }, "Member saved to database successfully");
+    }
+    logger.info({ memberId: newMember.id, memberNo: newMember.memberNo, photoUrl: newMember.photoUrl }, "Member saved to database successfully");
     await logAudit(req.user.id, "Register Member", "MEMBER", null, newMember, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     return res.status(201).json({ status: 201, data: newMember });
   }
@@ -123,10 +184,12 @@ var members_default = makeHandler(async (req, res) => {
       }
     }
     logger.info({ memberId: id, photoUrl, cnicFrontUrl, cnicBackUrl }, "Updating member with image URLs");
+    if (!existingMember.memberNo) {
+      existingMember.memberNo = await assignMemberNo(id);
+    }
     const updatedMember = await prisma.member.update({
       where: { id },
       data: {
-        memberNo: memberNo !== void 0 ? memberNo || null : void 0,
         fullName: fullName || void 0,
         fatherName: fatherName !== void 0 ? fatherName || null : void 0,
         cnic: cnic !== void 0 ? cnic || null : void 0,
