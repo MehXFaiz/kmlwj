@@ -34,7 +34,9 @@ export const memberService = {
    * @returns {Promise<{ photoUrl?, cnicFrontUrl?, cnicBackUrl? }>}
    */
   uploadFile: async (fieldName, file, onProgress) => {
-    const { data: signResult } = await api.post('/api/v1/upload/sign');
+    // Response body shape: { status: 200, data: { mode, ... } } — unwrap both
+    // the axios envelope and the API envelope to get the sign payload itself.
+    const signResult = (await api.post('/api/v1/upload/sign')).data.data;
 
     if (signResult.mode === 'cloud') {
       const { cloudName, apiKey, timestamp, signature, folder } = signResult;
