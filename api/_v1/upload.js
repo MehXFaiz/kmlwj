@@ -11,11 +11,17 @@ const FIELD_KEY = {
 };
 function assertWritableEnvironment() {
   if (process.env.VERCEL) {
+    const missingVars = [
+      !process.env.CLOUDINARY_CLOUD_NAME && "CLOUDINARY_CLOUD_NAME",
+      !process.env.CLOUDINARY_API_KEY && "CLOUDINARY_API_KEY",
+      !process.env.CLOUDINARY_API_SECRET && "CLOUDINARY_API_SECRET"
+    ].filter(Boolean);
     logger.error(
-      "Local-disk upload fallback invoked on Vercel (process.env.VERCEL is set) with no Cloudinary credentials configured. Vercel serverless functions have a read-only filesystem outside /tmp, and /tmp does not persist across invocations, so files saved here would be lost immediately. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in the Vercel project environment variables so uploads go directly from the browser to Cloudinary instead."
+      { missingVars },
+      "Local-disk upload fallback invoked on Vercel (process.env.VERCEL is set). Vercel serverless functions have a read-only filesystem outside /tmp, and /tmp does not persist across invocations, so files saved here would be lost immediately. Set the missing Cloudinary environment variables in the Vercel project settings so uploads go directly from the browser to Cloudinary instead."
     );
     const err = new Error(
-      "File storage is not configured for this environment. Please contact the administrator."
+      `Cloud storage is not configured. Missing environment variable(s): ${missingVars.join(", ")}. Set them in the Vercel project settings (Settings \u2192 Environment Variables) and redeploy.`
     );
     err.status = 503;
     err.code = "STORAGE_NOT_CONFIGURED";

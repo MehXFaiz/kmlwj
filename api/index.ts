@@ -54,6 +54,31 @@ import { memberVerifyHandler } from './_v1/member-verify.js';
 import notificationsHandler from './_v1/notifications.js';
 import { uploadFields, handleUploadError } from './_middlewares/upload.middleware.js';
 
+// ── Startup storage configuration check ─────────────────────────────────────
+// Uploads use Cloudinary (browser → Cloudinary direct, signed by /api/v1/upload/sign).
+// Local disk is only viable on a long-running dev server, never on Vercel.
+{
+  const missingStorageVars = [
+    !process.env.CLOUDINARY_CLOUD_NAME && 'CLOUDINARY_CLOUD_NAME',
+    !process.env.CLOUDINARY_API_KEY    && 'CLOUDINARY_API_KEY',
+    !process.env.CLOUDINARY_API_SECRET && 'CLOUDINARY_API_SECRET',
+  ].filter(Boolean);
+
+  if (missingStorageVars.length === 0) {
+    logger.info({ provider: 'cloudinary', cloudName: process.env.CLOUDINARY_CLOUD_NAME }, 'File storage configured');
+  } else if (process.env.VERCEL) {
+    logger.error({ missingStorageVars },
+      'FATAL STORAGE MISCONFIGURATION: running on Vercel with no cloud storage credentials. ' +
+      'File uploads WILL fail until these environment variables are added in the Vercel project ' +
+      'settings (Settings → Environment Variables) and the project is redeployed.'
+    );
+  } else {
+    logger.warn({ missingStorageVars },
+      'Cloudinary not configured — uploads will use the local ./uploads folder (development only).'
+    );
+  }
+}
+
 const app = express();
 
 // Trust the reverse proxy (e.g. Vercel) so rate limiting uses the correct IP

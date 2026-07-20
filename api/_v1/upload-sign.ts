@@ -32,19 +32,34 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const apiKey    = process.env.CLOUDINARY_API_KEY;
   const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
-  if (!cloudName || !apiKey || !apiSecret) {
+  const missingVars = [
+    !cloudName && 'CLOUDINARY_CLOUD_NAME',
+    !apiKey    && 'CLOUDINARY_API_KEY',
+    !apiSecret && 'CLOUDINARY_API_SECRET',
+  ].filter(Boolean) as string[];
+
+  if (missingVars.length > 0) {
     if (process.env.VERCEL) {
       // This is a misconfiguration, not a normal fallback: on Vercel the local-disk path
       // is guaranteed to fail (read-only filesystem outside /tmp, which itself doesn't
-      // persist). Flag it loudly here so it surfaces before a user ever attempts an upload.
-      logger.error(
-        'Cloudinary is not configured but this is running on Vercel (process.env.VERCEL is set). ' +
-        'The local-disk upload fallback WILL fail here. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, ' +
-        'and CLOUDINARY_API_SECRET in the Vercel project environment variables.'
+      // persist). Name the exact missing variables and fail here, before a user ever
+      // attempts an upload against the doomed local path.
+      logger.error({ missingVars },
+        'Cloud storage misconfigured on Vercel: the following environment variables are not set. ' +
+        'Add them in the Vercel project settings (Settings → Environment Variables) and redeploy.'
       );
-    } else {
-      logger.info('Cloudinary not configured — client will use local upload fallback');
+      return res.status(503).json({
+        error: {
+          message:
+            `Cloud storage is not configured. Missing environment variable(s): ${missingVars.join(', ')}. ` +
+            'Set them in the Vercel project settings and redeploy.',
+          status: 503,
+          code: 'STORAGE_NOT_CONFIGURED',
+          missing: missingVars,
+        },
+      });
     }
+    logger.info({ missingVars }, 'Cloudinary not configured — client will use local upload fallback');
     return res.status(200).json({ status: 200, data: { mode: 'local' } });
   }
 
