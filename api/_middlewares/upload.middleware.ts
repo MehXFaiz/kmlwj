@@ -1,24 +1,17 @@
 import multer, { MulterError } from 'multer';
 import type { Request, Response, NextFunction } from 'express';
 
-export const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-export const PHOTO_MAX_BYTES    = 2 * 1024 * 1024;   // 2 MB
-export const CNIC_MAX_BYTES     = 3 * 1024 * 1024;   // 3 MB
+// No file-type or per-field size restrictions by design — any file the user
+// selects is accepted. The single cap below exists purely as an operational
+// safeguard: uploads are buffered in memory (multer.memoryStorage()), so an
+// unbounded upload could exhaust server memory. It is not a validation rule.
+const MEMORY_SAFETY_CAP_BYTES = 100 * 1024 * 1024; // 100 MB
 
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: CNIC_MAX_BYTES,   // hard cap — per-field limits enforced in the handler
-    files: 3,                   // at most photo + cnicFront + cnicBack
-  },
-  fileFilter: (_req, file, cb) => {
-    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-      // Pass an error with a recognisable code so the error handler can map it
-      const err: any = new Error('Unsupported image format. Please use JPG, PNG, or WEBP.');
-      err.code = 'UNSUPPORTED_FORMAT';
-      return cb(err);
-    }
-    cb(null, true);
+    fileSize: MEMORY_SAFETY_CAP_BYTES,
+    files: 3, // at most photo + cnicFront + cnicBack per request
   },
 });
 
@@ -30,7 +23,8 @@ export const uploadFields = upload.fields([
 
 /**
  * Express error-handling middleware that converts multer errors into the same
- * JSON shape the rest of the API uses, so the frontend always gets structured JSON.
+ * JSON shape the rest of the API uses, so the frontend always gets structured JSON
+ * instead of Express's default HTML error page.
  *
  * Register this immediately after the upload route in index.ts:
  *   app.post('/api/v1/upload', uploadFields, makeExpress(uploadHandler), handleUploadError);
@@ -41,20 +35,16 @@ export function handleUploadError(
   res: Response,
   next: NextFunction,
 ): void {
-  // Only intercept errors that originate from multer or our fileFilter
-  if (err instanceof MulterError || err?.code === 'UNSUPPORTED_FORMAT') {
+  if (err instanceof MulterError) {
     let message: string;
     let status: number;
 
     if (err.code === 'LIMIT_FILE_SIZE') {
-      message = 'File exceeds the maximum allowed size. Profile photo: 2 MB, CNIC images: 3 MB.';
+      message = 'File is too large to upload.';
       status  = 413;
     } else if (err.code === 'LIMIT_FILE_COUNT') {
       message = 'Too many files in a single upload request.';
       status  = 400;
-    } else if (err.code === 'UNSUPPORTED_FORMAT') {
-      message = err.message;
-      status  = 415;
     } else {
       message = `Upload error: ${err.message}`;
       status  = 400;
@@ -64,6 +54,5 @@ export function handleUploadError(
     return;
   }
 
-  // Not a multer error — pass it down the chain
   next(err);
 }

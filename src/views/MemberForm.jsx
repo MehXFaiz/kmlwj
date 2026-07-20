@@ -11,24 +11,11 @@ import {
   Upload, Loader2, IdCard,
 } from 'lucide-react';
 
-// ── File validation constraints ───────────────────────────────────────────────
-const ALLOWED_TYPES  = ['image/jpeg', 'image/png', 'image/webp'];
-const PHOTO_MAX_BYTES = 2 * 1024 * 1024;   // 2 MB
-const CNIC_MAX_BYTES  = 3 * 1024 * 1024;   // 3 MB
-
-function validateFile(file, maxBytes) {
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    return 'Unsupported format. Please use JPG, PNG, or WEBP.';
-  }
-  if (file.size > maxBytes) {
-    const limitMB = Math.round(maxBytes / (1024 * 1024));
-    return `File exceeds the ${limitMB} MB limit.`;
-  }
-  return null;
-}
-
 // ── Single image upload widget ────────────────────────────────────────────────
-function ImageUploadField({ label, fieldName, accept = 'image/jpeg,image/png,image/webp', maxBytes, currentUrl, onUploaded, onError }) {
+// No file-type, size, or dimension restrictions — any file the user selects
+// is uploaded as-is. Validation, if ever needed, belongs at the point where
+// the file is actually consumed (e.g. card printing), not here.
+function ImageUploadField({ label, fieldName, currentUrl, onUploaded, onError }) {
   const [preview, setPreview]     = useState(currentUrl || null);
   const [progress, setProgress]   = useState(null);   // null | 0-100
   const [uploading, setUploading] = useState(false);
@@ -44,41 +31,24 @@ function ImageUploadField({ label, fieldName, accept = 'image/jpeg,image/png,ima
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Reset state
     setFieldError(null);
     e.target.value = '';
-
-    // Client-side validation
-    const validationError = validateFile(file, maxBytes);
-    if (validationError) {
-      setFieldError(validationError);
-      onError?.(validationError);
-      return;
-    }
 
     // Show local preview immediately
     const objectUrl = URL.createObjectURL(file);
     setPreview(objectUrl);
 
-    // Upload to server
-    const form = new FormData();
-    form.append(fieldName, file);
-
     setUploading(true);
     setProgress(0);
 
     try {
-      const urls = await memberService.uploadFiles(form, (pct) => setProgress(pct));
-      const uploadedUrl = urls[fieldName === 'photo' ? 'photoUrl' : fieldName === 'cnicFront' ? 'cnicFrontUrl' : 'cnicBackUrl'];
-      onUploaded(uploadedUrl);
+      const urls = await memberService.uploadFile(fieldName, file, (pct) => setProgress(pct));
+      const urlKey = fieldName === 'photo' ? 'photoUrl' : fieldName === 'cnicFront' ? 'cnicFrontUrl' : 'cnicBackUrl';
+      onUploaded(urls[urlKey]);
       setProgress(100);
     } catch (err) {
-      // Extract meaningful error from axios response
-      const msg =
-        err?.response?.data?.error?.message ||
-        (err?.response?.status === 413 ? `${label} exceeds the size limit.` : null) ||
-        (err?.response?.status === 400 ? 'Unsupported file format.' : null) ||
-        'Upload failed. Please try again.';
+      // Surface the backend's actual error message rather than a generic one
+      const msg = err?.response?.data?.error?.message || err?.message || 'Upload failed. Please try again.';
       setFieldError(msg);
       setPreview(currentUrl || null);
       onUploaded(currentUrl || null);
@@ -87,7 +57,7 @@ function ImageUploadField({ label, fieldName, accept = 'image/jpeg,image/png,ima
       setUploading(false);
       setTimeout(() => setProgress(null), 800);
     }
-  }, [fieldName, maxBytes, label, currentUrl, onUploaded, onError]);
+  }, [fieldName, currentUrl, onUploaded, onError]);
 
   const handleRemove = () => {
     setPreview(null);
@@ -136,7 +106,6 @@ function ImageUploadField({ label, fieldName, accept = 'image/jpeg,image/png,ima
         <input
           ref={inputRef}
           type="file"
-          accept={accept}
           onChange={handleSelect}
           className="hidden"
           disabled={uploading}
@@ -314,13 +283,11 @@ export const MemberForm = () => {
               <div className="flex items-center gap-2 mb-4">
                 <Camera className="w-4 h-4 text-amber-400" />
                 <h3 className="text-sm font-semibold text-slate-300">Profile Photo</h3>
-                <span className="ml-auto text-xs text-slate-600">JPG / PNG / WEBP · max 2 MB</span>
               </div>
 
               <ImageUploadField
                 label="Profile Photo"
                 fieldName="photo"
-                maxBytes={PHOTO_MAX_BYTES}
                 currentUrl={photoUrl}
                 onUploaded={(url) => { setPhotoUrl(url || ''); onUploadSuccess('photo'); }}
                 onError={(msg) => onUploadError('photo', msg)}
@@ -336,7 +303,6 @@ export const MemberForm = () => {
               <div className="flex items-center gap-2 mb-4">
                 <IdCard className="w-4 h-4 text-amber-400" />
                 <h3 className="text-sm font-semibold text-slate-300">CNIC Images</h3>
-                <span className="ml-auto text-xs text-slate-600">max 3 MB each</span>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -345,7 +311,6 @@ export const MemberForm = () => {
                   <ImageUploadField
                     label="CNIC Front"
                     fieldName="cnicFront"
-                    maxBytes={CNIC_MAX_BYTES}
                     currentUrl={cnicFrontUrl}
                     onUploaded={(url) => { setCnicFrontUrl(url || ''); onUploadSuccess('cnicFront'); }}
                     onError={(msg) => onUploadError('cnicFront', msg)}
@@ -356,7 +321,6 @@ export const MemberForm = () => {
                   <ImageUploadField
                     label="CNIC Back"
                     fieldName="cnicBack"
-                    maxBytes={CNIC_MAX_BYTES}
                     currentUrl={cnicBackUrl}
                     onUploaded={(url) => { setCnicBackUrl(url || ''); onUploadSuccess('cnicBack'); }}
                     onError={(msg) => onUploadError('cnicBack', msg)}

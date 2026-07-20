@@ -37,6 +37,7 @@ import revenueCollectionsHandler from './_v1/revenue-collections.js';
 import customersHandler from './_v1/customers.js';
 import membersHandler from './_v1/members.js';
 import uploadHandler from './_v1/upload.js';
+import uploadSignHandler from './_v1/upload-sign.js';
 import invoicesHandler from './_v1/invoices.js';
 import generalLedgerHandler from './_v1/general-ledger.js';
 import journalEntriesHandler from './_v1/journal-entries.js';
@@ -191,7 +192,11 @@ app.post('/api/v1/customers', makeExpress(customersHandler));
 app.put('/api/v1/customers', makeExpress(customersHandler));
 app.delete('/api/v1/customers', makeExpress(customersHandler));
 
-// File upload endpoint — multer → handler → multer error converter (must be last, 4-arg signature)
+// Issues a Cloudinary signature so the browser can upload directly (bypasses this server entirely)
+app.post('/api/v1/upload/sign', makeExpress(uploadSignHandler));
+
+// Local-disk fallback upload endpoint — used only when Cloudinary isn't configured.
+// multer → handler → multer error converter (must be last, 4-arg signature)
 app.post('/api/v1/upload', uploadFields, makeExpress(uploadHandler), handleUploadError);
 
 app.get('/api/v1/members', makeExpress(membersHandler));
