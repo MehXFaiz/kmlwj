@@ -1,16 +1,15 @@
 import React, { useEffect, useState, startTransition } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { Lock, Mail, Loader2, ArrowRight, UserCircle, Eye, EyeOff } from 'lucide-react';
+import { Lock, Mail, Loader2, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { useShallow } from 'zustand/react/shallow';
 
 export const Login = () => {
   const navigate = useNavigate();
-  const { login, loginAsGuest, isAuthenticated, loading, error, successMessage, clearError, clearSuccess } = useAuthStore(
+  const { login, isAuthenticated, loading, error, successMessage, clearError, clearSuccess } = useAuthStore(
     useShallow((state) => ({
       login: state.login,
-      loginAsGuest: state.loginAsGuest,
       isAuthenticated: state.isAuthenticated,
       loading: state.loading,
       error: state.error,
@@ -71,7 +70,7 @@ export const Login = () => {
     <AuthLayout>
       {/* Card wrapper */}
       <div className="relative group w-full max-w-full min-w-0">
-        {/* Ambient glow — hidden on very small screens to avoid overflow */}
+        {/* Ambient glow - hidden on very small screens to avoid overflow */}
         <div className="absolute -inset-[2px] bg-gradient-to-r from-emerald-500/20 via-blue-500/20 to-amber-500/20 rounded-[26px] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 hidden sm:block pointer-events-none" />
 
         {/* Main card */}
@@ -79,11 +78,8 @@ export const Login = () => {
           {/* Header */}
           <div className="text-center mb-6 sm:mb-8">
             <h2 className="text-xl sm:text-2xl lg:text-[28px] font-extrabold tracking-tight text-slate-100">
-              Welcome back
+              Welcome Back
             </h2>
-            <p className="text-slate-400 dark:text-slate-500 text-[13px] mt-1.5 font-medium">
-              Sign in to your financial workspace
-            </p>
           </div>
 
           {/* Alert Messages */}
@@ -126,7 +122,9 @@ export const Login = () => {
                   required
                 />
               </div>
-            </div>            {/* Password */}
+            </div>
+
+            {/* Password */}
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mb-1.5">
                 <label className="block text-xs font-semibold text-slate-300 dark:text-slate-400">
@@ -183,45 +181,6 @@ export const Login = () => {
               )}
             </button>
           </form>
-
-          {/* Divider */}
-          <div className="flex items-center gap-4 my-6">
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-500/50 dark:via-slate-800 to-transparent" />
-            <span className="text-[10px] text-slate-300 dark:text-slate-600 font-bold uppercase tracking-[0.2em]">or</span>
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-500/50 dark:via-slate-800 to-transparent" />
-          </div>
-
-          {/* Guest Mode */}
-          <button
-            type="button"
-            id="guest-login"
-            onClick={async () => {
-              const success = await loginAsGuest();
-              if (success) {
-                startTransition(() => {
-                  navigate('/', { replace: true });
-                });
-              }
-            }}
-            className="w-full py-3 px-4 bg-slate-700/30 dark:bg-white/[0.03] hover:bg-slate-600/30 dark:hover:bg-white/[0.06] border border-slate-500/50 dark:border-slate-800/80 hover:border-slate-400 dark:hover:border-slate-700 text-slate-200 dark:text-slate-400 hover:text-slate-100 dark:hover:text-slate-200 font-semibold text-sm rounded-xl focus:outline-none transition-all duration-200 flex items-center justify-center gap-2.5 cursor-pointer active:scale-[0.98]"
-          >
-            <UserCircle className="h-4 w-4" />
-            Explore as Guest
-          </button>
-          <p className="text-center text-[10px] text-slate-300 dark:text-slate-600 mt-2.5 tracking-wide">
-            Read-only access · No credentials required
-          </p>
-
-          {/* Footer */}
-          <div className="text-center mt-5 sm:mt-7 pt-5 sm:pt-6 border-t border-slate-500/30 dark:border-slate-800/50">
-            <span className="text-slate-300 dark:text-slate-600 text-xs">New to AccuLedger? </span>
-            <Link
-              to="/signup"
-              className="text-amber-400/80 hover:text-amber-300 text-xs font-bold transition-colors duration-200"
-            >
-              Create an account
-            </Link>
-          </div>
         </div>
       </div>
     </AuthLayout>
