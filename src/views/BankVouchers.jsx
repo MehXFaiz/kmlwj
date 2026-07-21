@@ -300,12 +300,21 @@ function BankVoucherPrintModal({ voucher, onClose }) {
         <div id="print-receipt" className="p-6 overflow-y-auto flex-1 bg-slate-100 print:bg-white print:overflow-visible print:p-0 print:static print:w-full print:block">
           <style>{`
             @media print {
+              *, *::before, *::after {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+              }
               body * {
                 visibility: hidden !important;
               }
               #print-modal-portal, #print-modal-portal * {
                 visibility: visible !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
               }
+              #print-modal-portal img, #print-modal-portal svg { filter: none !important; }
               #print-modal-portal {
                 position: absolute !important;
                 left: 0 !important;

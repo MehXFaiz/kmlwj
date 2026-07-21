@@ -460,24 +460,41 @@ html.theme-transition *::after {
     position: static !important;
   }
 
-  /* Global text-to-black reset — but NEVER touch the card print area, where
-     inline styles carry the actual card palette (green/gold/white).
-     Selectors Level 4: :not() accepts complex selectors. */
-  h1:not(#print-area, #print-area *),
-  h2:not(#print-area, #print-area *),
-  h3:not(#print-area, #print-area *),
-  h4:not(#print-area, #print-area *),
-  h5:not(#print-area, #print-area *),
-  h6:not(#print-area, #print-area *),
-  p:not(#print-area, #print-area *),
-  span:not(#print-area, #print-area *),
-  td:not(#print-area, #print-area *),
-  th:not(#print-area, #print-area *),
-  div:not(#print-area, #print-area *),
-  label:not(#print-area, #print-area *),
-  table:not(#print-area, #print-area *),
-  tr:not(#print-area, #print-area *) {
+  /* Global text-to-black reset — but NEVER touch any known print wrapper.
+     Every printable document (cards, receipts, vouchers, GL, reports) uses
+     one of the IDs / classes below; inline styles inside them carry the
+     real palette (backgrounds, gradients, colored text, borders) and must
+     survive the reset. Selectors Level 4: :not() accepts complex selectors. */
+  h1:not(.print-color, .print-color *, [id*="print"], [id*="print"] *),
+  h2:not(.print-color, .print-color *, [id*="print"], [id*="print"] *),
+  h3:not(.print-color, .print-color *, [id*="print"], [id*="print"] *),
+  h4:not(.print-color, .print-color *, [id*="print"], [id*="print"] *),
+  h5:not(.print-color, .print-color *, [id*="print"], [id*="print"] *),
+  h6:not(.print-color, .print-color *, [id*="print"], [id*="print"] *),
+  p:not(.print-color, .print-color *, [id*="print"], [id*="print"] *),
+  span:not(.print-color, .print-color *, [id*="print"], [id*="print"] *),
+  td:not(.print-color, .print-color *, [id*="print"], [id*="print"] *),
+  th:not(.print-color, .print-color *, [id*="print"], [id*="print"] *),
+  div:not(.print-color, .print-color *, [id*="print"], [id*="print"] *),
+  label:not(.print-color, .print-color *, [id*="print"], [id*="print"] *),
+  table:not(.print-color, .print-color *, [id*="print"], [id*="print"] *),
+  tr:not(.print-color, .print-color *, [id*="print"], [id*="print"] *) {
     color: black !important; text-shadow: none !important;
+  }
+
+  /* Any element whose id contains "print" (print-area, print-voucher-slip,
+     print-receipt-modal, gl-print-wrapper, print-modal-portal, …) or that
+     opts in via .print-color must render exactly like the screen. */
+  [id*="print"], [id*="print"] *,
+  .print-color, .print-color * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  [id*="print"] img, [id*="print"] svg,
+  .print-color img, .print-color svg {
+    filter: none !important;
   }
 }
 

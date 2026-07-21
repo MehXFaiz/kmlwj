@@ -757,6 +757,11 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
         <div className="overflow-y-auto print:overflow-visible bg-slate-200/80 print:bg-white flex flex-col items-center p-3 sm:p-4 print:p-0 print:static print:block">
           <style>{`
             @media print {
+              *, *::before, *::after {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+              }
               body * {
                 visibility: hidden !important;
               }
@@ -769,7 +774,9 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
                 visibility: visible !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
+                color-adjust: exact !important;
               }
+              #print-receipt-modal img, #print-receipt-modal svg { filter: none !important; }
               #print-receipt-modal {
                 position: absolute !important;
                 left: 0 !important;

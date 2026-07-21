@@ -104,12 +104,21 @@ export const VoucherSlipModal = ({
         <div className="p-4 sm:p-8 overflow-y-auto flex-1 bg-slate-900 print:p-0 print:overflow-visible print:bg-white">
           <style>{`
             @media print {
+              *, *::before, *::after {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+              }
               body * {
                 visibility: hidden !important;
               }
               #print-voucher-slip, #print-voucher-slip * {
                 visibility: visible !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
               }
+              #print-voucher-slip img, #print-voucher-slip svg { filter: none !important; }
               #print-voucher-slip {
                 position: absolute !important;
                 left: 0 !important;

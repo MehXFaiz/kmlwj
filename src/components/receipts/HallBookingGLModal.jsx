@@ -88,12 +88,19 @@ export const HallBookingGLModal = ({ booking, onClose }) => {
         <div className="overflow-y-auto print:overflow-visible bg-slate-100/60 print:bg-white flex flex-col items-center p-4 sm:p-8 print:p-0">
           <style>{`
             @media print {
+              *, *::before, *::after {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+              }
               body * { visibility: hidden !important; }
               #gl-print-wrapper, #gl-print-wrapper * {
                 visibility: visible !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
+                color-adjust: exact !important;
               }
+              #gl-print-wrapper img, #gl-print-wrapper svg { filter: none !important; }
               #gl-print-wrapper {
                 position: absolute !important;
                 left: 0 !important; top: 0 !important;
