@@ -1,5 +1,5 @@
 import React from 'react';
-import { Printer, X } from 'lucide-react';
+import { Banknote, BadgeCheck, CalendarDays, FileText, Printer, ScrollText, Signature, SquarePen, Wallet, X } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 
 const numberToWords = (num) => {
@@ -9,7 +9,7 @@ const numberToWords = (num) => {
     'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'
   ];
   const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-  
+
   const makeGroup = (n) => {
     let s = '';
     const hundred = Math.floor(n / 100);
@@ -38,10 +38,157 @@ const numberToWords = (num) => {
   return wordResult.trim() || 'Zero';
 };
 
+const theme = {
+  paper: '#fcf8f2',
+  paperDeep: '#f5ebde',
+  ink: '#24170f',
+  muted: '#6f5a45',
+  accent: '#8a5e3d',
+  accentSoft: '#b88b63',
+  border: '#d8c1a1',
+  line: '#e9dcc9',
+  success: '#5b4a39'
+};
+
+function FieldChip({ label, value, icon: Icon }) {
+  return (
+    <div className="rounded-2xl border border-[#e7d7bf] bg-white/80 px-3 py-2.5 shadow-[0_1px_0_rgba(0,0,0,0.03)]">
+      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7b6751]">
+        {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
+        <span>{label}</span>
+      </div>
+      <div className="mt-1 text-sm font-semibold text-[#24170f]">{value || '—'}</div>
+    </div>
+  );
+}
+
+function SectionCard({ title, icon: Icon, children }) {
+  return (
+    <div className="rounded-[20px] border border-[#e7d7bf] bg-white/80 p-3 shadow-[0_12px_32px_rgba(120,85,46,0.06)]">
+      <div className="mb-2 flex items-center gap-2 border-b border-[#efe2cf] pb-2">
+        {Icon ? <Icon className="h-4 w-4 text-[#8a5e3d]" /> : null}
+        <h3 className="text-[11px] font-black uppercase tracking-[0.25em] text-[#7b6751]">{title}</h3>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function LedgerTable({ rows, total }) {
+  return (
+    <div className="overflow-hidden rounded-[16px] border border-[#e7d7bf] bg-[#fcf7ef]">
+      <div className="grid grid-cols-[1.2fr_0.8fr] border-b border-[#e7d7bf] bg-[#f6ebdf] px-3 py-2 text-[10px] font-black uppercase tracking-[0.24em] text-[#7b6751]">
+        <span>Ledger Entry</span>
+        <span className="text-right">Amount</span>
+      </div>
+      {rows.map((row, index) => (
+        <div key={`${row.account}-${index}`} className={`grid grid-cols-[1.2fr_0.8fr] items-start px-3 py-2.5 text-sm ${index % 2 ? 'bg-white/60' : 'bg-transparent'}`}>
+          <div className="pr-2">
+            <div className="font-semibold text-[#24170f]">{row.account}</div>
+            <div className="mt-0.5 text-[11px] text-[#7b6751]">{row.narration}</div>
+          </div>
+          <div className="text-right font-semibold text-[#24170f]">Rs {Number(row.amount || 0).toLocaleString('en-PK')}</div>
+        </div>
+      ))}
+      <div className="grid grid-cols-[1.2fr_0.8fr] border-t border-[#e7d7bf] bg-[#f6ebdf] px-3 py-2.5 text-sm font-black text-[#24170f]">
+        <span className="uppercase tracking-[0.2em]">Total</span>
+        <span className="text-right">Rs {Number(total || 0).toLocaleString('en-PK')}</span>
+      </div>
+    </div>
+  );
+}
+
+function SignatureBlock({ label, name, checked = false }) {
+  return (
+    <div className="rounded-[16px] border border-[#e7d7bf] bg-[#fcf7ef] px-3 py-2.5">
+      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.24em] text-[#7b6751]">
+        <span className={`flex h-4 w-4 items-center justify-center rounded border ${checked ? 'border-[#8a5e3d] bg-[#8a5e3d]' : 'border-[#cdb79f] bg-white'}`}>
+          {checked ? <CheckSquare2 className="h-3 w-3 text-white" /> : null}
+        </span>
+        {label}
+      </div>
+      <div className="mt-2 border-b border-dashed border-[#cdb79f] pb-1 text-sm font-semibold text-[#24170f]">{name || '________________'}</div>
+    </div>
+  );
+}
+
+function CopySheet({ copyLabel, title, voucherNo, fileNo, formattedDate, paidTo, paymentMethod, amount, words, remarks, ledgerRows, preparedBy, verifiedBy, authorizedSign, payeeLabel }) {
+  return (
+    <div className="rounded-[24px] border border-[#d8c1a1] bg-[#fefcf8] p-3 shadow-[0_18px_40px_rgba(29,18,12,0.08)] print:rounded-none print:shadow-none">
+      <div className="mb-3 flex items-center justify-between gap-3 rounded-[18px] border border-[#e7d7bf] bg-gradient-to-r from-[#f6ebdf] to-[#fbf4e9] px-3 py-2.5">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[#d8c1a1] bg-white/80">
+            <img src={logoImg} alt="Logo" className="h-7 w-7 object-contain" />
+          </div>
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.24em] text-[#8a5e3d]">{copyLabel}</div>
+            <div className="font-semibold text-[#24170f]" style={{ fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif", fontSize: '0.95rem' }}>
+              کچھی مسلم لوہارواڈھا ویلفیئر جماعت
+            </div>
+          </div>
+        </div>
+        <div className="rounded-full border border-[#d8c1a1] bg-white/80 px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] text-[#8a5e3d]">
+          {title}
+        </div>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="space-y-3">
+          <SectionCard title="Voucher Details" icon={FileText}>
+            <div className="grid gap-2 md:grid-cols-2">
+              <FieldChip label="Voucher No" value={voucherNo || '—'} icon={ScrollText} />
+              <FieldChip label="Date" value={formattedDate} icon={CalendarDays} />
+              <FieldChip label="Paid To" value={paidTo || '—'} icon={Wallet} />
+              <FieldChip label="Payment Method" value={paymentMethod || 'Bank Transfer'} icon={Banknote} />
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Remarks & Amount" icon={SquarePen}>
+            <div className="space-y-2">
+              <div className="rounded-[16px] border border-[#e7d7bf] bg-[#fcf7ef] p-2.5 text-sm text-[#24170f]">
+                <div className="text-[10px] font-black uppercase tracking-[0.24em] text-[#7b6751]">Amount in Words</div>
+                <div className="mt-1 font-semibold">{words} Only</div>
+              </div>
+              <div className="rounded-[16px] border border-[#e7d7bf] bg-[#fcf7ef] p-2.5 text-sm text-[#24170f]">
+                <div className="text-[10px] font-black uppercase tracking-[0.24em] text-[#7b6751]">Remarks</div>
+                <div className="mt-1 font-medium">{remarks || 'No remarks provided.'}</div>
+              </div>
+              <div className="rounded-[16px] border border-[#8a5e3d] bg-[#f6ebdf] p-3 text-right">
+                <div className="text-[10px] font-black uppercase tracking-[0.24em] text-[#7b6751]">Net Amount</div>
+                <div className="mt-1 text-2xl font-black text-[#24170f]">Rs {Number(amount || 0).toLocaleString('en-PK')}</div>
+              </div>
+            </div>
+          </SectionCard>
+        </div>
+
+        <div className="space-y-3">
+          <SectionCard title="Ledger Entries" icon={BadgeCheck}>
+            <LedgerTable rows={ledgerRows} total={amount || 0} />
+          </SectionCard>
+
+          <SectionCard title="Authorizations" icon={Signature}>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <SignatureBlock label="Prepared By" name={preparedBy || 'Operator'} checked />
+              <SignatureBlock label="Verified By" name={verifiedBy || '—'} />
+              <SignatureBlock label="Authorized Sign" name={authorizedSign || '—'} />
+              <SignatureBlock label="Receiver" name={payeeLabel || 'Payee'} />
+            </div>
+          </SectionCard>
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-center justify-between rounded-[16px] border border-dashed border-[#d8c1a1] px-3 py-2 text-[10px] uppercase tracking-[0.22em] text-[#7b6751]">
+        <span>Reference: {fileNo || '—'}</span>
+        <span>Commercial Print Ready</span>
+      </div>
+    </div>
+  );
+}
+
 export const VoucherSlipModal = ({
   isOpen = true,
   onClose,
-  title = 'ZAKAT VOUCHER',
+  title = 'BANK PAYMENT SLIP',
   voucherNo = '',
   fileNo = '',
   date = '',
@@ -61,271 +208,96 @@ export const VoucherSlipModal = ({
   };
 
   const formattedDate = date ? new Date(date).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
-  const amountRs = Math.floor(amount || 0).toLocaleString();
+  const amountRs = Math.floor(amount || 0).toLocaleString('en-PK');
   const words = numberToWords(amount || 0);
-
-  // Generate 15 punch hole dots for the left margin
-  const punchHoles = Array.from({ length: 16 });
+  const paymentMethod = /bank/i.test(accountName || '') ? 'Bank Transfer' : /cash/i.test(accountName || '') ? 'Cash' : 'Bank Transfer';
+  const ledgerRows = [
+    {
+      account: accountName || 'Primary Ledger Account',
+      narration: particulars || 'Narration / particulars entry',
+      amount: amount || 0
+    }
+  ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 print:p-0 print:static print:inset-auto print:block">
-      {/* Backdrop - Hidden when printing */}
-      <div 
-        className="absolute inset-0 bg-black/75 backdrop-blur-sm print:hidden animate-fade-in" 
-        onClick={onClose} 
-      />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-2 sm:p-4 print:p-0 print:static print:inset-auto print:block">
+      <div className="absolute inset-0 print:hidden" onClick={onClose} />
 
-      {/* Modal Container */}
-      <div className="relative z-10 w-full max-w-3xl rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden flex flex-col max-h-[95vh] print:max-h-none print:shadow-none print:border-none print:bg-white print:w-full print:static print:block">
-        
-        {/* Top Control Bar - Hidden when printing */}
-        <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-800 bg-slate-950/80 shrink-0 print:hidden">
-          <div className="flex items-center gap-2">
-            <Printer className="h-4 w-4 text-amber-400" />
-            <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">Official Voucher Slip Preview</span>
+      <div className="relative z-10 flex max-h-[96vh] w-full max-w-7xl flex-col overflow-hidden rounded-[28px] border border-[#2d2118] bg-[#24170f] shadow-2xl print:max-h-none print:shadow-none print:border-none print:bg-white print:w-full print:static print:block">
+        <div className="flex items-center justify-between border-b border-[#3b2a20] bg-[#1c140e] px-5 py-3.5 print:hidden">
+          <div className="flex items-center gap-2.5">
+            <Printer className="h-4 w-4 text-[#e8c58a]" />
+            <span className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-200">Premium Voucher Preview</span>
           </div>
           <div className="flex items-center gap-3">
-            <button 
-              onClick={handlePrint} 
-              className="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-lg shadow-amber-900/30 cursor-pointer select-none"
-            >
-              <Printer className="h-3.5 w-3.5" /> Print Voucher
+            <button onClick={handlePrint} className="flex items-center gap-1.5 rounded-full bg-[#8a5e3d] px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.24em] text-white transition hover:bg-[#a06a43]">
+              <Printer className="h-3.5 w-3.5" /> Print Slip
             </button>
-            <button 
-              onClick={onClose} 
-              className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all"
-            >
+            <button onClick={onClose} className="rounded-full p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white">
               <X className="h-4 w-4" />
             </button>
           </div>
         </div>
 
-        {/* Printable Slip Area */}
-        <div className="p-4 sm:p-8 overflow-y-auto flex-1 bg-slate-900 print:p-0 print:overflow-visible print:bg-white">
+        <div className="flex-1 overflow-y-auto bg-[#f5ebde] p-3 sm:p-5 print:p-0 print:overflow-visible print:bg-white">
           <style>{`
+            @page {
+              size: A4 landscape;
+              margin: 7mm;
+            }
             @media print {
               *, *::before, *::after {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
                 color-adjust: exact !important;
               }
-              body * {
-                visibility: hidden !important;
-              }
-              #print-voucher-slip, #print-voucher-slip * {
-                visibility: visible !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                color-adjust: exact !important;
-              }
-              #print-voucher-slip img, #print-voucher-slip svg { filter: none !important; }
-              #print-voucher-slip {
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 100% !important;
-                margin: 0 !important;
-              }
+              body * { visibility: hidden !important; }
+              #print-voucher-slip, #print-voucher-slip * { visibility: visible !important; }
+              #print-voucher-slip { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; margin: 0 !important; }
             }
           `}</style>
-          
-          {/* Classic Official Voucher Slip Box */}
-          <div 
-            id="print-voucher-slip"
-            style={{ 
-              backgroundColor: '#ffffff', 
-              color: '#0f172a',
-              fontFamily: "'Times New Roman', Times, serif",
-              WebkitPrintColorAdjust: 'exact',
-              printColorAdjust: 'exact'
-            }}
-            className="relative rounded-xl border-2 border-slate-700 shadow-2xl overflow-hidden flex p-4 sm:p-6 print:border-slate-800 print:shadow-none print:rounded-none min-h-[480px]"
-          >
-            {/* Left Spiral Notebook Punch Holes Column */}
-            <div className="flex flex-col justify-between items-center pr-3 sm:pr-4 border-r-2 border-slate-300 mr-4 sm:mr-6 select-none py-1">
-              {punchHoles.map((_, idx) => (
-                <div 
-                  key={idx} 
-                  style={{ backgroundColor: '#f8fafc', borderColor: '#cbd5e1' }}
-                  className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border-2 shadow-inner my-1" 
+
+          <div id="print-voucher-slip" className="mx-auto w-full max-w-[1800px] rounded-[28px] border border-[#d8c1a1] bg-[#fcf8f2] p-2 shadow-[0_20px_45px_rgba(36,23,15,0.12)] print:rounded-none print:shadow-none">
+            <div className="relative overflow-hidden rounded-[24px] border border-[#e7d7bf] bg-[radial-gradient(circle_at_top_left,_rgba(138,94,61,0.06),_transparent_45%),linear-gradient(135deg,_#fcf8f2_0%,_#f6ebdf_100%)] p-3 print:p-0">
+              <div className="absolute inset-0 flex items-center justify-center opacity-[0.06] print:opacity-[0.08]">
+                <img src={logoImg} alt="Watermark" className="h-[320px] w-[320px] object-contain" />
+              </div>
+              <div className="relative z-10 grid gap-3 xl:grid-cols-2">
+                <CopySheet
+                  copyLabel="Office Copy"
+                  title={title}
+                  voucherNo={voucherNo}
+                  fileNo={fileNo}
+                  formattedDate={formattedDate}
+                  paidTo={name}
+                  paymentMethod={paymentMethod}
+                  amount={amount}
+                  words={words}
+                  remarks={particulars}
+                  ledgerRows={ledgerRows}
+                  preparedBy={preparedBy}
+                  verifiedBy="Director"
+                  authorizedSign="Authorized Sign"
+                  payeeLabel={payeeLabel}
                 />
-              ))}
-            </div>
-
-            {/* Main Content Area */}
-            <div className="flex-1 relative z-10 flex flex-col justify-between">
-              
-              {/* Header Section */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b-2 border-slate-800 gap-4">
-                <div className="flex items-start gap-4">
-                  <img
-                    src={logoImg}
-                    alt="Logo"
-                    className="w-16 h-16 object-contain"
-                  />
-                  <div className="text-left font-bold tracking-wider text-sm sm:text-base text-slate-900">
-                    <div className="font-semibold text-slate-900" style={{ fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif", fontSize: '1.15rem' }}>
-                      کچھی مسلم لوہارواڈھا ویلفیئر جماعت
-                    </div>
-                    <div className="text-base sm:text-xl uppercase font-black tracking-wide border-b-2 border-slate-800 pb-0.5 inline-block">
-                      {title}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Clean Pill Title Banner */}
-                <div 
-                  style={{ 
-                    backgroundColor: '#f8fafc', 
-                    color: '#0f172a',
-                    borderColor: '#334155'
-                  }}
-                  className="px-6 sm:px-8 py-1 sm:py-1.5 rounded-full font-extrabold text-base sm:text-xl tracking-[0.25em] uppercase border-2 shadow-sm mx-auto sm:mx-0 print:border-slate-800 print:bg-[#f8fafc]"
-                >
-                  VOUCHER
-                </div>
-
-                <div className="text-right font-bold text-xs sm:text-sm text-slate-800 self-end sm:self-center">
-                  <span>Date : </span>
-                  <span className="font-normal border-b border-slate-800 px-2 inline-block min-w-[100px] text-center">
-                    {formattedDate}
-                  </span>
-                </div>
+                <CopySheet
+                  copyLabel="Customer Copy"
+                  title={title}
+                  voucherNo={voucherNo}
+                  fileNo={fileNo}
+                  formattedDate={formattedDate}
+                  paidTo={name}
+                  paymentMethod={paymentMethod}
+                  amount={amount}
+                  words={words}
+                  remarks={particulars}
+                  ledgerRows={ledgerRows}
+                  preparedBy={preparedBy}
+                  verifiedBy="Director"
+                  authorizedSign="Authorized Sign"
+                  payeeLabel={payeeLabel}
+                />
               </div>
-
-              {/* Top Details (Name, Address, Voucher No, File No) */}
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 py-4 items-end">
-                {/* Left lines: Name & Address */}
-                <div className="sm:col-span-7 space-y-3 text-xs sm:text-sm font-semibold text-slate-800">
-                  <div className="flex items-baseline">
-                    <span className="w-16 shrink-0 font-bold">Name:</span>
-                    <span className="flex-1 border-b border-dotted border-slate-600 px-2 font-black text-slate-900">
-                      {name || '__________________________________________'}
-                    </span>
-                  </div>
-                  <div className="flex items-baseline">
-                    <span className="w-16 shrink-0 font-bold">Address:</span>
-                    <span className="flex-1 border-b border-dotted border-slate-600 px-2 font-normal text-slate-800">
-                      {address || '__________________________________________'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Right box: Voucher No & File No */}
-                <div className="sm:col-span-5 border-2 border-slate-800 p-2.5 rounded bg-slate-50 text-xs sm:text-sm font-semibold space-y-1.5">
-                  <div className="flex justify-between items-baseline border-b border-slate-300 pb-1">
-                    <span className="text-slate-600">Voucher No. :</span>
-                    <span className="font-mono font-black text-slate-900">{voucherNo || '—'}</span>
-                  </div>
-                  <div className="flex justify-between items-baseline pt-0.5">
-                    <span className="text-slate-600">File / Ref No. :</span>
-                    <span className="font-mono font-bold text-slate-900">{fileNo || '—'}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Debit / Credit A/c Line */}
-              <div className="flex items-baseline text-xs sm:text-sm font-semibold text-slate-800 pb-3">
-                <span className="shrink-0 font-bold">Debit / Credit:</span>
-                <span className="flex-1 border-b-2 border-slate-800 px-3 mx-2 font-black text-center text-slate-900">
-                  {debitCredit ? `${debitCredit} ${accountName ? `— (${accountName})` : ''}` : accountName || 'Cash / Bank Account'}
-                </span>
-                <span className="shrink-0 font-bold">A/c</span>
-              </div>
-
-              {/* Main Particulars Table */}
-              <div className="relative border-2 border-slate-800 my-2 bg-white/75 print:bg-transparent rounded overflow-hidden">
-                {/* Fixed Watermark Inside Particulars Table */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0 opacity-[0.10] print:opacity-[0.12]">
-                  <img src={logoImg} alt="KMLWJ Logo Watermark" className="w-72 h-72 sm:w-80 sm:h-80 object-contain" />
-                </div>
-                <table className="relative z-10 w-full border-collapse text-xs sm:text-sm">
-                  <thead>
-                    <tr className="border-b-2 border-slate-800 bg-slate-100 font-bold text-slate-900">
-                      <th className="py-2 px-3 text-left w-3/4 border-r-2 border-slate-800 uppercase tracking-wider">
-                        PARTICULARS
-                      </th>
-                      <th colSpan={2} className="py-1 px-2 text-center uppercase tracking-wider">
-                        <div className="border-b border-slate-800 pb-0.5">Amount</div>
-                        <div className="grid grid-cols-4 pt-0.5 text-xs font-semibold">
-                          <span className="col-span-3 border-r border-slate-800">Rs.</span>
-                          <span className="col-span-1">P.</span>
-                        </div>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {/* Row 1: Main line item */}
-                    <tr className="border-b border-slate-300">
-                      <td className="py-3 px-3 border-r-2 border-slate-800 font-semibold text-slate-900">
-                        {particulars || 'Contribution / Disbursed Amount'}
-                      </td>
-                      <td className="py-3 px-3 text-right font-black font-mono text-sm w-[18%] border-r border-slate-800 text-slate-900">
-                        {amountRs}
-                      </td>
-                      <td className="py-3 px-1 text-center font-mono font-bold w-[7%] text-slate-700">
-                        00
-                      </td>
-                    </tr>
-
-                    {/* Empty spacer rows for authentic physical voucher feel */}
-                    <tr className="border-b border-slate-300 h-8">
-                      <td className="border-r-2 border-slate-800"></td>
-                      <td className="border-r border-slate-800"></td>
-                      <td></td>
-                    </tr>
-                    <tr className="border-b border-slate-800 h-8">
-                      <td className="border-r-2 border-slate-800"></td>
-                      <td className="border-r border-slate-800"></td>
-                      <td></td>
-                    </tr>
-
-                    {/* Bottom Total Row */}
-                    <tr className="bg-slate-100 font-bold">
-                      <td className="py-2.5 px-3 border-r-2 border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                        <span className="italic font-serif text-xs sm:text-sm font-normal text-slate-700">
-                          Rupees in words : <span className="font-semibold underline capitalize text-slate-900">{words} Only</span>
-                        </span>
-                        <span className="tracking-widest uppercase font-black text-sm mt-1 sm:mt-0 self-end text-slate-900">TOTAL</span>
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-black font-mono text-sm border-r border-slate-800 text-slate-900">
-                        {amountRs}
-                      </td>
-                      <td className="py-2.5 px-1 text-center font-mono font-bold text-slate-900">
-                        00
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Footer Signatures Area */}
-              <div className="grid grid-cols-3 gap-2 pt-8 mt-2 items-end text-center font-serif italic text-xs sm:text-sm text-slate-800">
-                <div className="text-left">
-                  <div className="border-t-2 border-slate-800 pt-1.5 inline-block min-w-[120px] sm:min-w-[140px] font-semibold">
-                    Prepared by: <span className="not-italic font-bold text-slate-900">{preparedBy}</span>
-                  </div>
-                </div>
-
-                <div className="text-center">
-                  <div className="border-t-2 border-slate-800 pt-1.5 inline-block min-w-[100px] sm:min-w-[140px] font-semibold">
-                    Passed by
-                  </div>
-                </div>
-
-                <div className="text-right flex flex-col items-end">
-                  <div className="flex items-end gap-3">
-                    <div className="border-t-2 border-slate-800 pt-1.5 inline-block font-semibold">
-                      {payeeLabel}
-                    </div>
-                    {/* Stamp / Signature Box */}
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 border-2 border-slate-800 bg-slate-50 shadow-inner flex items-center justify-center text-[8px] uppercase tracking-tighter text-slate-500 font-sans not-italic font-bold">
-                      Stamp
-                    </div>
-                  </div>
-                </div>
-              </div>
-
             </div>
           </div>
         </div>
