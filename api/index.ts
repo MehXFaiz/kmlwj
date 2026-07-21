@@ -51,6 +51,7 @@ import simpleIncomeHandler from './_v1/simple-income.js';
 import accountingHealthHandler from './_v1/accounting-health.js';
 import zakatCardsHandler from './_v1/zakat-cards.js';
 import { memberVerifyHandler } from './_v1/member-verify.js';
+import { zakatCardVerifyHandler } from './_v1/zakat-card-verify.js';
 import notificationsHandler from './_v1/notifications.js';
 import { uploadFields, handleUploadError } from './_middlewares/upload.middleware.js';
 
@@ -274,6 +275,11 @@ app.patch('/api/v1/notifications', makeExpress(notificationsHandler));
 // Public Member Verification Route (no JWT — scanned from QR code)
 app.get('/api/v1/member/verify/:id', async (req: any, res: any) => {
   await memberVerifyHandler(req, res);
+});
+
+// Public Zakat Card Verification Route (no JWT — scanned from QR code)
+app.get('/api/v1/zakat-card/verify/:cardNumber', async (req: any, res: any) => {
+  await zakatCardVerifyHandler(req, res);
 });
 
 // ── Global JSON error handler ────────────────────────────────────────────────

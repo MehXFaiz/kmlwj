@@ -63,14 +63,16 @@ export function ZakatCardFront({ card }) {
   const member = card?.member || null;
   const displayName = beneficiary?.name || member?.fullName || '';
   const displayCnic = beneficiary?.cnic || null;
-  const BASE_URL = 'https://kmlwj.com/member/verify';
-  const qrValue = member?.memberNo
-    ? `${BASE_URL}/${member.memberNo}`
-    : beneficiary?.id
-    ? `${BASE_URL}/${beneficiary.id}`
-    : member?.id
-    ? `${BASE_URL}/${member.id}`
+
+  /* ── QR verification URL: prefer zakat card number, fall back to member ── */
+  const VERIFY_BASE = (typeof window !== 'undefined' && window.location?.origin)
+    ? window.location.origin
     : 'https://kmlwj.com';
+  const qrValue = card?.cardNumber
+    ? `${VERIFY_BASE}/verify/zakat/${encodeURIComponent(card.cardNumber)}`
+    : member?.memberNo
+    ? `${VERIFY_BASE}/verify/member/${encodeURIComponent(member.memberNo)}`
+    : null;
 
   return (
     <CardShell>
@@ -188,9 +190,37 @@ export function ZakatCardFront({ card }) {
           alignItems: 'center', gap: '3px', zIndex: 10,
         }}>
           <img src={logoSrc} alt="" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
-          <div style={{ background: WHITE, padding: '2px', borderRadius: '3px' }}>
-            <QRCodeSVG value={qrValue} size={32} bgColor={WHITE} fgColor="#000000" level="M" />
-          </div>
+          {qrValue && (
+            <div style={{
+              background: WHITE,
+              padding: '2px',
+              borderRadius: '3px',
+              width: '36px',
+              height: '36px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxSizing: 'border-box',
+            }}>
+              {/* High-resolution SVG QR: renders at 512px internal, scaled sharply via CSS */}
+              <QRCodeSVG
+                value={qrValue}
+                size={512}
+                bgColor={WHITE}
+                fgColor="#000000"
+                level="H"
+                includeMargin={true}
+                marginSize={4}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'block',
+                  imageRendering: 'pixelated',
+                  shapeRendering: 'crispEdges',
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
 
