@@ -9,17 +9,14 @@ const ORG_RETURN   = 'Kutchi Muslim Loharwada Jamat, Jumma Baloch Road, New Kalr
 const ORG_EMAIL    = 'info@kmlwj.org';
 const ORG_WEBSITE  = 'www.kmlwj.org';
 
-/* ── Reference palette ── */
-const GREEN       = '#1a4a2e';   // card background
-const GREEN_DEEP  = '#153f27';
-const GOLD        = '#C9A227';   // labels / titles
-const GOLD_TEXT   = '#D4AF37';
-const OLIVE       = '#9d8f56';   // outer border
-const OLIVE_DARK  = '#847844';
-const BAND_GOLD   = '#b39c55';   // vertical band + bottom strip
-const STRIP_GOLD  = '#cdbb82';   // bottom cream/gold strip
-const WHITE       = '#FFFFFF';
-const CREAM       = '#F5F0E0';
+/* ── Design palette (matches PHP print template) ── */
+const GREEN      = '#0b4f2d';   // card background
+const GOLD       = '#b59a5a';   // border, band, footer background
+const GOLD_LABEL = '#d8c07a';   // org name text
+const GOLD_TYPE  = '#ffb347';   // card type heading (amber)
+const DIVIDER    = 'rgba(204,106,43,0.95)'; // orange rule under heading
+const WHITE      = '#FFFFFF';
+const DARK_TEXT  = '#08120a';   // footer text
 
 function fmt(val) { return val || '—'; }
 function fmtDate(val) {
@@ -29,7 +26,7 @@ function fmtDate(val) {
   return d.toLocaleDateString('en-PK', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-/* Shared shell: olive-gold border all round, dark green face, faint crest watermark */
+/* Shared shell */
 function CardShell({ children }) {
   return (
     <div style={{
@@ -39,17 +36,17 @@ function CardShell({ children }) {
       display: 'flex',
       flexDirection: 'column',
       background: GREEN,
-      border: `3px solid ${OLIVE}`,
-      boxShadow: `inset 0 0 0 1px ${OLIVE_DARK}`,
+      border: `4px solid ${GOLD}`,
       borderRadius: 'inherit',
+      boxSizing: 'border-box',
     }}>
-      {/* Watermark crest behind content */}
+      {/* Watermark crest */}
       <div style={{
         position: 'absolute', inset: 0, zIndex: 1,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        opacity: 0.07, pointerEvents: 'none',
+        opacity: 0.08, pointerEvents: 'none',
       }}>
-        <img src={logoSrc} alt="" style={{ width: '58%', height: 'auto', objectFit: 'contain' }} />
+        <img src={logoSrc} alt="" style={{ width: '55%', height: 'auto', objectFit: 'contain' }} />
       </div>
       {children}
     </div>
@@ -67,131 +64,139 @@ export function CardFront({ member }) {
 
   return (
     <CardShell>
-      {/* ── HEADER ── */}
-      <div style={{
-        position: 'relative', zIndex: 3,
-        padding: '5px 8px 3px 10px',
-        display: 'flex', alignItems: 'flex-start',
-      }}>
-        {/* Centered org text */}
-        <div style={{ flex: 1, textAlign: 'center', paddingLeft: '26px' }}>
-          <div style={{
-            fontSize: '8px', fontWeight: 800, color: WHITE,
-            letterSpacing: '0.05em', lineHeight: 1.3, textTransform: 'uppercase',
-          }}>
-            {ORG_LINE1}
-          </div>
-          <div style={{
-            fontSize: '8px', fontWeight: 800, color: WHITE,
-            letterSpacing: '0.05em', lineHeight: 1.3, textTransform: 'uppercase',
-          }}>
-            {ORG_LINE2}
-          </div>
-          <div style={{
-            fontSize: '5.2px', color: 'rgba(245,240,224,0.85)', fontWeight: 700,
-            letterSpacing: '0.06em', marginTop: '1px', lineHeight: 1.2,
-          }}>
-            {ORG_REGD}
-          </div>
-          <div style={{
-            fontSize: '7.5px', fontWeight: 800, color: GOLD_TEXT,
-            letterSpacing: '0.18em', marginTop: '2px', textTransform: 'uppercase',
-          }}>
-            MEMBERSHIP CARD
-          </div>
-          {/* Gold rule under title */}
-          <div style={{
-            height: '1px', background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)`,
-            marginTop: '2px', marginLeft: '8%', marginRight: '8%',
-          }} />
-        </div>
-
-        {/* Right column: crest then QR */}
-        <div style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
-          gap: '3px', flexShrink: 0, marginLeft: '4px',
-        }}>
-          <img src={logoSrc} alt="" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
-          <div style={{ background: WHITE, padding: '2px', borderRadius: '2px' }}>
-            <QRCodeSVG value={qrValue} size={30} bgColor={WHITE} fgColor="#000000" level="M" />
-          </div>
-        </div>
-      </div>
-
-      {/* ── BODY ── */}
+      {/* ── BODY: band + photo | header + details + logo/qr ── */}
       <div style={{
         position: 'relative', zIndex: 3, flex: 1,
-        display: 'flex', alignItems: 'center', gap: '0',
-        padding: '2px 8px 3px 0',
+        display: 'flex', flexDirection: 'row',
       }}>
-        {/* Gold vertical band behind the portrait */}
+        {/* ── LEFT: Gold vertical band with portrait ── */}
         <div style={{
           position: 'relative', flexShrink: 0,
-          width: '58px', alignSelf: 'stretch',
+          width: '68px', alignSelf: 'stretch',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
+          {/* vertical band */}
           <div style={{
-            position: 'absolute', top: '-40px', bottom: '-4px', left: '14px', width: '13px',
-            background: `linear-gradient(180deg, ${BAND_GOLD}, ${OLIVE_DARK}, ${BAND_GOLD})`,
+            position: 'absolute', top: 0, bottom: 0, left: '50%',
+            transform: 'translateX(-50%)',
+            width: '14px',
+            background: GOLD,
+            borderRadius: '2px',
           }} />
-          {/* Portrait box */}
+          {/* Portrait */}
           <div style={{
-            position: 'relative',
-            width: '44px', height: '56px',
-            background: WHITE, borderRadius: '8px',
-            border: `1.5px solid ${OLIVE_DARK}`,
+            position: 'relative', zIndex: 2,
+            width: '46px', height: '58px',
+            background: WHITE,
+            borderRadius: '10px',
+            border: `3px solid ${GOLD}`,
             overflow: 'hidden',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
+            boxShadow: '0 3px 8px rgba(0,0,0,0.5)',
           }}>
             {member?.photoUrl ? (
               <img src={member.photoUrl} alt="Photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              <span style={{ fontSize: '5.5px', color: '#555', fontWeight: 500 }}>portrait here</span>
+              <span style={{ fontSize: '5px', color: '#555', fontWeight: 500, textAlign: 'center', lineHeight: 1.3 }}>portrait{'\n'}here</span>
             )}
           </div>
         </div>
 
-        {/* Member details */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3.5px', paddingLeft: '6px' }}>
-          {[
-            ['Membership No', member?.memberNo],
-            ['Name',          member?.fullName],
-            ['F. Name',       member?.fatherName],
-            ['D.O.B',         fmtDate(member?.dob)],
-            ['CNIC',          member?.cnic],
-          ].map(([label, value]) => (
-            <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-              <span style={{
-                fontSize: '7px', color: GOLD_TEXT, fontWeight: 800,
-                minWidth: '58px', flexShrink: 0, letterSpacing: '0.01em',
-              }}>
-                {label}:
-              </span>
-              <span style={{
-                fontSize: '7px', color: WHITE, fontWeight: 600,
-                lineHeight: 1.2, wordBreak: 'break-all',
-              }}>
-                {fmt(value)}
-              </span>
+        {/* ── MAIN: header + details ── */}
+        <div style={{
+          flex: 1, display: 'flex', flexDirection: 'column',
+          padding: '6px 6px 0 6px', minWidth: 0,
+        }}>
+          {/* Header */}
+          <div style={{ textAlign: 'center', paddingRight: '44px' }}>
+            <div style={{
+              fontSize: '8.5px', fontWeight: 800, color: GOLD_LABEL,
+              letterSpacing: '0.05em', lineHeight: 1.3, textTransform: 'uppercase',
+            }}>
+              {ORG_LINE1}
             </div>
-          ))}
+            <div style={{
+              fontSize: '8.5px', fontWeight: 800, color: GOLD_LABEL,
+              letterSpacing: '0.05em', lineHeight: 1.3, textTransform: 'uppercase',
+            }}>
+              {ORG_LINE2}
+            </div>
+            <div style={{
+              fontSize: '5px', color: 'rgba(245,240,224,0.85)', fontWeight: 700,
+              letterSpacing: '0.06em', marginTop: '1px', lineHeight: 1.2,
+            }}>
+              {ORG_REGD}
+            </div>
+            <div style={{
+              fontSize: '7px', fontWeight: 800, color: GOLD_TYPE,
+              letterSpacing: '0.18em', marginTop: '2px', textTransform: 'uppercase',
+            }}>
+              MEMBERSHIP CARD
+            </div>
+            {/* Orange divider */}
+            <div style={{
+              height: '2px', background: DIVIDER,
+              margin: '2px auto 0', width: '80%',
+              borderRadius: '1px',
+            }} />
+          </div>
+
+          {/* Details */}
+          <div style={{
+            flex: 1, display: 'flex', flexDirection: 'column',
+            justifyContent: 'center', gap: '3px',
+            padding: '3px 4px 0 4px',
+          }}>
+            {[
+              ['Membership No', member?.memberNo],
+              ['Name',          member?.fullName],
+              ['F. Name',       member?.fatherName],
+              ['D.O.B',         fmtDate(member?.dob)],
+              ['CNIC',          member?.cnic],
+            ].map(([label, value]) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '3px' }}>
+                <span style={{
+                  fontSize: '6.5px', color: GOLD_LABEL, fontWeight: 800,
+                  minWidth: '62px', flexShrink: 0, letterSpacing: '0.01em',
+                }}>
+                  {label}:
+                </span>
+                <span style={{
+                  fontSize: '6.5px', color: WHITE, fontWeight: 600,
+                  lineHeight: 1.2, wordBreak: 'break-all',
+                }}>
+                  {fmt(value)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── TOP-RIGHT: Logo + QR stacked ── */}
+        <div style={{
+          position: 'absolute', top: '6px', right: '6px',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', gap: '3px', zIndex: 10,
+        }}>
+          <img src={logoSrc} alt="" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+          <div style={{ background: WHITE, padding: '2px', borderRadius: '3px' }}>
+            <QRCodeSVG value={qrValue} size={32} bgColor={WHITE} fgColor="#000000" level="M" />
+          </div>
         </div>
       </div>
 
       {/* ── FOOTER strip ── */}
       <div style={{
         position: 'relative', zIndex: 3,
-        background: STRIP_GOLD,
-        borderTop: `1px solid ${OLIVE_DARK}`,
-        padding: '3px 8px',
-        display: 'flex', alignItems: 'center', gap: '4px',
+        background: GOLD,
+        padding: '4px 8px',
+        display: 'flex', alignItems: 'center', gap: '5px',
+        minHeight: '20px',
       }}>
-        {/* Location pin */}
-        <svg width="7" height="9" viewBox="0 0 12 16" style={{ flexShrink: 0 }}>
-          <path d="M6 0C2.7 0 0 2.7 0 6c0 4.5 6 10 6 10s6-5.5 6-10c0-3.3-2.7-6-6-6zm0 8.4A2.4 2.4 0 1 1 6 3.6a2.4 2.4 0 0 1 0 4.8z" fill="#1a2e1f"/>
+        <svg width="8" height="10" viewBox="0 0 24 32" style={{ flexShrink: 0 }}>
+          <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0zm0 16.8A4.8 4.8 0 1 1 12 7.2a4.8 4.8 0 0 1 0 9.6z" fill={DARK_TEXT}/>
         </svg>
-        <span style={{ fontSize: '5.6px', color: '#1a2e1f', fontWeight: 600, lineHeight: 1.35 }}>
+        <span style={{ fontSize: '5.5px', color: DARK_TEXT, fontWeight: 600, lineHeight: 1.35 }}>
           If found please return it to {ORG_RETURN}
         </span>
       </div>
@@ -207,24 +212,21 @@ export function CardBack({ member }) {
       <div style={{
         position: 'relative', zIndex: 3, textAlign: 'center',
         padding: '7px 12px 4px',
+        borderBottom: `2px solid ${GOLD}`,
       }}>
         <div style={{
-          fontSize: '8px', fontWeight: 800, color: GOLD_TEXT,
+          fontSize: '8px', fontWeight: 800, color: GOLD_TYPE,
           letterSpacing: '0.2em', textTransform: 'uppercase',
         }}>
           MEMBER INFORMATION
         </div>
-        <div style={{
-          height: '1px', background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)`,
-          marginTop: '3px', marginLeft: '14%', marginRight: '14%',
-        }} />
       </div>
 
       {/* ── BODY ── */}
       <div style={{
         position: 'relative', zIndex: 3, flex: 1,
-        display: 'flex', flexDirection: 'column', gap: '4.5px',
-        padding: '5px 16px 0 18px',
+        display: 'flex', flexDirection: 'column', gap: '4px',
+        padding: '6px 16px 0 18px',
       }}>
         {[
           ['Ghaam',        member?.ghamName],
@@ -234,7 +236,7 @@ export function CardBack({ member }) {
         ].map(([label, value]) => (
           <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
             <span style={{
-              fontSize: '7px', color: GOLD_TEXT, fontWeight: 800,
+              fontSize: '7px', color: GOLD_LABEL, fontWeight: 800,
               minWidth: '58px', flexShrink: 0,
             }}>
               {label}:
@@ -268,15 +270,14 @@ export function CardBack({ member }) {
       {/* ── FOOTER strip ── */}
       <div style={{
         position: 'relative', zIndex: 3,
-        background: STRIP_GOLD,
-        borderTop: `1px solid ${OLIVE_DARK}`,
-        padding: '3px 10px',
+        background: GOLD,
+        padding: '4px 10px',
         display: 'flex', flexWrap: 'wrap', gap: '12px',
       }}>
-        <span style={{ fontSize: '5.8px', color: '#1a2e1f', fontWeight: 600 }}>
+        <span style={{ fontSize: '5.8px', color: DARK_TEXT, fontWeight: 600 }}>
           <span style={{ fontWeight: 800 }}>Email:</span> {ORG_EMAIL}
         </span>
-        <span style={{ fontSize: '5.8px', color: '#1a2e1f', fontWeight: 600 }}>
+        <span style={{ fontSize: '5.8px', color: DARK_TEXT, fontWeight: 600 }}>
           <span style={{ fontWeight: 800 }}>Web:</span> {ORG_WEBSITE}
         </span>
       </div>
