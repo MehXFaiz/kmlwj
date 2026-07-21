@@ -4,6 +4,36 @@ import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middlewar
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 
+const ALL_FIELDS = [
+  'name', 'fatherName', 'husbandName', 'cnic', 'dob', 'mobile', 'email',
+  'familySize', 'monthlyIncome', 'monthlyExpenses', 'debtAmount',
+  'housingStatus', 'housingOther',
+  'address', 'town', 'area', 'gham', 'husbandGham', 'fatherGham',
+  'education', 'profession', 'firm', 'remarks', 'isActive',
+] as const;
+
+function pickData(body: any, isCreate: boolean) {
+  const data: any = {};
+  for (const key of ALL_FIELDS) {
+    if (body[key] === undefined) {
+      if (!isCreate) continue;
+    }
+    const val = body[key];
+    if (key === 'isActive') {
+      data.isActive = val !== undefined ? Boolean(val) : true;
+    } else if (key === 'dob') {
+      data.dob = val ? new Date(val) : null;
+    } else if (key === 'familySize') {
+      data.familySize = val ? parseInt(val) : null;
+    } else if (['monthlyIncome', 'monthlyExpenses', 'debtAmount'].includes(key)) {
+      data[key] = val || val === 0 ? parseFloat(val) : null;
+    } else {
+      data[key] = val || null;
+    }
+  }
+  return data;
+}
+
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -29,22 +59,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'POST') {
-    const { name, cnic, mobile, address, remarks, isActive } = req.body;
+    const { name } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: { message: 'Name is required', status: 400 } });
     }
 
-    const newBeneficiary = await prisma.beneficiary.create({
-      data: {
-        name,
-        cnic: cnic || null,
-        mobile: mobile || null,
-        address: address || null,
-        remarks: remarks || null,
-        isActive: isActive !== undefined ? Boolean(isActive) : true,
-      },
-    });
+    const data = pickData(req.body, true);
+
+    const newBeneficiary = await prisma.beneficiary.create({ data });
 
     await logAudit(req.user.id, 'Create Beneficiary', 'DONATION', null, newBeneficiary, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
@@ -61,18 +84,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(404).json({ error: { message: 'Beneficiary not found', status: 404 } });
     }
 
-    const { name, cnic, mobile, address, remarks, isActive } = req.body;
+    const data = pickData(req.body, false);
 
     const updatedBeneficiary = await prisma.beneficiary.update({
       where: { id },
-      data: {
-        name: name !== undefined ? name : undefined,
-        cnic: cnic !== undefined ? (cnic || null) : undefined,
-        mobile: mobile !== undefined ? (mobile || null) : undefined,
-        address: address !== undefined ? (address || null) : undefined,
-        remarks: remarks !== undefined ? (remarks || null) : undefined,
-        isActive: isActive !== undefined ? Boolean(isActive) : undefined,
-      },
+      data,
     });
 
     await logAudit(req.user.id, 'Update Beneficiary', 'DONATION', existingBeneficiary, updatedBeneficiary, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
@@ -90,7 +106,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(404).json({ error: { message: 'Beneficiary not found', status: 404 } });
     }
 
-    // Prevent deletion if the beneficiary has associated donations
     const donationsCount = await prisma.donation.count({ where: { beneficiaryId: id } });
     if (donationsCount > 0) {
       return res.status(400).json({ error: { message: 'Cannot delete beneficiary because they have associated donation records. Please remove the donations first.', status: 400 } });

@@ -256,17 +256,35 @@ enum DonationStatus {
 }
 
 model Beneficiary {
-  id         String      @id @default(uuid()) @db.Uuid
-  name       String
-  cnic       String?     @unique
-  mobile     String?
-  address    String?
-  remarks    String?
-  isActive   Boolean     @default(true)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-  donations  Donation[]
-  zakatCards ZakatCard[]
+  id              String      @id @default(uuid()) @db.Uuid
+  name            String
+  fatherName      String?
+  husbandName     String?
+  cnic            String?     @unique
+  dob             DateTime?
+  mobile          String?
+  email           String?
+  familySize      Int?
+  monthlyIncome   Decimal?    @db.Decimal(12, 2)
+  monthlyExpenses Decimal?    @db.Decimal(12, 2)
+  debtAmount      Decimal?    @db.Decimal(12, 2)
+  housingStatus   String?
+  housingOther    String?
+  address         String?
+  town            String?
+  area            String?
+  gham            String?
+  husbandGham     String?
+  fatherGham      String?
+  education       String?
+  profession      String?
+  firm            String?
+  remarks         String?
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  donations       Donation[]
+  zakatCards      ZakatCard[]
 }
 
 model Donation {
