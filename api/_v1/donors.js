@@ -35,8 +35,26 @@ var donors_default = makeHandler(async (req, res) => {
   }
   if (method === "POST") {
     const { fullName, fatherName, mobile, cnic, email, address, city, isActive } = req.body;
-    if (!fullName) {
+    if (!fullName || !String(fullName).trim()) {
       return res.status(400).json({ error: { message: "Donor full name is required", status: 400 } });
+    }
+    if (fatherName && !/^[a-zA-Z\s.-]{2,80}$/.test(String(fatherName))) {
+      return res.status(400).json({ error: { message: "Father / husband name can only contain letters, spaces, hyphens, and dots", status: 400 } });
+    }
+    if (cnic && !/^\d{13}$/.test(String(cnic))) {
+      return res.status(400).json({ error: { message: "CNIC must contain exactly 13 digits", status: 400 } });
+    }
+    if (mobile && !/^\d{11}$/.test(String(mobile))) {
+      return res.status(400).json({ error: { message: "Mobile number must contain exactly 11 digits", status: 400 } });
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
+      return res.status(400).json({ error: { message: "Email address is invalid", status: 400 } });
+    }
+    if (address && !/^[a-zA-Z0-9\s.,#/-]{3,160}$/.test(String(address))) {
+      return res.status(400).json({ error: { message: "Address contains unsupported characters", status: 400 } });
+    }
+    if (city && !/^[a-zA-Z\s.-]{2,80}$/.test(String(city))) {
+      return res.status(400).json({ error: { message: "City can only contain letters, spaces, hyphens, and dots", status: 400 } });
     }
     if (cnic) {
       const existingCnic = await prisma.donor.findUnique({ where: { cnic } });
@@ -72,6 +90,27 @@ var donors_default = makeHandler(async (req, res) => {
       return res.status(404).json({ error: { message: "Donor not found", status: 404 } });
     }
     const { fullName, fatherName, mobile, cnic, email, address, city, isActive } = req.body;
+    if (fullName !== void 0 && !String(fullName).trim()) {
+      return res.status(400).json({ error: { message: "Donor full name is required", status: 400 } });
+    }
+    if (fatherName !== void 0 && fatherName !== "" && !/^[a-zA-Z\s.-]{2,80}$/.test(String(fatherName))) {
+      return res.status(400).json({ error: { message: "Father / husband name can only contain letters, spaces, hyphens, and dots", status: 400 } });
+    }
+    if (cnic !== void 0 && cnic !== "" && !/^\d{13}$/.test(String(cnic))) {
+      return res.status(400).json({ error: { message: "CNIC must contain exactly 13 digits", status: 400 } });
+    }
+    if (mobile !== void 0 && mobile !== "" && !/^\d{11}$/.test(String(mobile))) {
+      return res.status(400).json({ error: { message: "Mobile number must contain exactly 11 digits", status: 400 } });
+    }
+    if (email !== void 0 && email !== "" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
+      return res.status(400).json({ error: { message: "Email address is invalid", status: 400 } });
+    }
+    if (address !== void 0 && address !== "" && !/^[a-zA-Z0-9\s.,#/-]{3,160}$/.test(String(address))) {
+      return res.status(400).json({ error: { message: "Address contains unsupported characters", status: 400 } });
+    }
+    if (city !== void 0 && city !== "" && !/^[a-zA-Z\s.-]{2,80}$/.test(String(city))) {
+      return res.status(400).json({ error: { message: "City can only contain letters, spaces, hyphens, and dots", status: 400 } });
+    }
     if (cnic && cnic !== existingDonor.cnic) {
       const existingCnic = await prisma.donor.findUnique({ where: { cnic } });
       if (existingCnic) {

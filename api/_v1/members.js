@@ -97,8 +97,32 @@ var members_default = makeHandler(async (req, res) => {
       cnicBackUrl,
       isActive
     } = req.body;
-    if (!fullName) {
+    if (!fullName || !String(fullName).trim()) {
       return res.status(400).json({ error: { message: "Full Member Name is required", status: 400 } });
+    }
+    if (fatherName && !/^[a-zA-Z\s.-]{2,80}$/.test(String(fatherName))) {
+      return res.status(400).json({ error: { message: "Father name can only contain letters, spaces, hyphens, and dots", status: 400 } });
+    }
+    if (cnic && !/^\d{13}$/.test(String(cnic))) {
+      return res.status(400).json({ error: { message: "CNIC must contain exactly 13 digits", status: 400 } });
+    }
+    if (mobile && !/^\d{11}$/.test(String(mobile))) {
+      return res.status(400).json({ error: { message: "Mobile number must contain exactly 11 digits", status: 400 } });
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
+      return res.status(400).json({ error: { message: "Email address is invalid", status: 400 } });
+    }
+    if (address && !/^[a-zA-Z0-9\s.,#/-]{3,200}$/.test(String(address))) {
+      return res.status(400).json({ error: { message: "Address contains unsupported characters", status: 400 } });
+    }
+    if (city && !/^[a-zA-Z\s.-]{2,80}$/.test(String(city))) {
+      return res.status(400).json({ error: { message: "City can only contain letters, spaces, hyphens, and dots", status: 400 } });
+    }
+    if (area && !/^[a-zA-Z\s.-]{2,80}$/.test(String(area))) {
+      return res.status(400).json({ error: { message: "Area can only contain letters, spaces, hyphens, and dots", status: 400 } });
+    }
+    if (ghamName && !/^[a-zA-Z\s.-]{2,80}$/.test(String(ghamName))) {
+      return res.status(400).json({ error: { message: "Gham name can only contain letters, spaces, hyphens, and dots", status: 400 } });
     }
     for (const [field, value] of [["photoUrl", photoUrl], ["cnicFrontUrl", cnicFrontUrl], ["cnicBackUrl", cnicBackUrl]]) {
       if (value && String(value).startsWith("data:")) {
@@ -178,6 +202,33 @@ var members_default = makeHandler(async (req, res) => {
       cnicBackUrl,
       isActive
     } = req.body;
+    if (fullName !== void 0 && !String(fullName).trim()) {
+      return res.status(400).json({ error: { message: "Full Member Name is required", status: 400 } });
+    }
+    if (fatherName !== void 0 && fatherName !== "" && !/^[a-zA-Z\s.-]{2,80}$/.test(String(fatherName))) {
+      return res.status(400).json({ error: { message: "Father name can only contain letters, spaces, hyphens, and dots", status: 400 } });
+    }
+    if (cnic !== void 0 && cnic !== "" && !/^\d{13}$/.test(String(cnic))) {
+      return res.status(400).json({ error: { message: "CNIC must contain exactly 13 digits", status: 400 } });
+    }
+    if (mobile !== void 0 && mobile !== "" && !/^\d{11}$/.test(String(mobile))) {
+      return res.status(400).json({ error: { message: "Mobile number must contain exactly 11 digits", status: 400 } });
+    }
+    if (email !== void 0 && email !== "" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
+      return res.status(400).json({ error: { message: "Email address is invalid", status: 400 } });
+    }
+    if (address !== void 0 && address !== "" && !/^[a-zA-Z0-9\s.,#/-]{3,200}$/.test(String(address))) {
+      return res.status(400).json({ error: { message: "Address contains unsupported characters", status: 400 } });
+    }
+    if (city !== void 0 && city !== "" && !/^[a-zA-Z\s.-]{2,80}$/.test(String(city))) {
+      return res.status(400).json({ error: { message: "City can only contain letters, spaces, hyphens, and dots", status: 400 } });
+    }
+    if (area !== void 0 && area !== "" && !/^[a-zA-Z\s.-]{2,80}$/.test(String(area))) {
+      return res.status(400).json({ error: { message: "Area can only contain letters, spaces, hyphens, and dots", status: 400 } });
+    }
+    if (ghamName !== void 0 && ghamName !== "" && !/^[a-zA-Z\s.-]{2,80}$/.test(String(ghamName))) {
+      return res.status(400).json({ error: { message: "Gham name can only contain letters, spaces, hyphens, and dots", status: 400 } });
+    }
     for (const [field, value] of [["photoUrl", photoUrl], ["cnicFrontUrl", cnicFrontUrl], ["cnicBackUrl", cnicBackUrl]]) {
       if (value && String(value).startsWith("data:")) {
         return res.status(400).json({ error: { message: `${field}: send a URL, not a Base64 image. Use /api/v1/upload first.`, status: 400 } });

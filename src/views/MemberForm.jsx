@@ -156,6 +156,7 @@ export const MemberForm = () => {
     formState: { errors, isSubmitting },
     reset,
     control,
+    setValue,
   } = useForm({
     defaultValues: {
       fullName: '', fatherName: '', cnic: '', dob: '', address: '',
@@ -224,6 +225,11 @@ export const MemberForm = () => {
         'Failed to save member details.';
       showToast('error', msg);
     }
+  };
+
+  const handleTextFieldChange = (field, type, maxLength = 80) => (e) => {
+    const sanitized = sanitizeInputValue(e.target.value, type, { maxLength });
+    setValue(field, sanitized, { shouldValidate: true, shouldDirty: true });
   };
 
   const inputClass = (hasError) =>
@@ -376,6 +382,7 @@ export const MemberForm = () => {
                   <label className={labelClass}>Full Member Name *</label>
                   <input
                     {...register('fullName', { required: 'Full name is required' })}
+                    onChange={handleTextFieldChange('fullName', 'letters', 80)}
                     placeholder="Mohammed Ali"
                     className={inputClass(errors.fullName)}
                   />
@@ -386,6 +393,7 @@ export const MemberForm = () => {
                   <label className={labelClass}>Father's Name *</label>
                   <input
                     {...register('fatherName', { required: "Father's name is required" })}
+                    onChange={handleTextFieldChange('fatherName', 'letters', 80)}
                     placeholder="Ahmed Khan"
                     className={inputClass(errors.fatherName)}
                   />
@@ -432,6 +440,7 @@ export const MemberForm = () => {
                   <textarea
                     rows={3}
                     {...register('address', { required: 'Residential address is required' })}
+                    onChange={handleTextFieldChange('address', 'address', 200)}
                     placeholder="House #, Street, Block, Area..."
                     className={inputClass(errors.address) + ' resize-none'}
                   />
@@ -461,17 +470,17 @@ export const MemberForm = () => {
 
                 <div>
                   <label className={labelClass}>Town / City</label>
-                  <input {...register('city')} placeholder="e.g. Karachi / Hyderabad" className={inputClass(false)} />
+                  <input {...register('city')} onChange={handleTextFieldChange('city', 'letters', 80)} placeholder="e.g. Karachi / Hyderabad" className={inputClass(false)} />
                 </div>
 
                 <div>
                   <label className={labelClass}>Specific Area</label>
-                  <input {...register('area')} placeholder="e.g. Saddar / Defence / Gulshan" className={inputClass(false)} />
+                  <input {...register('area')} onChange={handleTextFieldChange('area', 'letters', 80)} placeholder="e.g. Saddar / Defence / Gulshan" className={inputClass(false)} />
                 </div>
 
                 <div className="sm:col-span-2">
                   <label className={labelClass}>Gham Name</label>
-                  <input {...register('ghamName')} placeholder="e.g. Anjar / Bhuj / Mandvi / Mundra" className={inputClass(false)} />
+                  <input {...register('ghamName')} onChange={handleTextFieldChange('ghamName', 'letters', 80)} placeholder="e.g. Anjar / Bhuj / Mandvi / Mundra" className={inputClass(false)} />
                 </div>
               </div>
             </div>

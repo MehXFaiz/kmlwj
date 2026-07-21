@@ -8,6 +8,7 @@ import {
   Users, ShieldCheck, QrCode, ChevronLeft, CheckCircle, AlertCircle, Save
 } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
+import { sanitizeInputValue } from '../utils/validation';
 
 export const DonorForm = () => {
   const { id } = useParams();
@@ -16,7 +17,7 @@ export const DonorForm = () => {
 
   const [toast, setToast] = useState(null);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting }, reset, control } = useForm({
+  const { register, handleSubmit, formState: { errors, isSubmitting }, reset, control, setValue } = useForm({
     defaultValues: {
       fullName: '',
       fatherName: '',
@@ -57,6 +58,11 @@ export const DonorForm = () => {
     } catch (err) {
       setToast({ type: 'error', message: err.message || 'Failed to save donor details' });
     }
+  };
+
+  const handleTextFieldChange = (field, type, maxLength = 80) => (e) => {
+    const sanitized = sanitizeInputValue(e.target.value, type, { maxLength });
+    setValue(field, sanitized, { shouldValidate: true, shouldDirty: true });
   };
 
   const inputClass = (hasError) =>
@@ -148,6 +154,7 @@ export const DonorForm = () => {
                   <label className={labelClass}>Full Name *</label>
                   <input
                     {...register('fullName', { required: 'Full name is required' })}
+                    onChange={handleTextFieldChange('fullName', 'letters', 80)}
                     placeholder="e.g. Muhammad Ali"
                     className={inputClass(errors.fullName)}
                   />
@@ -158,6 +165,7 @@ export const DonorForm = () => {
                   <label className={labelClass}>Father / Husband Name</label>
                   <input
                     {...register('fatherName')}
+                    onChange={handleTextFieldChange('fatherName', 'letters', 80)}
                     placeholder="e.g. Abdul Rahman"
                     className={inputClass(false)}
                   />
@@ -224,6 +232,7 @@ export const DonorForm = () => {
                   <label className={labelClass}>Address</label>
                   <input
                     {...register('address')}
+                    onChange={handleTextFieldChange('address', 'address', 160)}
                     placeholder="Street address, house number, etc."
                     className={inputClass(false)}
                   />
@@ -233,6 +242,7 @@ export const DonorForm = () => {
                   <label className={labelClass}>City</label>
                   <input
                     {...register('city')}
+                    onChange={handleTextFieldChange('city', 'letters', 80)}
                     placeholder="e.g. Karachi"
                     className={inputClass(false)}
                   />

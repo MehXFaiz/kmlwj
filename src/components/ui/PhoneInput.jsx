@@ -61,6 +61,8 @@ export const PhoneInput = forwardRef(({ value, onChange, className, ...props }, 
       ref={ref}
       {...props}
       type="text"
+      validationType="numeric"
+      maxLength={11}
       placeholder="03XX-XXXXXXX"
       value={displayValue}
       onChange={handleChange}

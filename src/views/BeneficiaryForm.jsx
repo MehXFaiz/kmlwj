@@ -9,6 +9,7 @@ import {
   ChevronLeft, CheckCircle, AlertCircle, Save, X,
   Upload, Loader2, IdCard, Users, Search,
 } from 'lucide-react';
+import { sanitizeInputValue } from '../utils/validation';
 
 // ── Single image upload widget (identical to MemberForm) ─────────────────────
 function ImageUploadField({ label, fieldName, currentUrl, onUploaded, onError }) {
@@ -248,6 +249,10 @@ export const BeneficiaryForm = () => {
   };
 
   const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
+  const setSanitized = (key, type, maxLength) => (e) => {
+    const sanitized = sanitizeInputValue(e.target.value, type, { maxLength });
+    setForm(f => ({ ...f, [key]: sanitized }));
+  };
   const setChecked = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.checked }));
 
   const inputClass = (hasError) =>
@@ -400,17 +405,17 @@ export const BeneficiaryForm = () => {
               <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass}>Full Name *</label>
-                  <input value={form.name} onChange={set('name')}
+                  <input value={form.name} onChange={setSanitized('name', 'letters', 80)}
                     placeholder="e.g. Ahmed Khan" className={inputClass(false)} />
                 </div>
                 <div>
                   <label className={labelClass}>Father's Name *</label>
-                  <input value={form.fatherName} onChange={set('fatherName')}
+                  <input value={form.fatherName} onChange={setSanitized('fatherName', 'letters', 80)}
                     placeholder="e.g. Mohammad Khan" className={inputClass(false)} />
                 </div>
                 <div>
                   <label className={labelClass}>Husband's Name</label>
-                  <input value={form.husbandName} onChange={set('husbandName')}
+                  <input value={form.husbandName} onChange={setSanitized('husbandName', 'letters', 80)}
                     placeholder="If applicable" className={inputClass(false)} />
                 </div>
                 <div>
@@ -490,7 +495,7 @@ export const BeneficiaryForm = () => {
                 {form.housingStatus === 'Other' && (
                   <div className="sm:col-span-2">
                     <label className={labelClass}>Specify Housing Status</label>
-                    <input value={form.housingOther} onChange={set('housingOther')}
+                    <input value={form.housingOther} onChange={setSanitized('housingOther', 'letters', 80)}
                       placeholder="Please specify..." className={inputClass(false)} />
                   </div>
                 )}
@@ -506,13 +511,13 @@ export const BeneficiaryForm = () => {
               <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
                   <label className={labelClass}>Full Residential Address *</label>
-                  <textarea rows={3} value={form.address} onChange={set('address')}
+                  <textarea rows={3} value={form.address} onChange={setSanitized('address', 'address', 200)}
                     placeholder="House #, Street, Block, Area..."
                     className={inputClass(false) + ' resize-none'} />
                 </div>
                 <div>
                   <label className={labelClass}>Town / City</label>
-                  <input value={form.town} onChange={set('town')}
+                  <input value={form.town} onChange={setSanitized('town', 'letters', 80)}
                     placeholder="e.g. Karachi / Hyderabad" className={inputClass(false)} />
                 </div>
                 <div>

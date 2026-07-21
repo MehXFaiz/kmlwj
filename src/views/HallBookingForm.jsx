@@ -10,6 +10,7 @@ import { useCoaStore } from '../store/coaStore';
 import { showToast } from '../components/ui/Toast';
 import { HallBookingReceiptModal } from '../components/receipts/HallBookingReceiptModal';
 import api from '../services/api';
+import { sanitizeInputValue } from '../utils/validation';
 import HallBookingConflictModal from '../components/common/HallBookingConflictModal';
 import HallBookingCalendar from '../components/common/HallBookingCalendar';
 
@@ -333,6 +334,11 @@ export const HallBookingForm = () => {
     navigate('/hall-bookings');
   };
 
+  const handleTextFieldChange = (field, type, maxLength = 80) => (e) => {
+    const sanitized = sanitizeInputValue(e.target.value, type, { maxLength });
+    setValue(field, sanitized, { shouldValidate: true, shouldDirty: true });
+  };
+
   const inputClass = (hasError) =>
     `w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 transition-all font-medium ${hasError ? 'border-red-500/60' : 'border-slate-800'}`;
 
@@ -537,6 +543,7 @@ export const HallBookingForm = () => {
                           message: 'Only letters, spaces, hyphens, and dots (3-50 chars)'
                         }
                       })} required
+                        onChange={handleTextFieldChange('bookerName', 'letters', 80)}
                         className={inputWithIconClass(errors.bookerName)} />
                     </div>
                     {errors.bookerName && (
@@ -554,6 +561,7 @@ export const HallBookingForm = () => {
                           message: 'Only letters, spaces, hyphens, and dots (3-50 chars)'
                         }
                       })}
+                        onChange={handleTextFieldChange('fatherHusbandName', 'letters', 80)}
                         placeholder="Father or Husband name"
                         className={inputWithIconClass(errors.fatherHusbandName)} />
                     </div>
@@ -595,6 +603,7 @@ export const HallBookingForm = () => {
                           message: 'Alphanumeric, spaces, and basic punctuation only (5-100 chars)'
                         }
                       })}
+                        onChange={handleTextFieldChange('address', 'address', 160)}
                         className={inputWithIconClass(errors.address)} />
                     </div>
                     {errors.address && (

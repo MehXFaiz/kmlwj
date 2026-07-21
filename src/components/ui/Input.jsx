@@ -1,4 +1,5 @@
-import { forwardRef } from 'react';
+import { forwardRef, useEffect, useState } from 'react';
+import { sanitizeInputValue } from '../../utils/validation';
 
 export const Input = forwardRef(({
   label,
@@ -8,8 +9,26 @@ export const Input = forwardRef(({
   className = '',
   id,
   required,
+  validationType,
+  maxLength,
+  value,
+  onChange,
   ...props
 }, ref) => {
+  const [internalValue, setInternalValue] = useState(value ?? '');
+
+  useEffect(() => {
+    setInternalValue(value ?? '');
+  }, [value]);
+
+  const handleChange = (e) => {
+    const nextValue = sanitizeInputValue(e.target.value, validationType, { maxLength });
+    setInternalValue(nextValue);
+    if (onChange) {
+      const syntheticEvent = { ...e, target: { ...e.target, value: nextValue } };
+      onChange(syntheticEvent);
+    }
+  };
   const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
   
   return (
@@ -28,6 +47,8 @@ export const Input = forwardRef(({
         ref={ref}
         type={type}
         id={inputId}
+        value={internalValue}
+        onChange={handleChange}
         className={`
           w-full px-3.5 py-2.5 bg-slate-950/60 border rounded-xl text-sm text-slate-100 placeholder:text-slate-600
           focus:outline-none transition-all duration-200 font-medium

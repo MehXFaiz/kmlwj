@@ -63,6 +63,8 @@ export const CNICInput = forwardRef(({ value, onChange, className, ...props }, r
       ref={ref}
       {...props}
       type="text"
+      validationType="numeric"
+      maxLength={13}
       placeholder="XXXXX-XXXXXXX-X"
       value={displayValue}
       onChange={handleChange}

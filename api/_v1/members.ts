@@ -110,8 +110,32 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       photoUrl, cnicFrontUrl, cnicBackUrl, isActive
     } = req.body;
 
-    if (!fullName) {
+    if (!fullName || !String(fullName).trim()) {
       return res.status(400).json({ error: { message: 'Full Member Name is required', status: 400 } });
+    }
+    if (fatherName && !/^[a-zA-Z\s.-]{2,80}$/.test(String(fatherName))) {
+      return res.status(400).json({ error: { message: 'Father name can only contain letters, spaces, hyphens, and dots', status: 400 } });
+    }
+    if (cnic && !/^\d{13}$/.test(String(cnic))) {
+      return res.status(400).json({ error: { message: 'CNIC must contain exactly 13 digits', status: 400 } });
+    }
+    if (mobile && !/^\d{11}$/.test(String(mobile))) {
+      return res.status(400).json({ error: { message: 'Mobile number must contain exactly 11 digits', status: 400 } });
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
+      return res.status(400).json({ error: { message: 'Email address is invalid', status: 400 } });
+    }
+    if (address && !/^[a-zA-Z0-9\s.,#/-]{3,200}$/.test(String(address))) {
+      return res.status(400).json({ error: { message: 'Address contains unsupported characters', status: 400 } });
+    }
+    if (city && !/^[a-zA-Z\s.-]{2,80}$/.test(String(city))) {
+      return res.status(400).json({ error: { message: 'City can only contain letters, spaces, hyphens, and dots', status: 400 } });
+    }
+    if (area && !/^[a-zA-Z\s.-]{2,80}$/.test(String(area))) {
+      return res.status(400).json({ error: { message: 'Area can only contain letters, spaces, hyphens, and dots', status: 400 } });
+    }
+    if (ghamName && !/^[a-zA-Z\s.-]{2,80}$/.test(String(ghamName))) {
+      return res.status(400).json({ error: { message: 'Gham name can only contain letters, spaces, hyphens, and dots', status: 400 } });
     }
 
     // Reject Base64 payloads — images must be uploaded via /api/v1/upload first
@@ -190,6 +214,34 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       email, city, area, ghamName, education, profession, company, doi,
       photoUrl, cnicFrontUrl, cnicBackUrl, isActive
     } = req.body;
+
+    if (fullName !== undefined && !String(fullName).trim()) {
+      return res.status(400).json({ error: { message: 'Full Member Name is required', status: 400 } });
+    }
+    if (fatherName !== undefined && fatherName !== '' && !/^[a-zA-Z\s.-]{2,80}$/.test(String(fatherName))) {
+      return res.status(400).json({ error: { message: 'Father name can only contain letters, spaces, hyphens, and dots', status: 400 } });
+    }
+    if (cnic !== undefined && cnic !== '' && !/^\d{13}$/.test(String(cnic))) {
+      return res.status(400).json({ error: { message: 'CNIC must contain exactly 13 digits', status: 400 } });
+    }
+    if (mobile !== undefined && mobile !== '' && !/^\d{11}$/.test(String(mobile))) {
+      return res.status(400).json({ error: { message: 'Mobile number must contain exactly 11 digits', status: 400 } });
+    }
+    if (email !== undefined && email !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
+      return res.status(400).json({ error: { message: 'Email address is invalid', status: 400 } });
+    }
+    if (address !== undefined && address !== '' && !/^[a-zA-Z0-9\s.,#/-]{3,200}$/.test(String(address))) {
+      return res.status(400).json({ error: { message: 'Address contains unsupported characters', status: 400 } });
+    }
+    if (city !== undefined && city !== '' && !/^[a-zA-Z\s.-]{2,80}$/.test(String(city))) {
+      return res.status(400).json({ error: { message: 'City can only contain letters, spaces, hyphens, and dots', status: 400 } });
+    }
+    if (area !== undefined && area !== '' && !/^[a-zA-Z\s.-]{2,80}$/.test(String(area))) {
+      return res.status(400).json({ error: { message: 'Area can only contain letters, spaces, hyphens, and dots', status: 400 } });
+    }
+    if (ghamName !== undefined && ghamName !== '' && !/^[a-zA-Z\s.-]{2,80}$/.test(String(ghamName))) {
+      return res.status(400).json({ error: { message: 'Gham name can only contain letters, spaces, hyphens, and dots', status: 400 } });
+    }
 
     // Reject Base64 payloads — images must be uploaded via /api/v1/upload first
     for (const [field, value] of [['photoUrl', photoUrl], ['cnicFrontUrl', cnicFrontUrl], ['cnicBackUrl', cnicBackUrl]] as const) {

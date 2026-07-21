@@ -250,6 +250,25 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     // Action: Create Booking & Auto-Post to Ledger
     const { bookingDate, bookerName, fatherHusbandName, address, mobile, programDate, programType, functionType, timeFrom, timeTo, timings, hallId, isForJamaat, amount, hallCharges, discount, netAmount, receivedAmount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
 
+    if (bookerName && !/^[a-zA-Z\s.-]{2,80}$/.test(String(bookerName))) {
+      return res.status(400).json({ error: { message: 'Booker name can only contain letters, spaces, hyphens, and dots', status: 400 } });
+    }
+    if (fatherHusbandName && !/^[a-zA-Z\s.-]{2,80}$/.test(String(fatherHusbandName))) {
+      return res.status(400).json({ error: { message: 'Father / husband name can only contain letters, spaces, hyphens, and dots', status: 400 } });
+    }
+    if (address && !/^[a-zA-Z0-9\s.,#/-]{3,160}$/.test(String(address))) {
+      return res.status(400).json({ error: { message: 'Address contains unsupported characters', status: 400 } });
+    }
+    if (mobile && !/^\d{11}$/.test(String(mobile))) {
+      return res.status(400).json({ error: { message: 'Mobile number must contain exactly 11 digits', status: 400 } });
+    }
+    if (chequeNumber && !/^\d{6,20}$/.test(String(chequeNumber))) {
+      return res.status(400).json({ error: { message: 'Cheque number must contain only digits (6-20 digits)', status: 400 } });
+    }
+    if (chequeBankName && !/^[a-zA-Z\s.-]{2,80}$/.test(String(chequeBankName))) {
+      return res.status(400).json({ error: { message: 'Cheque bank name can only contain letters, spaces, hyphens, and dots', status: 400 } });
+    }
+
     const rawHallCharges = hallCharges ?? amount;
     if (!bookerName || !programDate || !hallId || rawHallCharges == null || !paymentMethod) {
       return res.status(400).json({ error: { message: 'Missing required fields', status: 400 } });
@@ -488,6 +507,25 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     const { bookingDate, bookerName, fatherHusbandName, address, mobile, programDate, programType, functionType, timeFrom, timeTo, timings, hallId, isForJamaat, amount, hallCharges, discount, receivedAmount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
+
+    if (bookerName && !/^[a-zA-Z\s.-]{2,80}$/.test(String(bookerName))) {
+      return res.status(400).json({ error: { message: 'Booker name can only contain letters, spaces, hyphens, and dots', status: 400 } });
+    }
+    if (fatherHusbandName && !/^[a-zA-Z\s.-]{2,80}$/.test(String(fatherHusbandName))) {
+      return res.status(400).json({ error: { message: 'Father / husband name can only contain letters, spaces, hyphens, and dots', status: 400 } });
+    }
+    if (address && !/^[a-zA-Z0-9\s.,#/-]{3,160}$/.test(String(address))) {
+      return res.status(400).json({ error: { message: 'Address contains unsupported characters', status: 400 } });
+    }
+    if (mobile && !/^\d{11}$/.test(String(mobile))) {
+      return res.status(400).json({ error: { message: 'Mobile number must contain exactly 11 digits', status: 400 } });
+    }
+    if (chequeNumber && !/^\d{6,20}$/.test(String(chequeNumber))) {
+      return res.status(400).json({ error: { message: 'Cheque number must contain only digits (6-20 digits)', status: 400 } });
+    }
+    if (chequeBankName && !/^[a-zA-Z\s.-]{2,80}$/.test(String(chequeBankName))) {
+      return res.status(400).json({ error: { message: 'Cheque bank name can only contain letters, spaces, hyphens, and dots', status: 400 } });
+    }
 
     const rawHallCharges = hallCharges ?? amount;
     if (!bookerName || !programDate || !hallId || rawHallCharges == null || !paymentMethod) {
