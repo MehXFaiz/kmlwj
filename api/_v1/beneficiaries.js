@@ -26,6 +26,9 @@ const ALL_FIELDS = [
   "profession",
   "firm",
   "remarks",
+  "photoUrl",
+  "cnicFrontUrl",
+  "cnicBackUrl",
   "isActive"
 ];
 function pickData(body, isCreate) {

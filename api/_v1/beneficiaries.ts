@@ -9,7 +9,9 @@ const ALL_FIELDS = [
   'familySize', 'monthlyIncome', 'monthlyExpenses', 'debtAmount',
   'housingStatus', 'housingOther',
   'address', 'town', 'area', 'gham', 'husbandGham', 'fatherGham',
-  'education', 'profession', 'firm', 'remarks', 'isActive',
+  'education', 'profession', 'firm', 'remarks',
+  'photoUrl', 'cnicFrontUrl', 'cnicBackUrl',
+  'isActive',
 ] as const;
 
 function pickData(body: any, isCreate: boolean) {

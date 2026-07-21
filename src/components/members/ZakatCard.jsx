@@ -104,8 +104,8 @@ export function ZakatCardFront({ card }) {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 3px 8px rgba(0,0,0,0.5)',
           }}>
-            {member?.photoUrl ? (
-              <img src={member.photoUrl} alt="Photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            {(beneficiary?.photoUrl || member?.photoUrl) ? (
+              <img src={beneficiary?.photoUrl || member?.photoUrl} alt="Photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
               <span style={{ fontSize: '5px', color: '#555', fontWeight: 500, textAlign: 'center', lineHeight: 1.3 }}>portrait{'\n'}here</span>
             )}

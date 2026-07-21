@@ -61,6 +61,7 @@ const MemberForm = lazy(() => import('./views/MemberForm').then(m => ({ default:
 const MembershipCards = lazy(() => import('./views/MembershipCards').then(m => ({ default: m.MembershipCards })));
 const ZakatCards = lazy(() => import('./views/ZakatCards').then(m => ({ default: m.ZakatCards })));
 const MemberVerify = lazy(() => import('./views/MemberVerify').then(m => ({ default: m.MemberVerify })));
+const ZakatCardVerify = lazy(() => import('./views/ZakatCardVerify'));
 
 // Bank Voucher Module Views
 const BankVouchers = lazy(() => import('./views/BankVouchers').then(m => ({ default: m.BankVouchers })));
@@ -322,6 +323,8 @@ function App() {
 
           {/* Public Member Verification — no auth required (QR scan target) */}
           <Route path="/member/verify/:id" element={<MemberVerify />} />
+          <Route path="/verify/member/:id" element={<MemberVerify />} />
+          <Route path="/verify/zakat/:cardNumber" element={<ZakatCardVerify />} />
 
           {/* Secure ERP Interface */}
           <Route element={<ProtectedRoutesWrapper />}>

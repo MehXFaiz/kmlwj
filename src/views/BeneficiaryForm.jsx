@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useBeneficiaryStore } from '../store/beneficiaryStore';
+import { beneficiaryService } from '../services/beneficiaryService';
 import { PhoneInput, validatePhoneNumber } from '../components/ui/PhoneInput';
 import { CNICInput, validateCNIC } from '../components/ui/CNICInput';
-import { Users, Search, ChevronLeft, Save, ShieldCheck } from 'lucide-react';
+import { ImageUploadField } from '../components/ui/ImageUploadField';
+import { Users, Search, ChevronLeft, Save, ShieldCheck, Camera, IdCard } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
 
 const nullsToEmpty = (obj) =>
@@ -14,7 +16,9 @@ const DEFAULT_BENEFICIARY = {
   familySize: '', monthlyIncome: '', monthlyExpenses: '', debtAmount: '',
   housingStatus: '', housingOther: '',
   address: '', town: '', area: '', gham: '', husbandGham: '', fatherGham: '',
-  education: '', profession: '', firm: '', remarks: '', isActive: true,
+  education: '', profession: '', firm: '', remarks: '',
+  photoUrl: '', cnicFrontUrl: '', cnicBackUrl: '',
+  isActive: true,
 };
 
 function formatDobForInput(val) {
@@ -351,6 +355,63 @@ export const BeneficiaryForm = () => {
                     This person is currently receiving aid
                   </label>
                 </div>
+              </div>
+            </div>
+
+            {/* Card 04: Photos & CNIC Images */}
+            <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
+                <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">04</span>
+                <h3 className="text-sm font-semibold text-slate-200">Profile Photo & CNIC Images</h3>
+              </div>
+              <div className="p-5 space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 justify-center">
+                      <Camera className="w-3.5 h-3.5 text-amber-400" />
+                      <label className="text-xs font-semibold text-slate-400">Profile Photo</label>
+                    </div>
+                    <ImageUploadField
+                      label="Profile Photo"
+                      fieldName="photo"
+                      currentUrl={form.photoUrl}
+                      uploader={beneficiaryService.uploadFile}
+                      onUploaded={(url) => setForm(f => ({ ...f, photoUrl: url || '' }))}
+                      onError={(msg) => showToast(msg, 'error')}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 justify-center">
+                      <IdCard className="w-3.5 h-3.5 text-amber-400" />
+                      <label className="text-xs font-semibold text-slate-400">CNIC Front</label>
+                    </div>
+                    <ImageUploadField
+                      label="CNIC Front"
+                      fieldName="cnicFront"
+                      currentUrl={form.cnicFrontUrl}
+                      uploader={beneficiaryService.uploadFile}
+                      onUploaded={(url) => setForm(f => ({ ...f, cnicFrontUrl: url || '' }))}
+                      onError={(msg) => showToast(msg, 'error')}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 justify-center">
+                      <IdCard className="w-3.5 h-3.5 text-amber-400" />
+                      <label className="text-xs font-semibold text-slate-400">CNIC Back</label>
+                    </div>
+                    <ImageUploadField
+                      label="CNIC Back"
+                      fieldName="cnicBack"
+                      currentUrl={form.cnicBackUrl}
+                      uploader={beneficiaryService.uploadFile}
+                      onUploaded={(url) => setForm(f => ({ ...f, cnicBackUrl: url || '' }))}
+                      onError={(msg) => showToast(msg, 'error')}
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500 text-center">
+                  Images are optional. Supported formats: JPG, PNG, WebP.
+                </p>
               </div>
             </div>
 

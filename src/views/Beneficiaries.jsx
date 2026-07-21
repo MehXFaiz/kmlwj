@@ -187,6 +187,7 @@ export const Beneficiaries = () => {
   const [selectedIds, setSelectedIds] = useState([]);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [lightbox, setLightbox] = useState(null); // { url, label } | null
 
   useEffect(() => {
     fetchBeneficiaries();
@@ -343,8 +344,15 @@ export const Beneficiaries = () => {
                         onChange={() => toggleSelect(b.id)}
                         className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer shrink-0"
                       />
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/30 flex items-center justify-center text-amber-400 font-extrabold text-lg shadow-inner shrink-0">
-                        {b.name ? b.name.charAt(0).toUpperCase() : 'B'}
+                      <div
+                        className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/30 flex items-center justify-center text-amber-400 font-extrabold text-lg shadow-inner shrink-0 overflow-hidden"
+                        onClick={(e) => { if (b.photoUrl) { e.stopPropagation(); setLightbox({ url: b.photoUrl, label: b.name || 'Profile Photo' }); } }}
+                        role={b.photoUrl ? 'button' : undefined}
+                        style={b.photoUrl ? { cursor: 'zoom-in' } : undefined}
+                      >
+                        {b.photoUrl
+                          ? <img src={b.photoUrl} alt={b.name} className="w-full h-full object-cover" />
+                          : (b.name ? b.name.charAt(0).toUpperCase() : 'B')}
                       </div>
                       <div>
                         <h4 className="text-base font-bold text-amber-400 group-hover:text-amber-300 transition-colors leading-tight tracking-tight">
@@ -390,6 +398,33 @@ export const Beneficiaries = () => {
                       </span>
                     </div>
                   </div>
+
+                  {/* CNIC thumbnails (if any) */}
+                  {(b.cnicFrontUrl || b.cnicBackUrl) && (
+                    <div className="flex items-center gap-2 mt-3">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">CNIC:</span>
+                      {b.cnicFrontUrl && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setLightbox({ url: b.cnicFrontUrl, label: 'CNIC Front' }); }}
+                          className="w-10 h-7 rounded border border-slate-700 overflow-hidden hover:border-amber-500/50 transition-colors"
+                          title="View CNIC Front"
+                        >
+                          <img src={b.cnicFrontUrl} alt="CNIC Front" className="w-full h-full object-cover" />
+                        </button>
+                      )}
+                      {b.cnicBackUrl && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setLightbox({ url: b.cnicBackUrl, label: 'CNIC Back' }); }}
+                          className="w-10 h-7 rounded border border-slate-700 overflow-hidden hover:border-amber-500/50 transition-colors"
+                          title="View CNIC Back"
+                        >
+                          <img src={b.cnicBackUrl} alt="CNIC Back" className="w-full h-full object-cover" />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Card Footer: Date & Action Icons */}
@@ -457,6 +492,30 @@ export const Beneficiaries = () => {
         </div>
       )}
 
+      {/* Image Lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" />
+          <div className="relative z-10 max-w-4xl max-h-[90vh] flex flex-col items-center gap-3">
+            <img
+              src={lightbox.url}
+              alt={lightbox.label}
+              className="max-w-full max-h-[80vh] rounded-xl border border-amber-500/30 shadow-2xl object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <div className="text-xs font-semibold text-amber-300 tracking-wide">{lightbox.label}</div>
+            <button
+              onClick={() => setLightbox(null)}
+              className="px-4 py-1.5 rounded-lg bg-slate-800/90 border border-slate-700 text-slate-300 text-xs font-semibold hover:bg-slate-700 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );
