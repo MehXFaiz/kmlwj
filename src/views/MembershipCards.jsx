@@ -23,9 +23,22 @@ function getMemberQrUrl(member) {
 const PRINT_STYLES = `
 @media print {
   @page { margin: 0; size: auto; }
+  /* Force full-color print for every element on the page — kills the
+     browser default that strips background colors/images during printing. */
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
   body * { visibility: hidden !important; }
-  #print-area, #print-area * { visibility: visible !important; }
-  #print-area { position: fixed; left: 0; top: 0; width: 100%; height: 100%; }
+  #print-area, #print-area * {
+    visibility: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  #print-area img, #print-area svg { filter: none !important; }
+  #print-area { position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: white !important; }
 }
 `;
 

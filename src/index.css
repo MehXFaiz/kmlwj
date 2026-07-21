@@ -431,6 +431,15 @@ html.theme-transition *::after {
    PRINT RESET
 ───────────────────────────────────────── */
 @media print {
+  /* Force browsers to print background colors, images, gradients, and vibrant
+     ink for ALL elements. Without this Chromium/Edge/Safari strip backgrounds
+     by default and Firefox tints colors for "readability". */
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
   .print-hidden,
   .print\:hidden,
   button, header, aside, nav, .lg\:flex { display: none !important; }
@@ -451,7 +460,23 @@ html.theme-transition *::after {
     position: static !important;
   }
 
-  h1, h2, h3, h4, h5, h6, p, span, td, th, div, label, table, tr {
+  /* Global text-to-black reset — but NEVER touch the card print area, where
+     inline styles carry the actual card palette (green/gold/white).
+     Selectors Level 4: :not() accepts complex selectors. */
+  h1:not(#print-area, #print-area *),
+  h2:not(#print-area, #print-area *),
+  h3:not(#print-area, #print-area *),
+  h4:not(#print-area, #print-area *),
+  h5:not(#print-area, #print-area *),
+  h6:not(#print-area, #print-area *),
+  p:not(#print-area, #print-area *),
+  span:not(#print-area, #print-area *),
+  td:not(#print-area, #print-area *),
+  th:not(#print-area, #print-area *),
+  div:not(#print-area, #print-area *),
+  label:not(#print-area, #print-area *),
+  table:not(#print-area, #print-area *),
+  tr:not(#print-area, #print-area *) {
     color: black !important; text-shadow: none !important;
   }
 }
@@ -504,12 +529,21 @@ html.theme-transition *::after {
     border-radius: 3mm !important;
   }
 
-  /* Override the global print reset for membership card print area */
+  /* Force the card print area to render with its inline colors preserved.
+     Every browser must print backgrounds, borders, gradients, SVGs, and
+     images exactly as displayed on screen. */
   #print-area,
   #print-area * {
     visibility: visible !important;
-    color: inherit !important;
-    background: inherit !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  #print-area img,
+  #print-area svg {
+    filter: none !important;
+    opacity: revert !important;
   }
 
   #print-area {
@@ -518,5 +552,6 @@ html.theme-transition *::after {
     top: 0 !important;
     width: 100% !important;
     height: auto !important;
+    background: white !important;
   }
 }
