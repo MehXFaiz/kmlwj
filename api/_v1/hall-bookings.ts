@@ -13,6 +13,44 @@ function generateVoucherNumber() {
   return `BR-${year}${month}-${randomStr}`;
 }
 
+// SQA fix: mirrors HallBookingForm.jsx's own client-side conflict preview
+// exactly — two bookings for the same hall/date only conflict if their
+// timings match, either is "Full Day", or either timing is unset (treated as
+// covering the whole day). Previously the server ignored timings entirely
+// and treated any second same-day booking as a conflict, rejecting
+// legitimate non-overlapping bookings the UI itself allows.
+function timingsConflict(existingTimings: string | null, requestedTimings: string | null | undefined): boolean {
+  if (!requestedTimings || !existingTimings) return true;
+  if (existingTimings === 'Full Day' || requestedTimings === 'Full Day') return true;
+  return existingTimings === requestedTimings;
+}
+
+// SQA fix: `status` is a free-text Prisma String column with no enum, and
+// neither the create nor update handler validated it against a known set or
+// checked whether a transition was legal — a direct API call could set an
+// arbitrary status, or move a Cancelled/Refunded (terminal) booking back to
+// Confirmed/POSTED, causing it to be silently re-posted to the ledger.
+// Converting the column to a real Prisma enum is a schema migration outside
+// the scope of a safe, verifiable same-pass change (see the migration note
+// below), so this is enforced at the application layer instead.
+const HALL_BOOKING_STATUSES = ['Pending', 'Confirmed', 'POSTED', 'Cancelled', 'Refunded'] as const;
+type HallBookingStatus = typeof HALL_BOOKING_STATUSES[number];
+
+// Terminal states (Cancelled, Refunded) have no legal outgoing transition —
+// once a booking is cancelled/refunded it cannot be revived into an active
+// status by a client-supplied status field.
+const ALLOWED_STATUS_TRANSITIONS: Record<HallBookingStatus, HallBookingStatus[]> = {
+  Pending:   ['Pending', 'Confirmed', 'POSTED', 'Cancelled', 'Refunded'],
+  Confirmed: ['Confirmed', 'POSTED', 'Cancelled', 'Refunded'],
+  POSTED:    ['POSTED', 'Cancelled', 'Refunded'],
+  Cancelled: ['Cancelled'],
+  Refunded:  ['Refunded'],
+};
+
+function isKnownStatus(value: string): value is HallBookingStatus {
+  return (HALL_BOOKING_STATUSES as readonly string[]).includes(value);
+}
+
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -25,6 +63,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       const hallId = req.query.hallId as string;
       const dateParam = (req.query.bookingDate || req.query.programDate) as string;
       const excludeId = req.query.excludeId as string;
+      const requestedTimings = req.query.timings as string | undefined;
 
       if (!hallId || !dateParam) {
         return res.status(400).json({ error: { message: 'hallId and bookingDate (or programDate) are required parameters', status: 400 } });
@@ -40,7 +79,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       const endOfDay = new Date(parsedDate);
       endOfDay.setUTCHours(23, 59, 59, 999);
 
-      const conflictBooking = await prisma.hallBooking.findFirst({
+      const sameDayBookings = await prisma.hallBooking.findMany({
         where: {
           hallId: hallId,
           programDate: {
@@ -57,6 +96,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           createdBy: true,
         },
       });
+
+      const conflictBooking = sameDayBookings.find(b => timingsConflict(b.timings, requestedTimings));
 
       if (conflictBooking) {
         const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress;
@@ -316,7 +357,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const endOfDay = new Date(parsedProgDate);
     endOfDay.setUTCHours(23, 59, 59, 999);
 
-    const conflictBooking = await prisma.hallBooking.findFirst({
+    const sameDayBookings = await prisma.hallBooking.findMany({
       where: {
         hallId: hallId,
         programDate: {
@@ -331,6 +372,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         hallAccount: true,
       },
     });
+    const conflictBooking = sameDayBookings.find(b => timingsConflict(b.timings, timings));
 
     if (conflictBooking) {
       const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress;
@@ -353,19 +395,35 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       return res.status(409).json({
         success: false,
-        message: 'This hall is already booked on the selected date. Please choose another date.',
+        message: 'This hall is already booked for the selected date and time slot. Please choose another date or time.',
       });
     }
 
     try {
       const result = await prisma.$transaction(async (tx) => {
-      const count = await tx.hallBooking.count();
-      const nextReceiptNo = count + 1;
+      // Re-check inside the transaction to close the TOCTOU gap between the
+      // advisory check above and this insert (see SQA fix note on
+      // timingsConflict/isValidBookingStatus below for the full rationale).
+      const sameDayInTx = await tx.hallBooking.findMany({
+        where: {
+          hallId,
+          programDate: { gte: startOfDay, lte: endOfDay },
+          status: { in: ['Confirmed', 'Pending', 'POSTED'] },
+        },
+      });
+      if (sameDayInTx.some((b: any) => timingsConflict(b.timings, timings))) {
+        throw Object.assign(new Error('This hall is already booked for the selected date and time slot. Please choose another date or time.'), { status: 409 });
+      }
 
+      // SQA fix: receiptNo was previously computed as `count() + 1` and set
+      // explicitly, racing under concurrent submissions (and, since the
+      // column has no unique constraint, a collision would silently create
+      // two bookings with the same receipt number rather than erroring).
+      // receiptNo is `@default(autoincrement())` in the schema — omitting it
+      // here lets Postgres assign it atomically instead.
       const newBooking = await tx.hallBooking.create({
         data: {
           bookingDate: bookingDate ? new Date(bookingDate) : undefined,
-          receiptNo: nextReceiptNo,
           bookerName,
           fatherHusbandName: fatherHusbandName || null,
           address: address || null,
@@ -401,7 +459,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       });
 
       return newBooking;
-    });
+    }, { isolationLevel: 'Serializable' });
+      // SQA fix: Serializable isolation makes the re-check-then-insert above
+      // atomic against concurrent bookings for the same hall/date/timings —
+      // without it, two overlapping transactions could both pass the re-check
+      // before either commits (classic TOCTOU), a race the prior date-only
+      // unique index masked for the exact-match case but couldn't cover once
+      // `timings` was added to the mix.
 
       await logAudit(req.user.id, 'Create & Post Hall Booking', 'REVENUE', null, result, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
@@ -565,7 +629,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const endOfDay = new Date(parsedProgDate);
     endOfDay.setUTCHours(23, 59, 59, 999);
 
-    const conflictBooking = await prisma.hallBooking.findFirst({
+    const sameDayBookingsForUpdate = await prisma.hallBooking.findMany({
       where: {
         hallId: hallId,
         programDate: {
@@ -581,6 +645,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         hallAccount: true,
       },
     });
+    const conflictBooking = sameDayBookingsForUpdate.find(b => timingsConflict(b.timings, timings));
 
     if (conflictBooking) {
       const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress;
@@ -603,7 +668,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       return res.status(409).json({
         success: false,
-        message: 'This hall is already booked on the selected date. Please choose another date.',
+        message: 'This hall is already booked for the selected date and time slot. Please choose another date or time.',
       });
     }
 

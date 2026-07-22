@@ -88,6 +88,9 @@ export const DonationForm = () => {
     if (!/^[1-9]\d*(\.\d{1,2})?$/.test(form.amount)) {
       showToast('Amount must be a positive number with up to 2 decimal places.', 'warning'); return;
     }
+    if (Number(form.amount) > 100000000) {
+      showToast('Amount cannot exceed 100,000,000.', 'warning'); return;
+    }
     if ((form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && !form.bankAccountId) {
       showToast('Bank Account is required.', 'warning'); return;
     }

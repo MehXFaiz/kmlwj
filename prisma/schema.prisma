@@ -98,6 +98,17 @@ model Account {
   description       String?
   currency          String             @default("PKR")
   subsidiary        String[]           @default(["Global"])
+  // SQA note: monetary columns here (and on JournalEntryLine/LedgerEntry debit/
+  // credit below) are Float, not Decimal — subject to IEEE-754 rounding drift
+  // over repeated increment operations. Migrating to Decimal(18,2) is the
+  // correct long-term fix, but is intentionally NOT done in this pass: it
+  // requires rewriting arithmetic across api/_services/accounting.service.ts
+  // (Prisma returns Decimal.js objects, not plain numbers, for Decimal columns
+  // — every +, -, comparison, and .toFixed() call touching these fields would
+  // need updating) and a supervised data migration, which cannot be safely
+  // done without a live database to verify against. The double-entry balance
+  // check (postTransaction, below) already guards against drift with a 0.001
+  // epsilon as an interim mitigation.
   initialBalance    Float              @default(0)
   currentBalance    Float              @default(0)
   detailType        String             @default("Header")
@@ -386,7 +397,22 @@ model HallBooking {
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 
-  @@unique([hallId, programDate], name: "hallId_programDate")
+  // SQA fix: this was `@@unique([hallId, programDate])` — date-only — which
+  // contradicted the app's own intent: HallBookingForm.jsx's own conflict
+  // preview (client-side) already treats two different `timings` values
+  // (e.g. "Morning" vs "Evening") on the same day as non-conflicting, but the
+  // DB constraint blocked ANY second booking for that hall/date regardless of
+  // timings, causing legitimate non-overlapping bookings to be rejected.
+  // `timings` is now part of the key so distinct time slots can coexist.
+  // NOTE: Postgres treats NULL as distinct from every other value in a unique
+  // index, so two bookings with an unset `timings` would NOT be blocked by
+  // this constraint alone — the application-level conflict check in
+  // api/_v1/hall-bookings.ts (which also matches "Full Day" against any
+  // timing, a rule this simple column-level index cannot express) remains
+  // the primary safeguard; this index is a backstop for the exact-match case.
+  // REQUIRES A MIGRATION: run `npm run db:push` (or `prisma migrate`) to
+  // apply this constraint change — not run automatically as part of this fix.
+  @@unique([hallId, programDate, timings], name: "hallId_programDate_timings")
 }
 
 model Customer {

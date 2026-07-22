@@ -10,6 +10,21 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   if (!authenticated || !req.user) return;
 
   if (req.method === 'GET') {
+    // SQA fix (High): this endpoint previously had no permission check at all
+    // — any authenticated user, regardless of role, could pull full ledger
+    // data (all account activity and balances). Every sibling report endpoint
+    // (trial-balance, balance-sheet, income-statement, cash-flow) requires
+    // VIEW_REPORTS; this brings the General Ledger in line with them.
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      include: { role: { include: { rolePermissions: { include: { permission: true } } } } },
+    });
+    const userPerms = user?.role.rolePermissions.map((rp) => rp.permission.name) || [];
+    const isSuperAdmin = user?.role.name === 'Super Admin';
+    if (!isSuperAdmin && !userPerms.includes('VIEW_REPORTS')) {
+      return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
+    }
+
     try {
       const { startDate, endDate, accountId, glCode, page, limit } = req.query as any;
       const ledgerResult = await AccountingService.getGeneralLedger({

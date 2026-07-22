@@ -420,7 +420,10 @@ export class AccountingService {
       totalCredit += creditVal;
     }
 
-    // Check Double Entry balance constraint
+    // Check Double Entry balance constraint. The 0.001 epsilon is a deliberate
+    // mitigation for Float (not Decimal) monetary columns — see the SQA note
+    // on Account.currentBalance in prisma/schema.prisma for why a full
+    // Decimal migration isn't done in the same pass as this check.
     if (Math.abs(totalDebit - totalCredit) > 0.001) {
       throw new Error(`Accounting Engine Error: Transaction must follow Double Entry Accounting. Total Debit (${totalDebit.toFixed(2)}) does not equal Total Credit (${totalCredit.toFixed(2)}).`);
     }
@@ -436,13 +439,17 @@ export class AccountingService {
     const reference = payload.reference || 'Auto Post';
     const description = payload.description || `Automatic posting from ${payload.module}`;
 
-    // Generate voucher No if not provided
-    let voucherNo = payload.voucherNo;
-    if (!voucherNo) {
+    // Generate voucher No if not provided. The random suffix has only 900,000
+    // possible values per day per voucher type with no prior uniqueness check
+    // — SQA fix: rather than let a rare collision surface as an unhandled
+    // Prisma unique-constraint error, generation (and only generation — never
+    // an explicitly caller-supplied voucherNo) is retried below on P2002.
+    const explicitVoucherNo = payload.voucherNo;
+    function generateVoucherNo(): string {
       const prefix = voucherType;
       const datePart = postingDate.toISOString().slice(2, 10).replace(/-/g, '');
       const randPart = Math.floor(100000 + Math.random() * 900000);
-      voucherNo = `${prefix}-${datePart}-${randPart}`;
+      return `${prefix}-${datePart}-${randPart}`;
     }
 
     // Resolve all accounts first inside transaction to ensure no missing accounts
@@ -459,18 +466,33 @@ export class AccountingService {
     }
 
     // 1. Create Journal Entry
-    const journalEntry = await tx.journalEntry.create({
-      data: {
-        voucherNo,
-        postingDate,
-        subsidiary,
-        reference,
-        description,
-        postedBy: payload.postedBy || 'system',
-        status,
-        voucherType
+    let voucherNo = explicitVoucherNo || generateVoucherNo();
+    let journalEntry;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        journalEntry = await tx.journalEntry.create({
+          data: {
+            voucherNo,
+            postingDate,
+            subsidiary,
+            reference,
+            description,
+            postedBy: payload.postedBy || 'system',
+            status,
+            voucherType
+          }
+        });
+        break;
+      } catch (err: any) {
+        const isUniqueViolation = err?.code === 'P2002';
+        const targetsVoucherNo = (err?.meta?.target as string[] | undefined)?.includes('voucherNo');
+        if (isUniqueViolation && targetsVoucherNo && !explicitVoucherNo && attempt < 5) {
+          voucherNo = generateVoucherNo();
+          continue;
+        }
+        throw err;
       }
-    });
+    }
 
     const createdLedgerEntries = [];
 

@@ -4,6 +4,28 @@ import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middlewar
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 
+function isUniqueViolation(err: any): boolean {
+  return err?.code === 'P2002';
+}
+
+const DONOR_CODE_PREFIX = 'DNR-';
+
+// SQA fix: previously derived from `count()`, which races under concurrent
+// creation and reuses numbers after a donor is deleted (count shrinks). Max
+// existing numeric suffix avoids the reuse issue; the caller retries on the
+// rare remaining collision.
+async function nextDonorCode(tx: any): Promise<string> {
+  const existing = await tx.donor.findMany({
+    where: { donorCode: { startsWith: DONOR_CODE_PREFIX } },
+    select: { donorCode: true },
+  });
+  const maxNum = existing.reduce((max: number, d: { donorCode: string }) => {
+    const n = parseInt(d.donorCode.slice(DONOR_CODE_PREFIX.length), 10);
+    return Number.isFinite(n) && n > max ? n : max;
+  }, 0);
+  return `${DONOR_CODE_PREFIX}${String(maxNum + 1).padStart(4, '0')}`;
+}
+
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -71,28 +93,51 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       }
     }
 
-    // Generate donorCode e.g. DNR-0001
-    const count = await prisma.donor.count();
-    const nextNum = (count + 1).toString().padStart(4, '0');
-    const donorCode = `DNR-${nextNum}`;
+    // SQA fix: uniqueness was only enforced on CNIC, which is optional — two
+    // donors with identical name+mobile but no CNIC could be created
+    // indefinitely, fragmenting donation history for the same real person.
+    // This is a non-blocking, informational warning only (not a rejection),
+    // since a shared name+mobile can legitimately belong to different people.
+    let duplicateWarning: string | undefined;
+    if (!cnic && mobile) {
+      const possibleDuplicate = await prisma.donor.findFirst({
+        where: { fullName: { equals: fullName, mode: 'insensitive' }, mobile },
+      });
+      if (possibleDuplicate) {
+        duplicateWarning = `A donor named "${possibleDuplicate.fullName}" with the same mobile number already exists (${possibleDuplicate.donorCode}). This donor was still created — please verify this isn't a duplicate.`;
+      }
+    }
 
-    const newDonor = await prisma.donor.create({
-      data: {
-        donorCode,
-        fullName,
-        fatherName: fatherName || null,
-        mobile: mobile || null,
-        cnic: cnic || null,
-        email: email || null,
-        address: address || null,
-        city: city || null,
-        isActive: isActive !== undefined ? Boolean(isActive) : true,
-      },
-    });
+    let newDonor;
+    for (let attempt = 1; ; attempt++) {
+      const donorCode = await nextDonorCode(prisma);
+      try {
+        newDonor = await prisma.donor.create({
+          data: {
+            donorCode,
+            fullName,
+            fatherName: fatherName || null,
+            mobile: mobile || null,
+            cnic: cnic || null,
+            email: email || null,
+            address: address || null,
+            city: city || null,
+            isActive: isActive !== undefined ? Boolean(isActive) : true,
+          },
+        });
+        break;
+      } catch (err: any) {
+        if (isUniqueViolation(err) && attempt < 5 &&
+            (err.meta?.target as string[] | undefined)?.includes('donorCode')) {
+          continue;
+        }
+        throw err;
+      }
+    }
 
     await logAudit(req.user.id, 'Create Donor', 'DONOR', null, newDonor, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-    return res.status(201).json({ status: 201, data: newDonor });
+    return res.status(201).json({ status: 201, data: newDonor, warning: duplicateWarning });
   }
 
   if (method === 'PUT' || method === 'PATCH') {

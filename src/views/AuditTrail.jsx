@@ -235,6 +235,15 @@ export const AuditTrail = () => {
     return { total, authCount, financialCount, autoCount };
   }, [parsedLogs]);
 
+  // SQA fix: neutralize CSV formula injection — a value starting with =, +,
+  // -, or @ would otherwise be interpreted as a formula by Excel/Sheets when
+  // this export is opened, and unescaped quotes would break the row.
+  const csvCell = (value) => {
+    let str = String(value ?? '');
+    if (/^[=+\-@]/.test(str)) str = `'${str}`;
+    return `"${str.replace(/"/g, '""')}"`;
+  };
+
   // Export CSV
   const exportToCSV = useCallback(() => {
     if (!filteredLogs.length) return;
@@ -252,7 +261,7 @@ export const AuditTrail = () => {
       log.moduleLabel,
       log.cleanAction,
       log.refCode || 'N/A',
-      `"${log.cleanDescription.replace(/"/g, '""')}"`,
+      csvCell(log.cleanDescription),
       log.user,
       log.ipAddress
     ]);

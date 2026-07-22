@@ -225,6 +225,10 @@ export const ExpenseEntryForm = () => {
       showToast('Amount must be a positive whole number.', 'warning');
       return;
     }
+    if (val > 100000000) {
+      showToast('Amount cannot exceed 100,000,000.', 'warning');
+      return;
+    }
 
     let bankAcc = bankAccounts.find(a => a.id === bankAccountId);
     if (bankAcc) {

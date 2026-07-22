@@ -331,6 +331,21 @@ export const Reports = () => {
                 <p className="text-sm text-slate-500 mt-1">{cashFlowData.summary?.periodLabel || `FY ${fiscalYear}`}</p>
               </div>
 
+              {/* By Activity (Operating / Investing / Financing) */}
+              {cashFlowData.categorySummary && (
+                <div className="max-w-lg mx-auto space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 border-b border-slate-800 pb-2">By Activity</h4>
+                  {['Operating', 'Investing', 'Financing'].map((cat) => (
+                    <div key={cat} className="flex justify-between items-center py-1.5 text-sm">
+                      <span className="text-slate-300">{cat}</span>
+                      <span className={`font-mono ${cashFlowData.categorySummary[cat].net >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {formatMoney(cashFlowData.categorySummary[cat].net)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
                 {/* Inflows */}
                 <div className="space-y-4">
@@ -341,7 +356,7 @@ export const Reports = () => {
                   <div className="space-y-1">
                     {cashFlowData.inflows.map((row, idx) => (
                       <div key={idx} className="flex justify-between items-center py-2 text-sm">
-                        <span className="text-slate-300">{row.accountName}</span>
+                        <span className="text-slate-300">{row.accountName}{row.category && row.category !== 'Operating' && <span className="ml-2 text-[10px] uppercase tracking-wide text-slate-500">({row.category})</span>}</span>
                         <span className="font-mono text-slate-200">{formatMoney(row.amount)}</span>
                       </div>
                     ))}
@@ -362,7 +377,7 @@ export const Reports = () => {
                   <div className="space-y-1">
                     {cashFlowData.outflows.map((row, idx) => (
                       <div key={idx} className="flex justify-between items-center py-2 text-sm">
-                        <span className="text-slate-300">{row.accountName}</span>
+                        <span className="text-slate-300">{row.accountName}{row.category && row.category !== 'Operating' && <span className="ml-2 text-[10px] uppercase tracking-wide text-slate-500">({row.category})</span>}</span>
                         <span className="font-mono text-slate-200">{formatMoney(row.amount)}</span>
                       </div>
                     ))}

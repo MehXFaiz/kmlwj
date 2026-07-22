@@ -399,6 +399,15 @@ export const TrialBalanceSheet = () => {
     window.print();
   };
 
+  // SQA fix: neutralize CSV formula injection — a description/category name
+  // starting with =, +, -, or @ would otherwise be interpreted as a formula
+  // by Excel/Sheets when this export is opened.
+  const csvCell = (value) => {
+    let str = String(value ?? '');
+    if (/^[=+\-@]/.test(str)) str = `'${str}`;
+    return `"${str.replace(/"/g, '""')}"`;
+  };
+
   const handleExportCSV = () => {
     if (viewMode === 'matrix') {
       const headers = ['S.No', 'Expenses / Payments Description', 'Expense Amount (PKR)', '', 'S.No', 'Receipts / Income Description', 'Income Amount (PKR)'];
@@ -410,11 +419,11 @@ export const TrialBalanceSheet = () => {
         const inc = matrixData.incomes[i] || { sNo: '', desc: '', val: 0 };
         csvRows.push([
           exp.sNo,
-          `"${exp.desc}"`,
+          csvCell(exp.desc),
           exp.val ? exp.val.toFixed(2) : '0.00',
           '',
           inc.sNo,
-          `"${inc.desc}"`,
+          csvCell(inc.desc),
           inc.val ? inc.val.toFixed(2) : '0.00'
         ].join(','));
       }
@@ -458,8 +467,8 @@ export const TrialBalanceSheet = () => {
         [
           row.code,
           row.nature,
-          `"${(row.mainCategory || '').replace(/"/g, '""')}"`,
-          `"${(row.glName || '').replace(/"/g, '""')}"`,
+          csvCell(row.mainCategory || ''),
+          csvCell(row.glName || ''),
           (row.debit || 0).toFixed(2),
           (row.credit || 0).toFixed(2),
           `"${formatBalance(row.debit, row.credit)}"`,

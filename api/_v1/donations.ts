@@ -68,6 +68,15 @@ async function getExpenseAccountForDonation(donationType: string, tx: any) {
   return acc;
 }
 
+// SQA note: this caps a BENEFICIARY to one approved aid disbursement per
+// month, regardless of donation type — it exists to prevent one person from
+// receiving aid twice in the same month. It intentionally does NOT apply to
+// donor contributions (api/_v1/donations-received.ts, the "Donations Received"
+// module) — donors are expected to give repeatedly, so no equivalent cap
+// exists there. If a per-donor-per-type monthly cap on the receiving side is
+// actually required, that is a business-rule decision that needs explicit
+// confirmation before implementing (a blanket cap risks blocking legitimate
+// repeat donors), so it is deliberately left unimplemented here.
 async function checkMonthlyRestriction(beneficiaryId: string | null | undefined, donationDate: Date, excludeId?: string) {
   if (!beneficiaryId) return false;
 

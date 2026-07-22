@@ -179,6 +179,10 @@ export const DonationReceiptForm = () => {
       setToast({ type: 'error', message: 'Please enter a valid positive whole donation amount' });
       return;
     }
+    if (Number(form.amount) > 100000000) {
+      setToast({ type: 'error', message: 'Amount cannot exceed 100,000,000' });
+      return;
+    }
     if (form.paymentMethod === 'CASH' && !form.cashAccountId && cashAccounts.length === 0) {
       setToast({ type: 'error', message: 'No Cash account available in Chart of Accounts' });
       return;

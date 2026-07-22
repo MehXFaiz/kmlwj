@@ -39,6 +39,25 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     const cashBankCodes = new Set(cashBankAccounts.map(a => a.glCode));
 
+    // SQA fix: this report previously only bucketed movements into generic
+    // inflows/outflows with no operating/investing/financing categorization,
+    // so it functioned as a cash summary rather than a true statement of cash
+    // flows. Classification is by account type/name, mirroring the standard
+    // categorization: PP&E/investment accounts → Investing, loan/equity
+    // accounts → Financing, everything else (day-to-day revenue/expense) →
+    // Operating.
+    type CashFlowCategory = 'Operating' | 'Investing' | 'Financing';
+    function classifyCashFlowCategory(accountName: string, accountTypeName: string | undefined): CashFlowCategory {
+      const name = accountName.toLowerCase();
+      const type = (accountTypeName || '').toUpperCase();
+      const investingKeywords = ['fixed asset', 'investment', 'property', 'equipment', 'vehicle', 'furniture', 'building', 'long-term'];
+      const financingKeywords = ['loan', 'equity', 'capital', 'owner', 'borrowing', 'share'];
+      if (investingKeywords.some(k => name.includes(k))) return 'Investing';
+      if (financingKeywords.some(k => name.includes(k)) || type === 'EQUITY') return 'Financing';
+      if (type === 'LIABILITY' && financingKeywords.some(k => name.includes(k))) return 'Financing';
+      return 'Operating';
+    }
+
     // Optional date range filter — support ?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
     const { startDate, endDate } = (req.query || {}) as { startDate?: string; endDate?: string };
 
@@ -92,6 +111,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     const inflowsMap: Record<string, number> = {};
     const outflowsMap: Record<string, number> = {};
+    const inflowCategoryByAccount: Record<string, CashFlowCategory> = {};
+    const outflowCategoryByAccount: Record<string, CashFlowCategory> = {};
 
     postedJournals.forEach((je) => {
       // Find cash lines in this journal entry
@@ -114,6 +135,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             const amount = Math.round(netCashChange * ratio * 100) / 100;
             const name = l.account.accountName;
             inflowsMap[name] = (inflowsMap[name] || 0) + amount;
+            inflowCategoryByAccount[name] = classifyCashFlowCategory(name, l.account.accountType?.name);
           }
         });
       } else if (netCashChange < 0) {
@@ -126,6 +148,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             const amount = Math.round(absChange * ratio * 100) / 100;
             const name = l.account.accountName;
             outflowsMap[name] = (outflowsMap[name] || 0) + amount;
+            outflowCategoryByAccount[name] = classifyCashFlowCategory(name, l.account.accountType?.name);
           }
         });
       }
@@ -133,13 +156,28 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     const inflows = Object.entries(inflowsMap).map(([name, amount]) => ({
       accountName: name,
-      amount
+      amount,
+      category: inflowCategoryByAccount[name] || 'Operating',
     }));
 
     const outflows = Object.entries(outflowsMap).map(([name, amount]) => ({
       accountName: name,
-      amount
+      amount,
+      category: outflowCategoryByAccount[name] || 'Operating',
     }));
+
+    const sumByCategory = (rows: { amount: number; category: CashFlowCategory }[], cat: CashFlowCategory) =>
+      Math.round(rows.filter(r => r.category === cat).reduce((sum, r) => sum + r.amount, 0) * 100) / 100;
+
+    const categories: CashFlowCategory[] = ['Operating', 'Investing', 'Financing'];
+    const categorySummary = Object.fromEntries(categories.map(cat => [
+      cat,
+      {
+        inflow: sumByCategory(inflows, cat),
+        outflow: sumByCategory(outflows, cat),
+        net: Math.round((sumByCategory(inflows, cat) - sumByCategory(outflows, cat)) * 100) / 100,
+      },
+    ]));
 
     const totalInflow = Math.round(inflows.reduce((sum, i) => sum + i.amount, 0) * 100) / 100;
     const totalOutflow = Math.round(outflows.reduce((sum, o) => sum + o.amount, 0) * 100) / 100;
@@ -156,6 +194,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       data: {
         inflows,
         outflows,
+        categorySummary,
         summary: {
           beginningCash,
           totalInflow,

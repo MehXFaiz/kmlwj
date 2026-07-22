@@ -49,8 +49,11 @@ export const DonorForm = () => {
         await updateDonor(id, data);
         setToast({ type: 'success', message: 'Donor details updated successfully!' });
       } else {
-        await addDonor(data);
-        setToast({ type: 'success', message: 'New donor registered successfully!' });
+        const res = await addDonor(data);
+        setToast(res?.warning
+          ? { type: 'warning', message: res.warning }
+          : { type: 'success', message: 'New donor registered successfully!' }
+        );
       }
       setTimeout(() => {
         navigate('/donors');

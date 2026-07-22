@@ -303,6 +303,23 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: `${existingAccount.accountLevel} accounts are system-defined and cannot be deleted. Only Level 4 (GL) accounts can be deleted.`, status: 400 } });
     }
 
+    // SQA fix: previously nothing checked for existing ledger/journal history
+    // before deleting — the only thing preventing an orphaned account was an
+    // incidental DB foreign-key Restrict, whose violation surfaced as an
+    // opaque, unhelpful 500 rather than a clear validation message.
+    const [journalLineCount, ledgerEntryCount] = await Promise.all([
+      prisma.journalEntryLine.count({ where: { accountId: id } }),
+      prisma.ledgerEntry.count({ where: { accountId: id } }),
+    ]);
+    if (journalLineCount > 0 || ledgerEntryCount > 0) {
+      return res.status(400).json({
+        error: {
+          message: 'Cannot delete this account because it has existing journal/ledger history. Lock it instead of deleting to preserve historical records.',
+          status: 400,
+        },
+      });
+    }
+
     await prisma.account.delete({ where: { id } });
 
     await logAudit(req.user.id, 'Delete Account', 'COA', existingAccount, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);

@@ -159,6 +159,10 @@ export const RevenueEntryForm = () => {
       showToast('Amount must be a positive number with up to 2 decimal places.', 'warning');
       return;
     }
+    if (val > 100000000) {
+      showToast('Amount cannot exceed 100,000,000.', 'warning');
+      return;
+    }
 
     setLoading(true);
     try {

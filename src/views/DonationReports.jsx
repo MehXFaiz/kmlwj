@@ -60,10 +60,29 @@ export const DonationReports = () => {
     window.print(); // Simple fallback for PDF generation via browser print
   };
 
+  // SQA fix: field values were interpolated into the CSV with no escaping —
+  // a value containing a literal double-quote broke the row, and a value
+  // starting with =, +, -, or @ (e.g. a beneficiary/donor name) is treated as
+  // a formula by Excel/Sheets when a staff member opens the export (CSV
+  // formula injection). csvCell() escapes quotes and neutralizes leading
+  // formula-trigger characters.
+  const csvCell = (value) => {
+    let str = String(value ?? '');
+    if (/^[=+\-@]/.test(str)) str = `'${str}`;
+    return `"${str.replace(/"/g, '""')}"`;
+  };
+
   const handleExportExcel = () => {
     const header = "Beneficiary,Type,Amount,Method,Status,Date\n";
-    const csv = filtered.map(d => 
-      `"${getBeneficiaryName(d)}","${donationTypeDisplay(d.donationType, d.customDonationType)}",${Number(d.amount) || 0},"${d.paymentMethod || ''}","${d.status || 'PENDING'}","${new Date(d.createdAt).toLocaleDateString()}"`
+    const csv = filtered.map(d =>
+      [
+        csvCell(getBeneficiaryName(d)),
+        csvCell(donationTypeDisplay(d.donationType, d.customDonationType)),
+        Number(d.amount) || 0,
+        csvCell(d.paymentMethod || ''),
+        csvCell(d.status || 'PENDING'),
+        csvCell(new Date(d.createdAt).toLocaleDateString()),
+      ].join(',')
     ).join("\n");
     const blob = new Blob([header + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);

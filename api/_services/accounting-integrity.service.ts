@@ -40,6 +40,7 @@ export class AccountingIntegrityService {
     issues.push(...(await this.checkInvalidJournalReferences()));
     issues.push(...(await this.checkInvalidLedgerReferences()));
     issues.push(...(await this.checkTrialBalanceMismatch()));
+    issues.push(...(await this.checkCachedBalanceDrift()));
 
     // Calculate counts
     const criticalCount = issues.filter(i => i.severity === 'critical').length;
@@ -444,6 +445,67 @@ export class AccountingIntegrityService {
         severity: 'critical',
         description: `Trial Balance mismatch! Total Debits: ${totalDebit.toFixed(2)}, Total Credits: ${totalCredit.toFixed(2)}, Difference: ${difference.toFixed(2)}`,
       });
+    }
+
+    return issues;
+  }
+
+  /**
+   * Check 11: Cached Balance Drift (Account.currentBalance vs recomputed from
+   * posted JournalEntryLine rows)
+   *
+   * SQA fix: Check 10 (Trial Balance Mismatch) only verifies that global
+   * debits equal global credits — it can never catch a single account whose
+   * *cached* currentBalance has silently diverged from what its own posted
+   * ledger lines actually sum to (e.g. from a missed decrement, or a partial
+   * failure outside a transaction), because the underlying JournalEntryLine
+   * data can still be globally balanced even while one account's cached field
+   * is wrong. This check recomputes each account's expected balance using the
+   * exact same formula as AccountingService.recalculateAccountBalance (read-
+   * only here — it does not write) and flags any divergence, since
+   * currentBalance is what Trial Balance, Balance Sheet, and the no-date-
+   * filter General Ledger actually read.
+   */
+  private static async checkCachedBalanceDrift(): Promise<IntegrityIssue[]> {
+    const issues: IntegrityIssue[] = [];
+
+    const accounts = await prisma.account.findMany({
+      where: { accountLevel: { in: ['GL', 'SUBSIDIARY'] } },
+      include: { accountType: true },
+    });
+
+    for (const account of accounts) {
+      const aggregations = await prisma.journalEntryLine.aggregate({
+        where: { accountId: account.id, journalEntry: { status: 'Posted' } },
+        _sum: { debit: true, credit: true },
+      });
+
+      const totalDebit = Number(aggregations._sum.debit) || 0;
+      const totalCredit = Number(aggregations._sum.credit) || 0;
+      const initialBalance = Number(account.initialBalance) || 0;
+
+      const typeName = account.accountType?.name?.toUpperCase() || 'ASSET';
+      const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
+
+      const expectedBalance = isDebitNormal
+        ? (initialBalance + totalDebit - totalCredit)
+        : (initialBalance + totalCredit - totalDebit);
+
+      const storedBalance = Number(account.currentBalance) || 0;
+      const drift = Math.abs(expectedBalance - storedBalance);
+
+      if (drift > 0.01) {
+        issues.push({
+          type: 'cached_balance_drift',
+          severity: 'critical',
+          description: `Account ${account.glCode} - ${account.accountName} has a stored balance of ${storedBalance.toFixed(2)} but its posted ledger lines compute to ${expectedBalance.toFixed(2)} (drift: ${drift.toFixed(2)}). Re-run balance recalculation for this account.`,
+          item: {
+            id: account.id,
+            glCode: account.glCode,
+            name: account.accountName,
+          },
+        });
+      }
     }
 
     return issues;

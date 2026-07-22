@@ -168,6 +168,10 @@ export const SpecializedRevenueForm = ({
       setToast({ type: 'error', message: 'Please enter a valid positive amount' });
       return;
     }
+    if (Number(form.amount) > 100000000) {
+      setToast({ type: 'error', message: 'Amount cannot exceed 100,000,000' });
+      return;
+    }
 
     setLoading(true);
     try {

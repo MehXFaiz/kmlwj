@@ -5,6 +5,7 @@ import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
 import { validateAmount } from '../_utils/amount.js';
+import { isValidTransactionDate } from '../_utils/date-range.js';
 
 const accountingTxOptions = { maxWait: 10000, timeout: 30000 };
 
@@ -13,16 +14,6 @@ const accountingTxOptions = { maxWait: 10000, timeout: 30000 };
 // could create records under fabricated categories that break category-based
 // reporting (CategorizedRevenues.jsx groups by exactly this fixed set).
 const ALLOWED_CATEGORIES = ['Zakat', 'Fitra', 'Membership Fee', 'Bus Booking'];
-
-// SQA fix: eventDate had no range validation — a date decades in the past or
-// far in the future would be accepted and posted to the ledger unchecked.
-const MIN_EVENT_DATE = new Date('1980-01-01'); // earliest plausible record date
-function isValidEventDate(d: Date): boolean {
-  if (isNaN(d.getTime())) return false;
-  const oneYearFromNow = new Date();
-  oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
-  return d >= MIN_EVENT_DATE && d <= oneYearFromNow;
-}
 
 async function getIncomeAccountForCategory(category: string, tx: any) {
   let searchKeyword = category;
@@ -202,7 +193,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
     }
     const parsedAmount = amountCheck.amount;
-    if (eventDate !== undefined && eventDate !== null && eventDate !== '' && !isValidEventDate(new Date(eventDate))) {
+    if (eventDate !== undefined && eventDate !== null && eventDate !== '' && !isValidTransactionDate(new Date(eventDate))) {
       return res.status(400).json({ error: { message: 'Event date is out of the acceptable range', status: 400 } });
     }
     if ((paymentMethod === 'BANK' || paymentMethod === 'CHEQUE') && !bankAccountId) {
@@ -360,7 +351,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
     }
     const parsedAmount = amountCheck.amount;
-    if (eventDate !== undefined && eventDate !== null && eventDate !== '' && !isValidEventDate(new Date(eventDate))) {
+    if (eventDate !== undefined && eventDate !== null && eventDate !== '' && !isValidTransactionDate(new Date(eventDate))) {
       return res.status(400).json({ error: { message: 'Event date is out of the acceptable range', status: 400 } });
     }
     if ((paymentMethod === 'BANK' || paymentMethod === 'CHEQUE') && !bankAccountId) {
