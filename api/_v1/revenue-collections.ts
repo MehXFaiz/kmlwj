@@ -352,9 +352,16 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if (!category || !title || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: 'Missing required fields (category, title, amount, paymentMethod)', status: 400 } });
     }
-    const parsedAmount = parseFloat(amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      return res.status(400).json({ error: { message: 'Amount must be greater than 0', status: 400 } });
+    if (!ALLOWED_CATEGORIES.includes(category)) {
+      return res.status(400).json({ error: { message: `Category must be one of: ${ALLOWED_CATEGORIES.join(', ')}`, status: 400 } });
+    }
+    const amountCheck = validateAmount(amount);
+    if (!amountCheck.valid) {
+      return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
+    }
+    const parsedAmount = amountCheck.amount;
+    if (eventDate !== undefined && eventDate !== null && eventDate !== '' && !isValidEventDate(new Date(eventDate))) {
+      return res.status(400).json({ error: { message: 'Event date is out of the acceptable range', status: 400 } });
     }
     if ((paymentMethod === 'BANK' || paymentMethod === 'CHEQUE') && !bankAccountId) {
       return res.status(400).json({ error: { message: 'Bank account is required for Bank/Cheque payment methods', status: 400 } });
