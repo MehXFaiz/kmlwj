@@ -46,211 +46,347 @@ const numberToWords = (num) => {
   return wordResult.trim() + ' Rupees Only';
 };
 
-// Printable Modal
-// Render a single copy of the voucher receipt/slip matching the reference slip design
+// ── Design tokens (Mocha Brown palette) ──
+const C = {
+  paper:      '#FEFCF8',
+  cream:      '#F6EBDF',
+  creamDeep:  '#ECD9C6',
+  primary:    '#4A2C11',
+  secondary:  '#8A5E3D',
+  gold:       '#C9A227',
+  goldLight:  '#E8C97A',
+  border:     '#D8C1A1',
+  borderSoft: '#EDE0CE',
+  ink:        '#24170F',
+  muted:      '#7B6751',
+  mutedLight: '#A8917A',
+};
+
+// ── Premium Bank Payment Voucher slip ──
 function VoucherReceiptSlip({ voucher, amount, copyType, t }) {
   const isBank = useMemo(() => {
-    return voucher.lines?.some(line => 
-      line.accountCode?.startsWith('102') || 
-      line.description?.toLowerCase().includes('bank') || 
+    return voucher.lines?.some(line =>
+      line.accountCode?.startsWith('102') ||
+      line.description?.toLowerCase().includes('bank') ||
       line.accountName?.toLowerCase().includes('bank')
     ) || voucher.reference?.length > 0;
   }, [voucher]);
 
+  const totalDebit  = voucher.lines?.reduce((s, l) => s + (l.debit  || 0), 0) ?? 0;
+  const totalCredit = voucher.lines?.reduce((s, l) => s + (l.credit || 0), 0) ?? 0;
+  const dateStr = new Date(voucher.postingDate || voucher.date).toLocaleDateString('en-GB');
+  const isOffice = copyType === 'office';
+
   return (
-    <div 
-      style={{ 
-        backgroundColor: '#ffffff', 
-        color: '#4a2c11',
-        fontFamily: "'Inter', 'Plus Jakarta Sans', system-ui, sans-serif",
-        borderColor: '#4a2c11',
-        WebkitPrintColorAdjust: 'exact',
-        printColorAdjust: 'exact'
-      }}
-      className="relative rounded-2xl border-4 border-double p-5 shadow-sm overflow-hidden flex flex-col justify-between min-h-[580px] bg-white text-[#4a2c11] print:shadow-none print:rounded-none"
-    >
-      {/* Watermark Logo */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden z-0 opacity-[0.035]">
-        <img src={logoImg} alt="Watermark" className="w-64 h-64 object-contain" />
+    <div style={{
+      backgroundColor: C.paper,
+      color: C.ink,
+      fontFamily: "'Inter', 'Plus Jakarta Sans', system-ui, sans-serif",
+      WebkitPrintColorAdjust: 'exact',
+      printColorAdjust: 'exact',
+      position: 'relative',
+      display: 'flex',
+      flexDirection: 'column',
+      border: `1px solid ${C.border}`,
+      borderRadius: '12px',
+      overflow: 'hidden',
+      boxShadow: '0 4px 24px rgba(74,44,17,0.08)',
+    }}>
+
+      {/* Watermark */}
+      <div style={{
+        position: 'absolute', inset: 0, display: 'flex',
+        alignItems: 'center', justifyContent: 'center',
+        pointerEvents: 'none', zIndex: 0, opacity: 0.045,
+      }}>
+        <img src={logoImg} alt="" style={{ width: '200px', height: '200px', objectFit: 'contain' }} />
       </div>
 
-      <div className="relative z-10 flex-1 flex flex-col justify-between">
-        {/* Header Block */}
-        <div>
-          <div className="flex items-center gap-3 pb-3 border-b-2 border-[#4a2c11]">
-            <img
-              src={logoImg}
-              alt="KMLWJ Logo"
-              style={{ filter: 'sepia(1) saturate(1.5) hue-rotate(330deg) brightness(0.5)' }}
-              className="w-14 h-14 object-contain shrink-0"
-            />
-            <div className="flex-1 text-left">
-              <h2 className="text-sm font-bold text-[#4a2c11] leading-tight" style={{ fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif", fontSize: '1.25rem' }}>کچھی مسلم لوہارواڈھا ویلفیئر جماعت</h2>
-              <p className="text-[9px] text-[#4a2c11]/85 uppercase tracking-wider font-extrabold">Kutchi Muslim Loharwada Welfare Jamat</p>
+      {/* ── HEADER BAND ── */}
+      <div style={{
+        background: `linear-gradient(135deg, ${C.primary} 0%, #6B3E1F 100%)`,
+        padding: '12px 16px 10px',
+        position: 'relative', zIndex: 1,
+      }}>
+        {/* Top row: logo + org name + voucher title */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Logo */}
+          <div style={{
+            width: '52px', height: '52px', flexShrink: 0,
+            background: 'rgba(255,255,255,0.12)',
+            borderRadius: '10px', border: '1px solid rgba(255,255,255,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '4px',
+          }}>
+            <img src={logoImg} alt="KMLWJ" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </div>
+
+          {/* Org name (center) */}
+          <div style={{ flex: 1 }}>
+            <div style={{
+              fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
+              fontSize: '1.15rem', color: '#FFFFFF', lineHeight: 1.3, fontWeight: 700,
+              direction: 'rtl', textAlign: 'right',
+            }}>
+              کچھی مسلم لوہارواڈھا ویلفیئر جماعت
+            </div>
+            <div style={{
+              fontSize: '7.5px', color: 'rgba(255,255,255,0.75)',
+              letterSpacing: '0.18em', fontWeight: 800, textTransform: 'uppercase', marginTop: '2px',
+            }}>
+              Kutchi Muslim Loharwada Welfare Jamat
             </div>
           </div>
 
-          {/* Badge & Meta Row */}
-          <div className="flex justify-between items-center mt-3 gap-2">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-extrabold uppercase text-[#4a2c11]/70">Voucher No:</span>
-              <span className="px-2 py-0.5 border border-[#4a2c11] rounded-md font-mono font-bold text-[11px] text-red-700 bg-red-50/40">
-                {voucher.voucherNo}
-              </span>
+          {/* Voucher title + copy badge (right) */}
+          <div style={{ flexShrink: 0, textAlign: 'right' }}>
+            <div style={{
+              fontSize: '9px', fontWeight: 900, color: C.goldLight,
+              letterSpacing: '0.22em', textTransform: 'uppercase',
+            }}>
+              {voucher.voucherType === 'BP' ? 'Bank Payment Voucher' : 'Bank Receipt Voucher'}
             </div>
-
-            <div className="px-3.5 py-1 bg-[#4a2c11] text-white rounded-full font-black text-[10px] uppercase tracking-wider text-center">
-              {voucher.voucherType === 'BP' ? 'BANK PAYMENT SLIP' : 'BANK RECEIPT SLIP'}
-            </div>
-
-            <div className="flex items-center gap-1 text-[10px]">
-              <span className="font-extrabold text-[#4a2c11]/70">Date:</span>
-              <span className="border-b border-[#4a2c11] px-1 font-bold min-w-[75px] text-center text-[10px]">
-                {new Date(voucher.postingDate || voucher.date).toLocaleDateString('en-GB')}
-              </span>
-            </div>
-          </div>
-
-          {/* Field lines (Paid To & Remarks) */}
-          <div className="space-y-2 mt-4 text-xs font-semibold">
-            <div className="flex items-baseline">
-              <span className="w-20 font-bold uppercase tracking-wider text-[9px] text-[#4a2c11]/80">Paid To:</span>
-              <span className="flex-1 border-b border-dotted border-[#4a2c11] px-1 font-extrabold text-slate-800">
-                {voucher.reference || '__________________________________________________'}
-              </span>
-            </div>
-            <div className="flex items-baseline">
-              <span className="w-20 font-bold uppercase tracking-wider text-[9px] text-[#4a2c11]/80">Remarks:</span>
-              <span className="flex-1 border-b border-dotted border-[#4a2c11] px-1 font-medium text-slate-700">
-                {voucher.description || '__________________________________________________'}
-              </span>
+            <div style={{
+              display: 'inline-block', marginTop: '4px',
+              background: isOffice ? C.gold : 'rgba(255,255,255,0.18)',
+              color: isOffice ? C.primary : '#fff',
+              fontSize: '7px', fontWeight: 900, letterSpacing: '0.2em',
+              textTransform: 'uppercase', padding: '2px 8px', borderRadius: '20px',
+              border: isOffice ? 'none' : '1px solid rgba(255,255,255,0.35)',
+            }}>
+              {isOffice ? 'Office Copy' : 'Customer Copy'}
             </div>
           </div>
+        </div>
 
-          {/* Accounting Ledger Lines Box */}
-          <div className="mt-4">
-            <div className="flex justify-center mb-1.5">
-              <span className="px-3 py-0.5 bg-[#4a2c11] text-white text-[8px] font-black uppercase tracking-wider rounded">
-                ACCOUNTING LEDGER LINES
-              </span>
-            </div>
-            <div className="border border-[#4a2c11] rounded-lg overflow-hidden bg-white text-xs">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-amber-50/20 border-b border-[#4a2c11] text-[8px] font-black uppercase text-[#4a2c11]">
-                    <th className="px-2.5 py-1.5 border-r border-[#4a2c11]">Account Code & Name</th>
-                    <th className="px-2.5 py-1.5 text-right w-20 border-r border-[#4a2c11]">Debit (Rs.)</th>
-                    <th className="px-2.5 py-1.5 text-right w-20">Credit (Rs.)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#4a2c11]/30 font-medium">
-                  {voucher.lines?.map((line, idx) => (
-                    <tr key={line.id || idx} className="text-slate-800 text-[10px]">
-                      <td className="px-2.5 py-1.5 border-r border-[#4a2c11] flex items-center gap-1">
-                        <span className="font-mono text-[9px] font-extrabold text-[#4a2c11] bg-amber-50 border border-[#4a2c11]/35 px-1 py-0.2 rounded shrink-0">
-                          {line.accountCode}
-                        </span>
-                        <span className="font-semibold text-slate-800 truncate max-w-[160px]">
-                          {line.description || line.accountName || t('tables.bankVouchers.entry')}
-                        </span>
-                      </td>
-                      <td className="px-2.5 py-1.5 text-right font-mono font-bold border-r border-[#4a2c11]">
-                        {line.debit > 0 ? line.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '—'}
-                      </td>
-                      <td className="px-2.5 py-1.5 text-right font-mono font-bold">
-                        {line.credit > 0 ? line.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                  {Array.from({ length: Math.max(0, 3 - (voucher.lines?.length || 0)) }).map((_, idx) => (
-                    <tr key={`empty-${idx}`} className="h-6 opacity-30">
-                      <td className="px-2.5 py-1.5 border-r border-[#4a2c11]"></td>
-                      <td className="px-2.5 py-1.5 border-r border-[#4a2c11]"></td>
-                      <td className="px-2.5 py-1.5"></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        {/* Divider */}
+        <div style={{ height: '1px', background: 'rgba(255,255,255,0.15)', margin: '10px 0 8px' }} />
+
+        {/* Sub-row: voucher no + date */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '7.5px', color: 'rgba(255,255,255,0.6)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+              Voucher No.
+            </span>
+            <span style={{
+              background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)',
+              borderRadius: '5px', padding: '1px 8px',
+              fontFamily: 'monospace', fontSize: '10px', fontWeight: 900, color: C.goldLight,
+              letterSpacing: '0.05em',
+            }}>
+              {voucher.voucherNo}
+            </span>
           </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '7.5px', color: 'rgba(255,255,255,0.6)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+              Date
+            </span>
+            <span style={{
+              background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)',
+              borderRadius: '5px', padding: '1px 8px',
+              fontSize: '9.5px', fontWeight: 800, color: '#ffffff',
+            }}>
+              {dateStr}
+            </span>
+          </div>
+        </div>
+      </div>
 
-          {/* Payment details box */}
-          <div className="mt-4 border border-[#4a2c11] rounded-lg p-2.5 bg-amber-50/5 text-xs space-y-1.5">
-            <div className="flex justify-center mb-1">
-              <span className="px-3 py-0.5 bg-[#4a2c11] text-white text-[8px] font-black uppercase tracking-wider rounded">
-                PAYMENT DETAILS
-              </span>
-            </div>
-            
-            <div className="space-y-1">
-              <div className="flex items-baseline">
-                <span className="text-[8px] font-bold uppercase tracking-wider text-[#4a2c11] mr-1 shrink-0">Amount in Words:</span>
-                <span className="flex-1 border-b border-dotted border-[#4a2c11] font-bold text-slate-800 italic text-[10px] truncate">
-                  {numberToWords(amount)}
-                </span>
-              </div>
+      {/* ── BODY ── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '12px 16px', gap: '10px', position: 'relative', zIndex: 1 }}>
 
-              <div className="grid grid-cols-2 gap-2.5 pt-1">
-                <div className="flex items-center justify-between border border-[#4a2c11] rounded px-2 py-0.5 bg-white shrink-0">
-                  <span className="text-[8px] font-bold uppercase text-[#4a2c11]">Total Debit:</span>
-                  <span className="font-mono font-black text-[#4a2c11] text-xs">Rs. {amount.toLocaleString()}/-</span>
+        {/* ── PAYMENT INFORMATION ── */}
+        <div style={{ border: `1px solid ${C.borderSoft}`, borderRadius: '8px', overflow: 'hidden' }}>
+          <div style={{
+            background: C.cream, padding: '5px 10px',
+            borderBottom: `1px solid ${C.borderSoft}`,
+            fontSize: '7.5px', fontWeight: 900, color: C.secondary,
+            textTransform: 'uppercase', letterSpacing: '0.22em',
+          }}>
+            Payment Information
+          </div>
+          <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {/* Paid To + Payment Method row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div>
+                <div style={{ fontSize: '7px', fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '3px' }}>
+                  Payee Name
                 </div>
-                <div className="flex items-center justify-between border border-[#4a2c11] rounded px-2 py-0.5 bg-white shrink-0">
-                  <span className="text-[8px] font-bold uppercase text-[#4a2c11]">Total Credit:</span>
-                  <span className="font-mono font-black text-[#4a2c11] text-xs">Rs. {amount.toLocaleString()}/-</span>
+                <div style={{
+                  borderBottom: `1.5px solid ${C.creamDeep}`, paddingBottom: '3px',
+                  fontSize: '10px', fontWeight: 700, color: C.ink, minHeight: '16px',
+                }}>
+                  {voucher.reference || <span style={{ color: C.mutedLight }}>—</span>}
                 </div>
               </div>
+              <div>
+                <div style={{ fontSize: '7px', fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '3px' }}>
+                  Payment Method
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '3px', borderBottom: `1.5px solid ${C.creamDeep}` }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '9px', fontWeight: 600, color: C.ink }}>
+                    <input type="checkbox" readOnly checked={!isBank} style={{ accentColor: C.primary, width: '10px', height: '10px' }} />
+                    Cash
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '9px', fontWeight: 600, color: C.ink }}>
+                    <input type="checkbox" readOnly checked={isBank} style={{ accentColor: C.primary, width: '10px', height: '10px' }} />
+                    Bank / Cheque
+                  </label>
+                </div>
+              </div>
+            </div>
 
-              <div className="flex items-center justify-between text-[9px] font-bold pt-1 border-t border-[#4a2c11]/20">
-                <span className="text-[#4a2c11] uppercase tracking-wider text-[8px]">Payment Method:</span>
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-1 text-slate-800">
-                    <input 
-                      type="checkbox" 
-                      checked={!isBank} 
-                      readOnly
-                      className="accent-[#4a2c11] h-3 w-3 border-[#4a2c11] rounded" 
-                    />
-                    <span>Cash</span>
-                  </label>
-                  <label className="flex items-center gap-1 text-slate-800">
-                    <input 
-                      type="checkbox" 
-                      checked={isBank} 
-                      readOnly
-                      className="accent-[#4a2c11] h-3 w-3 border-[#4a2c11] rounded" 
-                    />
-                    <span>Bank Transfer / Cheque</span>
-                  </label>
+            {/* Amount in Words */}
+            <div>
+              <div style={{ fontSize: '7px', fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '3px' }}>
+                Amount in Words
+              </div>
+              <div style={{
+                background: C.cream, borderRadius: '5px', padding: '4px 8px',
+                fontSize: '9px', fontWeight: 600, color: C.ink, fontStyle: 'italic',
+                border: `1px solid ${C.borderSoft}`,
+              }}>
+                {numberToWords(amount)}
+              </div>
+            </div>
+
+            {/* Amount figure + Remarks */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '10px', alignItems: 'start' }}>
+              <div>
+                <div style={{ fontSize: '7px', fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '3px' }}>
+                  Remarks / Particulars
+                </div>
+                <div style={{
+                  borderBottom: `1.5px solid ${C.creamDeep}`, paddingBottom: '3px',
+                  fontSize: '9.5px', fontWeight: 500, color: C.ink, minHeight: '16px',
+                }}>
+                  {voucher.description || <span style={{ color: C.mutedLight }}>—</span>}
+                </div>
+              </div>
+              <div style={{
+                background: `linear-gradient(135deg, ${C.primary} 0%, #6B3E1F 100%)`,
+                borderRadius: '8px', padding: '6px 12px', textAlign: 'right', flexShrink: 0,
+              }}>
+                <div style={{ fontSize: '6.5px', fontWeight: 700, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+                  Net Amount
+                </div>
+                <div style={{ fontSize: '13px', fontWeight: 900, color: C.goldLight, fontFamily: 'monospace', marginTop: '1px' }}>
+                  Rs. {amount.toLocaleString('en-PK')}
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Signatures & Bottom */}
-        <div>
-          <div className="mt-5 grid grid-cols-3 gap-1 text-center text-[#4a2c11] text-[8px] font-bold uppercase tracking-wider pt-2 border-t border-[#4a2c11]/10">
-            <div className="flex flex-col items-center">
-              <div className="w-16 border-b border-[#4a2c11] mb-1"></div>
-              <span>Prepared By</span>
-            </div>
-
-            <div className="flex flex-col items-center border-l border-r border-[#4a2c11]/25 px-0.5">
-              <div className="w-16 border-b border-[#4a2c11] mb-1"></div>
-              <span>Verified / Checked</span>
-            </div>
-
-            <div className="flex flex-col items-center">
-              <div className="w-16 border-b border-[#4a2c11] mb-1"></div>
-              <span>Authorized Sign</span>
-            </div>
+        {/* ── ACCOUNTING ENTRIES ── */}
+        <div style={{ border: `1px solid ${C.borderSoft}`, borderRadius: '8px', overflow: 'hidden' }}>
+          <div style={{
+            background: C.cream, padding: '5px 10px',
+            borderBottom: `1px solid ${C.borderSoft}`,
+            fontSize: '7.5px', fontWeight: 900, color: C.secondary,
+            textTransform: 'uppercase', letterSpacing: '0.22em',
+          }}>
+            Accounting Ledger Entries
           </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9px' }}>
+            <thead>
+              <tr style={{ background: C.creamDeep }}>
+                <th style={{ padding: '5px 8px', textAlign: 'left', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '7px', borderBottom: `1px solid ${C.border}`, width: '60px' }}>Code</th>
+                <th style={{ padding: '5px 8px', textAlign: 'left', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '7px', borderBottom: `1px solid ${C.border}` }}>Account Name / Description</th>
+                <th style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '7px', borderBottom: `1px solid ${C.border}`, width: '70px' }}>Debit</th>
+                <th style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '7px', borderBottom: `1px solid ${C.border}`, width: '70px' }}>Credit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {voucher.lines?.map((line, idx) => (
+                <tr key={line.id || idx} style={{ background: idx % 2 === 0 ? '#FFFFFF' : C.paper, borderBottom: `1px solid ${C.borderSoft}` }}>
+                  <td style={{ padding: '5px 8px', fontFamily: 'monospace', fontWeight: 700, color: C.secondary, fontSize: '8px' }}>
+                    {line.accountCode}
+                  </td>
+                  <td style={{ padding: '5px 8px', color: C.ink, fontWeight: 500 }}>
+                    <div style={{ fontWeight: 600, fontSize: '9px' }}>{line.accountName || t('tables.bankVouchers.entry')}</div>
+                    {line.description && line.description !== line.accountName && (
+                      <div style={{ fontSize: '7.5px', color: C.muted, marginTop: '1px' }}>{line.description}</div>
+                    )}
+                  </td>
+                  <td style={{ padding: '5px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: line.debit > 0 ? C.ink : C.mutedLight, fontSize: '9px' }}>
+                    {line.debit > 0 ? line.debit.toLocaleString('en-PK', { minimumFractionDigits: 2 }) : '—'}
+                  </td>
+                  <td style={{ padding: '5px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: line.credit > 0 ? C.ink : C.mutedLight, fontSize: '9px' }}>
+                    {line.credit > 0 ? line.credit.toLocaleString('en-PK', { minimumFractionDigits: 2 }) : '—'}
+                  </td>
+                </tr>
+              ))}
+              {Array.from({ length: Math.max(0, 2 - (voucher.lines?.length || 0)) }).map((_, idx) => (
+                <tr key={`empty-${idx}`} style={{ borderBottom: `1px solid ${C.borderSoft}` }}>
+                  <td style={{ padding: '8px 8px' }}>&nbsp;</td>
+                  <td style={{ padding: '8px 8px' }}></td>
+                  <td style={{ padding: '8px 8px' }}></td>
+                  <td style={{ padding: '8px 8px' }}></td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr style={{ background: `linear-gradient(90deg, ${C.cream} 0%, ${C.creamDeep} 100%)`, borderTop: `1.5px solid ${C.border}` }}>
+                <td colSpan={2} style={{ padding: '6px 8px', fontSize: '8px', fontWeight: 900, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.18em' }}>
+                  Total
+                </td>
+                <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 900, color: C.primary, fontSize: '10px' }}>
+                  {totalDebit > 0 ? totalDebit.toLocaleString('en-PK', { minimumFractionDigits: 2 }) : '—'}
+                </td>
+                <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 900, color: C.primary, fontSize: '10px' }}>
+                  {totalCredit > 0 ? totalCredit.toLocaleString('en-PK', { minimumFractionDigits: 2 }) : '—'}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
 
-          <div className="mt-3 flex justify-center">
-            <span className="px-6 py-0.5 bg-[#4a2c11] text-white text-[9px] font-black uppercase tracking-[0.2em] rounded shadow-sm">
-              {copyType === 'office' ? 'OFFICE COPY' : 'CUSTOMER COPY'}
-            </span>
+        {/* ── APPROVAL / SIGNATURES ── */}
+        <div style={{ border: `1px solid ${C.borderSoft}`, borderRadius: '8px', overflow: 'hidden' }}>
+          <div style={{
+            background: C.cream, padding: '5px 10px',
+            borderBottom: `1px solid ${C.borderSoft}`,
+            fontSize: '7.5px', fontWeight: 900, color: C.secondary,
+            textTransform: 'uppercase', letterSpacing: '0.22em',
+          }}>
+            Authorizations & Approval
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0', borderTop: 'none' }}>
+            {['Prepared By', 'Checked By', 'Approved By', "Authorized Sign"].map((label, i) => (
+              <div key={label} style={{
+                padding: '8px 8px 6px',
+                borderRight: i < 3 ? `1px solid ${C.borderSoft}` : 'none',
+                textAlign: 'center',
+              }}>
+                <div style={{
+                  height: '28px', borderBottom: `1px solid ${C.creamDeep}`, marginBottom: '5px',
+                }} />
+                <div style={{ fontSize: '7px', fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+                  {label}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── FOOTER ── */}
+        <div style={{
+          borderTop: `1px dashed ${C.border}`,
+          paddingTop: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '8px',
+        }}>
+          <div style={{ fontSize: '7px', color: C.mutedLight, lineHeight: 1.5 }}>
+            <div style={{ fontWeight: 700, color: C.muted }}>Kutchi Muslim Loharwada Welfare Jamat</div>
+            <div>Karachi, Pakistan &nbsp;|&nbsp; info@kmlwj.com &nbsp;|&nbsp; www.kmlwj.com</div>
+          </div>
+          <div style={{
+            fontSize: '6.5px', color: C.mutedLight, textAlign: 'right', maxWidth: '160px', lineHeight: 1.4,
+          }}>
+            This is a computer-generated voucher. Please retain for your records.
           </div>
         </div>
       </div>
@@ -258,46 +394,51 @@ function VoucherReceiptSlip({ voucher, amount, copyType, t }) {
   );
 }
 
-// Printable Modal
-// Printable Modal
+// ── Print Modal ──
 function BankVoucherPrintModal({ voucher, onClose }) {
   const { t } = useTranslation();
-  
+
   const handlePrint = () => {
     window.print();
   };
 
   const amount = useMemo(() => {
-    // Total is sum of debits (which balances credit lines)
     return voucher.lines.reduce((sum, line) => sum + (line.debit || 0), 0);
   }, [voucher]);
 
   return createPortal(
     <div id="print-modal-portal" className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 print:p-0 print:static print:inset-auto print:block overflow-y-auto">
       <div className="absolute inset-0 bg-black/75 backdrop-blur-sm print:hidden" onClick={onClose} />
-      
-      <div className="relative z-10 w-full max-w-6xl rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden flex flex-col max-h-[96vh] print:max-h-none print:shadow-none print:border-none print:bg-white print:w-full print:static print:block print:max-w-none animate-in zoom-in-95 duration-150">
-        
-        {/* Header - Hidden when printing */}
-        <div className="print-hide flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0 print:hidden bg-slate-950/80">
-          <div className="flex items-center gap-2">
-            <Printer className="h-4 w-4 text-amber-400" />
-            <h3 className="text-sm font-bold text-slate-200">
+
+      <div className="relative z-10 w-full max-w-6xl rounded-2xl overflow-hidden flex flex-col max-h-[96vh] print:max-h-none print:shadow-none print:border-none print:bg-white print:w-full print:static print:block print:max-w-none"
+        style={{ background: '#1C140E', border: '1px solid #3B2A20', boxShadow: '0 25px 60px rgba(0,0,0,0.5)' }}>
+
+        {/* Modal header — hidden on print */}
+        <div className="print-hide flex items-center justify-between px-6 py-3.5 shrink-0 print:hidden"
+          style={{ borderBottom: '1px solid #3B2A20', background: '#150F09' }}>
+          <div className="flex items-center gap-2.5">
+            <Printer className="h-4 w-4" style={{ color: C.goldLight }} />
+            <span className="text-sm font-bold text-slate-200">
               {voucher.voucherType === 'BP' ? t('tables.bankVouchers.printBankPayment') : t('tables.bankVouchers.printBankReceipt')}
-            </h3>
+            </span>
           </div>
-          <div className="flex gap-2">
-            <button onClick={handlePrint} className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-amber-900/30">
+          <div className="flex items-center gap-2">
+            <button onClick={handlePrint}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              style={{ background: C.secondary, color: '#fff' }}
+              onMouseEnter={e => e.currentTarget.style.background = C.primary}
+              onMouseLeave={e => e.currentTarget.style.background = C.secondary}>
               <Printer className="h-3.5 w-3.5" /> {t('tables.bankVouchers.print')}
             </button>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-300">
+            <button onClick={onClose} className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-white/10 transition-all">
               <XCircle className="h-5 w-5" />
             </button>
           </div>
         </div>
 
         {/* Printable content */}
-        <div id="print-receipt" className="p-6 overflow-y-auto flex-1 bg-slate-100 print:bg-white print:overflow-visible print:p-0 print:static print:w-full print:block">
+        <div id="print-receipt" className="p-5 overflow-y-auto flex-1 print:overflow-visible print:p-0 print:static print:w-full print:block"
+          style={{ background: '#2A1C12' }}>
           <style>{`
             @media print {
               *, *::before, *::after {
@@ -305,9 +446,7 @@ function BankVoucherPrintModal({ voucher, onClose }) {
                 print-color-adjust: exact !important;
                 color-adjust: exact !important;
               }
-              body * {
-                visibility: hidden !important;
-              }
+              body * { visibility: hidden !important; }
               #print-modal-portal, #print-modal-portal * {
                 visibility: visible !important;
                 -webkit-print-color-adjust: exact !important;
@@ -317,45 +456,39 @@ function BankVoucherPrintModal({ voucher, onClose }) {
               #print-modal-portal img, #print-modal-portal svg { filter: none !important; }
               #print-modal-portal {
                 position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 100% !important;
-                max-width: 100% !important;
-                height: auto !important;
-                min-height: 100% !important;
+                left: 0 !important; top: 0 !important;
+                width: 100% !important; max-width: 100% !important;
+                height: auto !important; min-height: 100% !important;
                 background: white !important;
-                padding: 0 !important;
-                margin: 0 !important;
+                padding: 0 !important; margin: 0 !important;
                 overflow: visible !important;
                 z-index: 999999 !important;
                 display: block !important;
               }
-              .print-hide {
-                display: none !important;
-              }
+              .print-hide { display: none !important; }
               #print-receipt {
-                width: 100% !important;
-                max-width: 100% !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                display: block !important;
+                width: 100% !important; max-width: 100% !important;
+                margin: 0 !important; padding: 0 !important;
+                display: block !important; background: white !important;
               }
-              @page {
-                size: A4 landscape;
-                margin: 5mm;
-              }
+              @page { size: A4 landscape; margin: 6mm; }
             }
           `}</style>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full print:grid-cols-2 print:gap-4 print:w-full">
-            <VoucherReceiptSlip voucher={voucher} amount={amount} copyType="office" t={t} />
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 w-full print:grid-cols-2 print:gap-3 print:w-full">
+            <VoucherReceiptSlip voucher={voucher} amount={amount} copyType="office"   t={t} />
             <VoucherReceiptSlip voucher={voucher} amount={amount} copyType="customer" t={t} />
           </div>
         </div>
 
-        {/* Footer actions - Hidden when printing */}
-        <div className="print-hide bg-slate-955/40 border-t border-slate-800 px-6 py-4 flex justify-end gap-3 shrink-0 print:hidden">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-xs font-semibold hover:bg-slate-800 hover:text-slate-200 transition-all cursor-pointer">
+        {/* Footer actions — hidden on print */}
+        <div className="print-hide flex justify-end gap-3 px-6 py-3 shrink-0 print:hidden"
+          style={{ borderTop: '1px solid #3B2A20', background: '#150F09' }}>
+          <button onClick={onClose}
+            className="px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer"
+            style={{ border: '1px solid #3B2A20', color: '#94867A', background: 'transparent' }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#2A1C12'; e.currentTarget.style.color = '#D4C4B0'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#94867A'; }}>
             {t('tables.bankVouchers.close')}
           </button>
         </div>

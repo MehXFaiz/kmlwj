@@ -21,7 +21,7 @@ const SECONDARY_TEXT = '#EAD8C8';
 const MUTED_TEXT     = '#D7C2B3';
 const BADGE_BG       = '#E6C7AE';
 const BADGE_TEXT     = '#4A2E24';
-const WATERMARK_OPACITY = 0.07;
+const WATERMARK_OPACITY = 0.082;
 
 function fmt(val) { return val || '—'; }
 function fmtDate(val) {

@@ -44,7 +44,7 @@ function CardShell({ children }) {
       <div style={{
         position: 'absolute', inset: 0, zIndex: 1,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        opacity: 0.08, pointerEvents: 'none',
+        opacity: 0.094, pointerEvents: 'none',
       }}>
         <img src={logoSrc} alt="" style={{ width: '55%', height: 'auto', objectFit: 'contain' }} />
       </div>
