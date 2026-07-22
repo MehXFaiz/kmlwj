@@ -3,6 +3,7 @@ import { useZakatCardStore } from '../store/zakatCardStore';
 import { zakatCardService } from '../services/zakatCardService';
 import { useAuthStore } from '../store/authStore';
 import { ZakatCardFront, ZakatCardBack } from '../components/members/ZakatCard';
+import { PvcCardPrintView } from '../components/members/PvcCardPrintView';
 import {
   CreditCard, Search, Printer, ChevronLeft,
   RefreshCw, X, Check, Eye, Plus,
@@ -319,7 +320,7 @@ function IssueModal({ beneficiaries, beneficiariesLoading, onClose, onSubmit }) 
   );
 }
 
-function PreviewModal({ card, onClose, onPrint, onCopyQr }) {
+function PreviewModal({ card, onClose, onPrint, onPrintPvc, onCopyQr }) {
   const qrUrl = getMemberQrUrl(card?.member);
   return (
     <div style={{
