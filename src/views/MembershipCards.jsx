@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useMemberStore } from '../store/memberStore';
 import { useAuthStore } from '../store/authStore';
 import { CardFront, CardBack } from '../components/members/MembershipCard';
+import { PvcCardPrintView } from '../components/members/PvcCardPrintView';
 import {
   CreditCard, Search, Printer, Download, ChevronLeft,
   Users, RefreshCw, Grid3X3, LayoutList, X, Check, Eye, Filter,
@@ -133,7 +134,7 @@ function chunk(arr, size) {
 }
 
 /* ─────────── Preview modal ─────────── */
-function PreviewModal({ member, onClose, onPrint, onCopyQr }) {
+function PreviewModal({ member, onClose, onPrint, onPrintPvc, onCopyQr }) {
   const qrUrl = getMemberQrUrl(member);
   return (
     <div style={{
@@ -213,7 +214,7 @@ function PreviewModal({ member, onClose, onPrint, onCopyQr }) {
             </button>
           )}
           <button onClick={() => onPrint(member)} style={{
-            flex: 2, padding: '10px', borderRadius: '10px',
+            flex: 1, padding: '10px', borderRadius: '10px',
             background: 'linear-gradient(135deg, #0D4E2B, #1A6B3C)',
             border: '1px solid #C9A22788',
             color: '#C9A227', cursor: 'pointer', fontSize: '13px', fontWeight: 700,
@@ -223,6 +224,20 @@ function PreviewModal({ member, onClose, onPrint, onCopyQr }) {
             <Printer size={15} />
             Print Card
           </button>
+          {onPrintPvc && (
+            <button onClick={() => onPrintPvc(member)} style={{
+              flex: 1, padding: '10px', borderRadius: '10px',
+              background: 'linear-gradient(135deg, #4A2C11, #6B3E1F)',
+              border: '1px solid rgba(201,162,39,0.55)',
+              color: '#f7d97a', cursor: 'pointer', fontSize: '13px', fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              minWidth: '120px',
+              boxShadow: '0 6px 18px rgba(74,44,17,0.35)',
+            }}>
+              <Printer size={15} />
+              Print PVC Card
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -238,6 +253,7 @@ export const MembershipCards = () => {
   const [filterStatus, setFilterStatus] = useState('all'); // all | active | inactive
   const [selectedIds, setSelectedIds] = useState([]);
   const [previewMember, setPreviewMember] = useState(null);
+  const [pvcPrintMember, setPvcPrintMember] = useState(null);
   const [printMode, setPrintMode] = useState(null); // 'single' | 'a4-bulk'
   const [printMember, setPrintMember] = useState(null);
   const [view, setView] = useState('grid'); // grid | list
@@ -554,7 +570,18 @@ export const MembershipCards = () => {
           member={previewMember}
           onClose={() => setPreviewMember(null)}
           onPrint={printSingle}
+          onPrintPvc={(m) => { setPreviewMember(null); setPvcPrintMember(m); }}
           onCopyQr={isAdmin ? copyQrLink : null}
+        />
+      )}
+
+      {/* ── Dedicated PVC card print view ── */}
+      {pvcPrintMember && (
+        <PvcCardPrintView
+          isOpen={true}
+          variant="member"
+          data={pvcPrintMember}
+          onClose={() => setPvcPrintMember(null)}
         />
       )}
 
