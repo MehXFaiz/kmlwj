@@ -397,7 +397,7 @@ function PreviewModal({ card, onClose, onPrint, onPrintPvc, onCopyQr }) {
             </button>
           )}
           <button onClick={() => onPrint(card)} style={{
-            flex: 2, padding: '10px', borderRadius: '10px',
+            flex: 1, padding: '10px', borderRadius: '10px',
             background: 'linear-gradient(135deg, #0D4E2B, #1A6B3C)',
             border: '1px solid #C9A22788',
             color: '#C9A227', cursor: 'pointer', fontSize: '13px', fontWeight: 700,
@@ -407,6 +407,20 @@ function PreviewModal({ card, onClose, onPrint, onPrintPvc, onCopyQr }) {
             <Printer size={15} />
             Print Card
           </button>
+          {onPrintPvc && (
+            <button onClick={() => onPrintPvc(card)} style={{
+              flex: 1, padding: '10px', borderRadius: '10px',
+              background: 'linear-gradient(135deg, #4A2C11, #6B3E1F)',
+              border: '1px solid rgba(201,162,39,0.55)',
+              color: '#f7d97a', cursor: 'pointer', fontSize: '13px', fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              minWidth: '120px',
+              boxShadow: '0 6px 18px rgba(74,44,17,0.35)',
+            }}>
+              <Printer size={15} />
+              Print PVC Card
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -418,6 +432,7 @@ export const ZakatCards = () => {
   const user = useAuthStore((state) => state.user);
   const [searchTerm, setSearchTerm] = useState('');
   const [previewCard, setPreviewCard] = useState(null);
+  const [pvcPrintCard, setPvcPrintCard] = useState(null);
   const [showIssueModal, setShowIssueModal] = useState(false);
   const [eligibleBeneficiaries, setEligibleBeneficiaries] = useState([]);
   const [eligibleLoading, setEligibleLoading] = useState(false);
