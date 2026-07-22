@@ -2,6 +2,21 @@ import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
+function isUniqueViolation(err) {
+  return err?.code === "P2002";
+}
+const DONOR_CODE_PREFIX = "DNR-";
+async function nextDonorCode(tx) {
+  const existing = await tx.donor.findMany({
+    where: { donorCode: { startsWith: DONOR_CODE_PREFIX } },
+    select: { donorCode: true }
+  });
+  const maxNum = existing.reduce((max, d) => {
+    const n = parseInt(d.donorCode.slice(DONOR_CODE_PREFIX.length), 10);
+    return Number.isFinite(n) && n > max ? n : max;
+  }, 0);
+  return `${DONOR_CODE_PREFIX}${String(maxNum + 1).padStart(4, "0")}`;
+}
 var donors_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -62,24 +77,42 @@ var donors_default = makeHandler(async (req, res) => {
         return res.status(400).json({ error: { message: "A donor with this CNIC already exists", status: 400 } });
       }
     }
-    const count = await prisma.donor.count();
-    const nextNum = (count + 1).toString().padStart(4, "0");
-    const donorCode = `DNR-${nextNum}`;
-    const newDonor = await prisma.donor.create({
-      data: {
-        donorCode,
-        fullName,
-        fatherName: fatherName || null,
-        mobile: mobile || null,
-        cnic: cnic || null,
-        email: email || null,
-        address: address || null,
-        city: city || null,
-        isActive: isActive !== void 0 ? Boolean(isActive) : true
+    let duplicateWarning;
+    if (!cnic && mobile) {
+      const possibleDuplicate = await prisma.donor.findFirst({
+        where: { fullName: { equals: fullName, mode: "insensitive" }, mobile }
+      });
+      if (possibleDuplicate) {
+        duplicateWarning = `A donor named "${possibleDuplicate.fullName}" with the same mobile number already exists (${possibleDuplicate.donorCode}). This donor was still created \u2014 please verify this isn't a duplicate.`;
       }
-    });
+    }
+    let newDonor;
+    for (let attempt = 1; ; attempt++) {
+      const donorCode = await nextDonorCode(prisma);
+      try {
+        newDonor = await prisma.donor.create({
+          data: {
+            donorCode,
+            fullName,
+            fatherName: fatherName || null,
+            mobile: mobile || null,
+            cnic: cnic || null,
+            email: email || null,
+            address: address || null,
+            city: city || null,
+            isActive: isActive !== void 0 ? Boolean(isActive) : true
+          }
+        });
+        break;
+      } catch (err) {
+        if (isUniqueViolation(err) && attempt < 5 && err.meta?.target?.includes("donorCode")) {
+          continue;
+        }
+        throw err;
+      }
+    }
     await logAudit(req.user.id, "Create Donor", "DONOR", null, newDonor, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    return res.status(201).json({ status: 201, data: newDonor });
+    return res.status(201).json({ status: 201, data: newDonor, warning: duplicateWarning });
   }
   if (method === "PUT" || method === "PATCH") {
     if (!id) {

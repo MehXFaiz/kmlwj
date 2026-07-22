@@ -314,6 +314,27 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if (!bookerName || !programDate || !hallId || rawHallCharges == null || !paymentMethod) {
       return res.status(400).json({ error: { message: 'Missing required fields', status: 400 } });
     }
+
+    // SQA fix: past-date rejection previously existed only in
+    // HallBookingForm.jsx (client-side) -- a direct API call could book a hall
+    // for a date years in the past. Compared at UTC day granularity to match
+    // the same-day conflict checks elsewhere in this file.
+    const parsedProgramDateForValidation = new Date(programDate);
+    if (isNaN(parsedProgramDateForValidation.getTime())) {
+      return res.status(400).json({ error: { message: 'Invalid program date', status: 400 } });
+    }
+    const todayUtcStart = new Date();
+    todayUtcStart.setUTCHours(0, 0, 0, 0);
+    if (parsedProgramDateForValidation < todayUtcStart) {
+      return res.status(400).json({ error: { message: 'Program date cannot be in the past', status: 400 } });
+    }
+
+    // SQA fix: status (if the caller supplies one) was accepted verbatim
+    // with no allowlist check on create.
+    const requestedCreateStatus = req.body.status;
+    if (requestedCreateStatus !== undefined && !isKnownStatus(requestedCreateStatus)) {
+      return res.status(400).json({ error: { message: `Status must be one of: ${HALL_BOOKING_STATUSES.join(', ')}`, status: 400 } });
+    }
     const parsedHallCharges = parseFloat(rawHallCharges);
     if (isNaN(parsedHallCharges) || parsedHallCharges <= 0) {
       return res.status(400).json({ error: { message: 'Hall Charges must be greater than 0', status: 400 } });
@@ -594,6 +615,33 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const rawHallCharges = hallCharges ?? amount;
     if (!bookerName || !programDate || !hallId || rawHallCharges == null || !paymentMethod) {
       return res.status(400).json({ error: { message: 'Missing required fields', status: 400 } });
+    }
+
+    // SQA fix: past-date rejection previously existed only client-side.
+    const parsedProgramDateForValidationPut = new Date(programDate);
+    if (isNaN(parsedProgramDateForValidationPut.getTime())) {
+      return res.status(400).json({ error: { message: 'Invalid program date', status: 400 } });
+    }
+    const todayUtcStartPut = new Date();
+    todayUtcStartPut.setUTCHours(0, 0, 0, 0);
+    if (parsedProgramDateForValidationPut < todayUtcStartPut) {
+      return res.status(400).json({ error: { message: 'Program date cannot be in the past', status: 400 } });
+    }
+
+    // SQA fix: previously any status string was accepted with no validation
+    // and no transition rules, so a Cancelled/Refunded (terminal) booking
+    // could be silently moved back to Confirmed/POSTED and re-posted to the
+    // ledger. This enforces both a known-value allowlist and a legal-
+    // transition check.
+    const requestedUpdateStatus = req.body.status;
+    if (requestedUpdateStatus !== undefined && !isKnownStatus(requestedUpdateStatus)) {
+      return res.status(400).json({ error: { message: `Status must be one of: ${HALL_BOOKING_STATUSES.join(', ')}`, status: 400 } });
+    }
+    if (requestedUpdateStatus !== undefined && isKnownStatus(existingBooking.status)) {
+      const allowedNext = ALLOWED_STATUS_TRANSITIONS[existingBooking.status as HallBookingStatus];
+      if (!allowedNext.includes(requestedUpdateStatus)) {
+        return res.status(400).json({ error: { message: `Cannot change booking status from '${existingBooking.status}' to '${requestedUpdateStatus}'.`, status: 400 } });
+      }
     }
     const parsedHallCharges = parseFloat(rawHallCharges);
     if (isNaN(parsedHallCharges) || parsedHallCharges <= 0) {

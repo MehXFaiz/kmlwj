@@ -13,17 +13,11 @@ async function memberVerifyHandler(req, res) {
       select: {
         memberNo: true,
         fullName: true,
-        fatherName: true,
         cnic: true,
-        dob: true,
         ghamName: true,
-        area: true,
-        city: true,
-        address: true,
         doi: true,
         photoUrl: true,
         isActive: true
-        // NEVER expose: id, mobile, email, education, profession, company, password etc.
       }
     });
     if (!member) {
@@ -34,13 +28,8 @@ async function memberVerifyHandler(req, res) {
           select: {
             memberNo: true,
             fullName: true,
-            fatherName: true,
             cnic: true,
-            dob: true,
             ghamName: true,
-            area: true,
-            city: true,
-            address: true,
             doi: true,
             photoUrl: true,
             isActive: true
@@ -64,12 +53,8 @@ async function memberVerifyHandler(req, res) {
       member: {
         memberNo: member.memberNo,
         fullName: member.fullName,
-        fatherName: member.fatherName || null,
         cnic: maskedCnic,
-        dob: member.dob || null,
         ghamName: member.ghamName || null,
-        area: member.area || null,
-        city: member.city || null,
         doi: member.doi || null,
         photoUrl: member.photoUrl || null,
         isActive: member.isActive

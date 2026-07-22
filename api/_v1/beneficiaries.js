@@ -47,7 +47,7 @@ function pickData(body, isCreate) {
     } else if (["monthlyIncome", "monthlyExpenses", "debtAmount"].includes(key)) {
       data[key] = val || val === 0 ? parseFloat(val) : null;
     } else {
-      data[key] = val || null;
+      data[key] = typeof val === "string" ? val.trim() || null : val || null;
     }
   }
   return data;

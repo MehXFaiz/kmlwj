@@ -10,6 +10,16 @@ function generateInvoiceNumber() {
   const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
   return `INV-${year}${month}-${randomStr}`;
 }
+function isUniqueViolation(err) {
+  return err?.code === "P2002";
+}
+function computeInvoiceTotals(items, tax, discount) {
+  const subtotal = Math.round(
+    items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0), 0) * 100
+  ) / 100;
+  const total = Math.round((subtotal + tax - discount) * 100) / 100;
+  return { subtotal, total };
+}
 function generateVoucherNumber(prefix = "JV") {
   const date = /* @__PURE__ */ new Date();
   const year = date.getFullYear().toString().slice(-2);
@@ -224,36 +234,56 @@ var invoices_default = makeHandler(async (req, res) => {
       await logAudit(req.user.id, "Cancel Invoice", "INVOICE", invoice, result.updatedInvoice, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, data: result.updatedInvoice, message: "Invoice cancelled and reversing journal entries logged" });
     }
-    const { customerId, issueDate, dueDate, subtotal, discount, tax, total, remarks, items } = req.body;
+    const { customerId, issueDate, dueDate, discount, tax, remarks, items } = req.body;
     if (!customerId || !issueDate || !dueDate || !items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: { message: "Missing required invoice parameters", status: 400 } });
     }
-    const newInvoice = await prisma.invoice.create({
-      data: {
-        invoiceNo: generateInvoiceNumber(),
-        customerId,
-        issueDate: new Date(issueDate),
-        dueDate: new Date(dueDate),
-        status: "DRAFT",
-        subtotal: parseFloat(subtotal),
-        discount: parseFloat(discount) || 0,
-        tax: parseFloat(tax) || 0,
-        total: parseFloat(total),
-        remarks: remarks || null,
-        items: {
-          create: items.map((item) => ({
-            description: item.description,
-            quantity: parseFloat(item.quantity),
-            unitPrice: parseFloat(item.unitPrice),
-            amount: parseFloat(item.amount)
-          }))
+    const parsedTax = parseFloat(tax) || 0;
+    const parsedDiscount = parseFloat(discount) || 0;
+    if (parsedTax < 0 || parsedDiscount < 0) {
+      return res.status(400).json({ error: { message: "Tax and discount cannot be negative", status: 400 } });
+    }
+    const { subtotal: computedSubtotal, total: computedTotal } = computeInvoiceTotals(items, parsedTax, parsedDiscount);
+    if (computedTotal < 0) {
+      return res.status(400).json({ error: { message: "Invoice total cannot be negative \u2014 check tax/discount against the line items", status: 400 } });
+    }
+    let newInvoice;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        newInvoice = await prisma.invoice.create({
+          data: {
+            invoiceNo: generateInvoiceNumber(),
+            customerId,
+            issueDate: new Date(issueDate),
+            dueDate: new Date(dueDate),
+            status: "DRAFT",
+            subtotal: computedSubtotal,
+            discount: parsedDiscount,
+            tax: parsedTax,
+            total: computedTotal,
+            remarks: remarks || null,
+            items: {
+              create: items.map((item) => ({
+                description: item.description,
+                quantity: parseFloat(item.quantity),
+                unitPrice: parseFloat(item.unitPrice),
+                amount: Math.round((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0) * 100) / 100
+              }))
+            }
+          },
+          include: {
+            customer: true,
+            items: true
+          }
+        });
+        break;
+      } catch (err) {
+        if (isUniqueViolation(err) && attempt < 5 && err.meta?.target?.includes("invoiceNo")) {
+          continue;
         }
-      },
-      include: {
-        customer: true,
-        items: true
+        throw err;
       }
-    });
+    }
     await logAudit(req.user.id, "Create Invoice", "INVOICE", null, newInvoice, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     return res.status(201).json({ status: 201, data: newInvoice });
   }
@@ -267,7 +297,17 @@ var invoices_default = makeHandler(async (req, res) => {
     if (existingInvoice.status !== "DRAFT") {
       return res.status(400).json({ error: { message: "Only DRAFT invoices can be modified", status: 400 } });
     }
-    const { customerId, issueDate, dueDate, subtotal, discount, tax, total, remarks, items } = req.body;
+    const { customerId, issueDate, dueDate, discount, tax, remarks, items } = req.body;
+    const effectiveItems = items ?? existingInvoice.items;
+    const effectiveTax = tax !== void 0 ? parseFloat(tax) || 0 : Number(existingInvoice.tax);
+    const effectiveDiscount = discount !== void 0 ? parseFloat(discount) || 0 : Number(existingInvoice.discount);
+    if (effectiveTax < 0 || effectiveDiscount < 0) {
+      return res.status(400).json({ error: { message: "Tax and discount cannot be negative", status: 400 } });
+    }
+    const { subtotal: computedSubtotal, total: computedTotal } = computeInvoiceTotals(effectiveItems, effectiveTax, effectiveDiscount);
+    if (computedTotal < 0) {
+      return res.status(400).json({ error: { message: "Invoice total cannot be negative \u2014 check tax/discount against the line items", status: 400 } });
+    }
     const result = await prisma.$transaction(async (tx) => {
       await tx.invoiceItem.deleteMany({
         where: { invoiceId: id }
@@ -278,19 +318,19 @@ var invoices_default = makeHandler(async (req, res) => {
           customerId: customerId !== void 0 ? customerId : void 0,
           issueDate: issueDate !== void 0 ? new Date(issueDate) : void 0,
           dueDate: dueDate !== void 0 ? new Date(dueDate) : void 0,
-          subtotal: subtotal !== void 0 ? parseFloat(subtotal) : void 0,
-          discount: discount !== void 0 ? parseFloat(discount) : void 0,
-          tax: tax !== void 0 ? parseFloat(tax) : void 0,
-          total: total !== void 0 ? parseFloat(total) : void 0,
+          subtotal: computedSubtotal,
+          discount: effectiveDiscount,
+          tax: effectiveTax,
+          total: computedTotal,
           remarks: remarks !== void 0 ? remarks : void 0,
-          items: items ? {
-            create: items.map((item) => ({
+          items: {
+            create: effectiveItems.map((item) => ({
               description: item.description,
               quantity: parseFloat(item.quantity),
               unitPrice: parseFloat(item.unitPrice),
-              amount: parseFloat(item.amount)
+              amount: Math.round((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0) * 100) / 100
             }))
-          } : void 0
+          }
         },
         include: {
           customer: true,

@@ -3,6 +3,8 @@ import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
+import { validateAmount } from "../_utils/amount.js";
+import { isWithinMaxLength, maxLengthError } from "../_utils/text-length.js";
 function generateVoucherNumber() {
   const date = /* @__PURE__ */ new Date();
   const year = date.getFullYear().toString().slice(-2);
@@ -178,15 +180,20 @@ var donations_default = makeHandler(async (req, res) => {
     if (donationType === "CUSTOM" && (!customDonationType || !String(customDonationType).trim())) {
       return res.status(400).json({ error: { message: 'Custom Donation / Aid Type is required when "Custom" is selected.', status: 400 } });
     }
-    if (amount <= 0) {
-      return res.status(400).json({ error: { message: "Amount must be greater than 0", status: 400 } });
+    const amountCheck = validateAmount(amount);
+    if (!amountCheck.valid) {
+      return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
     }
+    const parsedAmount = amountCheck.amount;
     if ((paymentMethod === "BANK" || paymentMethod === "CHEQUE") && !bankAccountId) {
       return res.status(400).json({ error: { message: "Bank account is required for Bank/Cheque payment methods", status: 400 } });
     }
     if (paymentMethod === "CHEQUE" && !chequeNumber) {
       return res.status(400).json({ error: { message: "Cheque number is required for Cheque payment method", status: 400 } });
     }
+    if (!isWithinMaxLength(remarks, 1e3)) return res.status(400).json({ error: maxLengthError("Remarks", 1e3) });
+    if (!isWithinMaxLength(donorBankName, 100)) return res.status(400).json({ error: maxLengthError("Donor bank name", 100) });
+    if (!isWithinMaxLength(chequeNumber, 30)) return res.status(400).json({ error: maxLengthError("Cheque number", 30) });
     if (beneficiaryId && !isValidBeneficiaryId(beneficiaryId)) {
       return res.status(400).json({ error: { message: "Selected recipient is invalid or out of date. Please re-select the recipient from People We Help and try again.", status: 400 } });
     }
@@ -209,7 +216,7 @@ var donations_default = makeHandler(async (req, res) => {
           donorMobile: donorMobile || null,
           donationType,
           customDonationType: donationType === "CUSTOM" ? customDonationType || null : null,
-          amount: parseFloat(amount),
+          amount: parsedAmount,
           paymentMethod,
           bankAccountId: bankAccountId || null,
           chequeNumber: chequeNumber || null,
@@ -230,7 +237,7 @@ var donations_default = makeHandler(async (req, res) => {
         const expenseAccount = await getExpenseAccountForDonation(donationType, tx);
         if (expenseAccount) {
           await AccountingService.postPayment(tx, {
-            amount: parseFloat(amount),
+            amount: parsedAmount,
             cashOrBankAccountId,
             expenseAccountId: expenseAccount.id,
             reference: `DON-${createdDonation.id.substring(0, 8)}`,
@@ -265,6 +272,17 @@ var donations_default = makeHandler(async (req, res) => {
     }
     const targetBeneficiaryId = beneficiaryId !== void 0 ? beneficiaryId : existingDonation.beneficiaryId;
     const targetStatus = status !== void 0 ? status : existingDonation.status;
+    if (!isWithinMaxLength(remarks, 1e3)) return res.status(400).json({ error: maxLengthError("Remarks", 1e3) });
+    if (!isWithinMaxLength(donorBankName, 100)) return res.status(400).json({ error: maxLengthError("Donor bank name", 100) });
+    if (!isWithinMaxLength(chequeNumber, 30)) return res.status(400).json({ error: maxLengthError("Cheque number", 30) });
+    let parsedAmount;
+    if (amount !== void 0) {
+      const amountCheck = validateAmount(amount);
+      if (!amountCheck.valid) {
+        return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
+      }
+      parsedAmount = amountCheck.amount;
+    }
     if (targetBeneficiaryId && !isValidBeneficiaryId(targetBeneficiaryId)) {
       return res.status(400).json({ error: { message: "Selected recipient is invalid or out of date. Please re-select the recipient from People We Help and try again.", status: 400 } });
     }
@@ -298,7 +316,7 @@ var donations_default = makeHandler(async (req, res) => {
           donorMobile: donorMobile !== void 0 ? donorMobile || null : void 0,
           donationType: donationType || void 0,
           customDonationType: donationType !== void 0 ? donationType === "CUSTOM" ? customDonationType || null : null : customDonationType !== void 0 ? existingDonation.donationType === "CUSTOM" ? customDonationType : null : void 0,
-          amount: amount !== void 0 ? parseFloat(amount) : void 0,
+          amount: parsedAmount !== void 0 ? parsedAmount : void 0,
           paymentMethod: paymentMethod || void 0,
           bankAccountId: bankAccountId !== void 0 ? bankAccountId || null : void 0,
           chequeNumber: chequeNumber !== void 0 ? chequeNumber || null : void 0,

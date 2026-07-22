@@ -9,6 +9,23 @@ const FIELD_KEY = {
   cnicFront: "cnicFrontUrl",
   cnicBack: "cnicBackUrl"
 };
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+function sniffImageType(buffer) {
+  if (buffer.length < 12) return null;
+  if (buffer[0] === 255 && buffer[1] === 216 && buffer[2] === 255) {
+    return { ext: ".jpg", mime: "image/jpeg" };
+  }
+  if (buffer.slice(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) {
+    return { ext: ".png", mime: "image/png" };
+  }
+  if (buffer.slice(0, 6).toString("ascii") === "GIF87a" || buffer.slice(0, 6).toString("ascii") === "GIF89a") {
+    return { ext: ".gif", mime: "image/gif" };
+  }
+  if (buffer.slice(0, 4).toString("ascii") === "RIFF" && buffer.slice(8, 12).toString("ascii") === "WEBP") {
+    return { ext: ".webp", mime: "image/webp" };
+  }
+  return null;
+}
 function assertWritableEnvironment() {
   if (process.env.VERCEL) {
     const missingVars = [
@@ -28,7 +45,7 @@ function assertWritableEnvironment() {
     throw err;
   }
 }
-function saveLocally(buffer, originalname, field) {
+function saveLocally(buffer, ext, field) {
   const uploadsDir = path.join(process.cwd(), "uploads", "members");
   logger.info({ field, uploadsDir }, "Ensuring upload directory exists");
   try {
@@ -37,7 +54,6 @@ function saveLocally(buffer, originalname, field) {
     logger.error({ err: { message: err.message, code: err.code, stack: err.stack }, uploadsDir }, "Failed to create upload directory");
     throw err;
   }
-  const ext = path.extname(originalname).toLowerCase().replace(/[^.a-z0-9]/gi, "") || ".bin";
   const safeName = `${Date.now()}-${crypto.randomBytes(8).toString("hex")}${ext}`;
   const fullPath = path.join(uploadsDir, safeName);
   logger.info({ field, fullPath }, "Writing file to disk");
@@ -109,7 +125,19 @@ var upload_default = makeHandler(async (req, res) => {
         mimetype: file.mimetype,
         size: file.size
       }, "Processing uploaded file");
-      const url = saveLocally(file.buffer, file.originalname, field);
+      if (file.size > MAX_IMAGE_BYTES) {
+        const err = new Error(`"${field}" is too large. Maximum allowed size is ${MAX_IMAGE_BYTES / (1024 * 1024)}MB.`);
+        err.status = 413;
+        throw err;
+      }
+      const sniffed = sniffImageType(file.buffer);
+      if (!sniffed) {
+        logger.warn({ field, originalname: file.originalname, mimetype: file.mimetype }, "Rejected upload \u2014 not a recognized image format");
+        const err = new Error(`"${field}" must be a JPEG, PNG, GIF, or WEBP image.`);
+        err.status = 400;
+        throw err;
+      }
+      const url = saveLocally(file.buffer, sniffed.ext, field);
       savedUrls.push(url);
       const key = FIELD_KEY[field] ?? field;
       result[key] = url;

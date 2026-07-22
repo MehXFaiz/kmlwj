@@ -19,11 +19,8 @@ async function zakatCardVerifyHandler(req, res) {
           select: {
             memberNo: true,
             fullName: true,
-            fatherName: true,
             cnic: true,
             ghamName: true,
-            area: true,
-            city: true,
             isActive: true
           }
         },
@@ -31,8 +28,6 @@ async function zakatCardVerifyHandler(req, res) {
           select: {
             name: true,
             cnic: true,
-            area: true,
-            town: true,
             gham: true,
             isActive: true
           }
@@ -60,11 +55,8 @@ async function zakatCardVerifyHandler(req, res) {
         zakatAmount: card.zakatAmount,
         issueDate: card.issueDate,
         holderName: displayName,
-        fatherName: card.member?.fatherName || null,
         cnic: maskedCnic,
-        area: card.beneficiary?.area || card.member?.area || null,
         gham: card.beneficiary?.gham || card.member?.ghamName || null,
-        city: card.member?.city || null,
         memberNo: card.member?.memberNo || null
       }
     });

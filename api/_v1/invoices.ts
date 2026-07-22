@@ -13,6 +13,27 @@ function generateInvoiceNumber() {
   return `INV-${year}${month}-${randomStr}`;
 }
 
+function isUniqueViolation(err: any): boolean {
+  return err?.code === 'P2002';
+}
+
+// SQA fix: `subtotal`/`total` were previously taken verbatim from the request
+// body with no cross-check against `items` — a client (or a bug in a future
+// client) could submit an internally-inconsistent invoice whose stored total
+// then flows straight into the general ledger on post/pay. This recomputes
+// both server-side from the line items, mirroring InvoiceForm.jsx's own
+// formula exactly: subtotal = sum(quantity*unitPrice), total = subtotal + tax
+// - discount. Client-supplied subtotal/total are ignored, not merely
+// validated, since the server must be the source of truth for what gets
+// posted to the ledger.
+function computeInvoiceTotals(items: any[], tax: number, discount: number) {
+  const subtotal = Math.round(
+    items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0), 0) * 100
+  ) / 100;
+  const total = Math.round((subtotal + tax - discount) * 100) / 100;
+  return { subtotal, total };
+}
+
 function generateVoucherNumber(prefix = 'JV') {
   const date = new Date();
   const year = date.getFullYear().toString().slice(-2);
@@ -287,38 +308,63 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     // --- CREATE NEW INVOICE ---
-    const { customerId, issueDate, dueDate, subtotal, discount, tax, total, remarks, items } = req.body;
+    const { customerId, issueDate, dueDate, discount, tax, remarks, items } = req.body;
 
     if (!customerId || !issueDate || !dueDate || !items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: { message: 'Missing required invoice parameters', status: 400 } });
     }
 
-    const newInvoice = await prisma.invoice.create({
-      data: {
-        invoiceNo: generateInvoiceNumber(),
-        customerId,
-        issueDate: new Date(issueDate),
-        dueDate: new Date(dueDate),
-        status: 'DRAFT',
-        subtotal: parseFloat(subtotal),
-        discount: parseFloat(discount) || 0,
-        tax: parseFloat(tax) || 0,
-        total: parseFloat(total),
-        remarks: remarks || null,
-        items: {
-          create: items.map((item: any) => ({
-            description: item.description,
-            quantity: parseFloat(item.quantity),
-            unitPrice: parseFloat(item.unitPrice),
-            amount: parseFloat(item.amount),
-          })),
-        },
-      },
-      include: {
-        customer: true,
-        items: true,
-      },
-    });
+    const parsedTax = parseFloat(tax) || 0;
+    const parsedDiscount = parseFloat(discount) || 0;
+    if (parsedTax < 0 || parsedDiscount < 0) {
+      return res.status(400).json({ error: { message: 'Tax and discount cannot be negative', status: 400 } });
+    }
+    const { subtotal: computedSubtotal, total: computedTotal } = computeInvoiceTotals(items, parsedTax, parsedDiscount);
+    if (computedTotal < 0) {
+      return res.status(400).json({ error: { message: 'Invoice total cannot be negative — check tax/discount against the line items', status: 400 } });
+    }
+
+    let newInvoice;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        newInvoice = await prisma.invoice.create({
+          data: {
+            invoiceNo: generateInvoiceNumber(),
+            customerId,
+            issueDate: new Date(issueDate),
+            dueDate: new Date(dueDate),
+            status: 'DRAFT',
+            subtotal: computedSubtotal,
+            discount: parsedDiscount,
+            tax: parsedTax,
+            total: computedTotal,
+            remarks: remarks || null,
+            items: {
+              create: items.map((item: any) => ({
+                description: item.description,
+                quantity: parseFloat(item.quantity),
+                unitPrice: parseFloat(item.unitPrice),
+                amount: Math.round((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0) * 100) / 100,
+              })),
+            },
+          },
+          include: {
+            customer: true,
+            items: true,
+          },
+        });
+        break;
+      } catch (err: any) {
+        // SQA fix: invoiceNo's random suffix had no uniqueness check before
+        // insert — a collision (rare, but the constraint is @unique) would
+        // otherwise surface as a raw 500 instead of a clean retry.
+        if (isUniqueViolation(err) && attempt < 5 &&
+            (err.meta?.target as string[] | undefined)?.includes('invoiceNo')) {
+          continue;
+        }
+        throw err;
+      }
+    }
 
     await logAudit(req.user.id, 'Create Invoice', 'INVOICE', null, newInvoice, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
@@ -338,7 +384,23 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Only DRAFT invoices can be modified', status: 400 } });
     }
 
-    const { customerId, issueDate, dueDate, subtotal, discount, tax, total, remarks, items } = req.body;
+    const { customerId, issueDate, dueDate, discount, tax, remarks, items } = req.body;
+
+    // SQA fix: subtotal/total were previously taken verbatim from the request
+    // body, independent of `items` — an update could change line items while
+    // keeping a stale client-supplied total. Recomputed here from whichever
+    // items apply (new ones if supplied, else the existing ones) combined
+    // with the resolved tax/discount, so the invariant always holds.
+    const effectiveItems = items ?? existingInvoice.items;
+    const effectiveTax = tax !== undefined ? parseFloat(tax) || 0 : Number(existingInvoice.tax);
+    const effectiveDiscount = discount !== undefined ? parseFloat(discount) || 0 : Number(existingInvoice.discount);
+    if (effectiveTax < 0 || effectiveDiscount < 0) {
+      return res.status(400).json({ error: { message: 'Tax and discount cannot be negative', status: 400 } });
+    }
+    const { subtotal: computedSubtotal, total: computedTotal } = computeInvoiceTotals(effectiveItems, effectiveTax, effectiveDiscount);
+    if (computedTotal < 0) {
+      return res.status(400).json({ error: { message: 'Invoice total cannot be negative — check tax/discount against the line items', status: 400 } });
+    }
 
     const result = await prisma.$transaction(async (tx) => {
       // Delete old items first
@@ -353,19 +415,19 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           customerId: customerId !== undefined ? customerId : undefined,
           issueDate: issueDate !== undefined ? new Date(issueDate) : undefined,
           dueDate: dueDate !== undefined ? new Date(dueDate) : undefined,
-          subtotal: subtotal !== undefined ? parseFloat(subtotal) : undefined,
-          discount: discount !== undefined ? parseFloat(discount) : undefined,
-          tax: tax !== undefined ? parseFloat(tax) : undefined,
-          total: total !== undefined ? parseFloat(total) : undefined,
+          subtotal: computedSubtotal,
+          discount: effectiveDiscount,
+          tax: effectiveTax,
+          total: computedTotal,
           remarks: remarks !== undefined ? remarks : undefined,
-          items: items ? {
-            create: items.map((item: any) => ({
+          items: {
+            create: effectiveItems.map((item: any) => ({
               description: item.description,
               quantity: parseFloat(item.quantity),
               unitPrice: parseFloat(item.unitPrice),
-              amount: parseFloat(item.amount),
+              amount: Math.round((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0) * 100) / 100,
             }))
-          } : undefined
+          }
         },
         include: {
           customer: true,

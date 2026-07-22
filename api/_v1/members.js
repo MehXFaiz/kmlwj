@@ -3,6 +3,15 @@ import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { logger } from "../_utils/logger.js";
+function trimOrNull(v) {
+  if (v === void 0 || v === null) return null;
+  const trimmed = String(v).trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+function trimIfProvided(v) {
+  if (v === void 0) return void 0;
+  return trimOrNull(v);
+}
 const MEMBER_NO_PREFIX = "KML-";
 async function nextMemberNo() {
   const existing = await prisma.member.findMany({
@@ -76,7 +85,7 @@ var members_default = makeHandler(async (req, res) => {
     return res.status(200).json({ status: 200, data: members, meta: { total, page: pageNum, limit: limitNum } });
   }
   if (method === "POST") {
-    const {
+    let {
       memberNo,
       fullName,
       fatherName,
@@ -97,6 +106,18 @@ var members_default = makeHandler(async (req, res) => {
       cnicBackUrl,
       isActive
     } = req.body;
+    fullName = trimOrNull(fullName);
+    fatherName = trimOrNull(fatherName);
+    cnic = trimOrNull(cnic);
+    address = trimOrNull(address);
+    mobile = trimOrNull(mobile);
+    email = trimOrNull(email);
+    city = trimOrNull(city);
+    area = trimOrNull(area);
+    ghamName = trimOrNull(ghamName);
+    education = trimOrNull(education);
+    profession = trimOrNull(profession);
+    company = trimOrNull(company);
     if (!fullName || !String(fullName).trim()) {
       return res.status(400).json({ error: { message: "Full Member Name is required", status: 400 } });
     }
@@ -181,7 +202,7 @@ var members_default = makeHandler(async (req, res) => {
     if (!existingMember) {
       return res.status(404).json({ error: { message: "Member not found", status: 404 } });
     }
-    const {
+    let {
       memberNo,
       fullName,
       fatherName,
@@ -202,6 +223,18 @@ var members_default = makeHandler(async (req, res) => {
       cnicBackUrl,
       isActive
     } = req.body;
+    fullName = trimIfProvided(fullName);
+    fatherName = trimIfProvided(fatherName);
+    cnic = trimIfProvided(cnic);
+    address = trimIfProvided(address);
+    mobile = trimIfProvided(mobile);
+    email = trimIfProvided(email);
+    city = trimIfProvided(city);
+    area = trimIfProvided(area);
+    ghamName = trimIfProvided(ghamName);
+    education = trimIfProvided(education);
+    profession = trimIfProvided(profession);
+    company = trimIfProvided(company);
     if (fullName !== void 0 && !String(fullName).trim()) {
       return res.status(400).json({ error: { message: "Full Member Name is required", status: 400 } });
     }

@@ -31,8 +31,38 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   if (method === 'POST') {
     const { name, email, phone, address, company, isActive } = req.body;
 
-    if (!name) {
-      return res.status(400).json({ error: { message: 'Name is required', status: 400 } });
+    // SQA fix: previously only a non-empty `name` check existed server-side —
+    // all format validation (name/email/phone/company regexes) lived only in
+    // CustomerForm.jsx and was trivially bypassed by a direct API call.
+    // Mirrors that same client-side validation here.
+    if (!name || !/^[a-zA-Z\s.-]{3,50}$/.test(String(name))) {
+      return res.status(400).json({ error: { message: 'Name should only contain letters, spaces, hyphens, and dots (3-50 chars)', status: 400 } });
+    }
+    if (email && !/^[\w.+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(String(email))) {
+      return res.status(400).json({ error: { message: 'Please enter a valid email address', status: 400 } });
+    }
+    if (phone && !/^\d{11}$/.test(String(phone))) {
+      return res.status(400).json({ error: { message: 'Phone number must contain exactly 11 digits', status: 400 } });
+    }
+    if (company && !/^[a-zA-Z0-9\s.-]{3,50}$/.test(String(company))) {
+      return res.status(400).json({ error: { message: 'Company name should contain only letters, numbers, spaces, hyphens, and dots (3-50 chars)', status: 400 } });
+    }
+
+    // SQA fix: no duplicate-customer prevention existed on email/phone —
+    // two customers with identical contact details could be created
+    // indefinitely (no CNIC field exists on this model to key off instead).
+    if (email || phone) {
+      const existingCustomer = await prisma.customer.findFirst({
+        where: {
+          OR: [
+            ...(email ? [{ email: { equals: String(email), mode: 'insensitive' as const } }] : []),
+            ...(phone ? [{ phone: String(phone) }] : []),
+          ],
+        },
+      });
+      if (existingCustomer) {
+        return res.status(400).json({ error: { message: `A customer with this ${existingCustomer.email === email ? 'email' : 'phone number'} already exists (${existingCustomer.name})`, status: 400 } });
+      }
     }
 
     const newCustomer = await prisma.customer.create({
@@ -62,6 +92,34 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     const { name, email, phone, address, company, isActive } = req.body;
+
+    if (name !== undefined && !/^[a-zA-Z\s.-]{3,50}$/.test(String(name))) {
+      return res.status(400).json({ error: { message: 'Name should only contain letters, spaces, hyphens, and dots (3-50 chars)', status: 400 } });
+    }
+    if (email && !/^[\w.+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(String(email))) {
+      return res.status(400).json({ error: { message: 'Please enter a valid email address', status: 400 } });
+    }
+    if (phone && !/^\d{11}$/.test(String(phone))) {
+      return res.status(400).json({ error: { message: 'Phone number must contain exactly 11 digits', status: 400 } });
+    }
+    if (company && !/^[a-zA-Z0-9\s.-]{3,50}$/.test(String(company))) {
+      return res.status(400).json({ error: { message: 'Company name should contain only letters, numbers, spaces, hyphens, and dots (3-50 chars)', status: 400 } });
+    }
+
+    if (email || phone) {
+      const duplicateCustomer = await prisma.customer.findFirst({
+        where: {
+          id: { not: id },
+          OR: [
+            ...(email ? [{ email: { equals: String(email), mode: 'insensitive' as const } }] : []),
+            ...(phone ? [{ phone: String(phone) }] : []),
+          ],
+        },
+      });
+      if (duplicateCustomer) {
+        return res.status(400).json({ error: { message: `A customer with this ${duplicateCustomer.email === email ? 'email' : 'phone number'} already exists (${duplicateCustomer.name})`, status: 400 } });
+      }
+    }
 
     const updatedCustomer = await prisma.customer.update({
       where: { id },

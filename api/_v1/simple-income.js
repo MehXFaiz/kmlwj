@@ -2,6 +2,7 @@ import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { AccountingService } from "../_services/accounting.service.js";
+import { validateAmount } from "../_utils/amount.js";
 const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };
 var simple_income_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
@@ -30,10 +31,11 @@ var simple_income_default = makeHandler(async (req, res) => {
     if (!revenueHeadId || !amount) {
       return res.status(400).json({ error: { message: "Missing required fields", status: 400 } });
     }
-    const numAmount = Number(amount);
-    if (numAmount <= 0) {
-      return res.status(400).json({ error: { message: "Amount must be greater than zero", status: 400 } });
+    const amountCheck = validateAmount(amount);
+    if (!amountCheck.valid) {
+      return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
     }
+    const numAmount = amountCheck.amount;
     const result = await prisma.$transaction(async (tx) => {
       const revenueHead = await tx.revenueHead.findUnique({
         where: { id: revenueHeadId },
@@ -91,10 +93,11 @@ var simple_income_default = makeHandler(async (req, res) => {
     if (!id || !revenueHeadId || !amount) {
       return res.status(400).json({ error: { message: "Missing required fields", status: 400 } });
     }
-    const numAmount = Number(amount);
-    if (numAmount <= 0) {
-      return res.status(400).json({ error: { message: "Amount must be greater than zero", status: 400 } });
+    const amountCheck = validateAmount(amount);
+    if (!amountCheck.valid) {
+      return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
     }
+    const numAmount = amountCheck.amount;
     const result = await prisma.$transaction(async (tx) => {
       const existing = await tx.simpleIncome.findUnique({ where: { id }, include: { revenueHead: true } });
       if (!existing) throw new Error("Income not found");

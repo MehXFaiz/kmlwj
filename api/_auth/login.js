@@ -3,6 +3,7 @@ import { makeHandler } from "../_utils/handler.js";
 import * as authService from "../_services/auth.service.js";
 import { logAudit } from "../_utils/audit.js";
 import { logger } from "../_utils/logger.js";
+import { setRefreshTokenCookie } from "../_utils/cookies.js";
 const loginSchema = z.object({
   email: z.string().trim().email("Invalid email address").transform((value) => value.toLowerCase()),
   password: z.string().min(1, "Password is required")
@@ -23,10 +24,14 @@ var login_default = makeHandler(async (req, res) => {
     req.headers["x-forwarded-for"],
     req.headers["user-agent"]
   );
+  setRefreshTokenCookie(res, result.refreshToken);
   return res.status(200).json({
     status: 200,
     message: "Login successful",
-    data: result
+    data: {
+      accessToken: result.accessToken,
+      user: result.user
+    }
   });
 });
 export {

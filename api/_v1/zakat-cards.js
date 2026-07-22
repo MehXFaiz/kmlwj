@@ -4,10 +4,20 @@ import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { createNotification } from "../_utils/notify.js";
-async function generateCardNumber(tx) {
-  const count = await tx.zakatCard.count();
-  const seq = (count + 1).toString().padStart(6, "0");
-  return `ZK-${seq}`;
+const CARD_NO_PREFIX = "ZK-";
+async function nextCardNumber(tx) {
+  const existing = await tx.zakatCard.findMany({
+    where: { cardNumber: { startsWith: CARD_NO_PREFIX } },
+    select: { cardNumber: true }
+  });
+  const maxNum = existing.reduce((max, c) => {
+    const n = parseInt(c.cardNumber.slice(CARD_NO_PREFIX.length), 10);
+    return Number.isFinite(n) && n > max ? n : max;
+  }, 0);
+  return `${CARD_NO_PREFIX}${String(maxNum + 1).padStart(6, "0")}`;
+}
+function isUniqueViolation(err) {
+  return err?.code === "P2002";
 }
 async function resolveZakatExpenseAccount(tx) {
   let acc = await tx.account.findFirst({
@@ -115,8 +125,22 @@ var zakat_cards_default = makeHandler(async (req, res) => {
     if ((paymentMethod === "BANK" || paymentMethod === "CHEQUE") && !bankAccountId) {
       return res.status(400).json({ error: { message: "Bank account is required for Bank/Cheque payments", status: 400 } });
     }
-    const result = await prisma.$transaction(async (tx) => {
-      const cardNumber = await generateCardNumber(tx);
+    let result;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        result = await prisma.$transaction(async (tx) => {
+          return runIssuance(tx);
+        });
+        break;
+      } catch (err) {
+        if (isUniqueViolation(err) && attempt < 5 && err.meta?.target?.includes("cardNumber")) {
+          continue;
+        }
+        throw err;
+      }
+    }
+    async function runIssuance(tx) {
+      const cardNumber = await nextCardNumber(tx);
       const zakatAccount = await resolveZakatExpenseAccount(tx);
       if (!zakatAccount) {
         throw Object.assign(
@@ -160,7 +184,7 @@ var zakat_cards_default = makeHandler(async (req, res) => {
         include: { beneficiary: true, member: true }
       });
       return card;
-    });
+    }
     await logAudit(
       req.user.id,
       "Issue Zakat Card",

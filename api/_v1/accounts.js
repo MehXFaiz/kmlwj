@@ -240,6 +240,18 @@ var accounts_default = makeHandler(async (req, res) => {
     if (existingAccount.accountLevel !== "GL") {
       return res.status(400).json({ error: { message: `${existingAccount.accountLevel} accounts are system-defined and cannot be deleted. Only Level 4 (GL) accounts can be deleted.`, status: 400 } });
     }
+    const [journalLineCount, ledgerEntryCount] = await Promise.all([
+      prisma.journalEntryLine.count({ where: { accountId: id } }),
+      prisma.ledgerEntry.count({ where: { accountId: id } })
+    ]);
+    if (journalLineCount > 0 || ledgerEntryCount > 0) {
+      return res.status(400).json({
+        error: {
+          message: "Cannot delete this account because it has existing journal/ledger history. Lock it instead of deleting to preserve historical records.",
+          status: 400
+        }
+      });
+    }
     await prisma.account.delete({ where: { id } });
     await logAudit(req.user.id, "Delete Account", "COA", existingAccount, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     return res.status(200).json({ status: 200, message: "Account deleted successfully" });

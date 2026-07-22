@@ -5,6 +5,7 @@ import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
 import { validateAmount } from '../_utils/amount.js';
+import { isWithinMaxLength, maxLengthError } from '../_utils/text-length.js';
 
 function generateVoucherNumber() {
   const date = new Date();
@@ -246,6 +247,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if (paymentMethod === 'CHEQUE' && !chequeNumber) {
       return res.status(400).json({ error: { message: 'Cheque number is required for Cheque payment method', status: 400 } });
     }
+    // SQA fix: these free-text fields had no max-length validation — only
+    // the global request body-size cap bounded them.
+    if (!isWithinMaxLength(remarks, 1000)) return res.status(400).json({ error: maxLengthError('Remarks', 1000) });
+    if (!isWithinMaxLength(donorBankName, 100)) return res.status(400).json({ error: maxLengthError('Donor bank name', 100) });
+    if (!isWithinMaxLength(chequeNumber, 30)) return res.status(400).json({ error: maxLengthError('Cheque number', 30) });
     if (beneficiaryId && !isValidBeneficiaryId(beneficiaryId)) {
       return res.status(400).json({ error: { message: 'Selected recipient is invalid or out of date. Please re-select the recipient from People We Help and try again.', status: 400 } });
     }
@@ -337,6 +343,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     const targetBeneficiaryId = beneficiaryId !== undefined ? beneficiaryId : existingDonation.beneficiaryId;
     const targetStatus = status !== undefined ? status : existingDonation.status;
+
+    if (!isWithinMaxLength(remarks, 1000)) return res.status(400).json({ error: maxLengthError('Remarks', 1000) });
+    if (!isWithinMaxLength(donorBankName, 100)) return res.status(400).json({ error: maxLengthError('Donor bank name', 100) });
+    if (!isWithinMaxLength(chequeNumber, 30)) return res.status(400).json({ error: maxLengthError('Cheque number', 30) });
 
     // SQA fix: this PUT/PATCH path previously had no amount validation at all
     // when the caller changed `amount` — a non-numeric or absurd value would

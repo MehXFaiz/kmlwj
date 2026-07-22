@@ -1191,16 +1191,32 @@ export class AccountingService {
     return deletedJe;
   }
 
+  // SQA fix: previously fell back to free-text name-substring matching
+  // ('cash', 'hand', 'bank', ...) regardless of what `detailType` said, so an
+  // account explicitly typed as something else entirely (e.g. a receivable
+  // named "Cash Advance to Staff") was still misclassified as cash/bank on
+  // the dashboard summary — while a genuine cash/bank account with an
+  // unmatched name was silently excluded. `detailType` is a structured field
+  // set at account-creation time (see api/_v1/accounts.ts); when it holds a
+  // specific, non-default value, that value is now authoritative and the
+  // name-substring heuristic only applies when detailType is unset/generic
+  // ('Header', the schema default, or blank).
   static isCashAccount(name: string, detailType: string): boolean {
     const detailLower = (detailType || '').toLowerCase();
+    if (detailLower === 'cash') return true;
+    const hasSpecificDetailType = detailLower && detailLower !== 'header';
+    if (hasSpecificDetailType) return false;
     const nameLower = (name || '').toLowerCase();
-    return detailLower === 'cash' || nameLower.includes('cash') || nameLower.includes('till') || nameLower.includes('petty') || nameLower.includes('hand');
+    return nameLower.includes('cash') || nameLower.includes('till') || nameLower.includes('petty') || nameLower.includes('hand');
   }
 
   static isBankAccount(name: string, detailType: string): boolean {
     const detailLower = (detailType || '').toLowerCase();
+    if (detailLower === 'bank') return true;
+    const hasSpecificDetailType = detailLower && detailLower !== 'header';
+    if (hasSpecificDetailType) return false;
     const nameLower = (name || '').toLowerCase();
-    return detailLower === 'bank' || nameLower.includes('bank') || nameLower.includes('al-habib') || nameLower.includes('nbp') || nameLower.includes('national bank') || nameLower.includes('mcb') || nameLower.includes('ubl') || nameLower.includes('allied') || nameLower.includes('faysal');
+    return nameLower.includes('bank') || nameLower.includes('al-habib') || nameLower.includes('nbp') || nameLower.includes('national bank') || nameLower.includes('mcb') || nameLower.includes('ubl') || nameLower.includes('allied') || nameLower.includes('faysal');
   }
 
   static async getGeneralLedger(params: { startDate?: string; endDate?: string; accountId?: string; glCode?: string; page?: string | number; limit?: string | number }) {

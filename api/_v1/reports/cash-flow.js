@@ -5,6 +5,17 @@ var cash_flow_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
   if (req.method === "GET") {
+    let classifyCashFlowCategory2 = function(accountName, accountTypeName) {
+      const name = accountName.toLowerCase();
+      const type = (accountTypeName || "").toUpperCase();
+      const investingKeywords = ["fixed asset", "investment", "property", "equipment", "vehicle", "furniture", "building", "long-term"];
+      const financingKeywords = ["loan", "equity", "capital", "owner", "borrowing", "share"];
+      if (investingKeywords.some((k) => name.includes(k))) return "Investing";
+      if (financingKeywords.some((k) => name.includes(k)) || type === "EQUITY") return "Financing";
+      if (type === "LIABILITY" && financingKeywords.some((k) => name.includes(k))) return "Financing";
+      return "Operating";
+    };
+    var classifyCashFlowCategory = classifyCashFlowCategory2;
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
       include: { role: { include: { rolePermissions: { include: { permission: true } } } } }
@@ -74,6 +85,8 @@ var cash_flow_default = makeHandler(async (req, res) => {
     });
     const inflowsMap = {};
     const outflowsMap = {};
+    const inflowCategoryByAccount = {};
+    const outflowCategoryByAccount = {};
     postedJournals.forEach((je) => {
       const cashLines = je.lines.filter((l) => cashBankCodes.has(l.account.glCode));
       const nonCashLines = je.lines.filter((l) => !cashBankCodes.has(l.account.glCode));
@@ -89,6 +102,7 @@ var cash_flow_default = makeHandler(async (req, res) => {
             const amount = Math.round(netCashChange * ratio * 100) / 100;
             const name = l.account.accountName;
             inflowsMap[name] = (inflowsMap[name] || 0) + amount;
+            inflowCategoryByAccount[name] = classifyCashFlowCategory2(name, l.account.accountType?.name);
           }
         });
       } else if (netCashChange < 0) {
@@ -100,18 +114,31 @@ var cash_flow_default = makeHandler(async (req, res) => {
             const amount = Math.round(absChange * ratio * 100) / 100;
             const name = l.account.accountName;
             outflowsMap[name] = (outflowsMap[name] || 0) + amount;
+            outflowCategoryByAccount[name] = classifyCashFlowCategory2(name, l.account.accountType?.name);
           }
         });
       }
     });
     const inflows = Object.entries(inflowsMap).map(([name, amount]) => ({
       accountName: name,
-      amount
+      amount,
+      category: inflowCategoryByAccount[name] || "Operating"
     }));
     const outflows = Object.entries(outflowsMap).map(([name, amount]) => ({
       accountName: name,
-      amount
+      amount,
+      category: outflowCategoryByAccount[name] || "Operating"
     }));
+    const sumByCategory = (rows, cat) => Math.round(rows.filter((r) => r.category === cat).reduce((sum, r) => sum + r.amount, 0) * 100) / 100;
+    const categories = ["Operating", "Investing", "Financing"];
+    const categorySummary = Object.fromEntries(categories.map((cat) => [
+      cat,
+      {
+        inflow: sumByCategory(inflows, cat),
+        outflow: sumByCategory(outflows, cat),
+        net: Math.round((sumByCategory(inflows, cat) - sumByCategory(outflows, cat)) * 100) / 100
+      }
+    ]));
     const totalInflow = Math.round(inflows.reduce((sum, i) => sum + i.amount, 0) * 100) / 100;
     const totalOutflow = Math.round(outflows.reduce((sum, o) => sum + o.amount, 0) * 100) / 100;
     const netChange = Math.round((totalInflow - totalOutflow) * 100) / 100;
@@ -122,6 +149,7 @@ var cash_flow_default = makeHandler(async (req, res) => {
       data: {
         inflows,
         outflows,
+        categorySummary,
         summary: {
           beginningCash,
           totalInflow,

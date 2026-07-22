@@ -5,6 +5,7 @@ import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
 import { validateAmount } from '../_utils/amount.js';
+import { isWithinMaxLength, maxLengthError } from '../_utils/text-length.js';
 
 function isUniqueViolation(err: any): boolean {
   return err?.code === 'P2002';
@@ -120,6 +121,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if (!amountCheck.valid) {
       return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
     }
+
+    if (!isWithinMaxLength(narration, 1000)) return res.status(400).json({ error: maxLengthError('Narration', 1000) });
+    if (!isWithinMaxLength(referenceNo, 100)) return res.status(400).json({ error: maxLengthError('Reference number', 100) });
+    if (!isWithinMaxLength(chequeNo, 30)) return res.status(400).json({ error: maxLengthError('Cheque number', 30) });
     const parsedAmount = amountCheck.amount;
 
     const donor = await prisma.donor.findUnique({ where: { id: donorId } });
@@ -257,6 +262,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if (finalDonationType === 'CUSTOM' && (!finalCustomType || !finalCustomType.trim())) {
       return res.status(400).json({ error: { message: 'Custom Donation Type is required when CUSTOM is selected', status: 400 } });
     }
+
+    if (!isWithinMaxLength(narration, 1000)) return res.status(400).json({ error: maxLengthError('Narration', 1000) });
+    if (!isWithinMaxLength(referenceNo, 100)) return res.status(400).json({ error: maxLengthError('Reference number', 100) });
+    if (!isWithinMaxLength(chequeNo, 30)) return res.status(400).json({ error: maxLengthError('Cheque number', 30) });
 
     // SQA fix: previously `parseFloat(amount)`/`Number(amount)` with no
     // isNaN/upper-bound check, both here and in the update payload below.

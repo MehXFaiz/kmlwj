@@ -3,7 +3,10 @@ import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
+import { validateAmount } from "../_utils/amount.js";
+import { isValidTransactionDate } from "../_utils/date-range.js";
 const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };
+const ALLOWED_CATEGORIES = ["Zakat", "Fitra", "Membership Fee", "Bus Booking"];
 async function getIncomeAccountForCategory(category, tx) {
   let searchKeyword = category;
   if (/membership/i.test(category)) searchKeyword = "Membership";
@@ -143,9 +146,16 @@ var revenue_collections_default = makeHandler(async (req, res) => {
     if (!category || !title || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: "Missing required fields (category, title, amount, paymentMethod)", status: 400 } });
     }
-    const parsedAmount = parseFloat(amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      return res.status(400).json({ error: { message: "Amount must be greater than 0", status: 400 } });
+    if (!ALLOWED_CATEGORIES.includes(category)) {
+      return res.status(400).json({ error: { message: `Category must be one of: ${ALLOWED_CATEGORIES.join(", ")}`, status: 400 } });
+    }
+    const amountCheck = validateAmount(amount);
+    if (!amountCheck.valid) {
+      return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
+    }
+    const parsedAmount = amountCheck.amount;
+    if (eventDate !== void 0 && eventDate !== null && eventDate !== "" && !isValidTransactionDate(new Date(eventDate))) {
+      return res.status(400).json({ error: { message: "Event date is out of the acceptable range", status: 400 } });
     }
     if ((paymentMethod === "BANK" || paymentMethod === "CHEQUE") && !bankAccountId) {
       return res.status(400).json({ error: { message: "Bank account is required for Bank/Cheque payment methods", status: 400 } });
@@ -268,9 +278,16 @@ var revenue_collections_default = makeHandler(async (req, res) => {
     if (!category || !title || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: "Missing required fields (category, title, amount, paymentMethod)", status: 400 } });
     }
-    const parsedAmount = parseFloat(amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      return res.status(400).json({ error: { message: "Amount must be greater than 0", status: 400 } });
+    if (!ALLOWED_CATEGORIES.includes(category)) {
+      return res.status(400).json({ error: { message: `Category must be one of: ${ALLOWED_CATEGORIES.join(", ")}`, status: 400 } });
+    }
+    const amountCheck = validateAmount(amount);
+    if (!amountCheck.valid) {
+      return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
+    }
+    const parsedAmount = amountCheck.amount;
+    if (eventDate !== void 0 && eventDate !== null && eventDate !== "" && !isValidTransactionDate(new Date(eventDate))) {
+      return res.status(400).json({ error: { message: "Event date is out of the acceptable range", status: 400 } });
     }
     if ((paymentMethod === "BANK" || paymentMethod === "CHEQUE") && !bankAccountId) {
       return res.status(400).json({ error: { message: "Bank account is required for Bank/Cheque payment methods", status: 400 } });

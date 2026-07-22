@@ -65,6 +65,16 @@ export const TransferForm = () => {
       return;
     }
 
+    // SQA note: no check against the source account's available balance is
+    // performed here (client or server). This is intentionally left as-is —
+    // whether overdraft postings should be blocked for cash/bank accounts is
+    // a business-rule decision, and the accounts list this form consumes
+    // (GET /api/v1/accounts, via useCoaStore) doesn't currently expose
+    // currentBalance to the client at all, so a correct client-side check
+    // would first require broadening that shared endpoint's response — a
+    // change with its own blast radius across every other consumer of that
+    // list. Flagged for a follow-up, not fixed blind in this pass.
+
     const fromAcc = bankAccounts.find(a => a.id === fromBankAccountId);
     const toAcc = bankAccounts.find(a => a.id === toBankAccountId);
 

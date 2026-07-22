@@ -10,6 +10,22 @@ function generateVoucherNumber() {
   const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
   return `BR-${year}${month}-${randomStr}`;
 }
+function timingsConflict(existingTimings, requestedTimings) {
+  if (!requestedTimings || !existingTimings) return true;
+  if (existingTimings === "Full Day" || requestedTimings === "Full Day") return true;
+  return existingTimings === requestedTimings;
+}
+const HALL_BOOKING_STATUSES = ["Pending", "Confirmed", "POSTED", "Cancelled", "Refunded"];
+const ALLOWED_STATUS_TRANSITIONS = {
+  Pending: ["Pending", "Confirmed", "POSTED", "Cancelled", "Refunded"],
+  Confirmed: ["Confirmed", "POSTED", "Cancelled", "Refunded"],
+  POSTED: ["POSTED", "Cancelled", "Refunded"],
+  Cancelled: ["Cancelled"],
+  Refunded: ["Refunded"]
+};
+function isKnownStatus(value) {
+  return HALL_BOOKING_STATUSES.includes(value);
+}
 var hall_bookings_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -20,6 +36,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
       const hallId = req.query.hallId;
       const dateParam = req.query.bookingDate || req.query.programDate;
       const excludeId = req.query.excludeId;
+      const requestedTimings = req.query.timings;
       if (!hallId || !dateParam) {
         return res.status(400).json({ error: { message: "hallId and bookingDate (or programDate) are required parameters", status: 400 } });
       }
@@ -31,7 +48,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
       startOfDay.setUTCHours(0, 0, 0, 0);
       const endOfDay = new Date(parsedDate);
       endOfDay.setUTCHours(23, 59, 59, 999);
-      const conflictBooking = await prisma.hallBooking.findFirst({
+      const sameDayBookings = await prisma.hallBooking.findMany({
         where: {
           hallId,
           programDate: {
@@ -48,6 +65,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
           createdBy: true
         }
       });
+      const conflictBooking = sameDayBookings.find((b) => timingsConflict(b.timings, requestedTimings));
       if (conflictBooking) {
         const ipAddress = req.headers["x-forwarded-for"] || req.socket?.remoteAddress;
         await logAudit(
@@ -227,6 +245,19 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     if (!bookerName || !programDate || !hallId || rawHallCharges == null || !paymentMethod) {
       return res.status(400).json({ error: { message: "Missing required fields", status: 400 } });
     }
+    const parsedProgramDateForValidation = new Date(programDate);
+    if (isNaN(parsedProgramDateForValidation.getTime())) {
+      return res.status(400).json({ error: { message: "Invalid program date", status: 400 } });
+    }
+    const todayUtcStart = /* @__PURE__ */ new Date();
+    todayUtcStart.setUTCHours(0, 0, 0, 0);
+    if (parsedProgramDateForValidation < todayUtcStart) {
+      return res.status(400).json({ error: { message: "Program date cannot be in the past", status: 400 } });
+    }
+    const requestedCreateStatus = req.body.status;
+    if (requestedCreateStatus !== void 0 && !isKnownStatus(requestedCreateStatus)) {
+      return res.status(400).json({ error: { message: `Status must be one of: ${HALL_BOOKING_STATUSES.join(", ")}`, status: 400 } });
+    }
     const parsedHallCharges = parseFloat(rawHallCharges);
     if (isNaN(parsedHallCharges) || parsedHallCharges <= 0) {
       return res.status(400).json({ error: { message: "Hall Charges must be greater than 0", status: 400 } });
@@ -263,7 +294,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     startOfDay.setUTCHours(0, 0, 0, 0);
     const endOfDay = new Date(parsedProgDate);
     endOfDay.setUTCHours(23, 59, 59, 999);
-    const conflictBooking = await prisma.hallBooking.findFirst({
+    const sameDayBookings = await prisma.hallBooking.findMany({
       where: {
         hallId,
         programDate: {
@@ -278,6 +309,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         hallAccount: true
       }
     });
+    const conflictBooking = sameDayBookings.find((b) => timingsConflict(b.timings, timings));
     if (conflictBooking) {
       const ipAddress = req.headers["x-forwarded-for"] || req.socket?.remoteAddress;
       await logAudit(
@@ -298,17 +330,24 @@ var hall_bookings_default = makeHandler(async (req, res) => {
       );
       return res.status(409).json({
         success: false,
-        message: "This hall is already booked on the selected date. Please choose another date."
+        message: "This hall is already booked for the selected date and time slot. Please choose another date or time."
       });
     }
     try {
       const result = await prisma.$transaction(async (tx) => {
-        const count = await tx.hallBooking.count();
-        const nextReceiptNo = count + 1;
+        const sameDayInTx = await tx.hallBooking.findMany({
+          where: {
+            hallId,
+            programDate: { gte: startOfDay, lte: endOfDay },
+            status: { in: ["Confirmed", "Pending", "POSTED"] }
+          }
+        });
+        if (sameDayInTx.some((b) => timingsConflict(b.timings, timings))) {
+          throw Object.assign(new Error("This hall is already booked for the selected date and time slot. Please choose another date or time."), { status: 409 });
+        }
         const newBooking = await tx.hallBooking.create({
           data: {
             bookingDate: bookingDate ? new Date(bookingDate) : void 0,
-            receiptNo: nextReceiptNo,
             bookerName,
             fatherHusbandName: fatherHusbandName || null,
             address: address || null,
@@ -343,7 +382,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
           }
         });
         return newBooking;
-      });
+      }, { isolationLevel: "Serializable" });
       await logAudit(req.user.id, "Create & Post Hall Booking", "REVENUE", null, result, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(201).json({ status: 201, data: result });
     } catch (err) {
@@ -453,6 +492,25 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     if (!bookerName || !programDate || !hallId || rawHallCharges == null || !paymentMethod) {
       return res.status(400).json({ error: { message: "Missing required fields", status: 400 } });
     }
+    const parsedProgramDateForValidationPut = new Date(programDate);
+    if (isNaN(parsedProgramDateForValidationPut.getTime())) {
+      return res.status(400).json({ error: { message: "Invalid program date", status: 400 } });
+    }
+    const todayUtcStartPut = /* @__PURE__ */ new Date();
+    todayUtcStartPut.setUTCHours(0, 0, 0, 0);
+    if (parsedProgramDateForValidationPut < todayUtcStartPut) {
+      return res.status(400).json({ error: { message: "Program date cannot be in the past", status: 400 } });
+    }
+    const requestedUpdateStatus = req.body.status;
+    if (requestedUpdateStatus !== void 0 && !isKnownStatus(requestedUpdateStatus)) {
+      return res.status(400).json({ error: { message: `Status must be one of: ${HALL_BOOKING_STATUSES.join(", ")}`, status: 400 } });
+    }
+    if (requestedUpdateStatus !== void 0 && isKnownStatus(existingBooking.status)) {
+      const allowedNext = ALLOWED_STATUS_TRANSITIONS[existingBooking.status];
+      if (!allowedNext.includes(requestedUpdateStatus)) {
+        return res.status(400).json({ error: { message: `Cannot change booking status from '${existingBooking.status}' to '${requestedUpdateStatus}'.`, status: 400 } });
+      }
+    }
     const parsedHallCharges = parseFloat(rawHallCharges);
     if (isNaN(parsedHallCharges) || parsedHallCharges <= 0) {
       return res.status(400).json({ error: { message: "Hall Charges must be greater than 0", status: 400 } });
@@ -482,7 +540,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     startOfDay.setUTCHours(0, 0, 0, 0);
     const endOfDay = new Date(parsedProgDate);
     endOfDay.setUTCHours(23, 59, 59, 999);
-    const conflictBooking = await prisma.hallBooking.findFirst({
+    const sameDayBookingsForUpdate = await prisma.hallBooking.findMany({
       where: {
         hallId,
         programDate: {
@@ -498,6 +556,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         hallAccount: true
       }
     });
+    const conflictBooking = sameDayBookingsForUpdate.find((b) => timingsConflict(b.timings, timings));
     if (conflictBooking) {
       const ipAddress = req.headers["x-forwarded-for"] || req.socket?.remoteAddress;
       await logAudit(
@@ -518,7 +577,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
       );
       return res.status(409).json({
         success: false,
-        message: "This hall is already booked on the selected date. Please choose another date."
+        message: "This hall is already booked for the selected date and time slot. Please choose another date or time."
       });
     }
     try {
