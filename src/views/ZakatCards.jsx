@@ -753,7 +753,18 @@ export const ZakatCards = () => {
           card={previewCard}
           onClose={() => setPreviewCard(null)}
           onPrint={printSingle}
+          onPrintPvc={(c) => { setPreviewCard(null); setPvcPrintCard(c); }}
           onCopyQr={copyQrLink}
+        />
+      )}
+
+      {/* Dedicated PVC card print view */}
+      {pvcPrintCard && (
+        <PvcCardPrintView
+          isOpen={true}
+          variant="zakat"
+          data={pvcPrintCard}
+          onClose={() => setPvcPrintCard(null)}
         />
       )}
 
