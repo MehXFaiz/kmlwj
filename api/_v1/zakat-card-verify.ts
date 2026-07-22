@@ -18,6 +18,9 @@ export async function zakatCardVerifyHandler(req: Request, res: Response) {
   }
 
   try {
+    // SQA fix: this endpoint is public and unauthenticated — it must never
+    // return identity-verification-grade PII (father's name, area/town/city)
+    // even though CNIC is masked. Only card-authenticity fields are selected.
     const card = await prisma.zakatCard.findUnique({
       where: { cardNumber },
       select: {
@@ -29,11 +32,8 @@ export async function zakatCardVerifyHandler(req: Request, res: Response) {
           select: {
             memberNo:   true,
             fullName:   true,
-            fatherName: true,
             cnic:       true,
             ghamName:   true,
-            area:       true,
-            city:       true,
             isActive:   true,
           },
         },
@@ -41,8 +41,6 @@ export async function zakatCardVerifyHandler(req: Request, res: Response) {
           select: {
             name:    true,
             cnic:    true,
-            area:    true,
-            town:    true,
             gham:    true,
             isActive: true,
           },
@@ -78,11 +76,8 @@ export async function zakatCardVerifyHandler(req: Request, res: Response) {
         zakatAmount: card.zakatAmount,
         issueDate:   card.issueDate,
         holderName:  displayName,
-        fatherName:  card.member?.fatherName || null,
         cnic:        maskedCnic,
-        area:        card.beneficiary?.area || card.member?.area || null,
         gham:        card.beneficiary?.gham || card.member?.ghamName || null,
-        city:        card.member?.city || null,
         memberNo:    card.member?.memberNo || null,
       },
     });

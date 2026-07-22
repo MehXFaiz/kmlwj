@@ -5,6 +5,20 @@ import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { logger } from '../_utils/logger.js';
 
+function trimOrNull(v: unknown): string | null {
+  if (v === undefined || v === null) return null;
+  const trimmed = String(v).trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+// PUT distinguishes "field omitted" (undefined, don't touch) from "field
+// explicitly cleared" (empty/null) — this preserves that distinction while
+// still trimming whatever was actually provided.
+function trimIfProvided(v: unknown): string | null | undefined {
+  if (v === undefined) return undefined;
+  return trimOrNull(v);
+}
+
 // ── Membership number generation ─────────────────────────────────────────────
 // Format: KML-0001, KML-0002, … Unique (DB constraint) and immutable: generated
 // exactly once — at registration, or lazily backfilled for legacy members that
@@ -104,11 +118,28 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'POST') {
-    const {
+    let {
       memberNo, fullName, fatherName, cnic, dob, address, mobile,
       email, city, area, ghamName, education, profession, company, doi,
       photoUrl, cnicFrontUrl, cnicBackUrl, isActive
     } = req.body;
+
+    // SQA fix: trim free-text fields before validation/persistence. Previously
+    // only emptiness was checked (`fullName.trim()`) but the untrimmed value
+    // was stored, producing visually-duplicate records and extra whitespace
+    // on printed cards.
+    fullName   = trimOrNull(fullName);
+    fatherName = trimOrNull(fatherName);
+    cnic       = trimOrNull(cnic);
+    address    = trimOrNull(address);
+    mobile     = trimOrNull(mobile);
+    email      = trimOrNull(email);
+    city       = trimOrNull(city);
+    area       = trimOrNull(area);
+    ghamName   = trimOrNull(ghamName);
+    education  = trimOrNull(education);
+    profession = trimOrNull(profession);
+    company    = trimOrNull(company);
 
     if (!fullName || !String(fullName).trim()) {
       return res.status(400).json({ error: { message: 'Full Member Name is required', status: 400 } });
@@ -209,11 +240,26 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(404).json({ error: { message: 'Member not found', status: 404 } });
     }
 
-    const {
+    let {
       memberNo, fullName, fatherName, cnic, dob, address, mobile,
       email, city, area, ghamName, education, profession, company, doi,
       photoUrl, cnicFrontUrl, cnicBackUrl, isActive
     } = req.body;
+
+    // SQA fix: trim free-text fields before validation/persistence (see the
+    // POST handler above for the same fix and rationale).
+    fullName   = trimIfProvided(fullName);
+    fatherName = trimIfProvided(fatherName);
+    cnic       = trimIfProvided(cnic);
+    address    = trimIfProvided(address);
+    mobile     = trimIfProvided(mobile);
+    email      = trimIfProvided(email);
+    city       = trimIfProvided(city);
+    area       = trimIfProvided(area);
+    ghamName   = trimIfProvided(ghamName);
+    education  = trimIfProvided(education);
+    profession = trimIfProvided(profession);
+    company    = trimIfProvided(company);
 
     if (fullName !== undefined && !String(fullName).trim()) {
       return res.status(400).json({ error: { message: 'Full Member Name is required', status: 400 } });

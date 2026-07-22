@@ -22,23 +22,24 @@ export async function memberVerifyHandler(req: Request, res: Response) {
   }
 
   try {
+    // SQA fix: this endpoint is public and unauthenticated — it must never
+    // return identity-verification-grade PII (date of birth, father's name,
+    // area/city/address) even though CNIC is masked. Anyone with the QR code
+    // or URL can call this, so only card-authenticity fields are selected.
+    // NEVER expose: id, mobile, email, education, profession, company,
+    // password, dob, fatherName, area, city, address, etc.
+
     // Try memberNo first (what QR embeds), then UUID id
     let member = await prisma.member.findUnique({
       where: { memberNo: id },
       select: {
         memberNo:   true,
         fullName:   true,
-        fatherName: true,
         cnic:       true,
-        dob:        true,
         ghamName:   true,
-        area:       true,
-        city:       true,
-        address:    true,
         doi:        true,
         photoUrl:   true,
         isActive:   true,
-        // NEVER expose: id, mobile, email, education, profession, company, password etc.
       }
     });
 
@@ -51,13 +52,8 @@ export async function memberVerifyHandler(req: Request, res: Response) {
           select: {
             memberNo:   true,
             fullName:   true,
-            fatherName: true,
             cnic:       true,
-            dob:        true,
             ghamName:   true,
-            area:       true,
-            city:       true,
-            address:    true,
             doi:        true,
             photoUrl:   true,
             isActive:   true,
@@ -87,12 +83,8 @@ export async function memberVerifyHandler(req: Request, res: Response) {
       member: {
         memberNo:     member.memberNo,
         fullName:     member.fullName,
-        fatherName:   member.fatherName || null,
         cnic:         maskedCnic,
-        dob:          member.dob || null,
         ghamName:     member.ghamName || null,
-        area:         member.area || null,
-        city:         member.city || null,
         doi:          member.doi || null,
         photoUrl:     member.photoUrl || null,
         isActive:     member.isActive,

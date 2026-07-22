@@ -56,6 +56,11 @@ export const Settings = () => {
       return;
     }
 
+    if (!/[a-z]/.test(newPassword) || !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      setPasswordError('New password must include an uppercase letter, a lowercase letter, and a digit');
+      return;
+    }
+
     if (newPassword !== confirmPassword) {
       setPasswordError('New passwords do not match');
       return;
@@ -125,13 +130,13 @@ export const Settings = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">New Password (Min 8 chars)</label>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">New Password (Min 8 chars, upper + lower + digit)</label>
                   <input
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    pattern="^.{8,}$"
-                    title="Password must be at least 8 characters long."
+                    pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).{8,}$"
+                    title="Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, and a digit."
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 text-sm transition-all font-medium"
                     required
                   />
@@ -143,8 +148,8 @@ export const Settings = () => {
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    pattern="^.{8,}$"
-                    title="Password must be at least 8 characters long."
+                    pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).{8,}$"
+                    title="Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, and a digit."
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 text-sm transition-all font-medium"
                     required
                   />

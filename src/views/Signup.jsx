@@ -172,10 +172,10 @@ export const Signup = () => {
                   id="signup-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  pattern="^.{8,}$"
-                  title="Password must be at least 8 characters long."
+                  pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).{8,}$"
+                  title="Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, and a digit."
                   className="w-full pl-10 pr-11 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 text-sm transition-all duration-200 font-medium"
-                  placeholder="Min 8 characters"
+                  placeholder="Min 8 chars, upper + lower + digit"
                   autoComplete="new-password"
                   required
                 />

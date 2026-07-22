@@ -294,7 +294,6 @@ function VerifiedCard({ member, verifiedAt }) {
           }}>
             {[
               { icon: '🪪', label: 'CNIC',          value: member.cnic || '—' },
-              { icon: '📅', label: 'Date of Birth',  value: fmtDate(member.dob) },
               { icon: '🕌', label: 'Jamaat / Area',  value: jamie },
               { icon: '🗓️', label: 'Issue Date',     value: fmtDate(member.doi) },
             ].map(({ icon, label, value }, i, arr) => (

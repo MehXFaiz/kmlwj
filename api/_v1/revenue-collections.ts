@@ -4,8 +4,25 @@ import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middlewar
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
+import { validateAmount } from '../_utils/amount.js';
 
 const accountingTxOptions = { maxWait: 10000, timeout: 30000 };
+
+// SQA fix: `category` previously accepted any free-form string with only a
+// non-empty check — a caller bypassing the UI dropdown (e.g. direct API call)
+// could create records under fabricated categories that break category-based
+// reporting (CategorizedRevenues.jsx groups by exactly this fixed set).
+const ALLOWED_CATEGORIES = ['Zakat', 'Fitra', 'Membership Fee', 'Bus Booking'];
+
+// SQA fix: eventDate had no range validation — a date decades in the past or
+// far in the future would be accepted and posted to the ledger unchecked.
+const MIN_EVENT_DATE = new Date('1980-01-01'); // earliest plausible record date
+function isValidEventDate(d: Date): boolean {
+  if (isNaN(d.getTime())) return false;
+  const oneYearFromNow = new Date();
+  oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+  return d >= MIN_EVENT_DATE && d <= oneYearFromNow;
+}
 
 async function getIncomeAccountForCategory(category: string, tx: any) {
   let searchKeyword = category;
@@ -177,9 +194,16 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if (!category || !title || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: 'Missing required fields (category, title, amount, paymentMethod)', status: 400 } });
     }
-    const parsedAmount = parseFloat(amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      return res.status(400).json({ error: { message: 'Amount must be greater than 0', status: 400 } });
+    if (!ALLOWED_CATEGORIES.includes(category)) {
+      return res.status(400).json({ error: { message: `Category must be one of: ${ALLOWED_CATEGORIES.join(', ')}`, status: 400 } });
+    }
+    const amountCheck = validateAmount(amount);
+    if (!amountCheck.valid) {
+      return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
+    }
+    const parsedAmount = amountCheck.amount;
+    if (eventDate !== undefined && eventDate !== null && eventDate !== '' && !isValidEventDate(new Date(eventDate))) {
+      return res.status(400).json({ error: { message: 'Event date is out of the acceptable range', status: 400 } });
     }
     if ((paymentMethod === 'BANK' || paymentMethod === 'CHEQUE') && !bankAccountId) {
       return res.status(400).json({ error: { message: 'Bank account is required for Bank/Cheque payment methods', status: 400 } });

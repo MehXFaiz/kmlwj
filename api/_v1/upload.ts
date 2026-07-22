@@ -26,6 +26,36 @@ const FIELD_KEY: Record<string, string> = {
   cnicBack:  'cnicBackUrl',
 };
 
+// SQA fix: this local-disk path previously accepted any file type/size "by
+// design" and derived the saved filename's extension from the client-supplied
+// original filename — a renamed .html/.php/.exe would be written to disk with
+// that extension and served back from /uploads, a same-origin stored-content
+// risk. Content is now sniffed by magic bytes (not trusted mimetype/filename)
+// against an image allowlist, and the saved extension is always derived from
+// the detected type. The production path (Cloudinary, see upload-sign.ts)
+// already restricts to images via its /image/upload endpoint.
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB per file
+
+type SniffedImageType = { ext: string; mime: string };
+
+function sniffImageType(buffer: Buffer): SniffedImageType | null {
+  if (buffer.length < 12) return null;
+
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return { ext: '.jpg', mime: 'image/jpeg' };
+  }
+  if (buffer.slice(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    return { ext: '.png', mime: 'image/png' };
+  }
+  if (buffer.slice(0, 6).toString('ascii') === 'GIF87a' || buffer.slice(0, 6).toString('ascii') === 'GIF89a') {
+    return { ext: '.gif', mime: 'image/gif' };
+  }
+  if (buffer.slice(0, 4).toString('ascii') === 'RIFF' && buffer.slice(8, 12).toString('ascii') === 'WEBP') {
+    return { ext: '.webp', mime: 'image/webp' };
+  }
+  return null;
+}
+
 function assertWritableEnvironment(): void {
   if (process.env.VERCEL) {
     const missingVars = [
@@ -50,7 +80,7 @@ function assertWritableEnvironment(): void {
   }
 }
 
-function saveLocally(buffer: Buffer, originalname: string, field: string): string {
+function saveLocally(buffer: Buffer, ext: string, field: string): string {
   const uploadsDir = path.join(process.cwd(), 'uploads', 'members');
 
   logger.info({ field, uploadsDir }, 'Ensuring upload directory exists');
@@ -61,7 +91,6 @@ function saveLocally(buffer: Buffer, originalname: string, field: string): strin
     throw err;
   }
 
-  const ext      = path.extname(originalname).toLowerCase().replace(/[^.a-z0-9]/gi, '') || '.bin';
   const safeName = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${ext}`;
   const fullPath = path.join(uploadsDir, safeName);
 
@@ -149,7 +178,23 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         size: file.size,
       }, 'Processing uploaded file');
 
-      const url = saveLocally(file.buffer, file.originalname, field);
+      if (file.size > MAX_IMAGE_BYTES) {
+        const err: any = new Error(`"${field}" is too large. Maximum allowed size is ${MAX_IMAGE_BYTES / (1024 * 1024)}MB.`);
+        err.status = 413;
+        throw err;
+      }
+
+      // Validate by content (magic bytes), never by client-supplied filename
+      // or mimetype header — both are trivially spoofable.
+      const sniffed = sniffImageType(file.buffer);
+      if (!sniffed) {
+        logger.warn({ field, originalname: file.originalname, mimetype: file.mimetype }, 'Rejected upload — not a recognized image format');
+        const err: any = new Error(`"${field}" must be a JPEG, PNG, GIF, or WEBP image.`);
+        err.status = 400;
+        throw err;
+      }
+
+      const url = saveLocally(file.buffer, sniffed.ext, field);
       savedUrls.push(url);
 
       const key = FIELD_KEY[field] ?? field;

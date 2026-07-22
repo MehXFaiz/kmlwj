@@ -4,6 +4,11 @@ import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middlewar
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
+import { validateAmount } from '../_utils/amount.js';
+
+function isUniqueViolation(err: any): boolean {
+  return err?.code === 'P2002';
+}
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
@@ -111,10 +116,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Custom Donation Type is required when CUSTOM is selected', status: 400 } });
     }
 
-    const parsedAmount = Math.round(parseFloat(amount) * 100) / 100;
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      return res.status(400).json({ error: { message: 'Amount must be a positive number', status: 400 } });
+    const amountCheck = validateAmount(amount);
+    if (!amountCheck.valid) {
+      return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
     }
+    const parsedAmount = amountCheck.amount;
 
     const donor = await prisma.donor.findUnique({ where: { id: donorId } });
     if (!donor) {
@@ -142,65 +148,93 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       }
     }
 
-    // Auto generate receiptNo e.g. REC-2026-0001
     const year = new Date().getFullYear();
-    const count = await prisma.donationReceived.count();
-    const nextNum = (count + 1).toString().padStart(4, '0');
-    const receiptNo = `REC-${year}-${nextNum}`;
+    const receiptPrefix = `REC-${year}-`;
+
+    // SQA fix: receiptNo previously derived from `count()`, read outside any
+    // transaction — two concurrent submissions can read the same count before
+    // either commits, generating the same number. The second create() then
+    // throws an unhandled unique-constraint error. Generation now uses the
+    // max existing numeric suffix (not count, so a deleted receipt can't cause
+    // number reuse) and the whole transaction retries on a rare collision.
+    async function nextReceiptNo(tx: any): Promise<string> {
+      const existing = await tx.donationReceived.findMany({
+        where: { receiptNo: { startsWith: receiptPrefix } },
+        select: { receiptNo: true },
+      });
+      const maxNum = existing.reduce((max: number, r: { receiptNo: string }) => {
+        const n = parseInt(r.receiptNo.slice(receiptPrefix.length), 10);
+        return Number.isFinite(n) && n > max ? n : max;
+      }, 0);
+      return `${receiptPrefix}${String(maxNum + 1).padStart(4, '0')}`;
+    }
 
     const txStatus = status === 'POSTED' ? 'POSTED' : 'DRAFT';
 
-    const result = await prisma.$transaction(async (tx) => {
-      let journalEntryId: string | null = null;
+    let result: any;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        result = await prisma.$transaction(async (tx) => {
+          const receiptNo = await nextReceiptNo(tx);
+          let journalEntryId: string | null = null;
 
-      if (txStatus === 'POSTED') {
-        const postingResult = await AccountingService.postReceipt(tx, {
-          amount: parsedAmount,
-          cashOrBankAccountId: debitAccountId!,
-          incomeAccountKeyword: donationType === 'CUSTOM' ? 'General Donation' : donationType,
-          reference: receiptNo,
-          description: narration || `Received ${donationType === 'CUSTOM' ? customDonationType : donationType} from ${donor.fullName} (${donor.donorCode})`,
-          module: 'Donations Received',
-          postedBy: req.user!.id,
-          postingDate: receiptDate || new Date(),
-          ipAddress: req.headers['x-forwarded-for'] as string,
-          userAgent: req.headers['user-agent'] as string,
-          voucherType: 'BR'
+          if (txStatus === 'POSTED') {
+            const postingResult = await AccountingService.postReceipt(tx, {
+              amount: parsedAmount,
+              cashOrBankAccountId: debitAccountId!,
+              incomeAccountKeyword: donationType === 'CUSTOM' ? 'General Donation' : donationType,
+              reference: receiptNo,
+              description: narration || `Received ${donationType === 'CUSTOM' ? customDonationType : donationType} from ${donor.fullName} (${donor.donorCode})`,
+              module: 'Donations Received',
+              postedBy: req.user!.id,
+              postingDate: receiptDate || new Date(),
+              ipAddress: req.headers['x-forwarded-for'] as string,
+              userAgent: req.headers['user-agent'] as string,
+              voucherType: 'BR'
+            });
+            if (postingResult && postingResult.journalEntry) {
+              journalEntryId = postingResult.journalEntry.id;
+            }
+          }
+
+          const newReceipt = await tx.donationReceived.create({
+            data: {
+              receiptNo,
+              receiptDate: receiptDate ? new Date(receiptDate) : new Date(),
+              donorId,
+              donationType,
+              customDonationType: donationType === 'CUSTOM' ? customDonationType : null,
+              amount: parsedAmount,
+              paymentMethod,
+              cashAccountId: paymentMethod === 'CASH' ? debitAccountId : null,
+              bankAccountId: paymentMethod !== 'CASH' ? debitAccountId : null,
+              chequeNo: chequeNo || null,
+              chequeDate: chequeDate ? new Date(chequeDate) : null,
+              referenceNo: referenceNo || null,
+              narration: narration || null,
+              journalEntryId,
+              status: txStatus,
+              createdById: req.user!.id
+            },
+            include: {
+              donor: true,
+              cashAccount: true,
+              bankAccount: true,
+              journalEntry: true
+            }
+          });
+
+          return newReceipt;
         });
-        if (postingResult && postingResult.journalEntry) {
-          journalEntryId = postingResult.journalEntry.id;
+        break;
+      } catch (err: any) {
+        if (isUniqueViolation(err) && attempt < 5 &&
+            (err.meta?.target as string[] | undefined)?.includes('receiptNo')) {
+          continue;
         }
+        throw err;
       }
-
-      const newReceipt = await tx.donationReceived.create({
-        data: {
-          receiptNo,
-          receiptDate: receiptDate ? new Date(receiptDate) : new Date(),
-          donorId,
-          donationType,
-          customDonationType: donationType === 'CUSTOM' ? customDonationType : null,
-          amount: parsedAmount,
-          paymentMethod,
-          cashAccountId: paymentMethod === 'CASH' ? debitAccountId : null,
-          bankAccountId: paymentMethod !== 'CASH' ? debitAccountId : null,
-          chequeNo: chequeNo || null,
-          chequeDate: chequeDate ? new Date(chequeDate) : null,
-          referenceNo: referenceNo || null,
-          narration: narration || null,
-          journalEntryId,
-          status: txStatus,
-          createdById: req.user!.id
-        },
-        include: {
-          donor: true,
-          cashAccount: true,
-          bankAccount: true,
-          journalEntry: true
-        }
-      });
-
-      return newReceipt;
-    });
+    }
 
     await logAudit(req.user.id, 'Create Donation Received', 'DONATION_RECEIVED', null, result, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
@@ -222,6 +256,17 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const finalCustomType = customDonationType !== undefined ? customDonationType : existing.customDonationType;
     if (finalDonationType === 'CUSTOM' && (!finalCustomType || !finalCustomType.trim())) {
       return res.status(400).json({ error: { message: 'Custom Donation Type is required when CUSTOM is selected', status: 400 } });
+    }
+
+    // SQA fix: previously `parseFloat(amount)`/`Number(amount)` with no
+    // isNaN/upper-bound check, both here and in the update payload below.
+    let parsedAmount: number | undefined;
+    if (amount !== undefined) {
+      const amountCheck = validateAmount(amount);
+      if (!amountCheck.valid) {
+        return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
+      }
+      parsedAmount = amountCheck.amount;
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -246,7 +291,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         }
 
         if (debitAccountId) {
-          const updatedAmount = amount !== undefined ? parseFloat(amount) : existing.amount;
+          const updatedAmount = parsedAmount !== undefined ? parsedAmount : existing.amount;
           const updatedType = donationType !== undefined ? donationType : existing.donationType;
           const updatedCustomType = customDonationType !== undefined ? customDonationType : existing.customDonationType;
           const updatedNarration = narration !== undefined ? narration : existing.narration;
@@ -289,7 +334,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           referenceNo: referenceNo !== undefined ? (referenceNo || null) : undefined,
           chequeNo: chequeNo !== undefined ? (chequeNo || null) : undefined,
           chequeDate: chequeDate !== undefined ? (chequeDate ? new Date(chequeDate) : null) : undefined,
-          amount: amount !== undefined ? Math.round(Number(amount) * 100) / 100 : undefined,
+          amount: parsedAmount !== undefined ? parsedAmount : undefined,
           donorId: donorId !== undefined ? donorId : undefined,
           donationType: donationType !== undefined ? donationType : undefined,
           customDonationType: donationType !== undefined

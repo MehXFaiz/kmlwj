@@ -84,21 +84,27 @@ export async function register(data: any) {
 
 export async function login(data: any) {
   const normalizedEmail = normalizeEmail(data.email);
-  logger.info({ email: normalizedEmail }, 'Login email received');
 
   let user = await prisma.user.findUnique({
     where: { email: normalizedEmail },
     include: { role: true },
   });
 
-  logger.info({ email: normalizedEmail, userFound: Boolean(user) }, 'User lookup result');
+  // SQA fix: do not log the submitted email, whether the user exists, or the
+  // outcome of the password comparison — these logs previously created a
+  // persistent, queryable trail of which emails are registered and whether
+  // login attempts against them succeeded (user-enumeration via logs).
 
-  if (normalizedEmail === 'guest@erp.com') {
+  const isGuestLogin = normalizedEmail === 'guest@erp.com';
+
+  if (isGuestLogin) {
     if (process.env.GUEST_MODE !== 'true') {
-      throw { status: 403, message: 'Guest access is disabled' };
+      throw { status: 401, message: 'Invalid credentials' };
     }
     if (!user) {
-      // Automatically register the guest user if they don't exist
+      // Automatically register the guest user if they don't exist.
+      // Guest access is intentionally passwordless — it is gated entirely
+      // behind the admin-controlled GUEST_MODE env flag, which defaults off.
       const auditorRole = await prisma.role.findUnique({ where: { name: 'Auditor' } });
       const hashedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);
       user = await prisma.user.create({
@@ -112,29 +118,27 @@ export async function login(data: any) {
         include: { role: true },
       });
     }
+    logger.info({ userId: user.id }, 'Guest login used (GUEST_MODE enabled)');
   } else {
-    if (!user) {
-      logger.warn({ email: normalizedEmail }, 'Login attempted with unknown email');
+    // SQA fix: unknown user, wrong password, and deactivated account now all
+    // return the exact same generic 401 — previously a deactivated account
+    // returned a distinct 403 message, letting an attacker enumerate which
+    // emails correspond to real (if inactive) accounts. Deactivation state
+    // is still fully enforced; it's just no longer disclosed to the caller.
+    if (!user || !user.isActive) {
       throw { status: 401, message: 'Invalid credentials' };
     }
 
-    if (!user.isActive) {
-      throw { status: 403, message: 'This account has been deactivated' };
-    }
-
     const matches = await bcrypt.compare(data.password, user.password);
-    logger.info({ userId: user.id, passwordComparison: matches }, 'Password comparison result');
     if (!matches) {
       throw { status: 401, message: 'Invalid credentials' };
     }
   }
 
-  // Ensure active check for guest as well if they existed
   if (!user.isActive) {
-    throw { status: 403, message: 'This account has been deactivated' };
+    throw { status: 401, message: 'Invalid credentials' };
   }
 
-  logger.info({ userId: user.id, role: user.role.name }, 'JWT generation');
   const accessToken = generateAccessToken(user.id, user.email, user.role.name);
   const refreshTokenStr = generateRefreshTokenString();
 
@@ -221,6 +225,11 @@ export async function rotateTokens(refreshTokenStr: string) {
   };
 }
 
+// SQA note: logout revokes the refresh token immediately, but the short-lived
+// (15 min) access token is a stateless JWT with no server-side denylist, so a
+// token captured before logout remains valid until it naturally expires. This
+// is an accepted trade-off given the short expiry; the same revoke-refresh-
+// tokens pattern is applied consistently on password change/reset.
 export async function logout(refreshTokenStr: string) {
   const tokenRecord = await prisma.refreshToken.findUnique({
     where: { token: refreshTokenStr },

@@ -1,10 +1,10 @@
 import multer, { MulterError } from 'multer';
 import type { Request, Response, NextFunction } from 'express';
 
-// No file-type or per-field size restrictions by design — any file the user
-// selects is accepted. The single cap below exists purely as an operational
-// safeguard: uploads are buffered in memory (multer.memoryStorage()), so an
-// unbounded upload could exhaust server memory. It is not a validation rule.
+// This multer-level cap is a generous operational ceiling only — uploads are
+// buffered in memory (multer.memoryStorage()), so an unbounded upload could
+// exhaust server memory. The actual file-type (magic-byte) and per-field size
+// validation lives in api/_v1/upload.ts, at the point the file is consumed.
 const MEMORY_SAFETY_CAP_BYTES = 100 * 1024 * 1024; // 100 MB
 
 const upload = multer({

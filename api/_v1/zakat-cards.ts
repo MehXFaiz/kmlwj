@@ -6,10 +6,28 @@ import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
 import { createNotification } from '../_utils/notify.js';
 
-async function generateCardNumber(tx: any): Promise<string> {
-  const count = await tx.zakatCard.count();
-  const seq = (count + 1).toString().padStart(6, '0');
-  return `ZK-${seq}`;
+const CARD_NO_PREFIX = 'ZK-';
+
+// SQA fix: previously derived from `count()`, which (a) races under concurrent
+// issuance — two transactions can read the same count before either commits —
+// and (b) reuses numbers after a card is deleted, since the count shrinks.
+// Deriving from the max existing numeric suffix avoids the reuse-after-delete
+// issue; the retry-on-unique-violation loop in the POST handler covers the
+// remaining race window.
+async function nextCardNumber(tx: any): Promise<string> {
+  const existing = await tx.zakatCard.findMany({
+    where: { cardNumber: { startsWith: CARD_NO_PREFIX } },
+    select: { cardNumber: true },
+  });
+  const maxNum = existing.reduce((max: number, c: { cardNumber: string }) => {
+    const n = parseInt(c.cardNumber.slice(CARD_NO_PREFIX.length), 10);
+    return Number.isFinite(n) && n > max ? n : max;
+  }, 0);
+  return `${CARD_NO_PREFIX}${String(maxNum + 1).padStart(6, '0')}`;
+}
+
+function isUniqueViolation(err: any): boolean {
+  return err?.code === 'P2002';
 }
 
 async function resolveZakatExpenseAccount(tx: any) {
@@ -148,8 +166,24 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Bank account is required for Bank/Cheque payments', status: 400 } });
     }
 
-    const result = await prisma.$transaction(async (tx: any) => {
-      const cardNumber = await generateCardNumber(tx);
+    let result: any;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        result = await prisma.$transaction(async (tx: any) => {
+          return runIssuance(tx);
+        });
+        break;
+      } catch (err: any) {
+        if (isUniqueViolation(err) && attempt < 5 &&
+            (err.meta?.target as string[] | undefined)?.includes('cardNumber')) {
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    async function runIssuance(tx: any) {
+      const cardNumber = await nextCardNumber(tx);
 
       const zakatAccount = await resolveZakatExpenseAccount(tx);
       if (!zakatAccount) {
@@ -170,13 +204,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       // Zakat disbursement: Debit Zakat Expense, Credit Cash/Bank
       const postingResult = await AccountingService.postTransaction(tx, {
         reference: cardNumber,
-        description: `Zakat Card issued to ${beneficiary.name} (${cardNumber})`,
+        description: `Zakat Card issued to ${beneficiary!.name} (${cardNumber})`,
         module: 'Zakat Card',
         voucherType: 'JV',
         postedBy: req.user!.id,
         postingDate: issueDate ? new Date(issueDate) : new Date(),
         lines: [
-          { accountId: zakatAccount.id, debit: parsedAmount, credit: 0, description: `Zakat disbursement - ${beneficiary.name}` },
+          { accountId: zakatAccount.id, debit: parsedAmount, credit: 0, description: `Zakat disbursement - ${beneficiary!.name}` },
           { accountId: debitAccountId, debit: 0, credit: parsedAmount, description: `Zakat payment - ${cardNumber}` },
         ],
         ipAddress: req.headers['x-forwarded-for'] as string,
@@ -199,7 +233,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       });
 
       return card;
-    });
+    }
 
     await logAudit(
       req.user.id, 'Issue Zakat Card', 'ZAKAT_CARD',

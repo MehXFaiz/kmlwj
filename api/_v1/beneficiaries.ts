@@ -30,7 +30,10 @@ function pickData(body: any, isCreate: boolean) {
     } else if (['monthlyIncome', 'monthlyExpenses', 'debtAmount'].includes(key)) {
       data[key] = val || val === 0 ? parseFloat(val) : null;
     } else {
-      data[key] = val || null;
+      // SQA fix: trim free-text fields before persistence — previously stored
+      // verbatim (only emptiness was checked), producing visually-duplicate
+      // records and extra whitespace on printed output.
+      data[key] = typeof val === 'string' ? (val.trim() || null) : (val || null);
     }
   }
   return data;

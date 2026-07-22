@@ -6,6 +6,9 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Refresh token now lives in an httpOnly cookie (see authService.js) — it
+  // must be sent automatically by the browser on every request.
+  withCredentials: true,
 });
 
 // Request interceptor to attach token
@@ -55,20 +58,13 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = tokenStorage.getRefreshToken();
-      if (!refreshToken) {
-        isRefreshing = false;
-        tokenStorage.clear();
-        window.dispatchEvent(new Event('auth_session_expired'));
-        return Promise.reject(error);
-      }
-
       try {
-        const res = await axios.post('/api/auth/refresh', { refreshToken });
-        const { accessToken, refreshToken: newRefreshToken } = res.data.data;
+        // The refresh token travels via the httpOnly cookie automatically —
+        // no token is read from or written to localStorage here.
+        const res = await axios.post('/api/auth/refresh', {}, { withCredentials: true });
+        const { accessToken } = res.data.data;
 
         tokenStorage.setAccessToken(accessToken);
-        tokenStorage.setRefreshToken(newRefreshToken);
 
         api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
         originalRequest.headers['Authorization'] = `Bearer ${accessToken}`;

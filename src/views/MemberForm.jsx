@@ -12,9 +12,14 @@ import {
 } from 'lucide-react';
 
 // ── Single image upload widget ────────────────────────────────────────────────
-// No file-type, size, or dimension restrictions — any file the user selects
-// is uploaded as-is. Validation, if ever needed, belongs at the point where
-// the file is actually consumed (e.g. card printing), not here.
+// The authoritative check is server-side (magic-byte sniffing in
+// api/_v1/upload.ts, and Cloudinary's /image/upload endpoint in production) —
+// a client can never be trusted to self-report file type/size correctly. This
+// client-side check only gives immediate feedback for the common case,
+// avoiding an unnecessary round trip for an obviously wrong file.
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const MAX_CLIENT_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB, matches the server-side cap
+
 function ImageUploadField({ label, fieldName, currentUrl, onUploaded, onError }) {
   const [preview, setPreview]     = useState(currentUrl || null);
   const [progress, setProgress]   = useState(null);   // null | 0-100
@@ -33,6 +38,19 @@ function ImageUploadField({ label, fieldName, currentUrl, onUploaded, onError })
 
     setFieldError(null);
     e.target.value = '';
+
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      const msg = 'Please choose a JPEG, PNG, GIF, or WEBP image.';
+      setFieldError(msg);
+      onError?.(msg);
+      return;
+    }
+    if (file.size > MAX_CLIENT_IMAGE_BYTES) {
+      const msg = `Image is too large. Maximum allowed size is ${MAX_CLIENT_IMAGE_BYTES / (1024 * 1024)}MB.`;
+      setFieldError(msg);
+      onError?.(msg);
+      return;
+    }
 
     // Show local preview immediately
     const objectUrl = URL.createObjectURL(file);

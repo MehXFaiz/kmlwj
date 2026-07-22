@@ -1,14 +1,15 @@
 const API_BASE_URL = '/api';
 
-// Simple token storage helper
+// SQA fix: the refresh token is no longer persisted in localStorage — it now
+// lives exclusively in an httpOnly cookie set by the server (see api/_auth/
+// login.ts, refresh.ts, logout.ts), so it's unreadable by any script running
+// on the page. Only the short-lived (15 min) access token and non-sensitive
+// user metadata remain client-side.
 export const tokenStorage = {
   getAccessToken: () => localStorage.getItem('access_token'),
   setAccessToken: (token) => localStorage.setItem('access_token', token),
-  getRefreshToken: () => localStorage.getItem('refresh_token'),
-  setRefreshToken: (token) => localStorage.setItem('refresh_token', token),
   clear: () => {
     localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
     localStorage.removeItem('user_meta');
   },
   getUserMeta: () => {
@@ -43,35 +44,26 @@ export async function apiRequest(path, options = {}) {
   }
 
   const url = `${API_BASE_URL}${path}`;
-  const response = await fetch(url, { ...options, headers });
+  const response = await fetch(url, { ...options, headers, credentials: 'include' });
 
   // Handle unauthorized errors
   if (response.status === 401) {
-    const refreshToken = tokenStorage.getRefreshToken();
-    
-    // If no refresh token, just fail
-    if (!refreshToken) {
-      tokenStorage.clear();
-      window.dispatchEvent(new Event('auth_session_expired'));
-      throw { status: 401, message: 'Session expired' };
-    }
-
     if (!isRefreshing) {
       isRefreshing = true;
       try {
+        // The refresh token travels via the httpOnly cookie automatically —
+        // no token is read from or written to localStorage here.
         const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refreshToken }),
+          credentials: 'include',
         });
 
         if (refreshRes.ok) {
           const refreshData = await refreshRes.json();
           const newAccessToken = refreshData.data.accessToken;
-          const newRefreshToken = refreshData.data.refreshToken;
 
           tokenStorage.setAccessToken(newAccessToken);
-          tokenStorage.setRefreshToken(newRefreshToken);
 
           isRefreshing = false;
           onRefreshed(newAccessToken);
@@ -119,16 +111,16 @@ export const authService = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
+      credentials: 'include',
     });
-    
+
     const data = await safeJson(res);
     if (!res.ok) {
       throw new Error(data.error?.message || 'Login failed');
     }
-    
-    const { accessToken, refreshToken, user } = data.data;
+
+    const { accessToken, user } = data.data;
     tokenStorage.setAccessToken(accessToken);
-    tokenStorage.setRefreshToken(refreshToken);
     tokenStorage.setUserMeta(user);
     return user;
   },
@@ -148,15 +140,12 @@ export const authService = {
   },
 
   logout: async () => {
-    const refreshToken = tokenStorage.getRefreshToken();
     try {
-      if (refreshToken) {
-        await fetch(`${API_BASE_URL}/auth/logout`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refreshToken }),
-        });
-      }
+      await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
     } catch (e) {
       console.error('Logout request failed', e);
     } finally {

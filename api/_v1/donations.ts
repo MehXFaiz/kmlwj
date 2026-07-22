@@ -4,6 +4,7 @@ import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middlewar
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
+import { validateAmount } from '../_utils/amount.js';
 
 function generateVoucherNumber() {
   const date = new Date();
@@ -221,9 +222,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if (donationType === 'CUSTOM' && (!customDonationType || !String(customDonationType).trim())) {
       return res.status(400).json({ error: { message: 'Custom Donation / Aid Type is required when "Custom" is selected.', status: 400 } });
     }
-    if (amount <= 0) {
-      return res.status(400).json({ error: { message: 'Amount must be greater than 0', status: 400 } });
+    // SQA fix (Critical): the previous `amount <= 0` check was bypassed by any
+    // non-numeric string — `"abc" <= 0` is false in JS — letting a NaN amount
+    // reach ledger posting. validateAmount() rejects non-numeric input,
+    // enforces a sane upper bound, and normalizes to 2 decimal places.
+    const amountCheck = validateAmount(amount);
+    if (!amountCheck.valid) {
+      return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
     }
+    const parsedAmount = amountCheck.amount;
     if ((paymentMethod === 'BANK' || paymentMethod === 'CHEQUE') && !bankAccountId) {
       return res.status(400).json({ error: { message: 'Bank account is required for Bank/Cheque payment methods', status: 400 } });
     }
@@ -254,7 +261,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           donorMobile: donorMobile || null,
           donationType,
           customDonationType: donationType === 'CUSTOM' ? (customDonationType || null) : null,
-          amount: parseFloat(amount),
+          amount: parsedAmount,
           paymentMethod,
           bankAccountId: bankAccountId || null,
           chequeNumber: chequeNumber || null,
@@ -277,7 +284,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         const expenseAccount = await getExpenseAccountForDonation(donationType, tx);
         if (expenseAccount) {
           await AccountingService.postPayment(tx, {
-            amount: parseFloat(amount),
+            amount: parsedAmount,
             cashOrBankAccountId,
             expenseAccountId: expenseAccount.id,
             reference: `DON-${createdDonation.id.substring(0, 8)}`,
@@ -322,6 +329,18 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const targetBeneficiaryId = beneficiaryId !== undefined ? beneficiaryId : existingDonation.beneficiaryId;
     const targetStatus = status !== undefined ? status : existingDonation.status;
 
+    // SQA fix: this PUT/PATCH path previously had no amount validation at all
+    // when the caller changed `amount` — a non-numeric or absurd value would
+    // flow straight into ledger re-posting below.
+    let parsedAmount: number | undefined;
+    if (amount !== undefined) {
+      const amountCheck = validateAmount(amount);
+      if (!amountCheck.valid) {
+        return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
+      }
+      parsedAmount = amountCheck.amount;
+    }
+
     if (targetBeneficiaryId && !isValidBeneficiaryId(targetBeneficiaryId)) {
       return res.status(400).json({ error: { message: 'Selected recipient is invalid or out of date. Please re-select the recipient from People We Help and try again.', status: 400 } });
     }
@@ -362,7 +381,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           customDonationType: donationType !== undefined
             ? (donationType === 'CUSTOM' ? (customDonationType || null) : null)
             : (customDonationType !== undefined ? ((existingDonation as any).donationType === 'CUSTOM' ? customDonationType : null) : undefined),
-          amount: amount !== undefined ? parseFloat(amount) : undefined,
+          amount: parsedAmount !== undefined ? parsedAmount : undefined,
           paymentMethod: paymentMethod || undefined,
           bankAccountId: bankAccountId !== undefined ? (bankAccountId || null) : undefined,
           chequeNumber: chequeNumber !== undefined ? (chequeNumber || null) : undefined,

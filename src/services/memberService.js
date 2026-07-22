@@ -8,7 +8,28 @@ const FIELD_TO_URL_KEY = {
 };
 
 export const memberService = {
-  getAll: () => api.get('/api/v1/members').then(res => res.data),
+  // SQA fix: the API paginates (default limit 100) but this previously fetched
+  // only the first page — any org with more than 100 members silently lost
+  // visibility into the rest, with no pagination UI to reach them either.
+  // This loops every page and returns the full combined list, preserving the
+  // { status, data } shape callers already expect.
+  getAll: async () => {
+    const PAGE_SIZE = 500;
+    let page = 1;
+    let all = [];
+    let total = Infinity;
+
+    while (all.length < total) {
+      const res = await api.get('/api/v1/members', { params: { page, limit: PAGE_SIZE } });
+      const { data, meta } = res.data;
+      all = all.concat(data || []);
+      total = meta?.total ?? all.length;
+      if (!data || data.length === 0) break; // safety net against an infinite loop
+      page += 1;
+    }
+
+    return { status: 200, data: all };
+  },
   getById: (id) => api.get(`/api/v1/members?id=${id}`).then(res => res.data),
   create: (data) => api.post('/api/v1/members', data).then(res => res.data),
   update: (id, data) => api.put(`/api/v1/members?id=${id}`, data).then(res => res.data),

@@ -3,6 +3,7 @@ import { makeHandler } from '../_utils/handler.js';
 import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
 import { prisma } from '../_prisma.js';
 import { AccountingService } from '../_services/accounting.service.js';
+import { validateAmount } from '../_utils/amount.js';
 
 const accountingTxOptions = { maxWait: 10000, timeout: 30000 };
 
@@ -41,10 +42,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Missing required fields', status: 400 } });
     }
 
-    const numAmount = Number(amount);
-    if (numAmount <= 0) {
-      return res.status(400).json({ error: { message: 'Amount must be greater than zero', status: 400 } });
+    // SQA fix: same NaN-bypass pattern as simple-expense.ts — validateAmount()
+    // rejects non-numeric input and enforces an upper bound.
+    const amountCheck = validateAmount(amount);
+    if (!amountCheck.valid) {
+      return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
     }
+    const numAmount = amountCheck.amount;
 
     // Begin transaction to create SimpleIncome and post to General Ledger via AccountingService
     const result = await prisma.$transaction(async (tx) => {
@@ -113,10 +117,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Missing required fields', status: 400 } });
     }
 
-    const numAmount = Number(amount);
-    if (numAmount <= 0) {
-      return res.status(400).json({ error: { message: 'Amount must be greater than zero', status: 400 } });
+    const amountCheck = validateAmount(amount);
+    if (!amountCheck.valid) {
+      return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
     }
+    const numAmount = amountCheck.amount;
 
     const result = await prisma.$transaction(async (tx) => {
       const existing = await tx.simpleIncome.findUnique({ where: { id }, include: { revenueHead: true } });
