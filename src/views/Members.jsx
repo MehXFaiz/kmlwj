@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useMemberStore } from '../store/memberStore';
 import {
   Users, UserPlus, Search, Edit2, Trash2, Phone, MapPin,
-  Briefcase, CheckCircle, ArrowRight, Building, AlertTriangle, CreditCard
+  Briefcase, CheckCircle, ArrowRight, Building, AlertTriangle, CreditCard, GitBranch
 } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
 import { useAuthStore } from '../store/authStore';
@@ -185,7 +185,8 @@ export const Members = () => {
             {filteredMembers.map((m) => (
               <div
                 key={m.id}
-                className="bg-slate-900 rounded-2xl border border-slate-800 p-5 hover:border-slate-700 transition-all flex flex-col justify-between group"
+                onClick={() => navigate(`/members/${m.id}`)}
+                className="bg-slate-900 rounded-2xl border border-slate-800 p-5 hover:border-slate-700 transition-all flex flex-col justify-between group cursor-pointer"
               >
                 <div>
                   {/* Top: Avatar + Status */}
@@ -258,25 +259,36 @@ export const Members = () => {
                   <span className="text-[10px] font-semibold text-slate-500 uppercase">
                     DOI: {m.doi || (m.createdAt ? new Date(m.createdAt).toLocaleDateString() : 'N/A')}
                   </span>
-                  {canEditOrDelete && (
-                    <div className="flex items-center gap-1.5">
-                      <Link
-                        to={`/members/edit/${m.id}`}
-                        className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-colors"
-                        title="Edit Member"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => setDeleteId(m.id)}
-                        className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-colors"
-                        title="Delete Member"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    <Link
+                      to={`/members/${m.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
+                      title="Family Tree"
+                    >
+                      <GitBranch className="w-3.5 h-3.5" />
+                    </Link>
+                    {canEditOrDelete && (
+                      <>
+                        <Link
+                          to={`/members/edit/${m.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-colors"
+                          title="Edit Member"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setDeleteId(m.id); }}
+                          className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-colors"
+                          title="Delete Member"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

@@ -36,6 +36,7 @@ import hallBookingsHandler from './_v1/hall-bookings.js';
 import revenueCollectionsHandler from './_v1/revenue-collections.js';
 import customersHandler from './_v1/customers.js';
 import membersHandler from './_v1/members.js';
+import familyRelationshipsHandler from './_v1/family-relationships.js';
 import uploadHandler from './_v1/upload.js';
 import uploadSignHandler from './_v1/upload-sign.js';
 import invoicesHandler from './_v1/invoices.js';
@@ -229,6 +230,10 @@ app.get('/api/v1/members', makeExpress(membersHandler));
 app.post('/api/v1/members', makeExpress(membersHandler));
 app.put('/api/v1/members', makeExpress(membersHandler));
 app.delete('/api/v1/members', makeExpress(membersHandler));
+
+app.get('/api/v1/family-relationships', makeExpress(familyRelationshipsHandler));
+app.post('/api/v1/family-relationships', makeExpress(familyRelationshipsHandler));
+app.delete('/api/v1/family-relationships', makeExpress(familyRelationshipsHandler));
 
 app.get('/api/v1/invoices', makeExpress(invoicesHandler));
 app.post('/api/v1/invoices', makeExpress(invoicesHandler));

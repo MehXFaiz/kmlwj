@@ -512,8 +512,53 @@ model Member {
   cnicBackUrl     String?        @db.Text
   isActive        Boolean        @default(true)
   zakatCards      ZakatCard[]
+  familyLinksFrom FamilyRelationship[] @relation("MemberFamilyLinks")
+  familyLinksTo   FamilyRelationship[] @relation("RelatedMemberFamilyLinks")
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+}
+
+enum FamilyRelationType {
+  FATHER
+  MOTHER
+  HUSBAND
+  WIFE
+  SON
+  DAUGHTER
+  BROTHER
+  SISTER
+  GRANDFATHER
+  GRANDMOTHER
+  GRANDSON
+  GRANDDAUGHTER
+  UNCLE
+  AUNT
+  NEPHEW
+  NIECE
+  COUSIN
+  GUARDIAN
+  OTHER
+}
+
+// Normalized, bidirectional link between two Members. A single logical link
+// (e.g. "A is Father of B") is stored as two rows — (A -> B, FATHER) and its
+// automatically-derived reciprocal (B -> A, SON/DAUGHTER) — so that either
+// member's family tree can be read with a single indexed query on memberId,
+// with no runtime traversal/inference needed.
+model FamilyRelationship {
+  id               String             @id @default(uuid()) @db.Uuid
+  memberId         String             @db.Uuid
+  member           Member             @relation("MemberFamilyLinks", fields: [memberId], references: [id], onDelete: Cascade)
+  relatedMemberId  String             @db.Uuid
+  relatedMember    Member             @relation("RelatedMemberFamilyLinks", fields: [relatedMemberId], references: [id], onDelete: Cascade)
+  relationshipType FamilyRelationType
+  customLabel      String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@unique([memberId, relatedMemberId])
+  @@index([memberId])
+  @@index([relatedMemberId])
 }
 
 model ZakatCard {
