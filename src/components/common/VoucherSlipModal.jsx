@@ -1,5 +1,5 @@
 import React from 'react';
-import { Banknote, BadgeCheck, CalendarDays, FileText, Printer, ScrollText, Signature, SquarePen, Wallet, X } from 'lucide-react';
+import { Banknote, BadgeCheck, CalendarDays, CheckSquare2, FileText, Printer, ScrollText, Signature, SquarePen, Wallet, X } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 
 const numberToWords = (num) => {
