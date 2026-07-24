@@ -5,7 +5,7 @@ import { Badge } from '../components/ui/Badge';
 import { useLedgerStore } from '../store/ledgerStore';
 import { useCoaStore } from '../store/coaStore';
 import { useAuthStore } from '../store/authStore';
-import { Search, Calendar, Filter, Trash2, AlertCircle, Printer } from 'lucide-react';
+import { Search, Calendar, Filter, Trash2, AlertCircle, Printer, Download } from 'lucide-react';
 import { showToast, ToastPlaceholder } from '../components/ui/Toast';
 import { MobileOnly, DesktopOnly } from '../components/common/responsive';
 import logoImg from '../assets/logo.png';
@@ -379,6 +379,277 @@ export const GeneralLedger = () => {
     };
   };
 
+  // ── Download GL as PDF ────────────────────────────────────────────────────
+  // Real PDF (jsPDF + autoTable) — auto page-splitting, repeating table
+  // header, no row cutoffs, PKR formatting. Uses live filtered data.
+  const handleDownloadGL = async () => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const autoTableMod = await import('jspdf-autotable');
+      const autoTable = autoTableMod.default || autoTableMod.autoTable || autoTableMod;
+
+      const user = useAuthStore.getState().user;
+      const userName = user?.fullName || user?.email || 'System';
+
+      const fmtAmtRaw = (v) =>
+        v > 0 ? Number(v).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
+      const fmtAmtSigned = (v) => {
+        if (v === 0 || v == null) return '—';
+        return Math.abs(Number(v)).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      };
+      const fmtDate = (v) => {
+        if (!v) return '—';
+        const d = new Date(v);
+        if (isNaN(d)) return String(v);
+        return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+      };
+      const balSuffix = (bal, isDebitNorm) => {
+        if (!bal) return '';
+        return isDebitNorm ? (bal < 0 ? ' Cr' : ' Dr') : (bal < 0 ? ' Dr' : ' Cr');
+      };
+
+      const now = new Date();
+      const generatedOn =
+        now.toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric' }) +
+        ' ' + now.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const stamp = `${yyyy}-${mm}-${dd}`;
+
+      const periodFrom = filters.startDate ? fmtDate(filters.startDate) : 'Beginning';
+      const periodTo   = filters.endDate   ? fmtDate(filters.endDate)   : 'Present';
+
+      const safeName = (accountInfo?.name || 'All_Accounts')
+        .replace(/[^a-z0-9]+/gi, '_')
+        .replace(/^_+|_+$/g, '');
+      const filename = `GL_${safeName}_${stamp}.pdf`;
+
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const marginX = 10;
+      const contentWidth = pageWidth - marginX * 2;
+
+      // ── Header block (drawn once at document start) ──
+      const drawReportHeader = () => {
+        // Brand bar
+        doc.setFillColor(26, 26, 26);
+        doc.rect(marginX, 8, contentWidth, 14, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.text('KUTCHI MUSLIM LOHARWADHA WELFARE JAMAT', pageWidth / 2, 15.5, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.text('Jumma Baloch Road, Near K.E Grid Station, New Kalri, Lyari, Karachi', pageWidth / 2, 20, { align: 'center' });
+
+        // Report title strip
+        const titleY = 26;
+        doc.setFillColor(210, 180, 140); // Mocha Brown accent
+        doc.rect(marginX, titleY, contentWidth, 8, 'F');
+        doc.setTextColor(30, 20, 10);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.text('GENERAL LEDGER', pageWidth / 2, titleY + 5.5, { align: 'center' });
+
+        // Meta strip: Period | Account | Prepared By | Generated
+        const metaY = titleY + 12;
+        doc.setTextColor(40, 40, 40);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.text('Period:', marginX, metaY);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${periodFrom}  to  ${periodTo}`, marginX + 13, metaY);
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('Account:', marginX, metaY + 4.5);
+        doc.setFont('helvetica', 'normal');
+        const accountText = accountInfo
+          ? `${accountInfo.name} (${accountInfo.glCode || '—'})`
+          : 'All Accounts';
+        doc.text(accountText, marginX + 15, metaY + 4.5);
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('Prepared By:', pageWidth - marginX, metaY, { align: 'right' });
+        doc.setFont('helvetica', 'normal');
+        doc.text(userName, pageWidth - marginX - 22, metaY, { align: 'right' });
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('Generated:', pageWidth - marginX, metaY + 4.5, { align: 'right' });
+        doc.setFont('helvetica', 'normal');
+        doc.text(generatedOn, pageWidth - marginX - 20, metaY + 4.5, { align: 'right' });
+
+        // Separator
+        doc.setDrawColor(180, 180, 180);
+        doc.setLineWidth(0.3);
+        doc.line(marginX, metaY + 8, pageWidth - marginX, metaY + 8);
+      };
+
+      // ── Footer (added per-page via autoTable didDrawPage hook) ──
+      const drawFooter = () => {
+        const total = doc.internal.getNumberOfPages();
+        const current = doc.getCurrentPageInfo().pageNumber;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(120, 120, 120);
+        doc.text(
+          `Generated on ${generatedOn}  |  By ${userName}`,
+          marginX,
+          pageHeight - 6
+        );
+        doc.text(
+          `Page ${current} of ${total}`,
+          pageWidth - marginX,
+          pageHeight - 6,
+          { align: 'right' }
+        );
+      };
+
+      drawReportHeader();
+
+      // If no data — write a "No Records Found" panel and save.
+      if (!groupedLedgers || groupedLedgers.length === 0) {
+        doc.setFontSize(11);
+        doc.setTextColor(100, 100, 100);
+        doc.setFont('helvetica', 'italic');
+        doc.text('No Records Found for the selected filters.', pageWidth / 2, 70, { align: 'center' });
+        drawFooter();
+        doc.save(filename);
+        showToast(`Downloaded ${filename}`, 'success');
+        return;
+      }
+
+      // Cursor Y tracking the position where the next block should start
+      let cursorY = 52;
+
+      groupedLedgers.forEach((group, groupIdx) => {
+        const isDebitNorm = ['ASSET','EXPENSE'].includes((group.type || '').toUpperCase());
+
+        // If less than ~50mm room left on the page for the account block, start a new page.
+        if (cursorY > pageHeight - 60) {
+          doc.addPage();
+          drawReportHeader();
+          cursorY = 52;
+        }
+
+        // Account block header
+        doc.setFillColor(240, 240, 240);
+        doc.setDrawColor(180, 180, 180);
+        doc.rect(marginX, cursorY, contentWidth, 9, 'FD');
+        doc.setTextColor(20, 20, 20);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.text(group.accountName || '—', marginX + 2, cursorY + 4);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(90, 90, 90);
+        doc.text(`Account No: ${group.glCode || '—'}`, marginX + 2, cursorY + 7.5);
+
+        // Build rows: opening → transactions → totals
+        let running = group.openingBalance || 0;
+        let totDr = 0;
+        let totCr = 0;
+
+        const bodyRows = [];
+
+        // Opening balance row
+        bodyRows.push([
+          periodFrom !== 'Beginning' ? periodFrom : '—',
+          '—',
+          'Beginning Balance',
+          '—',
+          '—',
+          group.openingBalance !== 0
+            ? `${fmtAmtSigned(group.openingBalance)}${balSuffix(group.openingBalance, isDebitNorm)}`
+            : '—',
+        ]);
+
+        (group.entries || []).forEach((e) => {
+          const deb = Number(e.debit) || 0;
+          const crd = Number(e.credit) || 0;
+          totDr += deb;
+          totCr += crd;
+          running = isDebitNorm ? running + deb - crd : running + crd - deb;
+          bodyRows.push([
+            fmtDate(e.date),
+            e.reference || '—',
+            e.description || '—',
+            deb > 0 ? fmtAmtRaw(deb) : '—',
+            crd > 0 ? fmtAmtRaw(crd) : '—',
+            `${fmtAmtSigned(running)}${balSuffix(running, isDebitNorm)}`,
+          ]);
+        });
+
+        if ((group.entries || []).length === 0) {
+          bodyRows.push([{ content: 'No transaction entries found for this account in the selected period.', colSpan: 6, styles: { halign: 'center', fontStyle: 'italic', textColor: [130, 130, 130] } }]);
+        }
+
+        const closingBal = running;
+
+        // Totals row (styled by autoTable via willDrawCell)
+        bodyRows.push([
+          { content: 'Account Totals', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold', fillColor: [232, 232, 232] } },
+          { content: fmtAmtRaw(totDr), styles: { halign: 'right', fontStyle: 'bold', fillColor: [232, 232, 232] } },
+          { content: fmtAmtRaw(totCr), styles: { halign: 'right', fontStyle: 'bold', fillColor: [232, 232, 232] } },
+          { content: `${fmtAmtSigned(closingBal)}${balSuffix(closingBal, isDebitNorm)}`, styles: { halign: 'right', fontStyle: 'bold', fillColor: [232, 232, 232] } },
+        ]);
+
+        autoTable(doc, {
+          startY: cursorY + 9,
+          margin: { left: marginX, right: marginX, top: 40 },
+          head: [['Date', 'Reference', 'Description', 'Debit (PKR)', 'Credit (PKR)', 'Running Balance']],
+          body: bodyRows,
+          styles: { fontSize: 7.8, cellPadding: 1.6, overflow: 'linebreak', valign: 'top', lineColor: [210, 210, 210], lineWidth: 0.1 },
+          headStyles: { fillColor: [44, 44, 44], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8, halign: 'left' },
+          bodyStyles: { textColor: [30, 30, 30] },
+          alternateRowStyles: { fillColor: [249, 249, 249] },
+          columnStyles: {
+            0: { cellWidth: 20 },
+            1: { cellWidth: 24, font: 'courier', fontSize: 7 },
+            2: { cellWidth: 'auto' },
+            3: { cellWidth: 24, halign: 'right', font: 'courier' },
+            4: { cellWidth: 24, halign: 'right', font: 'courier' },
+            5: { cellWidth: 30, halign: 'right', font: 'courier', fontStyle: 'bold' },
+          },
+          rowPageBreak: 'avoid',
+          showHead: 'everyPage',
+          didDrawPage: () => { drawFooter(); },
+        });
+
+        // Closing balance strip immediately under the table
+        const finalY = doc.lastAutoTable.finalY || cursorY + 20;
+        if (finalY > pageHeight - 20) {
+          doc.addPage();
+          drawReportHeader();
+          cursorY = 52;
+        } else {
+          doc.setFillColor(250, 240, 220);
+          doc.setDrawColor(200, 170, 130);
+          doc.rect(marginX, finalY + 1, contentWidth, 7, 'FD');
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(60, 40, 10);
+          doc.text('Closing Balance:', marginX + 2, finalY + 5.5);
+          doc.text(
+            `PKR ${fmtAmtSigned(closingBal)}${balSuffix(closingBal, isDebitNorm)}`,
+            pageWidth - marginX - 2,
+            finalY + 5.5,
+            { align: 'right' }
+          );
+          cursorY = finalY + 12;
+        }
+      });
+
+      drawFooter();
+      doc.save(filename);
+      showToast(`Downloaded ${filename}`, 'success');
+    } catch (err) {
+      console.error('GL PDF generation failed:', err);
+      showToast(`Failed to generate PDF: ${err?.message || 'Unknown error'}`, 'error');
+    }
+  };
+
   const debitColor = isDebitNormal ? "text-emerald-400" : (accountInfo ? "text-red-400" : "text-emerald-400");
   const creditColor = isDebitNormal ? "text-red-400" : (accountInfo ? "text-emerald-400" : "text-red-400");
   const tableDebitColor = isDebitNormal ? "text-emerald-400" : (accountInfo ? "text-red-400" : "text-emerald-400");
@@ -403,6 +674,13 @@ export const GeneralLedger = () => {
               <Trash2 className="h-3.5 w-3.5 pointer-events-none" /> Bulk Delete ({selectedIds.length})
             </button>
           )}
+          <button
+            type="button"
+            onClick={handleDownloadGL}
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-500 border border-amber-700/40 transition-all text-xs font-semibold cursor-pointer shadow-sm"
+          >
+            <Download className="h-3.5 w-3.5" /> Download PDF
+          </button>
           <button
             type="button"
             onClick={handlePrintGL}

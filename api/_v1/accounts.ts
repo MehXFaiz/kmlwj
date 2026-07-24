@@ -3,6 +3,7 @@ import { makeHandler } from '../_utils/handler.js';
 import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
+import { notify } from '../_utils/notify.js';
 import { compareCodes } from '../_utils/code-compare.js';
 import { AccountingService } from '../_services/accounting.service.js';
 
@@ -179,6 +180,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     await logAudit(req.user.id, 'Create Account', 'COA', null, newAccount, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
+    await notify(req, {
+      title: 'Account Added',
+      message: `Account "${(newAccount as any).accountName}" (${(newAccount as any).glCode || '—'}) added to Chart of Accounts.`,
+      module: 'Chart of Accounts',
+      recordId: (newAccount as any).id,
+      actionType: 'CREATE',
+      visibility: 'ADMIN_ONLY',
+    });
+
     return res.status(201).json({ status: 201, data: newAccount });
   }
 
@@ -281,6 +291,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     await logAudit(req.user.id, isToggleLock ? 'Toggle Lock Account' : 'Modify Account', 'COA', existingAccount, updatedAccount, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
+    await notify(req, {
+      title: isToggleLock ? 'Account Lock Toggled' : 'Account Updated',
+      message: `Account "${(updatedAccount as any).accountName}" ${isToggleLock ? ((updatedAccount as any).isLocked ? 'locked' : 'unlocked') : 'updated'}.`,
+      module: 'Chart of Accounts',
+      recordId: (updatedAccount as any).id,
+      actionType: 'UPDATE',
+      visibility: 'ADMIN_ONLY',
+    });
+
     return res.status(200).json({ status: 200, data: updatedAccount });
   }
 
@@ -323,6 +342,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     await prisma.account.delete({ where: { id } });
 
     await logAudit(req.user.id, 'Delete Account', 'COA', existingAccount, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+
+    await notify(req, {
+      title: 'Account Deleted',
+      message: `Account "${(existingAccount as any).accountName}" removed from Chart of Accounts.`,
+      module: 'Chart of Accounts',
+      recordId: (existingAccount as any).id,
+      actionType: 'DELETE',
+      visibility: 'SUPER_ADMIN_ONLY',
+    });
 
     return res.status(200).json({ status: 200, message: 'Account deleted successfully' });
   }

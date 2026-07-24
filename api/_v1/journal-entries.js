@@ -3,6 +3,7 @@ import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
+import { notify } from "../_utils/notify.js";
 const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };
 var journal_entries_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
@@ -106,6 +107,13 @@ var journal_entries_default = makeHandler(async (req, res) => {
           userAgent: req.headers["user-agent"]
         });
       }, accountingTxOptions);
+      await notify(req, {
+        title: "Journal Entry Posted",
+        message: `Voucher ${result.journalEntry.voucherNo || ""} \u2014 PKR ${Number(result.journalEntry.totalDebit || 0).toLocaleString()}.`,
+        module: "Journal",
+        recordId: result.journalEntry.id,
+        actionType: "CREATE"
+      });
       return res.status(201).json({ status: 201, data: result.journalEntry });
     } catch (err) {
       return res.status(400).json({ error: { message: err.message, status: 400 } });
@@ -242,6 +250,13 @@ var journal_entries_default = makeHandler(async (req, res) => {
         return await tx.journalEntry.findUnique({ where: { id }, include: { lines: true } });
       }, accountingTxOptions);
       await logAudit(req.user.id, "Update Journal Entry", "Journal Entries", null, { id, status, reference, amount }, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      await notify(req, {
+        title: status === "CANCELLED" ? "Voucher Cancelled" : "Journal Entry Updated",
+        message: `Journal entry ${reference || id} ${status === "CANCELLED" ? "cancelled" : "updated"}.`,
+        module: "Journal",
+        recordId: id,
+        actionType: status === "CANCELLED" ? "CANCEL" : "UPDATE"
+      });
       return res.status(200).json({ status: 200, data: result });
     } catch (err) {
       return res.status(400).json({ error: { message: err.message, status: 400 } });
@@ -274,6 +289,14 @@ var journal_entries_default = makeHandler(async (req, res) => {
         req.headers["x-forwarded-for"],
         req.headers["user-agent"]
       );
+      await notify(req, {
+        title: deletedEntries.length > 1 ? "Journal Entries Deleted" : "Journal Entry Deleted",
+        message: `${deletedEntries.length} journal entry(s) deleted.`,
+        module: "Journal",
+        recordId: deletedEntries.length === 1 ? deletedEntries[0].id : null,
+        actionType: "DELETE",
+        visibility: "ADMIN_ONLY"
+      });
       return res.status(200).json({
         status: 200,
         message: `${deletedEntries.length} journal entry(s) deleted successfully`,

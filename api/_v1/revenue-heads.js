@@ -2,6 +2,7 @@ import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
+import { notify } from "../_utils/notify.js";
 var revenue_heads_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -42,6 +43,14 @@ var revenue_heads_default = makeHandler(async (req, res) => {
       }
     });
     await logAudit(req.user.id, "Create Revenue Head", "REVENUE", null, newHead, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    await notify(req, {
+      title: "Revenue Head Added",
+      message: `Revenue head "${newHead.name}" created.`,
+      module: "Revenue Heads",
+      recordId: newHead.id,
+      actionType: "CREATE",
+      visibility: "ADMIN_ONLY"
+    });
     return res.status(201).json({ status: 201, data: newHead });
   }
   if (method === "PUT") {
@@ -68,6 +77,14 @@ var revenue_heads_default = makeHandler(async (req, res) => {
       }
     });
     await logAudit(req.user.id, "Modify Revenue Head", "REVENUE", existingHead, updatedHead, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    await notify(req, {
+      title: "Revenue Head Updated",
+      message: `Revenue head "${updatedHead.name}" updated.`,
+      module: "Revenue Heads",
+      recordId: updatedHead.id,
+      actionType: "UPDATE",
+      visibility: "ADMIN_ONLY"
+    });
     return res.status(200).json({ status: 200, data: updatedHead });
   }
   if (method === "DELETE") {
@@ -83,6 +100,14 @@ var revenue_heads_default = makeHandler(async (req, res) => {
     }
     await prisma.revenueHead.delete({ where: { id } });
     await logAudit(req.user.id, "Delete Revenue Head", "REVENUE", existingHead, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    await notify(req, {
+      title: "Revenue Head Deleted",
+      message: `Revenue head "${existingHead.name}" deleted.`,
+      module: "Revenue Heads",
+      recordId: existingHead.id,
+      actionType: "DELETE",
+      visibility: "ADMIN_ONLY"
+    });
     return res.status(200).json({ status: 200, message: "Revenue Head deleted successfully" });
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });

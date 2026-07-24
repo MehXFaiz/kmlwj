@@ -2,6 +2,7 @@ import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
+import { notify } from "../_utils/notify.js";
 const ALL_FIELDS = [
   "name",
   "fatherName",
@@ -125,6 +126,13 @@ var beneficiaries_default = makeHandler(async (req, res) => {
     const data = pickData(req.body, true);
     const newBeneficiary = await prisma.beneficiary.create({ data });
     await logAudit(req.user.id, "Create Beneficiary", "DONATION", null, newBeneficiary, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    await notify(req, {
+      title: "Person Added to Welfare List",
+      message: `${newBeneficiary.name || "Beneficiary"} added.`,
+      module: "Welfare",
+      recordId: newBeneficiary.id,
+      actionType: "CREATE"
+    });
     return res.status(201).json({ status: 201, data: newBeneficiary });
   }
   if (method === "PUT") {
@@ -190,6 +198,13 @@ var beneficiaries_default = makeHandler(async (req, res) => {
       data
     });
     await logAudit(req.user.id, "Update Beneficiary", "DONATION", existingBeneficiary, updatedBeneficiary, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    await notify(req, {
+      title: "Welfare Record Updated",
+      message: `${updatedBeneficiary.name || "Beneficiary"} record updated.`,
+      module: "Welfare",
+      recordId: updatedBeneficiary.id,
+      actionType: "UPDATE"
+    });
     return res.status(200).json({ status: 200, data: updatedBeneficiary });
   }
   if (method === "DELETE") {
@@ -206,6 +221,14 @@ var beneficiaries_default = makeHandler(async (req, res) => {
     }
     await prisma.beneficiary.delete({ where: { id } });
     await logAudit(req.user.id, "Delete Beneficiary", "DONATION", existingBeneficiary, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    await notify(req, {
+      title: "Welfare Record Deleted",
+      message: `${existingBeneficiary.name || "Beneficiary"} removed from welfare list.`,
+      module: "Welfare",
+      recordId: existingBeneficiary.id,
+      actionType: "DELETE",
+      visibility: "ADMIN_ONLY"
+    });
     return res.status(200).json({ status: 200, message: "Beneficiary deleted successfully" });
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });

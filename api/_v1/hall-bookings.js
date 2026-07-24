@@ -3,6 +3,7 @@ import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
+import { notify } from "../_utils/notify.js";
 function generateVoucherNumber() {
   const date = /* @__PURE__ */ new Date();
   const year = date.getFullYear().toString().slice(-2);
@@ -195,6 +196,13 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         return { approvedBooking, journalEntry: postingResult.journalEntry };
       });
       await logAudit(req.user.id, "Post Hall Booking", "REVENUE", booking, result.approvedBooking, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      await notify(req, {
+        title: "Hall Booking Approved",
+        message: `Booking for ${booking.bookerName || "booker"} posted to ledger (PKR ${Number(booking.netAmount || booking.amount || 0).toLocaleString()}).`,
+        module: "Hall Bookings",
+        recordId: booking.id,
+        actionType: "APPROVE"
+      });
       return res.status(200).json({ status: 200, data: result.approvedBooking, message: "Booking posted and journal entries created successfully" });
     }
     if (action === "revert") {
@@ -220,6 +228,13 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         return revertedBooking;
       });
       await logAudit(req.user.id, "Revert Hall Booking", "REVENUE", booking, result, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      await notify(req, {
+        title: "Hall Booking Cancelled",
+        message: `Booking for ${booking.bookerName || "booker"} reverted from ledger.`,
+        module: "Hall Bookings",
+        recordId: booking.id,
+        actionType: "CANCEL"
+      });
       return res.status(200).json({ status: 200, data: result, message: "Booking reverted from ledger successfully" });
     }
     const { bookingDate, bookerName, fatherHusbandName, address, mobile, programDate, programType, functionType, timeFrom, timeTo, timings, hallId, isForJamaat, amount, hallCharges, discount, netAmount, receivedAmount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
@@ -384,6 +399,13 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         return newBooking;
       }, { isolationLevel: "Serializable" });
       await logAudit(req.user.id, "Create & Post Hall Booking", "REVENUE", null, result, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      await notify(req, {
+        title: "Hall Booking Created",
+        message: `New booking for ${bookerName || "booker"}${programDate ? ` on ${new Date(programDate).toLocaleDateString()}` : ""} (PKR ${Number(netAmount || amount || 0).toLocaleString()}).`,
+        module: "Hall Bookings",
+        recordId: result?.id,
+        actionType: "CREATE"
+      });
       return res.status(201).json({ status: 201, data: result });
     } catch (err) {
       if (err.code === "P2002" || err.message?.includes("Unique constraint failed")) {
@@ -451,6 +473,14 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         req.headers["x-forwarded-for"],
         req.headers["user-agent"]
       );
+      await notify(req, {
+        title: deletedBookings.length > 1 ? "Hall Bookings Deleted" : "Hall Booking Deleted",
+        message: deletedBookings.length > 1 ? `${deletedBookings.length} hall booking(s) deleted.` : `Hall booking for ${deletedBookings[0].bookerName || "booker"} deleted.`,
+        module: "Hall Bookings",
+        recordId: deletedBookings.length === 1 ? deletedBookings[0].id : null,
+        actionType: "DELETE",
+        visibility: "ADMIN_ONLY"
+      });
       return res.status(200).json({
         status: 200,
         message: `${deletedBookings.length} hall booking(s) deleted successfully`,
@@ -680,6 +710,13 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         });
       });
       await logAudit(req.user.id, "Update & Post Hall Booking", "REVENUE", existingBooking, updatedBooking, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      await notify(req, {
+        title: "Hall Booking Updated",
+        message: `Booking for ${updatedBooking.bookerName || "booker"} updated.`,
+        module: "Hall Bookings",
+        recordId: updatedBooking.id,
+        actionType: "UPDATE"
+      });
       return res.status(200).json({ status: 200, data: updatedBooking });
     } catch (err) {
       if (err.code === "P2002" || err.message?.includes("Unique constraint failed")) {

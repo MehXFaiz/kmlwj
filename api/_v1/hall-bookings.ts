@@ -4,6 +4,7 @@ import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middlewar
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
+import { notify } from '../_utils/notify.js';
 
 function generateVoucherNumber() {
   const date = new Date();
@@ -251,6 +252,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       await logAudit(req.user.id, 'Post Hall Booking', 'REVENUE', booking, result.approvedBooking, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
+      await notify(req, {
+        title: 'Hall Booking Approved',
+        message: `Booking for ${booking.bookerName || 'booker'} posted to ledger (PKR ${Number(booking.netAmount || booking.amount || 0).toLocaleString()}).`,
+        module: 'Hall Bookings',
+        recordId: booking.id,
+        actionType: 'APPROVE',
+      });
+
       return res.status(200).json({ status: 200, data: result.approvedBooking, message: 'Booking posted and journal entries created successfully' });
     }
 
@@ -284,6 +293,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       });
 
       await logAudit(req.user.id, 'Revert Hall Booking', 'REVENUE', booking, result, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+
+      await notify(req, {
+        title: 'Hall Booking Cancelled',
+        message: `Booking for ${booking.bookerName || 'booker'} reverted from ledger.`,
+        module: 'Hall Bookings',
+        recordId: booking.id,
+        actionType: 'CANCEL',
+      });
 
       return res.status(200).json({ status: 200, data: result, message: 'Booking reverted from ledger successfully' });
     }
@@ -490,6 +507,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       await logAudit(req.user.id, 'Create & Post Hall Booking', 'REVENUE', null, result, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
+      await notify(req, {
+        title: 'Hall Booking Created',
+        message: `New booking for ${bookerName || 'booker'}${programDate ? ` on ${new Date(programDate).toLocaleDateString()}` : ''} (PKR ${Number(netAmount || amount || 0).toLocaleString()}).`,
+        module: 'Hall Bookings',
+        recordId: (result as any)?.id,
+        actionType: 'CREATE',
+      });
+
       return res.status(201).json({ status: 201, data: result });
     } catch (err: any) {
       if (err.code === 'P2002' || err.message?.includes('Unique constraint failed')) {
@@ -569,6 +594,17 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         req.headers['x-forwarded-for'] as string,
         req.headers['user-agent']
       );
+
+      await notify(req, {
+        title: deletedBookings.length > 1 ? 'Hall Bookings Deleted' : 'Hall Booking Deleted',
+        message: deletedBookings.length > 1
+          ? `${deletedBookings.length} hall booking(s) deleted.`
+          : `Hall booking for ${deletedBookings[0].bookerName || 'booker'} deleted.`,
+        module: 'Hall Bookings',
+        recordId: deletedBookings.length === 1 ? deletedBookings[0].id : null,
+        actionType: 'DELETE',
+        visibility: 'ADMIN_ONLY',
+      });
 
       return res.status(200).json({
         status: 200,
@@ -831,6 +867,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       });
 
       await logAudit(req.user.id, 'Update & Post Hall Booking', 'REVENUE', existingBooking, updatedBooking, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+
+      await notify(req, {
+        title: 'Hall Booking Updated',
+        message: `Booking for ${(updatedBooking as any).bookerName || 'booker'} updated.`,
+        module: 'Hall Bookings',
+        recordId: (updatedBooking as any).id,
+        actionType: 'UPDATE',
+      });
 
       return res.status(200).json({ status: 200, data: updatedBooking });
     } catch (err: any) {

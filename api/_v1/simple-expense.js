@@ -3,6 +3,7 @@ import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { validateAmount } from "../_utils/amount.js";
+import { notify } from "../_utils/notify.js";
 const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };
 var simple_expense_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
@@ -87,6 +88,13 @@ var simple_expense_default = makeHandler(async (req, res) => {
       }
       return expense;
     }, accountingTxOptions);
+    await notify(req, {
+      title: "Expense Added",
+      message: `Expense of PKR ${Number(result.amount).toLocaleString()} recorded${result.paidTo ? ` \u2014 paid to ${result.paidTo}` : ""}.`,
+      module: "Expenses",
+      recordId: result.id,
+      actionType: "CREATE"
+    });
     return res.status(201).json({ status: 201, data: result });
   }
   if (req.method === "PUT" || req.method === "PATCH") {
@@ -159,6 +167,13 @@ var simple_expense_default = makeHandler(async (req, res) => {
       }
       return updated;
     }, accountingTxOptions);
+    await notify(req, {
+      title: "Expense Updated",
+      message: `Expense (PKR ${Number(result.amount).toLocaleString()}) updated.`,
+      module: "Expenses",
+      recordId: result.id,
+      actionType: "UPDATE"
+    });
     return res.status(200).json({ status: 200, data: result });
   }
   if (req.method === "DELETE") {
@@ -176,6 +191,14 @@ var simple_expense_default = makeHandler(async (req, res) => {
         await tx.simpleExpense.delete({ where: { id: String(id) } });
       }
     }, accountingTxOptions);
+    await notify(req, {
+      title: "Expense Deleted",
+      message: "Expense record deleted and journal entry reversed.",
+      module: "Expenses",
+      recordId: String(id),
+      actionType: "DELETE",
+      visibility: "ADMIN_ONLY"
+    });
     return res.status(200).json({ status: 200, message: "Expense deleted successfully" });
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });

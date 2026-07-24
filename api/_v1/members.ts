@@ -4,6 +4,7 @@ import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middlewar
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { logger } from '../_utils/logger.js';
+import { notify } from '../_utils/notify.js';
 
 function trimOrNull(v: unknown): string | null {
   if (v === undefined || v === null) return null;
@@ -227,6 +228,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     await logAudit(req.user.id, 'Register Member', 'MEMBER', null, newMember, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
+    await notify(req, {
+      title: 'Member Created',
+      message: `${newMember.fullName}${newMember.memberNo ? ` (${newMember.memberNo})` : ''} registered.`,
+      module: 'Members',
+      recordId: newMember.id,
+      actionType: 'CREATE',
+    });
+
     return res.status(201).json({ status: 201, data: newMember });
   }
 
@@ -332,6 +341,18 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     await logAudit(req.user.id, 'Update Member', 'MEMBER', existingMember, updatedMember, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
+    const activationChanged =
+      isActive !== undefined && Boolean(isActive) !== Boolean(existingMember.isActive);
+    await notify(req, {
+      title: activationChanged
+        ? (updatedMember.isActive ? 'Member Approved' : 'Member Deactivated')
+        : 'Member Updated',
+      message: `${updatedMember.fullName}${updatedMember.memberNo ? ` (${updatedMember.memberNo})` : ''} ${activationChanged ? (updatedMember.isActive ? 'activated' : 'deactivated') : 'updated'}.`,
+      module: 'Members',
+      recordId: updatedMember.id,
+      actionType: activationChanged ? (updatedMember.isActive ? 'APPROVE' : 'REJECT') : 'UPDATE',
+    });
+
     return res.status(200).json({ status: 200, data: updatedMember });
   }
 
@@ -350,6 +371,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     });
 
     await logAudit(req.user.id, 'Delete Member(s)', 'MEMBER', { ids }, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+
+    await notify(req, {
+      title: ids.length > 1 ? 'Members Deleted' : 'Member Deleted',
+      message: ids.length > 1 ? `${ids.length} members deleted.` : `Member deleted.`,
+      module: 'Members',
+      recordId: ids.length === 1 ? ids[0] : null,
+      actionType: 'DELETE',
+      visibility: 'ADMIN_ONLY',
+    });
 
     return res.status(200).json({ status: 200, message: `Successfully deleted ${ids.length} member(s)` });
   }

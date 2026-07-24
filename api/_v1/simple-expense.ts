@@ -4,6 +4,7 @@ import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middlewar
 import { prisma } from '../_prisma.js';
 import { AccountingService } from '../_services/accounting.service.js';
 import { validateAmount } from '../_utils/amount.js';
+import { notify } from '../_utils/notify.js';
 
 const accountingTxOptions = { maxWait: 10000, timeout: 30000 };
 
@@ -110,6 +111,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return expense;
     }, accountingTxOptions);
 
+    await notify(req, {
+      title: 'Expense Added',
+      message: `Expense of PKR ${Number((result as any).amount).toLocaleString()} recorded${(result as any).paidTo ? ` — paid to ${(result as any).paidTo}` : ''}.`,
+      module: 'Expenses',
+      recordId: (result as any).id,
+      actionType: 'CREATE',
+    });
+
     return res.status(201).json({ status: 201, data: result });
   }
 
@@ -191,6 +200,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return updated;
     }, accountingTxOptions);
 
+    await notify(req, {
+      title: 'Expense Updated',
+      message: `Expense (PKR ${Number((result as any).amount).toLocaleString()}) updated.`,
+      module: 'Expenses',
+      recordId: (result as any).id,
+      actionType: 'UPDATE',
+    });
+
     return res.status(200).json({ status: 200, data: result });
   }
 
@@ -209,6 +226,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         await tx.simpleExpense.delete({ where: { id: String(id) } });
       }
     }, accountingTxOptions);
+
+    await notify(req, {
+      title: 'Expense Deleted',
+      message: 'Expense record deleted and journal entry reversed.',
+      module: 'Expenses',
+      recordId: String(id),
+      actionType: 'DELETE',
+      visibility: 'ADMIN_ONLY',
+    });
 
     return res.status(200).json({ status: 200, message: 'Expense deleted successfully' });
   }
