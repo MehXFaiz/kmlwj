@@ -4,7 +4,7 @@ import { useDonationStore } from '../store/donationStore';
 import { useCoaStore } from '../store/coaStore';
 import { useAuthStore } from '../store/authStore';
 import { showToast } from '../components/ui/Toast';
-import { Heart, Search, Plus, Edit2, Trash2, CheckCircle2, X, AlertTriangle, Printer, Phone, CreditCard, Banknote, Calendar, MapPin } from 'lucide-react';
+import { Heart, Search, Plus, Edit2, Trash2, CheckCircle2, X, AlertTriangle, Printer, Phone, CreditCard, Banknote, Calendar, MapPin, SlidersHorizontal, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -319,6 +319,19 @@ function DonationInvoiceModal({ donation, onClose }) {
   );
 }
 
+const DEFAULT_FILTERS = {
+  aidType: 'ALL',
+  paymentMethod: 'ALL',
+  postingStatus: 'ALL',
+  dateFrom: '',
+  dateTo: '',
+  amountMin: '',
+  amountMax: '',
+  beneficiary: '',
+  sortBy: 'LATEST',
+  quickFilter: '',
+};
+
 export const Donations = () => {
   const { donations, fetchDonations, approveDonation, deleteDonation, bulkDeleteDonations } = useDonationStore();
   const { flatAccounts, fetchAccountsList } = useCoaStore();
@@ -333,6 +346,8 @@ export const Donations = () => {
   const [selectedIds, setSelectedIds] = useState([]);
   const [deleteId, setDeleteId] = useState(null);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     fetchDonations();
@@ -341,20 +356,102 @@ export const Donations = () => {
 
   useEffect(() => {
     const q = searchParams.get('search') || '';
-    if (q) {
-      setSearch(q);
-    }
+    if (q) setSearch(q);
   }, [searchParams]);
 
+  const setFilter = (key, value) => setFilters(f => ({ ...f, [key]: value, quickFilter: key === 'quickFilter' ? value : (key === 'dateFrom' || key === 'dateTo' ? '' : f.quickFilter) }));
+
+  const resetFilters = () => {
+    setFilters(DEFAULT_FILTERS);
+    setSearch('');
+  };
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.aidType !== 'ALL') count++;
+    if (filters.paymentMethod !== 'ALL') count++;
+    if (filters.postingStatus !== 'ALL') count++;
+    if (filters.dateFrom) count++;
+    if (filters.dateTo) count++;
+    if (filters.amountMin) count++;
+    if (filters.amountMax) count++;
+    if (filters.beneficiary) count++;
+    if (filters.quickFilter) count++;
+    if (search) count++;
+    return count;
+  }, [filters, search]);
+
   const filtered = useMemo(() => {
-    return donations.filter(d =>
-      (d.donorName || '').toLowerCase().includes(search.toLowerCase()) ||
-      (d.donorMobile || '').includes(search) ||
-      (d.donationType || '').toLowerCase().includes(search.toLowerCase()) ||
-      (d.customDonationType || '').toLowerCase().includes(search.toLowerCase()) ||
-      (d.paymentMethod || '').toLowerCase().includes(search.toLowerCase())
-    );
-  }, [donations, search]);
+    const now = new Date();
+    const startOf = (unit) => {
+      const d = new Date(now);
+      if (unit === 'day') { d.setHours(0,0,0,0); }
+      else if (unit === 'week') { d.setDate(d.getDate() - d.getDay()); d.setHours(0,0,0,0); }
+      else if (unit === 'month') { d.setDate(1); d.setHours(0,0,0,0); }
+      else if (unit === 'year') { d.setMonth(0,1); d.setHours(0,0,0,0); }
+      return d;
+    };
+
+    let result = donations.filter(d => {
+      const q = search.toLowerCase();
+      if (q && !(
+        (d.donorName || '').toLowerCase().includes(q) ||
+        (d.donorMobile || '').includes(q) ||
+        (d.donationType || '').toLowerCase().includes(q) ||
+        (d.customDonationType || '').toLowerCase().includes(q) ||
+        (d.paymentMethod || '').toLowerCase().includes(q)
+      )) return false;
+
+      if (filters.beneficiary) {
+        const bq = filters.beneficiary.toLowerCase();
+        if (!(
+          (d.donorName || '').toLowerCase().includes(bq) ||
+          (d.donorMobile || '').includes(bq)
+        )) return false;
+      }
+
+      if (filters.aidType !== 'ALL' && (d.donationType || '') !== filters.aidType) return false;
+
+      if (filters.paymentMethod !== 'ALL' && (d.paymentMethod || '') !== filters.paymentMethod) return false;
+
+      if (filters.postingStatus !== 'ALL') {
+        const statusMap = { POSTED: 'APPROVED', PENDING: 'PENDING', DRAFT: 'DRAFT' };
+        if ((d.status || '') !== (statusMap[filters.postingStatus] || filters.postingStatus)) return false;
+      }
+
+      const createdAt = d.createdAt ? new Date(d.createdAt) : null;
+      if (filters.quickFilter && createdAt) {
+        const unitMap = { TODAY: 'day', THIS_WEEK: 'week', THIS_MONTH: 'month', THIS_YEAR: 'year' };
+        const start = startOf(unitMap[filters.quickFilter]);
+        if (createdAt < start || createdAt > now) return false;
+      } else {
+        if (filters.dateFrom && createdAt && createdAt < new Date(filters.dateFrom)) return false;
+        if (filters.dateTo && createdAt) {
+          const to = new Date(filters.dateTo); to.setHours(23,59,59,999);
+          if (createdAt > to) return false;
+        }
+      }
+
+      const amt = parseFloat(d.amount) || 0;
+      if (filters.amountMin && amt < parseFloat(filters.amountMin)) return false;
+      if (filters.amountMax && amt > parseFloat(filters.amountMax)) return false;
+
+      return true;
+    });
+
+    result = [...result].sort((a, b) => {
+      switch (filters.sortBy) {
+        case 'OLDEST': return new Date(a.createdAt) - new Date(b.createdAt);
+        case 'HIGHEST': return (parseFloat(b.amount) || 0) - (parseFloat(a.amount) || 0);
+        case 'LOWEST': return (parseFloat(a.amount) || 0) - (parseFloat(b.amount) || 0);
+        case 'NAME_AZ': return (a.donorName || '').localeCompare(b.donorName || '');
+        case 'NAME_ZA': return (b.donorName || '').localeCompare(a.donorName || '');
+        default: return new Date(b.createdAt) - new Date(a.createdAt);
+      }
+    });
+
+    return result;
+  }, [donations, search, filters]);
 
   const handleApprove = async (id) => {
     try {
@@ -443,15 +540,189 @@ export const Donations = () => {
       </div>
 
       {/* Search & Filter Toolbar */}
-      <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-3 shadow-sm backdrop-blur-md flex flex-col sm:flex-row gap-3 items-center justify-between">
-        <div className="relative flex-1 w-full sm:max-w-md">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search donations by donor, mobile, or type..."
-            className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-950/80 border border-slate-800/80 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 transition-all" />
+      <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl shadow-sm backdrop-blur-md overflow-hidden">
+        {/* Top bar: search + toggle */}
+        <div className="p-3 flex flex-col sm:flex-row gap-3 items-center justify-between">
+          <div className="relative flex-1 w-full sm:max-w-md">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by donor, mobile, or type..."
+              className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-950/80 border border-slate-800/80 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 transition-all" />
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => setFiltersOpen(o => !o)}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${filtersOpen ? 'bg-amber-500/15 border-amber-500/40 text-amber-400' : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:border-slate-600 hover:text-slate-300'}`}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="flex items-center justify-center w-4 h-4 rounded-full bg-amber-500 text-slate-950 text-[10px] font-extrabold leading-none">{activeFilterCount}</span>
+              )}
+              {filtersOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
+            {activeFilterCount > 0 && (
+              <button onClick={resetFilters} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 text-xs font-bold transition-all cursor-pointer">
+                <RotateCcw className="h-3.5 w-3.5" /> Reset
+              </button>
+            )}
+            <span className="ml-auto sm:ml-0 text-xs font-medium text-slate-400 whitespace-nowrap px-1">
+              <strong className="text-slate-200">{filtered.length}</strong> {filtered.length === 1 ? 'record' : 'records'}
+            </span>
+          </div>
         </div>
-        <div className="flex items-center gap-2 self-end sm:self-auto text-xs font-medium text-slate-400 px-2">
-          <span>Showing <strong className="text-slate-200">{filtered.length}</strong> {filtered.length === 1 ? 'donation' : 'donations'}</span>
-        </div>
+
+        {/* Collapsible filter panel */}
+        {filtersOpen && (
+          <div className="border-t border-slate-800/80 p-4 space-y-4">
+            {/* Quick Filters */}
+            <div className="flex flex-wrap gap-2">
+              {[
+                { label: 'Today', value: 'TODAY' },
+                { label: 'This Week', value: 'THIS_WEEK' },
+                { label: 'This Month', value: 'THIS_MONTH' },
+                { label: 'This Year', value: 'THIS_YEAR' },
+              ].map(q => (
+                <button
+                  key={q.value}
+                  onClick={() => setFilter('quickFilter', filters.quickFilter === q.value ? '' : q.value)}
+                  className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${filters.quickFilter === q.value ? 'bg-amber-500/20 border-amber-500/50 text-amber-300' : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:border-slate-600 hover:text-slate-300'}`}
+                >
+                  {q.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Filter Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {/* Aid Type */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Aid Type</label>
+                <select
+                  value={filters.aidType}
+                  onChange={e => setFilter('aidType', e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-amber-500/50 transition-all font-medium"
+                >
+                  <option value="ALL">All Types</option>
+                  {DONATION_TYPES.map(t => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Payment Method */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Payment Method</label>
+                <select
+                  value={filters.paymentMethod}
+                  onChange={e => setFilter('paymentMethod', e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-amber-500/50 transition-all font-medium"
+                >
+                  <option value="ALL">All Methods</option>
+                  <option value="CASH">Cash</option>
+                  <option value="BANK">Bank</option>
+                  <option value="CHEQUE">Cheque</option>
+                </select>
+              </div>
+
+              {/* Posting Status */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Posting Status</label>
+                <select
+                  value={filters.postingStatus}
+                  onChange={e => setFilter('postingStatus', e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-amber-500/50 transition-all font-medium"
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="POSTED">Posted</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="DRAFT">Draft</option>
+                </select>
+              </div>
+
+              {/* Sort By */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Sort By</label>
+                <select
+                  value={filters.sortBy}
+                  onChange={e => setFilter('sortBy', e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-amber-500/50 transition-all font-medium"
+                >
+                  <option value="LATEST">Latest First</option>
+                  <option value="OLDEST">Oldest First</option>
+                  <option value="HIGHEST">Highest Amount</option>
+                  <option value="LOWEST">Lowest Amount</option>
+                  <option value="NAME_AZ">Name (A–Z)</option>
+                  <option value="NAME_ZA">Name (Z–A)</option>
+                </select>
+              </div>
+
+              {/* Date From */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">From Date</label>
+                <input
+                  type="date"
+                  value={filters.dateFrom}
+                  onChange={e => setFilter('dateFrom', e.target.value)}
+                  disabled={!!filters.quickFilter}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-amber-500/50 transition-all font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                />
+              </div>
+
+              {/* Date To */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">To Date</label>
+                <input
+                  type="date"
+                  value={filters.dateTo}
+                  onChange={e => setFilter('dateTo', e.target.value)}
+                  disabled={!!filters.quickFilter}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-amber-500/50 transition-all font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                />
+              </div>
+
+              {/* Min Amount */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Min Amount (PKR)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={filters.amountMin}
+                  onChange={e => setFilter('amountMin', e.target.value)}
+                  placeholder="e.g. 1000"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-all font-medium"
+                />
+              </div>
+
+              {/* Max Amount */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Max Amount (PKR)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={filters.amountMax}
+                  onChange={e => setFilter('amountMax', e.target.value)}
+                  placeholder="e.g. 50000"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-all font-medium"
+                />
+              </div>
+            </div>
+
+            {/* Beneficiary search – full width */}
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Beneficiary</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+                <input
+                  type="text"
+                  value={filters.beneficiary}
+                  onChange={e => setFilter('beneficiary', e.target.value)}
+                  placeholder="Search by Name, CNIC, Mobile, or Membership ID…"
+                  className="w-full pl-8 pr-4 py-2 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-all font-medium"
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Grid Card View Container (Reference Style) */}
@@ -459,10 +730,10 @@ export const Donations = () => {
         {filtered.length === 0 ? (
           <EmptyState
             icon={Heart}
-            title={search ? 'No donations found' : 'No donations recorded yet'}
-            description={search ? `We couldn't find any results matching "${search}". Try adjusting your search term or clearing the filter.` : 'Start by recording your first donation contribution to generate voucher slips and accounting entries.'}
-            actionLabel={!search ? 'Log First Donation' : undefined}
-            onAction={!search ? () => navigate('/donations/new') : undefined}
+            title={activeFilterCount > 0 ? 'No donations match your filters' : 'No donations recorded yet'}
+            description={activeFilterCount > 0 ? 'Try adjusting or resetting your filters to see more results.' : 'Start by recording your first donation contribution to generate voucher slips and accounting entries.'}
+            actionLabel={activeFilterCount > 0 ? 'Reset Filters' : 'Log First Donation'}
+            onAction={activeFilterCount > 0 ? resetFilters : () => navigate('/donations/new')}
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
