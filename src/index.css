@@ -14,6 +14,7 @@
        local("Alvi Nastaleeq"),
        local("AlviNastaleeq-Regular"),
        local("AlviNastaleeq"),
+       url("/fonts/AlviNastaleeqRegular.ttf") format("truetype"),
        local("Jameel Noori Nastaleeq"),
        local("Noto Nastaliq Urdu");
   font-weight: 400;

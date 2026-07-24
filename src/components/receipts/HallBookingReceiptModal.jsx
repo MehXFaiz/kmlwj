@@ -438,7 +438,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
                     <span
                       className="text-xs font-bold leading-relaxed"
                       style={{
-                        fontFamily: "'Alvi Nastaleeq', 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
+                        fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
                         color: selected ? '#064e3b' : '#334155'
                       }}
                     >
@@ -578,7 +578,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
             <span
               className="text-xs font-bold block leading-relaxed"
               style={{
-                fontFamily: "'Alvi Nastaleeq', 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
+                fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
                 color: '#0f172a'
               }}
             >
@@ -595,7 +595,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
             <span
               className="text-xs font-bold block leading-relaxed"
               style={{
-                fontFamily: "'Alvi Nastaleeq', 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
+                fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
                 color: '#0f172a'
               }}
             >
@@ -612,7 +612,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
             <span
               className="text-xs font-bold block leading-relaxed"
               style={{
-                fontFamily: "'Alvi Nastaleeq', 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
+                fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
                 color: '#0f172a'
               }}
             >
@@ -629,7 +629,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
             <span
               className="text-xs font-bold block leading-relaxed"
               style={{
-                fontFamily: "'Alvi Nastaleeq', 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
+                fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
                 color: '#0f172a'
               }}
             >
@@ -646,7 +646,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
           <p
             className="text-[10px] font-bold leading-relaxed"
             style={{
-              fontFamily: "'Alvi Nastaleeq', 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
+              fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
               color: '#334155'
             }}
           >
