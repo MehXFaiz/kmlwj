@@ -58,6 +58,29 @@ async function main() {
   const hbCount = await prisma.hallBooking.deleteMany({});
   console.log(`Deleted ${hbCount.count} HallBookings`);
 
+  // Delete notifications belonging to financial-transaction modules only.
+  // Master-data modules (Users, Members, Welfare, Donors, Chart of Accounts,
+  // Revenue/Expense Heads, Zakat Card, Family Tree) are kept.
+  const financialNotificationModules = [
+    'Journal Entries',
+    'Journal',
+    'Income',
+    'Simple Income',
+    'Expense',
+    'Expenses',
+    'Simple Expense',
+    'Invoices',
+    'Revenue',
+    'Hall Booking',
+    'Hall Bookings',
+    'Donations Given',
+    'Donations Received',
+  ];
+  const notifCount = await prisma.notification.deleteMany({
+    where: { module: { in: financialNotificationModules } },
+  });
+  console.log(`Deleted ${notifCount.count} financial Notifications`);
+
   // Reset Account initialBalance and currentBalance to 0
   const accUpdate = await prisma.account.updateMany({
     data: {
