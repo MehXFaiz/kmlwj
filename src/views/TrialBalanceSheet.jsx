@@ -119,129 +119,128 @@ export const TrialBalanceSheet = () => {
     return flattenedData;
   }, [flattenedData]);
 
-  // Dynamic mapper that maps active ledger accounts to the specific Urdu statement matrix rows (in English)
+  // Dynamic mapper: LEFT = Expense accounts only, RIGHT = Revenue accounts only
+  // Asset accounts are excluded from both columns; they affect only closing cash.
   const matrixData = useMemo(() => {
-    const getBalanceByCodes = (codes, nameRegex = null) => {
-      let debitSum = 0;
-      let creditSum = 0;
-      
-      computedAccounts.forEach(acc => {
-        if (acc.type === 'gl' || acc.type === 'subsidiary') {
-          const matchesCode = codes.includes(acc.code);
-          const matchesName = nameRegex && nameRegex.test(acc.glName || acc.mainCategory || '');
-          if (matchesCode || matchesName) {
-            debitSum += acc.debit || 0;
-            creditSum += acc.credit || 0;
-          }
+
+    // ── LEFT COLUMN: all EXPENSE GLs ─────────────────────────────────────────
+    const expenseGls = computedAccounts.filter(
+      acc => (acc.type === 'gl' || acc.type === 'subsidiary') &&
+             acc.nature.toUpperCase() === 'EXPENSE'
+    );
+
+    const getExpenseBal = (codes, nameRegex = null) => {
+      let val = 0;
+      expenseGls.forEach(acc => {
+        const matchesCode = codes.length > 0 && codes.includes(acc.code);
+        const matchesName = nameRegex && nameRegex.test(acc.glName || acc.mainCategory || '');
+        if (matchesCode || matchesName) {
+          val += Math.max(0, (acc.debit || 0) - (acc.credit || 0));
         }
       });
-      return { debit: debitSum, credit: creditSum };
+      return val;
     };
 
-    // Helper to get Net Debit (Debit - Credit) for expense items
-    const getExpenseBal = (codes, nameRegex = null) => {
-      const bal = getBalanceByCodes(codes, nameRegex);
-      return Math.max(0, bal.debit - bal.credit);
-    };
+    // ── RIGHT COLUMN: all REVENUE / INCOME GLs ───────────────────────────────
+    const revenueGls = computedAccounts.filter(
+      acc => (acc.type === 'gl' || acc.type === 'subsidiary') &&
+             (acc.nature.toUpperCase() === 'REVENUE' || acc.nature.toUpperCase() === 'INCOME')
+    );
 
-    // Helper to get Net Credit (Credit - Debit) for revenue/liability items
     const getRevenueBal = (codes, nameRegex = null) => {
-      const bal = getBalanceByCodes(codes, nameRegex);
-      return Math.max(0, bal.credit - bal.debit);
+      let val = 0;
+      revenueGls.forEach(acc => {
+        const matchesCode = codes.length > 0 && codes.includes(acc.code);
+        const matchesName = nameRegex && nameRegex.test(acc.glName || acc.mainCategory || '');
+        if (matchesCode || matchesName) {
+          val += Math.max(0, (acc.credit || 0) - (acc.debit || 0));
+        }
+      });
+      return val;
     };
 
-    // Helper to get Asset balance (Debits - Credits)
-    const getAssetBal = (codes, nameRegex = null) => {
-      const bal = getBalanceByCodes(codes, nameRegex);
-      return Math.max(0, bal.debit - bal.credit);
-    };
+    const namedExpenses = [
+      { desc: 'Bank Charges',               val: getExpenseBal(['4080103']) },
+      { desc: 'Bus Diesel',                  val: getExpenseBal(['4030101']) },
+      { desc: 'Bus Maintenance',             val: getExpenseBal(['4050101'], /bus.*repair|bus.*maintenance/i) },
+      { desc: 'Bus Renovation',              val: getExpenseBal([], /bus.*renovation/i) },
+      { desc: 'Annexy Canopy',               val: getExpenseBal([], /annexy.*canopy|canopy.*annexy/i) },
+      { desc: 'Garden Canopy',               val: getExpenseBal([], /garden.*canopy|canopy.*garden/i) },
+      { desc: 'Cleaning Staff Labor',        val: getExpenseBal([], /cleaning.*labor|clean.*staff/i) },
+      { desc: 'Office Equipment',            val: getExpenseBal([], /office.*equipment|office.*asset/i) },
+      { desc: 'Cleaning Equipment',          val: getExpenseBal([], /cleaning.*equipment/i) },
+      { desc: 'Generator Diesel',            val: getExpenseBal(['4080104'], /generator.*fuel|generator.*diesel/i) },
+      { desc: 'Diyanat Committee Expenses',  val: getExpenseBal([], /diyanat.*committee/i) },
+      { desc: 'Staff Refreshments',          val: getExpenseBal(['4080101'], /entertainment|refreshment/i) },
+      { desc: 'Generator Repair',            val: getExpenseBal(['4050102'], /generator.*repair/i) },
+      { desc: 'Cricket Tournament Expenses', val: getExpenseBal([], /cricket|tournament/i) },
+      { desc: 'Monthly Donation Expense',    val: getExpenseBal(['4060101'], /monthly.*donation/i) },
+      { desc: 'Electric Equipment',          val: getExpenseBal([], /electric.*equipment/i) },
+      { desc: 'Office Fitting',              val: getExpenseBal([], /office.*fitting/i) },
+      { desc: 'Gardening Expenses',          val: getExpenseBal([], /garden.*expense|gardening/i) },
+      { desc: 'Jamaat Khana Renovation',     val: getExpenseBal([], /jamaat.*khana.*renovation|jamaat.*khana.*repair/i) },
+      { desc: 'Court / Legal Fees',          val: getExpenseBal(['4070101'], /legal.*fee|court/i) },
+      { desc: 'General Body Expenses',       val: getExpenseBal(['4080105'], /general.*body|meeting/i) },
+      { desc: 'K-Electric Bill',             val: getExpenseBal([], /k-electric|electricity/i) },
+      { desc: 'Medical Center Construction', val: getExpenseBal([], /medical.*center.*construction/i) },
+      { desc: 'Medical Donation',            val: getExpenseBal(['4060103'], /medical.*donation/i) },
+      { desc: 'Shadi Biyah Donation',        val: getExpenseBal(['4060102'], /marriage.*donation/i) },
+      { desc: 'Zakat Distribution',          val: getExpenseBal([], /zakat.*dist|zakat.*paid/i) },
+      { desc: 'Fitra Distribution',          val: getExpenseBal([], /fitra.*dist|fitra.*paid/i) },
+      { desc: 'Salary',                      val: getExpenseBal([], /salary|wages/i) },
+      { desc: 'Rent',                        val: getExpenseBal([], /rent/i) },
+      { desc: 'Administrative Expenses',     val: getExpenseBal([], /admin.*expense/i) },
+      { desc: 'Education Donation',          val: getExpenseBal([], /education.*donation/i) },
+    ];
 
-    // Left Column: 26 Expenses (Payments)
+    const totalActualExpense = expenseGls.reduce(
+      (s, acc) => s + Math.max(0, (acc.debit || 0) - (acc.credit || 0)), 0
+    );
+    const namedExpTotal = namedExpenses.reduce((s, r) => s + r.val, 0);
+    const residualExpense = Math.max(0, totalActualExpense - namedExpTotal);
+
     const expenses = [
-      { sNo: '01', desc: 'Bank Charges', val: getExpenseBal(['4080103']) },
-      { sNo: '02', desc: 'Bus Diesel', val: getExpenseBal(['4030101']) },
-      { sNo: '03', desc: 'Bus Maintenance', val: getExpenseBal(['4050101'], /bus.*repair|bus.*maintenance/i) },
-      { sNo: '04', desc: 'Bus Renovation', val: getExpenseBal([], /bus.*renovation/i) },
-      { sNo: '05', desc: 'Annexy Canopy', val: getExpenseBal([], /annexy.*canopy|canopy.*annexy/i) },
-      { sNo: '06', desc: 'Garden Canopy', val: getExpenseBal([], /garden.*canopy|canopy.*garden/i) },
-      { sNo: '07', desc: 'Cleaning Staff Labor', val: getExpenseBal([], /cleaning.*labor|clean.*staff/i) },
-      { sNo: '08', desc: 'Office Equipment', val: getExpenseBal([], /office.*equipment|office.*asset/i) },
-      { sNo: '09', desc: 'Cleaning Equipment', val: getExpenseBal([], /cleaning.*equipment/i) },
-      { sNo: '10', desc: 'Generator Diesel', val: getExpenseBal(['4080104'], /generator.*fuel|generator.*diesel/i) },
-      { sNo: '11', desc: 'Diyanat Committee Expenses', val: getExpenseBal([], /diyanat.*committee/i) },
-      { sNo: '12', desc: 'Staff Refreshments', val: getExpenseBal(['4080101'], /entertainment|refreshment/i) },
-      { sNo: '13', desc: 'Generator Repair', val: getExpenseBal(['4050102'], /generator.*repair/i) },
-      { sNo: '14', desc: 'Cricket Tournament Expenses', val: getExpenseBal([], /cricket|tournament/i) },
-      { sNo: '15', desc: 'Donation Expenses', val: getExpenseBal(['4060101'], /monthly.*donation/i) },
-      { sNo: '16', desc: 'Electric Equipment', val: getExpenseBal([], /electric.*equipment/i) },
-      { sNo: '17', desc: 'Office Fitting', val: getExpenseBal([], /office.*fitting/i) },
-      { sNo: '18', desc: 'Gardening Expenses', val: getExpenseBal([], /garden.*expense|gardening/i) },
-      { sNo: '19', desc: 'Jamaat Khana Renovation', val: getExpenseBal([], /jamaat.*khana.*renovation|jamaat.*khana.*repair/i) },
-      { sNo: '20', desc: 'Court / Legal Fees Payment', val: getExpenseBal(['4070101'], /legal.*fee|court/i) },
-      { sNo: '21', desc: 'General Body Expenses', val: getExpenseBal(['4080105'], /general.*body|meeting/i) },
-      { sNo: '22', desc: 'K-Electric Bill', val: getExpenseBal([], /k-electric|electricity/i) },
-      { sNo: '23', desc: 'Medical Center Construction', val: getExpenseBal([], /medical.*center.*construction/i) },
-      { sNo: '24', desc: 'Medical Donation', val: getExpenseBal(['4060103'], /medical.*donation/i) },
-      { sNo: '25', desc: 'Shadi Biyah Donation', val: getExpenseBal(['4060102'], /marriage.*donation/i) },
-      { sNo: '26', desc: 'Miscellaneous Expenses', val: 0 }, 
+      ...namedExpenses,
+      { desc: 'Miscellaneous Expenses', val: residualExpense },
+    ].map((row, idx) => ({ ...row, sNo: String(idx + 1).padStart(2, '0') }));
+
+    // ── RIGHT COLUMN: named revenue rows + residual ───────────────────────────
+    const namedIncomes = [
+      { desc: 'Donation Received',        val: getRevenueBal(['3020000', '3020100'], /general.*donation|donation.*received/i) },
+      { desc: 'Zakat Received',           val: getRevenueBal(['3020101'], /zakat.*received|zakat.*income/i) },
+      { desc: 'Fitra Received',           val: getRevenueBal(['3020201'], /fitra/i) },
+      { desc: 'Membership Fees',          val: getRevenueBal(['3020402'], /membership.*fee/i) },
+      { desc: 'Hall Booking Income',      val: getRevenueBal(['3010101', '3010102', '3010103', '3010104'], /hall.*booking/i) },
+      { desc: 'Bus Booking',              val: getRevenueBal(['3020401'], /bus.*booking/i) },
+      { desc: 'Decoration Income',        val: getRevenueBal(['3020403'], /decoration.*commission|decoration.*income/i) },
+      { desc: 'Light Decoration Income',  val: getRevenueBal([], /light.*decoration/i) },
+      { desc: 'Donation (Shadi Biyah)',   val: getRevenueBal(['3020404'], /marriage.*donation.*received/i) },
+      { desc: 'Scrap Sale (Raddi)',       val: getRevenueBal([], /scrap.*raddi|raddi/i) },
+      { desc: 'Scrap Sale (Scrap)',       val: getRevenueBal([], /scrap.*sale|scrap.*sold/i) },
+      { desc: 'Commission Income',        val: getRevenueBal([], /commission.*income/i) },
+      { desc: 'Qurbani Income',           val: getRevenueBal([], /qurbani/i) },
+      { desc: 'Coconut Income',           val: getRevenueBal([], /coconut/i) },
+      { desc: 'Profit / Interest NBP',    val: getRevenueBal([], /profit.*nbp|interest.*nbp/i) },
+      { desc: 'Loan / Salary Advance',    val: getRevenueBal([], /salary.*loan|advance.*loan/i) },
     ];
 
-    // Dynamically load all Asset accounts
-    const dynamicAssets = computedAccounts
-      .filter(acc => acc.type === 'gl' && acc.nature.toUpperCase() === 'ASSET')
-      .map(acc => ({
-        desc: `${acc.glName || acc.accountName || acc.mainCategory || 'Asset'} (Balance)`,
-        val: Math.max(0, (acc.debit || 0) - (acc.credit || 0))
-      }))
-      .filter(item => item.val > 0);
+    const totalActualRevenue = revenueGls.reduce(
+      (s, acc) => s + Math.max(0, (acc.credit || 0) - (acc.debit || 0)), 0
+    );
+    const namedRevTotal = namedIncomes.reduce((s, r) => s + r.val, 0);
+    const residualRevenue = Math.max(0, totalActualRevenue - namedRevTotal);
 
-    // Right Column: Incomes (Receipts) + Dynamic Assets
     const incomes = [
-      ...dynamicAssets.map((asset, idx) => ({ sNo: String(idx + 1).padStart(2, '0'), desc: asset.desc, val: asset.val })),
-      { sNo: '', desc: 'Bus Booking', val: getRevenueBal(['3020401'], /bus.*booking/i) },
-      { sNo: '', desc: 'Decoration Income', val: getRevenueBal(['3020403'], /decoration.*commission|decoration.*income/i) },
-      { sNo: '', desc: 'Fitra Income', val: getRevenueBal(['3020201'], /fitra/i) },
-      { sNo: '', desc: 'Donation Income', val: getRevenueBal(['3020000'], /general.*donation|donations/i) },
-      { sNo: '', desc: 'Loan for Salary Staff', val: getRevenueBal([], /salary.*loan/i) },
-      { sNo: '', desc: 'Sadar Jamaat Payable', val: getRevenueBal(['2010100'], /sadar.*payable/i) },
-      { sNo: '', desc: 'Membership Fees', val: getRevenueBal(['3020402'], /membership.*fee/i) },
-      { sNo: '', desc: 'Light Decoration Income', val: getRevenueBal([], /light.*decoration/i) },
-      { sNo: '', desc: 'Donation Income (Shadi Biyah)', val: getRevenueBal(['3020404'], /marriage.*donation.*received/i) },
-      { sNo: '', desc: 'Hall Booking Income', val: getRevenueBal(['3010101', '3010102', '3010103', '3010104']) },
-      { sNo: '', desc: 'Scrap Sale (Raddi)', val: getRevenueBal([], /scrap.*raddi|raddi/i) },
-      { sNo: '', desc: 'Scrap Sale (Scrap)', val: getRevenueBal([], /scrap.*sale|scrap.*sold/i) },
-      { sNo: '', desc: 'Zakat Income Ramzan 2021', val: getRevenueBal([], /zakat.*2021/i) },
-      { sNo: '', desc: 'Zakat Income Ramzan 2022', val: getRevenueBal([], /zakat.*2022/i) },
-      { sNo: '', desc: 'Zakat Income Ramzan 2023', val: getRevenueBal(['3020101'], /zakat/i) },
-      { sNo: '', desc: 'Profit NBP General', val: getRevenueBal([], /profit.*nbp|interest.*nbp/i) },
-    ];
-    
-    // Reassign serial numbers for incomes
-    incomes.forEach((inc, idx) => { inc.sNo = String(idx + 1).padStart(2, '0'); });
+      ...namedIncomes,
+      { desc: 'Other Income', val: residualRevenue },
+    ].map((row, idx) => ({ ...row, sNo: String(idx + 1).padStart(2, '0') }));
 
-    // Compute residual balances from all ledger accounts and distribute to match main total
-    const totalActualExpense = computedAccounts
-      .filter(acc => acc.type === 'gl' && acc.nature.toUpperCase() === 'EXPENSE')
-      .reduce((sum, acc) => sum + Math.max(0, acc.debit - acc.credit), 0);
-    const mappedExpTotal = expenses.reduce((sum, item) => sum + item.val, 0);
-    expenses[25].val = Math.max(0, totalActualExpense - mappedExpTotal);
+    // ── CLOSING CASH: net asset balances (not shown in either column) ─────────
+    const totalCashAndBank = computedAccounts
+      .filter(acc => (acc.type === 'gl' || acc.type === 'subsidiary') && acc.nature.toUpperCase() === 'ASSET')
+      .reduce((s, acc) => s + Math.max(0, (acc.debit || 0) - (acc.credit || 0)), 0);
 
-    const totalActualIncome = computedAccounts
-      .filter(acc => acc.type === 'gl' && acc.nature.toUpperCase() === 'REVENUE')
-      .reduce((sum, acc) => sum + Math.max(0, acc.credit - acc.debit), 0);
-    
-    const mappedIncTotal = incomes.slice(dynamicAssets.length).reduce((sum, item) => sum + item.val, 0);
-    const incomeDiff = totalActualIncome - mappedIncTotal;
-    if (incomeDiff > 0) {
-      const donationIdx = incomes.findIndex(inc => inc.desc.toLowerCase().includes('donation income') && !inc.desc.toLowerCase().includes('shadi'));
-      if (donationIdx >= 0) {
-        incomes[donationIdx].val += incomeDiff;
-      } else {
-        incomes[incomes.length - 1].val += incomeDiff;
-      }
-    }
-
-    return { expenses, incomes };
+    return { expenses, incomes, totalCashAndBank };
   }, [computedAccounts]);
 
   const filteredData = useMemo(() => {
@@ -272,20 +271,17 @@ export const TrialBalanceSheet = () => {
     };
   }, [tbReport, computedAccounts]);
 
-  // Compute matrix balanced surplus
+  // Compute matrix surplus or deficit
   const matrixTotals = useMemo(() => {
     const totalExp = matrixData.expenses.reduce((sum, e) => sum + e.val, 0);
     const totalInc = matrixData.incomes.reduce((sum, i) => sum + i.val, 0);
-    
-    // surplus represents the closing Cash & Bank surplus balance
-    const surplus = Math.max(0, totalInc - totalExp);
-    const finalExpTotal = totalExp + surplus;
-    
+    const netSurplus = totalInc - totalExp; // positive = surplus, negative = deficit
     return {
       totalExpenses: totalExp,
       totalIncomes: totalInc,
-      surplus: surplus,
-      finalExpensesTotal: finalExpTotal,
+      surplus: netSurplus,
+      isDeficit: netSurplus < 0,
+      finalExpensesTotal: totalExp + Math.max(0, netSurplus),
       finalIncomesTotal: totalInc
     };
   }, [matrixData]);
@@ -600,14 +596,23 @@ export const TrialBalanceSheet = () => {
                       </td>
                     </tr>
                   ))}
-                  {/* Closing Cash Surplus line to balance */}
-                  <tr className="bg-brand-400/5 print:bg-slate-50 font-semibold text-brand-300 print:text-slate-800">
-                    <td className="py-2.5 px-4 font-mono text-center border-r border-slate-900 print:border-slate-200">27</td>
-                    <td className="py-2.5 px-4">Closing Cash & Bank Balance (Surplus)</td>
-                    <td className="py-2.5 px-4 text-right font-mono font-bold print:text-slate-900">
-                      {formatMoney(matrixTotals.surplus)}
-                    </td>
-                  </tr>
+                  {/* Closing Cash Surplus / Deficit line to balance */}
+                  {!matrixTotals.isDeficit && (
+                    <tr className="bg-brand-400/5 print:bg-slate-50 font-semibold text-brand-300 print:text-slate-800">
+                      <td className="py-2.5 px-4 font-mono text-center border-r border-slate-900 print:border-slate-200">{String(matrixData.expenses.length + 1).padStart(2, '0')}</td>
+                      <td className="py-2.5 px-4">Closing Cash & Bank Balance (Surplus)</td>
+                      <td className="py-2.5 px-4 text-right font-mono font-bold print:text-slate-900">
+                        {formatMoney(matrixTotals.surplus)}
+                      </td>
+                    </tr>
+                  )}
+                  {matrixTotals.isDeficit && (
+                    <tr className="bg-red-950/10 print:bg-red-50 font-semibold text-red-400 print:text-slate-800">
+                      <td className="py-2.5 px-4 font-mono text-center border-r border-slate-900 print:border-slate-200">{String(matrixData.expenses.length + 1).padStart(2, '0')}</td>
+                      <td className="py-2.5 px-4">Deficit (Expenses exceed Income)</td>
+                      <td className="py-2.5 px-4 text-right font-mono font-bold print:text-slate-900">—</td>
+                    </tr>
+                  )}
                   {/* Total row */}
                   <tr className="bg-slate-900/90 print:bg-slate-100 font-bold text-slate-200 print:text-slate-900 border-t border-slate-700 print:border-slate-300">
                     <td colSpan={2} className="py-3 px-4 text-right uppercase tracking-wider">Total Payments (Balanced)</td>
