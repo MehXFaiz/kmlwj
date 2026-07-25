@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { zakatCardService } from '../services/zakatCardService';
+import { useDashboardStore } from './dashboardStore';
 
 export const useZakatCardStore = create((set) => ({
   cards: [],
@@ -19,11 +20,13 @@ export const useZakatCardStore = create((set) => ({
   issueCard: async (data) => {
     const res = await zakatCardService.create(data);
     set((state) => ({ cards: [res.data, ...state.cards] }));
+    useDashboardStore.getState().invalidateAll();
     return res.data;
   },
 
   deleteCard: async (id) => {
     await zakatCardService.delete(id);
     set((state) => ({ cards: state.cards.filter((c) => c.id !== id) }));
+    useDashboardStore.getState().invalidateAll();
   },
 }));

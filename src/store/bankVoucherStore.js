@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import api from '../services/api';
+import { useDashboardStore } from './dashboardStore';
 
 export const useBankVoucherStore = create((set, get) => ({
   vouchers: [],
@@ -21,6 +22,7 @@ export const useBankVoucherStore = create((set, get) => ({
     try {
       const res = await api.post('/api/v1/journal-entries', voucherData);
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
       return res.data;
     } catch (err) {
       set({ error: err.response?.data?.error?.message || err.message, loading: false });
@@ -34,6 +36,7 @@ export const useBankVoucherStore = create((set, get) => ({
       const res = await api.patch('/api/v1/journal-entries', { id, status });
       await get().fetchVouchers(type);
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
       return res.data;
     } catch (err) {
       set({ error: err.response?.data?.error?.message || err.message, loading: false });
@@ -47,6 +50,7 @@ export const useBankVoucherStore = create((set, get) => ({
       const res = await api.put('/api/v1/journal-entries', { id, ...voucherData });
       await get().fetchVouchers(type);
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
       return res.data;
     } catch (err) {
       set({ error: err.response?.data?.error?.message || err.message, loading: false });
@@ -60,6 +64,7 @@ export const useBankVoucherStore = create((set, get) => ({
       const res = await api.delete(`/api/v1/journal-entries?id=${id}`);
       await get().fetchVouchers(type);
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
       return res.data;
     } catch (err) {
       set({ error: err.response?.data?.error?.message || err.message, loading: false });
@@ -73,6 +78,7 @@ export const useBankVoucherStore = create((set, get) => ({
       const res = await api.delete('/api/v1/journal-entries', { data: { ids } });
       await get().fetchVouchers(type);
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
       return res.data;
     } catch (err) {
       set({ error: err.response?.data?.error?.message || err.message, loading: false });

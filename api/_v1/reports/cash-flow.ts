@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../../_utils/handler.js';
 import { verifyAuth, AuthenticatedRequest } from '../../_middlewares/auth.middleware.js';
 import { prisma } from '../../_prisma.js';
+import { AccountingService } from '../../_services/accounting.service.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
@@ -69,24 +70,18 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       dateFilter.lte = end;
     }
 
+    // Single source of truth: posted journal entry lines (same source as every
+    // other financial report — see AccountingService.getPostedAggregates)
     const computeCashBalance = async (upto?: Date) => {
-      if (!upto) {
-        return cashBankAccounts.reduce((sum, acc) => sum + Number(acc.currentBalance || 0), 0);
-      }
+      const aggregates = await AccountingService.getPostedAggregates({
+        to: upto,
+        accountIds: cashBankAccounts.map(a => a.id)
+      });
 
-      let total = 0;
-      for (const account of cashBankAccounts) {
-        const agg = await prisma.ledgerEntry.aggregate({
-          where: {
-            accountId: account.id,
-            postingDate: { lte: upto }
-          },
-          _sum: { debit: true, credit: true }
-        });
-        const debit = Number(agg._sum.debit) || 0;
-        const credit = Number(agg._sum.credit) || 0;
-        total += (Number(account.initialBalance) || 0) + debit - credit;
-      }
+      const total = cashBankAccounts.reduce(
+        (sum, acc) => sum + AccountingService.naturalBalance('ASSET', acc.initialBalance, aggregates.get(acc.id)),
+        0
+      );
 
       return Math.round(total * 100) / 100;
     };

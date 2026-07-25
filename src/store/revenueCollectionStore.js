@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import api from '../services/api';
+import { useDashboardStore } from './dashboardStore';
 
 export const useRevenueCollectionStore = create((set, get) => ({
   collections: [],
@@ -21,6 +22,7 @@ export const useRevenueCollectionStore = create((set, get) => ({
     try {
       const response = await api.post('/api/v1/revenue-collections', data);
       set((state) => ({ collections: [response.data.data, ...state.collections] }));
+      useDashboardStore.getState().invalidateAll();
       return response.data.data;
     } catch (error) {
       throw error;
@@ -33,6 +35,7 @@ export const useRevenueCollectionStore = create((set, get) => ({
       set((state) => ({
         collections: state.collections.map(c => c.id === id ? response.data.data : c)
       }));
+      useDashboardStore.getState().invalidateAll();
       return response.data.data;
     } catch (error) {
       throw error;
@@ -45,6 +48,7 @@ export const useRevenueCollectionStore = create((set, get) => ({
       set((state) => ({
         collections: state.collections.map(c => c.id === id ? { ...c, ...response.data.data } : c)
       }));
+      useDashboardStore.getState().invalidateAll();
       return response.data.data;
     } catch (error) {
       throw error;
@@ -57,6 +61,7 @@ export const useRevenueCollectionStore = create((set, get) => ({
       set((state) => ({
         collections: state.collections.map(c => c.id === id ? { ...c, ...response.data.data } : c)
       }));
+      useDashboardStore.getState().invalidateAll();
       return response.data.data;
     } catch (error) {
       throw error;
@@ -67,6 +72,7 @@ export const useRevenueCollectionStore = create((set, get) => ({
     try {
       await api.delete(`/api/v1/revenue-collections?id=${id}`);
       set((state) => ({ collections: state.collections.filter((c) => c.id !== id) }));
+      useDashboardStore.getState().invalidateAll();
     } catch (error) {
       throw error;
     }
@@ -78,6 +84,7 @@ export const useRevenueCollectionStore = create((set, get) => ({
       set((state) => ({
         collections: state.collections.filter((c) => !ids.includes(c.id))
       }));
+      useDashboardStore.getState().invalidateAll();
       return { success: true, count: response.data?.data?.length || ids.length };
     } catch (error) {
       return { success: false, error: error.response?.data?.error?.message || error.message };

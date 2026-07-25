@@ -36,16 +36,24 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const startOfYear = new Date(`${chartYear}-01-01T00:00:00Z`);
   const endOfYear = new Date(`${chartYear + 1}-01-01T00:00:00Z`);
 
-  const ledgerEntries = await prisma.ledgerEntry.findMany({
+  // Single source of truth: posted journal entry lines (same source as every
+  // financial report — see AccountingService.getPostedAggregates)
+  const postedLines = await prisma.journalEntryLine.findMany({
     where: {
-      postingDate: {
-        gte: startOfYear,
-        lt: endOfYear,
+      journalEntry: {
+        status: 'Posted',
+        postingDate: {
+          gte: startOfYear,
+          lt: endOfYear,
+        }
       }
     },
     include: {
       account: {
         include: { accountType: true }
+      },
+      journalEntry: {
+        select: { postingDate: true }
       }
     }
   });
@@ -53,8 +61,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const monthlyData = months.map(month => ({ month, Revenue: 0, Expenses: 0 }));
 
-  for (const entry of ledgerEntries) {
-    const monthIndex = entry.postingDate.getMonth();
+  for (const entry of postedLines) {
+    const monthIndex = entry.journalEntry.postingDate.getMonth();
     const typeName = (entry.account?.accountType?.name || '').toUpperCase();
 
     if (typeName === 'REVENUE' || typeName === 'INCOME') {

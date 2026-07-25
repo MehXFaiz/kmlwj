@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import api from '../services/api';
+import { useDashboardStore } from './dashboardStore';
 
 export const useIncomeStore = create((set, get) => ({
   incomes: [],
@@ -23,6 +24,7 @@ export const useIncomeStore = create((set, get) => ({
     try {
       const { data } = await api.post('/api/v1/simple-income', incomeData);
       set(state => ({ incomes: [data.data, ...state.incomes] }));
+      useDashboardStore.getState().invalidateAll();
       return true;
     } catch (error) {
       set({ error: error.response?.data?.error?.message || 'Failed to record income' });

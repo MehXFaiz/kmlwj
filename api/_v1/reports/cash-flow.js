@@ -1,6 +1,7 @@
 import { makeHandler } from "../../_utils/handler.js";
 import { verifyAuth } from "../../_middlewares/auth.middleware.js";
 import { prisma } from "../../_prisma.js";
+import { AccountingService } from "../../_services/accounting.service.js";
 var cash_flow_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -49,22 +50,14 @@ var cash_flow_default = makeHandler(async (req, res) => {
       dateFilter.lte = end;
     }
     const computeCashBalance = async (upto) => {
-      if (!upto) {
-        return cashBankAccounts.reduce((sum, acc) => sum + Number(acc.currentBalance || 0), 0);
-      }
-      let total = 0;
-      for (const account of cashBankAccounts) {
-        const agg = await prisma.ledgerEntry.aggregate({
-          where: {
-            accountId: account.id,
-            postingDate: { lte: upto }
-          },
-          _sum: { debit: true, credit: true }
-        });
-        const debit = Number(agg._sum.debit) || 0;
-        const credit = Number(agg._sum.credit) || 0;
-        total += (Number(account.initialBalance) || 0) + debit - credit;
-      }
+      const aggregates = await AccountingService.getPostedAggregates({
+        to: upto,
+        accountIds: cashBankAccounts.map((a) => a.id)
+      });
+      const total = cashBankAccounts.reduce(
+        (sum, acc) => sum + AccountingService.naturalBalance("ASSET", acc.initialBalance, aggregates.get(acc.id)),
+        0
+      );
       return Math.round(total * 100) / 100;
     };
     const postedJournals = await prisma.journalEntry.findMany({

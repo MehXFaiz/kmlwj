@@ -1,6 +1,7 @@
 import { makeHandler } from "../../_utils/handler.js";
 import { verifyAuth } from "../../_middlewares/auth.middleware.js";
 import { prisma } from "../../_prisma.js";
+import { AccountingService } from "../../_services/accounting.service.js";
 var tree_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -11,6 +12,8 @@ var tree_default = makeHandler(async (req, res) => {
       },
       orderBy: { glCode: "asc" }
     });
+    const aggregates = await AccountingService.getPostedAggregates();
+    const liveBalance = (acc) => AccountingService.naturalBalance(acc.accountType?.name || "ASSET", acc.initialBalance, aggregates.get(acc.id));
     const formatAccount = (acc) => ({
       id: acc.id,
       code: acc.glCode,
@@ -25,7 +28,7 @@ var tree_default = makeHandler(async (req, res) => {
       description: acc.description,
       subsidiary: acc.subsidiary,
       initialBalance: acc.initialBalance,
-      currentBalance: acc.currentBalance || 0,
+      currentBalance: liveBalance(acc),
       isSystemDefined: acc.isSystemDefined,
       isReserved: acc.isReserved,
       children: []

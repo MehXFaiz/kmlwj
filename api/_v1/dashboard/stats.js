@@ -23,23 +23,29 @@ var stats_default = makeHandler(async (req, res) => {
   const chartYear = startDate ? new Date(startDate).getFullYear() : currentYear;
   const startOfYear = /* @__PURE__ */ new Date(`${chartYear}-01-01T00:00:00Z`);
   const endOfYear = /* @__PURE__ */ new Date(`${chartYear + 1}-01-01T00:00:00Z`);
-  const ledgerEntries = await prisma.ledgerEntry.findMany({
+  const postedLines = await prisma.journalEntryLine.findMany({
     where: {
-      postingDate: {
-        gte: startOfYear,
-        lt: endOfYear
+      journalEntry: {
+        status: "Posted",
+        postingDate: {
+          gte: startOfYear,
+          lt: endOfYear
+        }
       }
     },
     include: {
       account: {
         include: { accountType: true }
+      },
+      journalEntry: {
+        select: { postingDate: true }
       }
     }
   });
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const monthlyData = months.map((month) => ({ month, Revenue: 0, Expenses: 0 }));
-  for (const entry of ledgerEntries) {
-    const monthIndex = entry.postingDate.getMonth();
+  for (const entry of postedLines) {
+    const monthIndex = entry.journalEntry.postingDate.getMonth();
     const typeName = (entry.account?.accountType?.name || "").toUpperCase();
     if (typeName === "REVENUE" || typeName === "INCOME") {
       monthlyData[monthIndex].Revenue += (Number(entry.credit) || 0) - (Number(entry.debit) || 0);

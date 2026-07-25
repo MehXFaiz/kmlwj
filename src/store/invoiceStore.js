@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { invoiceService } from '../services/invoiceService';
+import { useDashboardStore } from './dashboardStore';
 
 export const useInvoiceStore = create((set, get) => ({
   invoices: [],
@@ -32,6 +33,7 @@ export const useInvoiceStore = create((set, get) => ({
     try {
       const res = await invoiceService.create(data);
       await get().fetchInvoices();
+      useDashboardStore.getState().invalidateAll();
       return res.data || res;
     } catch (err) {
       set({ error: err.message });
@@ -43,6 +45,7 @@ export const useInvoiceStore = create((set, get) => ({
     try {
       const res = await invoiceService.update(id, data);
       await get().fetchInvoices();
+      useDashboardStore.getState().invalidateAll();
       return res.data || res;
     } catch (err) {
       set({ error: err.message });
@@ -56,6 +59,7 @@ export const useInvoiceStore = create((set, get) => ({
       set((state) => ({
         invoices: state.invoices.filter((inv) => inv.id !== id),
       }));
+      useDashboardStore.getState().invalidateAll();
     } catch (err) {
       set({ error: err.message });
       throw err;
@@ -66,6 +70,7 @@ export const useInvoiceStore = create((set, get) => ({
     try {
       const res = await invoiceService.bulkDelete(ids);
       await get().fetchInvoices();
+      useDashboardStore.getState().invalidateAll();
       return res;
     } catch (err) {
       set({ error: err.message });
@@ -77,6 +82,7 @@ export const useInvoiceStore = create((set, get) => ({
     try {
       await invoiceService.markPaid(id);
       await get().fetchInvoices();
+      useDashboardStore.getState().invalidateAll();
     } catch (err) {
       set({ error: err.message });
       throw err;
@@ -87,6 +93,7 @@ export const useInvoiceStore = create((set, get) => ({
     try {
       await invoiceService.void(id);
       await get().fetchInvoices();
+      useDashboardStore.getState().invalidateAll();
     } catch (err) {
       set({ error: err.message });
       throw err;
@@ -99,6 +106,7 @@ export const useInvoiceStore = create((set, get) => ({
       const res = await invoiceService.post(id, revenueAccountId);
       set({ currentInvoice: res.data || res, loading: false });
       await get().fetchInvoices();
+      useDashboardStore.getState().invalidateAll();
       return res;
     } catch (err) {
       set({ error: err.message, loading: false });
@@ -112,6 +120,7 @@ export const useInvoiceStore = create((set, get) => ({
       const res = await invoiceService.pay(id, paymentData);
       set({ currentInvoice: res.data || res, loading: false });
       await get().fetchInvoices();
+      useDashboardStore.getState().invalidateAll();
       return res;
     } catch (err) {
       set({ error: err.message, loading: false });
@@ -125,6 +134,7 @@ export const useInvoiceStore = create((set, get) => ({
       const res = await invoiceService.cancel(id, revenueAccountId);
       set({ currentInvoice: res.data || res, loading: false });
       await get().fetchInvoices();
+      useDashboardStore.getState().invalidateAll();
       return res;
     } catch (err) {
       set({ error: err.message, loading: false });

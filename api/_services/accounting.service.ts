@@ -1219,6 +1219,68 @@ export class AccountingService {
     return nameLower.includes('bank') || nameLower.includes('al-habib') || nameLower.includes('nbp') || nameLower.includes('national bank') || nameLower.includes('mcb') || nameLower.includes('ubl') || nameLower.includes('allied') || nameLower.includes('faysal');
   }
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // SINGLE SOURCE OF TRUTH for every financial report.
+  //
+  // All report methods below (getGeneralLedger, getTrialBalance,
+  // getBalanceSheet, getIncomeStatement, getFinancialSummary) — plus the
+  // dashboard stats and cash-flow endpoints — derive their numbers exclusively
+  // from POSTED JournalEntryLine rows via these two helpers. Draft and
+  // Cancelled entries are excluded. Account.currentBalance is a write-side
+  // convenience cache (kept in sync by postTransaction/recalculateAccountBalance
+  // and audited by the integrity service) and must never be read by a report;
+  // the same goes for the denormalized LedgerEntry table.
+  // ──────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Aggregates posted journal entry lines per account, optionally restricted
+   * to a posting-date window. One groupBy query — no per-account N+1.
+   */
+  static async getPostedAggregates(opts: { from?: Date; to?: Date; accountIds?: string[] } = {}): Promise<Map<string, { debit: number; credit: number }>> {
+    const journalWhere: any = { status: 'Posted' };
+    if (opts.from || opts.to) {
+      journalWhere.postingDate = {};
+      if (opts.from) journalWhere.postingDate.gte = opts.from;
+      if (opts.to) journalWhere.postingDate.lte = opts.to;
+    }
+
+    const where: any = { journalEntry: journalWhere };
+    if (opts.accountIds && opts.accountIds.length > 0) {
+      where.accountId = { in: opts.accountIds };
+    }
+
+    const groups = await prisma.journalEntryLine.groupBy({
+      by: ['accountId'],
+      where,
+      _sum: { debit: true, credit: true }
+    });
+
+    return new Map(groups.map(g => [
+      g.accountId,
+      { debit: Number(g._sum.debit) || 0, credit: Number(g._sum.credit) || 0 }
+    ]));
+  }
+
+  /**
+   * Natural balance of an account given its posted debit/credit sums:
+   * debit-normal (ASSET/EXPENSE):  initial + debit − credit
+   * credit-normal (LIABILITY/EQUITY/REVENUE): initial + credit − debit
+   */
+  static naturalBalance(typeName: string, initialBalance: number, agg?: { debit: number; credit: number }): number {
+    const d = agg?.debit || 0;
+    const c = agg?.credit || 0;
+    const init = Number(initialBalance) || 0;
+    const isDebitNormal = ['ASSET', 'ASSETS', 'EXPENSE', 'EXPENSES'].includes((typeName || '').toUpperCase());
+    return isDebitNormal ? init + d - c : init + c - d;
+  }
+
+  /** Inclusive end-of-day Date for a YYYY-MM-DD endDate filter. */
+  private static endOfDay(endDate: string): Date {
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    return end;
+  }
+
   static async getGeneralLedger(params: { startDate?: string; endDate?: string; accountId?: string; glCode?: string; page?: string | number; limit?: string | number }) {
     const { startDate, endDate, accountId, glCode, page = '1', limit = '100' } = params;
 
@@ -1238,33 +1300,44 @@ export class AccountingService {
       throw Object.assign(new Error('Account not found'), { status: 404 });
     }
 
-    // Build Where Clause for Entries within Date Range
-    const entryWhere: any = {};
+    // Build Where Clause: posted journal entry lines only (single source of truth)
+    const journalWhere: any = { status: 'Posted' };
+    if (startDate || endDate) {
+      journalWhere.postingDate = {};
+      if (startDate) journalWhere.postingDate.gte = new Date(startDate);
+      if (endDate) journalWhere.postingDate.lte = new Date(endDate);
+    }
+
+    const entryWhere: any = { journalEntry: journalWhere };
     if (targetAccount) {
       entryWhere.accountId = targetAccount.id;
     }
-    
-    if (startDate || endDate) {
-      entryWhere.postingDate = {};
-      if (startDate) entryWhere.postingDate.gte = new Date(startDate);
-      if (endDate) entryWhere.postingDate.lte = new Date(endDate);
-    }
 
-    // Fetch entries
+    // Fetch entries from posted journal entry lines
     const [entries, total] = await Promise.all([
-      prisma.ledgerEntry.findMany({
+      prisma.journalEntryLine.findMany({
         where: entryWhere,
-        include: { account: { select: { glCode: true, accountName: true, initialBalance: true, accountType: { select: { name: true } } } } },
-        orderBy: { postingDate: 'asc' },
+        include: {
+          account: { select: { glCode: true, accountName: true, initialBalance: true, accountType: { select: { name: true } } } },
+          journalEntry: { select: { voucherNo: true, postingDate: true } }
+        },
+        orderBy: [{ journalEntry: { postingDate: 'asc' } }, { createdAt: 'asc' }],
         skip,
         take: limitNum,
       }),
-      prisma.ledgerEntry.count({ where: entryWhere })
+      prisma.journalEntryLine.count({ where: entryWhere })
     ]);
 
     // For each unique account present in the fetched entries, calculate its opening balance
     const uniqueAccountIds = [...new Set(entries.map(e => e.accountId))];
     const accountMeta: Record<string, { openingBalance: number; type: string; initialBalance: number; name: string }> = {};
+
+    const priorAggregates = startDate
+      ? await AccountingService.getPostedAggregates({
+          to: new Date(new Date(startDate).getTime() - 1),
+          accountIds: uniqueAccountIds
+        })
+      : new Map<string, { debit: number; credit: number }>();
 
     for (const accId of uniqueAccountIds) {
       const firstEntry = entries.find(e => e.accountId === accId);
@@ -1272,57 +1345,23 @@ export class AccountingService {
       const typeName = (firstEntry?.account as any)?.accountType?.name?.toUpperCase() || 'ASSET';
       const glCodeVal = firstEntry?.account?.glCode || '';
       const name = firstEntry?.account?.accountName || '';
-      
-      let opBal = initialBal;
 
-      if (startDate) {
-        const prior = await prisma.ledgerEntry.aggregate({
-          where: {
-            accountId: accId,
-            postingDate: { lt: new Date(startDate) }
-          },
-          _sum: { debit: true, credit: true }
-        });
-        const pDebit = prior._sum.debit || 0;
-        const pCredit = prior._sum.credit || 0;
-        if (['ASSET', 'EXPENSE'].includes(typeName)) {
-          opBal += (pDebit - pCredit);
-        } else {
-          opBal += (pCredit - pDebit);
-        }
-      }
+      const opBal = AccountingService.naturalBalance(typeName, initialBal, priorAggregates.get(accId));
       accountMeta[glCodeVal] = { openingBalance: opBal, type: typeName, initialBalance: initialBal, name };
     }
 
     // Calculate Opening Balance
     let openingBalance = 0;
-    
+
     if (targetAccount) {
-      openingBalance = targetAccount.initialBalance || 0;
-      
-      // Calculate net activity before startDate
-      if (startDate) {
-        const priorEntries = await prisma.ledgerEntry.aggregate({
-          where: {
-            accountId: targetAccount.id,
-            postingDate: { lt: new Date(startDate) }
-          },
-          _sum: { debit: true, credit: true }
-        });
-        
-        const priorDebit = priorEntries._sum.debit || 0;
-        const priorCredit = priorEntries._sum.credit || 0;
-        
-        const typeName = targetAccount.accountType?.name?.toUpperCase() || 'ASSET';
-        
-        // Debit normal accounts
-        if (['ASSET', 'EXPENSE'].includes(typeName)) {
-          openingBalance += (priorDebit - priorCredit);
-        } else {
-          // Credit normal accounts (LIABILITY, EQUITY, REVENUE)
-          openingBalance += (priorCredit - priorDebit);
-        }
-      }
+      const typeName = targetAccount.accountType?.name?.toUpperCase() || 'ASSET';
+      const priorAgg = startDate
+        ? (await AccountingService.getPostedAggregates({
+            to: new Date(new Date(startDate).getTime() - 1),
+            accountIds: [targetAccount.id]
+          })).get(targetAccount.id)
+        : undefined;
+      openingBalance = AccountingService.naturalBalance(typeName, targetAccount.initialBalance || 0, priorAgg);
     } else if (entries.length > 0) {
         openingBalance = 0;
     }
@@ -1334,13 +1373,13 @@ export class AccountingService {
     const formattedEntries = entries.map(entry => {
       totalDebit += entry.debit;
       totalCredit += entry.credit;
-      
+
       return {
         id: entry.id,
-        date: entry.postingDate.toISOString().split('T')[0],
+        date: entry.journalEntry.postingDate.toISOString().split('T')[0],
         glCode: entry.account.glCode,
         accountName: entry.account.accountName,
-        reference: entry.reference,
+        reference: entry.journalEntry.voucherNo,
         description: entry.description,
         debit: entry.debit,
         credit: entry.credit
@@ -1385,6 +1424,23 @@ export class AccountingService {
       orderBy: { glCode: 'asc' }
     });
 
+    const hasDateFilter = Boolean(startDate || endDate);
+    const from = startDate ? new Date(startDate) : undefined;
+    const to = endDate ? AccountingService.endOfDay(endDate) : undefined;
+
+    // All balances derive from posted journal entry lines — the single source
+    // of truth. Three aggregate windows cover every case in one query each:
+    //   period      → P&L accounts (activity inside the range)
+    //   cumulative  → balance-sheet accounts (everything up to `to`)
+    //   prior       → retained earnings carried in from before `from`
+    const periodAggregates = await AccountingService.getPostedAggregates({ from, to });
+    const cumulativeAggregates = hasDateFilter
+      ? await AccountingService.getPostedAggregates({ to })
+      : periodAggregates;
+    const priorAggregates = from
+      ? await AccountingService.getPostedAggregates({ to: new Date(from.getTime() - 1) })
+      : new Map<string, { debit: number; credit: number }>();
+
     let totalDebit = 0;
     let totalCredit = 0;
     let openingRetainedEarnings = 0;
@@ -1392,56 +1448,35 @@ export class AccountingService {
     const formatted: any[] = [];
 
     for (const acc of activeAccounts) {
-      let balance = acc.currentBalance;
+      const typeName = acc.accountType?.name?.toUpperCase() || 'ASSET';
+      const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
+      const isPnl = ['REVENUE', 'EXPENSE'].includes(typeName);
 
-      // If date filter is provided, compute balance from ledger entries in that range
-      if (startDate || endDate) {
-        const dateFilter: any = {};
-        if (startDate) dateFilter.gte = new Date(startDate);
-        if (endDate) {
-          const end = new Date(endDate);
-          end.setHours(23, 59, 59, 999);
-          dateFilter.lte = end;
-        }
+      let balance: number;
+      if (hasDateFilter && isPnl) {
+        // P&L accounts: period activity only (no opening balance carried in)
+        balance = AccountingService.naturalBalance(typeName, 0, periodAggregates.get(acc.id));
+      } else {
+        // Balance-sheet accounts (and the no-filter case): cumulative position
+        balance = AccountingService.naturalBalance(typeName, acc.initialBalance, cumulativeAggregates.get(acc.id));
+      }
 
-        const agg = await prisma.ledgerEntry.aggregate({
-          where: {
-            accountId: acc.id,
-            postingDate: dateFilter
-          },
-          _sum: { debit: true, credit: true }
-        });
-
-        const d = Number(agg._sum.debit) || 0;
-        const c = Number(agg._sum.credit) || 0;
-
-        const typeName = (acc.accountType?.name || '').toUpperCase();
-        const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
-        const isPnl = ['REVENUE', 'EXPENSE'].includes(typeName);
-
-        if (isPnl) {
-          balance = isDebitNormal ? d - c : c - d;
+      // Retained earnings carried in from prior periods. Computed for every
+      // P&L account — even ones with zero activity inside the range —
+      // otherwise the trial balance would not foot.
+      if (startDate && isPnl) {
+        const prior = priorAggregates.get(acc.id);
+        const pd = prior?.debit || 0;
+        const pc = prior?.credit || 0;
+        if (typeName === 'REVENUE' || typeName === 'INCOME') {
+          openingRetainedEarnings += (pc - pd);
         } else {
-          if (endDate) {
-            const end = new Date(endDate);
-            end.setHours(23, 59, 59, 999);
-            const cumAgg = await prisma.ledgerEntry.aggregate({
-              where: { accountId: acc.id, postingDate: { lte: end } },
-              _sum: { debit: true, credit: true }
-            });
-            const cd = Number(cumAgg._sum.debit) || 0;
-            const cc = Number(cumAgg._sum.credit) || 0;
-            const initBal = Number(acc.initialBalance) || 0;
-            balance = isDebitNormal ? initBal + cd - cc : initBal + cc - cd;
-          }
+          openingRetainedEarnings -= (pd - pc);
         }
       }
 
       // Skip accounts with zero balance
       if (balance === 0) continue;
-
-      const typeName = acc.accountType?.name?.toUpperCase() || 'ASSET';
-      const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
 
       let debit = 0;
       let credit = 0;
@@ -1456,24 +1491,6 @@ export class AccountingService {
 
       totalDebit += debit;
       totalCredit += credit;
-
-      // Handle retained earnings opening balance from previous periods if we have a startDate
-      if (startDate && ['REVENUE', 'EXPENSE'].includes(typeName)) {
-        const priorAgg = await prisma.ledgerEntry.aggregate({
-          where: {
-            accountId: acc.id,
-            postingDate: { lt: new Date(startDate) }
-          },
-          _sum: { debit: true, credit: true }
-        });
-        const pd = Number(priorAgg._sum.debit) || 0;
-        const pc = Number(priorAgg._sum.credit) || 0;
-        if (typeName === 'REVENUE' || typeName === 'INCOME') {
-          openingRetainedEarnings += (pc - pd);
-        } else {
-          openingRetainedEarnings -= (pd - pc);
-        }
-      }
 
       formatted.push({
         id: acc.id,
@@ -1521,55 +1538,57 @@ export class AccountingService {
     const assets: any[] = [];
     const liabilities: any[] = [];
     const equity: any[] = [];
-    
+
     let totalAssets = 0;
     let totalLiabilities = 0;
     let totalEquity = 0;
-    
+
     let totalRevenue = 0;
     let totalExpense = 0;
     let openingRetainedEarnings = 0;
 
+    const from = startDate ? new Date(startDate) : undefined;
+    const to = endDate ? AccountingService.endOfDay(endDate) : undefined;
+    const hasPeriodFilter = Boolean(from || to);
+
+    // Single source of truth: posted journal entry lines (see getPostedAggregates)
+    const periodAggregates = await AccountingService.getPostedAggregates({ from, to });
+    const cumulativeAggregates = hasPeriodFilter
+      ? await AccountingService.getPostedAggregates({ to })
+      : periodAggregates;
+    const priorAggregates = from
+      ? await AccountingService.getPostedAggregates({ to: new Date(from.getTime() - 1) })
+      : new Map<string, { debit: number; credit: number }>();
+
     for (const acc of allAccounts) {
       const type = acc.accountType?.name;
-      let balance = acc.currentBalance;
+      let balance: number;
 
       if (type === 'REVENUE' || type === 'EXPENSE') {
-        if (startDate || endDate) {
-          const dateFilter: any = {};
-          if (startDate) dateFilter.gte = new Date(startDate);
-          if (endDate) {
-            const end = new Date(endDate);
-            end.setHours(23, 59, 59, 999);
-            dateFilter.lte = end;
-          }
-          const agg = await prisma.ledgerEntry.aggregate({
-            where: { accountId: acc.id, postingDate: dateFilter },
-            _sum: { debit: true, credit: true }
-          });
-          const d = Number(agg._sum.debit) || 0;
-          const c = Number(agg._sum.credit) || 0;
-          balance = type === 'REVENUE' ? (c - d) : (d - c);
-        }
+        // P&L accounts: activity inside the period only when filtered,
+        // all-time (including opening balance) otherwise
+        const agg = hasPeriodFilter ? periodAggregates.get(acc.id) : cumulativeAggregates.get(acc.id);
+        balance = AccountingService.naturalBalance(type, hasPeriodFilter ? 0 : acc.initialBalance, agg);
       } else {
-        if (endDate) {
-          const end = new Date(endDate);
-          end.setHours(23, 59, 59, 999);
-          const agg = await prisma.ledgerEntry.aggregate({
-            where: { accountId: acc.id, postingDate: { lte: end } },
-            _sum: { debit: true, credit: true }
-          });
-          const d = Number(agg._sum.debit) || 0;
-          const c = Number(agg._sum.credit) || 0;
-          const initialBal = Number(acc.initialBalance) || 0;
-          const typeName = (type || '').toUpperCase();
-          const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
-          balance = isDebitNormal ? initialBal + d - c : initialBal + c - d;
+        // Balance-sheet accounts: cumulative position up to the end date
+        balance = AccountingService.naturalBalance(type || 'ASSET', acc.initialBalance, cumulativeAggregates.get(acc.id));
+      }
+
+      // Retained earnings from prior periods — computed for every P&L account,
+      // even ones with no activity inside the range, so the sheet balances.
+      if (startDate && (type === 'REVENUE' || type === 'EXPENSE')) {
+        const prior = priorAggregates.get(acc.id);
+        const pd = prior?.debit || 0;
+        const pc = prior?.credit || 0;
+        if (type === 'REVENUE') {
+          openingRetainedEarnings += (pc - pd);
+        } else {
+          openingRetainedEarnings -= (pd - pc);
         }
       }
 
       if (balance === 0) continue;
-      
+
       const formatted = {
         id: acc.id,
         glCode: acc.glCode,
@@ -1590,23 +1609,6 @@ export class AccountingService {
         totalRevenue += balance;
       } else if (type === 'EXPENSE') {
         totalExpense += balance;
-      }
-
-      if (startDate && (type === 'REVENUE' || type === 'EXPENSE')) {
-        const priorAgg = await prisma.ledgerEntry.aggregate({
-          where: {
-            accountId: acc.id,
-            postingDate: { lt: new Date(startDate) }
-          },
-          _sum: { debit: true, credit: true }
-        });
-        const pd = Number(priorAgg._sum.debit) || 0;
-        const pc = Number(priorAgg._sum.credit) || 0;
-        if (type === 'REVENUE') {
-          openingRetainedEarnings += (pc - pd);
-        } else {
-          openingRetainedEarnings -= (pd - pc);
-        }
       }
     }
 
@@ -1657,36 +1659,24 @@ export class AccountingService {
     let totalRevenue = 0;
     let totalExpense = 0;
 
+    // Single source of truth: posted journal entry lines (see getPostedAggregates)
+    const aggregates = await AccountingService.getPostedAggregates({
+      from: startDate ? new Date(startDate) : undefined,
+      to: endDate ? AccountingService.endOfDay(endDate) : undefined,
+      accountIds: pnlAccounts.map(a => a.id)
+    });
+
+    // Period-filtered: activity inside the range only. Unfiltered (all-time):
+    // include any opening balance, matching the trial balance and summary.
+    const pnlInitialApplies = !(startDate || endDate);
+
     for (const acc of pnlAccounts) {
       const type = acc.accountType?.name;
-      let balance = acc.currentBalance;
-
-      if (startDate || endDate) {
-        const dateFilter: any = {};
-        if (startDate) dateFilter.gte = new Date(startDate);
-        if (endDate) {
-          const end = new Date(endDate);
-          end.setHours(23, 59, 59, 999);
-          dateFilter.lte = end;
-        }
-
-        const agg = await prisma.ledgerEntry.aggregate({
-          where: {
-            accountId: acc.id,
-            postingDate: dateFilter
-          },
-          _sum: { debit: true, credit: true }
-        });
-
-        const totalDebit = Number(agg._sum.debit) || 0;
-        const totalCredit = Number(agg._sum.credit) || 0;
-
-        if (type === 'REVENUE') {
-          balance = totalCredit - totalDebit;
-        } else if (type === 'EXPENSE') {
-          balance = totalDebit - totalCredit;
-        }
-      }
+      const balance = AccountingService.naturalBalance(
+        type || 'REVENUE',
+        pnlInitialApplies ? acc.initialBalance : 0,
+        aggregates.get(acc.id)
+      );
 
       if (balance === 0) continue;
 
@@ -1728,53 +1718,34 @@ export class AccountingService {
     let cashBalance = 0;
     let bankBalance = 0;
     let openingRetainedEarnings = 0;
-    const hasDateFilter = Boolean(startDate || endDate);
+
+    const from = startDate ? new Date(startDate) : undefined;
+    const to = endDate ? AccountingService.endOfDay(endDate) : undefined;
+    const hasDateFilter = Boolean(from || to);
+
+    // Single source of truth: posted journal entry lines (see getPostedAggregates)
+    const periodAggregates = await AccountingService.getPostedAggregates({ from, to });
+    const cumulativeAggregates = hasDateFilter
+      ? await AccountingService.getPostedAggregates({ to })
+      : periodAggregates;
+    const priorAggregates = from
+      ? await AccountingService.getPostedAggregates({ to: new Date(from.getTime() - 1) })
+      : new Map<string, { debit: number; credit: number }>();
 
     for (const acc of allAccounts) {
       const typeName = (acc.accountType?.name || '').toUpperCase();
       const isLeaf = !allAccounts.some(a => a.parentId === acc.id);
       if (!isLeaf) continue;
 
-      let bal = Number(acc.currentBalance) || 0;
+      const isPnl = ['REVENUE', 'INCOME', 'EXPENSE', 'EXPENSES'].includes(typeName);
 
-      if (hasDateFilter) {
-        if (typeName === 'REVENUE' || typeName === 'EXPENSE') {
-          const periodFilter: any = {};
-          if (startDate) periodFilter.gte = new Date(startDate);
-          if (endDate) {
-            const end = new Date(endDate);
-            end.setHours(23, 59, 59, 999);
-            periodFilter.lte = end;
-          }
-
-          const agg = await prisma.ledgerEntry.aggregate({
-            where: {
-              accountId: acc.id,
-              postingDate: periodFilter
-            },
-            _sum: { debit: true, credit: true }
-          });
-
-          const d = Number(agg._sum.debit) || 0;
-          const c = Number(agg._sum.credit) || 0;
-          bal = typeName === 'REVENUE' ? (c - d) : (d - c);
-        } else if (endDate) {
-          const end = new Date(endDate);
-          end.setHours(23, 59, 59, 999);
-          const agg = await prisma.ledgerEntry.aggregate({
-            where: {
-              accountId: acc.id,
-              postingDate: { lte: end }
-            },
-            _sum: { debit: true, credit: true }
-          });
-
-          const d = Number(agg._sum.debit) || 0;
-          const c = Number(agg._sum.credit) || 0;
-          const initialBal = Number(acc.initialBalance) || 0;
-          const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
-          bal = isDebitNormal ? initialBal + d - c : initialBal + c - d;
-        }
+      let bal: number;
+      if (hasDateFilter && isPnl) {
+        // P&L accounts: activity inside the period only
+        bal = AccountingService.naturalBalance(typeName, 0, periodAggregates.get(acc.id));
+      } else {
+        // Balance-sheet accounts (and no-filter): cumulative position
+        bal = AccountingService.naturalBalance(typeName, acc.initialBalance, cumulativeAggregates.get(acc.id));
       }
 
       if (typeName === 'ASSET' || typeName === 'ASSETS') {
@@ -1794,16 +1765,10 @@ export class AccountingService {
         totalExpense += bal;
       }
 
-      if (startDate && (typeName === 'REVENUE' || typeName === 'EXPENSE')) {
-        const priorAgg = await prisma.ledgerEntry.aggregate({
-          where: {
-            accountId: acc.id,
-            postingDate: { lt: new Date(startDate) }
-          },
-          _sum: { debit: true, credit: true }
-        });
-        const pd = Number(priorAgg._sum.debit) || 0;
-        const pc = Number(priorAgg._sum.credit) || 0;
+      if (startDate && isPnl) {
+        const prior = priorAggregates.get(acc.id);
+        const pd = prior?.debit || 0;
+        const pc = prior?.credit || 0;
         if (typeName === 'REVENUE' || typeName === 'INCOME') {
           openingRetainedEarnings += (pc - pd);
         } else {

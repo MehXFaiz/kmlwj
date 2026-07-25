@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { donationReceivedService } from '../services/donationReceivedService';
+import { useDashboardStore } from './dashboardStore';
 
 export const useDonationReceivedStore = create((set, get) => ({
   donations: [],
@@ -33,6 +34,7 @@ export const useDonationReceivedStore = create((set, get) => ({
       const res = await donationReceivedService.create(data);
       await get().fetchDonations();
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
       return res;
     } catch (err) {
       set({ error: err.response?.data?.error?.message || err.message, loading: false });
@@ -46,6 +48,7 @@ export const useDonationReceivedStore = create((set, get) => ({
       const res = await donationReceivedService.update(id, { status, ...extraData });
       await get().fetchDonations();
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
       return res;
     } catch (err) {
       set({ error: err.response?.data?.error?.message || err.message, loading: false });
@@ -61,6 +64,7 @@ export const useDonationReceivedStore = create((set, get) => ({
         donations: state.donations.filter(d => d.id !== id),
         loading: false
       }));
+      useDashboardStore.getState().invalidateAll();
     } catch (err) {
       set({ error: err.response?.data?.error?.message || err.message, loading: false });
       throw err;
@@ -73,6 +77,7 @@ export const useDonationReceivedStore = create((set, get) => ({
       const res = await donationReceivedService.bulkDelete(ids);
       await get().fetchDonations();
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
       return res;
     } catch (err) {
       set({ error: err.response?.data?.error?.message || err.message, loading: false });

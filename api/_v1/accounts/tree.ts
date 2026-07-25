@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../../_utils/handler.js';
 import { verifyAuth, AuthenticatedRequest } from '../../_middlewares/auth.middleware.js';
 import { prisma } from '../../_prisma.js';
+import { AccountingService } from '../../_services/accounting.service.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
@@ -15,6 +16,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       },
       orderBy: { glCode: 'asc' },
     });
+
+    // Single source of truth: live balances derive from posted journal entry
+    // lines (same source as every financial report), not the cached
+    // Account.currentBalance column.
+    const aggregates = await AccountingService.getPostedAggregates();
+    const liveBalance = (acc: any) =>
+      AccountingService.naturalBalance(acc.accountType?.name || 'ASSET', acc.initialBalance, aggregates.get(acc.id));
 
     // Helper to format accounts to match UI expectations
     const formatAccount = (acc: any) => ({
@@ -30,7 +38,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       description: acc.description,
       subsidiary: acc.subsidiary,
       initialBalance: acc.initialBalance,
-      currentBalance: acc.currentBalance || 0,
+      currentBalance: liveBalance(acc),
       isSystemDefined: acc.isSystemDefined,
       isReserved: acc.isReserved,
       children: [] as any[],
