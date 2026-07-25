@@ -267,8 +267,12 @@ app.get('/api/v1/reports/cash-flow', makeExpress(cashFlowHandler));
 // Simple Expense & Income Routes
 app.get('/api/v1/simple-expense', makeExpress(simpleExpenseHandler));
 app.post('/api/v1/simple-expense', makeExpress(simpleExpenseHandler));
+app.put('/api/v1/simple-expense', makeExpress(simpleExpenseHandler));
+app.delete('/api/v1/simple-expense', makeExpress(simpleExpenseHandler));
 app.get('/api/v1/simple-income', makeExpress(simpleIncomeHandler));
 app.post('/api/v1/simple-income', makeExpress(simpleIncomeHandler));
+app.put('/api/v1/simple-income', makeExpress(simpleIncomeHandler));
+app.delete('/api/v1/simple-income', makeExpress(simpleIncomeHandler));
 
 // Accounting Health Check Route
 app.get('/api/v1/accounting-health', makeExpress(accountingHealthHandler));
