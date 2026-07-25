@@ -186,29 +186,38 @@ export const TrialBalanceSheet = () => {
       { sNo: '26', desc: 'Miscellaneous Expenses', val: 0 }, 
     ];
 
-    // Right Column: 20 Incomes (Receipts)
+    // Dynamically load all Asset accounts
+    const dynamicAssets = computedAccounts
+      .filter(acc => acc.type === 'gl' && acc.nature.toUpperCase() === 'ASSET')
+      .map(acc => ({
+        desc: `${acc.glName || acc.accountName || acc.mainCategory || 'Asset'} (Balance)`,
+        val: Math.max(0, (acc.debit || 0) - (acc.credit || 0))
+      }))
+      .filter(item => item.val > 0);
+
+    // Right Column: Incomes (Receipts) + Dynamic Assets
     const incomes = [
-      { sNo: '01', desc: 'NBP Zakat Bank (Opening)', val: getAssetBal(['1010102']) },
-      { sNo: '02', desc: 'National Bank of Pakistan (Opening)', val: getAssetBal(['1010101']) },
-      { sNo: '03', desc: 'Opening Advance Salary', val: getAssetBal([], /advance.*salary/i) },
-      { sNo: '04', desc: 'Bus Booking', val: getRevenueBal(['3020401'], /bus.*booking/i) },
-      { sNo: '05', desc: 'Decoration Income', val: getRevenueBal(['3020403'], /decoration.*commission|decoration.*income/i) },
-      { sNo: '06', desc: 'Fitra Income', val: getRevenueBal(['3020201'], /fitra/i) },
-      { sNo: '07', desc: 'Donation Income', val: getRevenueBal(['3020000'], /general.*donation|donations/i) },
-      { sNo: '08', desc: 'Sadaya Academy Receipt (Balance)', val: getAssetBal([], /sadaya.*academy/i) },
-      { sNo: '09', desc: 'Loan for Salary Staff', val: getRevenueBal([], /salary.*loan/i) },
-      { sNo: '10', desc: 'Sadar Jamaat Payable', val: getRevenueBal(['2010100'], /sadar.*payable/i) },
-      { sNo: '11', desc: 'Membership Fees', val: getRevenueBal(['3020402'], /membership.*fee/i) },
-      { sNo: '12', desc: 'Light Decoration Income', val: getRevenueBal([], /light.*decoration/i) },
-      { sNo: '13', desc: 'Donation Income (Shadi Biyah)', val: getRevenueBal(['3020404'], /marriage.*donation.*received/i) },
-      { sNo: '14', desc: 'Hall Booking Income', val: getRevenueBal(['3010101', '3010102', '3010103', '3010104']) },
-      { sNo: '15', desc: 'Scrap Sale (Raddi)', val: getRevenueBal([], /scrap.*raddi|raddi/i) },
-      { sNo: '16', desc: 'Scrap Sale (Scrap)', val: getRevenueBal([], /scrap.*sale|scrap.*sold/i) },
-      { sNo: '17', desc: 'Zakat Income Ramzan 2021', val: getRevenueBal([], /zakat.*2021/i) },
-      { sNo: '18', desc: 'Zakat Income Ramzan 2022', val: getRevenueBal([], /zakat.*2022/i) },
-      { sNo: '19', desc: 'Zakat Income Ramzan 2023', val: getRevenueBal(['3020101'], /zakat/i) },
-      { sNo: '20', desc: 'Profit NBP General', val: getRevenueBal([], /profit.*nbp|interest.*nbp/i) },
+      ...dynamicAssets.map((asset, idx) => ({ sNo: String(idx + 1).padStart(2, '0'), desc: asset.desc, val: asset.val })),
+      { sNo: '', desc: 'Bus Booking', val: getRevenueBal(['3020401'], /bus.*booking/i) },
+      { sNo: '', desc: 'Decoration Income', val: getRevenueBal(['3020403'], /decoration.*commission|decoration.*income/i) },
+      { sNo: '', desc: 'Fitra Income', val: getRevenueBal(['3020201'], /fitra/i) },
+      { sNo: '', desc: 'Donation Income', val: getRevenueBal(['3020000'], /general.*donation|donations/i) },
+      { sNo: '', desc: 'Loan for Salary Staff', val: getRevenueBal([], /salary.*loan/i) },
+      { sNo: '', desc: 'Sadar Jamaat Payable', val: getRevenueBal(['2010100'], /sadar.*payable/i) },
+      { sNo: '', desc: 'Membership Fees', val: getRevenueBal(['3020402'], /membership.*fee/i) },
+      { sNo: '', desc: 'Light Decoration Income', val: getRevenueBal([], /light.*decoration/i) },
+      { sNo: '', desc: 'Donation Income (Shadi Biyah)', val: getRevenueBal(['3020404'], /marriage.*donation.*received/i) },
+      { sNo: '', desc: 'Hall Booking Income', val: getRevenueBal(['3010101', '3010102', '3010103', '3010104']) },
+      { sNo: '', desc: 'Scrap Sale (Raddi)', val: getRevenueBal([], /scrap.*raddi|raddi/i) },
+      { sNo: '', desc: 'Scrap Sale (Scrap)', val: getRevenueBal([], /scrap.*sale|scrap.*sold/i) },
+      { sNo: '', desc: 'Zakat Income Ramzan 2021', val: getRevenueBal([], /zakat.*2021/i) },
+      { sNo: '', desc: 'Zakat Income Ramzan 2022', val: getRevenueBal([], /zakat.*2022/i) },
+      { sNo: '', desc: 'Zakat Income Ramzan 2023', val: getRevenueBal(['3020101'], /zakat/i) },
+      { sNo: '', desc: 'Profit NBP General', val: getRevenueBal([], /profit.*nbp|interest.*nbp/i) },
     ];
+    
+    // Reassign serial numbers for incomes
+    incomes.forEach((inc, idx) => { inc.sNo = String(idx + 1).padStart(2, '0'); });
 
     // Compute residual balances from all ledger accounts and distribute to match main total
     const totalActualExpense = computedAccounts
@@ -221,10 +230,15 @@ export const TrialBalanceSheet = () => {
       .filter(acc => acc.type === 'gl' && acc.nature.toUpperCase() === 'REVENUE')
       .reduce((sum, acc) => sum + Math.max(0, acc.credit - acc.debit), 0);
     
-    const mappedIncTotal = incomes.slice(3).reduce((sum, item) => sum + item.val, 0);
+    const mappedIncTotal = incomes.slice(dynamicAssets.length).reduce((sum, item) => sum + item.val, 0);
     const incomeDiff = totalActualIncome - mappedIncTotal;
     if (incomeDiff > 0) {
-      incomes[6].val += incomeDiff;
+      const donationIdx = incomes.findIndex(inc => inc.desc.toLowerCase().includes('donation income') && !inc.desc.toLowerCase().includes('shadi'));
+      if (donationIdx >= 0) {
+        incomes[donationIdx].val += incomeDiff;
+      } else {
+        incomes[incomes.length - 1].val += incomeDiff;
+      }
     }
 
     return { expenses, incomes };
