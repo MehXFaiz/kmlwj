@@ -24,7 +24,7 @@ export const useJournalStore = create((set, get) => ({
       
       // Refresh the list after successful creation
       await get().fetchJournals(entry.subsidiary || 'Global');
-      useDashboardStore.getState().fetchStats();
+      useDashboardStore.getState().invalidateAll();
       set({ isLoading: false });
       return { success: true, data: res.data.data };
     } catch (err) {
@@ -44,7 +44,7 @@ export const useJournalStore = create((set, get) => ({
       if (entry) {
         await get().fetchJournals(entry.subsidiary || 'Global');
       }
-      useDashboardStore.getState().fetchStats();
+      useDashboardStore.getState().invalidateAll();
       set({ isLoading: false });
       return { success: true, data: res.data.data };
     } catch (err) {
@@ -61,7 +61,7 @@ export const useJournalStore = create((set, get) => ({
         journals: state.journals.filter(j => j.dbId !== id && j.id !== id),
         isLoading: false
       }));
-      useDashboardStore.getState().fetchStats();
+      useDashboardStore.getState().invalidateAll();
       return { success: true, data: res.data };
     } catch (err) {
       set({ error: err.message || 'Failed to delete journal entry', isLoading: false });
@@ -77,7 +77,7 @@ export const useJournalStore = create((set, get) => ({
         journals: state.journals.filter(j => !ids.includes(j.dbId) && !ids.includes(j.id)),
         isLoading: false
       }));
-      useDashboardStore.getState().fetchStats();
+      useDashboardStore.getState().invalidateAll();
       return { success: true, data: res.data };
     } catch (err) {
       set({ error: err.message || 'Failed to bulk delete journal entries', isLoading: false });

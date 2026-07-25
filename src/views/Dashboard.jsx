@@ -355,7 +355,7 @@ export const Dashboard = () => {
   const navigate = useNavigate();
   const { accounts, fetchAccounts, selectedSubsidiary, fiscalYear, loading: coaLoading } = useCoaStore();
   const { journals, auditLogs, fetchJournals, isLoading: journalsLoading } = useJournalStore();
-  const { stats: dbStats, fetchStats, loading: statsLoading } = useDashboardStore();
+  const { stats: dbStats, tbReport, fetchStats, fetchTbReport, loading: statsLoading } = useDashboardStore();
   const { addNotification } = useNotificationStore();
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -368,8 +368,28 @@ export const Dashboard = () => {
   useEffect(() => {
     fetchAccounts();
     fetchStats(reportParams);
+    fetchTbReport(reportParams);
     if (fetchJournals) fetchJournals(selectedSubsidiary);
-  }, [fetchAccounts, fetchStats, fetchJournals, selectedSubsidiary, reportParams]);
+  }, [fetchAccounts, fetchStats, fetchTbReport, fetchJournals, selectedSubsidiary, reportParams]);
+
+  // Consistency Check
+  useEffect(() => {
+    if (import.meta.env.DEV && dbStats?.summary && tbReport?.entries) {
+      const tbRevenue = tbReport.entries.filter(e => e.accountType === 'REVENUE').reduce((sum, e) => sum + (e.credit - e.debit), 0);
+      const tbExpense = tbReport.entries.filter(e => e.accountType === 'EXPENSE').reduce((sum, e) => sum + (e.debit - e.credit), 0);
+      
+      const dashRevenue = dbStats.summary.totalRevenue || 0;
+      const dashExpense = dbStats.summary.totalExpense || 0;
+      
+      const revDiff = Math.abs(tbRevenue - dashRevenue);
+      const expDiff = Math.abs(tbExpense - dashExpense);
+      
+      if (revDiff > 1 || expDiff > 1) {
+        console.error(`[Consistency Error] Dashboard vs Trial Balance mismatch! Revenue Diff: ${revDiff}, Expense Diff: ${expDiff}`);
+        showToast('Development Warning: Dashboard and Trial Balance totals do not match!', 'error');
+      }
+    }
+  }, [dbStats, tbReport]);
 
   const handleRefresh = useCallback(() => {
     fetchAccounts();

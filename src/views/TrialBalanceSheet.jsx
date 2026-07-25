@@ -6,14 +6,13 @@ import { useCoaStore } from '../store/coaStore';
 import { AccountFormDrawer } from '../components/coa/AccountFormDrawer';
 import { reportsService } from '../services/apiServices';
 import { useJournalStore } from '../store/journalStore';
+import { useDashboardStore } from '../store/dashboardStore';
 
 export const TrialBalanceSheet = () => {
   const { treeAccounts, fetchAccountsTree } = useCoaStore();
-  const { journals, fetchJournals } = useJournalStore();
+  const { tbReport, loading: isLoadingTb, fetchTbReport } = useDashboardStore();
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [tbReport, setTbReport] = useState(null);
-  const [isLoadingTb, setIsLoadingTb] = useState(false);
   const [viewMode, setViewMode] = useState('matrix'); // 'matrix' (Urdu paper replica) or 'ledger' (Standard hierarchical grid)
   
   // Date filter states
@@ -25,20 +24,14 @@ export const TrialBalanceSheet = () => {
 
   useEffect(() => {
     fetchAccountsTree();
-    fetchJournals('Global', 1, 1000); // Fetch journals for local calculation
-    const loadTbData = async () => {
-      setIsLoadingTb(true);
-      try {
-        const data = await reportsService.getTrialBalance();
-        setTbReport(data);
-      } catch (e) {
-        console.error('Failed to load trial balance report:', e);
-      } finally {
-        setIsLoadingTb(false);
-      }
-    };
-    loadTbData();
-  }, [fetchAccountsTree, fetchJournals]);
+  }, [fetchAccountsTree]);
+
+  useEffect(() => {
+    const params = {};
+    if (fromDate) params.startDate = fromDate;
+    if (toDate) params.endDate = toDate;
+    fetchTbReport(params);
+  }, [fromDate, toDate, fetchTbReport]);
 
   const formatMoney = (val) => {
     if (val === undefined || val === null || isNaN(val)) return 'Rs 0';
@@ -123,83 +116,8 @@ export const TrialBalanceSheet = () => {
 
   // Compute dynamic date-wise filtered accounts
   const computedAccounts = useMemo(() => {
-    if (!fromDate && !toDate) {
-      return flattenedData;
-    }
-
-    const baseBalances = {};
-    flattenedData.forEach(acc => {
-      baseBalances[acc.code] = {
-        code: acc.code,
-        initial: acc.rawAccount?.initialBalance || 0,
-        debitsBefore: 0,
-        creditsBefore: 0,
-        debitsPeriod: 0,
-        creditsPeriod: 0,
-      };
-    });
-
-    // Aggregate journal entries
-    journals.forEach(je => {
-      if (je.status !== 'Posted') return;
-      je.lines.forEach(line => {
-        const stats = baseBalances[line.accountCode];
-        if (stats) {
-          const dateStr = je.postingDate; // YYYY-MM-DD
-          const isBefore = fromDate && dateStr < fromDate;
-          const isInPeriod = (!fromDate || dateStr >= fromDate) && (!toDate || dateStr <= toDate);
-
-          if (isBefore) {
-            stats.debitsBefore += line.debit;
-            stats.creditsBefore += line.credit;
-          } else if (isInPeriod) {
-            stats.debitsPeriod += line.debit;
-            stats.creditsPeriod += line.credit;
-          }
-        }
-      });
-    });
-
-    // Compute closing/net balances
-    return flattenedData.map(acc => {
-      const stats = baseBalances[acc.code] || { initial: 0, debitsBefore: 0, creditsBefore: 0, debitsPeriod: 0, creditsPeriod: 0 };
-      const type = acc.nature;
-
-      // 1. Calculate opening balance for the period
-      let openingBal = 0;
-      if (type === 'Asset' || type === 'Expense') {
-        openingBal = stats.initial + stats.debitsBefore - stats.creditsBefore;
-      } else {
-        openingBal = stats.initial + stats.creditsBefore - stats.debitsBefore;
-      }
-
-      // 2. Calculate closing balance for the period
-      let closingBal = 0;
-      if (type === 'Asset' || type === 'Expense') {
-        closingBal = openingBal + stats.debitsPeriod - stats.creditsPeriod;
-      } else {
-        closingBal = openingBal + stats.creditsPeriod - stats.debitsPeriod;
-      }
-
-      // 3. Convert to debit/credit columns
-      let debit = 0;
-      let credit = 0;
-      if (type === 'Asset' || type === 'Expense') {
-        if (closingBal > 0) debit = closingBal;
-        else if (closingBal < 0) credit = Math.abs(closingBal);
-      } else {
-        if (closingBal > 0) credit = closingBal;
-        else if (closingBal < 0) debit = Math.abs(closingBal);
-      }
-
-      return {
-        ...acc,
-        debit,
-        credit,
-        netBalance: debit - credit
-      };
-    });
-  }, [flattenedData, journals, fromDate, toDate]);
+    return flattenedData;
+  }, [flattenedData]);
 
   // Dynamic mapper that maps active ledger accounts to the specific Urdu statement matrix rows (in English)
   const matrixData = useMemo(() => {
@@ -323,7 +241,7 @@ export const TrialBalanceSheet = () => {
 
   // Compute summary totals across MAIN accounts or from trial balance report
   const summaryTotals = useMemo(() => {
-    if (!fromDate && !toDate && tbReport && tbReport.summary) {
+    if (tbReport && tbReport.summary) {
       return {
         totalDebit: tbReport.summary.totalDebit || 0,
         totalCredit: tbReport.summary.totalCredit || 0,
@@ -338,7 +256,7 @@ export const TrialBalanceSheet = () => {
       totalCredit,
       isBalanced: Math.abs(totalDebit - totalCredit) < 0.01
     };
-  }, [tbReport, computedAccounts, fromDate, toDate]);
+  }, [tbReport, computedAccounts]);
 
   // Compute matrix balanced surplus
   const matrixTotals = useMemo(() => {
