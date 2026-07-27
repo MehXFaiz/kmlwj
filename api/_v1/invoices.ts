@@ -99,10 +99,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   const { method } = req;
   const id = req.query.id as string;
-  const action = req.query.action as string;
+  const action = (req.query.action || req.body?.action) as string;
 
   if (method === 'GET') {
-    if (id) {
+    if (id && !req.query.limit) {
       const invoice = await prisma.invoice.findUnique({
         where: { id },
         include: {
@@ -120,6 +120,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     const invoices = await prisma.invoice.findMany({
+      where: getDeletedFilter(req.query),
       include: {
         customer: true,
         items: true,
@@ -128,6 +129,28 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     });
 
     return res.status(200).json({ status: 200, data: invoices });
+  }
+
+  if (method === 'PUT' || method === 'POST' || method === 'PATCH') {
+    if (action === 'restore') {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can restore records', status: 403 } });
+      }
+      const targetId = id || req.body?.id;
+      if (!targetId) {
+        return res.status(400).json({ error: { message: 'Invoice ID is required', status: 400 } });
+      }
+      const existing = await prisma.invoice.findUnique({ where: { id: targetId } });
+      if (!existing) {
+        return res.status(404).json({ error: { message: 'Invoice not found', status: 404 } });
+      }
+      const restored = await prisma.invoice.update({
+        where: { id: targetId },
+        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      });
+      await logAudit(req.user.id, 'Restore Invoice', 'INVOICE', existing, restored, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      return res.status(200).json({ status: 200, message: 'Invoice restored successfully', data: restored });
+    }
   }
 
   if (method === 'POST') {
@@ -488,6 +511,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'DELETE') {
+    const isPermanent = req.query.permanent === 'true' || req.query.action === 'permanent_delete' || req.body?.permanent === true;
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can permanently delete records', status: 403 } });
+    }
+
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
     if (!idsRaw) {
       return res.status(400).json({ error: { message: 'Invoice ID(s) required', status: 400 } });
@@ -519,14 +547,28 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
         for (const je of jes) {
           try {
-            await AccountingService.deleteJournalEntry(tx, je.id, req.user!.id, 'Invoice Deleted');
+            if (isPermanent) {
+              await AccountingService.deleteJournalEntry(tx, je.id, req.user!.id, 'Invoice Permanently Deleted');
+            } else {
+              await tx.journalEntry.update({
+                where: { id: je.id },
+                data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user!.id }
+              });
+            }
           } catch (e) {
             // Ignore if already deleted
           }
         }
 
-        await tx.invoiceItem.deleteMany({ where: { invoiceId: inv.id } });
-        await tx.invoice.delete({ where: { id: inv.id } });
+        if (isPermanent) {
+          await tx.invoiceItem.deleteMany({ where: { invoiceId: inv.id } });
+          await tx.invoice.delete({ where: { id: inv.id } });
+        } else {
+          await tx.invoice.update({
+            where: { id: inv.id },
+            data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user!.id }
+          });
+        }
       }
     });
 

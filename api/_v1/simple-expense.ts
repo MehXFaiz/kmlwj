@@ -6,6 +6,7 @@ import { AccountingService } from '../_services/accounting.service.js';
 import { PERMS } from '../_constants/permissions.js';
 import { validateAmount } from '../_utils/amount.js';
 import { notify } from '../_utils/notify.js';
+import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
 
 const accountingTxOptions = { maxWait: 10000, timeout: 30000 };
 
@@ -13,8 +14,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
 
+  const action = (req.query.action || req.body?.action) as string;
+  const idParam = (req.query.id || req.body?.id) as string;
+
   if (req.method === 'GET') {
     const expenses = await prisma.simpleExpense.findMany({
+      where: getDeletedFilter(req.query),
       orderBy: { createdAt: 'desc' },
       include: {
         expenseHead: true,
@@ -25,7 +30,32 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     return res.status(200).json({ status: 200, data: expenses });
   }
 
-  // Every write below immediately posts a real transaction to the General Ledger.
+  if (req.method === 'PUT' || req.method === 'POST' || req.method === 'PATCH') {
+    if (action === 'restore') {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can restore records', status: 403 } });
+      }
+      if (!idParam) {
+        return res.status(400).json({ error: { message: 'Expense ID is required', status: 400 } });
+      }
+      const existing = await prisma.simpleExpense.findUnique({ where: { id: idParam } });
+      if (!existing) {
+        return res.status(404).json({ error: { message: 'Expense not found', status: 404 } });
+      }
+      const restored = await prisma.simpleExpense.update({
+        where: { id: idParam },
+        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      });
+      if (existing.journalEntryId) {
+        await prisma.journalEntry.update({
+          where: { id: existing.journalEntryId },
+          data: { isDeleted: false, deletedAt: null, deletedBy: null }
+        }).catch(() => {});
+      }
+      return res.status(200).json({ status: 200, message: 'Expense restored successfully', data: restored });
+    }
+  }
+
   if (!await verifyPermission(req, res, PERMS.RECORD_EXPENSE)) return;
 
   if (req.method === 'POST') {
@@ -35,16 +65,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Missing required fields', status: 400 } });
     }
 
-    // SQA fix: `Number(amount) <= 0` was bypassed by any non-numeric string
-    // (NaN comparisons are always false), letting a NaN amount reach ledger
-    // posting. validateAmount() rejects non-numeric input and enforces a cap.
     const amountCheck = validateAmount(amount);
     if (!amountCheck.valid) {
       return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
     }
     const numAmount = amountCheck.amount;
 
-    // Begin transaction to create SimpleExpense and post to General Ledger via AccountingService
     const result = await prisma.$transaction(async (tx) => {
       const expenseHead = await tx.expenseHead.findUnique({
         where: { id: expenseHeadId },
@@ -57,7 +83,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       const expenseAccountId = expenseHead.accountId || expenseHead.account?.id;
 
-      // Automatically post payment to GL: Debits Expense Account, Credits Cash/Bank
       const postingResult = await AccountingService.postPayment(tx, {
         amount: numAmount,
         cashOrBankAccountId: paymentMethod === 'BANK' && bankAccountId ? bankAccountId : undefined,
@@ -204,26 +229,45 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (req.method === 'DELETE') {
-    const id = req.query.id || req.body.id;
-    if (!id) return res.status(400).json({ error: { message: 'Expense ID required', status: 400 } });
+    const isPermanent = req.query.permanent === 'true' || req.query.action === 'permanent_delete' || req.body?.permanent === true;
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can permanently delete records', status: 403 } });
+    }
+
+    const targetId = String(req.query.id || req.body?.id || '');
+    if (!targetId) return res.status(400).json({ error: { message: 'Expense ID required', status: 400 } });
 
     await prisma.$transaction(async (tx) => {
-      const existing = await tx.simpleExpense.findUnique({ where: { id: String(id) } });
+      const existing = await tx.simpleExpense.findUnique({ where: { id: targetId } });
       if (existing && existing.journalEntryId) {
         try {
-          await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user!.id, 'Simple Expense Deleted');
+          if (isPermanent) {
+            await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user!.id, 'Simple Expense Permanently Deleted');
+          } else {
+            await tx.journalEntry.update({
+              where: { id: existing.journalEntryId },
+              data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user!.id }
+            });
+          }
         } catch (e) {}
       }
       if (existing) {
-        await tx.simpleExpense.delete({ where: { id: String(id) } });
+        if (isPermanent) {
+          await tx.simpleExpense.delete({ where: { id: targetId } });
+        } else {
+          await tx.simpleExpense.update({
+            where: { id: targetId },
+            data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user!.id }
+          });
+        }
       }
     }, accountingTxOptions);
 
     await notify(req, {
       title: 'Expense Deleted',
-      message: 'Expense record deleted and journal entry reversed.',
+      message: 'Expense record deleted.',
       module: 'Expenses',
-      recordId: String(id),
+      recordId: targetId,
       actionType: 'DELETE',
       visibility: 'ADMIN_ONLY',
     });

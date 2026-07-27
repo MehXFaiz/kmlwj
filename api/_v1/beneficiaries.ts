@@ -5,6 +5,7 @@ import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { notify } from '../_utils/notify.js';
 import { PERMS } from '../_constants/permissions.js';
+import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
 
 const ALL_FIELDS = [
   'name', 'fatherName', 'husbandName', 'cnic', 'dob', 'mobile', 'email',
@@ -32,9 +33,6 @@ function pickData(body: any, isCreate: boolean) {
     } else if (['monthlyIncome', 'monthlyExpenses', 'debtAmount'].includes(key)) {
       data[key] = val || val === 0 ? parseFloat(val) : null;
     } else {
-      // SQA fix: trim free-text fields before persistence — previously stored
-      // verbatim (only emptiness was checked), producing visually-duplicate
-      // records and extra whitespace on printed output.
       data[key] = typeof val === 'string' ? (val.trim() || null) : (val || null);
     }
   }
@@ -47,6 +45,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   const { method } = req;
   const id = req.query.id as string;
+  const action = (req.query.action || req.body?.action) as string;
 
   if (method === 'GET') {
     if (!await verifyPermission(req, res, PERMS.VIEW_BENEFICIARIES)) return;
@@ -55,16 +54,39 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
     const skip = (pageNum - 1) * limitNum;
+    const whereClause = getDeletedFilter(req.query);
 
     const [beneficiaries, total] = await Promise.all([
       prisma.beneficiary.findMany({
+        where: whereClause,
         orderBy: { createdAt: 'desc' },
         skip,
         take: limitNum,
       }),
-      prisma.beneficiary.count()
+      prisma.beneficiary.count({ where: whereClause })
     ]);
     return res.status(200).json({ status: 200, data: beneficiaries, meta: { total, page: pageNum, limit: limitNum } });
+  }
+
+  if (method === 'PUT' || method === 'POST') {
+    if (action === 'restore') {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can restore records', status: 403 } });
+      }
+      if (!id) {
+        return res.status(400).json({ error: { message: 'Beneficiary ID is required', status: 400 } });
+      }
+      const existing = await prisma.beneficiary.findUnique({ where: { id } });
+      if (!existing) {
+        return res.status(404).json({ error: { message: 'Beneficiary not found', status: 404 } });
+      }
+      const restored = await prisma.beneficiary.update({
+        where: { id },
+        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      });
+      await logAudit(req.user.id, 'Restore Beneficiary', 'DONATION', existing, restored, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      return res.status(200).json({ status: 200, message: 'Beneficiary restored successfully', data: restored });
+    }
   }
 
   if (method === 'POST') {
@@ -222,6 +244,23 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'DELETE') {
+    const isPermanent = req.query.permanent === 'true' || req.query.action === 'permanent_delete' || req.body?.permanent === true;
+    if (isPermanent) {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can permanently delete records', status: 403 } });
+      }
+      if (!id) {
+        return res.status(400).json({ error: { message: 'Beneficiary ID is required', status: 400 } });
+      }
+      const existingBeneficiary = await prisma.beneficiary.findUnique({ where: { id } });
+      if (!existingBeneficiary) {
+        return res.status(404).json({ error: { message: 'Beneficiary not found', status: 404 } });
+      }
+      await prisma.beneficiary.delete({ where: { id } });
+      await logAudit(req.user.id, 'Permanent Delete Beneficiary', 'DONATION', existingBeneficiary, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      return res.status(200).json({ status: 200, message: 'Beneficiary permanently deleted successfully' });
+    }
+
     if (!await verifyPermission(req, res, PERMS.DELETE_BENEFICIARY)) return;
 
     if (!id) {
@@ -233,14 +272,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(404).json({ error: { message: 'Beneficiary not found', status: 404 } });
     }
 
-    const donationsCount = await prisma.donation.count({ where: { beneficiaryId: id } });
-    if (donationsCount > 0) {
-      return res.status(400).json({ error: { message: 'Cannot delete beneficiary because they have associated donation records. Please remove the donations first.', status: 400 } });
-    }
+    const updated = await prisma.beneficiary.update({
+      where: { id },
+      data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user.id }
+    });
 
-    await prisma.beneficiary.delete({ where: { id } });
-
-    await logAudit(req.user.id, 'Delete Beneficiary', 'DONATION', existingBeneficiary, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+    await logAudit(req.user.id, 'Delete Beneficiary', 'DONATION', existingBeneficiary, updated, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
     await notify(req, {
       title: 'Welfare Record Deleted',

@@ -4,6 +4,7 @@ import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewa
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { PERMS } from '../_constants/permissions.js';
+import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
@@ -13,31 +14,52 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   const { method } = req;
   const id = req.query.id as string;
+  const action = (req.query.action || req.body?.action) as string;
 
   if (method === 'GET') {
     const { limit = '100', page = '1' } = req.query as any;
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
     const skip = (pageNum - 1) * limitNum;
+    const whereClause = getDeletedFilter(req.query);
 
     const [customers, total] = await Promise.all([
       prisma.customer.findMany({
+        where: whereClause,
         orderBy: { name: 'asc' },
         skip,
         take: limitNum,
       }),
-      prisma.customer.count()
+      prisma.customer.count({ where: whereClause })
     ]);
     return res.status(200).json({ status: 200, data: customers, meta: { total, page: pageNum, limit: limitNum } });
+  }
+
+  if (method === 'PUT' || method === 'POST' || method === 'PATCH') {
+    if (action === 'restore') {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can restore records', status: 403 } });
+      }
+      const targetId = id || req.body?.id;
+      if (!targetId) {
+        return res.status(400).json({ error: { message: 'Customer ID is required', status: 400 } });
+      }
+      const existing = await prisma.customer.findUnique({ where: { id: targetId } });
+      if (!existing) {
+        return res.status(404).json({ error: { message: 'Customer not found', status: 404 } });
+      }
+      const restored = await prisma.customer.update({
+        where: { id: targetId },
+        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      });
+      await logAudit(req.user.id, 'Restore Customer', 'CUSTOMER', existing, restored, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      return res.status(200).json({ status: 200, message: 'Customer restored successfully', data: restored });
+    }
   }
 
   if (method === 'POST') {
     const { name, email, phone, address, company, isActive } = req.body;
 
-    // SQA fix: previously only a non-empty `name` check existed server-side —
-    // all format validation (name/email/phone/company regexes) lived only in
-    // CustomerForm.jsx and was trivially bypassed by a direct API call.
-    // Mirrors that same client-side validation here.
     if (!name || !/^[a-zA-Z\s.-]{3,50}$/.test(String(name))) {
       return res.status(400).json({ error: { message: 'Name should only contain letters, spaces, hyphens, and dots (3-50 chars)', status: 400 } });
     }
@@ -51,12 +73,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Company name should contain only letters, numbers, spaces, hyphens, and dots (3-50 chars)', status: 400 } });
     }
 
-    // SQA fix: no duplicate-customer prevention existed on email/phone —
-    // two customers with identical contact details could be created
-    // indefinitely (no CNIC field exists on this model to key off instead).
     if (email || phone) {
       const existingCustomer = await prisma.customer.findFirst({
         where: {
+          isDeleted: false,
           OR: [
             ...(email ? [{ email: { equals: String(email), mode: 'insensitive' as const } }] : []),
             ...(phone ? [{ phone: String(phone) }] : []),
@@ -113,6 +133,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       const duplicateCustomer = await prisma.customer.findFirst({
         where: {
           id: { not: id },
+          isDeleted: false,
           OR: [
             ...(email ? [{ email: { equals: String(email), mode: 'insensitive' as const } }] : []),
             ...(phone ? [{ phone: String(phone) }] : []),
@@ -142,6 +163,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'DELETE') {
+    const isPermanent = req.query.permanent === 'true' || req.query.action === 'permanent_delete' || req.body?.permanent === true;
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can permanently delete records', status: 403 } });
+    }
+
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
     if (!idsRaw) {
       return res.status(400).json({ error: { message: 'Customer ID(s) required', status: 400 } });
@@ -164,20 +190,17 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(404).json({ error: { message: 'No customers found to delete', status: 404 } });
     }
 
-    const customersWithInvoices = existingCustomers.filter(c => c.invoices.length > 0);
-    if (customersWithInvoices.length > 0) {
-      return res.status(400).json({
-        error: {
-          message: `Cannot delete customer(s) with existing invoices (${customersWithInvoices.map(c => c.name).join(', ')})`,
-          status: 400,
-        },
+    if (isPermanent) {
+      await prisma.customer.deleteMany({ where: { id: { in: ids } } });
+    } else {
+      await prisma.customer.updateMany({
+        where: { id: { in: ids } },
+        data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user.id }
       });
     }
 
-    await prisma.customer.deleteMany({ where: { id: { in: ids } } });
-
     for (const c of existingCustomers) {
-      await logAudit(req.user.id, 'Delete Customer', 'CUSTOMER', c, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      await logAudit(req.user.id, isPermanent ? 'Permanent Delete Customer' : 'Delete Customer', 'CUSTOMER', c, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
     }
 
     return res.status(200).json({ status: 200, message: `${existingCustomers.length} customer(s) deleted successfully` });

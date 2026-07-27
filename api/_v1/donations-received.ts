@@ -8,6 +8,7 @@ import { validateAmount } from '../_utils/amount.js';
 import { isWithinMaxLength, maxLengthError } from '../_utils/text-length.js';
 import { notify } from '../_utils/notify.js';
 import { PERMS } from '../_constants/permissions.js';
+import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
 
 function donationTitleFragment(donationType: string, customType?: string | null): string {
   const map: Record<string, string> = {
@@ -41,6 +42,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   const { method } = req;
   const id = req.query.id as string;
+  const action = (req.query.action || req.body?.action) as string;
 
   if (method === 'GET') {
     if (!await verifyPermission(req, res, PERMS.MANAGE_DONATIONS)) return;
@@ -51,7 +53,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const paymentMethod = req.query.paymentMethod as string;
     const donorId = req.query.donorId as string;
 
-    const whereClause: any = {};
+    const whereClause: any = { ...getDeletedFilter(req.query) };
     if (status) whereClause.status = status;
     if (donationType) whereClause.donationType = donationType;
     if (paymentMethod) whereClause.paymentMethod = paymentMethod;
@@ -68,6 +70,51 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     const { limit = '100', page = '1' } = req.query as any;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 100;
+    const skip = (pageNum - 1) * limitNum;
+
+    const [items, total] = await Promise.all([
+      prisma.donationReceived.findMany({
+        where: whereClause,
+        include: { donor: true, cashAccount: true, bankAccount: true },
+        orderBy: { receiptDate: 'desc' },
+        skip,
+        take: limitNum,
+      }),
+      prisma.donationReceived.count({ where: whereClause }),
+    ]);
+
+    return res.status(200).json({ status: 200, data: items, meta: { total, page: pageNum, limit: limitNum } });
+  }
+
+  if (method === 'PUT' || method === 'POST' || method === 'PATCH') {
+    if (action === 'restore') {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can restore records', status: 403 } });
+      }
+      const targetId = id || req.body?.id;
+      if (!targetId) {
+        return res.status(400).json({ error: { message: 'Receipt ID is required', status: 400 } });
+      }
+      const existing = await prisma.donationReceived.findUnique({ where: { id: targetId } });
+      if (!existing) {
+        return res.status(404).json({ error: { message: 'Donation receipt not found', status: 404 } });
+      }
+      const restored = await prisma.donationReceived.update({
+        where: { id: targetId },
+        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      });
+      if (existing.journalEntryId) {
+        await prisma.journalEntry.update({
+          where: { id: existing.journalEntryId },
+          data: { isDeleted: false, deletedAt: null, deletedBy: null }
+        }).catch(() => {});
+      }
+      await logAudit(req.user.id, 'Restore Donation Received', 'DONATION_RECEIVED', existing, restored, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      return res.status(200).json({ status: 200, message: 'Donation receipt restored successfully', data: restored });
+    }
+  }
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
     const skip = (pageNum - 1) * limitNum;
@@ -416,6 +463,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'DELETE') {
+    const isPermanent = req.query.permanent === 'true' || req.query.action === 'permanent_delete' || req.body?.permanent === true;
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can permanently delete records', status: 403 } });
+    }
+
     if (!await verifyPermission(req, res, PERMS.RECORD_INCOME)) return;
 
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
@@ -440,12 +492,26 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       for (const item of existingItems) {
         if (item.journalEntryId) {
           try {
-            await AccountingService.deleteJournalEntry(tx, item.journalEntryId, req.user!.id, 'Donation Receipt Deleted');
+            if (isPermanent) {
+              await AccountingService.deleteJournalEntry(tx, item.journalEntryId, req.user!.id, 'Donation Receipt Permanently Deleted');
+            } else {
+              await tx.journalEntry.update({
+                where: { id: item.journalEntryId },
+                data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user!.id }
+              });
+            }
           } catch (e) {
             // Ignore
           }
         }
-        await tx.donationReceived.delete({ where: { id: item.id } });
+        if (isPermanent) {
+          await tx.donationReceived.delete({ where: { id: item.id } });
+        } else {
+          await tx.donationReceived.update({
+            where: { id: item.id },
+            data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user!.id }
+          });
+        }
       }
     });
 

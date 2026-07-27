@@ -1,13 +1,15 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
+import { AccountingSyncService } from './accounting-sync.service.js';
 
 export interface AccountingLinePayload {
   accountCode?: string;      // GL Code (e.g., '1010101' or '3010101')
   accountId?: string;        // Account UUID
   accountKeyword?: string;   // Keyword or type fallback (e.g., 'Cash In Hand', 'Donation Income', 'Salaries Expense')
   accountType?: string;      // Optional AccountType filter e.g., 'ASSET', 'REVENUE', 'EXPENSE'
-  debit: number;
-  credit: number;
+  debit: number | Prisma.Decimal | string;
+  credit: number | Prisma.Decimal | string;
   description?: string;
 }
 
@@ -337,28 +339,25 @@ export class AccountingService {
       throw new Error('Accounting Engine Error: Transaction must contain at least two accounting lines for double-entry posting.');
     }
 
-    let totalDebit = 0;
-    let totalCredit = 0;
+    let totalDebit = new Prisma.Decimal(0);
+    let totalCredit = new Prisma.Decimal(0);
 
     for (const line of payload.lines) {
-      const debitVal = Number(line.debit) || 0;
-      const creditVal = Number(line.credit) || 0;
-      if (debitVal < 0 || creditVal < 0) {
+      const debitVal = new Prisma.Decimal(line.debit ?? 0);
+      const creditVal = new Prisma.Decimal(line.credit ?? 0);
+      if (debitVal.isNegative() || creditVal.isNegative()) {
         throw new Error('Accounting Engine Error: Debit and Credit amounts cannot be negative.');
       }
-      totalDebit += debitVal;
-      totalCredit += creditVal;
+      totalDebit = totalDebit.plus(debitVal);
+      totalCredit = totalCredit.plus(creditVal);
     }
 
-    // Check Double Entry balance constraint. The 0.001 epsilon is a deliberate
-    // mitigation for Float (not Decimal) monetary columns — see the SQA note
-    // on Account.currentBalance in prisma/schema.prisma for why a full
-    // Decimal migration isn't done in the same pass as this check.
-    if (Math.abs(totalDebit - totalCredit) > 0.001) {
+    // Check Double Entry balance constraint using exact Decimal equality
+    if (!totalDebit.equals(totalCredit)) {
       throw new Error(`Accounting Engine Error: Transaction must follow Double Entry Accounting. Total Debit (${totalDebit.toFixed(2)}) does not equal Total Credit (${totalCredit.toFixed(2)}).`);
     }
 
-    if (totalDebit <= 0) {
+    if (totalDebit.lte(0)) {
       throw new Error('Accounting Engine Error: Transaction amount must be greater than zero.');
     }
 
@@ -446,10 +445,12 @@ export class AccountingService {
         // Update Account Running Balance using the account's normal balance side.
         const typeName = (line.account.accountType?.name || '').toUpperCase();
         const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
+        const lineDebit = new Prisma.Decimal(line.debit);
+        const lineCredit = new Prisma.Decimal(line.credit);
         const netChange = isDebitNormal
-          ? (line.debit - line.credit)
-          : (line.credit - line.debit);
-        if (netChange !== 0) {
+          ? lineDebit.minus(lineCredit)
+          : lineCredit.minus(lineDebit);
+        if (!netChange.isZero()) {
           await tx.account.update({
             where: { id: line.account.id },
             data: {
@@ -462,32 +463,38 @@ export class AccountingService {
       }
     }
 
-    // 3. Automatically Log Audit Trail inside transaction
+    // 3. Automatically Log Audit Trail inside transaction & emit sync event
     try {
-      await tx.auditLog.create({
-        data: {
-          userId: payload.postedBy && payload.postedBy !== 'system' && payload.postedBy.length === 36 ? payload.postedBy : null,
-          action: `Auto Post Journal (${voucherNo})`,
-          module: payload.module,
-          oldValues: null,
-          newValues: {
-            voucherNo,
-            voucherType,
-            reference,
-            totalDebit,
-            totalCredit,
-            linesCount: resolvedLines.length,
-            status,
-            postedBy: payload.postedBy || null
-          },
-          ipAddress: payload.ipAddress || null,
-          userAgent: payload.userAgent || null
+      await logAudit({
+        userId: payload.postedBy && payload.postedBy !== 'system' && payload.postedBy.length === 36 ? payload.postedBy : null,
+        action: `Post Journal (${voucherNo})`,
+        module: payload.module,
+        postedById: payload.postedBy || null,
+        postedAt: new Date().toISOString(),
+        ipAddress: payload.ipAddress || null,
+        userAgent: payload.userAgent || null,
+        oldValues: null,
+        newValues: {
+          voucherNo,
+          voucherType,
+          reference,
+          totalDebit,
+          totalCredit,
+          linesCount: resolvedLines.length,
+          status,
+          postedBy: payload.postedBy || null
         }
       });
+      AccountingSyncService.emitSyncEvent({
+        action: 'POST',
+        module: payload.module,
+        recordId: journalEntry.id,
+        userId: payload.postedBy || null
+      });
     } catch (e) {
-      // Ignore audit log errors for now
-      console.warn('Audit log creation failed:', e);
+      console.warn('Audit log or sync emission failed:', e);
     }
+
 
     return {
       journalEntry,
@@ -656,23 +663,23 @@ export class AccountingService {
       }
     });
 
-    const totalDebit = Number(aggregations._sum.debit) || 0;
-    const totalCredit = Number(aggregations._sum.credit) || 0;
-    const initialBalance = Number(account.initialBalance) || 0;
+    const totalDebit = new Prisma.Decimal(aggregations._sum.debit ?? 0);
+    const totalCredit = new Prisma.Decimal(aggregations._sum.credit ?? 0);
+    const initialBalance = new Prisma.Decimal(account.initialBalance ?? 0);
 
     const typeName = account.accountType?.name?.toUpperCase() || 'ASSET';
     const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
 
     const currentBalance = isDebitNormal
-      ? (initialBalance + totalDebit - totalCredit)
-      : (initialBalance + totalCredit - totalDebit);
+      ? initialBalance.plus(totalDebit).minus(totalCredit)
+      : initialBalance.plus(totalCredit).minus(totalDebit);
 
     await tx.account.update({
       where: { id: accountId },
       data: { currentBalance }
     });
 
-    return currentBalance;
+    return currentBalance.toNumber();
   }
 
   /**
@@ -841,8 +848,8 @@ export class AccountingService {
     // status to 'Posted' (done above) and refreshes the Account balance cache.
     // No LedgerEntry rows are written — reports read JournalEntryLine directly.
     for (const line of je.lines) {
-      const netChange = line.debit - line.credit;
-      if (netChange !== 0) {
+      const netChange = new Prisma.Decimal(line.debit).minus(new Prisma.Decimal(line.credit));
+      if (!netChange.isZero()) {
         await tx.account.update({
           where: { id: line.accountId },
           data: {
@@ -858,17 +865,23 @@ export class AccountingService {
     }
 
     try {
-      await tx.auditLog.create({
-        data: {
-          userId: postedBy && postedBy.length === 36 ? postedBy : null,
-          action: `Post Draft Journal (${je.voucherNo})`,
-          module: 'Journal Entries',
-          oldValues: { status: 'Draft' },
-          newValues: { status: 'Posted', voucherNo: je.voucherNo },
-        }
+      await logAudit({
+        userId: postedBy && postedBy.length === 36 ? postedBy : null,
+        action: `Post Draft Journal (${je.voucherNo})`,
+        module: 'Journal Entries',
+        postedById: postedBy || null,
+        postedAt: new Date().toISOString(),
+        oldValues: { status: 'Draft' },
+        newValues: { status: 'Posted', voucherNo: je.voucherNo },
+      });
+      AccountingSyncService.emitSyncEvent({
+        action: 'POST',
+        module: 'Journal Entries',
+        recordId: je.id,
+        userId: postedBy || null
       });
     } catch (e) {
-      // ignore non-uuid audit user
+      // ignore audit user errors
     }
 
     return updatedJe;
@@ -887,9 +900,7 @@ export class AccountingService {
     if (je.status === 'Cancelled') return je;
     if (je.status !== 'Posted') throw new Error(`Accounting Engine Error: Only Posted journal entries can be reversed/cancelled.`);
 
-    // Flip status before recalculating balances (see postDraft for why: recalculateAccountBalance
-    // only aggregates 'Posted' lines, so cancelling first would make it drop this entry's lines
-    // instead of removing them, discarding the reversal's increment silently).
+    // Flip status before recalculating balances
     const updatedJe = await tx.journalEntry.update({
       where: { id: je.id },
       data: {
@@ -898,13 +909,9 @@ export class AccountingService {
       }
     });
 
-    // Single source of truth: cancelling removes this entry's lines from every
-    // report automatically (getPostedAggregates filters status='Posted'). We no
-    // longer write a mirror-image reversal row into a separate ledger table —
-    // only the Account balance cache is refreshed.
     for (const line of je.lines) {
-      const netChange = line.credit - line.debit;
-      if (netChange !== 0) {
+      const netChange = new Prisma.Decimal(line.credit).minus(new Prisma.Decimal(line.debit));
+      if (!netChange.isZero()) {
         await tx.account.update({
           where: { id: line.accountId },
           data: {
@@ -920,14 +927,21 @@ export class AccountingService {
     }
 
     try {
-      await tx.auditLog.create({
-        data: {
-          userId: postedBy && postedBy.length === 36 ? postedBy : null,
-          action: `Reverse Journal (${je.voucherNo})`,
-          module: 'Journal Entries',
-          oldValues: { status: 'Posted' },
-          newValues: { status: 'Cancelled', voucherNo: je.voucherNo, reason: reason || null },
-        }
+      await logAudit({
+        userId: postedBy && postedBy.length === 36 ? postedBy : null,
+        action: `Reverse Journal (${je.voucherNo})`,
+        module: 'Journal Entries',
+        reversedById: postedBy || null,
+        reversedAt: new Date().toISOString(),
+        reason: reason || null,
+        oldValues: { status: 'Posted' },
+        newValues: { status: 'Cancelled', voucherNo: je.voucherNo, reason: reason || null },
+      });
+      AccountingSyncService.emitSyncEvent({
+        action: 'REVERSE',
+        module: 'Journal Entries',
+        recordId: je.id,
+        userId: postedBy || null
       });
     } catch (e) {
       // ignore non-uuid audit user
@@ -948,10 +962,6 @@ export class AccountingService {
     if (!je) throw new Error('Accounting Engine Error: Journal entry not found.');
     if (je.status !== 'Cancelled') return je;
 
-    // Flip status before recalculating balances (see postDraft for why): recalculateAccountBalance
-    // only aggregates lines whose parent entry is 'Posted', so it must already see newStatus —
-    // otherwise restoring to Posted silently drops this entry's lines from the recalculated balance,
-    // and restoring to Draft would incorrectly still count them.
     const newDescription = je.description ? je.description.replace(/\[Cancelled\/Reversed[^\]]*\]/, '').trim() : '';
     const updatedJe = await tx.journalEntry.update({
       where: { id: je.id },
@@ -961,10 +971,9 @@ export class AccountingService {
       }
     });
 
-    // Restore the account balances (reverse the reversal)
     for (const line of je.lines) {
-      const netChange = line.debit - line.credit; // opposite of reversal
-      if (netChange !== 0) {
+      const netChange = new Prisma.Decimal(line.debit).minus(new Prisma.Decimal(line.credit));
+      if (!netChange.isZero()) {
         await tx.account.update({
           where: { id: line.accountId },
           data: {
@@ -979,19 +988,21 @@ export class AccountingService {
       }
     }
 
-    // Single source of truth: restoring to 'Posted' makes this entry's existing
-    // JournalEntryLine rows count again automatically (getPostedAggregates
-    // filters on status). No separate ledger rows are re-created.
-
     try {
-      await tx.auditLog.create({
-        data: {
-          userId: postedBy && postedBy.length === 36 ? postedBy : null,
-          action: `Restore Journal (${je.voucherNo})`,
-          module: 'Journal Entries',
-          oldValues: { status: 'Cancelled' },
-          newValues: { status: newStatus, voucherNo: je.voucherNo },
-        }
+      await logAudit({
+        userId: postedBy && postedBy.length === 36 ? postedBy : null,
+        action: `Restore Journal (${je.voucherNo})`,
+        module: 'Journal Entries',
+        updatedById: postedBy || null,
+        updatedAt: new Date().toISOString(),
+        oldValues: { status: 'Cancelled' },
+        newValues: { status: newStatus, voucherNo: je.voucherNo },
+      });
+      AccountingSyncService.emitSyncEvent({
+        action: 'RESTORE',
+        module: 'Journal Entries',
+        recordId: je.id,
+        userId: postedBy || null
       });
     } catch (e) {
       // ignore non-uuid audit user
@@ -1014,20 +1025,14 @@ export class AccountingService {
 
     const accountIds = Array.from(new Set(je.lines.map((l: any) => l.accountId)));
 
-    // Delete journal entry lines (the JournalEntry cascade would also remove
-    // them, but doing it explicitly keeps the affected-account recalculation
-    // below unambiguous). No LedgerEntry rows exist to clean up — the ledger is
-    // derived solely from these JournalEntryLine rows.
     await tx.journalEntryLine.deleteMany({
       where: { journalEntryId: je.id }
     });
 
-    // Delete the journal entry
     const deletedJe = await tx.journalEntry.delete({
       where: { id: je.id }
     });
 
-    // Recalculate account balances for all affected accounts
     for (const accountId of accountIds) {
       try {
         await AccountingService.recalculateAccountBalance(tx, accountId as string);
@@ -1037,14 +1042,21 @@ export class AccountingService {
     }
 
     try {
-      await tx.auditLog.create({
-        data: {
-          userId: postedBy && postedBy !== 'system' && postedBy.length === 36 ? postedBy : null,
-          action: `Delete Journal (${je.voucherNo})`,
-          module: 'Journal Entries',
-          oldValues: { voucherNo: je.voucherNo, status: je.status, reference: je.reference },
-          newValues: { deleted: true, reason: reason || null },
-        }
+      await logAudit({
+        userId: postedBy && postedBy !== 'system' && postedBy.length === 36 ? postedBy : null,
+        action: `Delete Journal (${je.voucherNo})`,
+        module: 'Journal Entries',
+        deletedById: postedBy || null,
+        deletedAt: new Date().toISOString(),
+        reason: reason || null,
+        oldValues: { voucherNo: je.voucherNo, status: je.status, reference: je.reference },
+        newValues: { deleted: true, reason: reason || null },
+      });
+      AccountingSyncService.emitSyncEvent({
+        action: 'DELETE',
+        module: 'Journal Entries',
+        recordId: je.id,
+        userId: postedBy || null
       });
     } catch (e) {
       // ignore non-uuid audit user
@@ -1099,8 +1111,8 @@ export class AccountingService {
    * Aggregates posted journal entry lines per account, optionally restricted
    * to a posting-date window. One groupBy query — no per-account N+1.
    */
-  static async getPostedAggregates(opts: { from?: Date; to?: Date; accountIds?: string[] } = {}): Promise<Map<string, { debit: number; credit: number }>> {
-    const journalWhere: any = { status: 'Posted' };
+  static async getPostedAggregates(opts: { from?: Date; to?: Date; accountIds?: string[] } = {}): Promise<Map<string, { debit: Prisma.Decimal; credit: Prisma.Decimal }>> {
+    const journalWhere: any = { status: 'Posted', isDeleted: false };
     if (opts.from || opts.to) {
       journalWhere.postingDate = {};
       if (opts.from) journalWhere.postingDate.gte = opts.from;
@@ -1120,7 +1132,7 @@ export class AccountingService {
 
     return new Map(groups.map(g => [
       g.accountId,
-      { debit: Number(g._sum.debit) || 0, credit: Number(g._sum.credit) || 0 }
+      { debit: new Prisma.Decimal(g._sum.debit ?? 0), credit: new Prisma.Decimal(g._sum.credit ?? 0) }
     ]));
   }
 
@@ -1129,12 +1141,16 @@ export class AccountingService {
    * debit-normal (ASSET/EXPENSE):  initial + debit − credit
    * credit-normal (LIABILITY/EQUITY/REVENUE): initial + credit − debit
    */
-  static naturalBalance(typeName: string, initialBalance: number, agg?: { debit: number; credit: number }): number {
-    const d = agg?.debit || 0;
-    const c = agg?.credit || 0;
-    const init = Number(initialBalance) || 0;
+  static naturalBalance(
+    typeName: string,
+    initialBalance: Prisma.Decimal | number | string,
+    agg?: { debit: Prisma.Decimal | number | string; credit: Prisma.Decimal | number | string }
+  ): Prisma.Decimal {
+    const d = new Prisma.Decimal(agg?.debit ?? 0);
+    const c = new Prisma.Decimal(agg?.credit ?? 0);
+    const init = new Prisma.Decimal(initialBalance ?? 0);
     const isDebitNormal = ['ASSET', 'ASSETS', 'EXPENSE', 'EXPENSES'].includes((typeName || '').toUpperCase());
-    return isDebitNormal ? init + d - c : init + c - d;
+    return isDebitNormal ? init.plus(d).minus(c) : init.plus(c).minus(d);
   }
 
   /** Inclusive end-of-day Date for a YYYY-MM-DD endDate filter. */
@@ -1164,7 +1180,7 @@ export class AccountingService {
     }
 
     // Build Where Clause: posted journal entry lines only (single source of truth)
-    const journalWhere: any = { status: 'Posted' };
+    const journalWhere: any = { status: 'Posted', isDeleted: false };
     if (startDate || endDate) {
       journalWhere.postingDate = {};
       if (startDate) journalWhere.postingDate.gte = new Date(startDate);
@@ -1200,21 +1216,21 @@ export class AccountingService {
           to: new Date(new Date(startDate).getTime() - 1),
           accountIds: uniqueAccountIds
         })
-      : new Map<string, { debit: number; credit: number }>();
+      : new Map<string, { debit: Prisma.Decimal; credit: Prisma.Decimal }>();
 
     for (const accId of uniqueAccountIds) {
       const firstEntry = entries.find(e => e.accountId === accId);
-      const initialBal = firstEntry?.account?.initialBalance || 0;
+      const initialBal = firstEntry?.account?.initialBalance ?? 0;
       const typeName = (firstEntry?.account as any)?.accountType?.name?.toUpperCase() || 'ASSET';
       const glCodeVal = firstEntry?.account?.glCode || '';
       const name = firstEntry?.account?.accountName || '';
 
       const opBal = AccountingService.naturalBalance(typeName, initialBal, priorAggregates.get(accId));
-      accountMeta[glCodeVal] = { openingBalance: opBal, type: typeName, initialBalance: initialBal, name };
+      accountMeta[glCodeVal] = { openingBalance: opBal.toNumber(), type: typeName, initialBalance: new Prisma.Decimal(initialBal).toNumber(), name };
     }
 
     // Calculate Opening Balance
-    let openingBalance = 0;
+    let openingBalance = new Prisma.Decimal(0);
 
     if (targetAccount) {
       const typeName = targetAccount.accountType?.name?.toUpperCase() || 'ASSET';
@@ -1224,18 +1240,18 @@ export class AccountingService {
             accountIds: [targetAccount.id]
           })).get(targetAccount.id)
         : undefined;
-      openingBalance = AccountingService.naturalBalance(typeName, targetAccount.initialBalance || 0, priorAgg);
-    } else if (entries.length > 0) {
-        openingBalance = 0;
+      openingBalance = AccountingService.naturalBalance(typeName, targetAccount.initialBalance ?? 0, priorAgg);
     }
 
     // Calculate Debit and Credit totals within range
-    let totalDebit = 0;
-    let totalCredit = 0;
+    let totalDebit = new Prisma.Decimal(0);
+    let totalCredit = new Prisma.Decimal(0);
 
     const formattedEntries = entries.map(entry => {
-      totalDebit += entry.debit;
-      totalCredit += entry.credit;
+      const lineDebit = new Prisma.Decimal(entry.debit);
+      const lineCredit = new Prisma.Decimal(entry.credit);
+      totalDebit = totalDebit.plus(lineDebit);
+      totalCredit = totalCredit.plus(lineCredit);
 
       return {
         id: entry.id,
@@ -1244,18 +1260,18 @@ export class AccountingService {
         accountName: entry.account.accountName,
         reference: entry.journalEntry.voucherNo,
         description: entry.description,
-        debit: entry.debit,
-        credit: entry.credit
+        debit: lineDebit.toNumber(),
+        credit: lineCredit.toNumber()
       };
     });
 
-    let closingBalance = 0;
+    let closingBalance: Prisma.Decimal | null = null;
     if (targetAccount) {
         const typeName = targetAccount.accountType?.name?.toUpperCase() || 'ASSET';
         if (['ASSET', 'EXPENSE'].includes(typeName)) {
-            closingBalance = openingBalance + totalDebit - totalCredit;
+            closingBalance = openingBalance.plus(totalDebit).minus(totalCredit);
         } else {
-            closingBalance = openingBalance + totalCredit - totalDebit;
+            closingBalance = openingBalance.plus(totalCredit).minus(totalDebit);
         }
     }
 
@@ -1266,10 +1282,10 @@ export class AccountingService {
           type: targetAccount.accountType?.name || 'Unknown'
       } : null,
       summary: {
-        openingBalance,
-        totalDebit,
-        totalCredit,
-        closingBalance: targetAccount ? closingBalance : null
+        openingBalance: openingBalance.toNumber(),
+        totalDebit: totalDebit.toNumber(),
+        totalCredit: totalCredit.toNumber(),
+        closingBalance: targetAccount && closingBalance ? closingBalance.toNumber() : null
       },
       accountMeta,
       entries: formattedEntries,
@@ -1281,6 +1297,7 @@ export class AccountingService {
 
   static async getTrialBalance(startDate?: string, endDate?: string) {
     const activeAccounts = await prisma.account.findMany({
+      where: { isDeleted: false },
       include: {
         accountType: true
       },
@@ -1302,11 +1319,11 @@ export class AccountingService {
       : periodAggregates;
     const priorAggregates = from
       ? await AccountingService.getPostedAggregates({ to: new Date(from.getTime() - 1) })
-      : new Map<string, { debit: number; credit: number }>();
+      : new Map<string, { debit: Prisma.Decimal; credit: Prisma.Decimal }>();
 
-    let totalDebit = 0;
-    let totalCredit = 0;
-    let openingRetainedEarnings = 0;
+    let totalDebit = new Prisma.Decimal(0);
+    let totalCredit = new Prisma.Decimal(0);
+    let openingRetainedEarnings = new Prisma.Decimal(0);
 
     const formatted: any[] = [];
 
@@ -1315,7 +1332,7 @@ export class AccountingService {
       const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
       const isPnl = ['REVENUE', 'EXPENSE'].includes(typeName);
 
-      let balance: number;
+      let balance: Prisma.Decimal;
       if (hasDateFilter && isPnl) {
         // P&L accounts: period activity only (no opening balance carried in)
         balance = AccountingService.naturalBalance(typeName, 0, periodAggregates.get(acc.id));
@@ -1324,74 +1341,74 @@ export class AccountingService {
         balance = AccountingService.naturalBalance(typeName, acc.initialBalance, cumulativeAggregates.get(acc.id));
       }
 
-      // Retained earnings carried in from prior periods. Computed for every
-      // P&L account — even ones with zero activity inside the range —
-      // otherwise the trial balance would not foot.
+      // Retained earnings carried in from prior periods.
       if (startDate && isPnl) {
         const prior = priorAggregates.get(acc.id);
-        const pd = prior?.debit || 0;
-        const pc = prior?.credit || 0;
+        const pd = prior?.debit ?? new Prisma.Decimal(0);
+        const pc = prior?.credit ?? new Prisma.Decimal(0);
         if (typeName === 'REVENUE' || typeName === 'INCOME') {
-          openingRetainedEarnings += (pc - pd);
+          openingRetainedEarnings = openingRetainedEarnings.plus(pc.minus(pd));
         } else {
-          openingRetainedEarnings -= (pd - pc);
+          openingRetainedEarnings = openingRetainedEarnings.minus(pd.minus(pc));
         }
       }
 
       // Skip accounts with zero balance
-      if (balance === 0) continue;
+      if (balance.isZero()) continue;
 
-      let debit = 0;
-      let credit = 0;
+      let debit = new Prisma.Decimal(0);
+      let credit = new Prisma.Decimal(0);
 
       if (isDebitNormal) {
-        if (balance > 0) debit = balance;
-        else credit = Math.abs(balance);
+        if (balance.gt(0)) debit = balance;
+        else credit = balance.abs();
       } else {
-        if (balance > 0) credit = balance;
-        else debit = Math.abs(balance);
+        if (balance.gt(0)) credit = balance;
+        else debit = balance.abs();
       }
 
-      totalDebit += debit;
-      totalCredit += credit;
+      totalDebit = totalDebit.plus(debit);
+      totalCredit = totalCredit.plus(credit);
 
       formatted.push({
         id: acc.id,
         glCode: acc.glCode,
         accountName: acc.accountName,
         accountType: acc.accountType?.name || 'Asset',
-        balance,
-        debit,
-        credit
+        balance: balance.toNumber(),
+        debit: debit.toNumber(),
+        credit: credit.toNumber()
       });
     }
 
-    if (startDate && openingRetainedEarnings !== 0) {
-      const isDebit = openingRetainedEarnings < 0;
-      const absAmt = Math.abs(openingRetainedEarnings);
+    if (startDate && !openingRetainedEarnings.isZero()) {
+      const isDebit = openingRetainedEarnings.lt(0);
+      const absAmt = openingRetainedEarnings.abs();
       formatted.push({
         id: 'retained-earnings-opening-diff',
         glCode: '3010199',
         accountName: 'Retained Earnings (Prior Periods)',
         accountType: 'EQUITY',
-        balance: openingRetainedEarnings,
-        debit: isDebit ? absAmt : 0,
-        credit: isDebit ? 0 : absAmt
+        balance: openingRetainedEarnings.toNumber(),
+        debit: isDebit ? absAmt.toNumber() : 0,
+        credit: isDebit ? 0 : absAmt.toNumber()
       });
-      if (isDebit) totalDebit += absAmt;
-      else totalCredit += absAmt;
+      if (isDebit) totalDebit = totalDebit.plus(absAmt);
+      else totalCredit = totalCredit.plus(absAmt);
     }
 
+    const diff = totalDebit.minus(totalCredit).abs();
     return {
       accounts: formatted,
-      totalDebit,
-      totalCredit,
-      difference: Math.abs(totalDebit - totalCredit)
+      totalDebit: totalDebit.toNumber(),
+      totalCredit: totalCredit.toNumber(),
+      difference: diff.toNumber()
     };
   }
 
   static async getBalanceSheet(startDate?: string, endDate?: string) {
     const allAccounts = await prisma.account.findMany({
+      where: { isDeleted: false },
       include: {
         accountType: true
       },
@@ -1402,13 +1419,13 @@ export class AccountingService {
     const liabilities: any[] = [];
     const equity: any[] = [];
 
-    let totalAssets = 0;
-    let totalLiabilities = 0;
-    let totalEquity = 0;
+    let totalAssets = new Prisma.Decimal(0);
+    let totalLiabilities = new Prisma.Decimal(0);
+    let totalEquity = new Prisma.Decimal(0);
 
-    let totalRevenue = 0;
-    let totalExpense = 0;
-    let openingRetainedEarnings = 0;
+    let totalRevenue = new Prisma.Decimal(0);
+    let totalExpense = new Prisma.Decimal(0);
+    let openingRetainedEarnings = new Prisma.Decimal(0);
 
     const from = startDate ? new Date(startDate) : undefined;
     const to = endDate ? AccountingService.endOfDay(endDate) : undefined;
@@ -1421,92 +1438,88 @@ export class AccountingService {
       : periodAggregates;
     const priorAggregates = from
       ? await AccountingService.getPostedAggregates({ to: new Date(from.getTime() - 1) })
-      : new Map<string, { debit: number; credit: number }>();
+      : new Map<string, { debit: Prisma.Decimal; credit: Prisma.Decimal }>();
 
     for (const acc of allAccounts) {
       const type = acc.accountType?.name;
-      let balance: number;
+      let balance: Prisma.Decimal;
 
       if (type === 'REVENUE' || type === 'EXPENSE') {
-        // P&L accounts: activity inside the period only when filtered,
-        // all-time (including opening balance) otherwise
         const agg = hasPeriodFilter ? periodAggregates.get(acc.id) : cumulativeAggregates.get(acc.id);
         balance = AccountingService.naturalBalance(type, hasPeriodFilter ? 0 : acc.initialBalance, agg);
       } else {
-        // Balance-sheet accounts: cumulative position up to the end date
         balance = AccountingService.naturalBalance(type || 'ASSET', acc.initialBalance, cumulativeAggregates.get(acc.id));
       }
 
-      // Retained earnings from prior periods — computed for every P&L account,
-      // even ones with no activity inside the range, so the sheet balances.
       if (startDate && (type === 'REVENUE' || type === 'EXPENSE')) {
         const prior = priorAggregates.get(acc.id);
-        const pd = prior?.debit || 0;
-        const pc = prior?.credit || 0;
+        const pd = prior?.debit ?? new Prisma.Decimal(0);
+        const pc = prior?.credit ?? new Prisma.Decimal(0);
         if (type === 'REVENUE') {
-          openingRetainedEarnings += (pc - pd);
+          openingRetainedEarnings = openingRetainedEarnings.plus(pc.minus(pd));
         } else {
-          openingRetainedEarnings -= (pd - pc);
+          openingRetainedEarnings = openingRetainedEarnings.minus(pd.minus(pc));
         }
       }
 
-      if (balance === 0) continue;
+      if (balance.isZero()) continue;
 
       const formatted = {
         id: acc.id,
         glCode: acc.glCode,
         accountName: acc.accountName,
-        balance
+        balance: balance.toNumber()
       };
 
       if (type === 'ASSET') {
         assets.push(formatted);
-        totalAssets += balance;
+        totalAssets = totalAssets.plus(balance);
       } else if (type === 'LIABILITY') {
         liabilities.push(formatted);
-        totalLiabilities += balance;
+        totalLiabilities = totalLiabilities.plus(balance);
       } else if (type === 'EQUITY') {
         equity.push(formatted);
-        totalEquity += balance;
+        totalEquity = totalEquity.plus(balance);
       } else if (type === 'REVENUE') {
-        totalRevenue += balance;
+        totalRevenue = totalRevenue.plus(balance);
       } else if (type === 'EXPENSE') {
-        totalExpense += balance;
+        totalExpense = totalExpense.plus(balance);
       }
     }
 
-    const netPeriodIncome = totalRevenue - totalExpense;
+    const netPeriodIncome = totalRevenue.minus(totalExpense);
     let retainedEarnings = netPeriodIncome;
     if (startDate) {
-      retainedEarnings += openingRetainedEarnings;
+      retainedEarnings = retainedEarnings.plus(openingRetainedEarnings);
     }
 
-    if (retainedEarnings !== 0) {
+    if (!retainedEarnings.isZero()) {
       equity.push({
         id: 'retained-earnings-net',
         glCode: '3010199',
         accountName: 'Retained Earnings (P&L Transfer)',
-        balance: retainedEarnings
+        balance: retainedEarnings.toNumber()
       });
-      totalEquity += retainedEarnings;
+      totalEquity = totalEquity.plus(retainedEarnings);
     }
 
     return {
       assets,
       liabilities,
       equity,
-      totalAssets,
-      totalLiabilities,
-      totalEquity,
-      netPeriodIncome,
-      openingRetainedEarnings,
-      totalLiabilitiesAndEquity: totalLiabilities + totalEquity
+      totalAssets: totalAssets.toNumber(),
+      totalLiabilities: totalLiabilities.toNumber(),
+      totalEquity: totalEquity.toNumber(),
+      netPeriodIncome: netPeriodIncome.toNumber(),
+      openingRetainedEarnings: openingRetainedEarnings.toNumber(),
+      totalLiabilitiesAndEquity: totalLiabilities.plus(totalEquity).toNumber()
     };
   }
 
   static async getIncomeStatement(startDate?: string, endDate?: string) {
     const pnlAccounts = await prisma.account.findMany({
       where: {
+        isDeleted: false,
         accountType: {
           name: { in: ['REVENUE', 'EXPENSE'] }
         }
@@ -1519,8 +1532,8 @@ export class AccountingService {
 
     const revenues: any[] = [];
     const expenses: any[] = [];
-    let totalRevenue = 0;
-    let totalExpense = 0;
+    let totalRevenue = new Prisma.Decimal(0);
+    let totalExpense = new Prisma.Decimal(0);
 
     // Single source of truth: posted journal entry lines (see getPostedAggregates)
     const aggregates = await AccountingService.getPostedAggregates({
@@ -1529,8 +1542,6 @@ export class AccountingService {
       accountIds: pnlAccounts.map(a => a.id)
     });
 
-    // Period-filtered: activity inside the range only. Unfiltered (all-time):
-    // include any opening balance, matching the trial balance and summary.
     const pnlInitialApplies = !(startDate || endDate);
 
     for (const acc of pnlAccounts) {
@@ -1541,59 +1552,61 @@ export class AccountingService {
         aggregates.get(acc.id)
       );
 
-      if (balance === 0) continue;
+      if (balance.isZero()) continue;
 
       const formatted = {
         id: acc.id,
         glCode: acc.glCode,
         accountName: acc.accountName,
-        balance
+        balance: balance.toNumber()
       };
 
       if (type === 'REVENUE') {
         revenues.push(formatted);
-        totalRevenue += balance;
+        totalRevenue = totalRevenue.plus(balance);
       } else if (type === 'EXPENSE') {
         expenses.push(formatted);
-        totalExpense += balance;
+        totalExpense = totalExpense.plus(balance);
       }
     }
+
+    const netProfit = totalRevenue.minus(totalExpense);
 
     return {
       revenues,
       expenses,
-      totalRevenue,
-      totalExpense,
-      netProfit: totalRevenue - totalExpense
+      totalRevenue: totalRevenue.toNumber(),
+      totalExpense: totalExpense.toNumber(),
+      netProfit: netProfit.toNumber()
     };
   }
 
   static async getFinancialSummary(startDate?: string, endDate?: string) {
     const allAccounts = await prisma.account.findMany({
+      where: { isDeleted: false },
       include: { accountType: true }
     });
 
-    let totalAssets = 0;
-    let totalLiabilities = 0;
-    let totalEquity = 0;
-    let totalRevenue = 0;
-    let totalExpense = 0;
-    let cashBalance = 0;
-    let bankBalance = 0;
-    let openingRetainedEarnings = 0;
+    let totalAssets = new Prisma.Decimal(0);
+    let totalLiabilities = new Prisma.Decimal(0);
+    let totalEquity = new Prisma.Decimal(0);
+    let totalRevenue = new Prisma.Decimal(0);
+    let totalExpense = new Prisma.Decimal(0);
+    let cashBalance = new Prisma.Decimal(0);
+    let bankBalance = new Prisma.Decimal(0);
+    let openingRetainedEarnings = new Prisma.Decimal(0);
 
     const from = startDate ? new Date(startDate) : undefined;
     const to = endDate ? AccountingService.endOfDay(endDate) : undefined;
     const hasDateFilter = Boolean(from || to);
 
-    // Single source of truth: posted journal entry lines (see getPostedAggregates)
     const periodAggregates = await AccountingService.getPostedAggregates({ from, to });
     const cumulativeAggregates = hasDateFilter
       ? await AccountingService.getPostedAggregates({ to })
       : periodAggregates;
     const priorAggregates = from
       ? await AccountingService.getPostedAggregates({ to: new Date(from.getTime() - 1) })
-      : new Map<string, { debit: number; credit: number }>();
+      : new Map<string, { debit: Prisma.Decimal; credit: Prisma.Decimal }>();
 
     for (const acc of allAccounts) {
       const typeName = (acc.accountType?.name || '').toUpperCase();
@@ -1602,63 +1615,295 @@ export class AccountingService {
 
       const isPnl = ['REVENUE', 'INCOME', 'EXPENSE', 'EXPENSES'].includes(typeName);
 
-      let bal: number;
+      let bal: Prisma.Decimal;
       if (hasDateFilter && isPnl) {
-        // P&L accounts: activity inside the period only
         bal = AccountingService.naturalBalance(typeName, 0, periodAggregates.get(acc.id));
       } else {
-        // Balance-sheet accounts (and no-filter): cumulative position
         bal = AccountingService.naturalBalance(typeName, acc.initialBalance, cumulativeAggregates.get(acc.id));
       }
 
       if (typeName === 'ASSET' || typeName === 'ASSETS') {
-        totalAssets += bal;
+        totalAssets = totalAssets.plus(bal);
         if (this.isBankAccount(acc.accountName, acc.detailType)) {
-          bankBalance += bal;
+          bankBalance = bankBalance.plus(bal);
         } else if (this.isCashAccount(acc.accountName, acc.detailType)) {
-          cashBalance += bal;
+          cashBalance = cashBalance.plus(bal);
         }
       } else if (typeName === 'LIABILITY' || typeName === 'LIABILITIES') {
-        totalLiabilities += (bal < 0 ? Math.abs(bal) : bal);
+        totalLiabilities = totalLiabilities.plus(bal.lt(0) ? bal.abs() : bal);
       } else if (typeName === 'EQUITY') {
-        totalEquity += bal;
+        totalEquity = totalEquity.plus(bal);
       } else if (typeName === 'REVENUE' || typeName === 'INCOME') {
-        totalRevenue += bal;
+        totalRevenue = totalRevenue.plus(bal);
       } else if (typeName === 'EXPENSE' || typeName === 'EXPENSES' || (acc.glCode.startsWith('4') && !acc.glCode.startsWith('3') && !acc.glCode.startsWith('1') && !acc.glCode.startsWith('2'))) {
-        totalExpense += bal;
+        totalExpense = totalExpense.plus(bal);
       }
 
       if (startDate && isPnl) {
         const prior = priorAggregates.get(acc.id);
-        const pd = prior?.debit || 0;
-        const pc = prior?.credit || 0;
+        const pd = prior?.debit ?? new Prisma.Decimal(0);
+        const pc = prior?.credit ?? new Prisma.Decimal(0);
         if (typeName === 'REVENUE' || typeName === 'INCOME') {
-          openingRetainedEarnings += (pc - pd);
+          openingRetainedEarnings = openingRetainedEarnings.plus(pc.minus(pd));
         } else {
-          openingRetainedEarnings -= (pd - pc);
+          openingRetainedEarnings = openingRetainedEarnings.minus(pd.minus(pc));
         }
       }
     }
 
-    const netPeriodIncome = totalRevenue - totalExpense;
+    const netPeriodIncome = totalRevenue.minus(totalExpense);
     let retainedEarnings = netPeriodIncome;
     if (startDate) {
-      retainedEarnings += openingRetainedEarnings;
+      retainedEarnings = retainedEarnings.plus(openingRetainedEarnings);
     }
 
-    totalEquity += retainedEarnings;
+    totalEquity = totalEquity.plus(retainedEarnings);
 
     return {
-      totalAssets,
-      totalLiabilities,
-      totalEquity,
-      totalRevenue,
-      totalExpense,
-      cashBalance,
-      bankBalance,
-      netPeriodIncome,
-      openingRetainedEarnings,
-      retainedEarnings
+      totalAssets: totalAssets.toNumber(),
+      totalLiabilities: totalLiabilities.toNumber(),
+      totalEquity: totalEquity.toNumber(),
+      totalRevenue: totalRevenue.toNumber(),
+      totalExpense: totalExpense.toNumber(),
+      cashBalance: cashBalance.toNumber(),
+      bankBalance: bankBalance.toNumber(),
+      netPeriodIncome: netPeriodIncome.toNumber(),
+      openingRetainedEarnings: openingRetainedEarnings.toNumber(),
+      retainedEarnings: retainedEarnings.toNumber()
+    };
+  }
+
+  static async getCashFlow(startDate?: string, endDate?: string) {
+    const cashBankAccounts = await prisma.account.findMany({
+      where: {
+        isDeleted: false,
+        accountType: { name: { in: ['Asset', 'ASSET'], mode: 'insensitive' } },
+        children: { none: {} },
+        OR: [
+          { accountName: { contains: 'bank', mode: 'insensitive' } },
+          { accountName: { contains: 'cash', mode: 'insensitive' } },
+          { detailType: { in: ['Cash', 'Bank'], mode: 'insensitive' } }
+        ]
+      },
+      include: { accountType: true }
+    });
+
+    const cashAccounts = cashBankAccounts.filter(a => AccountingService.isCashAccount(a.accountName, a.detailType));
+    const bankAccounts = cashBankAccounts.filter(a => AccountingService.isBankAccount(a.accountName, a.detailType));
+
+    const cashCodes = new Set(cashAccounts.map(a => a.glCode));
+    const bankCodes = new Set(bankAccounts.map(a => a.glCode));
+    const cashBankCodes = new Set(cashBankAccounts.map(a => a.glCode));
+
+    type CashFlowCategory = 'Operating' | 'Investing' | 'Financing';
+    function classifyCashFlowCategory(accountName: string, accountTypeName: string | undefined): CashFlowCategory {
+      const name = accountName.toLowerCase();
+      const type = (accountTypeName || '').toUpperCase();
+      const investingKeywords = ['fixed asset', 'investment', 'property', 'equipment', 'vehicle', 'furniture', 'building', 'long-term'];
+      const financingKeywords = ['loan', 'equity', 'capital', 'owner', 'borrowing', 'share'];
+      if (investingKeywords.some(k => name.includes(k))) return 'Investing';
+      if (financingKeywords.some(k => name.includes(k)) || type === 'EQUITY') return 'Financing';
+      if (type === 'LIABILITY' && financingKeywords.some(k => name.includes(k))) return 'Financing';
+      return 'Operating';
+    }
+
+    const dateFilter: any = {};
+    if (startDate) dateFilter.gte = new Date(startDate);
+    if (endDate) {
+      dateFilter.lte = AccountingService.endOfDay(endDate);
+    }
+
+    const computeBalance = async (accounts: typeof cashBankAccounts, upto?: Date) => {
+      if (accounts.length === 0) return 0;
+      const aggregates = await AccountingService.getPostedAggregates({
+        to: upto,
+        accountIds: accounts.map(a => a.id)
+      });
+      const total = accounts.reduce(
+        (sum, acc) => sum + AccountingService.naturalBalance('ASSET', acc.initialBalance, aggregates.get(acc.id)),
+        0
+      );
+      return Math.round(total * 100) / 100;
+    };
+
+    const computeCashBalance = (upto?: Date) => computeBalance(cashBankAccounts, upto);
+    const computeCashOnlyBalance = (upto?: Date) => computeBalance(cashAccounts, upto);
+    const computeBankOnlyBalance = (upto?: Date) => computeBalance(bankAccounts, upto);
+
+    const postedJournals = await prisma.journalEntry.findMany({
+      where: {
+        status: 'Posted',
+        isDeleted: false,
+        ...(Object.keys(dateFilter).length > 0 ? { postingDate: dateFilter } : {}),
+      },
+      include: {
+        lines: {
+          include: {
+            account: {
+              include: { accountType: true }
+            }
+          }
+        }
+      },
+      orderBy: { postingDate: 'asc' },
+    });
+
+    const inflowsMap: Record<string, number> = {};
+    const outflowsMap: Record<string, number> = {};
+    const inflowCategoryByAccount: Record<string, CashFlowCategory> = {};
+    const outflowCategoryByAccount: Record<string, CashFlowCategory> = {};
+
+    const cashInflowsMap: Record<string, number> = {};
+    const cashOutflowsMap: Record<string, number> = {};
+    const bankInflowsMap: Record<string, number> = {};
+    const bankOutflowsMap: Record<string, number> = {};
+
+    const processMovements = (
+      movementLines: typeof postedJournals[0]['lines'],
+      nonCashLines: typeof postedJournals[0]['lines'],
+      netChange: number,
+      globalInflows: Record<string, number>,
+      globalOutflows: Record<string, number>
+    ) => {
+      if (netChange > 0) {
+        const totalNonCashCredit = nonCashLines.reduce((sum, l) => sum + Number(l.credit || 0), 0);
+        nonCashLines.forEach((l) => {
+          if (l.credit > 0) {
+            const ratio = totalNonCashCredit > 0 ? Number(l.credit) / totalNonCashCredit : 1;
+            const amount = Math.round(netChange * ratio * 100) / 100;
+            const name = l.account.accountName;
+            globalInflows[name] = (globalInflows[name] || 0) + amount;
+            inflowCategoryByAccount[name] = classifyCashFlowCategory(name, l.account.accountType?.name);
+          }
+        });
+      } else if (netChange < 0) {
+        const absChange = Math.abs(netChange);
+        const totalNonCashDebit = nonCashLines.reduce((sum, l) => sum + Number(l.debit || 0), 0);
+        nonCashLines.forEach((l) => {
+          if (l.debit > 0) {
+            const ratio = totalNonCashDebit > 0 ? Number(l.debit) / totalNonCashDebit : 1;
+            const amount = Math.round(absChange * ratio * 100) / 100;
+            const name = l.account.accountName;
+            globalOutflows[name] = (globalOutflows[name] || 0) + amount;
+            outflowCategoryByAccount[name] = classifyCashFlowCategory(name, l.account.accountType?.name);
+          }
+        });
+      }
+    };
+
+    postedJournals.forEach((je) => {
+      const allCashBankLines = je.lines.filter(l => cashBankCodes.has(l.account.glCode));
+      const nonCashBankLines = je.lines.filter(l => !cashBankCodes.has(l.account.glCode));
+
+      if (allCashBankLines.length === 0 || nonCashBankLines.length === 0) return;
+
+      const netCashChange = allCashBankLines.reduce((sum, l) => sum + Number(l.debit || 0) - Number(l.credit || 0), 0);
+      processMovements(allCashBankLines, nonCashBankLines, netCashChange, inflowsMap, outflowsMap);
+
+      const cashLines = je.lines.filter(l => cashCodes.has(l.account.glCode));
+      if (cashLines.length > 0) {
+        const netCash = cashLines.reduce((sum, l) => sum + Number(l.debit || 0) - Number(l.credit || 0), 0);
+        processMovements(cashLines, nonCashBankLines, netCash, cashInflowsMap, cashOutflowsMap);
+      }
+
+      const bankLines = je.lines.filter(l => bankCodes.has(l.account.glCode));
+      if (bankLines.length > 0) {
+        const netBank = bankLines.reduce((sum, l) => sum + Number(l.debit || 0) - Number(l.credit || 0), 0);
+        processMovements(bankLines, nonCashBankLines, netBank, bankInflowsMap, bankOutflowsMap);
+      }
+    });
+
+    const inflows = Object.entries(inflowsMap).map(([name, amount]) => ({
+      accountName: name,
+      amount,
+      category: inflowCategoryByAccount[name] || 'Operating',
+    }));
+
+    const outflows = Object.entries(outflowsMap).map(([name, amount]) => ({
+      accountName: name,
+      amount,
+      category: outflowCategoryByAccount[name] || 'Operating',
+    }));
+
+    const sumByCategory = (rows: { amount: number; category: CashFlowCategory }[], cat: CashFlowCategory) =>
+      Math.round(rows.filter(r => r.category === cat).reduce((sum, r) => sum + r.amount, 0) * 100) / 100;
+
+    const categories: CashFlowCategory[] = ['Operating', 'Investing', 'Financing'];
+    const categorySummary = Object.fromEntries(categories.map(cat => [
+      cat,
+      {
+        inflow: sumByCategory(inflows, cat),
+        outflow: sumByCategory(outflows, cat),
+        net: Math.round((sumByCategory(inflows, cat) - sumByCategory(outflows, cat)) * 100) / 100,
+      },
+    ]));
+
+    const totalInflow = Math.round(inflows.reduce((sum, i) => sum + i.amount, 0) * 100) / 100;
+    const totalOutflow = Math.round(outflows.reduce((sum, o) => sum + o.amount, 0) * 100) / 100;
+    const netChange = Math.round((totalInflow - totalOutflow) * 100) / 100;
+
+    const endingCash = endDate
+      ? await computeCashBalance(new Date(dateFilter.lte))
+      : await computeCashBalance();
+    const beginningCash = startDate
+      ? await computeCashBalance(new Date(new Date(startDate).getTime() - 1))
+      : Math.round((endingCash - netChange) * 100) / 100;
+
+    const cashTotalReceipts = Math.round(Object.values(cashInflowsMap).reduce((s, v) => s + v, 0) * 100) / 100;
+    const cashTotalPayments = Math.round(Object.values(cashOutflowsMap).reduce((s, v) => s + v, 0) * 100) / 100;
+    const closingCash = endDate
+      ? await computeCashOnlyBalance(new Date(dateFilter.lte))
+      : await computeCashOnlyBalance();
+    const openingCash = startDate
+      ? await computeCashOnlyBalance(new Date(new Date(startDate).getTime() - 1))
+      : Math.round((closingCash - (cashTotalReceipts - cashTotalPayments)) * 100) / 100;
+
+    const bankTotalReceipts = Math.round(Object.values(bankInflowsMap).reduce((s, v) => s + v, 0) * 100) / 100;
+    const bankTotalPayments = Math.round(Object.values(bankOutflowsMap).reduce((s, v) => s + v, 0) * 100) / 100;
+    const closingBank = endDate
+      ? await computeBankOnlyBalance(new Date(dateFilter.lte))
+      : await computeBankOnlyBalance();
+    const openingBank = startDate
+      ? await computeBankOnlyBalance(new Date(new Date(startDate).getTime() - 1))
+      : Math.round((closingBank - (bankTotalReceipts - bankTotalPayments)) * 100) / 100;
+
+    const periodLabel = startDate && endDate
+      ? `${startDate} to ${endDate}`
+      : startDate
+      ? `From ${startDate}`
+      : endDate
+      ? `Up to ${endDate}`
+      : 'All Time';
+
+    return {
+      inflows,
+      outflows,
+      categorySummary,
+      cashSection: {
+        receipts: Object.entries(cashInflowsMap).map(([accountName, amount]) => ({ accountName, amount })),
+        payments: Object.entries(cashOutflowsMap).map(([accountName, amount]) => ({ accountName, amount })),
+        openingBalance: openingCash,
+        totalReceipts: cashTotalReceipts,
+        totalPayments: cashTotalPayments,
+        closingBalance: closingCash,
+      },
+      bankSection: {
+        receipts: Object.entries(bankInflowsMap).map(([accountName, amount]) => ({ accountName, amount })),
+        payments: Object.entries(bankOutflowsMap).map(([accountName, amount]) => ({ accountName, amount })),
+        openingBalance: openingBank,
+        totalReceipts: bankTotalReceipts,
+        totalPayments: bankTotalPayments,
+        closingBalance: closingBank,
+      },
+      summary: {
+        beginningCash,
+        totalInflow,
+        totalOutflow,
+        netChange,
+        endingCash,
+        periodLabel
+      }
     };
   }
 }
+

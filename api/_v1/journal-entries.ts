@@ -6,6 +6,7 @@ import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
 import { notify } from '../_utils/notify.js';
 import { PERMS } from '../_constants/permissions.js';
+import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
 
 const accountingTxOptions = { maxWait: 10000, timeout: 30000 };
 
@@ -14,13 +15,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   if (!authenticated || !req.user) return;
 
   const { method } = req;
+  const action = (req.query.action || req.body?.action) as string;
 
-  // Enforce POST_JOURNAL for write operations
   if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
     if (!await verifyPermission(req, res, PERMS.POST_JOURNAL)) return;
   }
 
-  // Enforce VIEW_JOURNALS for read operations
   if (method === 'GET') {
     if (!await verifyPermission(req, res, PERMS.VIEW_JOURNALS)) return;
   }
@@ -32,7 +32,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const limitNum = parseInt(limit) || 100;
     const skip = (pageNum - 1) * limitNum;
 
-    const whereClause: any = {};
+    const whereClause: any = { ...getDeletedFilter(req.query) };
     if (subsidiary && subsidiary !== 'Global') {
       whereClause.subsidiary = subsidiary;
     }
@@ -130,8 +130,28 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   if (method === 'PATCH' || method === 'PUT') {
     const { id, status, reference, description, postingDate, amount, lines } = req.body;
-    
-    if (!id) {
+    const targetId = id || req.query.id;
+
+    if (action === 'restore') {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can restore records', status: 403 } });
+      }
+      if (!targetId) {
+        return res.status(400).json({ error: { message: 'Missing journal entry id', status: 400 } });
+      }
+      const existing = await prisma.journalEntry.findUnique({ where: { id: targetId } });
+      if (!existing) {
+        return res.status(404).json({ error: { message: 'Journal entry not found', status: 404 } });
+      }
+      const restored = await prisma.journalEntry.update({
+        where: { id: targetId },
+        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      });
+      await logAudit(req.user.id, 'Restore Journal Entry', 'Journal Entries', existing, restored, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      return res.status(200).json({ status: 200, message: 'Journal entry restored successfully', data: restored });
+    }
+
+    if (!targetId) {
        return res.status(400).json({ error: { message: 'Missing journal entry id', status: 400 } });
     }
 
@@ -287,6 +307,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'DELETE') {
+    const isPermanent = req.query.permanent === 'true' || req.query.action === 'permanent_delete' || req.body?.permanent === true;
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can permanently delete records', status: 403 } });
+    }
+
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
     if (!idsRaw) {
       return res.status(400).json({ error: { message: 'Journal Entry ID(s) required', status: 400 } });
@@ -304,8 +329,16 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       const deletedEntries = await prisma.$transaction(async (tx) => {
         const results = [];
         for (const id of ids) {
-          const resJe = await AccountingService.deleteJournalEntry(tx, id, req.user!.id, 'Admin Deleted');
-          if (resJe) results.push(resJe);
+          if (isPermanent) {
+            const resJe = await AccountingService.deleteJournalEntry(tx, id, req.user!.id, 'Admin Permanently Deleted');
+            if (resJe) results.push(resJe);
+          } else {
+            const resJe = await tx.journalEntry.update({
+              where: { id },
+              data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user!.id }
+            });
+            if (resJe) results.push(resJe);
+          }
         }
         return results;
       }, accountingTxOptions);

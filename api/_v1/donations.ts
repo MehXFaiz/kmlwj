@@ -8,6 +8,7 @@ import { validateAmount } from '../_utils/amount.js';
 import { isWithinMaxLength, maxLengthError } from '../_utils/text-length.js';
 import { notify } from '../_utils/notify.js';
 import { PERMS } from '../_constants/permissions.js';
+import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
 
 function generateVoucherNumber() {
   const date = new Date();
@@ -19,16 +20,11 @@ function generateVoucherNumber() {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// beneficiaryId is a Postgres UUID column — an unrecognized/malformed id (e.g. stale client-side
-// data) must be rejected with a clean 400 here, not passed through to Prisma where Postgres
-// rejects it with a raw "invalid input syntax for type uuid" error that would otherwise surface
-// as an uncaught 500.
 function isValidBeneficiaryId(beneficiaryId: unknown): beneficiaryId is string {
   return typeof beneficiaryId === 'string' && UUID_RE.test(beneficiaryId);
 }
 
 async function getExpenseAccountForDonation(donationType: string, tx: any) {
-  // First try: find a welfare/aid account matching donationType or general aid
   let acc = await tx.account.findFirst({
     where: {
       accountType: { name: { equals: 'Expense', mode: 'insensitive' } },
@@ -40,7 +36,8 @@ async function getExpenseAccountForDonation(donationType: string, tx: any) {
         { accountName: { contains: 'Donation', mode: 'insensitive' } }
       ],
       children: { none: {} },
-      isLocked: false
+      isLocked: false,
+      isDeleted: false
     },
     orderBy: { glCode: 'asc' }
   });
@@ -51,7 +48,8 @@ async function getExpenseAccountForDonation(donationType: string, tx: any) {
         accountType: { name: { equals: 'Expense', mode: 'insensitive' } },
         NOT: { accountName: { contains: 'Salary', mode: 'insensitive' } },
         children: { none: {} },
-        isLocked: false
+        isLocked: false,
+        isDeleted: false
       },
       orderBy: { glCode: 'asc' }
     });
@@ -61,8 +59,8 @@ async function getExpenseAccountForDonation(donationType: string, tx: any) {
     acc = await tx.account.findFirst({
       where: {
         accountType: { name: { equals: 'Expense', mode: 'insensitive' } },
-        children: { none: {} },
-        isLocked: false
+        isLocked: false,
+        isDeleted: false
       },
       orderBy: { glCode: 'asc' }
     });
@@ -71,15 +69,6 @@ async function getExpenseAccountForDonation(donationType: string, tx: any) {
   return acc;
 }
 
-// SQA note: this caps a BENEFICIARY to one approved aid disbursement per
-// month, regardless of donation type — it exists to prevent one person from
-// receiving aid twice in the same month. It intentionally does NOT apply to
-// donor contributions (api/_v1/donations-received.ts, the "Donations Received"
-// module) — donors are expected to give repeatedly, so no equivalent cap
-// exists there. If a per-donor-per-type monthly cap on the receiving side is
-// actually required, that is a business-rule decision that needs explicit
-// confirmation before implementing (a blanket cap risks blocking legitimate
-// repeat donors), so it is deliberately left unimplemented here.
 async function checkMonthlyRestriction(beneficiaryId: string | null | undefined, donationDate: Date, excludeId?: string) {
   if (!beneficiaryId) return false;
 
@@ -90,6 +79,7 @@ async function checkMonthlyRestriction(beneficiaryId: string | null | undefined,
     where: {
       beneficiaryId,
       status: 'APPROVED',
+      isDeleted: false,
       createdAt: {
         gte: startOfMonth,
         lte: endOfMonth,
@@ -106,7 +96,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   if (!authenticated || !req.user) return;
 
   const { method } = req;
-  const action = req.query.action as string;
+  const action = (req.query.action || req.body?.action) as string;
 
   if (method === 'GET') {
     if (!await verifyPermission(req, res, PERMS.MANAGE_DONATIONS)) return;
@@ -115,9 +105,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
     const skip = (pageNum - 1) * limitNum;
+    const whereClause = getDeletedFilter(req.query);
 
     const [donations, total] = await Promise.all([
       prisma.donation.findMany({
+        where: whereClause,
         include: {
           beneficiary: true,
           bankAccount: true,
@@ -127,10 +119,32 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         skip,
         take: limitNum,
       }),
-      prisma.donation.count()
+      prisma.donation.count({ where: whereClause })
     ]);
 
     return res.status(200).json({ status: 200, data: donations, meta: { total, page: pageNum, limit: limitNum } });
+  }
+
+  if (method === 'PUT' || method === 'POST' || method === 'PATCH') {
+    if (action === 'restore') {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can restore records', status: 403 } });
+      }
+      const id = (req.query.id || req.body?.id) as string;
+      if (!id) {
+        return res.status(400).json({ error: { message: 'Donation ID is required', status: 400 } });
+      }
+      const existing = await prisma.donation.findUnique({ where: { id } });
+      if (!existing) {
+        return res.status(404).json({ error: { message: 'Donation not found', status: 404 } });
+      }
+      const restored = await prisma.donation.update({
+        where: { id },
+        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      });
+      await logAudit(req.user.id, 'Restore Donation', 'DONATION', existing, restored, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      return res.status(200).json({ status: 200, message: 'Donation restored successfully', data: restored });
+    }
   }
 
   // Every write below immediately posts a real disbursement to the General Ledger.
@@ -466,6 +480,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'DELETE') {
+    const isPermanent = req.query.permanent === 'true' || req.query.action === 'permanent_delete' || req.body?.permanent === true;
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can permanently delete records', status: 403 } });
+    }
+
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
     if (!idsRaw) {
       return res.status(400).json({ error: { message: 'Donation ID(s) required', status: 400 } });
@@ -497,17 +516,31 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             });
             if (je) {
               try {
-                await AccountingService.deleteJournalEntry(tx, je.id, req.user!.id, 'Donation Deleted');
+                if (isPermanent) {
+                  await AccountingService.deleteJournalEntry(tx, je.id, req.user!.id, 'Donation Permanently Deleted');
+                } else {
+                  await tx.journalEntry.update({
+                    where: { id: je.id },
+                    data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user!.id }
+                  });
+                }
               } catch (e) {
-                // Ignore if already deleted
+                // Ignore if already processed
               }
             }
           }
         }
 
-        await tx.donation.deleteMany({
-          where: { id: { in: donations.map(d => d.id) } }
-        });
+        if (isPermanent) {
+          await tx.donation.deleteMany({
+            where: { id: { in: donations.map(d => d.id) } }
+          });
+        } else {
+          await tx.donation.updateMany({
+            where: { id: { in: donations.map(d => d.id) } },
+            data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user!.id }
+          });
+        }
 
         return donations;
       }, {

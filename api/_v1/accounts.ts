@@ -7,6 +7,7 @@ import { notify } from '../_utils/notify.js';
 import { compareCodes } from '../_utils/code-compare.js';
 import { AccountingService } from '../_services/accounting.service.js';
 import { loadPermissions } from '../_services/permission.service.js';
+import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
@@ -14,11 +15,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   const { method } = req;
   const id = req.query.id as string;
+  const action = (req.query.action || req.body?.action) as string;
 
   if (method === 'GET') {
     const { search, type, status, level, nature, reserved, sortBy = 'glCode', order = 'asc', page = '1', limit = '100' } = req.query as any;
 
-    const whereClause: any = {};
+    const whereClause: any = { ...getDeletedFilter(req.query) };
     if (search) {
       whereClause.OR = [
         { glCode: { contains: search, mode: 'insensitive' } },
@@ -183,6 +185,27 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     return res.status(201).json({ status: 201, data: newAccount });
   }
 
+  if (method === 'PUT' || method === 'POST') {
+    if (action === 'restore') {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can restore records', status: 403 } });
+      }
+      if (!id) {
+        return res.status(400).json({ error: { message: 'Account ID is required', status: 400 } });
+      }
+      const existingAccount = await prisma.account.findUnique({ where: { id } });
+      if (!existingAccount) {
+        return res.status(404).json({ error: { message: 'Account not found', status: 404 } });
+      }
+      const restored = await prisma.account.update({
+        where: { id },
+        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      });
+      await logAudit(req.user.id, 'Restore Account', 'COA', existingAccount, restored, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      return res.status(200).json({ status: 200, message: 'Account restored successfully', data: restored });
+    }
+  }
+
   if (method === 'PUT') {
     if (!id) {
       return res.status(400).json({ error: { message: 'Account ID is required', status: 400 } });
@@ -295,6 +318,23 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'DELETE') {
+    const isPermanent = req.query.permanent === 'true' || req.query.action === 'permanent_delete' || req.body?.permanent === true;
+    if (isPermanent) {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can permanently delete records', status: 403 } });
+      }
+      if (!id) {
+        return res.status(400).json({ error: { message: 'Account ID is required', status: 400 } });
+      }
+      const existingAccount = await prisma.account.findUnique({ where: { id } });
+      if (!existingAccount) {
+        return res.status(404).json({ error: { message: 'Account not found', status: 404 } });
+      }
+      await prisma.account.delete({ where: { id } });
+      await logAudit(req.user.id, 'Permanent Delete Account', 'COA', existingAccount, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      return res.status(200).json({ status: 200, message: 'Account permanently deleted successfully' });
+    }
+
     if (!checkPerm('DELETE_ACCOUNT')) {
       return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
     }
@@ -313,25 +353,16 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: `${existingAccount.accountLevel} accounts are system-defined and cannot be deleted. Only Level 4 (GL) accounts can be deleted.`, status: 400 } });
     }
 
-    // Guard against orphaning an account that has posting history. The single
-    // source of truth is JournalEntryLine, so that is the only table to check.
-    const journalLineCount = await prisma.journalEntryLine.count({ where: { accountId: id } });
-    if (journalLineCount > 0) {
-      return res.status(400).json({
-        error: {
-          message: 'Cannot delete this account because it has existing journal history. Lock it instead of deleting to preserve historical records.',
-          status: 400,
-        },
-      });
-    }
+    const updated = await prisma.account.update({
+      where: { id },
+      data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user.id }
+    });
 
-    await prisma.account.delete({ where: { id } });
-
-    await logAudit(req.user.id, 'Delete Account', 'COA', existingAccount, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+    await logAudit(req.user.id, 'Delete Account', 'COA', existingAccount, updated, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
     await notify(req, {
       title: 'Account Deleted',
-      message: `Account "${(existingAccount as any).accountName}" removed from Chart of Accounts.`,
+      message: `Account "${(existingAccount as any).accountName}" soft-deleted from Chart of Accounts.`,
       module: 'Chart of Accounts',
       recordId: (existingAccount as any).id,
       actionType: 'DELETE',

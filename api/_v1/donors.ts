@@ -5,6 +5,7 @@ import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { notify } from '../_utils/notify.js';
 import { PERMS } from '../_constants/permissions.js';
+import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
 
 function isUniqueViolation(err: any): boolean {
   return err?.code === 'P2002';
@@ -12,10 +13,6 @@ function isUniqueViolation(err: any): boolean {
 
 const DONOR_CODE_PREFIX = 'DNR-';
 
-// SQA fix: previously derived from `count()`, which races under concurrent
-// creation and reuses numbers after a donor is deleted (count shrinks). Max
-// existing numeric suffix avoids the reuse issue; the caller retries on the
-// rare remaining collision.
 async function nextDonorCode(tx: any): Promise<string> {
   const existing = await tx.donor.findMany({
     where: { donorCode: { startsWith: DONOR_CODE_PREFIX } },
@@ -36,10 +33,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   const { method } = req;
   const id = req.query.id as string;
+  const action = (req.query.action || req.body?.action) as string;
 
   if (method === 'GET') {
     const search = (req.query.search as string) || '';
-    const whereClause: any = {};
+    const whereClause: any = { ...getDeletedFilter(req.query) };
     if (search) {
       whereClause.OR = [
         { fullName: { contains: search, mode: 'insensitive' } },
@@ -63,6 +61,28 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       prisma.donor.count({ where: whereClause })
     ]);
     return res.status(200).json({ status: 200, data: donors, meta: { total, page: pageNum, limit: limitNum } });
+  }
+
+  if (method === 'PUT' || method === 'POST' || method === 'PATCH') {
+    if (action === 'restore') {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can restore records', status: 403 } });
+      }
+      const targetId = id || req.body?.id;
+      if (!targetId) {
+        return res.status(400).json({ error: { message: 'Donor ID is required', status: 400 } });
+      }
+      const existing = await prisma.donor.findUnique({ where: { id: targetId } });
+      if (!existing) {
+        return res.status(404).json({ error: { message: 'Donor not found', status: 404 } });
+      }
+      const restored = await prisma.donor.update({
+        where: { id: targetId },
+        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      });
+      await logAudit(req.user.id, 'Restore Donor', 'DONOR', existing, restored, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      return res.status(200).json({ status: 200, message: 'Donor restored successfully', data: restored });
+    }
   }
 
   if (method === 'POST') {
@@ -97,11 +117,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       }
     }
 
-    // SQA fix: uniqueness was only enforced on CNIC, which is optional — two
-    // donors with identical name+mobile but no CNIC could be created
-    // indefinitely, fragmenting donation history for the same real person.
-    // This is a non-blocking, informational warning only (not a rejection),
-    // since a shared name+mobile can legitimately belong to different people.
     let duplicateWarning: string | undefined;
     if (!cnic && mobile) {
       const possibleDuplicate = await prisma.donor.findFirst({
@@ -221,6 +236,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'DELETE') {
+    const isPermanent = req.query.permanent === 'true' || req.query.action === 'permanent_delete' || req.body?.permanent === true;
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can permanently delete records', status: 403 } });
+    }
+
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
     if (!idsRaw) {
       return res.status(400).json({ error: { message: 'Donor ID(s) required', status: 400 } });
@@ -243,20 +263,17 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(404).json({ error: { message: 'No donors found to delete', status: 404 } });
     }
 
-    const donorsWithDonations = existingDonors.filter(d => d.donations.length > 0);
-    if (donorsWithDonations.length > 0) {
-      return res.status(400).json({
-        error: {
-          message: `Cannot delete donor(s) with existing donation records (${donorsWithDonations.map(d => d.donorCode).join(', ')})`,
-          status: 400,
-        },
+    if (isPermanent) {
+      await prisma.donor.deleteMany({ where: { id: { in: ids } } });
+    } else {
+      await prisma.donor.updateMany({
+        where: { id: { in: ids } },
+        data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user.id }
       });
     }
 
-    await prisma.donor.deleteMany({ where: { id: { in: ids } } });
-
     for (const d of existingDonors) {
-      await logAudit(req.user.id, 'Delete Donor', 'DONOR', d, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      await logAudit(req.user.id, isPermanent ? 'Permanent Delete Donor' : 'Delete Donor', 'DONOR', d, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
     }
 
     await notify(req, {

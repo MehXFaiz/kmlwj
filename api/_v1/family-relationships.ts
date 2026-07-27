@@ -5,6 +5,7 @@ import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { notify } from '../_utils/notify.js';
 import { PERMS } from '../_constants/permissions.js';
+import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
 
 const RELATION_TYPES = [
   'FATHER', 'MOTHER', 'HUSBAND', 'WIFE', 'SON', 'DAUGHTER', 'BROTHER', 'SISTER',
@@ -29,6 +30,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   if (!authenticated || !req.user) return;
 
   const { method } = req;
+  const action = (req.query.action || req.body?.action) as string;
 
   if (method === 'GET') {
     if (!await verifyPermission(req, res, PERMS.VIEW_MEMBERS)) return;
@@ -38,13 +40,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'memberId is required', status: 400 } });
     }
 
-    // depth: 0 = only this member's direct links (used for the summary card),
-    // 2 = also pull in each direct relative's own links so the tree can show
-    // grandparents/grandchildren without one round-trip per node (avoids N+1).
     const depth = req.query.depth === '2' ? 2 : 0;
+    const filter = getDeletedFilter(req.query);
 
     const direct = await prisma.familyRelationship.findMany({
-      where: { memberId },
+      where: { memberId, ...filter },
       include: { relatedMember: { select: MEMBER_SELECT } },
       orderBy: { createdAt: 'asc' },
     });
@@ -55,12 +55,36 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     const relatedIds = [...new Set(direct.map((r) => r.relatedMemberId))];
     const extended = await prisma.familyRelationship.findMany({
-      where: { memberId: { in: relatedIds }, relatedMemberId: { not: memberId } },
+      where: { memberId: { in: relatedIds }, relatedMemberId: { not: memberId }, ...filter },
       include: { relatedMember: { select: MEMBER_SELECT } },
       orderBy: { createdAt: 'asc' },
     });
 
     return res.status(200).json({ status: 200, data: { direct, extended } });
+  }
+
+  if (method === 'PUT' || method === 'POST' || method === 'PATCH') {
+    if (action === 'restore') {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can restore records', status: 403 } });
+      }
+      const memberId = (req.query.memberId || req.body?.memberId) as string;
+      const relatedMemberId = (req.query.relatedMemberId || req.body?.relatedMemberId) as string;
+      if (!memberId || !relatedMemberId) {
+        return res.status(400).json({ error: { message: 'memberId and relatedMemberId are required', status: 400 } });
+      }
+      const restored = await prisma.familyRelationship.updateMany({
+        where: {
+          OR: [
+            { memberId, relatedMemberId },
+            { memberId: relatedMemberId, relatedMemberId: memberId },
+          ],
+        },
+        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      });
+      await logAudit(req.user.id, 'Restore Family Relationship', 'MEMBER', { memberId, relatedMemberId }, restored, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      return res.status(200).json({ status: 200, message: 'Family relationship restored successfully', data: restored });
+    }
   }
 
   if (method === 'POST') {
@@ -87,10 +111,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(404).json({ error: { message: 'One or both members were not found.', status: 404 } });
     }
 
-    // Prevent duplicate / circular links: a relationship between this exact
-    // pair (in either direction) must not already exist.
     const existing = await prisma.familyRelationship.findFirst({
       where: {
+        isDeleted: false,
         OR: [
           { memberId, relatedMemberId },
           { memberId: relatedMemberId, relatedMemberId: memberId },
@@ -139,6 +162,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'DELETE') {
+    const isPermanent = req.query.permanent === 'true' || req.query.action === 'permanent_delete' || req.body?.permanent === true;
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can permanently delete records', status: 403 } });
+    }
+
     if (!await verifyPermission(req, res, PERMS.DELETE_MEMBER)) return;
 
     const memberId = (req.query.memberId || req.body?.memberId) as string;
@@ -147,16 +175,31 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'memberId and relatedMemberId are required', status: 400 } });
     }
 
-    const deleted = await prisma.familyRelationship.deleteMany({
-      where: {
-        OR: [
-          { memberId, relatedMemberId },
-          { memberId: relatedMemberId, relatedMemberId: memberId },
-        ],
-      },
-    });
+    let deletedCount = 0;
+    if (isPermanent) {
+      const deleted = await prisma.familyRelationship.deleteMany({
+        where: {
+          OR: [
+            { memberId, relatedMemberId },
+            { memberId: relatedMemberId, relatedMemberId: memberId },
+          ],
+        },
+      });
+      deletedCount = deleted.count;
+    } else {
+      const updated = await prisma.familyRelationship.updateMany({
+        where: {
+          OR: [
+            { memberId, relatedMemberId },
+            { memberId: relatedMemberId, relatedMemberId: memberId },
+          ],
+        },
+        data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user.id }
+      });
+      deletedCount = updated.count;
+    }
 
-    await logAudit(req.user.id, 'Unlink Family Member', 'MEMBER', { memberId, relatedMemberId }, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+    await logAudit(req.user.id, isPermanent ? 'Permanent Unlink Family Member' : 'Unlink Family Member', 'MEMBER', { memberId, relatedMemberId }, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
     await notify(req, {
       title: 'Family Tree Updated',
@@ -166,7 +209,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       actionType: 'DELETE',
     });
 
-    return res.status(200).json({ status: 200, message: `Removed ${deleted.count} relationship link(s)` });
+    return res.status(200).json({ status: 200, message: `Removed ${deletedCount} relationship link(s)` });
   }
 
   return res.status(405).json({ error: { message: 'Method not allowed', status: 405 } });

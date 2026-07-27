@@ -13,6 +13,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if (!await verifyPermission(req, res, PERMS.VIEW_REPORTS)) return;
     // Fetch all accounts
     const dbAccounts = await prisma.account.findMany({
+      where: { isDeleted: false },
       include: {
         accountType: true,
       },

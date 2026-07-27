@@ -6,6 +6,7 @@ import { logAudit } from '../_utils/audit.js';
 import { logger } from '../_utils/logger.js';
 import { notify } from '../_utils/notify.js';
 import { PERMS } from '../_constants/permissions.js';
+import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
 
 function trimOrNull(v: unknown): string | null {
   if (v === undefined || v === null) return null;
@@ -13,23 +14,14 @@ function trimOrNull(v: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-// PUT distinguishes "field omitted" (undefined, don't touch) from "field
-// explicitly cleared" (empty/null) — this preserves that distinction while
-// still trimming whatever was actually provided.
 function trimIfProvided(v: unknown): string | null | undefined {
   if (v === undefined) return undefined;
   return trimOrNull(v);
 }
 
-// ── Membership number generation ─────────────────────────────────────────────
-// Format: KML-0001, KML-0002, … Unique (DB constraint) and immutable: generated
-// exactly once — at registration, or lazily backfilled for legacy members that
-// predate auto-generation — and never regenerated or overwritten afterwards.
-
 const MEMBER_NO_PREFIX = 'KML-';
 
 async function nextMemberNo(): Promise<string> {
-  // Compute the max numerically (not lexically, which breaks past 4 digits)
   const existing = await prisma.member.findMany({
     where: { memberNo: { startsWith: MEMBER_NO_PREFIX } },
     select: { memberNo: true },
@@ -45,21 +37,15 @@ function isUniqueViolation(err: any): boolean {
   return err?.code === 'P2002';
 }
 
-/**
- * Assign a memberNo to a member that doesn't have one yet, retrying on the
- * (rare) concurrent-insert collision against the @unique constraint.
- */
 async function assignMemberNo(memberId: string): Promise<string> {
   for (let attempt = 1; attempt <= 5; attempt++) {
     const candidate = await nextMemberNo();
     try {
-      // Guard on memberNo:null so a concurrent assignment is never overwritten
       const updated = await prisma.member.updateMany({
         where: { id: memberId, memberNo: null },
         data: { memberNo: candidate },
       });
       if (updated.count === 0) {
-        // Someone else assigned it in the meantime — read and return theirs
         const current = await prisma.member.findUnique({ where: { id: memberId }, select: { memberNo: true } });
         return current?.memberNo ?? candidate;
       }
@@ -73,11 +59,6 @@ async function assignMemberNo(memberId: string): Promise<string> {
   throw new Error('Failed to assign a unique membership number');
 }
 
-/**
- * One-time lazy backfill: give legacy members (created before auto-generation)
- * a permanent memberNo the first time they are read. Stored immediately, so
- * subsequent reads return the same value — nothing is regenerated per view.
- */
 async function backfillMemberNos<T extends { id: string; memberNo: string | null }>(members: T[]): Promise<T[]> {
   const missing = members.filter(m => !m.memberNo);
   for (const m of missing) {
@@ -92,10 +73,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   const { method } = req;
   const id = req.query.id as string;
+  const action = (req.query.action || req.body?.action) as string;
 
   if (method === 'GET') {
     if (!await verifyPermission(req, res, PERMS.VIEW_MEMBERS)) return;
-    if (id) {
+    if (id && !req.query.limit) {
       const member = await prisma.member.findUnique({ where: { id } });
       if (!member) {
         return res.status(404).json({ error: { message: 'Member not found', status: 404 } });
@@ -107,17 +89,41 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
     const skip = (pageNum - 1) * limitNum;
+    const whereClause = getDeletedFilter(req.query);
 
     const [members, total] = await Promise.all([
       prisma.member.findMany({
+        where: whereClause,
         orderBy: { createdAt: 'desc' },
         skip,
         take: limitNum,
       }),
-      prisma.member.count()
+      prisma.member.count({ where: whereClause })
     ]);
     await backfillMemberNos(members);
     return res.status(200).json({ status: 200, data: members, meta: { total, page: pageNum, limit: limitNum } });
+  }
+
+  if (method === 'PUT' || method === 'POST' || method === 'PATCH') {
+    if (action === 'restore') {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can restore records', status: 403 } });
+      }
+      const targetId = id || req.body?.id;
+      if (!targetId) {
+        return res.status(400).json({ error: { message: 'Member ID is required', status: 400 } });
+      }
+      const existing = await prisma.member.findUnique({ where: { id: targetId } });
+      if (!existing) {
+        return res.status(404).json({ error: { message: 'Member not found', status: 404 } });
+      }
+      const restored = await prisma.member.update({
+        where: { id: targetId },
+        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      });
+      await logAudit(req.user.id, 'Restore Member', 'MEMBER', existing, restored, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      return res.status(200).json({ status: 200, message: 'Member restored successfully', data: restored });
+    }
   }
 
   if (method === 'POST') {
@@ -129,10 +135,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       photoUrl, cnicFrontUrl, cnicBackUrl, isActive
     } = req.body;
 
-    // SQA fix: trim free-text fields before validation/persistence. Previously
-    // only emptiness was checked (`fullName.trim()`) but the untrimmed value
-    // was stored, producing visually-duplicate records and extra whitespace
-    // on printed cards.
     fullName   = trimOrNull(fullName);
     fatherName = trimOrNull(fatherName);
     cnic       = trimOrNull(cnic);
@@ -174,7 +176,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Gham name can only contain letters, spaces, hyphens, and dots', status: 400 } });
     }
 
-    // Reject Base64 payloads — images must be uploaded via /api/v1/upload first
     for (const [field, value] of [['photoUrl', photoUrl], ['cnicFrontUrl', cnicFrontUrl], ['cnicBackUrl', cnicBackUrl]] as const) {
       if (value && String(value).startsWith('data:')) {
         return res.status(400).json({ error: { message: `${field}: send a URL, not a Base64 image. Use /api/v1/upload first.`, status: 400 } });
@@ -183,8 +184,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     logger.info({ photoUrl, cnicFrontUrl, cnicBackUrl }, 'Saving new member with image URLs');
 
-    // memberNo: honor an explicitly provided one; otherwise generate. The
-    // create is retried on unique-constraint collision (concurrent registration).
     let newMember;
     for (let attempt = 1; ; attempt++) {
       const memberNoToUse = (memberNo && String(memberNo).trim()) || await nextMemberNo();
@@ -214,8 +213,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         });
         break;
       } catch (err: any) {
-        // Retry only on a generated-memberNo collision; an explicitly provided
-        // duplicate (or any other unique violation, e.g. cnic) surfaces as 400.
         if (isUniqueViolation(err) && !memberNo && attempt < 5 &&
             (err.meta?.target as string[] | undefined)?.includes('memberNo')) {
           continue;
@@ -261,8 +258,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       photoUrl, cnicFrontUrl, cnicBackUrl, isActive
     } = req.body;
 
-    // SQA fix: trim free-text fields before validation/persistence (see the
-    // POST handler above for the same fix and rationale).
     fullName   = trimIfProvided(fullName);
     fatherName = trimIfProvided(fatherName);
     cnic       = trimIfProvided(cnic);
@@ -304,7 +299,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Gham name can only contain letters, spaces, hyphens, and dots', status: 400 } });
     }
 
-    // Reject Base64 payloads — images must be uploaded via /api/v1/upload first
     for (const [field, value] of [['photoUrl', photoUrl], ['cnicFrontUrl', cnicFrontUrl], ['cnicBackUrl', cnicBackUrl]] as const) {
       if (value && String(value).startsWith('data:')) {
         return res.status(400).json({ error: { message: `${field}: send a URL, not a Base64 image. Use /api/v1/upload first.`, status: 400 } });
@@ -313,8 +307,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     logger.info({ memberId: id, photoUrl, cnicFrontUrl, cnicBackUrl }, 'Updating member with image URLs');
 
-    // memberNo is immutable once assigned: ignore any incoming value when one
-    // exists; backfill legacy members that still lack one.
     if (!existingMember.memberNo) {
       existingMember.memberNo = await assignMemberNo(id);
     }
@@ -363,6 +355,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'DELETE') {
+    const isPermanent = req.query.permanent === 'true' || req.query.action === 'permanent_delete' || req.body?.permanent === true;
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can permanently delete records', status: 403 } });
+    }
+
     if (!await verifyPermission(req, res, PERMS.DELETE_MEMBER)) return;
 
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
@@ -374,11 +371,18 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       ? idsRaw.map(String)
       : String(idsRaw).split(',').map(s => s.trim()).filter(Boolean);
 
-    await prisma.member.deleteMany({
-      where: { id: { in: ids } }
-    });
+    if (isPermanent) {
+      await prisma.member.deleteMany({
+        where: { id: { in: ids } }
+      });
+    } else {
+      await prisma.member.updateMany({
+        where: { id: { in: ids } },
+        data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user.id }
+      });
+    }
 
-    await logAudit(req.user.id, 'Delete Member(s)', 'MEMBER', { ids }, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+    await logAudit(req.user.id, isPermanent ? 'Permanent Delete Member' : 'Delete Member(s)', 'MEMBER', { ids }, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
     await notify(req, {
       title: ids.length > 1 ? 'Members Deleted' : 'Member Deleted',

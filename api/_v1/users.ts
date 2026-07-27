@@ -6,13 +6,9 @@ import { logAudit } from '../_utils/audit.js';
 import { notify } from '../_utils/notify.js';
 import { loadPermissions } from '../_services/permission.service.js';
 import { PERMS, SECURITY_PERMISSIONS } from '../_constants/permissions.js';
+import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
 import bcrypt from 'bcrypt';
 
-// A role is "security-sensitive" if it grants any Super-Admin-only permission
-// (SYSTEM_SETTINGS, MANAGE_USERS, MANAGE_ROLES). Only an actor who already holds
-// SYSTEM_SETTINGS may assign such a role to someone else — this is a permission-set
-// check, not a role-name check, so it works for any role (built-in or custom) that
-// happens to carry those permissions.
 async function roleGrantsSecurityPermission(roleName: string): Promise<boolean> {
   const role = await prisma.role.findUnique({
     where: { name: roleName },
@@ -29,15 +25,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   const { method } = req;
   const id = req.query.id as string;
+  const action = (req.query.action || req.body?.action) as string;
 
-  // User Management is a security-sensitive operation — MANAGE_USERS is granted
-  // only to Super Admin by seed data/convention.
   if (!await verifyPermission(req, res, PERMS.MANAGE_USERS)) return;
   const userPerms = await loadPermissions(req);
   const actorHoldsSystemSettings = userPerms.has(PERMS.SYSTEM_SETTINGS);
 
   if (method === 'GET') {
     const dbUsers = await prisma.user.findMany({
+      where: getDeletedFilter(req.query),
       include: { role: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -54,6 +50,28 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     return res.status(200).json({ status: 200, data: formatted });
   }
 
+  if (method === 'PUT' || method === 'POST' || method === 'PATCH') {
+    if (action === 'restore') {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can restore records', status: 403 } });
+      }
+      const targetId = id || req.body?.id;
+      if (!targetId) {
+        return res.status(400).json({ error: { message: 'User ID is required', status: 400 } });
+      }
+      const existing = await prisma.user.findUnique({ where: { id: targetId } });
+      if (!existing) {
+        return res.status(404).json({ error: { message: 'User not found', status: 404 } });
+      }
+      const restored = await prisma.user.update({
+        where: { id: targetId },
+        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      });
+      await logAudit(req.user.id, 'Restore User', 'USERS', existing, restored, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      return res.status(200).json({ status: 200, message: 'User restored successfully', data: restored });
+    }
+  }
+
   if (method === 'POST') {
     const { email, password, fullName, role } = req.body;
 
@@ -61,10 +79,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Email, password, full name, and role are required', status: 400 } });
     }
 
-    // Only an actor who already holds SYSTEM_SETTINGS may assign a role that grants
-    // security-sensitive permissions — otherwise a custom role holding only MANAGE_USERS
-    // (delegated for ordinary staff administration) could mint a new security-privileged
-    // account and self-escalate.
     if (!actorHoldsSystemSettings && await roleGrantsSecurityPermission(role)) {
       return res.status(403).json({ error: { message: 'Forbidden: Only an account with SYSTEM_SETTINGS permission can grant a security-sensitive role', status: 403 } });
     }
@@ -178,6 +192,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'DELETE') {
+    const isPermanent = req.query.permanent === 'true' || req.query.action === 'permanent_delete' || req.body?.permanent === true;
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can permanently delete records', status: 403 } });
+    }
+
     if (!id) {
       return res.status(400).json({ error: { message: 'User ID is required', status: 400 } });
     }
@@ -192,19 +211,24 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     try {
-      // First delete any refresh tokens to clean up references that cascade but are better removed first
-      await prisma.refreshToken.deleteMany({
-        where: { userId: id }
-      });
+      if (isPermanent) {
+        await prisma.refreshToken.deleteMany({
+          where: { userId: id }
+        });
 
-      // Attempt hard delete
-      await prisma.user.delete({
-        where: { id },
-      });
+        await prisma.user.delete({
+          where: { id },
+        });
+      } else {
+        await prisma.user.update({
+          where: { id },
+          data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user.id, isActive: false }
+        });
+      }
 
       await logAudit(
         req.user.id,
-        'Delete User',
+        isPermanent ? 'Permanent Delete User' : 'Delete User',
         'USERS',
         { id: existingUser.id, email: existingUser.email, fullName: existingUser.fullName },
         null,
@@ -223,11 +247,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       return res.status(200).json({ status: 200, message: 'User successfully deleted' });
     } catch (err: any) {
-      // Prisma foreign key constraint code is P2003
       if (err.code === 'P2003') {
         const deactivatedUser = await prisma.user.update({
           where: { id },
-          data: { isActive: false },
+          data: { isActive: false, isDeleted: true, deletedAt: new Date(), deletedBy: req.user.id },
         });
 
         await logAudit(
@@ -240,11 +263,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           req.headers['user-agent']
         );
 
-        return res.status(400).json({
-          error: {
-            message: 'User has active records (donations, bookings, ledger etc.) and cannot be fully deleted. They have been set to Inactive instead.',
-            status: 400
-          }
+        return res.status(200).json({
+          status: 200,
+          message: 'User set to soft-deleted & inactive.'
         });
       }
 

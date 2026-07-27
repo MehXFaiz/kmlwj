@@ -16,20 +16,20 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const { startDate, endDate } = (req.query || {}) as { startDate?: string; endDate?: string };
 
   // 1. KPI Counts from database
-  const totalAccounts = await prisma.account.count();
+  const totalAccounts = await prisma.account.count({ where: { isDeleted: false } });
   
-  const revenueHeads = await prisma.revenueHead.count();
+  const revenueHeads = await prisma.revenueHead.count({ where: { isDeleted: false } });
 
-  const expenseHeads = await prisma.expenseHead.count();
+  const expenseHeads = await prisma.expenseHead.count({ where: { isDeleted: false } });
   
-  const totalJournalEntries = await prisma.journalEntry.count();
+  const totalJournalEntries = await prisma.journalEntry.count({ where: { isDeleted: false } });
 
   const lockedAccounts = await prisma.account.count({
-    where: { isLocked: true }
+    where: { isLocked: true, isDeleted: false }
   });
 
   const activeUsers = await prisma.user.count({
-    where: { isActive: true }
+    where: { isActive: true, isDeleted: false }
   });
 
   // 2. Monthly Revenue vs Expenses Chart Data
@@ -44,6 +44,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     where: {
       journalEntry: {
         status: 'Posted',
+        isDeleted: false,
         postingDate: {
           gte: startOfYear,
           lt: endOfYear,
@@ -96,6 +97,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   // Recent posted transactions
   const recentJournalsRaw = await prisma.journalEntry.findMany({
+    where: { isDeleted: false },
     take: 8,
     orderBy: { postingDate: 'desc' },
     include: {
@@ -121,7 +123,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const startOfMonth = new Date(currentYear, new Date().getMonth(), 1);
   
   const pendingDonations = await prisma.donation.count({
-    where: { status: 'PENDING' }
+    where: { status: 'PENDING', isDeleted: false }
   });
 
   const donationsThisMonthRaw = await prisma.donation.aggregate({
@@ -129,20 +131,21 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     _count: true,
     where: {
       status: 'APPROVED',
+      isDeleted: false,
       createdAt: { gte: startOfMonth }
     }
   });
   
   const hallBookingsThisMonth = await prisma.hallBooking.count({
-    where: { createdAt: { gte: startOfMonth } }
+    where: { createdAt: { gte: startOfMonth }, isDeleted: false }
   });
 
   const outstandingInvoices = await prisma.invoice.count({
-    where: { status: { in: ['ISSUED', 'OVERDUE'] } }
+    where: { status: { in: ['ISSUED', 'OVERDUE'] }, isDeleted: false }
   });
 
   const pendingApprovalsList = await prisma.donation.findMany({
-    where: { status: 'PENDING' },
+    where: { status: 'PENDING', isDeleted: false },
     take: 5,
     orderBy: { createdAt: 'desc' },
     include: { beneficiary: true }
@@ -151,7 +154,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const donationBreakdown = await prisma.donation.groupBy({
     by: ['donationType'],
     _sum: { amount: true },
-    where: { status: 'APPROVED' }
+    where: { status: 'APPROVED', isDeleted: false }
   });
 
   // 3. Recent activities from audit logs

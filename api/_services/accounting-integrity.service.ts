@@ -1,5 +1,7 @@
 
+import { Prisma } from '@prisma/client';
 import { prisma } from '../_prisma.js';
+import { AccountingService } from './accounting.service.js';
 
 export interface IntegrityIssue {
   type: string;
@@ -23,6 +25,18 @@ export interface IntegrityCheckResult {
 }
 
 export class AccountingIntegrityService {
+  /**
+   * Automatic reconciliation and healing for cached balance drift
+   */
+  static async reconcileAll(): Promise<{ fixedAccountsCount: number; issueCount: number }> {
+    const checkResult = await this.runFullCheck();
+    await AccountingService.recalculateAllBalances();
+    return {
+      fixedAccountsCount: checkResult.issues.filter(i => i.type === 'cached_balance_drift').length,
+      issueCount: checkResult.totalIssues
+    };
+  }
+
   /**
    * Comprehensive integrity check for the entire accounting system
    */
@@ -405,11 +419,11 @@ export class AccountingIntegrityService {
       },
     });
 
-    const totalDebit = Number(aggregations._sum.debit) || 0;
-    const totalCredit = Number(aggregations._sum.credit) || 0;
-    const difference = Math.abs(totalDebit - totalCredit);
+    const totalDebit = new Prisma.Decimal(aggregations._sum.debit ?? 0);
+    const totalCredit = new Prisma.Decimal(aggregations._sum.credit ?? 0);
+    const difference = totalDebit.minus(totalCredit).abs();
 
-    if (difference > 0.01) {
+    if (!totalDebit.equals(totalCredit)) {
       issues.push({
         type: 'trial_balance_mismatch',
         severity: 'critical',
@@ -450,24 +464,24 @@ export class AccountingIntegrityService {
         _sum: { debit: true, credit: true },
       });
 
-      const totalDebit = Number(aggregations._sum.debit) || 0;
-      const totalCredit = Number(aggregations._sum.credit) || 0;
-      const initialBalance = Number(account.initialBalance) || 0;
+      const totalDebit = new Prisma.Decimal(aggregations._sum.debit ?? 0);
+      const totalCredit = new Prisma.Decimal(aggregations._sum.credit ?? 0);
+      const initialBalance = new Prisma.Decimal(account.initialBalance ?? 0);
 
       const typeName = account.accountType?.name?.toUpperCase() || 'ASSET';
       const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
 
       const expectedBalance = isDebitNormal
-        ? (initialBalance + totalDebit - totalCredit)
-        : (initialBalance + totalCredit - totalDebit);
+        ? initialBalance.plus(totalDebit).minus(totalCredit)
+        : initialBalance.plus(totalCredit).minus(totalDebit);
 
-      const storedBalance = Number(account.currentBalance) || 0;
-      const drift = Math.abs(expectedBalance - storedBalance);
+      const storedBalance = new Prisma.Decimal(account.currentBalance ?? 0);
+      const drift = expectedBalance.minus(storedBalance).abs();
 
-      if (drift > 0.01) {
+      if (!expectedBalance.equals(storedBalance)) {
         issues.push({
           type: 'cached_balance_drift',
-          severity: 'critical',
+          severity: 'warning',
           description: `Account ${account.glCode} - ${account.accountName} has a stored balance of ${storedBalance.toFixed(2)} but its posted ledger lines compute to ${expectedBalance.toFixed(2)} (drift: ${drift.toFixed(2)}). Re-run balance recalculation for this account.`,
           item: {
             id: account.id,

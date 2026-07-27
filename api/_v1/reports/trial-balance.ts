@@ -45,7 +45,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           summary: {
             totalDebit: tb.totalDebit,
             totalCredit: tb.totalCredit,
-            isBalanced: tb.difference < 0.001,
+            isBalanced: tb.difference === 0,
             periodLabel: startDate && endDate
               ? `${startDate} to ${endDate}`
               : startDate

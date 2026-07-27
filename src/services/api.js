@@ -1,13 +1,12 @@
 import axios from 'axios';
 import { tokenStorage } from './authService';
+import { syncEngine } from './syncEngine';
 
 const api = axios.create({
   baseURL: '',
   headers: {
     'Content-Type': 'application/json',
   },
-  // Refresh token now lives in an httpOnly cookie (see authService.js) — it
-  // must be sent automatically by the browser on every request.
   withCredentials: true,
 });
 
@@ -23,7 +22,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle token refresh and unauthorized
+// Response interceptor to handle token refresh, unauthorized, and sync events
 let isRefreshing = false;
 let failedQueue = [];
 
@@ -39,7 +38,20 @@ const processQueue = (error, token = null) => {
 };
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const method = response.config?.method?.toUpperCase();
+    const headers = response.headers || {};
+    const hasSyncHeader = headers['x-erp-sync-version'] || headers['X-ERP-Sync-Version'];
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) || hasSyncHeader) {
+      syncEngine.notifyTransactionEvent({
+        action: method,
+        url: response.config?.url,
+        syncVersion: hasSyncHeader
+      });
+    }
+    return response;
+  },
+
   async (error) => {
     const originalRequest = error.config;
 

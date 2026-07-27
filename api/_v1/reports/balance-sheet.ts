@@ -60,7 +60,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             totalLiabilities: bs.totalLiabilities,
             totalEquity: bs.totalEquity,
             totalLiabilitiesAndEquity: bs.totalLiabilitiesAndEquity,
-            isBalanced: Math.abs(bs.totalAssets - bs.totalLiabilitiesAndEquity) < 0.001,
+            isBalanced: bs.totalAssets === bs.totalLiabilitiesAndEquity,
             periodLabel: startDate && endDate
               ? `${startDate} to ${endDate}`
               : startDate
