@@ -1,9 +1,9 @@
 
 import type { VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
-import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
-import { prisma } from '../_prisma.js';
+import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
 import { AccountingIntegrityService } from '../_services/accounting-integrity.service.js';
+import { PERMS } from '../_constants/permissions.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
@@ -13,15 +13,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     return res.status(405).json({ error: { message: 'Method Not Allowed', status: 405 } });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    include: { role: { include: { rolePermissions: { include: { permission: true } } } } },
-  });
-  const userPerms = user?.role.rolePermissions.map((rp) => rp.permission.name) || [];
-  const isSuperAdmin = user?.role.name === 'Super Admin';
-  if (!isSuperAdmin && !userPerms.includes('VIEW_REPORTS') && !userPerms.includes('MANAGE_USERS')) {
-    return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
-  }
+  if (!await verifyPermission(req, res, PERMS.VIEW_AUDIT)) return;
 
   try {
     const result = await AccountingIntegrityService.runFullCheck();

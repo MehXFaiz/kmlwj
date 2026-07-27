@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, CheckCircle2, XCircle, Info, Loader2, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, XCircle, Info, Loader2, X, Trash2 } from 'lucide-react';
 import { useConfirmStore } from '../../store/confirmStore';
 
 export const useConfirm = () => {
@@ -26,13 +26,13 @@ export const ConfirmationModal = () => {
     handleConfirm,
     handleCancel,
     handleClose,
+    isDangerous,
   } = useConfirmStore();
 
   const modalRef = useRef(null);
   const confirmBtnRef = useRef(null);
   const closeBtnRef = useRef(null);
 
-  // Prevent background scrolling
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -44,7 +44,6 @@ export const ConfirmationModal = () => {
     };
   }, [isOpen]);
 
-  // Handle keyboard events (ESC, Enter, Focus Trap)
   useEffect(() => {
     if (!isOpen) return;
 
@@ -59,9 +58,8 @@ export const ConfirmationModal = () => {
       }
 
       if (e.key === 'Enter') {
-        // Prevent enter triggering action multiple times or if button is focused
         if (document.activeElement?.tagName === 'BUTTON') return;
-        
+
         if (isSuccess || error) {
           handleClose();
         } else if (!isLoading && !alertOnly) {
@@ -73,7 +71,6 @@ export const ConfirmationModal = () => {
         }
       }
 
-      // Focus trap
       if (e.key === 'Tab') {
         if (!modalRef.current) return;
         const focusableElements = modalRef.current.querySelectorAll(
@@ -97,8 +94,7 @@ export const ConfirmationModal = () => {
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    
-    // Auto focus appropriate action button
+
     setTimeout(() => {
       if (isSuccess || error || alertOnly) {
         closeBtnRef.current?.focus();
@@ -112,20 +108,27 @@ export const ConfirmationModal = () => {
     };
   }, [isOpen, isLoading, isSuccess, error, alertOnly, handleConfirm, handleCancel, handleClose]);
 
-  // Determine icon and color based on state/type
   const getHeaderIcon = () => {
     if (isSuccess) {
       return (
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 glow-emerald">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-950/50 border border-emerald-600/40 text-emerald-400">
           <CheckCircle2 className="h-8 w-8" />
         </div>
       );
     }
-    
+
     if (error) {
       return (
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-950/40 border border-red-500/30 text-red-400">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-950/50 border border-red-600/40 text-red-400">
           <XCircle className="h-8 w-8" />
+        </div>
+      );
+    }
+
+    if (isDangerous) {
+      return (
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-950/40 border border-red-700/50 text-red-500">
+          <AlertTriangle className="h-8 w-8" />
         </div>
       );
     }
@@ -133,27 +136,33 @@ export const ConfirmationModal = () => {
     switch (type) {
       case 'success':
         return (
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 glow-emerald">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-950/50 border border-emerald-600/40 text-emerald-400">
             <CheckCircle2 className="h-8 w-8" />
           </div>
         );
       case 'error':
         return (
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-950/40 border border-red-500/30 text-red-400">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-950/50 border border-red-600/40 text-red-400">
             <XCircle className="h-8 w-8" />
           </div>
         );
-      case 'info':
+      case 'warning':
         return (
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-900 border border-amber-500/20 text-amber-400">
-            <Info className="h-8 w-8" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-950/40 border border-amber-700/50 text-amber-500">
+            <AlertTriangle className="h-8 w-8" />
           </div>
         );
-      case 'warning':
+      case 'danger':
+        return (
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-950/40 border border-red-700/50 text-red-500">
+            <Trash2 className="h-8 w-8" />
+          </div>
+        );
+      case 'info':
       default:
         return (
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-950/30 border border-amber-600/30 text-amber-400 glow-amber">
-            <AlertTriangle className="h-8 w-8" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-900/50 border border-slate-700/50 text-slate-400">
+            <Info className="h-8 w-8" />
           </div>
         );
     }
@@ -162,14 +171,13 @@ export const ConfirmationModal = () => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto"
           role="dialog"
           aria-modal="true"
           aria-labelledby="confirm-modal-title"
           aria-describedby="confirm-modal-description"
         >
-          {/* Overlay backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -182,102 +190,107 @@ export const ConfirmationModal = () => {
                 handleCancel();
               }
             }}
-            className="fixed inset-0 bg-black/85 backdrop-blur-md cursor-pointer"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm"
           />
 
-          {/* Modal Content container */}
           <motion.div
             ref={modalRef}
-            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            initial={{ opacity: 0, scale: 0.92, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 15 }}
-            transition={{ type: 'spring', duration: 0.35 }}
-            className="relative w-full max-w-md bg-slate-950 border border-slate-800 rounded-lg shadow-2xl p-6 overflow-hidden z-10 flex flex-col text-center"
+            exit={{ opacity: 0, scale: 0.92, y: 20 }}
+            transition={{ type: 'spring', duration: 0.3, bounce: 0.2 }}
+            className="relative w-full max-w-md bg-slate-950 border border-slate-800/60 rounded-2xl shadow-2xl p-8 overflow-hidden z-10 flex flex-col text-center"
+            style={{
+              boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 0 1px rgba(255,255,255,0.05)',
+            }}
           >
-            {/* Ambient gold glow in background */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-20 rounded-full bg-amber-600/5 blur-3xl pointer-events-none" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 rounded-full bg-slate-800/20 blur-3xl pointer-events-none" />
 
-            {/* Close button (top corner, disabled when loading) */}
             {!isLoading && (
               <button
                 onClick={isSuccess || error ? handleClose : handleCancel}
-                className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-slate-900/60 transition-colors"
+                className="absolute top-4 right-4 p-2 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 transition-colors"
                 aria-label="Close modal"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </button>
             )}
 
-            {/* Modal Icon */}
-            <div className="mb-4 mt-2 select-none">
+            <div className="mb-6 mt-2 select-none">
               {getHeaderIcon()}
             </div>
 
-            {/* Title */}
             <h3
               id="confirm-modal-title"
-              className="text-base font-bold text-slate-100 uppercase tracking-wider mb-2 select-none"
+              className="text-lg font-bold text-slate-100 mb-3 select-none"
             >
               {isSuccess ? 'Success' : error ? 'Error' : title}
             </h3>
 
-            {/* Description */}
-            <div 
-              id="confirm-modal-description" 
-              className="text-xs text-slate-400 leading-relaxed mb-5"
+            <div
+              id="confirm-modal-description"
+              className="text-sm text-slate-400 leading-relaxed mb-6"
             >
               {isSuccess ? (
                 <p className="text-slate-300 font-semibold">{successMessage || 'Operation completed successfully.'}</p>
               ) : error ? (
-                <div className="bg-red-950/20 border border-red-900/30 rounded-lg p-3 text-left">
-                  <p className="text-red-400 font-mono text-[11px] overflow-auto max-h-32 whitespace-pre-wrap">{error}</p>
+                <div className="bg-red-950/20 border border-red-900/30 rounded-lg p-4 text-left">
+                  <p className="text-red-400 text-xs overflow-auto max-h-40 whitespace-pre-wrap font-mono">{error}</p>
                 </div>
               ) : (
                 <p>{description}</p>
               )}
             </div>
 
-            {/* Optional details grid */}
             {!isSuccess && !error && details && (
-              <div className="bg-slate-900/60 border border-slate-900 rounded-lg p-4 mb-6 text-left space-y-3">
-                {Object.entries(details).map(([key, val]) => {
-                  if (!val) return null;
-                  
-                  // Render warning row highlighted
-                  if (key.toLowerCase() === 'warning') {
+              <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4 mb-6 text-left space-y-2.5">
+                {Array.isArray(details) ? (
+                  <ul className="space-y-2">
+                    {details.map((item, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-xs text-slate-300">
+                        <span className="text-amber-500/80 mt-0.5">•</span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  Object.entries(details).map(([key, val]) => {
+                    if (!val) return null;
+
+                    if (key.toLowerCase() === 'warning') {
+                      return (
+                        <div key={key} className="border-t border-slate-700/50 pt-2.5 mt-2.5">
+                          <span className="text-xs font-bold uppercase tracking-wider text-red-500 block mb-1">
+                            ⚠️ {key}
+                          </span>
+                          <span className="text-xs text-red-400/90 leading-relaxed block">
+                            {val}
+                          </span>
+                        </div>
+                      );
+                    }
+
                     return (
-                      <div key={key} className="border-t border-slate-800/80 pt-2.5 mt-2.5">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-amber-500 block mb-1">
-                          ⚠️ {key}
+                      <div key={key} className="flex justify-between items-start gap-2">
+                        <span className="text-xs text-slate-500 uppercase tracking-wide font-semibold">
+                          {key}:
                         </span>
-                        <span className="text-[11px] text-amber-400/90 leading-relaxed block">
+                        <span className="text-xs text-slate-200 text-right">
                           {val}
                         </span>
                       </div>
                     );
-                  }
-
-                  return (
-                    <div key={key} className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
-                      <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
-                        {key}:
-                      </span>
-                      <span className="text-[11px] text-slate-200 font-mono sm:text-right select-all">
-                        {val}
-                      </span>
-                    </div>
-                  );
-                })}
+                  })
+                )}
               </div>
             )}
 
-            {/* Action buttons */}
             <div className="flex flex-col sm:flex-row gap-3 mt-2">
               {isSuccess || error || alertOnly ? (
                 <button
                   ref={closeBtnRef}
                   onClick={handleClose}
-                  className="w-full py-2.5 px-4 rounded-md bg-slate-900 border border-slate-800 text-slate-100 hover:border-amber-600/30 text-xs font-bold transition-all focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+                  className="w-full py-3 px-4 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 hover:bg-slate-800 hover:border-slate-600 text-sm font-semibold transition-all focus:outline-none focus:ring-1 focus:ring-slate-500 cursor-pointer"
                 >
                   Close
                 </button>
@@ -286,7 +299,7 @@ export const ConfirmationModal = () => {
                   <button
                     onClick={handleCancel}
                     disabled={isLoading}
-                    className="w-full sm:w-1/2 py-2.5 px-4 rounded-md bg-slate-900/40 border border-slate-800 hover:border-amber-600/30 text-slate-400 hover:text-slate-100 text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="w-full sm:w-1/2 py-3 px-4 rounded-xl bg-transparent border border-slate-700 hover:border-slate-600 text-slate-300 hover:text-slate-100 hover:bg-slate-800/30 text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     {cancelLabel}
                   </button>
@@ -294,11 +307,15 @@ export const ConfirmationModal = () => {
                     ref={confirmBtnRef}
                     onClick={handleConfirm}
                     disabled={isLoading}
-                    className="w-full sm:w-1/2 py-2.5 px-4 rounded-md bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white text-xs font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-lg shadow-amber-950/20 hover:shadow-amber-500/10 cursor-pointer"
+                    className={`w-full sm:w-1/2 py-3 px-4 rounded-xl text-sm font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer ${
+                      isDangerous
+                        ? 'bg-red-700 hover:bg-red-600 text-white border border-red-600 hover:border-red-500 shadow-lg shadow-red-900/20'
+                        : 'bg-amber-700 hover:bg-amber-600 text-white border border-amber-600 hover:border-amber-500 shadow-lg shadow-amber-900/20'
+                    }`}
                   >
                     {isLoading ? (
                       <>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                         <span>{loadingLabel}</span>
                       </>
                     ) : (

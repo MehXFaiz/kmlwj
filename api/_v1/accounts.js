@@ -5,6 +5,7 @@ import { logAudit } from "../_utils/audit.js";
 import { notify } from "../_utils/notify.js";
 import { compareCodes } from "../_utils/code-compare.js";
 import { AccountingService } from "../_services/accounting.service.js";
+import { loadPermissions } from "../_services/permission.service.js";
 var accounts_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -68,16 +69,8 @@ var accounts_default = makeHandler(async (req, res) => {
     }));
     return res.status(200).json({ status: 200, data: formatted, meta: { total, page: pageNum, limit: limitNum } });
   }
-  const user = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    include: { role: { include: { rolePermissions: { include: { permission: true } } } } }
-  });
-  const userPerms = user?.role.rolePermissions.map((rp) => rp.permission.name) || [];
-  const isSuperAdmin = user?.role.name === "Super Admin";
-  const checkPerm = (perm) => {
-    if (isSuperAdmin) return true;
-    return userPerms.includes(perm);
-  };
+  const userPerms = await loadPermissions(req);
+  const checkPerm = (perm) => userPerms.has(perm);
   if (method === "POST") {
     if (!checkPerm("CREATE_ACCOUNT")) {
       return res.status(403).json({ error: { message: "Forbidden: Insufficient permissions", status: 403 } });
@@ -257,14 +250,11 @@ var accounts_default = makeHandler(async (req, res) => {
     if (existingAccount.accountLevel !== "GL") {
       return res.status(400).json({ error: { message: `${existingAccount.accountLevel} accounts are system-defined and cannot be deleted. Only Level 4 (GL) accounts can be deleted.`, status: 400 } });
     }
-    const [journalLineCount, ledgerEntryCount] = await Promise.all([
-      prisma.journalEntryLine.count({ where: { accountId: id } }),
-      prisma.ledgerEntry.count({ where: { accountId: id } })
-    ]);
-    if (journalLineCount > 0 || ledgerEntryCount > 0) {
+    const journalLineCount = await prisma.journalEntryLine.count({ where: { accountId: id } });
+    if (journalLineCount > 0) {
       return res.status(400).json({
         error: {
-          message: "Cannot delete this account because it has existing journal/ledger history. Lock it instead of deleting to preserve historical records.",
+          message: "Cannot delete this account because it has existing journal history. Lock it instead of deleting to preserve historical records.",
           status: 400
         }
       });

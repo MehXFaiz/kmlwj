@@ -1,10 +1,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
-import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
 import { notify } from '../_utils/notify.js';
+import { PERMS } from '../_constants/permissions.js';
 
 const accountingTxOptions = { maxWait: 10000, timeout: 30000 };
 
@@ -12,33 +13,16 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
 
-  const user = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    include: { role: { include: { rolePermissions: { include: { permission: true } } } } },
-  });
-
-  const userPerms = user?.role.rolePermissions.map((rp) => rp.permission.name) || [];
-  const isSuperAdmin = user?.role.name === 'Super Admin';
-
-  const checkPerm = (perm: string) => {
-    if (isSuperAdmin) return true;
-    return userPerms.includes(perm);
-  };
-
   const { method } = req;
 
   // Enforce POST_JOURNAL for write operations
   if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
-    if (!checkPerm('POST_JOURNAL')) {
-      return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
-    }
+    if (!await verifyPermission(req, res, PERMS.POST_JOURNAL)) return;
   }
 
-  // Enforce VIEW_REPORTS for read operations
+  // Enforce VIEW_JOURNALS for read operations
   if (method === 'GET') {
-    if (!checkPerm('VIEW_REPORTS')) {
-      return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
-    }
+    if (!await verifyPermission(req, res, PERMS.VIEW_JOURNALS)) return;
   }
 
   if (method === 'GET') {

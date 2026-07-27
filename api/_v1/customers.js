@@ -1,10 +1,12 @@
 import { makeHandler } from "../_utils/handler.js";
-import { verifyAuth } from "../_middlewares/auth.middleware.js";
+import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
+import { PERMS } from "../_constants/permissions.js";
 var customers_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
+  if (!await verifyPermission(req, res, PERMS.MANAGE_CUSTOMERS)) return;
   const { method } = req;
   const id = req.query.id;
   if (method === "GET") {

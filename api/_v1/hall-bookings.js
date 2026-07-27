@@ -1,9 +1,10 @@
 import { makeHandler } from "../_utils/handler.js";
-import { verifyAuth } from "../_middlewares/auth.middleware.js";
+import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { notify } from "../_utils/notify.js";
+import { PERMS } from "../_constants/permissions.js";
 function generateVoucherNumber() {
   const date = /* @__PURE__ */ new Date();
   const year = date.getFullYear().toString().slice(-2);
@@ -30,6 +31,7 @@ function isKnownStatus(value) {
 var hall_bookings_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
+  if (!await verifyPermission(req, res, PERMS.MANAGE_HALL_BOOKINGS)) return;
   const { method } = req;
   const action = req.query.action;
   if (method === "GET") {

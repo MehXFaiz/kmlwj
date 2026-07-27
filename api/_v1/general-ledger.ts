@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
-import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
-import { prisma } from '../_prisma.js';
+import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import { PERMS } from '../_constants/permissions.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
 
@@ -15,15 +15,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     // data (all account activity and balances). Every sibling report endpoint
     // (trial-balance, balance-sheet, income-statement, cash-flow) requires
     // VIEW_REPORTS; this brings the General Ledger in line with them.
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      include: { role: { include: { rolePermissions: { include: { permission: true } } } } },
-    });
-    const userPerms = user?.role.rolePermissions.map((rp) => rp.permission.name) || [];
-    const isSuperAdmin = user?.role.name === 'Super Admin';
-    if (!isSuperAdmin && !userPerms.includes('VIEW_REPORTS')) {
-      return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
-    }
+    if (!await verifyPermission(req, res, PERMS.VIEW_REPORTS)) return;
 
     try {
       const { startDate, endDate, accountId, glCode, page, limit } = req.query as any;

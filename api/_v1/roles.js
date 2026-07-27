@@ -1,34 +1,32 @@
 import { makeHandler } from "../_utils/handler.js";
-import { verifyAuth } from "../_middlewares/auth.middleware.js";
+import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
+import { PERMS } from "../_constants/permissions.js";
 var roles_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
   const { method } = req;
   const id = req.query.id;
-  const user = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    include: { role: { include: { rolePermissions: { include: { permission: true } } } } }
-  });
-  const userPerms = user?.role.rolePermissions.map((rp) => rp.permission.name) || [];
-  const isSuperAdmin = user?.role.name === "Super Admin";
-  const checkPerm = (perm) => {
-    if (isSuperAdmin) return true;
-    return userPerms.includes(perm);
-  };
-  if (!checkPerm("MANAGE_ROLES")) {
-    return res.status(403).json({ error: { message: "Forbidden: Insufficient permissions", status: 403 } });
-  }
+  if (!await verifyPermission(req, res, PERMS.MANAGE_ROLES)) return;
   const permMap = {
     coa: ["CREATE_ACCOUNT", "UPDATE_ACCOUNT", "DELETE_ACCOUNT", "LOCK_ACCOUNT"],
-    journals: ["VIEW_REPORTS", "POST_JOURNAL"],
+    journals: ["VIEW_JOURNALS", "POST_JOURNAL"],
     reports: ["VIEW_REPORTS"],
+    audit: ["VIEW_AUDIT"],
     users: ["MANAGE_USERS"],
-    settings: ["MANAGE_ROLES", "MANAGE_RESERVED_CODES"],
-    income: ["RECORD_INCOME", "CREATE_ACCOUNT"],
-    expense: ["RECORD_EXPENSE", "CREATE_ACCOUNT"],
-    invoices: ["VIEW_INVOICES"]
+    settings: ["SYSTEM_SETTINGS", "MANAGE_ROLES", "MANAGE_RESERVED_CODES"],
+    income: ["RECORD_INCOME", "MANAGE_REVENUE_HEADS"],
+    expense: ["RECORD_EXPENSE", "MANAGE_EXPENSE_HEADS"],
+    invoices: ["MANAGE_INVOICES"],
+    members: ["VIEW_MEMBERS", "CREATE_MEMBER", "UPDATE_MEMBER", "DELETE_MEMBER"],
+    beneficiaries: ["VIEW_BENEFICIARIES", "CREATE_BENEFICIARY", "UPDATE_BENEFICIARY", "DELETE_BENEFICIARY"],
+    donations: ["MANAGE_DONATIONS"],
+    hallBookings: ["MANAGE_HALL_BOOKINGS"],
+    revenueCollections: ["MANAGE_REVENUE_COLLECTIONS"],
+    zakatCards: ["MANAGE_ZAKAT_CARDS"],
+    donors: ["MANAGE_DONORS"],
+    customers: ["MANAGE_CUSTOMERS"]
   };
   if (method === "GET") {
     const dbRoles = await prisma.role.findMany({
@@ -41,16 +39,10 @@ var roles_default = makeHandler(async (req, res) => {
     });
     const formatted = dbRoles.map((role) => {
       const activePermNames = role.rolePermissions.map((rp) => rp.permission.name);
-      const permissions = {
-        coa: permMap.coa.every((p) => activePermNames.includes(p)),
-        journals: permMap.journals.every((p) => activePermNames.includes(p)),
-        reports: permMap.reports.every((p) => activePermNames.includes(p)),
-        users: permMap.users.every((p) => activePermNames.includes(p)),
-        settings: permMap.settings.every((p) => activePermNames.includes(p)),
-        income: permMap.income.every((p) => activePermNames.includes(p)),
-        expense: permMap.expense.every((p) => activePermNames.includes(p)),
-        invoices: permMap.invoices.every((p) => activePermNames.includes(p))
-      };
+      const permissions = {};
+      for (const key of Object.keys(permMap)) {
+        permissions[key] = permMap[key].every((p) => activePermNames.includes(p));
+      }
       const locked = role.name === "Super Admin" || role.description?.includes("Locked");
       return {
         id: role.id,
@@ -189,20 +181,15 @@ var roles_default = makeHandler(async (req, res) => {
       req.headers["user-agent"]
     );
     const activePermNames = createdRoleWithPerms?.rolePermissions.map((rp) => rp.permission.name) || [];
+    const newRolePermissions = {};
+    for (const key of Object.keys(permMap)) {
+      newRolePermissions[key] = permMap[key].every((p) => activePermNames.includes(p));
+    }
     const formattedNewRole = {
       id: createdRoleWithPerms.id,
       name: createdRoleWithPerms.name,
       description: createdRoleWithPerms.description,
-      permissions: {
-        coa: permMap.coa.every((p) => activePermNames.includes(p)),
-        journals: permMap.journals.every((p) => activePermNames.includes(p)),
-        reports: permMap.reports.every((p) => activePermNames.includes(p)),
-        users: permMap.users.every((p) => activePermNames.includes(p)),
-        settings: permMap.settings.every((p) => activePermNames.includes(p)),
-        income: permMap.income.every((p) => activePermNames.includes(p)),
-        expense: permMap.expense.every((p) => activePermNames.includes(p)),
-        invoices: permMap.invoices.every((p) => activePermNames.includes(p))
-      },
+      permissions: newRolePermissions,
       locked: false
     };
     return res.status(201).json({ status: 201, message: "Role created successfully", data: formattedNewRole });

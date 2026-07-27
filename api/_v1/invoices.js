@@ -1,9 +1,10 @@
 import { makeHandler } from "../_utils/handler.js";
-import { verifyAuth } from "../_middlewares/auth.middleware.js";
+import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { notify } from "../_utils/notify.js";
 import { AccountingService } from "../_services/accounting.service.js";
+import { PERMS } from "../_constants/permissions.js";
 function generateInvoiceNumber() {
   const date = /* @__PURE__ */ new Date();
   const year = date.getFullYear().toString().slice(-2);
@@ -71,6 +72,7 @@ async function getOrCreateAccountsReceivable(tx) {
 var invoices_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
+  if (!await verifyPermission(req, res, PERMS.MANAGE_INVOICES)) return;
   const { method } = req;
   const id = req.query.id;
   const action = req.query.action;

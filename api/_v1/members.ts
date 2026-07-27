@@ -1,10 +1,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
-import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { logger } from '../_utils/logger.js';
 import { notify } from '../_utils/notify.js';
+import { PERMS } from '../_constants/permissions.js';
 
 function trimOrNull(v: unknown): string | null {
   if (v === undefined || v === null) return null;
@@ -93,6 +94,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const id = req.query.id as string;
 
   if (method === 'GET') {
+    if (!await verifyPermission(req, res, PERMS.VIEW_MEMBERS)) return;
     if (id) {
       const member = await prisma.member.findUnique({ where: { id } });
       if (!member) {
@@ -119,6 +121,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'POST') {
+    if (!await verifyPermission(req, res, PERMS.CREATE_MEMBER)) return;
+
     let {
       memberNo, fullName, fatherName, cnic, dob, address, mobile,
       email, city, area, ghamName, education, profession, company, doi,
@@ -240,6 +244,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'PUT') {
+    if (!await verifyPermission(req, res, PERMS.UPDATE_MEMBER)) return;
+
     if (!id) {
       return res.status(400).json({ error: { message: 'Member ID is required', status: 400 } });
     }
@@ -357,6 +363,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'DELETE') {
+    if (!await verifyPermission(req, res, PERMS.DELETE_MEMBER)) return;
+
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
     if (!idsRaw) {
       return res.status(400).json({ error: { message: 'Member ID(s) required', status: 400 } });

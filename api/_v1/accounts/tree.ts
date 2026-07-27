@@ -1,14 +1,16 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../../_utils/handler.js';
-import { verifyAuth, AuthenticatedRequest } from '../../_middlewares/auth.middleware.js';
+import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../../_middlewares/auth.middleware.js';
 import { prisma } from '../../_prisma.js';
 import { AccountingService } from '../../_services/accounting.service.js';
+import { PERMS } from '../../_constants/permissions.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
 
   if (req.method === 'GET') {
+    if (!await verifyPermission(req, res, PERMS.VIEW_REPORTS)) return;
     // Fetch all accounts
     const dbAccounts = await prisma.account.findMany({
       include: {

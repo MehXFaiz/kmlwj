@@ -5,20 +5,19 @@ export const useConfirmStore = create((set, get) => ({
   title: '',
   description: '',
   details: null,
-  type: 'warning', // 'warning', 'success', 'error', 'info'
+  type: 'warning', // 'warning', 'success', 'error', 'info', 'danger'
   confirmLabel: 'Confirm',
   cancelLabel: 'Cancel',
   alertOnly: false,
+  isDangerous: false, // Red destructive styling for dangerous actions
   loadingLabel: 'Processing...',
   successMessage: '',
   action: null,
-  
-  // Running state
+
   isLoading: false,
   error: null,
   isSuccess: false,
-  
-  // Promise resolvers
+
   resolve: null,
 
   showConfirm: (options) => {
@@ -32,6 +31,7 @@ export const useConfirmStore = create((set, get) => ({
         confirmLabel: options.confirmLabel || 'Confirm',
         cancelLabel: options.cancelLabel || 'Cancel',
         alertOnly: options.alertOnly || false,
+        isDangerous: options.isDangerous || false,
         loadingLabel: options.loadingLabel || 'Processing...',
         successMessage: options.successMessage || '',
         action: options.action || null,
@@ -45,7 +45,7 @@ export const useConfirmStore = create((set, get) => ({
 
   handleConfirm: async () => {
     const { action, resolve, successMessage } = get();
-    
+
     if (action) {
       set({ isLoading: true, error: null });
       try {
@@ -58,9 +58,9 @@ export const useConfirmStore = create((set, get) => ({
         }
       } catch (err) {
         console.error('Confirmation action error:', err);
-        set({ 
-          isLoading: false, 
-          error: err.response?.data?.error?.message || err.message || 'An error occurred.' 
+        set({
+          isLoading: false,
+          error: err.response?.data?.error?.message || err.message || 'An error occurred.',
         });
       }
     } else {
@@ -79,5 +79,5 @@ export const useConfirmStore = create((set, get) => ({
     const { resolve } = get();
     set({ isOpen: false });
     if (resolve) resolve(true);
-  }
+  },
 }));

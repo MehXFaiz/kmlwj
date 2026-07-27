@@ -1,33 +1,20 @@
 import { makeHandler } from "../_utils/handler.js";
-import { verifyAuth } from "../_middlewares/auth.middleware.js";
+import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { notify } from "../_utils/notify.js";
+import { PERMS } from "../_constants/permissions.js";
 const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };
 var journal_entries_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
-  const user = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    include: { role: { include: { rolePermissions: { include: { permission: true } } } } }
-  });
-  const userPerms = user?.role.rolePermissions.map((rp) => rp.permission.name) || [];
-  const isSuperAdmin = user?.role.name === "Super Admin";
-  const checkPerm = (perm) => {
-    if (isSuperAdmin) return true;
-    return userPerms.includes(perm);
-  };
   const { method } = req;
   if (method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE") {
-    if (!checkPerm("POST_JOURNAL")) {
-      return res.status(403).json({ error: { message: "Forbidden: Insufficient permissions", status: 403 } });
-    }
+    if (!await verifyPermission(req, res, PERMS.POST_JOURNAL)) return;
   }
   if (method === "GET") {
-    if (!checkPerm("VIEW_REPORTS")) {
-      return res.status(403).json({ error: { message: "Forbidden: Insufficient permissions", status: 403 } });
-    }
+    if (!await verifyPermission(req, res, PERMS.VIEW_JOURNALS)) return;
   }
   if (method === "GET") {
     const { subsidiary, limit = "100", page = "1", type } = req.query;
@@ -229,21 +216,8 @@ var journal_entries_default = makeHandler(async (req, res) => {
           }
         }
         if (newStatus === "Posted" || newStatus === "POSTED") {
-          await tx.ledgerEntry.deleteMany({
-            where: { reference: { in: [je.voucherNo, `${je.voucherNo}-REV`] } }
-          });
           const updatedLines = await tx.journalEntryLine.findMany({ where: { journalEntryId: je.id } });
           for (const l of updatedLines) {
-            await tx.ledgerEntry.create({
-              data: {
-                accountId: l.accountId,
-                debit: l.debit,
-                credit: l.credit,
-                reference: je.voucherNo,
-                description: l.description || newDesc || newRef || je.description,
-                postingDate: newDate
-              }
-            });
             await AccountingService.recalculateAccountBalance(tx, l.accountId);
           }
         }

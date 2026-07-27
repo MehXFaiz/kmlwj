@@ -1,8 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
-import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
+import { PERMS } from '../_constants/permissions.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
@@ -11,34 +12,33 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const { method } = req;
   const id = req.query.id as string;
 
-  // Verify User Role & Permissions
-  const user = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    include: { role: { include: { rolePermissions: { include: { permission: true } } } } },
-  });
+  // Role Management is a security-sensitive operation — MANAGE_ROLES is granted
+  // only to Super Admin by seed data/convention; this checks the permission set
+  // loaded live from the DB, never a hardcoded role name.
+  if (!await verifyPermission(req, res, PERMS.MANAGE_ROLES)) return;
 
-  const userPerms = user?.role.rolePermissions.map((rp) => rp.permission.name) || [];
-  const isSuperAdmin = user?.role.name === 'Super Admin';
-
-  const checkPerm = (perm: string) => {
-    if (isSuperAdmin) return true;
-    return userPerms.includes(perm);
-  };
-
-  if (!checkPerm('MANAGE_ROLES')) {
-    return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
-  }
-
-  // Perm mapping definition
+  // UI toggle-group → canonical permission mapping. Every name referenced here
+  // must exist in PERMS (api/_constants/permissions.ts) / prisma/seed.ts — this
+  // route upserts them by name, so a typo here would silently mint a stray,
+  // unused permission row.
   const permMap: Record<string, string[]> = {
     coa: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT', 'LOCK_ACCOUNT'],
-    journals: ['VIEW_REPORTS', 'POST_JOURNAL'],
+    journals: ['VIEW_JOURNALS', 'POST_JOURNAL'],
     reports: ['VIEW_REPORTS'],
+    audit: ['VIEW_AUDIT'],
     users: ['MANAGE_USERS'],
-    settings: ['MANAGE_ROLES', 'MANAGE_RESERVED_CODES'],
-    income: ['RECORD_INCOME', 'CREATE_ACCOUNT'],
-    expense: ['RECORD_EXPENSE', 'CREATE_ACCOUNT'],
-    invoices: ['VIEW_INVOICES'],
+    settings: ['SYSTEM_SETTINGS', 'MANAGE_ROLES', 'MANAGE_RESERVED_CODES'],
+    income: ['RECORD_INCOME', 'MANAGE_REVENUE_HEADS'],
+    expense: ['RECORD_EXPENSE', 'MANAGE_EXPENSE_HEADS'],
+    invoices: ['MANAGE_INVOICES'],
+    members: ['VIEW_MEMBERS', 'CREATE_MEMBER', 'UPDATE_MEMBER', 'DELETE_MEMBER'],
+    beneficiaries: ['VIEW_BENEFICIARIES', 'CREATE_BENEFICIARY', 'UPDATE_BENEFICIARY', 'DELETE_BENEFICIARY'],
+    donations: ['MANAGE_DONATIONS'],
+    hallBookings: ['MANAGE_HALL_BOOKINGS'],
+    revenueCollections: ['MANAGE_REVENUE_COLLECTIONS'],
+    zakatCards: ['MANAGE_ZAKAT_CARDS'],
+    donors: ['MANAGE_DONORS'],
+    customers: ['MANAGE_CUSTOMERS'],
   };
 
   if (method === 'GET') {
@@ -53,17 +53,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     const formatted = dbRoles.map((role) => {
       const activePermNames = role.rolePermissions.map((rp) => rp.permission.name);
-      
-      const permissions = {
-        coa: permMap.coa.every((p) => activePermNames.includes(p)),
-        journals: permMap.journals.every((p) => activePermNames.includes(p)),
-        reports: permMap.reports.every((p) => activePermNames.includes(p)),
-        users: permMap.users.every((p) => activePermNames.includes(p)),
-        settings: permMap.settings.every((p) => activePermNames.includes(p)),
-        income: permMap.income.every((p) => activePermNames.includes(p)),
-        expense: permMap.expense.every((p) => activePermNames.includes(p)),
-        invoices: permMap.invoices.every((p) => activePermNames.includes(p)),
-      };
+
+      const permissions: Record<string, boolean> = {};
+      for (const key of Object.keys(permMap)) {
+        permissions[key] = permMap[key].every((p) => activePermNames.includes(p));
+      }
 
       // Check if role is locked (Super Admin cannot be modified, or check description)
       const locked = role.name === 'Super Admin' || role.description?.includes('Locked');
@@ -237,20 +231,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     // Format new role response matching GET
     const activePermNames = createdRoleWithPerms?.rolePermissions.map((rp) => rp.permission.name) || [];
+    const newRolePermissions: Record<string, boolean> = {};
+    for (const key of Object.keys(permMap)) {
+      newRolePermissions[key] = permMap[key].every((p) => activePermNames.includes(p));
+    }
     const formattedNewRole = {
       id: createdRoleWithPerms!.id,
       name: createdRoleWithPerms!.name,
       description: createdRoleWithPerms!.description,
-      permissions: {
-        coa: permMap.coa.every((p) => activePermNames.includes(p)),
-        journals: permMap.journals.every((p) => activePermNames.includes(p)),
-        reports: permMap.reports.every((p) => activePermNames.includes(p)),
-        users: permMap.users.every((p) => activePermNames.includes(p)),
-        settings: permMap.settings.every((p) => activePermNames.includes(p)),
-        income: permMap.income.every((p) => activePermNames.includes(p)),
-        expense: permMap.expense.every((p) => activePermNames.includes(p)),
-        invoices: permMap.invoices.every((p) => activePermNames.includes(p)),
-      },
+      permissions: newRolePermissions,
       locked: false,
     };
 

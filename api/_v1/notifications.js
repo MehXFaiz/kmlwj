@@ -1,19 +1,20 @@
 import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
+import { loadPermissions } from "../_services/permission.service.js";
+import { PERMS } from "../_constants/permissions.js";
 var notifications_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
-  const userRole = req.user.role || "";
   const userId = req.user.id;
-  const roleLower = userRole.toLowerCase().trim();
-  const isSuperAdmin = roleLower === "super admin" || roleLower === "superadmin";
-  const isAdmin = roleLower === "admin" || roleLower === "administrator";
+  const userPerms = await loadPermissions(req);
+  const canSeeSuperAdminOnly = userPerms.has(PERMS.SYSTEM_SETTINGS);
+  const canSeeAdminOnly = userPerms.has(PERMS.MANAGE_USERS) || canSeeSuperAdminOnly;
   function buildVisibilityFilter() {
-    if (isSuperAdmin) {
+    if (canSeeSuperAdminOnly) {
       return { isCleared: false };
     }
-    if (isAdmin) {
+    if (canSeeAdminOnly) {
       return { isCleared: false, visibility: { in: ["ALL", "ADMIN_ONLY"] } };
     }
     return { isCleared: false, visibility: "ALL", userId };

@@ -29,19 +29,50 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log('Starting database seeding...');
 
-  // 1. Seed Permissions
+  // 1. Seed Permissions — canonical list lives in api/_constants/permissions.ts.
+  // Keep these two lists in sync; this file can't import server TS directly
+  // because it runs standalone via tsx against the compiled Prisma client.
   const permissionsList = [
+    // Chart of Accounts
     { name: 'CREATE_ACCOUNT', description: 'Create new chart of accounts' },
     { name: 'UPDATE_ACCOUNT', description: 'Update existing chart of accounts' },
     { name: 'DELETE_ACCOUNT', description: 'Soft delete or delete accounts' },
     { name: 'LOCK_ACCOUNT', description: 'Lock or unlock accounts' },
-    { name: 'VIEW_REPORTS', description: 'View financial reports and audit logs' },
-    { name: 'MANAGE_USERS', description: 'Manage users, roles, and permissions' },
-    { name: 'MANAGE_ROLES', description: 'Manage system roles and their permissions' },
-    { name: 'MANAGE_RESERVED_CODES', description: 'Manage reserved account codes' },
-    { name: 'POST_JOURNAL', description: 'Post journal entries and transactions' },
+    // Reports & Audit
+    { name: 'VIEW_REPORTS', description: 'View financial reports (dashboard, trial balance, IS, BS, cash flow, GL)' },
+    { name: 'VIEW_AUDIT', description: 'View audit logs and accounting health checks' },
+    { name: 'VIEW_JOURNALS', description: 'View journal entries' },
+    // Journal / GL posting
+    { name: 'POST_JOURNAL', description: 'Post, reverse, or restore journal entries and transactions' },
+    // Income & Expense
     { name: 'RECORD_INCOME', description: 'Record income and revenue collections that post to the General Ledger' },
     { name: 'RECORD_EXPENSE', description: 'Record expenses and disbursements that post to the General Ledger' },
+    // Members
+    { name: 'VIEW_MEMBERS', description: 'View member records' },
+    { name: 'CREATE_MEMBER', description: 'Register new members' },
+    { name: 'UPDATE_MEMBER', description: 'Update member records and family links' },
+    { name: 'DELETE_MEMBER', description: 'Delete members and family links' },
+    // Beneficiaries
+    { name: 'VIEW_BENEFICIARIES', description: 'View welfare beneficiary records' },
+    { name: 'CREATE_BENEFICIARY', description: 'Add welfare beneficiaries' },
+    { name: 'UPDATE_BENEFICIARY', description: 'Update welfare beneficiary records' },
+    { name: 'DELETE_BENEFICIARY', description: 'Delete welfare beneficiary records' },
+    // Operational modules
+    { name: 'MANAGE_DONATIONS', description: 'Manage donations given (welfare disbursements) and donations received' },
+    { name: 'MANAGE_INVOICES', description: 'Manage invoices' },
+    { name: 'MANAGE_HALL_BOOKINGS', description: 'Manage hall bookings' },
+    { name: 'MANAGE_REVENUE_COLLECTIONS', description: 'Manage revenue collections' },
+    { name: 'MANAGE_ZAKAT_CARDS', description: 'Manage Zakat cards' },
+    { name: 'MANAGE_DONORS', description: 'Manage donor records' },
+    { name: 'MANAGE_CUSTOMERS', description: 'Manage customer records' },
+    // Configuration (Admin+)
+    { name: 'MANAGE_EXPENSE_HEADS', description: 'Manage expense head configuration' },
+    { name: 'MANAGE_REVENUE_HEADS', description: 'Manage revenue head configuration' },
+    { name: 'MANAGE_RESERVED_CODES', description: 'Manage reserved GL code ranges' },
+    // Security (Super Admin only)
+    { name: 'SYSTEM_SETTINGS', description: 'System settings, database restore, fiscal year closing' },
+    { name: 'MANAGE_USERS', description: 'Create, update, deactivate, and delete users' },
+    { name: 'MANAGE_ROLES', description: 'Manage roles and assign permissions' },
   ];
 
   console.log('Seeding Permissions...');
@@ -56,12 +87,42 @@ async function main() {
   }
 
   // 2. Seed Roles
+  // ALL permission names, used for Super Admin and to compute "operational" (non-security) sets.
+  const ALL_PERM_NAMES = permissionsList.map((p) => p.name);
+  const SECURITY_ONLY = ['SYSTEM_SETTINGS', 'MANAGE_USERS', 'MANAGE_ROLES'];
+  // Everything except the three Super-Admin-exclusive security permissions.
+  const OPERATIONAL_PERM_NAMES = ALL_PERM_NAMES.filter((n) => !SECURITY_ONLY.includes(n));
+  // Read-only permissions across every module — used by Viewer/Auditor.
+  const READ_ONLY_PERM_NAMES = [
+    'VIEW_REPORTS', 'VIEW_AUDIT', 'VIEW_JOURNALS', 'VIEW_MEMBERS', 'VIEW_BENEFICIARIES',
+  ];
+  // "Create only" permissions — used by Operator. Everything that adds a new record
+  // without granting update/delete/config/security access.
+  const CREATE_ONLY_PERM_NAMES = [
+    'RECORD_INCOME', 'RECORD_EXPENSE', 'CREATE_MEMBER', 'CREATE_BENEFICIARY',
+    'MANAGE_DONATIONS', 'MANAGE_INVOICES', 'MANAGE_HALL_BOOKINGS',
+    'MANAGE_REVENUE_COLLECTIONS', 'MANAGE_ZAKAT_CARDS', 'MANAGE_DONORS', 'MANAGE_CUSTOMERS',
+    'CREATE_ACCOUNT', 'POST_JOURNAL',
+  ];
+
   const rolesList = [
-    { name: 'Super Admin', description: 'Full access to all system modules and actions' },
-    { name: 'Accountant', description: 'Manage charts of accounts and view reports' },
-    { name: 'Auditor', description: 'Read-only access to reports and audit logs' },
-    { name: 'Data Entry Operator', description: 'Create and update accounts but cannot delete or lock' },
-    { name: 'Donation and Zakat Manager', description: 'Manage donations and Zakat distributions' },
+    { name: 'Super Admin', description: 'Full access to all system modules and actions, including security settings, role management, and user management', perms: ALL_PERM_NAMES },
+    { name: 'Admin', description: 'Manages operational data across all modules but cannot touch System Settings, Role Management, Permission Management, Database Restore, Fiscal Year Closing, or User Management', perms: OPERATIONAL_PERM_NAMES },
+    { name: 'Manager', description: 'Manages assigned modules — financial recording, member/beneficiary administration, and reporting', perms: [
+      'VIEW_REPORTS', 'VIEW_AUDIT', 'VIEW_JOURNALS', 'POST_JOURNAL',
+      'RECORD_INCOME', 'RECORD_EXPENSE',
+      'VIEW_MEMBERS', 'CREATE_MEMBER', 'UPDATE_MEMBER',
+      'VIEW_BENEFICIARIES', 'CREATE_BENEFICIARY', 'UPDATE_BENEFICIARY',
+      'MANAGE_DONATIONS', 'MANAGE_INVOICES', 'MANAGE_HALL_BOOKINGS',
+      'MANAGE_REVENUE_COLLECTIONS', 'MANAGE_ZAKAT_CARDS', 'MANAGE_DONORS', 'MANAGE_CUSTOMERS',
+    ] },
+    { name: 'Operator', description: 'Create-only access — can record new transactions and entries but cannot edit, delete, or view configuration/security data', perms: CREATE_ONLY_PERM_NAMES },
+    { name: 'Viewer', description: 'Read-only access to reports, audit logs, journals, members, and beneficiaries', perms: READ_ONLY_PERM_NAMES },
+    // Legacy roles kept for backward compatibility with existing assigned users.
+    { name: 'Accountant', description: 'Manage charts of accounts and view reports', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'VIEW_REPORTS', 'VIEW_JOURNALS', 'POST_JOURNAL', 'RECORD_INCOME', 'RECORD_EXPENSE'] },
+    { name: 'Auditor', description: 'Read-only access to reports and audit logs', perms: READ_ONLY_PERM_NAMES },
+    { name: 'Data Entry Operator', description: 'Create and update accounts but cannot delete or lock', perms: ['CREATE_ACCOUNT'] },
+    { name: 'Donation and Zakat Manager', description: 'Manage donations and Zakat distributions', perms: ['VIEW_REPORTS', 'RECORD_INCOME', 'RECORD_EXPENSE', 'MANAGE_DONATIONS', 'MANAGE_ZAKAT_CARDS'] },
   ];
 
   console.log('Seeding Roles...');
@@ -70,102 +131,31 @@ async function main() {
     const record = await prisma.role.upsert({
       where: { name: role.name },
       update: { description: role.description },
-      create: role,
+      create: { name: role.name, description: role.description },
     });
     seededRoles[role.name] = record;
   }
 
   // 3. Seed RolePermissions Many-to-Many Relationships
   console.log('Linking Roles and Permissions...');
-  
-  // Super Admin gets all permissions
-  for (const permName of Object.keys(seededPermissions)) {
-    await prisma.rolePermission.upsert({
-      where: {
-        roleId_permissionId: {
-          roleId: seededRoles['Super Admin'].id,
-          permissionId: seededPermissions[permName].id,
-        },
-      },
-      update: {},
-      create: {
-        roleId: seededRoles['Super Admin'].id,
-        permissionId: seededPermissions[permName].id,
-      },
-    });
-  }
 
-  // Accountant permissions: CREATE_ACCOUNT, UPDATE_ACCOUNT, VIEW_REPORTS, POST_JOURNAL, RECORD_INCOME, RECORD_EXPENSE
-  const accountantPerms = ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'VIEW_REPORTS', 'POST_JOURNAL', 'RECORD_INCOME', 'RECORD_EXPENSE'];
-  for (const permName of accountantPerms) {
-    await prisma.rolePermission.upsert({
-      where: {
-        roleId_permissionId: {
-          roleId: seededRoles['Accountant'].id,
+  for (const role of rolesList) {
+    for (const permName of role.perms) {
+      if (!seededPermissions[permName]) continue; // guards against a typo in the perms list above
+      await prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: {
+            roleId: seededRoles[role.name].id,
+            permissionId: seededPermissions[permName].id,
+          },
+        },
+        update: {},
+        create: {
+          roleId: seededRoles[role.name].id,
           permissionId: seededPermissions[permName].id,
         },
-      },
-      update: {},
-      create: {
-        roleId: seededRoles['Accountant'].id,
-        permissionId: seededPermissions[permName].id,
-      },
-    });
-  }
-
-  // Auditor permissions: VIEW_REPORTS
-  const auditorPerms = ['VIEW_REPORTS'];
-  for (const permName of auditorPerms) {
-    await prisma.rolePermission.upsert({
-      where: {
-        roleId_permissionId: {
-          roleId: seededRoles['Auditor'].id,
-          permissionId: seededPermissions[permName].id,
-        },
-      },
-      update: {},
-      create: {
-        roleId: seededRoles['Auditor'].id,
-        permissionId: seededPermissions[permName].id,
-      },
-    });
-  }
-
-  // Data Entry Operator permissions: CREATE_ACCOUNT
-  const dePerms = ['CREATE_ACCOUNT'];
-  for (const permName of dePerms) {
-    await prisma.rolePermission.upsert({
-      where: {
-        roleId_permissionId: {
-          roleId: seededRoles['Data Entry Operator'].id,
-          permissionId: seededPermissions[permName].id,
-        },
-      },
-      update: {},
-      create: {
-        roleId: seededRoles['Data Entry Operator'].id,
-        permissionId: seededPermissions[permName].id,
-      },
-    });
-  }
-
-  // Donation and Zakat Manager permissions: VIEW_REPORTS, RECORD_INCOME, RECORD_EXPENSE
-  // (this role previously had zero permissions granted despite its stated purpose)
-  const donationManagerPerms = ['VIEW_REPORTS', 'RECORD_INCOME', 'RECORD_EXPENSE'];
-  for (const permName of donationManagerPerms) {
-    await prisma.rolePermission.upsert({
-      where: {
-        roleId_permissionId: {
-          roleId: seededRoles['Donation and Zakat Manager'].id,
-          permissionId: seededPermissions[permName].id,
-        },
-      },
-      update: {},
-      create: {
-        roleId: seededRoles['Donation and Zakat Manager'].id,
-        permissionId: seededPermissions[permName].id,
-      },
-    });
+      });
+    }
   }
 
   // 4. Seed Admin User

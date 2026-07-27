@@ -1,23 +1,12 @@
 import { makeHandler } from "../_utils/handler.js";
-import { verifyAuth } from "../_middlewares/auth.middleware.js";
+import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
+import { PERMS } from "../_constants/permissions.js";
 var audit_logs_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
   const { method } = req;
-  const user = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    include: { role: { include: { rolePermissions: { include: { permission: true } } } } }
-  });
-  const userPerms = user?.role.rolePermissions.map((rp) => rp.permission.name) || [];
-  const isSuperAdmin = user?.role.name === "Super Admin";
-  const checkPerm = (perm) => {
-    if (isSuperAdmin) return true;
-    return userPerms.includes(perm);
-  };
-  if (!checkPerm("VIEW_REPORTS")) {
-    return res.status(403).json({ error: { message: "Forbidden: Insufficient permissions", status: 403 } });
-  }
+  if (!await verifyPermission(req, res, PERMS.VIEW_AUDIT)) return;
   if (method === "GET") {
     const dbLogs = await prisma.auditLog.findMany({
       include: {

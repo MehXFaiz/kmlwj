@@ -1,11 +1,12 @@
 import { makeHandler } from "../_utils/handler.js";
-import { verifyAuth } from "../_middlewares/auth.middleware.js";
+import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { validateAmount } from "../_utils/amount.js";
 import { isValidTransactionDate } from "../_utils/date-range.js";
 import { notify } from "../_utils/notify.js";
+import { PERMS } from "../_constants/permissions.js";
 const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };
 const ALLOWED_CATEGORIES = ["Zakat", "Fitra", "Membership Fee", "Bus Booking"];
 async function getIncomeAccountForCategory(category, tx) {
@@ -53,6 +54,7 @@ var revenue_collections_default = makeHandler(async (req, res) => {
   const action = req.query.action;
   const categoryFilter = req.query.category;
   if (method === "GET") {
+    if (!await verifyPermission(req, res, PERMS.MANAGE_REVENUE_COLLECTIONS)) return;
     const whereClause = categoryFilter ? { category: categoryFilter } : {};
     const collections = await prisma.revenueCollection.findMany({
       where: whereClause,
@@ -64,15 +66,7 @@ var revenue_collections_default = makeHandler(async (req, res) => {
     });
     return res.status(200).json({ status: 200, data: collections });
   }
-  const actingUser = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    include: { role: { include: { rolePermissions: { include: { permission: true } } } } }
-  });
-  const actingUserPerms = actingUser?.role.rolePermissions.map((rp) => rp.permission.name) || [];
-  const actingUserIsSuperAdmin = actingUser?.role.name === "Super Admin";
-  if (!actingUserIsSuperAdmin && !actingUserPerms.includes("RECORD_INCOME")) {
-    return res.status(403).json({ error: { message: "Forbidden: Insufficient permissions", status: 403 } });
-  }
+  if (!await verifyPermission(req, res, PERMS.RECORD_INCOME)) return;
   if (method === "POST") {
     if (action === "approve") {
       const { id } = req.body;

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useJournalStore } from '../store/journalStore';
 import { useCoaStore } from '../store/coaStore';
 import { useAuthStore } from '../store/authStore';
+import { useConfirmStore } from '../store/confirmStore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -42,20 +43,52 @@ export const JournalEntries = () => {
   };
 
   const handleUpdateStatus = async (dbId, status) => {
-    if (window.confirm(`Are you sure you want to change status to ${status}?`)) {
-      const res = await updateJournalStatus(dbId, status);
-      if (res?.error) {
-        alert("Error updating status: " + res.error);
-      }
+    const confirmed = await useConfirmStore.getState().showConfirm({
+      type: 'warning',
+      title: 'Change Journal Entry Status?',
+      description: `Are you sure you want to change status to ${status}?`,
+      confirmLabel: 'Change Status',
+      cancelLabel: 'Cancel',
+      loadingLabel: 'Updating...',
+      successMessage: `Journal entry status changed to ${status}.`,
+      action: async () => {
+        const res = await updateJournalStatus(dbId, status);
+        if (res?.error) {
+          throw new Error(res.error);
+        }
+      },
+    });
+
+    if (confirmed) {
+      showToast(`Journal entry status changed to ${status}.`, 'success');
     }
   };
 
   const handleDeleteJournal = async (dbId, voucherNo) => {
-    if (window.confirm(`Are you sure you want to permanently delete journal entry ${voucherNo}? This will remove it from the database and adjust account balances.`)) {
-      const res = await deleteJournalEntry(dbId);
-      if (res?.error) {
-        alert("Error deleting journal entry: " + res.error);
-      }
+    const confirmed = await useConfirmStore.getState().showConfirm({
+      type: 'danger',
+      isDangerous: true,
+      title: 'Delete Journal Entry?',
+      description: `Are you sure you want to permanently delete journal entry ${voucherNo}?`,
+      details: [
+        'Journal entry will be removed from the database.',
+        'Account balances will be adjusted.',
+        'This action cannot be undone.',
+      ],
+      confirmLabel: 'Delete Entry',
+      cancelLabel: 'Cancel',
+      loadingLabel: 'Deleting...',
+      successMessage: 'Journal entry deleted successfully.',
+      action: async () => {
+        const res = await deleteJournalEntry(dbId);
+        if (res?.error) {
+          throw new Error(res.error);
+        }
+      },
+    });
+
+    if (confirmed) {
+      showToast('Journal entry deleted successfully.', 'success');
     }
   };
 

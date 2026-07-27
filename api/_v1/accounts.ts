@@ -6,6 +6,7 @@ import { logAudit } from '../_utils/audit.js';
 import { notify } from '../_utils/notify.js';
 import { compareCodes } from '../_utils/code-compare.js';
 import { AccountingService } from '../_services/accounting.service.js';
+import { loadPermissions } from '../_services/permission.service.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
@@ -78,19 +79,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     return res.status(200).json({ status: 200, data: formatted, meta: { total, page: pageNum, limit: limitNum } });
   }
 
-  // Verify User Role & Permissions for mutations
-  const user = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    include: { role: { include: { rolePermissions: { include: { permission: true } } } } },
-  });
-
-  const userPerms = user?.role.rolePermissions.map((rp) => rp.permission.name) || [];
-  const isSuperAdmin = user?.role.name === 'Super Admin';
-
-  const checkPerm = (perm: string) => {
-    if (isSuperAdmin) return true;
-    return userPerms.includes(perm);
-  };
+  // Verify permissions for mutations — loaded live from DB, never from JWT role name.
+  const userPerms = await loadPermissions(req);
+  const checkPerm = (perm: string) => userPerms.has(perm);
 
   if (method === 'POST') {
     if (!checkPerm('CREATE_ACCOUNT')) {

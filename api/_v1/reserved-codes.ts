@@ -1,9 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
-import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { compareCodes } from '../_utils/code-compare.js';
+import { PERMS } from '../_constants/permissions.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
@@ -19,23 +20,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     return res.status(200).json({ status: 200, data: dbReservedCodes });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    include: { role: { include: { rolePermissions: { include: { permission: true } } } } },
-  });
-
-  const userPerms = user?.role.rolePermissions.map((rp) => rp.permission.name) || [];
-  const isSuperAdmin = user?.role.name === 'Super Admin';
-
-  const checkPerm = (perm: string) => {
-    if (isSuperAdmin) return true;
-    return userPerms.includes(perm);
-  };
-
   if (method === 'POST') {
-    if (!checkPerm('CREATE_ACCOUNT')) { // Assuming CREATE_ACCOUNT covers COA governance
-      return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
-    }
+    if (!await verifyPermission(req, res, PERMS.MANAGE_RESERVED_CODES)) return;
 
     const { reserveStart, reserveEnd, reserveReason, isActive } = req.body;
 
@@ -73,9 +59,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'PUT') {
-    if (!checkPerm('UPDATE_ACCOUNT')) {
-      return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
-    }
+    if (!await verifyPermission(req, res, PERMS.MANAGE_RESERVED_CODES)) return;
 
     if (!id) {
       return res.status(400).json({ error: { message: 'Reserved Code ID is required', status: 400 } });
@@ -122,9 +106,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'DELETE') {
-    if (!checkPerm('DELETE_ACCOUNT')) {
-      return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
-    }
+    if (!await verifyPermission(req, res, PERMS.MANAGE_RESERVED_CODES)) return;
 
     if (!id) {
       return res.status(400).json({ error: { message: 'Reserved Code ID is required', status: 400 } });

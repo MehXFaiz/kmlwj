@@ -1,11 +1,12 @@
 import { makeHandler } from "../_utils/handler.js";
-import { verifyAuth } from "../_middlewares/auth.middleware.js";
+import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { validateAmount } from "../_utils/amount.js";
 import { isWithinMaxLength, maxLengthError } from "../_utils/text-length.js";
 import { notify } from "../_utils/notify.js";
+import { PERMS } from "../_constants/permissions.js";
 function generateVoucherNumber() {
   const date = /* @__PURE__ */ new Date();
   const year = date.getFullYear().toString().slice(-2);
@@ -79,6 +80,7 @@ var donations_default = makeHandler(async (req, res) => {
   const { method } = req;
   const action = req.query.action;
   if (method === "GET") {
+    if (!await verifyPermission(req, res, PERMS.MANAGE_DONATIONS)) return;
     const { limit = "100", page = "1" } = req.query;
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
@@ -98,15 +100,7 @@ var donations_default = makeHandler(async (req, res) => {
     ]);
     return res.status(200).json({ status: 200, data: donations, meta: { total, page: pageNum, limit: limitNum } });
   }
-  const actingUser = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    include: { role: { include: { rolePermissions: { include: { permission: true } } } } }
-  });
-  const actingUserPerms = actingUser?.role.rolePermissions.map((rp) => rp.permission.name) || [];
-  const actingUserIsSuperAdmin = actingUser?.role.name === "Super Admin";
-  if (!actingUserIsSuperAdmin && !actingUserPerms.includes("RECORD_EXPENSE")) {
-    return res.status(403).json({ error: { message: "Forbidden: Insufficient permissions", status: 403 } });
-  }
+  if (!await verifyPermission(req, res, PERMS.RECORD_EXPENSE)) return;
   if (method === "POST") {
     if (action === "approve") {
       const { id } = req.body;

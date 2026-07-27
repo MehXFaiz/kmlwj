@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useCoaStore } from '../store/coaStore';
 import { useJournalStore } from '../store/journalStore';
 import { useAuthStore } from '../store/authStore';
+import { useConfirmStore } from '../store/confirmStore';
+import { showToast } from '../components/ui/Toast';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Settings as SettingsIcon, RotateCcw, ShieldCheck, Database, HardDrive, RefreshCw, Lock, Loader2 } from 'lucide-react';
@@ -24,20 +26,34 @@ export const Settings = () => {
     clearAuthSuccess();
   }, []);
 
-  const handleResetSandbox = () => {
-    if (!window.confirm('Warning: This will restore standard charts of accounts and seed journal records. All your manual additions and modifications will be cleared. Proceed?')) {
-      return;
-    }
+  const handleResetSandbox = async () => {
+    const confirmed = await useConfirmStore.getState().showConfirm({
+      type: 'danger',
+      isDangerous: true,
+      title: 'Reset Sandbox?',
+      description: 'This will restore standard charts of accounts and seed journal records.',
+      details: [
+        'All manual additions will be cleared.',
+        'All modifications to accounts will be removed.',
+        'Journal records will be reset to factory defaults.',
+        'This action cannot be undone.',
+      ],
+      confirmLabel: 'Reset Sandbox',
+      cancelLabel: 'Cancel',
+      loadingLabel: 'Resetting...',
+      successMessage: 'Sandbox has been reset to factory defaults.',
+      action: async () => {
+        resetAccounts();
+        resetJournals();
+        logActivity('Reset Sandbox', 'Trial ledger and account databases restored to factory standard templates.');
+      },
+    });
 
-    setLoading(true);
-    setTimeout(() => {
-      resetAccounts();
-      resetJournals();
-      logActivity('Reset Sandbox', 'Trial ledger and account databases restored to factory standard templates.');
-      setLoading(false);
+    if (confirmed) {
       setSuccess(true);
       setTimeout(() => setSuccess(false), 2000);
-    }, 800);
+      showToast('Sandbox reset to factory defaults.', 'success');
+    }
   };
 
   const handlePasswordChange = async (e) => {

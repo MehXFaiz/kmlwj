@@ -1,9 +1,10 @@
 import type { VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
-import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { notify } from '../_utils/notify.js';
+import { PERMS } from '../_constants/permissions.js';
 
 const RELATION_TYPES = [
   'FATHER', 'MOTHER', 'HUSBAND', 'WIFE', 'SON', 'DAUGHTER', 'BROTHER', 'SISTER',
@@ -19,20 +20,6 @@ const RECIPROCAL_DEFAULTS: Record<string, string> = {
   COUSIN: 'COUSIN', GUARDIAN: 'OTHER', OTHER: 'OTHER',
 };
 
-// Family-tree links follow the same admin-only write rule as the rest of the
-// member module (see api/_middlewares/auth.middleware.ts), but "Data Entry"
-// roles are additionally allowed to add/edit — only deletion is admin-only.
-function isAdminRole(role?: string): boolean {
-  if (!role) return false;
-  const r = role.toLowerCase().trim();
-  return r === 'admin' || r === 'super admin' || r === 'administrator';
-}
-function canWriteFamilyLinks(role?: string): boolean {
-  if (isAdminRole(role)) return true;
-  const r = String(role || '').toLowerCase().trim();
-  return r.startsWith('data entry') || r === 'data-entry' || r === 'dataentry';
-}
-
 const MEMBER_SELECT = {
   id: true, memberNo: true, fullName: true, cnic: true, mobile: true, photoUrl: true,
 };
@@ -44,6 +31,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const { method } = req;
 
   if (method === 'GET') {
+    if (!await verifyPermission(req, res, PERMS.VIEW_MEMBERS)) return;
+
     const memberId = req.query.memberId as string;
     if (!memberId) {
       return res.status(400).json({ error: { message: 'memberId is required', status: 400 } });
@@ -75,9 +64,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'POST') {
-    if (!canWriteFamilyLinks(req.user.role)) {
-      return res.status(403).json({ error: { message: 'Forbidden: only Admin and Data Entry roles can link family members.', status: 403 } });
-    }
+    if (!await verifyPermission(req, res, PERMS.UPDATE_MEMBER)) return;
 
     const { memberId, relatedMemberId, relationshipType, reciprocalType, customLabel, reciprocalCustomLabel } = req.body || {};
 
@@ -152,9 +139,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'DELETE') {
-    if (!isAdminRole(req.user.role)) {
-      return res.status(403).json({ error: { message: 'Forbidden: only Admin can remove family links.', status: 403 } });
-    }
+    if (!await verifyPermission(req, res, PERMS.DELETE_MEMBER)) return;
 
     const memberId = (req.query.memberId || req.body?.memberId) as string;
     const relatedMemberId = (req.query.relatedMemberId || req.body?.relatedMemberId) as string;

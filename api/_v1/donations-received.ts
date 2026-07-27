@@ -1,12 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
-import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
 import { validateAmount } from '../_utils/amount.js';
 import { isWithinMaxLength, maxLengthError } from '../_utils/text-length.js';
 import { notify } from '../_utils/notify.js';
+import { PERMS } from '../_constants/permissions.js';
 
 function donationTitleFragment(donationType: string, customType?: string | null): string {
   const map: Record<string, string> = {
@@ -42,6 +43,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const id = req.query.id as string;
 
   if (method === 'GET') {
+    if (!await verifyPermission(req, res, PERMS.MANAGE_DONATIONS)) return;
+
     const search = (req.query.search as string) || '';
     const status = req.query.status as string;
     const donationType = req.query.donationType as string;
@@ -116,6 +119,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'POST') {
+    if (!await verifyPermission(req, res, PERMS.RECORD_INCOME)) return;
+
     const {
       receiptDate,
       donorId,
@@ -278,6 +283,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'PUT' || method === 'PATCH') {
+    if (!await verifyPermission(req, res, PERMS.RECORD_INCOME)) return;
     if (!id) return res.status(400).json({ error: { message: 'Receipt ID is required', status: 400 } });
 
     const existing = await prisma.donationReceived.findUnique({
@@ -410,6 +416,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'DELETE') {
+    if (!await verifyPermission(req, res, PERMS.RECORD_INCOME)) return;
+
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
     if (!idsRaw) {
       return res.status(400).json({ error: { message: 'Receipt ID(s) required', status: 400 } });

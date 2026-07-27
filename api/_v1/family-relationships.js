@@ -1,8 +1,9 @@
 import { makeHandler } from "../_utils/handler.js";
-import { verifyAuth } from "../_middlewares/auth.middleware.js";
+import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { notify } from "../_utils/notify.js";
+import { PERMS } from "../_constants/permissions.js";
 const RELATION_TYPES = [
   "FATHER",
   "MOTHER",
@@ -45,16 +46,6 @@ const RECIPROCAL_DEFAULTS = {
   GUARDIAN: "OTHER",
   OTHER: "OTHER"
 };
-function isAdminRole(role) {
-  if (!role) return false;
-  const r = role.toLowerCase().trim();
-  return r === "admin" || r === "super admin" || r === "administrator";
-}
-function canWriteFamilyLinks(role) {
-  if (isAdminRole(role)) return true;
-  const r = String(role || "").toLowerCase().trim();
-  return r.startsWith("data entry") || r === "data-entry" || r === "dataentry";
-}
 const MEMBER_SELECT = {
   id: true,
   memberNo: true,
@@ -68,6 +59,7 @@ var family_relationships_default = makeHandler(async (req, res) => {
   if (!authenticated || !req.user) return;
   const { method } = req;
   if (method === "GET") {
+    if (!await verifyPermission(req, res, PERMS.VIEW_MEMBERS)) return;
     const memberId = req.query.memberId;
     if (!memberId) {
       return res.status(400).json({ error: { message: "memberId is required", status: 400 } });
@@ -90,9 +82,7 @@ var family_relationships_default = makeHandler(async (req, res) => {
     return res.status(200).json({ status: 200, data: { direct, extended } });
   }
   if (method === "POST") {
-    if (!canWriteFamilyLinks(req.user.role)) {
-      return res.status(403).json({ error: { message: "Forbidden: only Admin and Data Entry roles can link family members.", status: 403 } });
-    }
+    if (!await verifyPermission(req, res, PERMS.UPDATE_MEMBER)) return;
     const { memberId, relatedMemberId, relationshipType, reciprocalType, customLabel, reciprocalCustomLabel } = req.body || {};
     if (!memberId || !relatedMemberId) {
       return res.status(400).json({ error: { message: "memberId and relatedMemberId are required", status: 400 } });
@@ -160,9 +150,7 @@ var family_relationships_default = makeHandler(async (req, res) => {
     }
   }
   if (method === "DELETE") {
-    if (!isAdminRole(req.user.role)) {
-      return res.status(403).json({ error: { message: "Forbidden: only Admin can remove family links.", status: 403 } });
-    }
+    if (!await verifyPermission(req, res, PERMS.DELETE_MEMBER)) return;
     const memberId = req.query.memberId || req.body?.memberId;
     const relatedMemberId = req.query.relatedMemberId || req.body?.relatedMemberId;
     if (!memberId || !relatedMemberId) {

@@ -1,10 +1,27 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
-import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { notify } from '../_utils/notify.js';
+import { loadPermissions } from '../_services/permission.service.js';
+import { PERMS, SECURITY_PERMISSIONS } from '../_constants/permissions.js';
 import bcrypt from 'bcrypt';
+
+// A role is "security-sensitive" if it grants any Super-Admin-only permission
+// (SYSTEM_SETTINGS, MANAGE_USERS, MANAGE_ROLES). Only an actor who already holds
+// SYSTEM_SETTINGS may assign such a role to someone else — this is a permission-set
+// check, not a role-name check, so it works for any role (built-in or custom) that
+// happens to carry those permissions.
+async function roleGrantsSecurityPermission(roleName: string): Promise<boolean> {
+  const role = await prisma.role.findUnique({
+    where: { name: roleName },
+    include: { rolePermissions: { include: { permission: true } } },
+  });
+  if (!role) return false;
+  const names = role.rolePermissions.map((rp) => rp.permission.name);
+  return names.some((n) => SECURITY_PERMISSIONS.includes(n));
+}
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
@@ -13,23 +30,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const { method } = req;
   const id = req.query.id as string;
 
-  // Verify User Role & Permissions
-  const user = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    include: { role: { include: { rolePermissions: { include: { permission: true } } } } },
-  });
-
-  const userPerms = user?.role.rolePermissions.map((rp) => rp.permission.name) || [];
-  const isSuperAdmin = user?.role.name === 'Super Admin';
-
-  const checkPerm = (perm: string) => {
-    if (isSuperAdmin) return true;
-    return userPerms.includes(perm);
-  };
-
-  if (!checkPerm('MANAGE_USERS')) {
-    return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
-  }
+  // User Management is a security-sensitive operation — MANAGE_USERS is granted
+  // only to Super Admin by seed data/convention.
+  if (!await verifyPermission(req, res, PERMS.MANAGE_USERS)) return;
+  const userPerms = await loadPermissions(req);
+  const actorHoldsSystemSettings = userPerms.has(PERMS.SYSTEM_SETTINGS);
 
   if (method === 'GET') {
     const dbUsers = await prisma.user.findMany({
@@ -56,11 +61,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Email, password, full name, and role are required', status: 400 } });
     }
 
-    // Only an actual Super Admin may grant the Super Admin role — otherwise a custom role
-    // holding only MANAGE_USERS (delegated for ordinary staff administration) could mint a
-    // brand-new Super Admin account and self-escalate.
-    if (role === 'Super Admin' && !isSuperAdmin) {
-      return res.status(403).json({ error: { message: 'Forbidden: Only a Super Admin can grant the Super Admin role', status: 403 } });
+    // Only an actor who already holds SYSTEM_SETTINGS may assign a role that grants
+    // security-sensitive permissions — otherwise a custom role holding only MANAGE_USERS
+    // (delegated for ordinary staff administration) could mint a new security-privileged
+    // account and self-escalate.
+    if (!actorHoldsSystemSettings && await roleGrantsSecurityPermission(role)) {
+      return res.status(403).json({ error: { message: 'Forbidden: Only an account with SYSTEM_SETTINGS permission can grant a security-sensitive role', status: 403 } });
     }
 
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -130,8 +136,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     if (role !== undefined) {
-      if (role === 'Super Admin' && !isSuperAdmin) {
-        return res.status(403).json({ error: { message: 'Forbidden: Only a Super Admin can grant the Super Admin role', status: 403 } });
+      if (!actorHoldsSystemSettings && await roleGrantsSecurityPermission(role)) {
+        return res.status(403).json({ error: { message: 'Forbidden: Only an account with SYSTEM_SETTINGS permission can grant a security-sensitive role', status: 403 } });
       }
       let roleRecord = await prisma.role.findUnique({ where: { name: role } });
       if (!roleRecord) {

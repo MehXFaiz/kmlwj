@@ -1,9 +1,10 @@
 import { makeHandler } from "../_utils/handler.js";
-import { verifyAuth } from "../_middlewares/auth.middleware.js";
+import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { logger } from "../_utils/logger.js";
 import { notify } from "../_utils/notify.js";
+import { PERMS } from "../_constants/permissions.js";
 function trimOrNull(v) {
   if (v === void 0 || v === null) return null;
   const trimmed = String(v).trim();
@@ -62,6 +63,7 @@ var members_default = makeHandler(async (req, res) => {
   const { method } = req;
   const id = req.query.id;
   if (method === "GET") {
+    if (!await verifyPermission(req, res, PERMS.VIEW_MEMBERS)) return;
     if (id) {
       const member = await prisma.member.findUnique({ where: { id } });
       if (!member) {
@@ -86,6 +88,7 @@ var members_default = makeHandler(async (req, res) => {
     return res.status(200).json({ status: 200, data: members, meta: { total, page: pageNum, limit: limitNum } });
   }
   if (method === "POST") {
+    if (!await verifyPermission(req, res, PERMS.CREATE_MEMBER)) return;
     let {
       memberNo,
       fullName,
@@ -203,6 +206,7 @@ var members_default = makeHandler(async (req, res) => {
     return res.status(201).json({ status: 201, data: newMember });
   }
   if (method === "PUT") {
+    if (!await verifyPermission(req, res, PERMS.UPDATE_MEMBER)) return;
     if (!id) {
       return res.status(400).json({ error: { message: "Member ID is required", status: 400 } });
     }
@@ -315,6 +319,7 @@ var members_default = makeHandler(async (req, res) => {
     return res.status(200).json({ status: 200, data: updatedMember });
   }
   if (method === "DELETE") {
+    if (!await verifyPermission(req, res, PERMS.DELETE_MEMBER)) return;
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
     if (!idsRaw) {
       return res.status(400).json({ error: { message: "Member ID(s) required", status: 400 } });

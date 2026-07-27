@@ -1,27 +1,28 @@
 import { makeHandler } from "../_utils/handler.js";
-import { verifyAuth } from "../_middlewares/auth.middleware.js";
+import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { notify } from "../_utils/notify.js";
+import { loadPermissions } from "../_services/permission.service.js";
+import { PERMS, SECURITY_PERMISSIONS } from "../_constants/permissions.js";
 import bcrypt from "bcrypt";
+async function roleGrantsSecurityPermission(roleName) {
+  const role = await prisma.role.findUnique({
+    where: { name: roleName },
+    include: { rolePermissions: { include: { permission: true } } }
+  });
+  if (!role) return false;
+  const names = role.rolePermissions.map((rp) => rp.permission.name);
+  return names.some((n) => SECURITY_PERMISSIONS.includes(n));
+}
 var users_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
   const { method } = req;
   const id = req.query.id;
-  const user = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    include: { role: { include: { rolePermissions: { include: { permission: true } } } } }
-  });
-  const userPerms = user?.role.rolePermissions.map((rp) => rp.permission.name) || [];
-  const isSuperAdmin = user?.role.name === "Super Admin";
-  const checkPerm = (perm) => {
-    if (isSuperAdmin) return true;
-    return userPerms.includes(perm);
-  };
-  if (!checkPerm("MANAGE_USERS")) {
-    return res.status(403).json({ error: { message: "Forbidden: Insufficient permissions", status: 403 } });
-  }
+  if (!await verifyPermission(req, res, PERMS.MANAGE_USERS)) return;
+  const userPerms = await loadPermissions(req);
+  const actorHoldsSystemSettings = userPerms.has(PERMS.SYSTEM_SETTINGS);
   if (method === "GET") {
     const dbUsers = await prisma.user.findMany({
       include: { role: true },
@@ -42,8 +43,8 @@ var users_default = makeHandler(async (req, res) => {
     if (!email || !password || !fullName || !role) {
       return res.status(400).json({ error: { message: "Email, password, full name, and role are required", status: 400 } });
     }
-    if (role === "Super Admin" && !isSuperAdmin) {
-      return res.status(403).json({ error: { message: "Forbidden: Only a Super Admin can grant the Super Admin role", status: 403 } });
+    if (!actorHoldsSystemSettings && await roleGrantsSecurityPermission(role)) {
+      return res.status(403).json({ error: { message: "Forbidden: Only an account with SYSTEM_SETTINGS permission can grant a security-sensitive role", status: 403 } });
     }
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -100,8 +101,8 @@ var users_default = makeHandler(async (req, res) => {
       updateData.password = await bcrypt.hash(password, 12);
     }
     if (role !== void 0) {
-      if (role === "Super Admin" && !isSuperAdmin) {
-        return res.status(403).json({ error: { message: "Forbidden: Only a Super Admin can grant the Super Admin role", status: 403 } });
+      if (!actorHoldsSystemSettings && await roleGrantsSecurityPermission(role)) {
+        return res.status(403).json({ error: { message: "Forbidden: Only an account with SYSTEM_SETTINGS permission can grant a security-sensitive role", status: 403 } });
       }
       let roleRecord = await prisma.role.findUnique({ where: { name: role } });
       if (!roleRecord) {

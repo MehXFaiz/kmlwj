@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Plus, Search, Printer, AlertTriangle, CheckCircle, X, Trash2, Edit2, CheckCircle2, Calendar, Table as TableIcon, LayoutGrid, Building2, Phone, DollarSign, FileText, Clock, RotateCcw } from 'lucide-react';
 import { useHallBookingStore } from '../store/hallBookingStore';
 import { useAuthStore } from '../store/authStore';
+import { useConfirmStore } from '../store/confirmStore';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { showToast } from '../components/ui/Toast';
 import { HallBookingReceiptModal } from '../components/receipts/HallBookingReceiptModal';
@@ -50,26 +51,52 @@ export const HallBookings = () => {
   };
 
   const handleRevert = async (id) => {
-    if (window.confirm('Are you sure you want to revert this booking? Its journal entries will be deleted and status reset to Pending.')) {
-      try {
+    const confirmed = await useConfirmStore.getState().showConfirm({
+      type: 'warning',
+      title: 'Revert Hall Booking?',
+      description: 'Are you sure you want to revert this booking? Its journal entries will be deleted and status reset to Pending.',
+      details: [
+        'Journal entries will be deleted.',
+        'Booking status will reset to Pending Post.',
+      ],
+      confirmLabel: 'Revert Booking',
+      cancelLabel: 'Cancel',
+      loadingLabel: 'Reverting...',
+      successMessage: 'Booking reverted from ledger successfully!',
+      action: async () => {
         await revertBooking(id);
-        showToast('Booking reverted from ledger successfully!', 'success');
-      } catch (err) {
-        showToast(err.message || 'Failed to revert booking', 'error');
-      }
+      },
+    });
+
+    if (confirmed) {
+      showToast('Booking reverted from ledger successfully!', 'success');
     }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this booking? If posted, its journal entries will be automatically reversed.')) {
-      try {
+    const confirmed = await useConfirmStore.getState().showConfirm({
+      type: 'danger',
+      isDangerous: true,
+      title: 'Delete Hall Booking?',
+      description: 'Are you sure you want to delete this booking? If posted, its journal entries will be automatically reversed.',
+      details: [
+        'Hall booking record will be permanently deleted.',
+        'If posted, accounting journal entries will be reversed.',
+        'This action cannot be undone.',
+      ],
+      confirmLabel: 'Delete Booking',
+      cancelLabel: 'Cancel',
+      loadingLabel: 'Deleting...',
+      successMessage: 'Booking deleted successfully!',
+      action: async () => {
         await new Promise(resolve => setTimeout(resolve, 15));
         await deleteBooking(id);
         setSelectedIds(prev => prev.filter(item => item !== id));
-        showToast('Booking deleted successfully', 'success');
-      } catch (err) {
-        showToast(err.message || 'Failed to delete booking', 'error');
-      }
+      },
+    });
+
+    if (confirmed) {
+      showToast('Booking deleted successfully', 'success');
     }
   };
 

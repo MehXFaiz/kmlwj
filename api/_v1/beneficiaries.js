@@ -1,8 +1,9 @@
 import { makeHandler } from "../_utils/handler.js";
-import { verifyAuth } from "../_middlewares/auth.middleware.js";
+import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { notify } from "../_utils/notify.js";
+import { PERMS } from "../_constants/permissions.js";
 const ALL_FIELDS = [
   "name",
   "fatherName",
@@ -59,6 +60,7 @@ var beneficiaries_default = makeHandler(async (req, res) => {
   const { method } = req;
   const id = req.query.id;
   if (method === "GET") {
+    if (!await verifyPermission(req, res, PERMS.VIEW_BENEFICIARIES)) return;
     const { limit = "100", page = "1" } = req.query;
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
@@ -74,6 +76,7 @@ var beneficiaries_default = makeHandler(async (req, res) => {
     return res.status(200).json({ status: 200, data: beneficiaries, meta: { total, page: pageNum, limit: limitNum } });
   }
   if (method === "POST") {
+    if (!await verifyPermission(req, res, PERMS.CREATE_BENEFICIARY)) return;
     const { name, fatherName, husbandName, cnic, mobile, email, address, town, area, gham, housingStatus, housingOther, familySize, monthlyIncome, monthlyExpenses, debtAmount } = req.body;
     if (!name || !String(name).trim()) {
       return res.status(400).json({ error: { message: "Name is required", status: 400 } });
@@ -136,6 +139,7 @@ var beneficiaries_default = makeHandler(async (req, res) => {
     return res.status(201).json({ status: 201, data: newBeneficiary });
   }
   if (method === "PUT") {
+    if (!await verifyPermission(req, res, PERMS.UPDATE_BENEFICIARY)) return;
     if (!id) {
       return res.status(400).json({ error: { message: "Beneficiary ID is required", status: 400 } });
     }
@@ -208,6 +212,7 @@ var beneficiaries_default = makeHandler(async (req, res) => {
     return res.status(200).json({ status: 200, data: updatedBeneficiary });
   }
   if (method === "DELETE") {
+    if (!await verifyPermission(req, res, PERMS.DELETE_BENEFICIARY)) return;
     if (!id) {
       return res.status(400).json({ error: { message: "Beneficiary ID is required", status: 400 } });
     }

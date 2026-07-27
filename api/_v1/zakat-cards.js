@@ -1,9 +1,10 @@
 import { makeHandler } from "../_utils/handler.js";
-import { verifyAuth } from "../_middlewares/auth.middleware.js";
+import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { createNotification } from "../_utils/notify.js";
+import { PERMS } from "../_constants/permissions.js";
 const CARD_NO_PREFIX = "ZK-";
 async function nextCardNumber(tx) {
   const existing = await tx.zakatCard.findMany({
@@ -44,6 +45,7 @@ async function resolveZakatExpenseAccount(tx) {
 var zakat_cards_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
+  if (!await verifyPermission(req, res, PERMS.MANAGE_ZAKAT_CARDS)) return;
   const { method } = req;
   const id = req.query.id;
   const action = req.query.action;

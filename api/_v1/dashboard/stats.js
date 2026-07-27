@@ -1,13 +1,15 @@
 import { makeHandler } from "../../_utils/handler.js";
-import { verifyAuth } from "../../_middlewares/auth.middleware.js";
+import { verifyAuth, verifyPermission } from "../../_middlewares/auth.middleware.js";
 import { prisma } from "../../_prisma.js";
 import { AccountingService } from "../../_services/accounting.service.js";
+import { PERMS } from "../../_constants/permissions.js";
 var stats_default = makeHandler(async (req, res) => {
   if (req.method !== "GET") {
     return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
   }
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
+  if (!await verifyPermission(req, res, PERMS.VIEW_REPORTS)) return;
   const { startDate, endDate } = req.query || {};
   const totalAccounts = await prisma.account.count();
   const revenueHeads = await prisma.revenueHead.count();

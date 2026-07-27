@@ -4,6 +4,8 @@ import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middlewar
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { notify } from '../_utils/notify.js';
+import { loadPermissions } from '../_services/permission.service.js';
+import { PERMS } from '../_constants/permissions.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
@@ -22,22 +24,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     return res.status(200).json({ status: 200, data: dbExpenseHeads });
   }
 
-  // Enforce CREATE_ACCOUNT or UPDATE_ACCOUNT permissions for expense changes
-  const user = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    include: { role: { include: { rolePermissions: { include: { permission: true } } } } },
-  });
-
-  const userPerms = user?.role.rolePermissions.map((rp) => rp.permission.name) || [];
-  const isSuperAdmin = user?.role.name === 'Super Admin';
-
-  const checkPerm = (perm: string) => {
-    if (isSuperAdmin) return true;
-    return userPerms.includes(perm);
-  };
+  // Enforce MANAGE_EXPENSE_HEADS for expense head changes
+  const userPerms = await loadPermissions(req);
+  const checkPerm = (perm: string) => userPerms.has(perm);
 
   if (method === 'POST') {
-    if (!checkPerm('CREATE_ACCOUNT')) {
+    if (!checkPerm(PERMS.MANAGE_EXPENSE_HEADS)) {
       return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
     }
 
@@ -74,7 +66,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'PUT') {
-    if (!checkPerm('UPDATE_ACCOUNT')) {
+    if (!checkPerm(PERMS.MANAGE_EXPENSE_HEADS)) {
       return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
     }
 
@@ -117,7 +109,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'DELETE') {
-    if (!checkPerm('DELETE_ACCOUNT')) {
+    if (!checkPerm(PERMS.MANAGE_EXPENSE_HEADS)) {
       return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
     }
 

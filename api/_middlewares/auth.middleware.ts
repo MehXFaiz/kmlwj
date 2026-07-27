@@ -1,115 +1,27 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import jwt from 'jsonwebtoken';
-
-// Add Express interface extension for typing support
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        email: string;
-        role: string;
-      };
-    }
-  }
-}
+import { loadPermissions } from '../_services/permission.service.js';
 
 export interface AuthenticatedRequest extends VercelRequest {
   user?: {
     id: string;
     email: string;
+    /** Display-only — never use for authorization. Call verifyPermission() instead. */
     role: string;
   };
 }
 
-export function isAdminOrSuperAdmin(role?: string): boolean {
-  if (!role) return false;
-  const r = role.toLowerCase().trim();
-  return r === 'admin' || r === 'super admin' || r === 'administrator';
-}
-
-export function isEditOrDeleteRequest(req: any): boolean {
-  const method = (req.method || '').toUpperCase();
-  const url = req.url || req.path || '';
-  // Self-service writes exempt from the admin-only edit guard:
-  // user-preferences (own theme), notifications (own read/dismiss state)
-  if (url.includes('/user-preferences') || url.includes('/notifications')) {
-    return false;
-  }
-  if (method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
-    return true;
-  }
-  if (method === 'POST') {
-    const action = String(req.body?.action || req.query?.action || '').toLowerCase().trim();
-    if (['cancel', 'delete', 'edit', 'update', 'remove', 'bulk-delete', 'reverse', 'revert'].includes(action)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function checkEditDeletePermission(req: any, res: any): boolean {
-  if (isEditOrDeleteRequest(req)) {
-    const role = req.user?.role;
-    if (!isAdminOrSuperAdmin(role)) {
-      res.status(403).json({
-        error: {
-          message: 'Forbidden: Only Admin and Super Admin roles are permitted to edit and delete data.',
-          status: 403,
-        },
-      });
-      return false;
-    }
-  }
-  return true;
-}
-
-export function isPostToLedgerRequest(req: any): boolean {
-  const method = (req.method || '').toUpperCase();
-  const url = req.url || req.path || '';
-  if (url.includes('/journal-entries') && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
-    return true;
-  }
-  const action = String(req.body?.action || req.query?.action || '').toLowerCase().trim();
-  if (['post', 'post-draft', 'post-to-ledger', 'posttoledger', 'approve', 'revert', 'reverse'].includes(action)) {
-    return true;
-  }
-  const status = String(req.body?.status || '').toUpperCase().trim();
-  if (status === 'POSTED' || status === 'APPROVED') {
-    return true;
-  }
-  return false;
-}
-
-function checkPostToLedgerPermission(req: any, res: any): boolean {
-  if (isPostToLedgerRequest(req)) {
-    const role = req.user?.role;
-    if (!isAdminOrSuperAdmin(role)) {
-      res.status(403).json({
-        error: {
-          message: 'Forbidden: Only Admin and Super Admin roles are permitted to post to the ledger.',
-          status: 403,
-        },
-      });
-      return false;
-    }
-  }
-  return true;
-}
-
 /**
- * Serverless helper to authenticate requests.
- * Modifies the request object to include 'user' if successful, or returns false (and sends 401).
+ * Validates the JWT and populates req.user.
+ * Does NOT enforce any permissions — call verifyPermission() for each operation.
  */
-export async function verifyAuth(req: AuthenticatedRequest, res: VercelResponse): Promise<boolean> {
+export async function verifyAuth(
+  req: AuthenticatedRequest,
+  res: VercelResponse
+): Promise<boolean> {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    res.status(401).json({
-      error: {
-        message: 'Authorization token required',
-        status: 401,
-      },
-    });
+    res.status(401).json({ error: { message: 'Authorization token required', status: 401 } });
     return false;
   }
 
@@ -119,41 +31,50 @@ export async function verifyAuth(req: AuthenticatedRequest, res: VercelResponse)
 
   try {
     const payload = jwt.verify(token, secret) as { sub: string; email: string; role: string };
-    req.user = {
-      id: payload.sub,
-      email: payload.email,
-      role: payload.role,
-    };
-    if (!checkEditDeletePermission(req, res)) {
-      return false;
-    }
-    if (!checkPostToLedgerPermission(req, res)) {
-      return false;
-    }
+    req.user = { id: payload.sub, email: payload.email, role: payload.role };
     return true;
-  } catch (error) {
+  } catch {
     res.status(401).json({
-      error: {
-        message: 'Invalid or expired authorization token',
-        status: 401,
-      },
+      error: { message: 'Invalid or expired authorization token', status: 401 },
     });
     return false;
   }
 }
 
 /**
- * Express-compatible middleware for authentication (used in dev server).
+ * Checks that req.user holds the given permission, loaded live from the database.
+ * Sends 403 and returns false if denied; returns true if allowed.
+ *
+ * Usage:
+ *   if (!await verifyPermission(req, res, PERMS.RECORD_INCOME)) return;
+ */
+export async function verifyPermission(
+  req: AuthenticatedRequest,
+  res: VercelResponse,
+  permission: string
+): Promise<boolean> {
+  if (!req.user) {
+    res.status(401).json({ error: { message: 'Authentication required', status: 401 } });
+    return false;
+  }
+  const perms = await loadPermissions(req);
+  if (!perms.has(permission)) {
+    res.status(403).json({
+      error: { message: `Forbidden: '${permission}' permission required`, status: 403 },
+    });
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Express-compatible authentication middleware (used in dev server).
+ * Populates req.user from the JWT. No permission check — call requirePermission() after.
  */
 export function requireAuth(req: any, res: any, next: any): void {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    res.status(401).json({
-      error: {
-        message: 'Authorization token required',
-        status: 401,
-      },
-    });
+    res.status(401).json({ error: { message: 'Authorization token required', status: 401 } });
     return;
   }
 
@@ -163,53 +84,34 @@ export function requireAuth(req: any, res: any, next: any): void {
 
   try {
     const payload = jwt.verify(token, secret) as { sub: string; email: string; role: string };
-    req.user = {
-      id: payload.sub,
-      email: payload.email,
-      role: payload.role,
-    };
-    if (!checkEditDeletePermission(req, res)) {
-      return;
-    }
-    if (!checkPostToLedgerPermission(req, res)) {
-      return;
-    }
+    req.user = { id: payload.sub, email: payload.email, role: payload.role };
     next();
-  } catch (error) {
+  } catch {
     res.status(401).json({
-      error: {
-        message: 'Invalid or expired authorization token',
-        status: 401,
-      },
+      error: { message: 'Invalid or expired authorization token', status: 401 },
     });
   }
 }
 
 /**
- * Express-compatible role checker middleware.
+ * Express-compatible permission middleware factory (used in dev server).
+ * Requires requireAuth() to have run first.
+ *
+ * Usage: router.post('/income', requireAuth, requirePermission(PERMS.RECORD_INCOME), handler)
  */
-export function requireRole(roles: string[]) {
-  return (req: any, res: any, next: any): void => {
+export function requirePermission(permission: string) {
+  return async (req: any, res: any, next: any): Promise<void> => {
     if (!req.user) {
-      res.status(401).json({
-        error: {
-          message: 'Authentication required',
-          status: 401,
-        },
-      });
+      res.status(401).json({ error: { message: 'Authentication required', status: 401 } });
       return;
     }
-
-    if (!roles.includes(req.user.role)) {
+    const perms = await loadPermissions(req);
+    if (!perms.has(permission)) {
       res.status(403).json({
-        error: {
-          message: 'Forbidden: Insufficient privileges',
-          status: 403,
-        },
+        error: { message: `Forbidden: '${permission}' permission required`, status: 403 },
       });
       return;
     }
-
     next();
   };
 }

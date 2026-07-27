@@ -1,7 +1,8 @@
 import { makeHandler } from "../_utils/handler.js";
-import { verifyAuth } from "../_middlewares/auth.middleware.js";
+import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { AccountingService } from "../_services/accounting.service.js";
+import { PERMS } from "../_constants/permissions.js";
 import { validateAmount } from "../_utils/amount.js";
 import { notify } from "../_utils/notify.js";
 const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };
@@ -18,15 +19,7 @@ var simple_expense_default = makeHandler(async (req, res) => {
     });
     return res.status(200).json({ status: 200, data: expenses });
   }
-  const user = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    include: { role: { include: { rolePermissions: { include: { permission: true } } } } }
-  });
-  const userPerms = user?.role.rolePermissions.map((rp) => rp.permission.name) || [];
-  const isSuperAdmin = user?.role.name === "Super Admin";
-  if (!isSuperAdmin && !userPerms.includes("RECORD_EXPENSE")) {
-    return res.status(403).json({ error: { message: "Forbidden: Insufficient permissions", status: 403 } });
-  }
+  if (!await verifyPermission(req, res, PERMS.RECORD_EXPENSE)) return;
   if (req.method === "POST") {
     const { date, expenseHeadId, paidTo, description, amount, paymentMethod, bankAccountId, reference } = req.body;
     if (!expenseHeadId || !amount) {

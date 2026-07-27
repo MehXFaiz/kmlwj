@@ -1,11 +1,13 @@
 import { makeHandler } from "../../_utils/handler.js";
-import { verifyAuth } from "../../_middlewares/auth.middleware.js";
+import { verifyAuth, verifyPermission } from "../../_middlewares/auth.middleware.js";
 import { prisma } from "../../_prisma.js";
 import { AccountingService } from "../../_services/accounting.service.js";
+import { PERMS } from "../../_constants/permissions.js";
 var tree_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
   if (req.method === "GET") {
+    if (!await verifyPermission(req, res, PERMS.VIEW_REPORTS)) return;
     const dbAccounts = await prisma.account.findMany({
       include: {
         accountType: true

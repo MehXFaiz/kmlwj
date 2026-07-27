@@ -1,11 +1,12 @@
 import { makeHandler } from "../_utils/handler.js";
-import { verifyAuth } from "../_middlewares/auth.middleware.js";
+import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { validateAmount } from "../_utils/amount.js";
 import { isWithinMaxLength, maxLengthError } from "../_utils/text-length.js";
 import { notify } from "../_utils/notify.js";
+import { PERMS } from "../_constants/permissions.js";
 function donationTitleFragment(donationType, customType) {
   const map = {
     ZAKAT: "Zakat",
@@ -36,6 +37,7 @@ var donations_received_default = makeHandler(async (req, res) => {
   const { method } = req;
   const id = req.query.id;
   if (method === "GET") {
+    if (!await verifyPermission(req, res, PERMS.MANAGE_DONATIONS)) return;
     const search = req.query.search || "";
     const status = req.query.status;
     const donationType = req.query.donationType;
@@ -102,6 +104,7 @@ var donations_received_default = makeHandler(async (req, res) => {
     });
   }
   if (method === "POST") {
+    if (!await verifyPermission(req, res, PERMS.RECORD_INCOME)) return;
     const {
       receiptDate,
       donorId,
@@ -240,6 +243,7 @@ var donations_received_default = makeHandler(async (req, res) => {
     return res.status(201).json({ status: 201, data: result });
   }
   if (method === "PUT" || method === "PATCH") {
+    if (!await verifyPermission(req, res, PERMS.RECORD_INCOME)) return;
     if (!id) return res.status(400).json({ error: { message: "Receipt ID is required", status: 400 } });
     const existing = await prisma.donationReceived.findUnique({
       where: { id },
@@ -351,6 +355,7 @@ var donations_received_default = makeHandler(async (req, res) => {
     return res.status(200).json({ status: 200, data: result });
   }
   if (method === "DELETE") {
+    if (!await verifyPermission(req, res, PERMS.RECORD_INCOME)) return;
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
     if (!idsRaw) {
       return res.status(400).json({ error: { message: "Receipt ID(s) required", status: 400 } });

@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useZakatCardStore } from '../store/zakatCardStore';
 import { zakatCardService } from '../services/zakatCardService';
 import { useAuthStore } from '../store/authStore';
+import { useConfirmStore } from '../store/confirmStore';
+import { showToast } from '../components/ui/Toast';
 import { ZakatCardFront, ZakatCardBack } from '../components/members/ZakatCard';
 import { PvcCardPrintView } from '../components/members/PvcCardPrintView';
 import {
@@ -440,13 +442,7 @@ export const ZakatCards = () => {
   const [eligibleLoading, setEligibleLoading] = useState(false);
   const [printMode, setPrintMode] = useState(null);
   const [printCard, setPrintCard] = useState(null);
-  const [toast, setToast] = useState(null);
   const singlePrintRef = useRef(null);
-
-  const showToast = useCallback((message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 2500);
-  }, []);
 
   const copyQrLink = useCallback((card) => {
     const url = getMemberQrUrl(card?.member);
@@ -505,12 +501,31 @@ export const ZakatCards = () => {
   };
 
   const handleDelete = async (card) => {
-    if (!confirm(`Delete zakat card ${card.cardNumber} for ${card.member?.fullName}? This will also reverse the accounting entry.`)) return;
-    try {
-      await deleteCard(card.id);
-      showToast('Zakat card deleted');
-    } catch (err) {
-      showToast(err.message || 'Failed to delete', 'error');
+    const beneficiaryName = card.beneficiary?.name || card.member?.fullName || 'Unknown Beneficiary';
+    const cardNo = card.cardNumber || 'N/A';
+
+    const confirmed = await useConfirmStore.getState().showConfirm({
+      type: 'danger',
+      isDangerous: true,
+      title: 'Delete Zakat Card?',
+      description: `Are you sure you want to delete Zakat Card ${cardNo} for ${beneficiaryName}?`,
+      details: [
+        'Delete the card.',
+        'Reverse the accounting journal entry.',
+        'Update all financial reports automatically.',
+        'Remove the card from reports and dashboard.',
+      ],
+      confirmLabel: 'Delete Card',
+      cancelLabel: 'Cancel',
+      loadingLabel: 'Deleting...',
+      successMessage: 'Zakat Card deleted successfully.',
+      action: async () => {
+        await deleteCard(card.id);
+      },
+    });
+
+    if (confirmed) {
+      showToast('Zakat Card deleted successfully.');
     }
   };
 
@@ -528,26 +543,6 @@ export const ZakatCards = () => {
 
   return (
     <div className="space-y-6">
-      <style>{`@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }`}</style>
-
-      {toast && (
-        <div style={{
-          position: 'fixed', bottom: '28px', left: '50%', transform: 'translateX(-50%)',
-          zIndex: 99999, padding: '10px 22px', borderRadius: '12px',
-          background: toast.type === 'error' ? 'rgba(127,29,29,0.97)' : 'rgba(13,78,43,0.97)',
-          border: `1px solid ${toast.type === 'error' ? 'rgba(239,68,68,0.5)' : 'rgba(74,222,128,0.4)'}`,
-          color: '#fff', fontSize: '13px', fontWeight: 600,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-          display: 'flex', alignItems: 'center', gap: '8px',
-          animation: 'fadeUp 0.25s ease',
-          whiteSpace: 'nowrap',
-        }}>
-          {toast.type === 'error'
-            ? <X size={14} style={{ color: '#f87171' }} />
-            : <Check size={14} style={{ color: '#4ade80' }} />}
-          {toast.message}
-        </div>
-      )}
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

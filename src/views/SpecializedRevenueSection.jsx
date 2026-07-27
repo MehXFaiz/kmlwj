@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Plus, Search, Printer, AlertTriangle, CheckCircle, Trash2, X, DollarSign, Calendar, Users, Building, Edit2, CheckCircle2, ChevronDown, LayoutGrid, Table as TableIcon, MapPin, Tag, Phone, Bus, Heart, User, Hash, RotateCcw } from 'lucide-react';
 import { useRevenueCollectionStore } from '../store/revenueCollectionStore';
 import { useAuthStore } from '../store/authStore';
+import { useConfirmStore } from '../store/confirmStore';
 import { useCoaStore } from '../store/coaStore';
 import { useMemberStore } from '../store/memberStore';
 import { DashboardLayout } from '../layouts/DashboardLayout';
@@ -69,26 +70,52 @@ export const SpecializedRevenueSection = ({
   };
 
   const handleRevert = async (id) => {
-    if (window.confirm(`Are you sure you want to revert this ${category} record? Its journal entries will be deleted and status reset to Pending Post.`)) {
-      try {
+    const confirmed = await useConfirmStore.getState().showConfirm({
+      type: 'warning',
+      title: `Revert ${category} Record?`,
+      description: `Are you sure you want to revert this ${category} record? Its journal entries will be deleted and status reset to Pending Post.`,
+      details: [
+        'Journal entries will be deleted.',
+        'Record status will reset to Pending Post.',
+      ],
+      confirmLabel: 'Revert Record',
+      cancelLabel: 'Cancel',
+      loadingLabel: 'Reverting...',
+      successMessage: `${category} reverted from ledger successfully!`,
+      action: async () => {
         await revertCollection(id);
-        showToast(`${category} reverted from ledger successfully!`, 'success');
-      } catch (err) {
-        showToast(err.message || `Failed to revert ${category}`, 'error');
-      }
+      },
+    });
+
+    if (confirmed) {
+      showToast(`${category} reverted from ledger successfully!`, 'success');
     }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm(`Are you sure you want to delete this ${category} record? If posted, its journal entries will be automatically reversed.`)) {
-      try {
+    const confirmed = await useConfirmStore.getState().showConfirm({
+      type: 'danger',
+      isDangerous: true,
+      title: `Delete ${category} Record?`,
+      description: `Are you sure you want to delete this ${category} record? If posted, its journal entries will be automatically reversed.`,
+      details: [
+        `${category} record will be permanently deleted.`,
+        'If posted, accounting journal entries will be reversed.',
+        'This action cannot be undone.',
+      ],
+      confirmLabel: 'Delete Record',
+      cancelLabel: 'Cancel',
+      loadingLabel: 'Deleting...',
+      successMessage: 'Record deleted successfully.',
+      action: async () => {
         await new Promise(resolve => setTimeout(resolve, 15));
         await deleteCollection(id);
         setSelectedIds(prev => prev.filter(item => item !== id));
-        showToast('Record deleted successfully', 'success');
-      } catch (err) {
-        showToast(err.message || 'Failed to delete record', 'error');
-      }
+      },
+    });
+
+    if (confirmed) {
+      showToast('Record deleted successfully', 'success');
     }
   };
 
