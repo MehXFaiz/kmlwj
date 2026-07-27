@@ -163,8 +163,8 @@ async function main() {
 
   // Step 6: Print summary
   console.log('\n📊 Summary:');
-  const totalIncome = incomeTransactions.reduce((sum, t) => sum + t.amount, 0);
-  const totalExpense = expenseTransactions.reduce((sum, t) => sum + t.amount, 0);
+  const totalIncome = incomeTransactions.reduce((sum, t) => sum + Number(t.amount), 0);
+  const totalExpense = expenseTransactions.reduce((sum, t) => sum + Number(t.amount), 0);
   console.log(`Total Income: ${totalIncome} PKR`);
   console.log(`Total Expense: ${totalExpense} PKR`);
   console.log(`Net: ${totalIncome - totalExpense} PKR`);
@@ -173,9 +173,9 @@ async function main() {
   const updatedCashAccount = await prisma.account.findUnique({ where: { id: cashAccount.id } });
   const updatedBankAccounts = await Promise.all(bankAccounts.map(b => prisma.account.findUnique({ where: { id: b.id } })));
   console.log('\n💸 Account Balances:');
-  console.log(`Cash in Hand: ${updatedCashAccount?.currentBalance} PKR`);
+  console.log(`Cash in Hand: ${Number(updatedCashAccount?.currentBalance || 0)} PKR`);
   updatedBankAccounts.forEach(b => {
-    if (b) console.log(`${b.accountName}: ${b.currentBalance} PKR`);
+    if (b) console.log(`${b.accountName}: ${Number(b.currentBalance || 0)} PKR`);
   });
 
   console.log('\n✅ Test data creation complete!');
