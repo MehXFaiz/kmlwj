@@ -4,6 +4,7 @@ import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middlewar
 import { prisma } from '../_prisma.js';
 import { AccountingService } from '../_services/accounting.service.js';
 import { validateAmount } from '../_utils/amount.js';
+import { notify } from '../_utils/notify.js';
 
 const accountingTxOptions = { maxWait: 10000, timeout: 30000 };
 
@@ -108,6 +109,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return income;
     }, accountingTxOptions);
 
+    await notify(req, {
+      title: 'Income Recorded',
+      message: `Income of Rs ${numAmount.toLocaleString()} recorded and posted to the ledger.`,
+      module: 'Income',
+      recordId: (result as any).id,
+      actionType: 'CREATE',
+    });
+
     return res.status(201).json({ status: 201, data: result });
   }
 
@@ -188,6 +197,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return updated;
     }, accountingTxOptions);
 
+    await notify(req, {
+      title: 'Income Updated',
+      message: `Income ${id} updated to Rs ${numAmount.toLocaleString()} and re-posted to the ledger.`,
+      module: 'Income',
+      recordId: id,
+      actionType: 'UPDATE',
+    });
+
     return res.status(200).json({ status: 200, data: result });
   }
 
@@ -206,6 +223,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         await tx.simpleIncome.delete({ where: { id: String(id) } });
       }
     }, accountingTxOptions);
+
+    await notify(req, {
+      title: 'Income Deleted',
+      message: `Income ${id} deleted and reversed out of the ledger.`,
+      module: 'Income',
+      recordId: String(id),
+      actionType: 'DELETE',
+    });
 
     return res.status(200).json({ status: 200, message: 'Income deleted successfully' });
   }

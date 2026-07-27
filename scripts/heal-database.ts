@@ -45,24 +45,13 @@ async function main() {
   console.log(`Found incorrect line on Journal Entry: ${targetJournalLine.journalEntry.voucherNo}`);
   console.log(`  Updating Account from ${targetJournalLine.account.glCode} (${targetJournalLine.account.accountName}) to ${targetRevenueAccount.glCode} (${targetRevenueAccount.accountName})`);
 
-  // 3. Update the JournalEntryLine and the corresponding LedgerEntry inside a transaction
+  // 3. Update the JournalEntryLine (the single source of truth) inside a transaction
   await prisma.$transaction(async (tx) => {
-    // Update JournalEntryLine
+    // Update JournalEntryLine (the single source of truth — no LedgerEntry to mirror)
     await tx.journalEntryLine.update({
       where: { id: targetJournalLine.id },
       data: { accountId: newAccountId }
     });
-
-    // Update LedgerEntry
-    const ledgerResult = await tx.ledgerEntry.updateMany({
-      where: {
-        accountId: oldAccountId,
-        reference: targetJournalLine.journalEntry.voucherNo
-      },
-      data: { accountId: newAccountId }
-    });
-
-    console.log(`Updated ${ledgerResult.count} LedgerEntry record(s).`);
 
     // Recalculate balances for both old and new accounts
     // Helper function inside the transaction

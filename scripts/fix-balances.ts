@@ -40,12 +40,14 @@ async function main() {
       continue;
     }
 
-    const agg = await prisma.ledgerEntry.aggregate({
-      where: { accountId: acc.id },
+    // Single source of truth: posted journal entry lines (not the removed LedgerEntry table).
+    const agg = await prisma.journalEntryLine.aggregate({
+      where: { accountId: acc.id, journalEntry: { status: 'Posted' } },
       _sum: { debit: true, credit: true }
     });
 
-    console.log(`Account: ${acc.glCode} - ${acc.accountName} - ${acc.currentBalance}`);
+    const posted = (Number(agg._sum.debit) || 0) - (Number(agg._sum.credit) || 0);
+    console.log(`Account: ${acc.glCode} - ${acc.accountName} - cached=${acc.currentBalance} postedNet=${posted}`);
   }
 }
 

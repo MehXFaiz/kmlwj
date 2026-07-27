@@ -66,12 +66,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (req.method === 'DELETE') {
-    // General Ledger entries are derived from Journal Entry lines and have no independent
-    // existence — recalculateAccountBalance always re-derives Account.currentBalance from
-    // JournalEntryLine, so deleting a LedgerEntry row alone cannot correctly adjust the balance
-    // (the untouched JournalEntryLine rows immediately overwrite any manual adjustment on the
-    // next recalculation). Deleting/reversing the source Journal Entry is the only correct way
-    // to remove a posting, since that path also removes the JournalEntryLine rows it derives from.
+    // General Ledger entries are a read-only projection of JournalEntryLine rows
+    // (via getPostedAggregates) and have no independent existence. The only
+    // correct way to remove a posting is to delete or reverse its source Journal
+    // Entry, which removes the JournalEntryLine rows the ledger is derived from.
     return res.status(400).json({
       error: {
         message: 'General Ledger entries cannot be deleted directly — they are automatically generated from Journal Entries. Delete or reverse the source Journal Entry instead.',

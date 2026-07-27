@@ -31,9 +31,6 @@ async function main() {
   const jelCount = await prisma.journalEntryLine.deleteMany({});
   console.log(`Deleted ${jelCount.count} JournalEntryLines`);
 
-  const leCount = await prisma.ledgerEntry.deleteMany({});
-  console.log(`Deleted ${leCount.count} LedgerEntries`);
-
   const jeCount = await prisma.journalEntry.deleteMany({});
   console.log(`Deleted ${jeCount.count} JournalEntries`);
 

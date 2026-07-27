@@ -128,28 +128,7 @@ async function createIncome(userId: string, revenueHead: any, amount: number, pa
       }
     });
 
-    // Create Ledger Entries
-    await tx.ledgerEntry.create({
-      data: {
-        accountId: account.id,
-        debit: amount,
-        credit: 0,
-        reference: je.voucherNo,
-        description: `Sample ${revenueHead.name}`,
-        postingDate: date
-      }
-    });
-
-    await tx.ledgerEntry.create({
-      data: {
-        accountId: revenueHead.accountId || revenueHead.account.id,
-        debit: 0,
-        credit: amount,
-        reference: je.voucherNo,
-        description: `Sample ${revenueHead.name}`,
-        postingDate: date
-      }
-    });
+    // No LedgerEntry writes — JournalEntryLine (above) is the single source of truth.
 
     // Update account balances
     await tx.account.update({
@@ -219,28 +198,7 @@ async function createExpense(userId: string, expenseHead: any, amount: number, p
       }
     });
 
-    // Create Ledger Entries
-    await tx.ledgerEntry.create({
-      data: {
-        accountId: expenseHead.accountId || expenseHead.account.id,
-        debit: amount,
-        credit: 0,
-        reference: je.voucherNo,
-        description: `Sample ${expenseHead.name}`,
-        postingDate: date
-      }
-    });
-
-    await tx.ledgerEntry.create({
-      data: {
-        accountId: account.id,
-        debit: 0,
-        credit: amount,
-        reference: je.voucherNo,
-        description: `Sample ${expenseHead.name}`,
-        postingDate: date
-      }
-    });
+    // No LedgerEntry writes — JournalEntryLine (above) is the single source of truth.
 
     // Update account balances
     await tx.account.update({

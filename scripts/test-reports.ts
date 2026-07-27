@@ -36,8 +36,8 @@ async function main() {
   let totalRevenue = 0;
   let totalExpense = 0;
   for (const acc of pnlAccounts) {
-    const agg = await prisma.ledgerEntry.aggregate({
-      where: { accountId: acc.id },
+    const agg = await prisma.journalEntryLine.aggregate({
+      where: { accountId: acc.id, journalEntry: { status: 'Posted' } },
       _sum: { debit: true, credit: true }
     });
     const d = Number(agg._sum.debit) || 0;
@@ -75,8 +75,8 @@ async function main() {
 
   for (const acc of allAccounts) {
     const type = acc.accountType?.name;
-    const agg = await prisma.ledgerEntry.aggregate({
-      where: { accountId: acc.id },
+    const agg = await prisma.journalEntryLine.aggregate({
+      where: { accountId: acc.id, journalEntry: { status: 'Posted' } },
       _sum: { debit: true, credit: true }
     });
     const d = Number(agg._sum.debit) || 0;
@@ -116,8 +116,8 @@ async function main() {
     const type = acc.accountType?.name;
     const name = acc.accountName.toLowerCase();
     if (type === 'ASSET') {
-      const agg = await prisma.ledgerEntry.aggregate({
-        where: { accountId: acc.id },
+      const agg = await prisma.journalEntryLine.aggregate({
+        where: { accountId: acc.id, journalEntry: { status: 'Posted' } },
         _sum: { debit: true, credit: true }
       });
       const d = Number(agg._sum.debit) || 0;

@@ -38,7 +38,6 @@ async function main() {
   console.log('── Transaction tables (must all be 0) ──');
   check('JournalEntries', await prisma.journalEntry.count());
   check('JournalEntryLines', await prisma.journalEntryLine.count());
-  check('LedgerEntries', await prisma.ledgerEntry.count());
   check('SimpleIncomes', await prisma.simpleIncome.count());
   check('SimpleExpenses', await prisma.simpleExpense.count());
   check('RevenueCollections', await prisma.revenueCollection.count());
@@ -63,9 +62,6 @@ async function main() {
   const jelSum = await prisma.journalEntryLine.aggregate({ _sum: { debit: true, credit: true } });
   check('Trial Balance Debit', Number(jelSum._sum.debit) || 0);
   check('Trial Balance Credit', Number(jelSum._sum.credit) || 0);
-  const leSum = await prisma.ledgerEntry.aggregate({ _sum: { debit: true, credit: true } });
-  check('LedgerEntry Debit', Number(leSum._sum.debit) || 0);
-  check('LedgerEntry Credit', Number(leSum._sum.credit) || 0);
 
   console.log('\n── Account balances (must all be 0) ──');
   const nonZero = await prisma.account.findMany({

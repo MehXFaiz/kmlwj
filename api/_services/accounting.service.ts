@@ -193,12 +193,30 @@ export class AccountingService {
   }
 
   /**
-   * Resolves an Account from the Chart of Accounts using ID, GL Code, keyword, or type fallback.
-   * Enforces that the account exists and is not locked.
+   * Resolves an Account from the Chart of Accounts.
+   *
+   * Resolution order (most to least deterministic):
+   *   1. Explicit Account ID          (preferred — unambiguous)
+   *   2. Explicit GL Code             (preferred — unambiguous)
+   *   3. Reserved 'Cash' system account via ensureCashInHandAccount (a dedicated
+   *      getter, not name matching)
+   *   4. EXACT account name / detailType / GL code match
+   *   5. LAST-RESORT case-insensitive `contains` on the account name — documented
+   *      tech debt, retained only so callers that still pass a donation type or
+   *      head name that is not an exact account name (e.g. 'ZAKAT' → the account
+   *      literally named "Zakat 2024-25") keep posting. To eliminate step 5,
+   *      link every RevenueHead/ExpenseHead to a GL account and pass an explicit
+   *      accountId/accountCode from the module.
+   *
+   * The previously-present SILENT fallbacks — first-word substring, description
+   * substring, "grab any REVENUE/EXPENSE account", and "first account of this
+   * type" — have been REMOVED. Those could route a posting to an arbitrary
+   * account with no warning; now, if nothing above matches, we throw.
    */
   static async resolveAccount(tx: any, line: AccountingLinePayload) {
     let account = null;
 
+    // 1 & 2. Explicit, deterministic resolution.
     if (line.accountId) {
       account = await tx.account.findUnique({
         where: { id: line.accountId },
@@ -219,16 +237,14 @@ export class AccountingService {
       }
     }
 
-    // Ensure directly looked-up account resolves to a leaf account if it is a header
+    // If an explicit account turns out to be a header, descend to a leaf ONLY
+    // through the real parent/child hierarchy — never by name guessing.
     if (account) {
       const hasChild = await tx.account.findFirst({ where: { parentId: account.id } });
       if (hasChild) {
         const leaf = await tx.account.findFirst({
           where: {
-            OR: [
-              { parentId: account.id },
-              { accountName: { contains: account.accountName, mode: 'insensitive' } }
-            ],
+            parentId: account.id,
             children: { none: {} },
             isLocked: false
           },
@@ -236,7 +252,6 @@ export class AccountingService {
           orderBy: { glCode: 'asc' }
         });
         if (leaf) {
-          // Re-validate leaf account type
           if (line.accountType) {
             const leafTypeName = (leaf.accountType?.name || '').toUpperCase();
             if (leafTypeName !== line.accountType.toUpperCase()) {
@@ -248,29 +263,32 @@ export class AccountingService {
       }
     }
 
-    // Keyword or Name Search fallback
+    // 3, 4 & 5. Keyword resolution (only when no explicit ID/code was supplied).
     if (!account && line.accountKeyword) {
       const keyword = line.accountKeyword.trim();
       const cleanKeyword = keyword.replace(/_/g, ' ').replace(/-/g, ' ');
 
+      // 3. Reserved system Cash account (deterministic getter).
       if (cleanKeyword.toLowerCase() === 'cash') {
         account = await AccountingService.ensureCashInHandAccount(tx);
       }
 
-      // Try exact or case-insensitive contains match on accountName or glCode
+      const typeFilter = line.accountType
+        ? { name: { equals: line.accountType, mode: 'insensitive' } }
+        : undefined;
+
+      // 4. EXACT match on account name / detailType / GL code.
       if (!account) {
         account = await tx.account.findFirst({
           where: {
             OR: [
               { accountName: { equals: cleanKeyword, mode: 'insensitive' } },
-              { accountName: { contains: cleanKeyword, mode: 'insensitive' } },
               { accountName: { equals: keyword, mode: 'insensitive' } },
-              { accountName: { contains: keyword, mode: 'insensitive' } },
-              { glCode: { equals: keyword } },
               { detailType: { equals: cleanKeyword, mode: 'insensitive' } },
-              { detailType: { equals: keyword, mode: 'insensitive' } }
+              { detailType: { equals: keyword, mode: 'insensitive' } },
+              { glCode: { equals: keyword } }
             ],
-            accountType: line.accountType ? { name: { equals: line.accountType, mode: 'insensitive' } } : undefined,
+            accountType: typeFilter,
             isLocked: false,
             children: { none: {} },
             accountLevel: { in: ['GL', 'SUBSIDIARY'] }
@@ -280,16 +298,13 @@ export class AccountingService {
         });
       }
 
-      // If still not found and a general keyword like 'Cash' or 'Bank' or 'Donation' was used
+      // 5. LAST-RESORT contains fallback (documented tech debt — see method
+      // docblock). Only reached when no exact match exists.
       if (!account) {
         account = await tx.account.findFirst({
           where: {
-            OR: [
-              { accountName: { contains: cleanKeyword.split(' ')[0], mode: 'insensitive' } },
-              { accountName: { contains: keyword.split(' ')[0], mode: 'insensitive' } },
-              { description: { contains: cleanKeyword, mode: 'insensitive' } }
-            ],
-            accountType: line.accountType ? { name: { equals: line.accountType, mode: 'insensitive' } } : undefined,
+            accountName: { contains: cleanKeyword, mode: 'insensitive' },
+            accountType: typeFilter,
             isLocked: false,
             children: { none: {} },
             accountLevel: { in: ['GL', 'SUBSIDIARY'] }
@@ -298,96 +313,11 @@ export class AccountingService {
           orderBy: { glCode: 'asc' }
         });
       }
-
-      // Special fallback for REVENUE when looking for generic Donation/Income
-      if (!account && line.accountType === 'REVENUE') {
-        // Try to find a General Donation account first
-        account = await tx.account.findFirst({
-          where: {
-            accountName: { contains: 'General Donation', mode: 'insensitive' },
-            accountType: { name: { equals: 'REVENUE', mode: 'insensitive' } },
-            isLocked: false,
-            children: { none: {} },
-            accountLevel: { in: ['GL', 'SUBSIDIARY'] }
-          },
-          include: { accountType: true },
-          orderBy: { glCode: 'asc' }
-        });
-
-        if (!account) {
-          account = await tx.account.findFirst({
-            where: {
-              OR: [
-                { accountName: { contains: 'Donation', mode: 'insensitive' } },
-                { accountName: { contains: 'Income', mode: 'insensitive' } }
-              ],
-              accountType: { name: { equals: 'REVENUE', mode: 'insensitive' } },
-              isLocked: false,
-              children: { none: {} },
-              accountLevel: { in: ['GL', 'SUBSIDIARY'] }
-            },
-            include: { accountType: true },
-            orderBy: { glCode: 'asc' }
-          });
-        }
-      }
-
-      // Special fallback for EXPENSE when looking for generic Expense/Welfare/Aid
-      if (!account && line.accountType === 'EXPENSE') {
-        account = await tx.account.findFirst({
-          where: {
-            OR: [
-              { accountName: { contains: 'Expense', mode: 'insensitive' } },
-              { accountName: { contains: 'Welfare', mode: 'insensitive' } },
-              { accountName: { contains: 'Aid', mode: 'insensitive' } }
-            ],
-            accountType: { name: { equals: 'EXPENSE', mode: 'insensitive' } },
-            isLocked: false,
-            children: { none: {} },
-            accountLevel: { in: ['GL', 'SUBSIDIARY'] }
-          },
-          include: { accountType: true },
-          orderBy: { glCode: 'asc' }
-        });
-      }
-
-      // Final fallback: any unlocked account matching keyword without level restriction
-      if (!account) {
-        account = await tx.account.findFirst({
-          where: {
-            OR: [
-              { accountName: { equals: cleanKeyword, mode: 'insensitive' } },
-              { accountName: { contains: cleanKeyword, mode: 'insensitive' } },
-              { accountName: { equals: keyword, mode: 'insensitive' } },
-              { accountName: { contains: keyword, mode: 'insensitive' } }
-            ],
-            accountType: line.accountType ? { name: { equals: line.accountType, mode: 'insensitive' } } : undefined,
-            isLocked: false,
-            children: { none: {} }
-          },
-          include: { accountType: true },
-          orderBy: { glCode: 'asc' }
-        });
-      }
-    }
-
-    // Type fallback if provided
-    if (!account && line.accountType) {
-      account = await tx.account.findFirst({
-        where: {
-          accountType: { name: { equals: line.accountType, mode: 'insensitive' } },
-          isLocked: false,
-          children: { none: {} },
-          accountLevel: { in: ['GL', 'SUBSIDIARY'] }
-        },
-        include: { accountType: true },
-        orderBy: { glCode: 'asc' }
-      });
     }
 
     if (!account) {
       const identifier = line.accountId || line.accountCode || line.accountKeyword || line.accountType || 'Unknown';
-      throw new Error(`Accounting Engine Error: Account not found in Chart of Accounts for identifier '${identifier}'. Please ensure an active GL account exists.`);
+      throw new Error(`Accounting Engine Error: Account not found in Chart of Accounts for identifier '${identifier}'. Pass an explicit Account ID or GL Code, or link the source revenue/expense head to a GL account.`);
     }
 
     if (account.isLocked) {
