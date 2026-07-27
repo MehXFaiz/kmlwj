@@ -466,9 +466,14 @@ model Customer {
   address   String?
   company   String?
   isActive  Boolean   @default(true)
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  deletedBy String?   @db.Uuid
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   invoices  Invoice[]
+
+  @@index([isDeleted])
 }
 
 model Invoice {
@@ -491,8 +496,13 @@ model Invoice {
   items         InvoiceItem[]
   createdById   String?       @db.Uuid
   createdBy     User?         @relation("InvoiceCreatedBy", fields: [createdById], references: [id])
+  isDeleted     Boolean       @default(false)
+  deletedAt     DateTime?
+  deletedBy     String?       @db.Uuid
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+
+  @@index([isDeleted])
 }
 
 model InvoiceItem {
@@ -529,8 +539,13 @@ model RevenueCollection {
   createdBy       User?          @relation("RevenueCollectionCreatedBy", fields: [createdById], references: [id])
   journalEntryId  String?        @unique @db.Uuid
   journalEntry    JournalEntry?  @relation("RevenueCollectionJournalEntry", fields: [journalEntryId], references: [id])
+  isDeleted       Boolean        @default(false)
+  deletedAt       DateTime?
+  deletedBy       String?        @db.Uuid
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+
+  @@index([isDeleted])
 }
 
 model Member {
@@ -554,11 +569,16 @@ model Member {
   cnicFrontUrl    String?        @db.Text
   cnicBackUrl     String?        @db.Text
   isActive        Boolean        @default(true)
+  isDeleted       Boolean        @default(false)
+  deletedAt       DateTime?
+  deletedBy       String?        @db.Uuid
   zakatCards      ZakatCard[]
   familyLinksFrom FamilyRelationship[] @relation("MemberFamilyLinks")
   familyLinksTo   FamilyRelationship[] @relation("RelatedMemberFamilyLinks")
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+
+  @@index([isDeleted])
 }
 
 enum FamilyRelationType {
@@ -596,12 +616,16 @@ model FamilyRelationship {
   relatedMember    Member             @relation("RelatedMemberFamilyLinks", fields: [relatedMemberId], references: [id], onDelete: Cascade)
   relationshipType FamilyRelationType
   customLabel      String?
+  isDeleted        Boolean            @default(false)
+  deletedAt        DateTime?
+  deletedBy        String?            @db.Uuid
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 
   @@unique([memberId, relatedMemberId])
   @@index([memberId])
   @@index([relatedMemberId])
+  @@index([isDeleted])
 }
 
 model ZakatCard {
@@ -619,12 +643,16 @@ model ZakatCard {
   journalEntry    JournalEntry?  @relation("ZakatCardJournalEntry", fields: [journalEntryId], references: [id])
   createdById     String?        @db.Uuid
   createdBy       User?          @relation("ZakatCardCreatedBy", fields: [createdById], references: [id])
+  isDeleted       Boolean        @default(false)
+  deletedAt       DateTime?
+  deletedBy       String?        @db.Uuid
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
   @@index([memberId])
   @@index([beneficiaryId])
   @@index([cardNumber])
+  @@index([isDeleted])
 }
 
 model Donor {
@@ -638,9 +666,14 @@ model Donor {
   address         String?
   city            String?
   isActive        Boolean  @default(true)
+  isDeleted       Boolean  @default(false)
+  deletedAt       DateTime?
+  deletedBy       String?  @db.Uuid
   donations       DonationReceived[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([isDeleted])
 }
 
 model DonationReceived {
@@ -666,12 +699,16 @@ model DonationReceived {
   status            TransactionStatus @default(POSTED)
   createdById       String            @db.Uuid
   createdBy         User              @relation("DonationReceivedCreatedBy", fields: [createdById], references: [id])
+  isDeleted         Boolean           @default(false)
+  deletedAt         DateTime?
+  deletedBy         String?           @db.Uuid
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
   @@index([receiptDate])
   @@index([donorId])
   @@index([paymentMethod])
+  @@index([isDeleted])
 }
 
 model Notification {
