@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "dev:api": "tsx watch scripts/dev-server.ts",
+    "start:api": "tsx scripts/dev-server.ts",
     "build": "node scripts/compile-api-shared.mjs && prisma generate && vite build",
     "build:api": "node scripts/compile-api-shared.mjs",
     "postinstall": "prisma generate",

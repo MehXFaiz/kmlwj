@@ -392,7 +392,7 @@ async function main() {
     { glCode: '1010101', accountName: 'National Bank of Pakistan', parentCode: '1010100', accountTypeName: 'ASSET',   detailType: 'Cash', description: 'National Bank of Pakistan — main current account' },
     { glCode: '1010102', accountName: 'NBP Zakat Bank',            parentCode: '1010100', accountTypeName: 'ASSET',   detailType: 'Cash', description: 'NBP Zakat Bank — dedicated zakat collection account' },
     // Under Hall Booking (3010100)
-    { glCode: '3010101', accountName: 'Bagh-e-Hajiani Garden', parentCode: '3010100', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Bagh-e-Hajiani Garden booking income — rate: Rs 43,000' },
+    { glCode: '3010101', accountName: 'Bagh-e-Hajiani Kareema', parentCode: '3010100', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Bagh-e-Hajiani Kareema booking income — rate: Rs 46,000' },
     { glCode: '3010102', accountName: 'Sadaya Hall',           parentCode: '3010100', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Sadaya Hall booking income — rate: Rs 28,000' },
     { glCode: '3010103', accountName: 'Zikarya Hall',          parentCode: '3010100', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Zikarya Hall booking income — rate: Rs 28,000' },
     { glCode: '3010104', accountName: 'Annexy Hall',           parentCode: '3010100', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Annexy Hall booking income — rate: Rs 33,000' },
@@ -475,7 +475,7 @@ async function main() {
     {
       category: 'Hall Bookings',
       heads: [
-        { name: 'Bagh-e-Hajiani Garden', glAccountName: 'Bagh-e-Hajiani Garden' },
+        { name: 'Bagh-e-Hajiani Kareema', glAccountName: 'Bagh-e-Hajiani Kareema' },
         { name: 'Sadaya Hall', glAccountName: 'Sadaya Hall' },
         { name: 'Zikarya Hall', glAccountName: 'Zikarya Hall' },
         { name: 'Annexy Hall', glAccountName: 'Annexy Hall' }

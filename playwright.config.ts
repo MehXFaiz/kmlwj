@@ -25,8 +25,10 @@ export default defineConfig({
   reporter: 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    /* Base URL to use in actions like `await page.goto('')`. */
-    // baseURL: 'http://localhost:3000',
+    /* Base URL to use in actions like `await page.goto('')`. The e2e specs use
+     * absolute URLs, but this keeps the config aligned with the frontend origin
+     * and lets future specs use relative paths. */
+    baseURL: process.env.BASE_URL || 'http://localhost:5173',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -70,10 +72,29 @@ export default defineConfig({
     // },
   ],
 
-  /* Run your local dev server before starting the tests */
-  // webServer: {
-  //   command: 'npm run start',
-  //   url: 'http://localhost:3000',
-  //   reuseExistingServer: !process.env.CI,
-  // },
+  /* Start the backend (Express API on :4000) and the frontend (Vite on :5173)
+   * before running the tests, and wait until each is reachable. The Vite dev
+   * server proxies /api → http://localhost:4000 (see vite.config.ts), so the
+   * frontend and backend talk to each other exactly as they do in local dev.
+   * Playwright tears both servers down when the run finishes. */
+  webServer: [
+    {
+      command: 'npm run start:api',
+      // /api/v1/health verifies the DB connection too, so tests only start once
+      // Express AND PostgreSQL are ready.
+      url: 'http://localhost:4000/api/v1/health',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+    {
+      command: 'npm run dev',
+      url: 'http://localhost:5173',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+  ],
 });
