@@ -1,11 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { z } from 'zod';
 import { makeHandler } from '../_utils/handler.js';
+import { forgotPasswordSchema } from '../_schemas/auth.schema.js';
 import * as authService from '../_services/auth.service.js';
-
-const forgotPasswordSchema = z.object({
-  email: z.string().email('Invalid email address'),
-});
 
 export default makeHandler(async (req: VercelRequest, res: VercelResponse) => {
   if (req.method !== 'POST') {

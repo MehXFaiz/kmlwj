@@ -9,6 +9,7 @@ var tree_default = makeHandler(async (req, res) => {
   if (req.method === "GET") {
     if (!await verifyPermission(req, res, PERMS.VIEW_REPORTS)) return;
     const dbAccounts = await prisma.account.findMany({
+      where: { isDeleted: false },
       include: {
         accountType: true
       },

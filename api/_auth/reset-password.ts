@@ -1,16 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { z } from 'zod';
 import { makeHandler } from '../_utils/handler.js';
+import { resetPasswordSchema } from '../_schemas/auth.schema.js';
 import * as authService from '../_services/auth.service.js';
-
-const resetPasswordSchema = z.object({
-  token: z.string().min(1, 'Reset token is required'),
-  newPassword: z.string()
-    .min(8, 'New password must be at least 8 characters long')
-    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .regex(/[0-9]/, 'Password must contain at least one digit'),
-});
 
 export default makeHandler(async (req: VercelRequest, res: VercelResponse) => {
   if (req.method !== 'POST') {

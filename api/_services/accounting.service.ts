@@ -1720,10 +1720,10 @@ export class AccountingService {
         accountIds: accounts.map(a => a.id)
       });
       const total = accounts.reduce(
-        (sum, acc) => sum + AccountingService.naturalBalance('ASSET', acc.initialBalance, aggregates.get(acc.id)),
-        0
+        (sum, acc) => sum.plus(AccountingService.naturalBalance('ASSET', acc.initialBalance, aggregates.get(acc.id))),
+        new Prisma.Decimal(0)
       );
-      return Math.round(total * 100) / 100;
+      return total.toNumber();
     };
 
     const computeCashBalance = (upto?: Date) => computeBalance(cashBankAccounts, upto);
@@ -1748,43 +1748,45 @@ export class AccountingService {
       orderBy: { postingDate: 'asc' },
     });
 
-    const inflowsMap: Record<string, number> = {};
-    const outflowsMap: Record<string, number> = {};
+    const inflowsMap: Record<string, Prisma.Decimal> = {};
+    const outflowsMap: Record<string, Prisma.Decimal> = {};
     const inflowCategoryByAccount: Record<string, CashFlowCategory> = {};
     const outflowCategoryByAccount: Record<string, CashFlowCategory> = {};
 
-    const cashInflowsMap: Record<string, number> = {};
-    const cashOutflowsMap: Record<string, number> = {};
-    const bankInflowsMap: Record<string, number> = {};
-    const bankOutflowsMap: Record<string, number> = {};
+    const cashInflowsMap: Record<string, Prisma.Decimal> = {};
+    const cashOutflowsMap: Record<string, Prisma.Decimal> = {};
+    const bankInflowsMap: Record<string, Prisma.Decimal> = {};
+    const bankOutflowsMap: Record<string, Prisma.Decimal> = {};
 
     const processMovements = (
       movementLines: typeof postedJournals[0]['lines'],
       nonCashLines: typeof postedJournals[0]['lines'],
-      netChange: number,
-      globalInflows: Record<string, number>,
-      globalOutflows: Record<string, number>
+      netChangeDec: Prisma.Decimal,
+      globalInflows: Record<string, Prisma.Decimal>,
+      globalOutflows: Record<string, Prisma.Decimal>
     ) => {
-      if (netChange > 0) {
-        const totalNonCashCredit = nonCashLines.reduce((sum, l) => sum + Number(l.credit || 0), 0);
+      if (netChangeDec.gt(0)) {
+        const totalNonCashCredit = nonCashLines.reduce((sum, l) => sum.plus(new Prisma.Decimal(l.credit)), new Prisma.Decimal(0));
         nonCashLines.forEach((l) => {
-          if (l.credit > 0) {
-            const ratio = totalNonCashCredit > 0 ? Number(l.credit) / totalNonCashCredit : 1;
-            const amount = Math.round(netChange * ratio * 100) / 100;
+          const lCredit = new Prisma.Decimal(l.credit);
+          if (lCredit.gt(0)) {
+            const ratio = totalNonCashCredit.gt(0) ? lCredit.div(totalNonCashCredit) : new Prisma.Decimal(1);
+            const amount = netChangeDec.mul(ratio);
             const name = l.account.accountName;
-            globalInflows[name] = (globalInflows[name] || 0) + amount;
+            globalInflows[name] = (globalInflows[name] || new Prisma.Decimal(0)).plus(amount);
             inflowCategoryByAccount[name] = classifyCashFlowCategory(name, l.account.accountType?.name);
           }
         });
-      } else if (netChange < 0) {
-        const absChange = Math.abs(netChange);
-        const totalNonCashDebit = nonCashLines.reduce((sum, l) => sum + Number(l.debit || 0), 0);
+      } else if (netChangeDec.lt(0)) {
+        const absChange = netChangeDec.abs();
+        const totalNonCashDebit = nonCashLines.reduce((sum, l) => sum.plus(new Prisma.Decimal(l.debit)), new Prisma.Decimal(0));
         nonCashLines.forEach((l) => {
-          if (l.debit > 0) {
-            const ratio = totalNonCashDebit > 0 ? Number(l.debit) / totalNonCashDebit : 1;
-            const amount = Math.round(absChange * ratio * 100) / 100;
+          const lDebit = new Prisma.Decimal(l.debit);
+          if (lDebit.gt(0)) {
+            const ratio = totalNonCashDebit.gt(0) ? lDebit.div(totalNonCashDebit) : new Prisma.Decimal(1);
+            const amount = absChange.mul(ratio);
             const name = l.account.accountName;
-            globalOutflows[name] = (globalOutflows[name] || 0) + amount;
+            globalOutflows[name] = (globalOutflows[name] || new Prisma.Decimal(0)).plus(amount);
             outflowCategoryByAccount[name] = classifyCashFlowCategory(name, l.account.accountType?.name);
           }
         });
@@ -1797,75 +1799,88 @@ export class AccountingService {
 
       if (allCashBankLines.length === 0 || nonCashBankLines.length === 0) return;
 
-      const netCashChange = allCashBankLines.reduce((sum, l) => sum + Number(l.debit || 0) - Number(l.credit || 0), 0);
+      const netCashChange = allCashBankLines.reduce(
+        (sum, l) => sum.plus(new Prisma.Decimal(l.debit)).minus(new Prisma.Decimal(l.credit)),
+        new Prisma.Decimal(0)
+      );
       processMovements(allCashBankLines, nonCashBankLines, netCashChange, inflowsMap, outflowsMap);
 
       const cashLines = je.lines.filter(l => cashCodes.has(l.account.glCode));
       if (cashLines.length > 0) {
-        const netCash = cashLines.reduce((sum, l) => sum + Number(l.debit || 0) - Number(l.credit || 0), 0);
+        const netCash = cashLines.reduce(
+          (sum, l) => sum.plus(new Prisma.Decimal(l.debit)).minus(new Prisma.Decimal(l.credit)),
+          new Prisma.Decimal(0)
+        );
         processMovements(cashLines, nonCashBankLines, netCash, cashInflowsMap, cashOutflowsMap);
       }
 
       const bankLines = je.lines.filter(l => bankCodes.has(l.account.glCode));
       if (bankLines.length > 0) {
-        const netBank = bankLines.reduce((sum, l) => sum + Number(l.debit || 0) - Number(l.credit || 0), 0);
+        const netBank = bankLines.reduce(
+          (sum, l) => sum.plus(new Prisma.Decimal(l.debit)).minus(new Prisma.Decimal(l.credit)),
+          new Prisma.Decimal(0)
+        );
         processMovements(bankLines, nonCashBankLines, netBank, bankInflowsMap, bankOutflowsMap);
       }
     });
 
-    const inflows = Object.entries(inflowsMap).map(([name, amount]) => ({
+    const inflows = Object.entries(inflowsMap).map(([name, dec]) => ({
       accountName: name,
-      amount,
+      amount: dec.toNumber(),
       category: inflowCategoryByAccount[name] || 'Operating',
     }));
 
-    const outflows = Object.entries(outflowsMap).map(([name, amount]) => ({
+    const outflows = Object.entries(outflowsMap).map(([name, dec]) => ({
       accountName: name,
-      amount,
+      amount: dec.toNumber(),
       category: outflowCategoryByAccount[name] || 'Operating',
     }));
 
-    const sumByCategory = (rows: { amount: number; category: CashFlowCategory }[], cat: CashFlowCategory) =>
-      Math.round(rows.filter(r => r.category === cat).reduce((sum, r) => sum + r.amount, 0) * 100) / 100;
+    const sumByCategory = (rows: { amount: number; category: CashFlowCategory }[], cat: CashFlowCategory): Prisma.Decimal =>
+      rows.filter(r => r.category === cat).reduce((sum, r) => sum.plus(new Prisma.Decimal(r.amount)), new Prisma.Decimal(0));
 
     const categories: CashFlowCategory[] = ['Operating', 'Investing', 'Financing'];
-    const categorySummary = Object.fromEntries(categories.map(cat => [
-      cat,
-      {
-        inflow: sumByCategory(inflows, cat),
-        outflow: sumByCategory(outflows, cat),
-        net: Math.round((sumByCategory(inflows, cat) - sumByCategory(outflows, cat)) * 100) / 100,
-      },
-    ]));
+    const categorySummary = Object.fromEntries(categories.map(cat => {
+      const inf = sumByCategory(inflows, cat);
+      const outf = sumByCategory(outflows, cat);
+      return [
+        cat,
+        {
+          inflow: inf.toNumber(),
+          outflow: outf.toNumber(),
+          net: inf.minus(outf).toNumber(),
+        },
+      ];
+    }));
 
-    const totalInflow = Math.round(inflows.reduce((sum, i) => sum + i.amount, 0) * 100) / 100;
-    const totalOutflow = Math.round(outflows.reduce((sum, o) => sum + o.amount, 0) * 100) / 100;
-    const netChange = Math.round((totalInflow - totalOutflow) * 100) / 100;
+    const totalInflowDec = inflows.reduce((sum, i) => sum.plus(new Prisma.Decimal(i.amount)), new Prisma.Decimal(0));
+    const totalOutflowDec = outflows.reduce((sum, o) => sum.plus(new Prisma.Decimal(o.amount)), new Prisma.Decimal(0));
+    const netChangeDec = totalInflowDec.minus(totalOutflowDec);
 
     const endingCash = endDate
       ? await computeCashBalance(new Date(dateFilter.lte))
       : await computeCashBalance();
     const beginningCash = startDate
       ? await computeCashBalance(new Date(new Date(startDate).getTime() - 1))
-      : Math.round((endingCash - netChange) * 100) / 100;
+      : new Prisma.Decimal(endingCash).minus(netChangeDec).toNumber();
 
-    const cashTotalReceipts = Math.round(Object.values(cashInflowsMap).reduce((s, v) => s + v, 0) * 100) / 100;
-    const cashTotalPayments = Math.round(Object.values(cashOutflowsMap).reduce((s, v) => s + v, 0) * 100) / 100;
+    const cashTotalReceiptsDec = Object.values(cashInflowsMap).reduce((s, v) => s.plus(v), new Prisma.Decimal(0));
+    const cashTotalPaymentsDec = Object.values(cashOutflowsMap).reduce((s, v) => s.plus(v), new Prisma.Decimal(0));
     const closingCash = endDate
       ? await computeCashOnlyBalance(new Date(dateFilter.lte))
       : await computeCashOnlyBalance();
     const openingCash = startDate
       ? await computeCashOnlyBalance(new Date(new Date(startDate).getTime() - 1))
-      : Math.round((closingCash - (cashTotalReceipts - cashTotalPayments)) * 100) / 100;
+      : new Prisma.Decimal(closingCash).minus(cashTotalReceiptsDec.minus(cashTotalPaymentsDec)).toNumber();
 
-    const bankTotalReceipts = Math.round(Object.values(bankInflowsMap).reduce((s, v) => s + v, 0) * 100) / 100;
-    const bankTotalPayments = Math.round(Object.values(bankOutflowsMap).reduce((s, v) => s + v, 0) * 100) / 100;
+    const bankTotalReceiptsDec = Object.values(bankInflowsMap).reduce((s, v) => s.plus(v), new Prisma.Decimal(0));
+    const bankTotalPaymentsDec = Object.values(bankOutflowsMap).reduce((s, v) => s.plus(v), new Prisma.Decimal(0));
     const closingBank = endDate
       ? await computeBankOnlyBalance(new Date(dateFilter.lte))
       : await computeBankOnlyBalance();
     const openingBank = startDate
       ? await computeBankOnlyBalance(new Date(new Date(startDate).getTime() - 1))
-      : Math.round((closingBank - (bankTotalReceipts - bankTotalPayments)) * 100) / 100;
+      : new Prisma.Decimal(closingBank).minus(bankTotalReceiptsDec.minus(bankTotalPaymentsDec)).toNumber();
 
     const periodLabel = startDate && endDate
       ? `${startDate} to ${endDate}`
@@ -1880,26 +1895,26 @@ export class AccountingService {
       outflows,
       categorySummary,
       cashSection: {
-        receipts: Object.entries(cashInflowsMap).map(([accountName, amount]) => ({ accountName, amount })),
-        payments: Object.entries(cashOutflowsMap).map(([accountName, amount]) => ({ accountName, amount })),
+        receipts: Object.entries(cashInflowsMap).map(([accountName, dec]) => ({ accountName, amount: dec.toNumber() })),
+        payments: Object.entries(cashOutflowsMap).map(([accountName, dec]) => ({ accountName, amount: dec.toNumber() })),
         openingBalance: openingCash,
-        totalReceipts: cashTotalReceipts,
-        totalPayments: cashTotalPayments,
+        totalReceipts: cashTotalReceiptsDec.toNumber(),
+        totalPayments: cashTotalPaymentsDec.toNumber(),
         closingBalance: closingCash,
       },
       bankSection: {
-        receipts: Object.entries(bankInflowsMap).map(([accountName, amount]) => ({ accountName, amount })),
-        payments: Object.entries(bankOutflowsMap).map(([accountName, amount]) => ({ accountName, amount })),
+        receipts: Object.entries(bankInflowsMap).map(([accountName, dec]) => ({ accountName, amount: dec.toNumber() })),
+        payments: Object.entries(bankOutflowsMap).map(([accountName, dec]) => ({ accountName, amount: dec.toNumber() })),
         openingBalance: openingBank,
-        totalReceipts: bankTotalReceipts,
-        totalPayments: bankTotalPayments,
+        totalReceipts: bankTotalReceiptsDec.toNumber(),
+        totalPayments: bankTotalPaymentsDec.toNumber(),
         closingBalance: closingBank,
       },
       summary: {
         beginningCash,
-        totalInflow,
-        totalOutflow,
-        netChange,
+        totalInflow: totalInflowDec.toNumber(),
+        totalOutflow: totalOutflowDec.toNumber(),
+        netChange: netChangeDec.toNumber(),
         endingCash,
         periodLabel
       }

@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
 import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
@@ -215,9 +216,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             debit: l.debit > 0 ? numAmount : l.debit,
             credit: l.credit > 0 ? numAmount : l.credit,
           }));
-          const plannedDebit = plannedLines.reduce((sum: number, l: any) => sum + l.debit, 0);
-          const plannedCredit = plannedLines.reduce((sum: number, l: any) => sum + l.credit, 0);
-          if (Math.abs(plannedDebit - plannedCredit) > 0.001) {
+          const plannedDebit = plannedLines.reduce((sum: Prisma.Decimal, l: any) => sum.plus(new Prisma.Decimal(l.debit)), new Prisma.Decimal(0));
+          const plannedCredit = plannedLines.reduce((sum: Prisma.Decimal, l: any) => sum.plus(new Prisma.Decimal(l.credit)), new Prisma.Decimal(0));
+          if (!plannedDebit.equals(plannedCredit)) {
             throw new Error(`Accounting Engine Error: Transaction must follow Double Entry Accounting. Total Debit (${plannedDebit.toFixed(2)}) does not equal Total Credit (${plannedCredit.toFixed(2)}).`);
           }
 
@@ -240,24 +241,24 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             throw new Error('Accounting Engine Error: Transaction must contain at least two accounting lines for double-entry posting.');
           }
 
-          let totalDebit = 0;
-          let totalCredit = 0;
+          let totalDebit = new Prisma.Decimal(0);
+          let totalCredit = new Prisma.Decimal(0);
           for (const l of lines) {
-            const debitVal = Number(l.debit) || 0;
-            const creditVal = Number(l.credit) || 0;
-            if (debitVal < 0 || creditVal < 0) {
+            const debitVal = new Prisma.Decimal(l.debit ?? 0);
+            const creditVal = new Prisma.Decimal(l.credit ?? 0);
+            if (debitVal.isNegative() || creditVal.isNegative()) {
               throw new Error('Accounting Engine Error: Debit and Credit amounts cannot be negative.');
             }
             if (!l.accountId) {
               throw new Error('Accounting Engine Error: Every line must reference an account.');
             }
-            totalDebit += debitVal;
-            totalCredit += creditVal;
+            totalDebit = totalDebit.plus(debitVal);
+            totalCredit = totalCredit.plus(creditVal);
           }
-          if (Math.abs(totalDebit - totalCredit) > 0.001) {
+          if (!totalDebit.equals(totalCredit)) {
             throw new Error(`Accounting Engine Error: Transaction must follow Double Entry Accounting. Total Debit (${totalDebit.toFixed(2)}) does not equal Total Credit (${totalCredit.toFixed(2)}).`);
           }
-          if (totalDebit <= 0) {
+          if (totalDebit.lte(0)) {
             throw new Error('Accounting Engine Error: Transaction amount must be greater than zero.');
           }
 

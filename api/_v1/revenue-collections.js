@@ -47,15 +47,20 @@ async function getIncomeAccountForCategory(category, tx) {
   }
   return acc;
 }
+import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 var revenue_collections_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
   const { method } = req;
-  const action = req.query.action;
+  const id = req.query.id;
+  const action = req.query.action || req.body?.action;
   const categoryFilter = req.query.category;
   if (method === "GET") {
     if (!await verifyPermission(req, res, PERMS.MANAGE_REVENUE_COLLECTIONS)) return;
-    const whereClause = categoryFilter ? { category: categoryFilter } : {};
+    const whereClause = {
+      ...categoryFilter ? { category: categoryFilter } : {},
+      ...getDeletedFilter(req.query)
+    };
     const collections = await prisma.revenueCollection.findMany({
       where: whereClause,
       include: {
@@ -66,12 +71,40 @@ var revenue_collections_default = makeHandler(async (req, res) => {
     });
     return res.status(200).json({ status: 200, data: collections });
   }
+  if (method === "PUT" || method === "POST" || method === "PATCH") {
+    if (action === "restore") {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can restore records", status: 403 } });
+      }
+      const targetId = id || req.body?.id;
+      if (!targetId) {
+        return res.status(400).json({ error: { message: "Collection ID is required", status: 400 } });
+      }
+      const existing = await prisma.revenueCollection.findUnique({ where: { id: targetId } });
+      if (!existing) {
+        return res.status(404).json({ error: { message: "Record not found", status: 404 } });
+      }
+      const restored = await prisma.revenueCollection.update({
+        where: { id: targetId },
+        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      });
+      if (existing.journalEntryId) {
+        await prisma.journalEntry.update({
+          where: { id: existing.journalEntryId },
+          data: { isDeleted: false, deletedAt: null, deletedBy: null }
+        }).catch(() => {
+        });
+      }
+      await logAudit(req.user.id, "Restore Revenue Collection", "REVENUE", existing, restored, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      return res.status(200).json({ status: 200, message: "Revenue collection restored successfully", data: restored });
+    }
+  }
   if (!await verifyPermission(req, res, PERMS.RECORD_INCOME)) return;
   if (method === "POST") {
     if (action === "approve") {
-      const { id } = req.body;
-      if (!id) return res.status(400).json({ error: { message: "Collection ID is required", status: 400 } });
-      const item = await prisma.revenueCollection.findUnique({ where: { id }, include: { bankAccount: true } });
+      const { id: id2 } = req.body;
+      if (!id2) return res.status(400).json({ error: { message: "Collection ID is required", status: 400 } });
+      const item = await prisma.revenueCollection.findUnique({ where: { id: id2 }, include: { bankAccount: true } });
       if (!item) return res.status(404).json({ error: { message: "Record not found", status: 404 } });
       if (item.status === "POSTED") return res.status(400).json({ error: { message: "Record is already posted to ledger", status: 400 } });
       let debitAccountId2 = null;
@@ -101,7 +134,7 @@ var revenue_collections_default = makeHandler(async (req, res) => {
           userAgent: req.headers["user-agent"]
         });
         const approvedItem = await tx.revenueCollection.update({
-          where: { id },
+          where: { id: id2 },
           data: {
             status: "POSTED",
             journalEntryId: postingResult.journalEntry.id
@@ -120,9 +153,9 @@ var revenue_collections_default = makeHandler(async (req, res) => {
       return res.status(200).json({ status: 200, data: result2.approvedItem, message: `${item.category} posted to ledger successfully` });
     }
     if (action === "revert") {
-      const { id } = req.body;
-      if (!id) return res.status(400).json({ error: { message: "Collection ID is required", status: 400 } });
-      const item = await prisma.revenueCollection.findUnique({ where: { id } });
+      const { id: id2 } = req.body;
+      if (!id2) return res.status(400).json({ error: { message: "Collection ID is required", status: 400 } });
+      const item = await prisma.revenueCollection.findUnique({ where: { id: id2 } });
       if (!item) return res.status(404).json({ error: { message: "Record not found", status: 404 } });
       if (item.status !== "POSTED") return res.status(400).json({ error: { message: "Record is not posted to ledger", status: 400 } });
       const result2 = await prisma.$transaction(async (tx) => {
@@ -133,7 +166,7 @@ var revenue_collections_default = makeHandler(async (req, res) => {
           }
         }
         const revertedItem = await tx.revenueCollection.update({
-          where: { id },
+          where: { id: id2 },
           data: {
             status: "Confirmed",
             journalEntryId: null
@@ -290,11 +323,11 @@ var revenue_collections_default = makeHandler(async (req, res) => {
     }
   }
   if (method === "PUT") {
-    const id = req.query.id;
-    if (!id) {
+    const id2 = req.query.id;
+    if (!id2) {
       return res.status(400).json({ error: { message: "Record ID is required", status: 400 } });
     }
-    const existingItem = await prisma.revenueCollection.findUnique({ where: { id } });
+    const existingItem = await prisma.revenueCollection.findUnique({ where: { id: id2 } });
     if (!existingItem) {
       return res.status(404).json({ error: { message: "Record not found", status: 404 } });
     }
@@ -348,7 +381,7 @@ var revenue_collections_default = makeHandler(async (req, res) => {
         userAgent: req.headers["user-agent"]
       });
       return await tx.revenueCollection.update({
-        where: { id },
+        where: { id: id2 },
         data: {
           category,
           title,
@@ -381,6 +414,53 @@ var revenue_collections_default = makeHandler(async (req, res) => {
       actionType: "UPDATE"
     });
     return res.status(200).json({ status: 200, data: updatedItem });
+  }
+  if (method === "DELETE") {
+    const isPermanent = req.query.permanent === "true" || req.query.action === "permanent_delete" || req.body?.permanent === true;
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can permanently delete records", status: 403 } });
+    }
+    const targetId = id || req.body?.id;
+    if (!targetId) {
+      return res.status(400).json({ error: { message: "Collection ID is required", status: 400 } });
+    }
+    const existing = await prisma.revenueCollection.findUnique({ where: { id: targetId } });
+    if (!existing) {
+      return res.status(404).json({ error: { message: "Record not found", status: 404 } });
+    }
+    await prisma.$transaction(async (tx) => {
+      if (existing.journalEntryId) {
+        try {
+          if (isPermanent) {
+            await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user.id, "Revenue Collection Permanently Deleted");
+          } else {
+            await tx.journalEntry.update({
+              where: { id: existing.journalEntryId },
+              data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
+            });
+          }
+        } catch (e) {
+        }
+      }
+      if (isPermanent) {
+        await tx.revenueCollection.delete({ where: { id: targetId } });
+      } else {
+        await tx.revenueCollection.update({
+          where: { id: targetId },
+          data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
+        });
+      }
+    });
+    await logAudit(req.user.id, isPermanent ? "Permanent Delete Revenue Collection" : "Delete Revenue Collection", "REVENUE", existing, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    await notify(req, {
+      title: "Revenue Collection Deleted",
+      message: `Revenue collection record deleted.`,
+      module: "Revenue",
+      recordId: existing.id,
+      actionType: "DELETE",
+      visibility: "ADMIN_ONLY"
+    });
+    return res.status(200).json({ status: 200, message: "Revenue collection deleted successfully" });
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
 });

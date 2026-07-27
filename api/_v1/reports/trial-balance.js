@@ -37,7 +37,7 @@ var trial_balance_default = makeHandler(async (req, res) => {
           summary: {
             totalDebit: tb.totalDebit,
             totalCredit: tb.totalCredit,
-            isBalanced: tb.difference < 1e-3,
+            isBalanced: tb.difference === 0,
             periodLabel: startDate && endDate ? `${startDate} to ${endDate}` : startDate ? `From ${startDate}` : endDate ? `Up to ${endDate}` : "All Time"
           }
         }

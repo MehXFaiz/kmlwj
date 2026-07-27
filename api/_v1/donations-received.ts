@@ -74,18 +74,49 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const limitNum = parseInt(limit) || 100;
     const skip = (pageNum - 1) * limitNum;
 
-    const [items, total] = await Promise.all([
+    const [donations, total] = await Promise.all([
       prisma.donationReceived.findMany({
         where: whereClause,
-        include: { donor: true, cashAccount: true, bankAccount: true },
+        include: {
+          donor: true,
+          cashAccount: true,
+          bankAccount: true,
+          journalEntry: true,
+          createdBy: { select: { id: true, fullName: true, email: true } }
+        },
         orderBy: { receiptDate: 'desc' },
         skip,
         take: limitNum,
       }),
-      prisma.donationReceived.count({ where: whereClause }),
+      prisma.donationReceived.count({ where: whereClause })
     ]);
 
-    return res.status(200).json({ status: 200, data: items, meta: { total, page: pageNum, limit: limitNum } });
+    const [totalAgg, cashAgg] = await Promise.all([
+      prisma.donationReceived.aggregate({
+        where: { ...whereClause, status: 'POSTED' },
+        _sum: { amount: true }
+      }),
+      prisma.donationReceived.aggregate({
+        where: { ...whereClause, status: 'POSTED', paymentMethod: 'CASH' },
+        _sum: { amount: true }
+      })
+    ]);
+
+    const totalAmount = totalAgg._sum.amount || 0;
+    const cashAmount = cashAgg._sum.amount || 0;
+    const bankAmount = totalAmount - cashAmount;
+
+    return res.status(200).json({
+      status: 200,
+      data: donations,
+      meta: { total, page: pageNum, limit: limitNum },
+      stats: {
+        totalAmount,
+        cashAmount,
+        bankAmount,
+        totalReceipts: total,
+      }
+    });
   }
 
   if (method === 'PUT' || method === 'POST' || method === 'PATCH') {
@@ -114,55 +145,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       await logAudit(req.user.id, 'Restore Donation Received', 'DONATION_RECEIVED', existing, restored, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
       return res.status(200).json({ status: 200, message: 'Donation receipt restored successfully', data: restored });
     }
-  }
-    const pageNum = parseInt(page) || 1;
-    const limitNum = parseInt(limit) || 100;
-    const skip = (pageNum - 1) * limitNum;
-
-    const [donations, total] = await Promise.all([
-      prisma.donationReceived.findMany({
-        where: whereClause,
-        include: {
-          donor: true,
-          cashAccount: true,
-          bankAccount: true,
-          journalEntry: true,
-          createdBy: { select: { id: true, fullName: true, email: true } }
-        },
-        orderBy: { receiptDate: 'desc' },
-        skip,
-        take: limitNum,
-      }),
-      prisma.donationReceived.count({ where: whereClause })
-    ]);
-
-    // Calculate stats across ALL pages for the current filter
-    const [totalAgg, cashAgg] = await Promise.all([
-      prisma.donationReceived.aggregate({
-        where: { ...whereClause, status: 'POSTED' },
-        _sum: { amount: true }
-      }),
-      prisma.donationReceived.aggregate({
-        where: { ...whereClause, status: 'POSTED', paymentMethod: 'CASH' },
-        _sum: { amount: true }
-      })
-    ]);
-
-    const totalAmount = totalAgg._sum.amount || 0;
-    const cashAmount = cashAgg._sum.amount || 0;
-    const bankAmount = totalAmount - cashAmount;
-
-    return res.status(200).json({
-      status: 200,
-      data: donations,
-      meta: { total, page: pageNum, limit: limitNum },
-      stats: {
-        totalAmount,
-        cashAmount,
-        bankAmount,
-        totalReceipts: total,
-      }
-    });
   }
 
   if (method === 'POST') {

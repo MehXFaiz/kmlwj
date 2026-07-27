@@ -1,9 +1,6 @@
-import { z } from "zod";
 import { makeHandler } from "../_utils/handler.js";
+import { forgotPasswordSchema } from "../_schemas/auth.schema.js";
 import * as authService from "../_services/auth.service.js";
-const forgotPasswordSchema = z.object({
-  email: z.string().email("Invalid email address")
-});
 var forgot_password_default = makeHandler(async (req, res) => {
   if (req.method !== "POST") {
     return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });

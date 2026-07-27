@@ -5,6 +5,7 @@ import { logAudit } from "../_utils/audit.js";
 import { notify } from "../_utils/notify.js";
 import { loadPermissions } from "../_services/permission.service.js";
 import { PERMS, SECURITY_PERMISSIONS } from "../_constants/permissions.js";
+import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 import bcrypt from "bcrypt";
 async function roleGrantsSecurityPermission(roleName) {
   const role = await prisma.role.findUnique({
@@ -20,11 +21,13 @@ var users_default = makeHandler(async (req, res) => {
   if (!authenticated || !req.user) return;
   const { method } = req;
   const id = req.query.id;
+  const action = req.query.action || req.body?.action;
   if (!await verifyPermission(req, res, PERMS.MANAGE_USERS)) return;
   const userPerms = await loadPermissions(req);
   const actorHoldsSystemSettings = userPerms.has(PERMS.SYSTEM_SETTINGS);
   if (method === "GET") {
     const dbUsers = await prisma.user.findMany({
+      where: getDeletedFilter(req.query),
       include: { role: true },
       orderBy: { createdAt: "desc" }
     });
@@ -37,6 +40,27 @@ var users_default = makeHandler(async (req, res) => {
       createdAt: u.createdAt
     }));
     return res.status(200).json({ status: 200, data: formatted });
+  }
+  if (method === "PUT" || method === "POST" || method === "PATCH") {
+    if (action === "restore") {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can restore records", status: 403 } });
+      }
+      const targetId = id || req.body?.id;
+      if (!targetId) {
+        return res.status(400).json({ error: { message: "User ID is required", status: 400 } });
+      }
+      const existing = await prisma.user.findUnique({ where: { id: targetId } });
+      if (!existing) {
+        return res.status(404).json({ error: { message: "User not found", status: 404 } });
+      }
+      const restored = await prisma.user.update({
+        where: { id: targetId },
+        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      });
+      await logAudit(req.user.id, "Restore User", "USERS", existing, restored, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      return res.status(200).json({ status: 200, message: "User restored successfully", data: restored });
+    }
   }
   if (method === "POST") {
     const { email, password, fullName, role } = req.body;
@@ -136,6 +160,10 @@ var users_default = makeHandler(async (req, res) => {
     });
   }
   if (method === "DELETE") {
+    const isPermanent = req.query.permanent === "true" || req.query.action === "permanent_delete" || req.body?.permanent === true;
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can permanently delete records", status: 403 } });
+    }
     if (!id) {
       return res.status(400).json({ error: { message: "User ID is required", status: 400 } });
     }
@@ -147,15 +175,22 @@ var users_default = makeHandler(async (req, res) => {
       return res.status(400).json({ error: { message: "Cannot delete your own user account", status: 400 } });
     }
     try {
-      await prisma.refreshToken.deleteMany({
-        where: { userId: id }
-      });
-      await prisma.user.delete({
-        where: { id }
-      });
+      if (isPermanent) {
+        await prisma.refreshToken.deleteMany({
+          where: { userId: id }
+        });
+        await prisma.user.delete({
+          where: { id }
+        });
+      } else {
+        await prisma.user.update({
+          where: { id },
+          data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id, isActive: false }
+        });
+      }
       await logAudit(
         req.user.id,
-        "Delete User",
+        isPermanent ? "Permanent Delete User" : "Delete User",
         "USERS",
         { id: existingUser.id, email: existingUser.email, fullName: existingUser.fullName },
         null,
@@ -175,7 +210,7 @@ var users_default = makeHandler(async (req, res) => {
       if (err.code === "P2003") {
         const deactivatedUser = await prisma.user.update({
           where: { id },
-          data: { isActive: false }
+          data: { isActive: false, isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
         });
         await logAudit(
           req.user.id,
@@ -186,11 +221,9 @@ var users_default = makeHandler(async (req, res) => {
           req.headers["x-forwarded-for"],
           req.headers["user-agent"]
         );
-        return res.status(400).json({
-          error: {
-            message: "User has active records (donations, bookings, ledger etc.) and cannot be fully deleted. They have been set to Inactive instead.",
-            status: 400
-          }
+        return res.status(200).json({
+          status: 200,
+          message: "User set to soft-deleted & inactive."
         });
       }
       return res.status(500).json({ error: { message: err.message || "Internal server error during delete", status: 500 } });

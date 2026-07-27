@@ -68,20 +68,21 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     return res.status(200).json({ status: 200, data: beneficiaries, meta: { total, page: pageNum, limit: limitNum } });
   }
 
-  if (method === 'PUT' || method === 'POST') {
+  if (method === 'PUT' || method === 'POST' || method === 'PATCH') {
     if (action === 'restore') {
       if (!await isSuperAdmin(req)) {
         return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can restore records', status: 403 } });
       }
-      if (!id) {
+      const targetId = id || req.body?.id;
+      if (!targetId) {
         return res.status(400).json({ error: { message: 'Beneficiary ID is required', status: 400 } });
       }
-      const existing = await prisma.beneficiary.findUnique({ where: { id } });
+      const existing = await prisma.beneficiary.findUnique({ where: { id: targetId } });
       if (!existing) {
         return res.status(404).json({ error: { message: 'Beneficiary not found', status: 404 } });
       }
       const restored = await prisma.beneficiary.update({
-        where: { id },
+        where: { id: targetId },
         data: { isDeleted: false, deletedAt: null, deletedBy: null }
       });
       await logAudit(req.user.id, 'Restore Beneficiary', 'DONATION', existing, restored, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);

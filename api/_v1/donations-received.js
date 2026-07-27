@@ -7,6 +7,7 @@ import { validateAmount } from "../_utils/amount.js";
 import { isWithinMaxLength, maxLengthError } from "../_utils/text-length.js";
 import { notify } from "../_utils/notify.js";
 import { PERMS } from "../_constants/permissions.js";
+import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 function donationTitleFragment(donationType, customType) {
   const map = {
     ZAKAT: "Zakat",
@@ -36,6 +37,7 @@ var donations_received_default = makeHandler(async (req, res) => {
   if (!authenticated || !req.user) return;
   const { method } = req;
   const id = req.query.id;
+  const action = req.query.action || req.body?.action;
   if (method === "GET") {
     if (!await verifyPermission(req, res, PERMS.MANAGE_DONATIONS)) return;
     const search = req.query.search || "";
@@ -43,7 +45,7 @@ var donations_received_default = makeHandler(async (req, res) => {
     const donationType = req.query.donationType;
     const paymentMethod = req.query.paymentMethod;
     const donorId = req.query.donorId;
-    const whereClause = {};
+    const whereClause = { ...getDeletedFilter(req.query) };
     if (status) whereClause.status = status;
     if (donationType) whereClause.donationType = donationType;
     if (paymentMethod) whereClause.paymentMethod = paymentMethod;
@@ -102,6 +104,34 @@ var donations_received_default = makeHandler(async (req, res) => {
         totalReceipts: total
       }
     });
+  }
+  if (method === "PUT" || method === "POST" || method === "PATCH") {
+    if (action === "restore") {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can restore records", status: 403 } });
+      }
+      const targetId = id || req.body?.id;
+      if (!targetId) {
+        return res.status(400).json({ error: { message: "Receipt ID is required", status: 400 } });
+      }
+      const existing = await prisma.donationReceived.findUnique({ where: { id: targetId } });
+      if (!existing) {
+        return res.status(404).json({ error: { message: "Donation receipt not found", status: 404 } });
+      }
+      const restored = await prisma.donationReceived.update({
+        where: { id: targetId },
+        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      });
+      if (existing.journalEntryId) {
+        await prisma.journalEntry.update({
+          where: { id: existing.journalEntryId },
+          data: { isDeleted: false, deletedAt: null, deletedBy: null }
+        }).catch(() => {
+        });
+      }
+      await logAudit(req.user.id, "Restore Donation Received", "DONATION_RECEIVED", existing, restored, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      return res.status(200).json({ status: 200, message: "Donation receipt restored successfully", data: restored });
+    }
   }
   if (method === "POST") {
     if (!await verifyPermission(req, res, PERMS.RECORD_INCOME)) return;
@@ -355,6 +385,10 @@ var donations_received_default = makeHandler(async (req, res) => {
     return res.status(200).json({ status: 200, data: result });
   }
   if (method === "DELETE") {
+    const isPermanent = req.query.permanent === "true" || req.query.action === "permanent_delete" || req.body?.permanent === true;
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can permanently delete records", status: 403 } });
+    }
     if (!await verifyPermission(req, res, PERMS.RECORD_INCOME)) return;
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
     if (!idsRaw) {
@@ -372,11 +406,25 @@ var donations_received_default = makeHandler(async (req, res) => {
       for (const item of existingItems) {
         if (item.journalEntryId) {
           try {
-            await AccountingService.deleteJournalEntry(tx, item.journalEntryId, req.user.id, "Donation Receipt Deleted");
+            if (isPermanent) {
+              await AccountingService.deleteJournalEntry(tx, item.journalEntryId, req.user.id, "Donation Receipt Permanently Deleted");
+            } else {
+              await tx.journalEntry.update({
+                where: { id: item.journalEntryId },
+                data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
+              });
+            }
           } catch (e) {
           }
         }
-        await tx.donationReceived.delete({ where: { id: item.id } });
+        if (isPermanent) {
+          await tx.donationReceived.delete({ where: { id: item.id } });
+        } else {
+          await tx.donationReceived.update({
+            where: { id: item.id },
+            data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
+          });
+        }
       }
     });
     for (const item of existingItems) {

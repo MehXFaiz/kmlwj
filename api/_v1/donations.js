@@ -7,6 +7,7 @@ import { validateAmount } from "../_utils/amount.js";
 import { isWithinMaxLength, maxLengthError } from "../_utils/text-length.js";
 import { notify } from "../_utils/notify.js";
 import { PERMS } from "../_constants/permissions.js";
+import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 function generateVoucherNumber() {
   const date = /* @__PURE__ */ new Date();
   const year = date.getFullYear().toString().slice(-2);
@@ -30,7 +31,8 @@ async function getExpenseAccountForDonation(donationType, tx) {
         { accountName: { contains: "Donation", mode: "insensitive" } }
       ],
       children: { none: {} },
-      isLocked: false
+      isLocked: false,
+      isDeleted: false
     },
     orderBy: { glCode: "asc" }
   });
@@ -40,7 +42,8 @@ async function getExpenseAccountForDonation(donationType, tx) {
         accountType: { name: { equals: "Expense", mode: "insensitive" } },
         NOT: { accountName: { contains: "Salary", mode: "insensitive" } },
         children: { none: {} },
-        isLocked: false
+        isLocked: false,
+        isDeleted: false
       },
       orderBy: { glCode: "asc" }
     });
@@ -49,8 +52,8 @@ async function getExpenseAccountForDonation(donationType, tx) {
     acc = await tx.account.findFirst({
       where: {
         accountType: { name: { equals: "Expense", mode: "insensitive" } },
-        children: { none: {} },
-        isLocked: false
+        isLocked: false,
+        isDeleted: false
       },
       orderBy: { glCode: "asc" }
     });
@@ -65,6 +68,7 @@ async function checkMonthlyRestriction(beneficiaryId, donationDate, excludeId) {
     where: {
       beneficiaryId,
       status: "APPROVED",
+      isDeleted: false,
       createdAt: {
         gte: startOfMonth,
         lte: endOfMonth
@@ -78,15 +82,17 @@ var donations_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
   const { method } = req;
-  const action = req.query.action;
+  const action = req.query.action || req.body?.action;
   if (method === "GET") {
     if (!await verifyPermission(req, res, PERMS.MANAGE_DONATIONS)) return;
     const { limit = "100", page = "1" } = req.query;
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
     const skip = (pageNum - 1) * limitNum;
+    const whereClause = getDeletedFilter(req.query);
     const [donations, total] = await Promise.all([
       prisma.donation.findMany({
+        where: whereClause,
         include: {
           beneficiary: true,
           bankAccount: true,
@@ -96,9 +102,30 @@ var donations_default = makeHandler(async (req, res) => {
         skip,
         take: limitNum
       }),
-      prisma.donation.count()
+      prisma.donation.count({ where: whereClause })
     ]);
     return res.status(200).json({ status: 200, data: donations, meta: { total, page: pageNum, limit: limitNum } });
+  }
+  if (method === "PUT" || method === "POST" || method === "PATCH") {
+    if (action === "restore") {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can restore records", status: 403 } });
+      }
+      const id = req.query.id || req.body?.id;
+      if (!id) {
+        return res.status(400).json({ error: { message: "Donation ID is required", status: 400 } });
+      }
+      const existing = await prisma.donation.findUnique({ where: { id } });
+      if (!existing) {
+        return res.status(404).json({ error: { message: "Donation not found", status: 404 } });
+      }
+      const restored = await prisma.donation.update({
+        where: { id },
+        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      });
+      await logAudit(req.user.id, "Restore Donation", "DONATION", existing, restored, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      return res.status(200).json({ status: 200, message: "Donation restored successfully", data: restored });
+    }
   }
   if (!await verifyPermission(req, res, PERMS.RECORD_EXPENSE)) return;
   if (method === "POST") {
@@ -376,6 +403,10 @@ var donations_default = makeHandler(async (req, res) => {
     return res.status(200).json({ status: 200, data: updatedDonation });
   }
   if (method === "DELETE") {
+    const isPermanent = req.query.permanent === "true" || req.query.action === "permanent_delete" || req.body?.permanent === true;
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can permanently delete records", status: 403 } });
+    }
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
     if (!idsRaw) {
       return res.status(400).json({ error: { message: "Donation ID(s) required", status: 400 } });
@@ -400,15 +431,29 @@ var donations_default = makeHandler(async (req, res) => {
             });
             if (je) {
               try {
-                await AccountingService.deleteJournalEntry(tx, je.id, req.user.id, "Donation Deleted");
+                if (isPermanent) {
+                  await AccountingService.deleteJournalEntry(tx, je.id, req.user.id, "Donation Permanently Deleted");
+                } else {
+                  await tx.journalEntry.update({
+                    where: { id: je.id },
+                    data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
+                  });
+                }
               } catch (e) {
               }
             }
           }
         }
-        await tx.donation.deleteMany({
-          where: { id: { in: donations.map((d) => d.id) } }
-        });
+        if (isPermanent) {
+          await tx.donation.deleteMany({
+            where: { id: { in: donations.map((d) => d.id) } }
+          });
+        } else {
+          await tx.donation.updateMany({
+            where: { id: { in: donations.map((d) => d.id) } },
+            data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
+          });
+        }
         return donations;
       }, {
         timeout: 15e3

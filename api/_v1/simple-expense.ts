@@ -7,6 +7,7 @@ import { PERMS } from '../_constants/permissions.js';
 import { validateAmount } from '../_utils/amount.js';
 import { notify } from '../_utils/notify.js';
 import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
+import { simpleExpenseSchema } from '../_schemas/financial.schema.js';
 
 const accountingTxOptions = { maxWait: 10000, timeout: 30000 };
 
@@ -59,11 +60,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   if (!await verifyPermission(req, res, PERMS.RECORD_EXPENSE)) return;
 
   if (req.method === 'POST') {
-    const { date, expenseHeadId, paidTo, description, amount, paymentMethod, bankAccountId, reference } = req.body;
-
-    if (!expenseHeadId || !amount) {
-      return res.status(400).json({ error: { message: 'Missing required fields', status: 400 } });
-    }
+    const validated = simpleExpenseSchema.parse(req.body);
+    const { date, expenseHeadId, paidTo, description, amount, paymentMethod, bankAccountId, reference } = validated;
 
     const amountCheck = validateAmount(amount);
     if (!amountCheck.valid) {

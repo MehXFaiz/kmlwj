@@ -5,6 +5,7 @@ import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { compareCodes } from '../_utils/code-compare.js';
 import { PERMS } from '../_constants/permissions.js';
+import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
@@ -12,12 +13,36 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   const { method } = req;
   const id = req.query.id as string;
+  const action = (req.query.action || req.body?.action) as string;
 
   if (method === 'GET') {
-    const dbReservedCodes = await prisma.reservedCode.findMany();
-    // Sort correctly in memory
+    const dbReservedCodes = await prisma.reservedCode.findMany({
+      where: getDeletedFilter(req.query)
+    });
     dbReservedCodes.sort((a, b) => compareCodes(a.reserveStart, b.reserveStart));
     return res.status(200).json({ status: 200, data: dbReservedCodes });
+  }
+
+  if (method === 'PUT' || method === 'POST' || method === 'PATCH') {
+    if (action === 'restore') {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can restore records', status: 403 } });
+      }
+      const targetId = id || req.body?.id;
+      if (!targetId) {
+        return res.status(400).json({ error: { message: 'Reserved Code ID is required', status: 400 } });
+      }
+      const existing = await prisma.reservedCode.findUnique({ where: { id: targetId } });
+      if (!existing) {
+        return res.status(404).json({ error: { message: 'Reserved Code not found', status: 404 } });
+      }
+      const restored = await prisma.reservedCode.update({
+        where: { id: targetId },
+        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      });
+      await logAudit(req.user.id, 'Restore Reserved Code', 'COA', existing, restored, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      return res.status(200).json({ status: 200, message: 'Reserved Code restored successfully', data: restored });
+    }
   }
 
   if (method === 'POST') {
@@ -33,8 +58,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Start code must be less than or equal to end code', status: 400 } });
     }
 
-    // Check for overlaps in memory
-    const existingReservations = await prisma.reservedCode.findMany();
+    const existingReservations = await prisma.reservedCode.findMany({ where: { isDeleted: false } });
     const overlap = existingReservations.find(r => 
       compareCodes(r.reserveStart, reserveEnd) <= 0 && 
       compareCodes(r.reserveEnd, reserveStart) >= 0
@@ -79,8 +103,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Start code must be less than or equal to end code', status: 400 } });
     }
 
-    // Check for overlaps in memory
-    const existingReservations = await prisma.reservedCode.findMany({ where: { id: { not: id } } });
+    const existingReservations = await prisma.reservedCode.findMany({ where: { id: { not: id }, isDeleted: false } });
     const overlap = existingReservations.find(r => 
       compareCodes(r.reserveStart, newEnd) <= 0 && 
       compareCodes(r.reserveEnd, newStart) >= 0
@@ -106,6 +129,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'DELETE') {
+    const isPermanent = req.query.permanent === 'true' || req.query.action === 'permanent_delete' || req.body?.permanent === true;
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can permanently delete records', status: 403 } });
+    }
+
     if (!await verifyPermission(req, res, PERMS.MANAGE_RESERVED_CODES)) return;
 
     if (!id) {
@@ -117,9 +145,16 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(404).json({ error: { message: 'Reserved Code not found', status: 404 } });
     }
 
-    await prisma.reservedCode.delete({ where: { id } });
+    if (isPermanent) {
+      await prisma.reservedCode.delete({ where: { id } });
+    } else {
+      await prisma.reservedCode.update({
+        where: { id },
+        data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user.id }
+      });
+    }
 
-    await logAudit(req.user.id, 'Delete Reserved Code', 'COA', existingReservation, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+    await logAudit(req.user.id, isPermanent ? 'Permanent Delete Reserved Code' : 'Delete Reserved Code', 'COA', existingReservation, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
     return res.status(200).json({ status: 200, message: 'Reserved Code deleted successfully' });
   }

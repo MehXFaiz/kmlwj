@@ -3,8 +3,8 @@ import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
-import { notify } from "../_utils/notify.js";
 import { PERMS } from "../_constants/permissions.js";
+import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 function generateVoucherNumber() {
   const date = /* @__PURE__ */ new Date();
   const year = date.getFullYear().toString().slice(-2);
@@ -53,6 +53,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
       endOfDay.setUTCHours(23, 59, 59, 999);
       const sameDayBookings = await prisma.hallBooking.findMany({
         where: {
+          isDeleted: false,
           hallId,
           programDate: {
             gte: startOfDay,
@@ -99,7 +100,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
       return res.status(200).json({ available: true });
     }
     const id = req.query.id;
-    if (id) {
+    if (id && !req.query.limit) {
       const booking = await prisma.hallBooking.findUnique({
         where: { id },
         include: {
@@ -115,8 +116,10 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
     const skip = (pageNum - 1) * limitNum;
+    const whereClause = getDeletedFilter(req.query);
     const [bookings, total] = await Promise.all([
       prisma.hallBooking.findMany({
+        where: whereClause,
         include: {
           hallAccount: true,
           bankAccount: true,
@@ -126,9 +129,38 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         skip,
         take: limitNum
       }),
-      prisma.hallBooking.count()
+      prisma.hallBooking.count({ where: whereClause })
     ]);
     return res.status(200).json({ status: 200, data: bookings, meta: { total, page: pageNum, limit: limitNum } });
+  }
+  if (method === "PUT" || method === "POST" || method === "PATCH") {
+    const action2 = req.query.action || req.body?.action;
+    const id = req.query.id || req.body?.id;
+    if (action2 === "restore") {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can restore records", status: 403 } });
+      }
+      if (!id) {
+        return res.status(400).json({ error: { message: "Booking ID is required", status: 400 } });
+      }
+      const existing = await prisma.hallBooking.findUnique({ where: { id } });
+      if (!existing) {
+        return res.status(404).json({ error: { message: "Booking not found", status: 404 } });
+      }
+      const restored = await prisma.hallBooking.update({
+        where: { id },
+        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      });
+      if (existing.journalEntryId) {
+        await prisma.journalEntry.update({
+          where: { id: existing.journalEntryId },
+          data: { isDeleted: false, deletedAt: null, deletedBy: null }
+        }).catch(() => {
+        });
+      }
+      await logAudit(req.user.id, "Restore Hall Booking", "REVENUE", existing, restored, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      return res.status(200).json({ status: 200, message: "Hall booking restored successfully", data: restored });
+    }
   }
   if (method === "POST") {
     if (action === "approve") {
@@ -746,6 +778,45 @@ var hall_bookings_default = makeHandler(async (req, res) => {
       }
       throw err;
     }
+  }
+  if (method === "DELETE") {
+    const isPermanent = req.query.permanent === "true" || req.query.action === "permanent_delete" || req.body?.permanent === true;
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can permanently delete records", status: 403 } });
+    }
+    const targetId = req.query.id || req.body?.id;
+    if (!targetId) {
+      return res.status(400).json({ error: { message: "Booking ID is required", status: 400 } });
+    }
+    const existing = await prisma.hallBooking.findUnique({ where: { id: targetId } });
+    if (!existing) {
+      return res.status(404).json({ error: { message: "Booking not found", status: 404 } });
+    }
+    await prisma.$transaction(async (tx) => {
+      if (existing.journalEntryId) {
+        try {
+          if (isPermanent) {
+            await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user.id, "Hall Booking Permanently Deleted");
+          } else {
+            await tx.journalEntry.update({
+              where: { id: existing.journalEntryId },
+              data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
+            });
+          }
+        } catch (e) {
+        }
+      }
+      if (isPermanent) {
+        await tx.hallBooking.delete({ where: { id: targetId } });
+      } else {
+        await tx.hallBooking.update({
+          where: { id: targetId },
+          data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
+        });
+      }
+    });
+    await logAudit(req.user.id, isPermanent ? "Permanent Delete Hall Booking" : "Delete Hall Booking", "REVENUE", existing, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    return res.status(200).json({ status: 200, message: "Hall booking deleted successfully" });
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
 });

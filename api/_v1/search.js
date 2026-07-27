@@ -14,6 +14,7 @@ var search_default = makeHandler(async (req, res) => {
   }
   const accounts = await prisma.account.findMany({
     where: {
+      isDeleted: false,
       OR: [
         { glCode: { contains: q, mode: "insensitive" } },
         { accountName: { contains: q, mode: "insensitive" } },
@@ -24,6 +25,7 @@ var search_default = makeHandler(async (req, res) => {
   });
   const beneficiaries = await prisma.beneficiary.findMany({
     where: {
+      isDeleted: false,
       OR: [
         { name: { contains: q, mode: "insensitive" } },
         { cnic: { contains: q, mode: "insensitive" } },
@@ -35,6 +37,7 @@ var search_default = makeHandler(async (req, res) => {
   });
   const donations = await prisma.donation.findMany({
     where: {
+      isDeleted: false,
       OR: [
         { remarks: { contains: q, mode: "insensitive" } },
         { donorBankName: { contains: q, mode: "insensitive" } },
@@ -50,6 +53,7 @@ var search_default = makeHandler(async (req, res) => {
   });
   const journalEntries = await prisma.journalEntry.findMany({
     where: {
+      isDeleted: false,
       OR: [
         { voucherNo: { contains: q, mode: "insensitive" } },
         { reference: { contains: q, mode: "insensitive" } },
@@ -60,6 +64,7 @@ var search_default = makeHandler(async (req, res) => {
   });
   const customers = await prisma.customer.findMany({
     where: {
+      isDeleted: false,
       OR: [
         { name: { contains: q, mode: "insensitive" } },
         { company: { contains: q, mode: "insensitive" } },
@@ -71,6 +76,7 @@ var search_default = makeHandler(async (req, res) => {
   });
   const invoices = await prisma.invoice.findMany({
     where: {
+      isDeleted: false,
       OR: [
         { invoiceNo: { contains: q, mode: "insensitive" } },
         { remarks: { contains: q, mode: "insensitive" } },

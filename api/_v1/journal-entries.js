@@ -1,15 +1,18 @@
 import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { notify } from "../_utils/notify.js";
 import { PERMS } from "../_constants/permissions.js";
+import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };
 var journal_entries_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
   const { method } = req;
+  const action = req.query.action || req.body?.action;
   if (method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE") {
     if (!await verifyPermission(req, res, PERMS.POST_JOURNAL)) return;
   }
@@ -21,7 +24,7 @@ var journal_entries_default = makeHandler(async (req, res) => {
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
     const skip = (pageNum - 1) * limitNum;
-    const whereClause = {};
+    const whereClause = { ...getDeletedFilter(req.query) };
     if (subsidiary && subsidiary !== "Global") {
       whereClause.subsidiary = subsidiary;
     }
@@ -108,7 +111,26 @@ var journal_entries_default = makeHandler(async (req, res) => {
   }
   if (method === "PATCH" || method === "PUT") {
     const { id, status, reference, description, postingDate, amount, lines } = req.body;
-    if (!id) {
+    const targetId = id || req.query.id;
+    if (action === "restore") {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can restore records", status: 403 } });
+      }
+      if (!targetId) {
+        return res.status(400).json({ error: { message: "Missing journal entry id", status: 400 } });
+      }
+      const existing = await prisma.journalEntry.findUnique({ where: { id: targetId } });
+      if (!existing) {
+        return res.status(404).json({ error: { message: "Journal entry not found", status: 404 } });
+      }
+      const restored = await prisma.journalEntry.update({
+        where: { id: targetId },
+        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      });
+      await logAudit(req.user.id, "Restore Journal Entry", "Journal Entries", existing, restored, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      return res.status(200).json({ status: 200, message: "Journal entry restored successfully", data: restored });
+    }
+    if (!targetId) {
       return res.status(400).json({ error: { message: "Missing journal entry id", status: 400 } });
     }
     try {
@@ -158,9 +180,9 @@ var journal_entries_default = makeHandler(async (req, res) => {
             debit: l.debit > 0 ? numAmount : l.debit,
             credit: l.credit > 0 ? numAmount : l.credit
           }));
-          const plannedDebit = plannedLines.reduce((sum, l) => sum + l.debit, 0);
-          const plannedCredit = plannedLines.reduce((sum, l) => sum + l.credit, 0);
-          if (Math.abs(plannedDebit - plannedCredit) > 1e-3) {
+          const plannedDebit = plannedLines.reduce((sum, l) => sum.plus(new Prisma.Decimal(l.debit)), new Prisma.Decimal(0));
+          const plannedCredit = plannedLines.reduce((sum, l) => sum.plus(new Prisma.Decimal(l.credit)), new Prisma.Decimal(0));
+          if (!plannedDebit.equals(plannedCredit)) {
             throw new Error(`Accounting Engine Error: Transaction must follow Double Entry Accounting. Total Debit (${plannedDebit.toFixed(2)}) does not equal Total Credit (${plannedCredit.toFixed(2)}).`);
           }
           for (const l of je.lines) {
@@ -180,24 +202,24 @@ var journal_entries_default = makeHandler(async (req, res) => {
           if (lines.length < 2) {
             throw new Error("Accounting Engine Error: Transaction must contain at least two accounting lines for double-entry posting.");
           }
-          let totalDebit = 0;
-          let totalCredit = 0;
+          let totalDebit = new Prisma.Decimal(0);
+          let totalCredit = new Prisma.Decimal(0);
           for (const l of lines) {
-            const debitVal = Number(l.debit) || 0;
-            const creditVal = Number(l.credit) || 0;
-            if (debitVal < 0 || creditVal < 0) {
+            const debitVal = new Prisma.Decimal(l.debit ?? 0);
+            const creditVal = new Prisma.Decimal(l.credit ?? 0);
+            if (debitVal.isNegative() || creditVal.isNegative()) {
               throw new Error("Accounting Engine Error: Debit and Credit amounts cannot be negative.");
             }
             if (!l.accountId) {
               throw new Error("Accounting Engine Error: Every line must reference an account.");
             }
-            totalDebit += debitVal;
-            totalCredit += creditVal;
+            totalDebit = totalDebit.plus(debitVal);
+            totalCredit = totalCredit.plus(creditVal);
           }
-          if (Math.abs(totalDebit - totalCredit) > 1e-3) {
+          if (!totalDebit.equals(totalCredit)) {
             throw new Error(`Accounting Engine Error: Transaction must follow Double Entry Accounting. Total Debit (${totalDebit.toFixed(2)}) does not equal Total Credit (${totalCredit.toFixed(2)}).`);
           }
-          if (totalDebit <= 0) {
+          if (totalDebit.lte(0)) {
             throw new Error("Accounting Engine Error: Transaction amount must be greater than zero.");
           }
           await tx.journalEntryLine.deleteMany({
@@ -237,6 +259,10 @@ var journal_entries_default = makeHandler(async (req, res) => {
     }
   }
   if (method === "DELETE") {
+    const isPermanent = req.query.permanent === "true" || req.query.action === "permanent_delete" || req.body?.permanent === true;
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can permanently delete records", status: 403 } });
+    }
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
     if (!idsRaw) {
       return res.status(400).json({ error: { message: "Journal Entry ID(s) required", status: 400 } });
@@ -249,8 +275,16 @@ var journal_entries_default = makeHandler(async (req, res) => {
       const deletedEntries = await prisma.$transaction(async (tx) => {
         const results = [];
         for (const id of ids) {
-          const resJe = await AccountingService.deleteJournalEntry(tx, id, req.user.id, "Admin Deleted");
-          if (resJe) results.push(resJe);
+          if (isPermanent) {
+            const resJe = await AccountingService.deleteJournalEntry(tx, id, req.user.id, "Admin Permanently Deleted");
+            if (resJe) results.push(resJe);
+          } else {
+            const resJe = await tx.journalEntry.update({
+              where: { id },
+              data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
+            });
+            if (resJe) results.push(resJe);
+          }
         }
         return results;
       }, accountingTxOptions);

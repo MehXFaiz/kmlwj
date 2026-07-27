@@ -1,27 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { z } from 'zod';
 import { makeHandler } from '../_utils/handler.js';
+import { registerSchema } from '../_schemas/auth.schema.js';
 import * as authService from '../_services/auth.service.js';
-
-const passwordSchema = z.string()
-  .min(8, 'Password must be at least 8 characters long')
-  .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-  .regex(/[0-9]/, 'Password must contain at least one digit');
-
-const nameSchema = z.string().trim()
-  .min(3, 'Name must be at least 3 characters')
-  .max(50, 'Name must be at most 50 characters')
-  .regex(/^[a-zA-Z\s.-]+$/, 'Name must contain only letters, spaces, hyphens, and dots')
-  .optional();
-
-const registerSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: passwordSchema,
-  name: nameSchema,
-  fullName: nameSchema,
-  role: z.string().optional(),
-});
 
 export default makeHandler(async (req: VercelRequest, res: VercelResponse) => {
   if (req.method !== 'POST') {

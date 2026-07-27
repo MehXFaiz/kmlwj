@@ -5,6 +5,7 @@ import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { createNotification } from "../_utils/notify.js";
 import { PERMS } from "../_constants/permissions.js";
+import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 const CARD_NO_PREFIX = "ZK-";
 async function nextCardNumber(tx) {
   const existing = await tx.zakatCard.findMany({
@@ -26,6 +27,7 @@ async function resolveZakatExpenseAccount(tx) {
       accountName: { contains: "Zakat", mode: "insensitive" },
       accountType: { name: { in: ["Expense", "Expenses", "Liability", "Liabilities"], mode: "insensitive" } },
       isLocked: false,
+      isDeleted: false,
       children: { none: {} }
     },
     orderBy: { glCode: "asc" }
@@ -35,6 +37,7 @@ async function resolveZakatExpenseAccount(tx) {
       where: {
         accountType: { name: { in: ["Expense", "Expenses"], mode: "insensitive" } },
         isLocked: false,
+        isDeleted: false,
         children: { none: {} }
       },
       orderBy: { glCode: "asc" }
@@ -48,13 +51,14 @@ var zakat_cards_default = makeHandler(async (req, res) => {
   if (!await verifyPermission(req, res, PERMS.MANAGE_ZAKAT_CARDS)) return;
   const { method } = req;
   const id = req.query.id;
-  const action = req.query.action;
+  const action = req.query.action || req.body?.action;
   if (method === "GET") {
     if (action === "eligible-members") {
       const donations = await prisma.donation.findMany({
         where: {
           donationType: "ZAKAT",
           status: "APPROVED",
+          isDeleted: false,
           beneficiaryId: { not: null }
         },
         include: {
@@ -81,7 +85,7 @@ var zakat_cards_default = makeHandler(async (req, res) => {
       eligible.sort((a, b) => a.name.localeCompare(b.name));
       return res.status(200).json({ status: 200, data: eligible });
     }
-    if (id) {
+    if (id && !req.query.limit) {
       const card = await prisma.zakatCard.findUnique({
         where: { id },
         include: {
@@ -94,6 +98,7 @@ var zakat_cards_default = makeHandler(async (req, res) => {
       return res.status(200).json({ status: 200, data: card });
     }
     const cards = await prisma.zakatCard.findMany({
+      where: getDeletedFilter(req.query),
       include: {
         member: true,
         beneficiary: true,
@@ -102,6 +107,34 @@ var zakat_cards_default = makeHandler(async (req, res) => {
       orderBy: { createdAt: "desc" }
     });
     return res.status(200).json({ status: 200, data: cards });
+  }
+  if (method === "PUT" || method === "POST" || method === "PATCH") {
+    if (action === "restore") {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can restore records", status: 403 } });
+      }
+      const targetId = id || req.body?.id;
+      if (!targetId) {
+        return res.status(400).json({ error: { message: "Card ID is required", status: 400 } });
+      }
+      const existing = await prisma.zakatCard.findUnique({ where: { id: targetId } });
+      if (!existing) {
+        return res.status(404).json({ error: { message: "Zakat card not found", status: 404 } });
+      }
+      const restored = await prisma.zakatCard.update({
+        where: { id: targetId },
+        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      });
+      if (existing.journalEntryId) {
+        await prisma.journalEntry.update({
+          where: { id: existing.journalEntryId },
+          data: { isDeleted: false, deletedAt: null, deletedBy: null }
+        }).catch(() => {
+        });
+      }
+      await logAudit(req.user.id, "Restore Zakat Card", "ZAKAT_CARD", existing, restored, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      return res.status(200).json({ status: 200, message: "Zakat card restored successfully", data: restored });
+    }
   }
   if (method === "POST") {
     const { beneficiaryId, zakatAmount, issueDate, paymentMethod, bankAccountId } = req.body;
@@ -117,7 +150,7 @@ var zakat_cards_default = makeHandler(async (req, res) => {
       return res.status(404).json({ error: { message: "Beneficiary not found", status: 404 } });
     }
     const zakatDonation = await prisma.donation.findFirst({
-      where: { beneficiaryId, donationType: "ZAKAT", status: "APPROVED" }
+      where: { beneficiaryId, donationType: "ZAKAT", status: "APPROVED", isDeleted: false }
     });
     if (!zakatDonation) {
       return res.status(400).json({
@@ -209,21 +242,40 @@ var zakat_cards_default = makeHandler(async (req, res) => {
     return res.status(201).json({ status: 201, data: result, message: "Zakat card issued successfully" });
   }
   if (method === "DELETE") {
-    if (!id) return res.status(400).json({ error: { message: "Card ID is required", status: 400 } });
-    const card = await prisma.zakatCard.findUnique({ where: { id } });
+    const isPermanent = req.query.permanent === "true" || req.query.action === "permanent_delete" || req.body?.permanent === true;
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can permanently delete records", status: 403 } });
+    }
+    const targetId = id || req.body?.id;
+    if (!targetId) return res.status(400).json({ error: { message: "Card ID is required", status: 400 } });
+    const card = await prisma.zakatCard.findUnique({ where: { id: targetId } });
     if (!card) return res.status(404).json({ error: { message: "Zakat card not found", status: 404 } });
     await prisma.$transaction(async (tx) => {
       if (card.journalEntryId) {
         try {
-          await AccountingService.deleteJournalEntry(tx, card.journalEntryId, req.user.id, "Deleted Zakat Card");
+          if (isPermanent) {
+            await AccountingService.deleteJournalEntry(tx, card.journalEntryId, req.user.id, "Deleted Zakat Card Permanently");
+          } else {
+            await tx.journalEntry.update({
+              where: { id: card.journalEntryId },
+              data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
+            });
+          }
         } catch (e) {
         }
       }
-      await tx.zakatCard.delete({ where: { id } });
+      if (isPermanent) {
+        await tx.zakatCard.delete({ where: { id: targetId } });
+      } else {
+        await tx.zakatCard.update({
+          where: { id: targetId },
+          data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
+        });
+      }
     });
     await logAudit(
       req.user.id,
-      "Delete Zakat Card",
+      isPermanent ? "Permanent Delete Zakat Card" : "Delete Zakat Card",
       "ZAKAT_CARD",
       card,
       null,
@@ -234,7 +286,7 @@ var zakat_cards_default = makeHandler(async (req, res) => {
       title: "Zakat Card Deleted",
       message: `Zakat card ${card.cardNumber} deleted.`,
       module: "Zakat",
-      recordId: id,
+      recordId: targetId,
       actionType: "DELETE",
       userName: req.user.email,
       userRole: req.user.role,

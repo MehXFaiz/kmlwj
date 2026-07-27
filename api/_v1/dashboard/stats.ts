@@ -92,7 +92,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const netIncome = summaryResult.netPeriodIncome;
   const baseEquity = summaryResult.totalEquity - netIncome;
   const totalEquityWithNetIncome = summaryResult.totalEquity;
-  const isEquationBalanced = Math.abs(totalAssets - (totalLiabilities + totalEquityWithNetIncome)) < 0.01;
+  const isEquationBalanced = totalAssets === totalLiabilities + totalEquityWithNetIncome;
 
 
   // Recent posted transactions
@@ -181,6 +181,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     status: 200,
     data: {
       totalAccounts,
+      totalJournalEntries,
+      revenueHeads,
+      expenseHeads,
       activeUsers,
       monthlyData,
       recentActivities,

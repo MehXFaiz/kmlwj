@@ -7,6 +7,7 @@ import { logger } from '../_utils/logger.js';
 import { notify } from '../_utils/notify.js';
 import { PERMS } from '../_constants/permissions.js';
 import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
+import { createMemberSchema, updateMemberSchema } from '../_schemas/members.schema.js';
 
 function trimOrNull(v: unknown): string | null {
   if (v === undefined || v === null) return null;
@@ -129,58 +130,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   if (method === 'POST') {
     if (!await verifyPermission(req, res, PERMS.CREATE_MEMBER)) return;
 
+    const validated = createMemberSchema.parse(req.body);
     let {
       memberNo, fullName, fatherName, cnic, dob, address, mobile,
       email, city, area, ghamName, education, profession, company, doi,
       photoUrl, cnicFrontUrl, cnicBackUrl, isActive
-    } = req.body;
-
-    fullName   = trimOrNull(fullName);
-    fatherName = trimOrNull(fatherName);
-    cnic       = trimOrNull(cnic);
-    address    = trimOrNull(address);
-    mobile     = trimOrNull(mobile);
-    email      = trimOrNull(email);
-    city       = trimOrNull(city);
-    area       = trimOrNull(area);
-    ghamName   = trimOrNull(ghamName);
-    education  = trimOrNull(education);
-    profession = trimOrNull(profession);
-    company    = trimOrNull(company);
-
-    if (!fullName || !String(fullName).trim()) {
-      return res.status(400).json({ error: { message: 'Full Member Name is required', status: 400 } });
-    }
-    if (fatherName && !/^[a-zA-Z\s.-]{2,80}$/.test(String(fatherName))) {
-      return res.status(400).json({ error: { message: 'Father name can only contain letters, spaces, hyphens, and dots', status: 400 } });
-    }
-    if (cnic && !/^\d{13}$/.test(String(cnic))) {
-      return res.status(400).json({ error: { message: 'CNIC must contain exactly 13 digits', status: 400 } });
-    }
-    if (mobile && !/^\d{11}$/.test(String(mobile))) {
-      return res.status(400).json({ error: { message: 'Mobile number must contain exactly 11 digits', status: 400 } });
-    }
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
-      return res.status(400).json({ error: { message: 'Email address is invalid', status: 400 } });
-    }
-    if (address && !/^[a-zA-Z0-9\s.,#/-]{3,200}$/.test(String(address))) {
-      return res.status(400).json({ error: { message: 'Address contains unsupported characters', status: 400 } });
-    }
-    if (city && !/^[a-zA-Z\s.-]{2,80}$/.test(String(city))) {
-      return res.status(400).json({ error: { message: 'City can only contain letters, spaces, hyphens, and dots', status: 400 } });
-    }
-    if (area && !/^[a-zA-Z\s.-]{2,80}$/.test(String(area))) {
-      return res.status(400).json({ error: { message: 'Area can only contain letters, spaces, hyphens, and dots', status: 400 } });
-    }
-    if (ghamName && !/^[a-zA-Z\s.-]{2,80}$/.test(String(ghamName))) {
-      return res.status(400).json({ error: { message: 'Gham name can only contain letters, spaces, hyphens, and dots', status: 400 } });
-    }
-
-    for (const [field, value] of [['photoUrl', photoUrl], ['cnicFrontUrl', cnicFrontUrl], ['cnicBackUrl', cnicBackUrl]] as const) {
-      if (value && String(value).startsWith('data:')) {
-        return res.status(400).json({ error: { message: `${field}: send a URL, not a Base64 image. Use /api/v1/upload first.`, status: 400 } });
-      }
-    }
+    } = validated;
 
     logger.info({ photoUrl, cnicFrontUrl, cnicBackUrl }, 'Saving new member with image URLs');
 
@@ -252,11 +207,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(404).json({ error: { message: 'Member not found', status: 404 } });
     }
 
+    const validated = updateMemberSchema.parse(req.body);
     let {
       memberNo, fullName, fatherName, cnic, dob, address, mobile,
       email, city, area, ghamName, education, profession, company, doi,
       photoUrl, cnicFrontUrl, cnicBackUrl, isActive
-    } = req.body;
+    } = validated;
 
     fullName   = trimIfProvided(fullName);
     fatherName = trimIfProvided(fatherName);

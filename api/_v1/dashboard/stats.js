@@ -11,15 +11,15 @@ var stats_default = makeHandler(async (req, res) => {
   if (!authenticated || !req.user) return;
   if (!await verifyPermission(req, res, PERMS.VIEW_REPORTS)) return;
   const { startDate, endDate } = req.query || {};
-  const totalAccounts = await prisma.account.count();
-  const revenueHeads = await prisma.revenueHead.count();
-  const expenseHeads = await prisma.expenseHead.count();
-  const totalJournalEntries = await prisma.journalEntry.count();
+  const totalAccounts = await prisma.account.count({ where: { isDeleted: false } });
+  const revenueHeads = await prisma.revenueHead.count({ where: { isDeleted: false } });
+  const expenseHeads = await prisma.expenseHead.count({ where: { isDeleted: false } });
+  const totalJournalEntries = await prisma.journalEntry.count({ where: { isDeleted: false } });
   const lockedAccounts = await prisma.account.count({
-    where: { isLocked: true }
+    where: { isLocked: true, isDeleted: false }
   });
   const activeUsers = await prisma.user.count({
-    where: { isActive: true }
+    where: { isActive: true, isDeleted: false }
   });
   const currentYear = (/* @__PURE__ */ new Date()).getFullYear();
   const chartYear = startDate ? new Date(startDate).getFullYear() : currentYear;
@@ -29,6 +29,7 @@ var stats_default = makeHandler(async (req, res) => {
     where: {
       journalEntry: {
         status: "Posted",
+        isDeleted: false,
         postingDate: {
           gte: startOfYear,
           lt: endOfYear
@@ -68,8 +69,9 @@ var stats_default = makeHandler(async (req, res) => {
   const netIncome = summaryResult.netPeriodIncome;
   const baseEquity = summaryResult.totalEquity - netIncome;
   const totalEquityWithNetIncome = summaryResult.totalEquity;
-  const isEquationBalanced = Math.abs(totalAssets - (totalLiabilities + totalEquityWithNetIncome)) < 0.01;
+  const isEquationBalanced = totalAssets === totalLiabilities + totalEquityWithNetIncome;
   const recentJournalsRaw = await prisma.journalEntry.findMany({
+    where: { isDeleted: false },
     take: 8,
     orderBy: { postingDate: "desc" },
     include: {
@@ -91,24 +93,25 @@ var stats_default = makeHandler(async (req, res) => {
   });
   const startOfMonth = new Date(currentYear, (/* @__PURE__ */ new Date()).getMonth(), 1);
   const pendingDonations = await prisma.donation.count({
-    where: { status: "PENDING" }
+    where: { status: "PENDING", isDeleted: false }
   });
   const donationsThisMonthRaw = await prisma.donation.aggregate({
     _sum: { amount: true },
     _count: true,
     where: {
       status: "APPROVED",
+      isDeleted: false,
       createdAt: { gte: startOfMonth }
     }
   });
   const hallBookingsThisMonth = await prisma.hallBooking.count({
-    where: { createdAt: { gte: startOfMonth } }
+    where: { createdAt: { gte: startOfMonth }, isDeleted: false }
   });
   const outstandingInvoices = await prisma.invoice.count({
-    where: { status: { in: ["ISSUED", "OVERDUE"] } }
+    where: { status: { in: ["ISSUED", "OVERDUE"] }, isDeleted: false }
   });
   const pendingApprovalsList = await prisma.donation.findMany({
-    where: { status: "PENDING" },
+    where: { status: "PENDING", isDeleted: false },
     take: 5,
     orderBy: { createdAt: "desc" },
     include: { beneficiary: true }
@@ -116,7 +119,7 @@ var stats_default = makeHandler(async (req, res) => {
   const donationBreakdown = await prisma.donation.groupBy({
     by: ["donationType"],
     _sum: { amount: true },
-    where: { status: "APPROVED" }
+    where: { status: "APPROVED", isDeleted: false }
   });
   const rawLogs = await prisma.auditLog.findMany({
     take: 8,
@@ -139,6 +142,9 @@ var stats_default = makeHandler(async (req, res) => {
     status: 200,
     data: {
       totalAccounts,
+      totalJournalEntries,
+      revenueHeads,
+      expenseHeads,
       activeUsers,
       monthlyData,
       recentActivities,

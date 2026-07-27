@@ -4,6 +4,7 @@ import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { notify } from "../_utils/notify.js";
 import { PERMS } from "../_constants/permissions.js";
+import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 const ALL_FIELDS = [
   "name",
   "fatherName",
@@ -59,21 +60,45 @@ var beneficiaries_default = makeHandler(async (req, res) => {
   if (!authenticated || !req.user) return;
   const { method } = req;
   const id = req.query.id;
+  const action = req.query.action || req.body?.action;
   if (method === "GET") {
     if (!await verifyPermission(req, res, PERMS.VIEW_BENEFICIARIES)) return;
     const { limit = "100", page = "1" } = req.query;
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
     const skip = (pageNum - 1) * limitNum;
+    const whereClause = getDeletedFilter(req.query);
     const [beneficiaries, total] = await Promise.all([
       prisma.beneficiary.findMany({
+        where: whereClause,
         orderBy: { createdAt: "desc" },
         skip,
         take: limitNum
       }),
-      prisma.beneficiary.count()
+      prisma.beneficiary.count({ where: whereClause })
     ]);
     return res.status(200).json({ status: 200, data: beneficiaries, meta: { total, page: pageNum, limit: limitNum } });
+  }
+  if (method === "PUT" || method === "POST" || method === "PATCH") {
+    if (action === "restore") {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can restore records", status: 403 } });
+      }
+      const targetId = id || req.body?.id;
+      if (!targetId) {
+        return res.status(400).json({ error: { message: "Beneficiary ID is required", status: 400 } });
+      }
+      const existing = await prisma.beneficiary.findUnique({ where: { id: targetId } });
+      if (!existing) {
+        return res.status(404).json({ error: { message: "Beneficiary not found", status: 404 } });
+      }
+      const restored = await prisma.beneficiary.update({
+        where: { id: targetId },
+        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      });
+      await logAudit(req.user.id, "Restore Beneficiary", "DONATION", existing, restored, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      return res.status(200).json({ status: 200, message: "Beneficiary restored successfully", data: restored });
+    }
   }
   if (method === "POST") {
     if (!await verifyPermission(req, res, PERMS.CREATE_BENEFICIARY)) return;
@@ -212,6 +237,22 @@ var beneficiaries_default = makeHandler(async (req, res) => {
     return res.status(200).json({ status: 200, data: updatedBeneficiary });
   }
   if (method === "DELETE") {
+    const isPermanent = req.query.permanent === "true" || req.query.action === "permanent_delete" || req.body?.permanent === true;
+    if (isPermanent) {
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can permanently delete records", status: 403 } });
+      }
+      if (!id) {
+        return res.status(400).json({ error: { message: "Beneficiary ID is required", status: 400 } });
+      }
+      const existingBeneficiary2 = await prisma.beneficiary.findUnique({ where: { id } });
+      if (!existingBeneficiary2) {
+        return res.status(404).json({ error: { message: "Beneficiary not found", status: 404 } });
+      }
+      await prisma.beneficiary.delete({ where: { id } });
+      await logAudit(req.user.id, "Permanent Delete Beneficiary", "DONATION", existingBeneficiary2, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      return res.status(200).json({ status: 200, message: "Beneficiary permanently deleted successfully" });
+    }
     if (!await verifyPermission(req, res, PERMS.DELETE_BENEFICIARY)) return;
     if (!id) {
       return res.status(400).json({ error: { message: "Beneficiary ID is required", status: 400 } });
@@ -220,12 +261,11 @@ var beneficiaries_default = makeHandler(async (req, res) => {
     if (!existingBeneficiary) {
       return res.status(404).json({ error: { message: "Beneficiary not found", status: 404 } });
     }
-    const donationsCount = await prisma.donation.count({ where: { beneficiaryId: id } });
-    if (donationsCount > 0) {
-      return res.status(400).json({ error: { message: "Cannot delete beneficiary because they have associated donation records. Please remove the donations first.", status: 400 } });
-    }
-    await prisma.beneficiary.delete({ where: { id } });
-    await logAudit(req.user.id, "Delete Beneficiary", "DONATION", existingBeneficiary, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    const updated = await prisma.beneficiary.update({
+      where: { id },
+      data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
+    });
+    await logAudit(req.user.id, "Delete Beneficiary", "DONATION", existingBeneficiary, updated, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     await notify(req, {
       title: "Welfare Record Deleted",
       message: `${existingBeneficiary.name || "Beneficiary"} removed from welfare list.`,

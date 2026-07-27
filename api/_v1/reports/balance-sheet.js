@@ -44,7 +44,7 @@ var balance_sheet_default = makeHandler(async (req, res) => {
             totalLiabilities: bs.totalLiabilities,
             totalEquity: bs.totalEquity,
             totalLiabilitiesAndEquity: bs.totalLiabilitiesAndEquity,
-            isBalanced: Math.abs(bs.totalAssets - bs.totalLiabilitiesAndEquity) < 1e-3,
+            isBalanced: bs.totalAssets === bs.totalLiabilitiesAndEquity,
             periodLabel: startDate && endDate ? `${startDate} to ${endDate}` : startDate ? `From ${startDate}` : endDate ? `Up to ${endDate}` : "All Time"
           }
         }
