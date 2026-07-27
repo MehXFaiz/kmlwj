@@ -38,7 +38,6 @@ export class AccountingIntegrityService {
     issues.push(...(await this.checkBrokenHierarchy()));
     issues.push(...(await this.checkOrphanAccounts()));
     issues.push(...(await this.checkInvalidJournalReferences()));
-    issues.push(...(await this.checkInvalidLedgerReferences()));
     issues.push(...(await this.checkTrialBalanceMismatch()));
     issues.push(...(await this.checkCachedBalanceDrift()));
 
@@ -328,7 +327,6 @@ export class AccountingIntegrityService {
     const accounts = await prisma.account.findMany({
       include: {
         journalEntryLines: true,
-        ledgerEntries: true,
         revenueHeads: true,
         expenseHeads: true,
       },
@@ -336,12 +334,11 @@ export class AccountingIntegrityService {
 
     for (const account of accounts) {
       const hasJournalLines = account.journalEntryLines.length > 0;
-      const hasLedgerEntries = account.ledgerEntries.length > 0;
       const hasRevenueHeads = account.revenueHeads.length > 0;
       const hasExpenseHeads = account.expenseHeads.length > 0;
       const isLeaf = account.accountLevel === 'GL' || account.accountLevel === 'SUBSIDIARY';
 
-      if (isLeaf && !hasJournalLines && !hasLedgerEntries && !hasRevenueHeads && !hasExpenseHeads) {
+      if (isLeaf && !hasJournalLines && !hasRevenueHeads && !hasExpenseHeads) {
         issues.push({
           type: 'orphan_account',
           severity: 'info',
@@ -382,33 +379,6 @@ export class AccountingIntegrityService {
           item: {
             id: line.id,
             reference: line.journalEntry.voucherNo,
-          },
-        });
-      }
-    }
-
-    return issues;
-  }
-
-  /**
-   * Check 9: Invalid Ledger References (ledger entries referencing non-existent accounts)
-   */
-  private static async checkInvalidLedgerReferences(): Promise<IntegrityIssue[]> {
-    const issues: IntegrityIssue[] = [];
-
-    const ledgerEntries = await prisma.ledgerEntry.findMany();
-    const accounts = await prisma.account.findMany();
-    const accountIds = new Set(accounts.map(a => a.id));
-
-    for (const entry of ledgerEntries) {
-      if (!accountIds.has(entry.accountId)) {
-        issues.push({
-          type: 'invalid_ledger_account',
-          severity: 'critical',
-          description: `Ledger Entry with reference ${entry.reference} references non-existent account`,
-          item: {
-            id: entry.id,
-            reference: entry.reference,
           },
         });
       }

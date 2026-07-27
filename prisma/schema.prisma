@@ -117,7 +117,6 @@ model Account {
   revenueHeads      RevenueHead[]
   expenseHeads      ExpenseHead[]
   journalEntryLines JournalEntryLine[]
-  ledgerEntries          LedgerEntry[]
   donations              Donation[]          @relation("DonationBankAccount")
   invoices               Invoice[]           @relation("InvoiceBankAccount")
   hallBookings           HallBooking[]       @relation("HallBookingAccount")
@@ -125,6 +124,10 @@ model Account {
   revenueCollections     RevenueCollection[] @relation("RevenueCollectionBankAccount")
   donationsReceivedCash  DonationReceived[]  @relation("DonationReceivedCashAccount")
   donationsReceivedBank  DonationReceived[]  @relation("DonationReceivedBankAccount")
+
+  // Tree-building (parent lookups) and level-scoped scans hit these constantly.
+  @@index([parentId])
+  @@index([accountLevel])
 }
 
 model AccountType {
@@ -200,6 +203,12 @@ model JournalEntry {
   revenueCollection RevenueCollection? @relation("RevenueCollectionJournalEntry")
   donationReceived DonationReceived?   @relation("DonationReceivedJournalEntry")
   zakatCard        ZakatCard?          @relation("ZakatCardJournalEntry")
+
+  // Every financial report filters posted lines by their parent JournalEntry's
+  // status (+ posting-date window) via getPostedAggregates — this is the single
+  // hottest query in the system.
+  @@index([status, postingDate])
+  @@index([voucherType, postingDate])
 }
 
 model JournalEntryLine {
@@ -213,19 +222,11 @@ model JournalEntryLine {
   credit         Float        @default(0)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-}
 
-model LedgerEntry {
-  id          String   @id @default(uuid()) @db.Uuid
-  accountId   String   @db.Uuid
-  account     Account  @relation(fields: [accountId], references: [id])
-  debit       Float    @default(0)
-  credit      Float    @default(0)
-  reference   String
-  description String?
-  postingDate DateTime
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  // getPostedAggregates groups by accountId; delete/recalc paths filter by
+  // journalEntryId. Both were previously unindexed (sequential scans).
+  @@index([accountId])
+  @@index([journalEntryId])
 }
 
 enum DonationType {

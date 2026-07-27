@@ -494,9 +494,12 @@ export class AccountingService {
       }
     }
 
-    const createdLedgerEntries = [];
-
-    // 2. Create Journal Entry Lines, Ledger Entries, and update Account Balances
+    // 2. Create Journal Entry Lines and update the Account balance cache.
+    // SINGLE SOURCE OF TRUTH: postings live ONLY as JournalEntryLine rows. The
+    // former parallel write to the denormalized LedgerEntry table was removed —
+    // no report reads LedgerEntry, and a second copy could only ever drift.
+    // Account.currentBalance is retained as a write-side convenience cache
+    // (consumed by the CoA tree/account UI, not by any financial report).
     for (const line of resolvedLines) {
       // Create Journal Entry Line
       await tx.journalEntryLine.create({
@@ -510,19 +513,6 @@ export class AccountingService {
       });
 
       if (status === 'Posted') {
-        // Create Ledger Entry
-        const ledgerEntry = await tx.ledgerEntry.create({
-          data: {
-            accountId: line.account.id,
-            debit: line.debit,
-            credit: line.credit,
-            reference: voucherNo,
-            description: line.description,
-            postingDate
-          }
-        });
-        createdLedgerEntries.push(ledgerEntry);
-
         // Update Account Running Balance using the account's normal balance side.
         const typeName = (line.account.accountType?.name || '').toUpperCase();
         const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
@@ -571,7 +561,6 @@ export class AccountingService {
 
     return {
       journalEntry,
-      ledgerEntries: createdLedgerEntries,
       voucherNo,
       totalDebit,
       totalCredit
@@ -812,10 +801,6 @@ export class AccountingService {
                 where: { id: line.id },
                 data: { accountId: cashAccount.id }
               });
-              await prismaClient.ledgerEntry.updateMany({
-                where: { reference: booking.journalEntry.id, debit: { gt: 0 } },
-                data: { accountId: cashAccount.id }
-              });
               needsRecalculation = true;
             }
           }
@@ -834,10 +819,6 @@ export class AccountingService {
             if (line.debit > 0 && line.accountId !== cashAccount.id) {
               await prismaClient.journalEntryLine.update({
                 where: { id: line.id },
-                data: { accountId: cashAccount.id }
-              });
-              await prismaClient.ledgerEntry.updateMany({
-                where: { reference: donRec.journalEntry.id, debit: { gt: 0 } },
                 data: { accountId: cashAccount.id }
               });
               if (donRec.cashAccountId !== cashAccount.id) {
@@ -892,10 +873,6 @@ export class AccountingService {
               where: { id: line.id },
               data: { accountId: leafAccount.id }
             });
-            await prismaClient.ledgerEntry.updateMany({
-              where: { accountId: line.accountId, reference: line.journalEntryId },
-              data: { accountId: leafAccount.id }
-            });
             needsRecalculation = true;
           }
         }
@@ -930,18 +907,10 @@ export class AccountingService {
       data: { status: 'Posted' }
     });
 
+    // Single source of truth: posting a draft only flips its lines' parent
+    // status to 'Posted' (done above) and refreshes the Account balance cache.
+    // No LedgerEntry rows are written — reports read JournalEntryLine directly.
     for (const line of je.lines) {
-      await tx.ledgerEntry.create({
-        data: {
-          accountId: line.accountId,
-          debit: line.debit,
-          credit: line.credit,
-          reference: je.voucherNo,
-          description: line.description || je.description || je.reference || 'Journal Entry',
-          postingDate: je.postingDate,
-        }
-      });
-
       const netChange = line.debit - line.credit;
       if (netChange !== 0) {
         await tx.account.update({
@@ -988,9 +957,6 @@ export class AccountingService {
     if (je.status === 'Cancelled') return je;
     if (je.status !== 'Posted') throw new Error(`Accounting Engine Error: Only Posted journal entries can be reversed/cancelled.`);
 
-    const revReference = `${je.voucherNo}-REV`;
-    const revDescription = `Reversal: ${reason || je.description || je.reference}`;
-
     // Flip status before recalculating balances (see postDraft for why: recalculateAccountBalance
     // only aggregates 'Posted' lines, so cancelling first would make it drop this entry's lines
     // instead of removing them, discarding the reversal's increment silently).
@@ -1002,18 +968,11 @@ export class AccountingService {
       }
     });
 
+    // Single source of truth: cancelling removes this entry's lines from every
+    // report automatically (getPostedAggregates filters status='Posted'). We no
+    // longer write a mirror-image reversal row into a separate ledger table —
+    // only the Account balance cache is refreshed.
     for (const line of je.lines) {
-      await tx.ledgerEntry.create({
-        data: {
-          accountId: line.accountId,
-          debit: line.credit,
-          credit: line.debit,
-          reference: revReference,
-          description: revDescription,
-          postingDate: new Date(),
-        }
-      });
-
       const netChange = line.credit - line.debit;
       if (netChange !== 0) {
         await tx.account.update({
@@ -1059,12 +1018,6 @@ export class AccountingService {
     if (!je) throw new Error('Accounting Engine Error: Journal entry not found.');
     if (je.status !== 'Cancelled') return je;
 
-    // Delete the reversal ledger entries (-REV)
-    const revReference = `${je.voucherNo}-REV`;
-    await tx.ledgerEntry.deleteMany({
-      where: { reference: revReference }
-    });
-
     // Flip status before recalculating balances (see postDraft for why): recalculateAccountBalance
     // only aggregates lines whose parent entry is 'Posted', so it must already see newStatus —
     // otherwise restoring to Posted silently drops this entry's lines from the recalculated balance,
@@ -1096,21 +1049,9 @@ export class AccountingService {
       }
     }
 
-    // Re-create ledger entries if restoring to Posted status
-    if (newStatus === 'Posted') {
-      for (const line of je.lines) {
-        await tx.ledgerEntry.create({
-          data: {
-            accountId: line.accountId,
-            debit: line.debit,
-            credit: line.credit,
-            reference: je.voucherNo,
-            description: line.description || je.description,
-            postingDate: je.postingDate,
-          }
-        });
-      }
-    }
+    // Single source of truth: restoring to 'Posted' makes this entry's existing
+    // JournalEntryLine rows count again automatically (getPostedAggregates
+    // filters on status). No separate ledger rows are re-created.
 
     try {
       await tx.auditLog.create({
@@ -1142,20 +1083,11 @@ export class AccountingService {
     if (!je) return null;
 
     const accountIds = Array.from(new Set(je.lines.map((l: any) => l.accountId)));
-    // LedgerEntry.reference is always set to the journal entry's unique voucherNo (see
-    // postTransaction/postDraft/reverseJournalEntry) — never to the free-text JournalEntry.reference
-    // field, which isn't unique (many entries default to the literal "Journal Entry"). Matching on
-    // je.reference here would risk deleting an unrelated entry's ledger rows on a string collision.
-    const voucherRefs = [je.voucherNo, `${je.voucherNo}-REV`];
 
-    // Delete associated ledger entries
-    await tx.ledgerEntry.deleteMany({
-      where: {
-        reference: { in: voucherRefs }
-      }
-    });
-
-    // Delete journal entry lines
+    // Delete journal entry lines (the JournalEntry cascade would also remove
+    // them, but doing it explicitly keeps the affected-account recalculation
+    // below unambiguous). No LedgerEntry rows exist to clean up — the ledger is
+    // derived solely from these JournalEntryLine rows.
     await tx.journalEntryLine.deleteMany({
       where: { journalEntryId: je.id }
     });
@@ -1228,8 +1160,9 @@ export class AccountingService {
   // from POSTED JournalEntryLine rows via these two helpers. Draft and
   // Cancelled entries are excluded. Account.currentBalance is a write-side
   // convenience cache (kept in sync by postTransaction/recalculateAccountBalance
-  // and audited by the integrity service) and must never be read by a report;
-  // the same goes for the denormalized LedgerEntry table.
+  // and audited by the integrity service) and must never be read by a report.
+  // The denormalized LedgerEntry table has been removed entirely — there is now
+  // exactly one accounting store: JournalEntry + JournalEntryLine.
   // ──────────────────────────────────────────────────────────────────────────
 
   /**

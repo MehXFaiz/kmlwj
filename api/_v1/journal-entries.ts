@@ -273,24 +273,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           }
         }
 
-        // If status is Posted or becoming Posted, refresh ledger entries and balances
+        // If status is Posted or becoming Posted, refresh the affected account
+        // balance caches. Reports read JournalEntryLine directly (single source
+        // of truth), so there is no separate ledger table to rewrite here.
         if (newStatus === 'Posted' || newStatus === 'POSTED') {
-          await tx.ledgerEntry.deleteMany({
-            where: { reference: { in: [je.voucherNo, `${je.voucherNo}-REV`] } }
-          });
-
           const updatedLines = await tx.journalEntryLine.findMany({ where: { journalEntryId: je.id } });
           for (const l of updatedLines) {
-            await tx.ledgerEntry.create({
-              data: {
-                accountId: l.accountId,
-                debit: l.debit,
-                credit: l.credit,
-                reference: je.voucherNo,
-                description: l.description || newDesc || newRef || je.description,
-                postingDate: newDate
-              }
-            });
             await AccountingService.recalculateAccountBalance(tx, l.accountId);
           }
         }
