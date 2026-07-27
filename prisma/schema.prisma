@@ -112,6 +112,9 @@ model Account {
   initialBalance    Float              @default(0)
   currentBalance    Float              @default(0)
   detailType        String             @default("Header")
+  isDeleted         Boolean            @default(false)
+  deletedAt         DateTime?
+  deletedBy         String?            @db.Uuid
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   revenueHeads      RevenueHead[]
@@ -128,6 +131,7 @@ model Account {
   // Tree-building (parent lookups) and level-scoped scans hit these constantly.
   @@index([parentId])
   @@index([accountLevel])
+  @@index([isDeleted])
 }
 
 model AccountType {
@@ -158,8 +162,13 @@ model RevenueHead {
   accountId     String?        @db.Uuid
   account       Account?       @relation(fields: [accountId], references: [id])
   isActive      Boolean        @default(true)
+  isDeleted     Boolean        @default(false)
+  deletedAt     DateTime?
+  deletedBy     String?        @db.Uuid
   createdAt     DateTime       @default(now())
   simpleIncomes SimpleIncome[]
+
+  @@index([isDeleted])
 }
 
 model ExpenseHead {
@@ -169,8 +178,13 @@ model ExpenseHead {
   accountId      String?         @db.Uuid
   account        Account?        @relation(fields: [accountId], references: [id])
   isActive       Boolean         @default(true)
+  isDeleted      Boolean         @default(false)
+  deletedAt      DateTime?
+  deletedBy      String?         @db.Uuid
   createdAt      DateTime        @default(now())
   simpleExpenses SimpleExpense[]
+
+  @@index([isDeleted])
 }
 
 model AuditLog {
@@ -196,6 +210,9 @@ model JournalEntry {
   postedBy    String
   status      String             @default("Draft")
   voucherType String             @default("JV")
+  isDeleted   Boolean            @default(false)
+  deletedAt   DateTime?
+  deletedBy   String?            @db.Uuid
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
   lines       JournalEntryLine[]
@@ -209,6 +226,7 @@ model JournalEntry {
   // hottest query in the system.
   @@index([status, postingDate])
   @@index([voucherType, postingDate])
+  @@index([isDeleted])
 }
 
 model JournalEntryLine {
@@ -296,10 +314,15 @@ model Beneficiary {
   cnicFrontUrl    String?     @db.Text
   cnicBackUrl     String?     @db.Text
   isActive        Boolean     @default(true)
+  isDeleted       Boolean     @default(false)
+  deletedAt       DateTime?
+  deletedBy       String?     @db.Uuid
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   donations       Donation[]
   zakatCards      ZakatCard[]
+
+  @@index([isDeleted])
 }
 
 model Donation {
@@ -320,8 +343,13 @@ model Donation {
   status         DonationStatus @default(PENDING)
   createdById    String?        @db.Uuid
   createdBy      User?          @relation("DonationCreatedBy", fields: [createdById], references: [id])
+  isDeleted      Boolean        @default(false)
+  deletedAt      DateTime?
+  deletedBy      String?        @db.Uuid
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+
+  @@index([isDeleted])
 }
 
 // ── Simple Income ─────────────────────────────────────────────
@@ -338,7 +366,12 @@ model SimpleIncome {
   journalEntryId String?     @db.Uuid
   createdById    String?     @db.Uuid
   createdBy      User?       @relation("IncomeCreatedBy", fields: [createdById], references: [id])
+  isDeleted      Boolean     @default(false)
+  deletedAt      DateTime?
+  deletedBy      String?     @db.Uuid
   createdAt      DateTime    @default(now())
+
+  @@index([isDeleted])
 }
 
 // ── Simple Expense ────────────────────────────────────────────
@@ -356,7 +389,12 @@ model SimpleExpense {
   journalEntryId String?     @db.Uuid
   createdById    String?     @db.Uuid
   createdBy      User?       @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
+  isDeleted      Boolean     @default(false)
+  deletedAt      DateTime?
+  deletedBy      String?     @db.Uuid
   createdAt      DateTime    @default(now())
+
+  @@index([isDeleted])
 }
 
 model HallBooking {
@@ -395,6 +433,9 @@ model HallBooking {
   createdBy         User?          @relation("HallBookingCreatedBy", fields: [createdById], references: [id])
   journalEntryId    String?        @unique @db.Uuid
   journalEntry      JournalEntry?  @relation("HallBookingJournalEntry", fields: [journalEntryId], references: [id])
+  isDeleted         Boolean        @default(false)
+  deletedAt         DateTime?
+  deletedBy         String?        @db.Uuid
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 
@@ -414,6 +455,7 @@ model HallBooking {
   // REQUIRES A MIGRATION: run `npm run db:push` (or `prisma migrate`) to
   // apply this constraint change — not run automatically as part of this fix.
   @@unique([hallId, programDate, timings], name: "hallId_programDate_timings")
+  @@index([isDeleted])
 }
 
 model Customer {
