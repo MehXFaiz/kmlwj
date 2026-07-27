@@ -119,124 +119,115 @@ export const TrialBalanceSheet = () => {
     return flattenedData;
   }, [flattenedData]);
 
-  // Dynamic mapper: LEFT = Expense accounts only, RIGHT = Revenue accounts only
-  // Asset accounts are excluded from both columns; they affect only closing cash.
+  // Dynamic mapper: LEFT = Expense accounts only, RIGHT = Revenue accounts only.
+  //
+  // SINGLE SOURCE OF TRUTH: every value below is derived exclusively from
+  // `tbReport.entries` — the Trial Balance API rows, which come from
+  // AccountingService.getTrialBalance → getPostedAggregates (posted journal
+  // entry lines). We deliberately do NOT read the account tree's rolled-up
+  // node.debit/node.credit here: the tree sums each posting up through every
+  // parent, so including both leaf ('gl') and header ('subsidiary') nodes
+  // counted every expense twice (leaf + its parent) — that was the 40k→80k
+  // Dashboard/Matrix mismatch. tbReport has exactly one row per posting
+  // account, so each posted transaction now contributes exactly once and the
+  // Matrix totals equal the Dashboard, Income Statement, Balance Sheet and
+  // Cash Flow totals.
   const matrixData = useMemo(() => {
+    const entries = (tbReport && Array.isArray(tbReport.entries)) ? tbReport.entries : [];
 
-    // ── LEFT COLUMN: all EXPENSE GLs ─────────────────────────────────────────
-    const expenseGls = computedAccounts.filter(
-      acc => (acc.type === 'gl' || acc.type === 'subsidiary') &&
-             acc.nature.toUpperCase() === 'EXPENSE'
-    );
+    const typeOf = (e) => (e.accountType || '').toUpperCase();
+    const expenseEntries = entries.filter(e => typeOf(e) === 'EXPENSE');
+    const revenueEntries = entries.filter(e => typeOf(e) === 'REVENUE' || typeOf(e) === 'INCOME');
+    const assetEntries   = entries.filter(e => typeOf(e) === 'ASSET');
 
-    const getExpenseBal = (codes, nameRegex = null) => {
-      let val = 0;
-      expenseGls.forEach(acc => {
-        const matchesCode = codes.length > 0 && codes.includes(acc.code);
-        const matchesName = nameRegex && nameRegex.test(acc.glName || acc.mainCategory || '');
-        if (matchesCode || matchesName) {
-          val += Math.max(0, (acc.debit || 0) - (acc.credit || 0));
-        }
-      });
-      return val;
+    // Debit-normal balance for expenses/assets; credit-normal for revenue.
+    const debitBal  = (e) => Math.max(0, (e.debit || 0) - (e.credit || 0));
+    const creditBal = (e) => Math.max(0, (e.credit || 0) - (e.debit || 0));
+
+    // Strict PARTITION of entries into named rows (first matching definition
+    // wins) plus a single residual row. Because every entry lands in exactly
+    // one row, the rows always sum back to the single-source total — no double
+    // counting and no hardcoded/overlapping subtotals.
+    const partition = (items, rowDefs, amtFn, residualLabel) => {
+      const totals = new Array(rowDefs.length).fill(0);
+      let residual = 0;
+      for (const e of items) {
+        const idx = rowDefs.findIndex(def =>
+          (def.codes && def.codes.includes(e.glCode)) ||
+          (def.regex && def.regex.test(e.accountName || ''))
+        );
+        const amt = amtFn(e);
+        if (idx >= 0) totals[idx] += amt;
+        else residual += amt;
+      }
+      const rows = rowDefs.map((def, i) => ({ desc: def.desc, val: totals[i] }));
+      rows.push({ desc: residualLabel, val: residual });
+      return rows.map((row, idx) => ({ ...row, sNo: String(idx + 1).padStart(2, '0') }));
     };
 
-    // ── RIGHT COLUMN: all REVENUE / INCOME GLs ───────────────────────────────
-    const revenueGls = computedAccounts.filter(
-      acc => (acc.type === 'gl' || acc.type === 'subsidiary') &&
-             (acc.nature.toUpperCase() === 'REVENUE' || acc.nature.toUpperCase() === 'INCOME')
-    );
-
-    const getRevenueBal = (codes, nameRegex = null) => {
-      let val = 0;
-      revenueGls.forEach(acc => {
-        const matchesCode = codes.length > 0 && codes.includes(acc.code);
-        const matchesName = nameRegex && nameRegex.test(acc.glName || acc.mainCategory || '');
-        if (matchesCode || matchesName) {
-          val += Math.max(0, (acc.credit || 0) - (acc.debit || 0));
-        }
-      });
-      return val;
-    };
-
-    const namedExpenses = [
-      { desc: 'Bank Charges',               val: getExpenseBal(['4080103']) },
-      { desc: 'Bus Diesel',                  val: getExpenseBal(['4030101']) },
-      { desc: 'Bus Maintenance',             val: getExpenseBal(['4050101'], /bus.*repair|bus.*maintenance/i) },
-      { desc: 'Bus Renovation',              val: getExpenseBal([], /bus.*renovation/i) },
-      { desc: 'Annexy Canopy',               val: getExpenseBal([], /annexy.*canopy|canopy.*annexy/i) },
-      { desc: 'Garden Canopy',               val: getExpenseBal([], /garden.*canopy|canopy.*garden/i) },
-      { desc: 'Cleaning Staff Labor',        val: getExpenseBal([], /cleaning.*labor|clean.*staff/i) },
-      { desc: 'Office Equipment',            val: getExpenseBal([], /office.*equipment|office.*asset/i) },
-      { desc: 'Cleaning Equipment',          val: getExpenseBal([], /cleaning.*equipment/i) },
-      { desc: 'Generator Diesel',            val: getExpenseBal(['4080104'], /generator.*fuel|generator.*diesel/i) },
-      { desc: 'Diyanat Committee Expenses',  val: getExpenseBal([], /diyanat.*committee/i) },
-      { desc: 'Staff Refreshments',          val: getExpenseBal(['4080101'], /entertainment|refreshment/i) },
-      { desc: 'Generator Repair',            val: getExpenseBal(['4050102'], /generator.*repair/i) },
-      { desc: 'Cricket Tournament Expenses', val: getExpenseBal([], /cricket|tournament/i) },
-      { desc: 'Monthly Donation Expense',    val: getExpenseBal(['4060101'], /monthly.*donation/i) },
-      { desc: 'Electric Equipment',          val: getExpenseBal([], /electric.*equipment/i) },
-      { desc: 'Office Fitting',              val: getExpenseBal([], /office.*fitting/i) },
-      { desc: 'Gardening Expenses',          val: getExpenseBal([], /garden.*expense|gardening/i) },
-      { desc: 'Jamaat Khana Renovation',     val: getExpenseBal([], /jamaat.*khana.*renovation|jamaat.*khana.*repair/i) },
-      { desc: 'Court / Legal Fees',          val: getExpenseBal(['4070101'], /legal.*fee|court/i) },
-      { desc: 'General Body Expenses',       val: getExpenseBal(['4080105'], /general.*body|meeting/i) },
-      { desc: 'K-Electric Bill',             val: getExpenseBal([], /k-electric|electricity/i) },
-      { desc: 'Medical Center Construction', val: getExpenseBal([], /medical.*center.*construction/i) },
-      { desc: 'Medical Donation',            val: getExpenseBal(['4060103'], /medical.*donation/i) },
-      { desc: 'Shadi Biyah Donation',        val: getExpenseBal(['4060102'], /marriage.*donation/i) },
-      { desc: 'Zakat Distribution',          val: getExpenseBal([], /zakat.*dist|zakat.*paid/i) },
-      { desc: 'Fitra Distribution',          val: getExpenseBal([], /fitra.*dist|fitra.*paid/i) },
-      { desc: 'Salary',                      val: getExpenseBal([], /salary|wages/i) },
-      { desc: 'Rent',                        val: getExpenseBal([], /rent/i) },
-      { desc: 'Administrative Expenses',     val: getExpenseBal([], /admin.*expense/i) },
-      { desc: 'Education Donation',          val: getExpenseBal([], /education.*donation/i) },
+    // ── LEFT COLUMN: EXPENSE rows ────────────────────────────────────────────
+    const expenseRowDefs = [
+      { desc: 'Bank Charges',               codes: ['4080103'] },
+      { desc: 'Bus Diesel',                  codes: ['4030101'] },
+      { desc: 'Bus Maintenance',             codes: ['4050101'], regex: /bus.*repair|bus.*maintenance/i },
+      { desc: 'Bus Renovation',              regex: /bus.*renovation/i },
+      { desc: 'Annexy Canopy',               regex: /annexy.*canopy|canopy.*annexy/i },
+      { desc: 'Garden Canopy',               regex: /garden.*canopy|canopy.*garden/i },
+      { desc: 'Cleaning Staff Labor',        regex: /cleaning.*labor|clean.*staff/i },
+      { desc: 'Office Equipment',            regex: /office.*equipment|office.*asset/i },
+      { desc: 'Cleaning Equipment',          regex: /cleaning.*equipment/i },
+      { desc: 'Generator Diesel',            codes: ['4080104'], regex: /generator.*fuel|generator.*diesel/i },
+      { desc: 'Diyanat Committee Expenses',  regex: /diyanat.*committee/i },
+      { desc: 'Staff Refreshments',          codes: ['4080101'], regex: /entertainment|refreshment/i },
+      { desc: 'Generator Repair',            codes: ['4050102'], regex: /generator.*repair/i },
+      { desc: 'Cricket Tournament Expenses', regex: /cricket|tournament/i },
+      { desc: 'Monthly Donation Expense',    codes: ['4060101'], regex: /monthly.*donation/i },
+      { desc: 'Electric Equipment',          regex: /electric.*equipment/i },
+      { desc: 'Office Fitting',              regex: /office.*fitting/i },
+      { desc: 'Gardening Expenses',          regex: /garden.*expense|gardening/i },
+      { desc: 'Jamaat Khana Renovation',     regex: /jamaat.*khana.*renovation|jamaat.*khana.*repair/i },
+      { desc: 'Court / Legal Fees',          codes: ['4070101'], regex: /legal.*fee|court/i },
+      { desc: 'General Body Expenses',       codes: ['4080105'], regex: /general.*body|meeting/i },
+      { desc: 'K-Electric Bill',             regex: /k-electric|electricity/i },
+      { desc: 'Medical Center Construction', regex: /medical.*center.*construction/i },
+      { desc: 'Medical Donation',            codes: ['4060103'], regex: /medical.*donation/i },
+      { desc: 'Shadi Biyah Donation',        codes: ['4060102'], regex: /marriage.*donation/i },
+      { desc: 'Zakat Distribution',          regex: /zakat.*dist|zakat.*paid/i },
+      { desc: 'Fitra Distribution',          regex: /fitra.*dist|fitra.*paid/i },
+      { desc: 'Salary',                      regex: /salary|wages/i },
+      { desc: 'Rent',                        regex: /rent/i },
+      { desc: 'Administrative Expenses',     regex: /admin.*expense/i },
+      { desc: 'Education Donation',          regex: /education.*donation/i },
     ];
+    const expenses = partition(expenseEntries, expenseRowDefs, debitBal, 'Miscellaneous Expenses');
+    const totalActualExpense = expenseEntries.reduce((s, e) => s + debitBal(e), 0);
 
-    const totalActualExpense = expenseGls.reduce(
-      (s, acc) => s + Math.max(0, (acc.debit || 0) - (acc.credit || 0)), 0
-    );
-    const namedExpTotal = namedExpenses.reduce((s, r) => s + r.val, 0);
-    const residualExpense = Math.max(0, totalActualExpense - namedExpTotal);
-
-    const expenses = [
-      ...namedExpenses,
-      { desc: 'Miscellaneous Expenses', val: residualExpense },
-    ].map((row, idx) => ({ ...row, sNo: String(idx + 1).padStart(2, '0') }));
-
-    // ── RIGHT COLUMN: named revenue rows + residual ───────────────────────────
-    const namedIncomes = [
-      { desc: 'Donation Received',        val: getRevenueBal(['3020000', '3020100'], /general.*donation|donation.*received/i) },
-      { desc: 'Zakat Received',           val: getRevenueBal(['3020101'], /zakat.*received|zakat.*income/i) },
-      { desc: 'Fitra Received',           val: getRevenueBal(['3020201'], /fitra/i) },
-      { desc: 'Membership Fees',          val: getRevenueBal(['3020402'], /membership.*fee/i) },
-      { desc: 'Hall Booking Income',      val: getRevenueBal(['3010101', '3010102', '3010103', '3010104'], /hall.*booking/i) },
-      { desc: 'Bus Booking',              val: getRevenueBal(['3020401'], /bus.*booking/i) },
-      { desc: 'Decoration Income',        val: getRevenueBal(['3020403'], /decoration.*commission|decoration.*income/i) },
-      { desc: 'Light Decoration Income',  val: getRevenueBal([], /light.*decoration/i) },
-      { desc: 'Donation (Shadi Biyah)',   val: getRevenueBal(['3020404'], /marriage.*donation.*received/i) },
-      { desc: 'Scrap Sale (Raddi)',       val: getRevenueBal([], /scrap.*raddi|raddi/i) },
-      { desc: 'Scrap Sale (Scrap)',       val: getRevenueBal([], /scrap.*sale|scrap.*sold/i) },
-      { desc: 'Commission Income',        val: getRevenueBal([], /commission.*income/i) },
-      { desc: 'Qurbani Income',           val: getRevenueBal([], /qurbani/i) },
-      { desc: 'Coconut Income',           val: getRevenueBal([], /coconut/i) },
-      { desc: 'Profit / Interest NBP',    val: getRevenueBal([], /profit.*nbp|interest.*nbp/i) },
-      { desc: 'Loan / Salary Advance',    val: getRevenueBal([], /salary.*loan|advance.*loan/i) },
+    // ── RIGHT COLUMN: REVENUE rows ───────────────────────────────────────────
+    const revenueRowDefs = [
+      { desc: 'Donation Received',        codes: ['3020000', '3020100'], regex: /general.*donation|donation.*received/i },
+      { desc: 'Zakat Received',           codes: ['3020101'], regex: /zakat.*received|zakat.*income/i },
+      { desc: 'Fitra Received',           codes: ['3020201'], regex: /fitra/i },
+      { desc: 'Membership Fees',          codes: ['3020402'], regex: /membership.*fee/i },
+      { desc: 'Hall Booking Income',      codes: ['3010101', '3010102', '3010103', '3010104'], regex: /hall.*booking/i },
+      { desc: 'Bus Booking',              codes: ['3020401'], regex: /bus.*booking/i },
+      { desc: 'Decoration Income',        codes: ['3020403'], regex: /decoration.*commission|decoration.*income/i },
+      { desc: 'Light Decoration Income',  regex: /light.*decoration/i },
+      { desc: 'Donation (Shadi Biyah)',   codes: ['3020404'], regex: /marriage.*donation.*received/i },
+      { desc: 'Scrap Sale (Raddi)',       regex: /scrap.*raddi|raddi/i },
+      { desc: 'Scrap Sale (Scrap)',       regex: /scrap.*sale|scrap.*sold/i },
+      { desc: 'Commission Income',        regex: /commission.*income/i },
+      { desc: 'Qurbani Income',           regex: /qurbani/i },
+      { desc: 'Coconut Income',           regex: /coconut/i },
+      { desc: 'Profit / Interest NBP',    regex: /profit.*nbp|interest.*nbp/i },
+      { desc: 'Loan / Salary Advance',    regex: /salary.*loan|advance.*loan/i },
     ];
+    const incomes = partition(revenueEntries, revenueRowDefs, creditBal, 'Other Income');
+    const totalActualRevenue = revenueEntries.reduce((s, e) => s + creditBal(e), 0);
 
-    const totalActualRevenue = revenueGls.reduce(
-      (s, acc) => s + Math.max(0, (acc.credit || 0) - (acc.debit || 0)), 0
-    );
-    const namedRevTotal = namedIncomes.reduce((s, r) => s + r.val, 0);
-    const residualRevenue = Math.max(0, totalActualRevenue - namedRevTotal);
-
-    const incomes = [
-      ...namedIncomes,
-      { desc: 'Other Income', val: residualRevenue },
-    ].map((row, idx) => ({ ...row, sNo: String(idx + 1).padStart(2, '0') }));
-
-    // ── CASH IN HAND vs BANK BALANCE: split from ASSET accounts ─────────────
-    // Uses the same name-heuristic as the backend isCashAccount / isBankAccount.
+    // ── CASH IN HAND vs BANK BALANCE (Requirement 9) ─────────────────────────
+    // Cash in Hand = Cash GL closing balance only (never a bank account).
+    // Bank Balance = sum of bank GL accounts (National Bank of Pakistan + NBP
+    // Zakat) only. Both come from the same posted-GL tbReport asset rows.
     const isCashName = (name) => {
       const n = (name || '').toLowerCase();
       return (n.includes('cash') || n.includes('hand') || n.includes('petty') || n.includes('till')) && !n.includes('bank');
@@ -246,20 +237,16 @@ export const TrialBalanceSheet = () => {
       return n.includes('bank') || n.includes('nbp') || n.includes('national bank');
     };
 
-    const assetGls = computedAccounts.filter(
-      acc => (acc.type === 'gl' || acc.type === 'subsidiary') && acc.nature.toUpperCase() === 'ASSET'
-    );
+    const cashInHand = assetEntries
+      .filter(e => isCashName(e.accountName))
+      .reduce((s, e) => s + debitBal(e), 0);
 
-    const cashInHand = assetGls
-      .filter(acc => isCashName(acc.glName) || isCashName(acc.mainCategory))
-      .reduce((s, acc) => s + Math.max(0, (acc.debit || 0) - (acc.credit || 0)), 0);
+    const bankBalance = assetEntries
+      .filter(e => isBankName(e.accountName))
+      .reduce((s, e) => s + debitBal(e), 0);
 
-    const bankBalance = assetGls
-      .filter(acc => isBankName(acc.glName) || isBankName(acc.mainCategory))
-      .reduce((s, acc) => s + Math.max(0, (acc.debit || 0) - (acc.credit || 0)), 0);
-
-    return { expenses, incomes, cashInHand, bankBalance };
-  }, [computedAccounts]);
+    return { expenses, incomes, cashInHand, bankBalance, totalActualExpense, totalActualRevenue };
+  }, [tbReport]);
 
   const filteredData = useMemo(() => {
     return computedAccounts.filter(item => 
@@ -289,17 +276,22 @@ export const TrialBalanceSheet = () => {
     };
   }, [tbReport, computedAccounts]);
 
-  // Compute matrix surplus or deficit
+  // Compute matrix surplus or deficit. Totals come straight from the
+  // single-source figures (identical to the sum of the partitioned rows, but
+  // taken directly so the footer can never drift from the source).
   const matrixTotals = useMemo(() => {
-    const totalExp = matrixData.expenses.reduce((sum, e) => sum + e.val, 0);
-    const totalInc = matrixData.incomes.reduce((sum, i) => sum + i.val, 0);
+    const totalExp = matrixData.totalActualExpense || 0;
+    const totalInc = matrixData.totalActualRevenue || 0;
     const netSurplus = totalInc - totalExp; // positive = surplus, negative = deficit
     const { cashInHand, bankBalance } = matrixData;
+    // Requirement 9: Closing Cash in Trial Balance = Cash in Hand + Bank Balance.
+    const closingCash = (cashInHand || 0) + (bankBalance || 0);
     return {
       totalExpenses: totalExp,
       totalIncomes: totalInc,
       cashInHand,
       bankBalance,
+      closingCash,
       surplus: netSurplus,
       isDeficit: netSurplus < 0,
       finalExpensesTotal: totalExp + Math.max(0, netSurplus),
@@ -720,6 +712,12 @@ export const TrialBalanceSheet = () => {
                   <td className="py-2.5 px-4 text-slate-400 uppercase tracking-wider font-semibold">Total Bank Balance</td>
                   <td className="py-2.5 px-4 text-right font-mono font-bold text-emerald-400 print:text-slate-900">
                     {formatMoney(matrixTotals.bankBalance)}
+                  </td>
+                </tr>
+                <tr className="border-b border-slate-800 print:border-slate-300">
+                  <td className="py-2.5 px-4 text-slate-300 uppercase tracking-wider font-bold">Closing Cash (Cash in Hand + Bank)</td>
+                  <td className="py-2.5 px-4 text-right font-mono font-black text-emerald-300 print:text-slate-900">
+                    {formatMoney(matrixTotals.closingCash)}
                   </td>
                 </tr>
                 <tr className="border-b border-slate-800 print:border-slate-300">
