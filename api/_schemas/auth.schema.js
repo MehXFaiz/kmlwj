@@ -2,7 +2,7 @@ import { z } from "zod";
 import { emailSchema, sanitizedString } from "./common.schema.js";
 const loginSchema = z.object({
   email: emailSchema,
-  password: z.string({ required_error: "Password is required" }).min(1, "Password is required")
+  password: z.string().min(1, "Password is required")
 });
 const registerSchema = z.object({
   email: emailSchema,

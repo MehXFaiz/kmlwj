@@ -6,7 +6,6 @@ import {
   optionalUuidSchema,
   nonNegativeAmountSchema,
   optionalNonNegativeAmountSchema,
-  cnicSchema,
   optionalCnicSchema,
   phoneSchema,
   optionalPhoneSchema,
@@ -19,17 +18,13 @@ import {
 export const hallBookingSchema = z.object({
   hallName: sanitizedString({ min: 2, max: 100, fieldName: 'Hall Name' }),
   eventDate: dateSchema,
-  slot: z.enum(['MORNING', 'AFTERNOON', 'EVENING', 'FULL_DAY'], {
-    errorMap: () => ({ message: 'Slot must be MORNING, AFTERNOON, EVENING, or FULL_DAY' }),
-  }),
+  slot: z.enum(['MORNING', 'AFTERNOON', 'EVENING', 'FULL_DAY'] as const),
   customerName: sanitizedString({ min: 2, max: 100, fieldName: 'Customer Name' }),
   customerPhone: phoneSchema,
   cnic: optionalCnicSchema,
   amount: nonNegativeAmountSchema,
   advancePaid: optionalNonNegativeAmountSchema.default(0),
-  status: z.enum(['BOOKED', 'CONFIRMED', 'CANCELLED', 'COMPLETED'], {
-    errorMap: () => ({ message: 'Status must be BOOKED, CONFIRMED, CANCELLED, or COMPLETED' }),
-  }).optional().default('BOOKED'),
+  status: z.enum(['BOOKED', 'CONFIRMED', 'CANCELLED', 'COMPLETED'] as const).optional().default('BOOKED'),
   notes: optionalSanitizedString({ max: 500, fieldName: 'Notes' }),
 });
 
@@ -57,9 +52,7 @@ export const invoiceSchema = z.object({
   invoiceDate: dateSchema,
   dueDate: optionalDateSchema,
   totalAmount: nonNegativeAmountSchema,
-  status: z.enum(['DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED'], {
-    errorMap: () => ({ message: 'Invoice status must be DRAFT, SENT, PAID, OVERDUE, or CANCELLED' }),
-  }).optional().default('DRAFT'),
+  status: z.enum(['DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED'] as const).optional().default('DRAFT'),
   items: z.array(invoiceItemSchema).min(1, 'Invoice must contain at least 1 item').optional(),
   notes: optionalSanitizedString({ max: 500, fieldName: 'Notes' }),
 });

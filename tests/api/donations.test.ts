@@ -3,6 +3,7 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import app from '../../api/index';
 import { prisma } from '../../api/_prisma';
+import { AccountingService } from '../../api/_services/accounting.service';
 
 describe('Donations Monthly Restriction API', () => {
   let token: string;
@@ -27,6 +28,13 @@ describe('Donations Monthly Restriction API', () => {
         isActive: true,
       }
     });
+    // Ensure Cash account has sufficient balance for test disbursements
+    const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
+    await prisma.account.update({
+      where: { id: cashAccount.id },
+      data: { initialBalance: 1000000, currentBalance: 1000000 }
+    });
+
     beneficiaryId = beneficiary.id;
   }, 30000);
 

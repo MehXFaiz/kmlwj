@@ -71,8 +71,10 @@ var journal_entries_default = makeHandler(async (req, res) => {
     if (!lines || !Array.isArray(lines) || lines.length === 0) {
       return res.status(400).json({ error: { message: "Lines are required", status: 400 } });
     }
-    const voucherNo = req.body.voucherNo;
-    const postedBy = req.user.id || req.user.email || "system";
+    const isAdjustment = voucherType === "ADJUSTMENT" || reference && reference.toUpperCase().includes("ADJUSTMENT");
+    if (isAdjustment && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: "Forbidden: Only Super Admin may perform manual balance adjustment entries", status: 403 } });
+    }
     try {
       const result = await prisma.$transaction(async (tx) => {
         const payloadLines = lines.map((l) => ({

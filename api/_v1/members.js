@@ -219,18 +219,6 @@ var members_default = makeHandler(async (req, res) => {
       cnicBackUrl,
       isActive
     } = validated;
-    fullName = trimIfProvided(fullName);
-    fatherName = trimIfProvided(fatherName);
-    cnic = trimIfProvided(cnic);
-    address = trimIfProvided(address);
-    mobile = trimIfProvided(mobile);
-    email = trimIfProvided(email);
-    city = trimIfProvided(city);
-    area = trimIfProvided(area);
-    ghamName = trimIfProvided(ghamName);
-    education = trimIfProvided(education);
-    profession = trimIfProvided(profession);
-    company = trimIfProvided(company);
     if (fullName !== void 0 && !String(fullName).trim()) {
       return res.status(400).json({ error: { message: "Full Member Name is required", status: 400 } });
     }

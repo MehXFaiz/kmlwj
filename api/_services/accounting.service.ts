@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingSyncService } from './accounting-sync.service.js';
+import { FundValidationService, InsufficientFundsError } from './fund-validation.service.js';
 
 export interface AccountingLinePayload {
   accountCode?: string;      // GL Code (e.g., '1010101' or '3010101')
@@ -392,6 +393,28 @@ export class AccountingService {
         credit: Number(line.credit) || 0,
         description: line.description || description
       });
+    }
+
+    // Strictly validate available funds before posting any transaction crediting Cash/Bank
+    if (status === 'Posted') {
+      const accountCreditsMap = new Map<string, number>();
+      for (const line of resolvedLines) {
+        if (line.credit > 0) {
+          const current = accountCreditsMap.get(line.account.id) || 0;
+          accountCreditsMap.set(line.account.id, current + line.credit);
+        }
+      }
+
+      for (const [accId, totalCredit] of accountCreditsMap.entries()) {
+        await FundValidationService.validateAndLockFunds(tx, {
+          accountId: accId,
+          requiredAmount: totalCredit,
+          module: payload.module,
+          userId: payload.postedBy,
+          ipAddress: payload.ipAddress,
+          userAgent: payload.userAgent
+        });
+      }
     }
 
     // 1. Create Journal Entry
@@ -836,6 +859,25 @@ export class AccountingService {
     if (je.status === 'Posted') return je;
     if (je.status !== 'Draft') throw new Error(`Accounting Engine Error: Cannot post journal entry with status '${je.status}'.`);
 
+    // Strictly validate available funds before posting draft entry crediting Cash/Bank
+    const accountCreditsMap = new Map<string, number>();
+    for (const line of je.lines) {
+      const creditVal = Number(line.credit) || 0;
+      if (creditVal > 0) {
+        const current = accountCreditsMap.get(line.accountId) || 0;
+        accountCreditsMap.set(line.accountId, current + creditVal);
+      }
+    }
+
+    for (const [accId, totalCredit] of accountCreditsMap.entries()) {
+      await FundValidationService.validateAndLockFunds(tx, {
+        accountId: accId,
+        requiredAmount: totalCredit,
+        module: 'Journal Entries',
+        userId: postedBy
+      });
+    }
+
     // Flip status before recalculating balances: recalculateAccountBalance aggregates
     // only 'Posted' lines, so it must see the new status or it silently excludes this
     // entry's own lines and discards the increment applied a moment earlier.
@@ -961,6 +1003,26 @@ export class AccountingService {
 
     if (!je) throw new Error('Accounting Engine Error: Journal entry not found.');
     if (je.status !== 'Cancelled') return je;
+
+    if (newStatus === 'Posted') {
+      const accountCreditsMap = new Map<string, number>();
+      for (const line of je.lines) {
+        const creditVal = Number(line.credit) || 0;
+        if (creditVal > 0) {
+          const current = accountCreditsMap.get(line.accountId) || 0;
+          accountCreditsMap.set(line.accountId, current + creditVal);
+        }
+      }
+
+      for (const [accId, totalCredit] of accountCreditsMap.entries()) {
+        await FundValidationService.validateAndLockFunds(tx, {
+          accountId: accId,
+          requiredAmount: totalCredit,
+          module: 'Journal Entries',
+          userId: postedBy
+        });
+      }
+    }
 
     const newDescription = je.description ? je.description.replace(/\[Cancelled\/Reversed[^\]]*\]/, '').trim() : '';
     const updatedJe = await tx.journalEntry.update({
@@ -1665,8 +1727,8 @@ export class AccountingService {
       totalEquity: totalEquity.toNumber(),
       totalRevenue: totalRevenue.toNumber(),
       totalExpense: totalExpense.toNumber(),
-      cashBalance: cashBalance.toNumber(),
-      bankBalance: bankBalance.toNumber(),
+      cashBalance: Math.max(0, cashBalance.toNumber()),
+      bankBalance: Math.max(0, bankBalance.toNumber()),
       netPeriodIncome: netPeriodIncome.toNumber(),
       openingRetainedEarnings: openingRetainedEarnings.toNumber(),
       retainedEarnings: retainedEarnings.toNumber()

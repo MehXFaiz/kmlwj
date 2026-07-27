@@ -13,9 +13,7 @@ import {
 export const accountSchema = z.object({
   code: sanitizedString({ min: 1, max: 20, fieldName: 'Account Code' }),
   name: sanitizedString({ min: 2, max: 100, fieldName: 'Account Name' }),
-  type: z.enum(['ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE'], {
-    errorMap: () => ({ message: 'Account type must be one of ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE' }),
-  }),
+  type: z.enum(['ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE'] as const),
   parentId: optionalUuidSchema,
   openingBalance: optionalNonNegativeAmountSchema.default(0),
   isActive: z.boolean().optional().default(true),
@@ -41,9 +39,7 @@ export const simpleExpenseSchema = z.object({
   expenseHeadId: uuidSchema,
   amount: nonNegativeAmountSchema,
   date: optionalDateSchema,
-  paymentMethod: z.enum(['CASH', 'BANK', 'CHEQUE', 'ONLINE'], {
-    errorMap: () => ({ message: 'Payment method must be CASH, BANK, CHEQUE, or ONLINE' }),
-  }).optional().default('CASH'),
+  paymentMethod: z.enum(['CASH', 'BANK', 'CHEQUE', 'ONLINE'] as const).optional().default('CASH'),
   paidTo: optionalSanitizedString({ max: 100, fieldName: 'Paid To' }),
   bankAccountId: optionalUuidSchema,
   reference: optionalSanitizedString({ max: 100, fieldName: 'Reference' }),
@@ -55,9 +51,7 @@ export const simpleIncomeSchema = z.object({
   revenueHeadId: uuidSchema,
   amount: nonNegativeAmountSchema,
   date: optionalDateSchema,
-  paymentMethod: z.enum(['CASH', 'BANK', 'CHEQUE', 'ONLINE'], {
-    errorMap: () => ({ message: 'Payment method must be CASH, BANK, CHEQUE, or ONLINE' }),
-  }).optional().default('CASH'),
+  paymentMethod: z.enum(['CASH', 'BANK', 'CHEQUE', 'ONLINE'] as const).optional().default('CASH'),
   receivedFrom: optionalSanitizedString({ max: 100, fieldName: 'Received From' }),
   bankAccountId: optionalUuidSchema,
   reference: optionalSanitizedString({ max: 100, fieldName: 'Reference' }),
@@ -71,9 +65,7 @@ export const revenueCollectionSchema = z.object({
   date: dateSchema,
   memberId: optionalUuidSchema,
   donorId: optionalUuidSchema,
-  paymentMethod: z.enum(['CASH', 'BANK', 'CHEQUE', 'ONLINE'], {
-    errorMap: () => ({ message: 'Payment method must be CASH, BANK, CHEQUE, or ONLINE' }),
-  }),
+  paymentMethod: z.enum(['CASH', 'BANK', 'CHEQUE', 'ONLINE'] as const),
   remarks: optionalSanitizedString({ max: 500, fieldName: 'Remarks' }),
 });
 

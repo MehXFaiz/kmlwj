@@ -64,8 +64,8 @@ var stats_default = makeHandler(async (req, res) => {
   const totalLiabilities = summaryResult.totalLiabilities;
   const totalRevenue = summaryResult.totalRevenue;
   const totalExpense = summaryResult.totalExpense;
-  const cashBalance = summaryResult.cashBalance;
-  const bankBalance = summaryResult.bankBalance;
+  const cashBalance = Math.max(0, summaryResult.cashBalance);
+  const bankBalance = Math.max(0, summaryResult.bankBalance);
   const netIncome = summaryResult.netPeriodIncome;
   const baseEquity = summaryResult.totalEquity - netIncome;
   const totalEquityWithNetIncome = summaryResult.totalEquity;

@@ -36,9 +36,7 @@ const updateMemberSchema = createMemberSchema.partial();
 const familyRelationshipSchema = z.object({
   headId: uuidSchema,
   relativeId: uuidSchema,
-  relationshipType: z.enum(["SPOUSE", "CHILD", "PARENT", "SIBLING", "OTHER"], {
-    errorMap: () => ({ message: "Invalid relationship type enum" })
-  })
+  relationshipType: z.enum(["SPOUSE", "CHILD", "PARENT", "SIBLING", "OTHER"])
 });
 const zakatCardSchema = z.object({
   memberId: uuidSchema,

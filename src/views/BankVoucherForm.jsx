@@ -91,7 +91,18 @@ export const BankVoucherForm = () => {
       const { localBalances } = calculateAccountBalances(flatAccounts, journals, 'Global');
       const avail = localBalances[bankAcc.code] !== undefined ? localBalances[bankAcc.code] : (bankAcc.initialBalance || 0);
       if (val > avail) {
-        showToast(`Insufficient amount! Current balance: Rs. ${Math.max(0, avail).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, 'error');
+        const isCash = bankAcc.detailType === 'Cash' || (bankAcc.name || '').toLowerCase().includes('cash');
+        const availNum = Math.max(0, avail);
+        const shortfall = val - availNum;
+        const formattedAvailable = availNum.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        const formattedRequired = val.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        const formattedShortfall = shortfall.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+        const msg = isCash
+          ? `Insufficient Cash Balance.\nAvailable Cash: Rs ${formattedAvailable}\nRequired Amount: Rs ${formattedRequired}\nShortfall: Rs ${formattedShortfall}`
+          : `Insufficient Bank Balance.\nAvailable Balance: Rs ${formattedAvailable}\nRequired Amount: Rs ${formattedRequired}\nShortfall: Rs ${formattedShortfall}`;
+
+        showToast(msg, 'error');
         return;
       }
     }

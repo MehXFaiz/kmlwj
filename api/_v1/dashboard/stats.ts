@@ -87,8 +87,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const totalLiabilities = summaryResult.totalLiabilities;
   const totalRevenue = summaryResult.totalRevenue;
   const totalExpense = summaryResult.totalExpense;
-  const cashBalance = summaryResult.cashBalance;
-  const bankBalance = summaryResult.bankBalance;
+  const cashBalance = Math.max(0, summaryResult.cashBalance);
+  const bankBalance = Math.max(0, summaryResult.bankBalance);
   const netIncome = summaryResult.netPeriodIncome;
   const baseEquity = summaryResult.totalEquity - netIncome;
   const totalEquityWithNetIncome = summaryResult.totalEquity;
