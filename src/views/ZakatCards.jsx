@@ -10,6 +10,8 @@ import {
   Link2, Copy, Trash2
 } from 'lucide-react';
 
+import { paymentMethodLabel } from '../constants/paymentMethods';
+
 const VERIFY_BASE_URL = 'https://kmlwj.com/member/verify';
 
 function getMemberQrUrl(member) {
@@ -691,7 +693,7 @@ export const ZakatCards = () => {
               <span style={{
                 fontSize: '10px', fontWeight: 600,
                 color: card.paymentMethod === 'CASH' ? '#4ade80' : '#60a5fa',
-              }}>{card.paymentMethod}</span>
+              }}>{paymentMethodLabel(card.paymentMethod)}</span>
               <div style={{ display: 'flex', gap: '5px' }}>
                 <button
                   onClick={() => setPreviewCard(card)}

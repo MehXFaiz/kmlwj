@@ -118,11 +118,18 @@ export const Topbar = ({ onMobileMenuToggle }) => {
         <div className="flex-1 flex items-center justify-center min-w-0 px-2 sm:px-4">
           <span
             dir="rtl"
-            className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#1C120B] via-[#482F1E] to-[#291A10] dark:from-brand-300 dark:via-brand-200 dark:to-brand-400 truncate select-none text-[15px] sm:text-[18px] text-center leading-relaxed"
+            className="text-transparent bg-clip-text bg-gradient-to-r from-[#1C120B] via-[#482F1E] to-[#291A10] dark:from-brand-300 dark:via-brand-200 dark:to-brand-400 select-none text-[13px] sm:text-[16px] text-center whitespace-nowrap overflow-visible"
             style={{
-              fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
-              lineHeight: 2,
+              fontFamily: "'Jameel Noori Nastaleeq', 'Mehr Nastaleeq', 'Alvi Nastaleeq Regular', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', serif",
+              fontWeight: 'normal',
+              lineHeight: 1.4,
               letterSpacing: '0.01em',
+              direction: 'rtl',
+              unicodeBidi: 'isolate',
+              textRendering: 'optimizeLegibility',
+              WebkitFontSmoothing: 'antialiased',
+              overflow: 'visible',
+              whiteSpace: 'nowrap',
             }}
           >
             کچھی مسلم لوہارواڈھا ویلفیئر جماعت

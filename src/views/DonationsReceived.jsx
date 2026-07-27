@@ -14,6 +14,7 @@ import { showToast } from '../components/ui/Toast';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 import { useConfirm } from '../components/ui/ConfirmationModal';
 import { DONATION_TYPES, donationTypeDisplay } from '../constants/donationTypes';
+import { paymentMethodLabel } from '../constants/paymentMethods';
 
 const PAYMENT_METHODS = ['CASH', 'BANK', 'CHEQUE', 'ONLINE'];
 
@@ -37,7 +38,7 @@ function PrintReceiptModal({ donation, onClose }) {
       date={donation.receiptDate || donation.createdAt}
       name={donation.donor?.fullName}
       address={donation.donor?.mobile || donation.donor?.address || ''}
-      debitCredit={donation.paymentMethod}
+      paymentMethod={donation.paymentMethod}
       accountName={`${categoryLabel} A/c`}
       particulars={`Donation Received - ${categoryLabel}${donation.narration ? ` (${donation.narration})` : ''}${donation.chequeNo ? ` [Cheque #${donation.chequeNo}]` : ''}`}
       amount={donation.amount}
@@ -417,7 +418,7 @@ export const DonationsReceived = () => {
                         <CreditCard className="w-3.5 h-3.5 text-amber-400" /> METHOD
                       </span>
                       <span className="font-semibold text-slate-100 text-xs truncate max-w-[150px]">
-                        {d.paymentMethod || 'CASH'}
+                        {paymentMethodLabel(d.paymentMethod)}
                         {d.bankAccount && <span className="text-slate-400 font-normal ml-1">({d.bankAccount.accountName})</span>}
                       </span>
                     </div>

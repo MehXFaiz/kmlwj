@@ -1,6 +1,7 @@
 import React from 'react';
 import { Banknote, BadgeCheck, CalendarDays, CheckSquare2, FileText, Printer, ScrollText, Signature, SquarePen, Wallet, X } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
+import { paymentMethodLabel } from '../../constants/paymentMethods';
 
 const numberToWords = (num) => {
   if (!num || num === 0) return 'Zero';
@@ -139,7 +140,7 @@ function CopySheet({ copyLabel, title, voucherNo, fileNo, formattedDate, paidTo,
               <FieldChip label="Voucher No" value={voucherNo || '—'} icon={ScrollText} />
               <FieldChip label="Date" value={formattedDate} icon={CalendarDays} />
               <FieldChip label="Paid To" value={paidTo || '—'} icon={Wallet} />
-              <FieldChip label="Payment Method" value={paymentMethod || 'Bank Transfer'} icon={Banknote} />
+              <FieldChip label="Payment Method" value={paymentMethod} icon={Banknote} />
             </div>
           </SectionCard>
 
@@ -194,6 +195,10 @@ export const VoucherSlipModal = ({
   date = '',
   name = '',
   address = '',
+  // Actual saved payment method code (CASH/BANK/CHEQUE/ONLINE). `paymentMethod`
+  // is the preferred prop; `debitCredit` is accepted for backward compatibility
+  // since existing callers wire the record's method through it.
+  paymentMethod: paymentMethodProp,
   debitCredit = '',
   accountName = '',
   particulars = '',
@@ -210,7 +215,9 @@ export const VoucherSlipModal = ({
   const formattedDate = date ? new Date(date).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
   const amountRs = Math.floor(amount || 0).toLocaleString('en-PK');
   const words = numberToWords(amount || 0);
-  const paymentMethod = /bank/i.test(accountName || '') ? 'Bank Transfer' : /cash/i.test(accountName || '') ? 'Cash' : 'Bank Transfer';
+  // Always derive from the actual saved transaction record — never inferred from
+  // the account name and never defaulted to "Bank Transfer".
+  const paymentMethod = paymentMethodLabel(paymentMethodProp ?? debitCredit);
   const ledgerRows = [
     {
       account: accountName || 'Primary Ledger Account',

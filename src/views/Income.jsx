@@ -3,6 +3,7 @@ import { useIncomeStore } from '../store/incomeStore';
 import { useRevenueStore } from '../store/revenueStore';
 import { useCoaStore } from '../store/coaStore';
 import { PlusCircle, Search, X, CheckCircle2, TrendingUp, Building2, Banknote } from 'lucide-react';
+import { paymentMethodLabel } from '../constants/paymentMethods';
 
 function IncomeModal({ isOpen, onClose, onSave, revenueHeads, accounts }) {
   const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], revenueHeadId: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
@@ -196,7 +197,7 @@ export const Income = () => {
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-1.5">
                         {inc.paymentMethod === 'BANK' ? <Building2 className="h-3.5 w-3.5 text-blue-400" /> : <Banknote className="h-3.5 w-3.5 text-emerald-400" />}
-                        <span className="text-[10px] font-bold text-slate-300">{inc.paymentMethod}</span>
+                        <span className="text-[10px] font-bold text-slate-300">{paymentMethodLabel(inc.paymentMethod)}</span>
                       </div>
                       {inc.reference && <p className="text-[9px] text-slate-500 mt-0.5 font-mono">{inc.reference}</p>}
                     </td>

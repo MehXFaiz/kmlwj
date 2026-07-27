@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { reportsService } from '../services/apiServices';
 import { useCoaStore } from '../store/coaStore';
+import { useDashboardStore } from '../store/dashboardStore';
 import { showToast } from '../components/ui/Toast';
 import { FileText, Banknote, PieChart, Activity, RefreshCw, BookOpen } from 'lucide-react';
 import { DesktopOnly, MobileOnly } from '../components/common/responsive';
@@ -13,15 +14,19 @@ export const Reports = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get('tab') || 'trial-balance';
-  
+
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const [trialBalanceData, setTrialBalanceData] = useState(null);
   const [incomeStatementData, setIncomeStatementData] = useState(null);
   const [balanceSheetData, setBalanceSheetData] = useState(null);
   const [cashFlowData, setCashFlowData] = useState(null);
   const { fiscalYear } = useCoaStore();
+  // Watch the global mutation version — any Create/Update/Delete/Post in any
+  // module bumps this counter via invalidateAll(), causing Reports to re-fetch.
+  const { version } = useDashboardStore();
+  const isFirstRender = useRef(true);
   const reportParams = useMemo(() => ({
     startDate: `${fiscalYear}-01-01`,
     endDate: `${fiscalYear}-12-31`,
@@ -66,6 +71,15 @@ export const Reports = () => {
   useEffect(() => {
     fetchReport(activeTab);
   }, [activeTab, reportParams]);
+
+  // Re-fetch whenever any mutation happens (journal post/cancel/delete, voucher, etc.)
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    fetchReport(activeTab);
+  }, [version]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRefresh = () => {
     fetchReport(activeTab);
@@ -390,20 +404,73 @@ export const Reports = () => {
                 </div>
               </div>
 
-              {/* Cash Summary */}
-              <div className="bg-slate-950/40 border border-slate-800/70 p-6 rounded-xl space-y-4 max-w-lg mx-auto">
-                <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Cash Balance Reconciliation</h4>
+              {/* Cash in Hand + Bank — separate reconciliations */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                {/* Cash in Hand section */}
+                {cashFlowData.cashSection && (
+                  <div className="bg-slate-950/40 border border-slate-800/70 p-5 rounded-xl space-y-3">
+                    <h4 className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider text-center border-b border-slate-800 pb-2">Cash in Hand Reconciliation</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between py-1">
+                        <span className="text-slate-400">Opening Cash</span>
+                        <span className="font-mono text-slate-200">{formatMoney(cashFlowData.cashSection.openingBalance)}</span>
+                      </div>
+                      <div className="flex justify-between py-1 text-emerald-400">
+                        <span>+ Cash Receipts</span>
+                        <span className="font-mono">{formatMoney(cashFlowData.cashSection.totalReceipts)}</span>
+                      </div>
+                      <div className="flex justify-between py-1 text-red-400">
+                        <span>− Cash Payments</span>
+                        <span className="font-mono">{formatMoney(cashFlowData.cashSection.totalPayments)}</span>
+                      </div>
+                      <div className="flex justify-between py-3 border-t border-slate-800 font-bold text-base text-slate-100">
+                        <span>Closing Cash in Hand</span>
+                        <span className="font-mono text-brand-400">{formatMoney(cashFlowData.cashSection.closingBalance)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Bank Balance section */}
+                {cashFlowData.bankSection && (
+                  <div className="bg-slate-950/40 border border-slate-800/70 p-5 rounded-xl space-y-3">
+                    <h4 className="text-[10px] font-bold text-amber-400 uppercase tracking-wider text-center border-b border-slate-800 pb-2">Bank Balance Reconciliation</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between py-1">
+                        <span className="text-slate-400">Opening Bank</span>
+                        <span className="font-mono text-slate-200">{formatMoney(cashFlowData.bankSection.openingBalance)}</span>
+                      </div>
+                      <div className="flex justify-between py-1 text-emerald-400">
+                        <span>+ Bank Receipts</span>
+                        <span className="font-mono">{formatMoney(cashFlowData.bankSection.totalReceipts)}</span>
+                      </div>
+                      <div className="flex justify-between py-1 text-red-400">
+                        <span>− Bank Payments</span>
+                        <span className="font-mono">{formatMoney(cashFlowData.bankSection.totalPayments)}</span>
+                      </div>
+                      <div className="flex justify-between py-3 border-t border-slate-800 font-bold text-base text-slate-100">
+                        <span>Closing Bank Balance</span>
+                        <span className="font-mono text-brand-400">{formatMoney(cashFlowData.bankSection.closingBalance)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Combined summary */}
+              <div className="bg-slate-950/40 border border-slate-800/70 p-5 rounded-xl space-y-3 max-w-lg mx-auto">
+                <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Combined Cash & Bank Reconciliation</h4>
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between py-1 text-slate-350">
-                    <span>Beginning Cash Balance</span>
+                  <div className="flex justify-between py-1">
+                    <span className="text-slate-400">Beginning Cash + Bank</span>
                     <span className="font-mono text-slate-200">{formatMoney(cashFlowData.summary.beginningCash)}</span>
                   </div>
                   <div className="flex justify-between py-1 text-emerald-400">
-                    <span>Net Cash Increase/Decrease</span>
+                    <span>Net Increase / Decrease</span>
                     <span className="font-mono">{cashFlowData.summary.netChange >= 0 ? `+${formatMoney(cashFlowData.summary.netChange)}` : formatMoney(cashFlowData.summary.netChange)}</span>
                   </div>
                   <div className="flex justify-between py-3 border-t border-slate-800 font-bold text-base text-slate-100">
-                    <span>Ending Cash Balance</span>
+                    <span>Ending Cash + Bank</span>
                     <span className="font-mono text-brand-400">{formatMoney(cashFlowData.summary.endingCash)}</span>
                   </div>
                 </div>

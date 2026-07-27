@@ -22,7 +22,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
     }
 
-    // 1. Fetch cash and bank accounts dynamically
+    // 1. Fetch cash and bank accounts dynamically — kept separate from the start
     const cashBankAccounts = await prisma.account.findMany({
       where: {
         accountType: { name: { in: ['Asset', 'ASSET'], mode: 'insensitive' } },
@@ -38,6 +38,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       }
     });
 
+    // Split into cash-in-hand accounts vs bank accounts using the same
+    // isCashAccount / isBankAccount logic as the rest of the accounting engine.
+    const cashAccounts = cashBankAccounts.filter(a => AccountingService.isCashAccount(a.accountName, a.detailType));
+    const bankAccounts = cashBankAccounts.filter(a => AccountingService.isBankAccount(a.accountName, a.detailType));
+
+    const cashCodes = new Set(cashAccounts.map(a => a.glCode));
+    const bankCodes = new Set(bankAccounts.map(a => a.glCode));
     const cashBankCodes = new Set(cashBankAccounts.map(a => a.glCode));
 
     // SQA fix: this report previously only bucketed movements into generic
@@ -70,21 +77,23 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       dateFilter.lte = end;
     }
 
-    // Single source of truth: posted journal entry lines (same source as every
-    // other financial report — see AccountingService.getPostedAggregates)
-    const computeCashBalance = async (upto?: Date) => {
+    // Single source of truth: posted journal entry lines (same as every other report)
+    const computeBalance = async (accounts: typeof cashBankAccounts, upto?: Date) => {
+      if (accounts.length === 0) return 0;
       const aggregates = await AccountingService.getPostedAggregates({
         to: upto,
-        accountIds: cashBankAccounts.map(a => a.id)
+        accountIds: accounts.map(a => a.id)
       });
-
-      const total = cashBankAccounts.reduce(
+      const total = accounts.reduce(
         (sum, acc) => sum + AccountingService.naturalBalance('ASSET', acc.initialBalance, aggregates.get(acc.id)),
         0
       );
-
       return Math.round(total * 100) / 100;
     };
+
+    const computeCashBalance  = (upto?: Date) => computeBalance(cashBankAccounts, upto);
+    const computeCashOnlyBalance = (upto?: Date) => computeBalance(cashAccounts, upto);
+    const computeBankOnlyBalance = (upto?: Date) => computeBalance(bankAccounts, upto);
 
     // 2. Fetch all posted journal entries and analyze transactions
     const postedJournals = await prisma.journalEntry.findMany({
@@ -109,43 +118,67 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const inflowCategoryByAccount: Record<string, CashFlowCategory> = {};
     const outflowCategoryByAccount: Record<string, CashFlowCategory> = {};
 
-    postedJournals.forEach((je) => {
-      // Find cash lines in this journal entry
-      const cashLines = je.lines.filter(l => cashBankCodes.has(l.account.glCode));
-      const nonCashLines = je.lines.filter(l => !cashBankCodes.has(l.account.glCode));
+    // Separate cash-only and bank-only inflow/outflow maps
+    const cashInflowsMap: Record<string, number> = {};
+    const cashOutflowsMap: Record<string, number> = {};
+    const bankInflowsMap: Record<string, number> = {};
+    const bankOutflowsMap: Record<string, number> = {};
 
-      if (cashLines.length === 0 || nonCashLines.length === 0) return;
-
-      // Net impact on cash/bank in this entry
-      const debitSum = cashLines.reduce((sum, l) => sum + Number(l.debit || 0), 0);
-      const creditSum = cashLines.reduce((sum, l) => sum + Number(l.credit || 0), 0);
-      const netCashChange = debitSum - creditSum;
-
-      if (netCashChange > 0) {
-        // Cash Inflow: associate with the credit offset accounts
+    const processMovements = (
+      movementLines: typeof postedJournals[0]['lines'],
+      nonCashLines: typeof postedJournals[0]['lines'],
+      netChange: number,
+      globalInflows: Record<string, number>,
+      globalOutflows: Record<string, number>
+    ) => {
+      if (netChange > 0) {
         const totalNonCashCredit = nonCashLines.reduce((sum, l) => sum + Number(l.credit || 0), 0);
         nonCashLines.forEach((l) => {
           if (l.credit > 0) {
             const ratio = totalNonCashCredit > 0 ? Number(l.credit) / totalNonCashCredit : 1;
-            const amount = Math.round(netCashChange * ratio * 100) / 100;
+            const amount = Math.round(netChange * ratio * 100) / 100;
             const name = l.account.accountName;
-            inflowsMap[name] = (inflowsMap[name] || 0) + amount;
+            globalInflows[name] = (globalInflows[name] || 0) + amount;
             inflowCategoryByAccount[name] = classifyCashFlowCategory(name, l.account.accountType?.name);
           }
         });
-      } else if (netCashChange < 0) {
-        // Cash Outflow: associate with the debit offset accounts
-        const absChange = Math.abs(netCashChange);
+      } else if (netChange < 0) {
+        const absChange = Math.abs(netChange);
         const totalNonCashDebit = nonCashLines.reduce((sum, l) => sum + Number(l.debit || 0), 0);
         nonCashLines.forEach((l) => {
           if (l.debit > 0) {
             const ratio = totalNonCashDebit > 0 ? Number(l.debit) / totalNonCashDebit : 1;
             const amount = Math.round(absChange * ratio * 100) / 100;
             const name = l.account.accountName;
-            outflowsMap[name] = (outflowsMap[name] || 0) + amount;
+            globalOutflows[name] = (globalOutflows[name] || 0) + amount;
             outflowCategoryByAccount[name] = classifyCashFlowCategory(name, l.account.accountType?.name);
           }
         });
+      }
+    };
+
+    postedJournals.forEach((je) => {
+      const allCashBankLines = je.lines.filter(l => cashBankCodes.has(l.account.glCode));
+      const nonCashBankLines = je.lines.filter(l => !cashBankCodes.has(l.account.glCode));
+
+      if (allCashBankLines.length === 0 || nonCashBankLines.length === 0) return;
+
+      // Combined (legacy / summary) inflows/outflows
+      const netCashChange = allCashBankLines.reduce((sum, l) => sum + Number(l.debit || 0) - Number(l.credit || 0), 0);
+      processMovements(allCashBankLines, nonCashBankLines, netCashChange, inflowsMap, outflowsMap);
+
+      // Cash-in-hand section
+      const cashLines = je.lines.filter(l => cashCodes.has(l.account.glCode));
+      if (cashLines.length > 0) {
+        const netCash = cashLines.reduce((sum, l) => sum + Number(l.debit || 0) - Number(l.credit || 0), 0);
+        processMovements(cashLines, nonCashBankLines, netCash, cashInflowsMap, cashOutflowsMap);
+      }
+
+      // Bank section
+      const bankLines = je.lines.filter(l => bankCodes.has(l.account.glCode));
+      if (bankLines.length > 0) {
+        const netBank = bankLines.reduce((sum, l) => sum + Number(l.debit || 0) - Number(l.credit || 0), 0);
+        processMovements(bankLines, nonCashBankLines, netBank, bankInflowsMap, bankOutflowsMap);
       }
     });
 
@@ -184,25 +217,64 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       ? await computeCashBalance(new Date(new Date(startDate).getTime() - 1))
       : Math.round((endingCash - netChange) * 100) / 100;
 
+    // Cash-in-hand section
+    const cashTotalReceipts = Math.round(Object.values(cashInflowsMap).reduce((s, v) => s + v, 0) * 100) / 100;
+    const cashTotalPayments = Math.round(Object.values(cashOutflowsMap).reduce((s, v) => s + v, 0) * 100) / 100;
+    const closingCash = endDate
+      ? await computeCashOnlyBalance(new Date(dateFilter.lte))
+      : await computeCashOnlyBalance();
+    const openingCash = startDate
+      ? await computeCashOnlyBalance(new Date(new Date(startDate).getTime() - 1))
+      : Math.round((closingCash - (cashTotalReceipts - cashTotalPayments)) * 100) / 100;
+
+    // Bank section
+    const bankTotalReceipts = Math.round(Object.values(bankInflowsMap).reduce((s, v) => s + v, 0) * 100) / 100;
+    const bankTotalPayments = Math.round(Object.values(bankOutflowsMap).reduce((s, v) => s + v, 0) * 100) / 100;
+    const closingBank = endDate
+      ? await computeBankOnlyBalance(new Date(dateFilter.lte))
+      : await computeBankOnlyBalance();
+    const openingBank = startDate
+      ? await computeBankOnlyBalance(new Date(new Date(startDate).getTime() - 1))
+      : Math.round((closingBank - (bankTotalReceipts - bankTotalPayments)) * 100) / 100;
+
+    const periodLabel = startDate && endDate
+      ? `${startDate} to ${endDate}`
+      : startDate
+      ? `From ${startDate}`
+      : endDate
+      ? `Up to ${endDate}`
+      : 'All Time';
+
     return res.status(200).json({
       status: 200,
       data: {
         inflows,
         outflows,
         categorySummary,
+        // Split Cash in Hand and Bank sections (single source of truth: posted GL entries)
+        cashSection: {
+          receipts: Object.entries(cashInflowsMap).map(([accountName, amount]) => ({ accountName, amount })),
+          payments: Object.entries(cashOutflowsMap).map(([accountName, amount]) => ({ accountName, amount })),
+          openingBalance: openingCash,
+          totalReceipts: cashTotalReceipts,
+          totalPayments: cashTotalPayments,
+          closingBalance: closingCash,
+        },
+        bankSection: {
+          receipts: Object.entries(bankInflowsMap).map(([accountName, amount]) => ({ accountName, amount })),
+          payments: Object.entries(bankOutflowsMap).map(([accountName, amount]) => ({ accountName, amount })),
+          openingBalance: openingBank,
+          totalReceipts: bankTotalReceipts,
+          totalPayments: bankTotalPayments,
+          closingBalance: closingBank,
+        },
         summary: {
           beginningCash,
           totalInflow,
           totalOutflow,
           netChange,
           endingCash,
-          periodLabel: startDate && endDate
-            ? `${startDate} to ${endDate}`
-            : startDate
-            ? `From ${startDate}`
-            : endDate
-            ? `Up to ${endDate}`
-            : 'All Time'
+          periodLabel
         }
       }
     });

@@ -10,12 +10,16 @@
    ═══════════════════════════════════════════════════════════════ */
 @font-face {
   font-family: "Alvi Nastaleeq";
-  src: local("Alvi Nastaleeq Regular"),
+  /* Prefer Jameel Noori / Mehr Nastaleeq when locally installed — they render the
+     Kaaf (ک) vertical stroke fully — before the bundled Alvi ttf, then Noto. */
+  src: local("Jameel Noori Nastaleeq"),
+       local("Jameel Noori Nastaleeq Kasheeda"),
+       local("Mehr Nastaleeq"),
+       local("Alvi Nastaleeq Regular"),
        local("Alvi Nastaleeq"),
        local("AlviNastaleeq-Regular"),
        local("AlviNastaleeq"),
        url("/fonts/AlviNastaleeqRegular.ttf") format("truetype"),
-       local("Jameel Noori Nastaleeq"),
        local("Noto Nastaliq Urdu");
   font-weight: 400;
   font-style: normal;

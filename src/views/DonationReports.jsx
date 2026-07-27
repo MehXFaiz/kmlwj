@@ -4,6 +4,7 @@ import { useBeneficiaryStore } from '../store/beneficiaryStore';
 import { FileText, Download, LayoutGrid, Table as TableIcon, Heart, Calendar, CreditCard, Banknote, CheckCircle2, Clock, User, Phone } from 'lucide-react';
 import { pageActionsClass } from '../components/common/responsive';
 import { DONATION_TYPES, donationTypeDisplay } from '../constants/donationTypes';
+import { paymentMethodLabel } from '../constants/paymentMethods';
 
 export const DonationReports = () => {
   const { donations, fetchDonations } = useDonationStore();
@@ -79,7 +80,7 @@ export const DonationReports = () => {
         csvCell(getBeneficiaryName(d)),
         csvCell(donationTypeDisplay(d.donationType, d.customDonationType)),
         Number(d.amount) || 0,
-        csvCell(d.paymentMethod || ''),
+        csvCell(d.paymentMethod ? paymentMethodLabel(d.paymentMethod) : ''),
         csvCell(d.status || 'PENDING'),
         csvCell(new Date(d.createdAt).toLocaleDateString()),
       ].join(',')
@@ -277,7 +278,7 @@ export const DonationReports = () => {
                         <CreditCard className="w-3.5 h-3.5 text-cyan-400 print:text-black" /> METHOD
                       </span>
                       <span className="font-semibold text-slate-200 text-xs uppercase print:text-black">
-                        {d.paymentMethod || 'CASH'}
+                        {paymentMethodLabel(d.paymentMethod)}
                         {d.chequeNumber && <span className="text-slate-400 font-normal ml-1">#{d.chequeNumber}</span>}
                       </span>
                     </div>
@@ -326,7 +327,7 @@ export const DonationReports = () => {
                     <td className="px-4 py-3.5"><p className="text-sm font-semibold text-slate-200 print:text-black">{getBeneficiaryName(d)}</p></td>
                     <td className="px-4 py-3.5 text-xs text-slate-400 print:text-black">{donationTypeDisplay(d.donationType, d.customDonationType)}</td>
                     <td className="px-4 py-3.5 text-sm font-bold text-emerald-400 print:text-black">PKR {(Number(d.amount) || 0).toLocaleString()}</td>
-                    <td className="px-4 py-3.5 text-xs text-slate-400 print:text-black">{d.paymentMethod}</td>
+                    <td className="px-4 py-3.5 text-xs text-slate-400 print:text-black">{paymentMethodLabel(d.paymentMethod)}</td>
                     <td className="px-4 py-3.5 text-xs text-slate-400 print:text-black">{d.status || 'PENDING'}</td>
                     <td className="px-4 py-3.5 text-xs text-slate-400 print:text-black">{new Date(d.createdAt).toLocaleDateString()}</td>
                   </tr>

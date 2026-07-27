@@ -9,6 +9,7 @@ import { useMemberStore } from '../store/memberStore';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { showToast } from '../components/ui/Toast';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
+import { paymentMethodLabel } from '../constants/paymentMethods';
 
 export const SpecializedRevenueSection = ({
   category = 'Zakat',
@@ -349,8 +350,8 @@ export const SpecializedRevenueSection = ({
                         </div>
 
                         <div className="pt-3.5 border-t border-slate-800/80 flex items-center justify-between gap-2 relative z-10">
-                          <span className="text-xs text-slate-500 font-medium truncate max-w-[140px]" title={item.remarks || item.paymentMethod}>
-                            {item.paymentMethod || 'Cash'}{item.remarks ? ` • ${item.remarks}` : ''}
+                          <span className="text-xs text-slate-500 font-medium truncate max-w-[140px]" title={item.remarks || paymentMethodLabel(item.paymentMethod)}>
+                            {paymentMethodLabel(item.paymentMethod)}{item.remarks ? ` • ${item.remarks}` : ''}
                           </span>
                           <div className="flex items-center gap-1.5 shrink-0">
                             {isConfirmed && canPostToLedger && (
@@ -578,7 +579,7 @@ export const SpecializedRevenueSection = ({
           date={printItem.eventDate || printItem.createdAt}
           name={printItem.title}
           address={printItem.destination || printItem.remarks || ''}
-          debitCredit={printItem.paymentMethod}
+          paymentMethod={printItem.paymentMethod}
           accountName={`${printItem.category} Collection`}
           particulars={showQty ? `${printItem.category} — ${printItem.quantity} ${qtyLabel} @ Rs. ${printItem.rate?.toLocaleString()}` : `${printItem.category} Collection${printItem.remarks ? ` - ${printItem.remarks}` : ''}`}
           amount={printItem.amount}

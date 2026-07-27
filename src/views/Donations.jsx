@@ -9,6 +9,7 @@ import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { DONATION_TYPES, donationTypeDisplay } from '../constants/donationTypes';
+import { paymentMethodLabel } from '../constants/paymentMethods';
 
 // Replace null DB values with '' so controlled inputs stay controlled
 const nullsToEmpty = (obj) =>
@@ -309,7 +310,7 @@ function DonationInvoiceModal({ donation, onClose }) {
       date={donation.createdAt}
       name={donation.donorName}
       address={donation.donorMobile || donation.donorBankName || ''}
-      debitCredit={donation.paymentMethod}
+      paymentMethod={donation.paymentMethod}
       accountName="Donation Disbursement A/c"
       particulars={`Donation Given / Disbursement - ${donationTypeDisplay(donation.donationType, donation.customDonationType)}${donation.remarks ? ` (${donation.remarks})` : ''}${donation.chequeNumber ? ` [Cheque #${donation.chequeNumber}]` : ''}`}
       amount={donation.amount}
@@ -811,7 +812,7 @@ export const Donations = () => {
                         <CreditCard className="w-3.5 h-3.5 text-amber-400" /> METHOD
                       </span>
                       <span className="font-semibold text-slate-100 text-xs">
-                        {d.paymentMethod || 'CASH'}
+                        {paymentMethodLabel(d.paymentMethod)}
                         {d.chequeNumber && <span className="text-slate-400 font-normal ml-1">#{d.chequeNumber}</span>}
                       </span>
                     </div>

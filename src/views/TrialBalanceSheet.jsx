@@ -10,7 +10,7 @@ import { useDashboardStore } from '../store/dashboardStore';
 
 export const TrialBalanceSheet = () => {
   const { treeAccounts, fetchAccountsTree } = useCoaStore();
-  const { tbReport, loading: isLoadingTb, fetchTbReport } = useDashboardStore();
+  const { tbReport, loading: isLoadingTb, fetchTbReport, version } = useDashboardStore();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('matrix'); // 'matrix' (Urdu paper replica) or 'ledger' (Standard hierarchical grid)
@@ -31,7 +31,7 @@ export const TrialBalanceSheet = () => {
     if (fromDate) params.startDate = fromDate;
     if (toDate) params.endDate = toDate;
     fetchTbReport(params);
-  }, [fromDate, toDate, fetchTbReport]);
+  }, [fromDate, toDate, fetchTbReport, version]);
 
   const formatMoney = (val) => {
     if (val === undefined || val === null || isNaN(val)) return 'Rs 0';
@@ -235,12 +235,30 @@ export const TrialBalanceSheet = () => {
       { desc: 'Other Income', val: residualRevenue },
     ].map((row, idx) => ({ ...row, sNo: String(idx + 1).padStart(2, '0') }));
 
-    // ── CLOSING CASH: net asset balances (not shown in either column) ─────────
-    const totalCashAndBank = computedAccounts
-      .filter(acc => (acc.type === 'gl' || acc.type === 'subsidiary') && acc.nature.toUpperCase() === 'ASSET')
+    // ── CASH IN HAND vs BANK BALANCE: split from ASSET accounts ─────────────
+    // Uses the same name-heuristic as the backend isCashAccount / isBankAccount.
+    const isCashName = (name) => {
+      const n = (name || '').toLowerCase();
+      return (n.includes('cash') || n.includes('hand') || n.includes('petty') || n.includes('till')) && !n.includes('bank');
+    };
+    const isBankName = (name) => {
+      const n = (name || '').toLowerCase();
+      return n.includes('bank') || n.includes('nbp') || n.includes('national bank');
+    };
+
+    const assetGls = computedAccounts.filter(
+      acc => (acc.type === 'gl' || acc.type === 'subsidiary') && acc.nature.toUpperCase() === 'ASSET'
+    );
+
+    const cashInHand = assetGls
+      .filter(acc => isCashName(acc.glName) || isCashName(acc.mainCategory))
       .reduce((s, acc) => s + Math.max(0, (acc.debit || 0) - (acc.credit || 0)), 0);
 
-    return { expenses, incomes, totalCashAndBank };
+    const bankBalance = assetGls
+      .filter(acc => isBankName(acc.glName) || isBankName(acc.mainCategory))
+      .reduce((s, acc) => s + Math.max(0, (acc.debit || 0) - (acc.credit || 0)), 0);
+
+    return { expenses, incomes, cashInHand, bankBalance };
   }, [computedAccounts]);
 
   const filteredData = useMemo(() => {
@@ -276,9 +294,12 @@ export const TrialBalanceSheet = () => {
     const totalExp = matrixData.expenses.reduce((sum, e) => sum + e.val, 0);
     const totalInc = matrixData.incomes.reduce((sum, i) => sum + i.val, 0);
     const netSurplus = totalInc - totalExp; // positive = surplus, negative = deficit
+    const { cashInHand, bankBalance } = matrixData;
     return {
       totalExpenses: totalExp,
       totalIncomes: totalInc,
+      cashInHand,
+      bankBalance,
       surplus: netSurplus,
       isDeficit: netSurplus < 0,
       finalExpensesTotal: totalExp + Math.max(0, netSurplus),
@@ -356,12 +377,16 @@ export const TrialBalanceSheet = () => {
         ].join(','));
       }
       
-      // Add cash surplus & totals
+      // Add bottom summary rows
       csvRows.push(['', '', '', '', '', '', '']);
+      csvRows.push(['"Total Income (Credit)"', matrixTotals.totalIncomes.toFixed(2), '', '', '', '', ''].join(','));
+      csvRows.push(['"Total Expense (Debit)"', matrixTotals.totalExpenses.toFixed(2), '', '', '', '', ''].join(','));
+      csvRows.push(['"Cash in Hand"', matrixTotals.cashInHand.toFixed(2), '', '', '', '', ''].join(','));
+      csvRows.push(['"Total Bank Balance"', matrixTotals.bankBalance.toFixed(2), '', '', '', '', ''].join(','));
       csvRows.push([
-        '27',
-        '"Closing Cash & Bank Surplus"',
+        '"Closing Surplus (Income - Expense)"',
         matrixTotals.surplus.toFixed(2),
+        '',
         '',
         '',
         '',
@@ -667,6 +692,52 @@ export const TrialBalanceSheet = () => {
               </table>
             </div>
 
+          </div>
+
+          {/* ── BOTTOM SUMMARY: required 6-row section ────────────────────────── */}
+          <div className="border-t-2 border-slate-700 print:border-slate-400 bg-slate-950/60 print:bg-slate-50">
+            <table className="w-full text-xs border-collapse">
+              <tbody>
+                <tr className="border-b border-slate-800 print:border-slate-300">
+                  <td className="py-2.5 px-4 text-slate-400 uppercase tracking-wider font-semibold w-1/2">Total Income (Credit)</td>
+                  <td className="py-2.5 px-4 text-right font-mono font-bold text-brand-400 print:text-slate-900 w-1/2">
+                    {formatMoney(matrixTotals.totalIncomes)}
+                  </td>
+                </tr>
+                <tr className="border-b border-slate-800 print:border-slate-300">
+                  <td className="py-2.5 px-4 text-slate-400 uppercase tracking-wider font-semibold">Total Expense (Debit)</td>
+                  <td className="py-2.5 px-4 text-right font-mono font-bold text-brand-400 print:text-slate-900">
+                    {formatMoney(matrixTotals.totalExpenses)}
+                  </td>
+                </tr>
+                <tr className="border-b border-slate-800 print:border-slate-300">
+                  <td className="py-2.5 px-4 text-slate-400 uppercase tracking-wider font-semibold">Cash in Hand</td>
+                  <td className="py-2.5 px-4 text-right font-mono font-bold text-emerald-400 print:text-slate-900">
+                    {formatMoney(matrixTotals.cashInHand)}
+                  </td>
+                </tr>
+                <tr className="border-b border-slate-800 print:border-slate-300">
+                  <td className="py-2.5 px-4 text-slate-400 uppercase tracking-wider font-semibold">Total Bank Balance</td>
+                  <td className="py-2.5 px-4 text-right font-mono font-bold text-emerald-400 print:text-slate-900">
+                    {formatMoney(matrixTotals.bankBalance)}
+                  </td>
+                </tr>
+                <tr className="border-b border-slate-800 print:border-slate-300">
+                  <td className="py-2.5 px-4 text-slate-400 uppercase tracking-wider font-semibold">
+                    Closing Surplus {matrixTotals.isDeficit ? '(Deficit)' : '(Income − Expense)'}
+                  </td>
+                  <td className={`py-2.5 px-4 text-right font-mono font-bold print:text-slate-900 ${matrixTotals.isDeficit ? 'text-red-400' : 'text-brand-400'}`}>
+                    {formatMoney(matrixTotals.surplus)}
+                  </td>
+                </tr>
+                <tr className="bg-slate-900 print:bg-slate-100">
+                  <td className="py-3 px-4 text-slate-200 uppercase tracking-widest font-black text-xs">Grand Total (Income Side)</td>
+                  <td className="py-3 px-4 text-right font-mono font-black text-brand-400 print:text-slate-900 text-sm">
+                    {formatMoney(matrixTotals.finalIncomesTotal)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </Card>
       )}

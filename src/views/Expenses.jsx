@@ -7,6 +7,7 @@ import { useJournalStore, calculateAccountBalances } from '../store/journalStore
 import { showToast } from '../components/ui/Toast';
 import { MinusCircle, Search, X, CheckCircle2, TrendingDown, Building2, Banknote, Edit, Trash2 } from 'lucide-react';
 import { useConfirm } from '../components/ui/ConfirmationModal';
+import { paymentMethodLabel } from '../constants/paymentMethods';
 
 function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editingExpense }) {
   const { journals } = useJournalStore();
@@ -443,7 +444,7 @@ export const Expenses = () => {
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-1.5">
                         {exp.paymentMethod === 'BANK' ? <Building2 className="h-3.5 w-3.5 text-blue-400" /> : <Banknote className="h-3.5 w-3.5 text-red-400" />}
-                        <span className="text-[10px] font-bold text-slate-300">{exp.paymentMethod}</span>
+                        <span className="text-[10px] font-bold text-slate-300">{paymentMethodLabel(exp.paymentMethod)}</span>
                       </div>
                       {exp.reference && <p className="text-[9px] text-slate-500 mt-0.5 font-mono">{exp.reference}</p>}
                     </td>
