@@ -12,6 +12,16 @@
   font-family: "Alvi Nastaleeq";
   /* Prefer Jameel Noori / Mehr Nastaleeq when locally installed — they render the
      Kaaf (ک) vertical stroke fully — before the bundled Alvi ttf, then Noto. */
+  /* No webfont is bundled: public/fonts/ is empty, so /fonts/AlviNastaleeqRegular.ttf
+     was answered by the SPA catch-all rewrite with index.html. The browser read
+     "<!do" as the sfntVersion and logged "OTS parsing error: invalid sfntVersion"
+     on every load. To ship the webfont, drop the real files in public/fonts/ and
+     restore the url() entries below — woff2 first, ttf last as the fallback:
+       url("/fonts/AlviNastaleeqRegular.woff2") format("woff2"),
+       url("/fonts/AlviNastaleeqRegular.woff")  format("woff"),
+       url("/fonts/AlviNastaleeqRegular.ttf")   format("truetype"),
+     placing them after the local() entries so a locally installed Nastaleeq
+     still wins. */
   src: local("Jameel Noori Nastaleeq"),
        local("Jameel Noori Nastaleeq Kasheeda"),
        local("Mehr Nastaleeq"),
@@ -19,7 +29,6 @@
        local("Alvi Nastaleeq"),
        local("AlviNastaleeq-Regular"),
        local("AlviNastaleeq"),
-       url("/fonts/AlviNastaleeqRegular.ttf") format("truetype"),
        local("Noto Nastaliq Urdu");
   font-weight: 400;
   font-style: normal;
