@@ -63,6 +63,12 @@ describe('Donations Monthly Restriction API', () => {
       await prisma.beneficiary.delete({
         where: { id: beneficiaryId }
       });
+
+      const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
+      await prisma.account.update({
+        where: { id: cashAccount.id },
+        data: { initialBalance: 0, currentBalance: 0 }
+      });
     }
   }, 30000);
 
