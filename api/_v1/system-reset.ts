@@ -19,24 +19,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can reset system financial data', status: 403 } });
   }
 
-  const financialNotificationModules = [
-    'Journal Entries',
-    'Journal',
-    'Income',
-    'Simple Income',
-    'Expense',
-    'Expenses',
-    'Simple Expense',
-    'Invoices',
-    'Revenue',
-    'Hall Booking',
-    'Hall Bookings',
-    'Donations Given',
-    'Donations Received',
-    'Zakat',
-    'Zakat Card',
-    'Zakat Cards',
-  ];
+
 
   try {
     const results = await prisma.$transaction(async (tx) => {
@@ -71,10 +54,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       // 10. Delete Hall Bookings
       const hbCount = await tx.hallBooking.deleteMany({});
 
-      // 11. Delete Financial Notifications
-      const notifCount = await tx.notification.deleteMany({
-        where: { module: { in: financialNotificationModules } },
-      });
 
       // 12. Reset Account initialBalance and currentBalance to 0 across all accounts
       const accUpdate = await tx.account.updateMany({
@@ -101,7 +80,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         invItemCount: invItemCount.count,
         invCount: invCount.count,
         hbCount: hbCount.count,
-        notifCount: notifCount.count,
         accCount: accUpdate.count,
         revHeadCount: revHeadUpdate.count,
       };

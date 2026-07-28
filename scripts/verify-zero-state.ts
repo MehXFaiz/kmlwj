@@ -86,16 +86,6 @@ async function main() {
     }
   }
 
-  console.log('\n── Financial notifications (must be 0) ──');
-  const financialNotificationModules = [
-    'Journal Entries', 'Journal', 'Income', 'Simple Income', 'Expense',
-    'Expenses', 'Simple Expense', 'Invoices', 'Revenue', 'Hall Booking',
-    'Hall Bookings', 'Donations Given', 'Donations Received',
-  ];
-  check(
-    'Financial notifications remaining',
-    await prisma.notification.count({ where: { module: { in: financialNotificationModules } } }),
-  );
 
   console.log('\n── Preserved master data (informational) ──');
   console.log(`   Users: ${await prisma.user.count()}`);

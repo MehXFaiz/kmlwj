@@ -2,7 +2,6 @@ import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
-import { notify } from "../_utils/notify.js";
 import { compareCodes } from "../_utils/code-compare.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { loadPermissions } from "../_services/permission.service.js";
@@ -139,14 +138,6 @@ var accounts_default = makeHandler(async (req, res) => {
     const finalBalance = await AccountingService.recalculateAccountBalance(prisma, newAccount.id);
     newAccount.currentBalance = finalBalance;
     await logAudit(req.user.id, "Create Account", "COA", null, newAccount, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    await notify(req, {
-      title: "Account Added",
-      message: `Account "${newAccount.accountName}" (${newAccount.glCode || "\u2014"}) added to Chart of Accounts.`,
-      module: "Chart of Accounts",
-      recordId: newAccount.id,
-      actionType: "CREATE",
-      visibility: "ADMIN_ONLY"
-    });
     return res.status(201).json({ status: 201, data: newAccount });
   }
   if (method === "PUT" || method === "POST") {
@@ -248,14 +239,6 @@ var accounts_default = makeHandler(async (req, res) => {
     const finalBalance = await AccountingService.recalculateAccountBalance(prisma, id);
     updatedAccount.currentBalance = finalBalance;
     await logAudit(req.user.id, isToggleLock ? "Toggle Lock Account" : "Modify Account", "COA", existingAccount, updatedAccount, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    await notify(req, {
-      title: isToggleLock ? "Account Lock Toggled" : "Account Updated",
-      message: `Account "${updatedAccount.accountName}" ${isToggleLock ? updatedAccount.isLocked ? "locked" : "unlocked" : "updated"}.`,
-      module: "Chart of Accounts",
-      recordId: updatedAccount.id,
-      actionType: "UPDATE",
-      visibility: "ADMIN_ONLY"
-    });
     return res.status(200).json({ status: 200, data: updatedAccount });
   }
   if (method === "DELETE") {
@@ -293,14 +276,6 @@ var accounts_default = makeHandler(async (req, res) => {
       data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
     });
     await logAudit(req.user.id, "Delete Account", "COA", existingAccount, updated, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    await notify(req, {
-      title: "Account Deleted",
-      message: `Account "${existingAccount.accountName}" soft-deleted from Chart of Accounts.`,
-      module: "Chart of Accounts",
-      recordId: existingAccount.id,
-      actionType: "DELETE",
-      visibility: "SUPER_ADMIN_ONLY"
-    });
     return res.status(200).json({ status: 200, message: "Account deleted successfully" });
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });

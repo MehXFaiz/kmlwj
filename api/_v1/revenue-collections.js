@@ -5,7 +5,6 @@ import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { validateAmount } from "../_utils/amount.js";
 import { isValidTransactionDate } from "../_utils/date-range.js";
-import { notify } from "../_utils/notify.js";
 import { PERMS } from "../_constants/permissions.js";
 const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };
 const ALLOWED_CATEGORIES = ["Zakat", "Fitra", "Membership Fee", "Bus Booking"];
@@ -143,13 +142,6 @@ var revenue_collections_default = makeHandler(async (req, res) => {
         return { approvedItem, journalEntry: postingResult.journalEntry };
       }, accountingTxOptions);
       await logAudit(req.user.id, `Post ${item.category}`, "REVENUE", item, result2.approvedItem, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-      await notify(req, {
-        title: `${item.category} Posted`,
-        message: `${item.category} of PKR ${Number(item.amount).toLocaleString()} posted to ledger.`,
-        module: "Revenue",
-        recordId: item.id,
-        actionType: "APPROVE"
-      });
       return res.status(200).json({ status: 200, data: result2.approvedItem, message: `${item.category} posted to ledger successfully` });
     }
     if (action === "revert") {
@@ -175,13 +167,6 @@ var revenue_collections_default = makeHandler(async (req, res) => {
         return revertedItem;
       }, accountingTxOptions);
       await logAudit(req.user.id, `Revert ${item.category}`, "REVENUE", item, result2, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-      await notify(req, {
-        title: `${item.category} Reverted`,
-        message: `${item.category} (PKR ${Number(item.amount).toLocaleString()}) reverted from ledger.`,
-        module: "Revenue",
-        recordId: item.id,
-        actionType: "CANCEL"
-      });
       return res.status(200).json({ status: 200, data: result2, message: `${item.category} reverted from ledger successfully` });
     }
     const { category, title, subTitle, mobile, eventDate, quantity, rate, destination, amount, paymentMethod, bankAccountId, chequeNumber, remarks } = req.body;
@@ -257,13 +242,6 @@ var revenue_collections_default = makeHandler(async (req, res) => {
       return newItem;
     }, accountingTxOptions);
     await logAudit(req.user.id, `Create & Post ${category}`, "REVENUE", null, result, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    await notify(req, {
-      title: `${category} Received`,
-      message: `${category} of PKR ${Number(amount).toLocaleString()} recorded${title ? ` (${title})` : ""}.`,
-      module: "Revenue",
-      recordId: result?.id,
-      actionType: "CREATE"
-    });
     return res.status(201).json({ status: 201, data: result });
   }
   if (method === "DELETE") {
@@ -305,14 +283,6 @@ var revenue_collections_default = makeHandler(async (req, res) => {
         req.headers["x-forwarded-for"],
         req.headers["user-agent"]
       );
-      await notify(req, {
-        title: deletedItems.length > 1 ? "Revenue Records Deleted" : "Revenue Record Deleted",
-        message: deletedItems.length > 1 ? `${deletedItems.length} revenue record(s) deleted.` : `${deletedItems[0].category} (PKR ${Number(deletedItems[0].amount).toLocaleString()}) deleted.`,
-        module: "Revenue",
-        recordId: deletedItems.length === 1 ? deletedItems[0].id : null,
-        actionType: "DELETE",
-        visibility: "ADMIN_ONLY"
-      });
       return res.status(200).json({
         status: 200,
         message: `${deletedItems.length} record(s) deleted successfully`,
@@ -406,13 +376,6 @@ var revenue_collections_default = makeHandler(async (req, res) => {
       });
     }, accountingTxOptions);
     await logAudit(req.user.id, `Update & Post ${category}`, "REVENUE", existingItem, updatedItem, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    await notify(req, {
-      title: `${category} Updated`,
-      message: `${category} record updated (PKR ${Number(updatedItem.amount).toLocaleString()}).`,
-      module: "Revenue",
-      recordId: updatedItem.id,
-      actionType: "UPDATE"
-    });
     return res.status(200).json({ status: 200, data: updatedItem });
   }
   if (method === "DELETE") {
@@ -452,14 +415,6 @@ var revenue_collections_default = makeHandler(async (req, res) => {
       }
     });
     await logAudit(req.user.id, isPermanent ? "Permanent Delete Revenue Collection" : "Delete Revenue Collection", "REVENUE", existing, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    await notify(req, {
-      title: "Revenue Collection Deleted",
-      message: `Revenue collection record deleted.`,
-      module: "Revenue",
-      recordId: existing.id,
-      actionType: "DELETE",
-      visibility: "ADMIN_ONLY"
-    });
     return res.status(200).json({ status: 200, message: "Revenue collection deleted successfully" });
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });

@@ -117,15 +117,15 @@ describe('Auth refresh flow', () => {
     expect(res.status).toBe(401);
   }, 30000);
 
-  describe('notifications authorization', () => {
+  describe('authenticated endpoint authorization', () => {
     it('returns 401 without an Authorization header', async () => {
-      const res = await request(app).get('/api/v1/notifications?limit=50');
+      const res = await request(app).get('/api/v1/auth/me');
       expect(res.status).toBe(401);
     }, 30000);
 
     it('returns 401 for a malformed or expired token', async () => {
       const res = await request(app)
-        .get('/api/v1/notifications?limit=50')
+        .get('/api/v1/auth/me')
         .set('Authorization', 'Bearer not-a-real-token');
       expect(res.status).toBe(401);
     }, 30000);
@@ -133,11 +133,10 @@ describe('Auth refresh flow', () => {
     it('returns 200 with the access token issued by login', async () => {
       const login = await doLogin();
       const res = await request(app)
-        .get('/api/v1/notifications?limit=50')
+        .get('/api/v1/auth/me')
         .set('Authorization', `Bearer ${login.body.data.accessToken}`);
 
       expect(res.status).toBe(200);
-      expect(Array.isArray(res.body.data)).toBe(true);
     }, 30000);
 
     it('returns 200 with an access token obtained by refreshing', async () => {
@@ -147,7 +146,7 @@ describe('Auth refresh flow', () => {
         .set('Cookie', refreshCookie(login)!);
 
       const res = await request(app)
-        .get('/api/v1/notifications?limit=50')
+        .get('/api/v1/auth/me')
         .set('Authorization', `Bearer ${refreshed.body.data.accessToken}`);
 
       expect(res.status).toBe(200);

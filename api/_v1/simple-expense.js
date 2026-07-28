@@ -4,7 +4,6 @@ import { prisma } from "../_prisma.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { PERMS } from "../_constants/permissions.js";
 import { validateAmount } from "../_utils/amount.js";
-import { notify } from "../_utils/notify.js";
 import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 import { simpleExpenseSchema } from "../_schemas/financial.schema.js";
 const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };
@@ -110,13 +109,6 @@ var simple_expense_default = makeHandler(async (req, res) => {
       }
       return expense;
     }, accountingTxOptions);
-    await notify(req, {
-      title: "Expense Added",
-      message: `Expense of PKR ${Number(result.amount).toLocaleString()} recorded${result.paidTo ? ` \u2014 paid to ${result.paidTo}` : ""}.`,
-      module: "Expenses",
-      recordId: result.id,
-      actionType: "CREATE"
-    });
     return res.status(201).json({ status: 201, data: result });
   }
   if (req.method === "PUT" || req.method === "PATCH") {
@@ -189,13 +181,6 @@ var simple_expense_default = makeHandler(async (req, res) => {
       }
       return updated;
     }, accountingTxOptions);
-    await notify(req, {
-      title: "Expense Updated",
-      message: `Expense (PKR ${Number(result.amount).toLocaleString()}) updated.`,
-      module: "Expenses",
-      recordId: result.id,
-      actionType: "UPDATE"
-    });
     return res.status(200).json({ status: 200, data: result });
   }
   if (req.method === "DELETE") {
@@ -231,14 +216,6 @@ var simple_expense_default = makeHandler(async (req, res) => {
         }
       }
     }, accountingTxOptions);
-    await notify(req, {
-      title: "Expense Deleted",
-      message: "Expense record deleted.",
-      module: "Expenses",
-      recordId: targetId,
-      actionType: "DELETE",
-      visibility: "ADMIN_ONLY"
-    });
     return res.status(200).json({ status: 200, message: "Expense deleted successfully" });
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });

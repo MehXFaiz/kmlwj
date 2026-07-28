@@ -55,7 +55,6 @@ import systemResetHandler from './_v1/system-reset.js';
 import zakatCardsHandler from './_v1/zakat-cards.js';
 import { memberVerifyHandler } from './_v1/member-verify.js';
 import { zakatCardVerifyHandler } from './_v1/zakat-card-verify.js';
-import notificationsHandler from './_v1/notifications.js';
 import { uploadFields, handleUploadError } from './_middlewares/upload.middleware.js';
 
 // ── Startup storage configuration check ─────────────────────────────────────
@@ -284,10 +283,6 @@ app.get('/api/v1/accounting-health', makeExpress(accountingHealthHandler));
 
 // System Reset Route
 app.post('/api/v1/system-reset', makeExpress(systemResetHandler));
-
-// Notification Routes
-app.get('/api/v1/notifications', makeExpress(notificationsHandler));
-app.patch('/api/v1/notifications', makeExpress(notificationsHandler));
 
 // Public Member Verification Route (no JWT — scanned from QR code)
 app.get('/api/v1/member/verify/:id', async (req: any, res: any) => {

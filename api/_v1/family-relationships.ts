@@ -3,7 +3,6 @@ import { makeHandler } from '../_utils/handler.js';
 import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
-import { notify } from '../_utils/notify.js';
 import { PERMS } from '../_constants/permissions.js';
 import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
 
@@ -144,13 +143,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       await logAudit(req.user.id, 'Link Family Member', 'MEMBER', null, { forward, backward }, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-      await notify(req, {
-        title: 'Family Tree Updated',
-        message: `Family relationship linked.`,
-        module: 'Family Tree',
-        recordId: (forward as any)?.memberId || null,
-        actionType: 'CREATE',
-      });
 
       return res.status(201).json({ status: 201, data: forward });
     } catch (err: any) {
@@ -201,13 +193,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     await logAudit(req.user.id, isPermanent ? 'Permanent Unlink Family Member' : 'Unlink Family Member', 'MEMBER', { memberId, relatedMemberId }, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-    await notify(req, {
-      title: 'Family Tree Updated',
-      message: `Family relationship removed.`,
-      module: 'Family Tree',
-      recordId: memberId,
-      actionType: 'DELETE',
-    });
 
     return res.status(200).json({ status: 200, message: `Removed ${deletedCount} relationship link(s)` });
   }

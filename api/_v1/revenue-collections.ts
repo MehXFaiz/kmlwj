@@ -6,7 +6,6 @@ import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
 import { validateAmount } from '../_utils/amount.js';
 import { isValidTransactionDate } from '../_utils/date-range.js';
-import { notify } from '../_utils/notify.js';
 import { PERMS } from '../_constants/permissions.js';
 
 const accountingTxOptions = { maxWait: 10000, timeout: 30000 };
@@ -174,13 +173,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       await logAudit(req.user.id, `Post ${item.category}`, 'REVENUE', item, result.approvedItem, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-      await notify(req, {
-        title: `${item.category} Posted`,
-        message: `${item.category} of PKR ${Number(item.amount).toLocaleString()} posted to ledger.`,
-        module: 'Revenue',
-        recordId: item.id,
-        actionType: 'APPROVE',
-      });
 
       return res.status(200).json({ status: 200, data: result.approvedItem, message: `${item.category} posted to ledger successfully` });
     }
@@ -213,13 +205,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       await logAudit(req.user.id, `Revert ${item.category}`, 'REVENUE', item, result, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-      await notify(req, {
-        title: `${item.category} Reverted`,
-        message: `${item.category} (PKR ${Number(item.amount).toLocaleString()}) reverted from ledger.`,
-        module: 'Revenue',
-        recordId: item.id,
-        actionType: 'CANCEL',
-      });
 
       return res.status(200).json({ status: 200, data: result, message: `${item.category} reverted from ledger successfully` });
     }
@@ -308,13 +293,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     await logAudit(req.user.id, `Create & Post ${category}`, 'REVENUE', null, result, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-    await notify(req, {
-      title: `${category} Received`,
-      message: `${category} of PKR ${Number(amount).toLocaleString()} recorded${title ? ` (${title})` : ''}.`,
-      module: 'Revenue',
-      recordId: (result as any)?.id,
-      actionType: 'CREATE',
-    });
 
     return res.status(201).json({ status: 201, data: result });
   }
@@ -370,16 +348,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         req.headers['user-agent']
       );
 
-      await notify(req, {
-        title: deletedItems.length > 1 ? 'Revenue Records Deleted' : 'Revenue Record Deleted',
-        message: deletedItems.length > 1
-          ? `${deletedItems.length} revenue record(s) deleted.`
-          : `${deletedItems[0].category} (PKR ${Number(deletedItems[0].amount).toLocaleString()}) deleted.`,
-        module: 'Revenue',
-        recordId: deletedItems.length === 1 ? deletedItems[0].id : null,
-        actionType: 'DELETE',
-        visibility: 'ADMIN_ONLY',
-      });
 
       return res.status(200).json({
         status: 200,
@@ -484,13 +452,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     await logAudit(req.user.id, `Update & Post ${category}`, 'REVENUE', existingItem, updatedItem, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-    await notify(req, {
-      title: `${category} Updated`,
-      message: `${category} record updated (PKR ${Number((updatedItem as any).amount).toLocaleString()}).`,
-      module: 'Revenue',
-      recordId: (updatedItem as any).id,
-      actionType: 'UPDATE',
-    });
 
     return res.status(200).json({ status: 200, data: updatedItem });
   }
@@ -539,14 +500,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     await logAudit(req.user.id, isPermanent ? 'Permanent Delete Revenue Collection' : 'Delete Revenue Collection', 'REVENUE', existing, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-    await notify(req, {
-      title: 'Revenue Collection Deleted',
-      message: `Revenue collection record deleted.`,
-      module: 'Revenue',
-      recordId: existing.id,
-      actionType: 'DELETE',
-      visibility: 'ADMIN_ONLY',
-    });
 
     return res.status(200).json({ status: 200, message: 'Revenue collection deleted successfully' });
   }

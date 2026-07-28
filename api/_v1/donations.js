@@ -5,7 +5,6 @@ import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { validateAmount } from "../_utils/amount.js";
 import { isWithinMaxLength, maxLengthError } from "../_utils/text-length.js";
-import { notify } from "../_utils/notify.js";
 import { PERMS } from "../_constants/permissions.js";
 import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 function generateVoucherNumber() {
@@ -193,13 +192,6 @@ var donations_default = makeHandler(async (req, res) => {
         timeout: 15e3
       });
       await logAudit(req.user.id, "Approve Donation", "DONATION", donation, result.approvedDonation, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-      await notify(req, {
-        title: "Aid Disbursement Posted",
-        message: `Donation of PKR ${Number(donation.amount).toLocaleString()} to ${donation.donorName || "Beneficiary"} posted to ledger.`,
-        module: "Donations Given",
-        recordId: donation.id,
-        actionType: "APPROVE"
-      });
       return res.status(200).json({ status: 200, data: result.approvedDonation, message: "Donation approved and journal entries created successfully" });
     }
     const { beneficiaryId, donorName, donorMobile, donationType, customDonationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks } = req.body;
@@ -284,13 +276,6 @@ var donations_default = makeHandler(async (req, res) => {
       timeout: 15e3
     });
     await logAudit(req.user.id, "Create Donation", "DONATION", null, newDonation, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    await notify(req, {
-      title: "Aid Disbursement Recorded",
-      message: `New ${donationType === "CUSTOM" ? customDonationType || "Custom" : donationType} disbursement of PKR ${Number(amount).toLocaleString()} to ${donorName}.`,
-      module: "Donations Given",
-      recordId: newDonation.id,
-      actionType: "CREATE"
-    });
     return res.status(201).json({ status: 201, data: newDonation });
   }
   if (method === "PUT" || method === "PATCH") {
@@ -393,13 +378,6 @@ var donations_default = makeHandler(async (req, res) => {
       timeout: 15e3
     });
     await logAudit(req.user.id, "Update Donation", "DONATION", existingDonation, updatedDonation, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    await notify(req, {
-      title: "Aid Disbursement Updated",
-      message: `Donation to ${updatedDonation.donorName || "Beneficiary"} updated (PKR ${Number(updatedDonation.amount).toLocaleString()}).`,
-      module: "Donations Given",
-      recordId: updatedDonation.id,
-      actionType: "UPDATE"
-    });
     return res.status(200).json({ status: 200, data: updatedDonation });
   }
   if (method === "DELETE") {
@@ -467,14 +445,6 @@ var donations_default = makeHandler(async (req, res) => {
         req.headers["x-forwarded-for"],
         req.headers["user-agent"]
       );
-      await notify(req, {
-        title: deletedDonations.length > 1 ? "Aid Disbursements Deleted" : "Aid Disbursement Deleted",
-        message: deletedDonations.length > 1 ? `${deletedDonations.length} donation records deleted.` : `Donation to ${deletedDonations[0].donorName || "Beneficiary"} (PKR ${Number(deletedDonations[0].amount).toLocaleString()}) deleted.`,
-        module: "Donations Given",
-        recordId: deletedDonations.length === 1 ? deletedDonations[0].id : null,
-        actionType: "DELETE",
-        visibility: "ADMIN_ONLY"
-      });
       return res.status(200).json({
         status: 200,
         message: `${deletedDonations.length} donation(s) deleted successfully`,

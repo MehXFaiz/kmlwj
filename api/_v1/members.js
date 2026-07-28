@@ -3,7 +3,6 @@ import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { logger } from "../_utils/logger.js";
-import { notify } from "../_utils/notify.js";
 import { PERMS } from "../_constants/permissions.js";
 import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 import { createMemberSchema, updateMemberSchema } from "../_schemas/members.schema.js";
@@ -179,13 +178,6 @@ var members_default = makeHandler(async (req, res) => {
     }
     logger.info({ memberId: newMember.id, memberNo: newMember.memberNo, photoUrl: newMember.photoUrl }, "Member saved to database successfully");
     await logAudit(req.user.id, "Register Member", "MEMBER", null, newMember, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    await notify(req, {
-      title: "Member Created",
-      message: `${newMember.fullName}${newMember.memberNo ? ` (${newMember.memberNo})` : ""} registered.`,
-      module: "Members",
-      recordId: newMember.id,
-      actionType: "CREATE"
-    });
     return res.status(201).json({ status: 201, data: newMember });
   }
   if (method === "PUT") {
@@ -281,13 +273,6 @@ var members_default = makeHandler(async (req, res) => {
     logger.info({ memberId: updatedMember.id, photoUrl: updatedMember.photoUrl }, "Member updated in database successfully");
     await logAudit(req.user.id, "Update Member", "MEMBER", existingMember, updatedMember, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     const activationChanged = isActive !== void 0 && Boolean(isActive) !== Boolean(existingMember.isActive);
-    await notify(req, {
-      title: activationChanged ? updatedMember.isActive ? "Member Approved" : "Member Deactivated" : "Member Updated",
-      message: `${updatedMember.fullName}${updatedMember.memberNo ? ` (${updatedMember.memberNo})` : ""} ${activationChanged ? updatedMember.isActive ? "activated" : "deactivated" : "updated"}.`,
-      module: "Members",
-      recordId: updatedMember.id,
-      actionType: activationChanged ? updatedMember.isActive ? "APPROVE" : "REJECT" : "UPDATE"
-    });
     return res.status(200).json({ status: 200, data: updatedMember });
   }
   if (method === "DELETE") {
@@ -312,14 +297,6 @@ var members_default = makeHandler(async (req, res) => {
       });
     }
     await logAudit(req.user.id, isPermanent ? "Permanent Delete Member" : "Delete Member(s)", "MEMBER", { ids }, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    await notify(req, {
-      title: ids.length > 1 ? "Members Deleted" : "Member Deleted",
-      message: ids.length > 1 ? `${ids.length} members deleted.` : `Member deleted.`,
-      module: "Members",
-      recordId: ids.length === 1 ? ids[0] : null,
-      actionType: "DELETE",
-      visibility: "ADMIN_ONLY"
-    });
     return res.status(200).json({ status: 200, message: `Successfully deleted ${ids.length} member(s)` });
   }
   return res.status(405).json({ error: { message: "Method not allowed", status: 405 } });

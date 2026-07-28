@@ -13,24 +13,6 @@ var system_reset_default = makeHandler(async (req, res) => {
   if (!await verifyPermission(req, res, PERMS.SYSTEM_SETTINGS) && !await isSuperAdmin(req)) {
     return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can reset system financial data", status: 403 } });
   }
-  const financialNotificationModules = [
-    "Journal Entries",
-    "Journal",
-    "Income",
-    "Simple Income",
-    "Expense",
-    "Expenses",
-    "Simple Expense",
-    "Invoices",
-    "Revenue",
-    "Hall Booking",
-    "Hall Bookings",
-    "Donations Given",
-    "Donations Received",
-    "Zakat",
-    "Zakat Card",
-    "Zakat Cards"
-  ];
   try {
     const results = await prisma.$transaction(async (tx) => {
       const zcCount = await tx.zakatCard.deleteMany({});
@@ -44,9 +26,6 @@ var system_reset_default = makeHandler(async (req, res) => {
       const invItemCount = await tx.invoiceItem.deleteMany({});
       const invCount = await tx.invoice.deleteMany({});
       const hbCount = await tx.hallBooking.deleteMany({});
-      const notifCount = await tx.notification.deleteMany({
-        where: { module: { in: financialNotificationModules } }
-      });
       const accUpdate = await tx.account.updateMany({
         data: {
           initialBalance: 0,
@@ -68,7 +47,6 @@ var system_reset_default = makeHandler(async (req, res) => {
         invItemCount: invItemCount.count,
         invCount: invCount.count,
         hbCount: hbCount.count,
-        notifCount: notifCount.count,
         accCount: accUpdate.count,
         revHeadCount: revHeadUpdate.count
       };

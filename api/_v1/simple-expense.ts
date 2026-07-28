@@ -5,7 +5,6 @@ import { prisma } from '../_prisma.js';
 import { AccountingService } from '../_services/accounting.service.js';
 import { PERMS } from '../_constants/permissions.js';
 import { validateAmount } from '../_utils/amount.js';
-import { notify } from '../_utils/notify.js';
 import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
 import { simpleExpenseSchema } from '../_schemas/financial.schema.js';
 
@@ -126,13 +125,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return expense;
     }, accountingTxOptions);
 
-    await notify(req, {
-      title: 'Expense Added',
-      message: `Expense of PKR ${Number((result as any).amount).toLocaleString()} recorded${(result as any).paidTo ? ` — paid to ${(result as any).paidTo}` : ''}.`,
-      module: 'Expenses',
-      recordId: (result as any).id,
-      actionType: 'CREATE',
-    });
 
     return res.status(201).json({ status: 201, data: result });
   }
@@ -215,13 +207,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return updated;
     }, accountingTxOptions);
 
-    await notify(req, {
-      title: 'Expense Updated',
-      message: `Expense (PKR ${Number((result as any).amount).toLocaleString()}) updated.`,
-      module: 'Expenses',
-      recordId: (result as any).id,
-      actionType: 'UPDATE',
-    });
 
     return res.status(200).json({ status: 200, data: result });
   }
@@ -261,14 +246,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       }
     }, accountingTxOptions);
 
-    await notify(req, {
-      title: 'Expense Deleted',
-      message: 'Expense record deleted.',
-      module: 'Expenses',
-      recordId: targetId,
-      actionType: 'DELETE',
-      visibility: 'ADMIN_ONLY',
-    });
 
     return res.status(200).json({ status: 200, message: 'Expense deleted successfully' });
   }

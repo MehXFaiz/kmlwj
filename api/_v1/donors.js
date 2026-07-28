@@ -2,7 +2,6 @@ import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
-import { notify } from "../_utils/notify.js";
 import { PERMS } from "../_constants/permissions.js";
 import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 function isUniqueViolation(err) {
@@ -138,13 +137,6 @@ var donors_default = makeHandler(async (req, res) => {
       }
     }
     await logAudit(req.user.id, "Create Donor", "DONOR", null, newDonor, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    await notify(req, {
-      title: "Donor Added",
-      message: `${newDonor.name || "Donor"} added.`,
-      module: "Donors",
-      recordId: newDonor.id,
-      actionType: "CREATE"
-    });
     return res.status(201).json({ status: 201, data: newDonor, warning: duplicateWarning });
   }
   if (method === "PUT" || method === "PATCH") {
@@ -197,13 +189,6 @@ var donors_default = makeHandler(async (req, res) => {
       }
     });
     await logAudit(req.user.id, "Update Donor", "DONOR", existingDonor, updatedDonor, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    await notify(req, {
-      title: "Donor Updated",
-      message: `${updatedDonor.name || "Donor"} updated.`,
-      module: "Donors",
-      recordId: updatedDonor.id,
-      actionType: "UPDATE"
-    });
     return res.status(200).json({ status: 200, data: updatedDonor });
   }
   if (method === "DELETE") {
@@ -237,14 +222,6 @@ var donors_default = makeHandler(async (req, res) => {
     for (const d of existingDonors) {
       await logAudit(req.user.id, isPermanent ? "Permanent Delete Donor" : "Delete Donor", "DONOR", d, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     }
-    await notify(req, {
-      title: existingDonors.length > 1 ? "Donors Deleted" : "Donor Deleted",
-      message: `${existingDonors.length} donor(s) deleted.`,
-      module: "Donors",
-      recordId: existingDonors.length === 1 ? existingDonors[0].id : null,
-      actionType: "DELETE",
-      visibility: "ADMIN_ONLY"
-    });
     return res.status(200).json({ status: 200, message: `${existingDonors.length} donor(s) deleted successfully` });
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });

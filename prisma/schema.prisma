@@ -710,24 +710,3 @@ model DonationReceived {
   @@index([paymentMethod])
   @@index([isDeleted])
 }
-
-model Notification {
-  id         String   @id @default(cuid())
-  title      String
-  message    String
-  module     String
-  recordId   String?
-  actionType String
-  userName   String
-  userRole   String
-  userId     String?
-  visibility String   @default("ALL")
-  isRead     Boolean  @default(false)
-  isCleared  Boolean  @default(false)
-  createdAt  DateTime @default(now())
-
-  @@index([createdAt(sort: Desc)])
-  @@index([userId])
-  @@index([isRead])
-  @@index([isCleared])
-}

@@ -5,7 +5,6 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
-import { notify } from '../_utils/notify.js';
 import { PERMS } from '../_constants/permissions.js';
 import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
 
@@ -117,13 +116,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         });
       }, accountingTxOptions);
 
-      await notify(req, {
-        title: 'Journal Entry Posted',
-        message: `Voucher ${result.journalEntry.voucherNo || ''} — PKR ${Number(result.journalEntry.totalDebit || 0).toLocaleString()}.`,
-        module: 'Journal',
-        recordId: result.journalEntry.id,
-        actionType: 'CREATE',
-      });
 
       return res.status(201).json({ status: 201, data: result.journalEntry });
     } catch (err: any) {
@@ -295,13 +287,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       await logAudit(req.user.id, 'Update Journal Entry', 'Journal Entries', null, { id, status, reference, amount }, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-      await notify(req, {
-        title: status === 'CANCELLED' ? 'Voucher Cancelled' : 'Journal Entry Updated',
-        message: `Journal entry ${reference || id} ${status === 'CANCELLED' ? 'cancelled' : 'updated'}.`,
-        module: 'Journal',
-        recordId: id,
-        actionType: status === 'CANCELLED' ? 'CANCEL' : 'UPDATE',
-      });
 
       return res.status(200).json({ status: 200, data: result });
     } catch (err: any) {
@@ -356,14 +341,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         req.headers['user-agent']
       );
 
-      await notify(req, {
-        title: deletedEntries.length > 1 ? 'Journal Entries Deleted' : 'Journal Entry Deleted',
-        message: `${deletedEntries.length} journal entry(s) deleted.`,
-        module: 'Journal',
-        recordId: deletedEntries.length === 1 ? deletedEntries[0].id : null,
-        actionType: 'DELETE',
-        visibility: 'ADMIN_ONLY',
-      });
 
       return res.status(200).json({
         status: 200,

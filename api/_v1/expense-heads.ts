@@ -3,7 +3,6 @@ import { makeHandler } from '../_utils/handler.js';
 import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
-import { notify } from '../_utils/notify.js';
 import { loadPermissions } from '../_services/permission.service.js';
 import { PERMS } from '../_constants/permissions.js';
 import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
@@ -76,14 +75,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     await logAudit(req.user.id, 'Create Expense Head', 'EXPENSE', null, newHead, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-    await notify(req, {
-      title: 'Expense Head Added',
-      message: `Expense head "${(newHead as any).name}" created.`,
-      module: 'Expense Heads',
-      recordId: (newHead as any).id,
-      actionType: 'CREATE',
-      visibility: 'ADMIN_ONLY',
-    });
 
     return res.status(201).json({ status: 201, data: newHead });
   }
@@ -119,14 +110,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     await logAudit(req.user.id, 'Modify Expense Head', 'EXPENSE', existingHead, updatedHead, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-    await notify(req, {
-      title: 'Expense Head Updated',
-      message: `Expense head "${(updatedHead as any).name}" updated.`,
-      module: 'Expense Heads',
-      recordId: (updatedHead as any).id,
-      actionType: 'UPDATE',
-      visibility: 'ADMIN_ONLY',
-    });
 
     return res.status(200).json({ status: 200, data: updatedHead });
   }
@@ -169,14 +152,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     await logAudit(req.user.id, 'Delete Expense Head', 'EXPENSE', existingHead, updated, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-    await notify(req, {
-      title: 'Expense Head Deleted',
-      message: `Expense head "${(existingHead as any).name}" deleted.`,
-      module: 'Expense Heads',
-      recordId: (existingHead as any).id,
-      actionType: 'DELETE',
-      visibility: 'ADMIN_ONLY',
-    });
 
     return res.status(200).json({ status: 200, message: 'Expense Head deleted successfully' });
   }

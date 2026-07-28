@@ -5,7 +5,6 @@ import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { validateAmount } from "../_utils/amount.js";
 import { isWithinMaxLength, maxLengthError } from "../_utils/text-length.js";
-import { notify } from "../_utils/notify.js";
 import { PERMS } from "../_constants/permissions.js";
 import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 function donationTitleFragment(donationType, customType) {
@@ -263,13 +262,6 @@ var donations_received_default = makeHandler(async (req, res) => {
       }
     }
     await logAudit(req.user.id, "Create Donation Received", "DONATION_RECEIVED", null, result, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    await notify(req, {
-      title: `${donationTitleFragment(donationType, customDonationType)} Received`,
-      message: `PKR ${Number(amount).toLocaleString()} received via ${paymentMethod || "CASH"}.`,
-      module: "Donations Received",
-      recordId: result.id,
-      actionType: "CREATE"
-    });
     return res.status(201).json({ status: 201, data: result });
   }
   if (method === "PUT" || method === "PATCH") {
@@ -375,13 +367,6 @@ var donations_received_default = makeHandler(async (req, res) => {
       return updated;
     });
     await logAudit(req.user.id, "Update Donation Received", "DONATION_RECEIVED", existing, result, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    await notify(req, {
-      title: "Donation Receipt Updated",
-      message: `${donationTitleFragment(result.donationType, result.customDonationType)} receipt updated \u2014 PKR ${Number(result.amount).toLocaleString()}.`,
-      module: "Donations Received",
-      recordId: result.id,
-      actionType: "UPDATE"
-    });
     return res.status(200).json({ status: 200, data: result });
   }
   if (method === "DELETE") {
@@ -430,14 +415,6 @@ var donations_received_default = makeHandler(async (req, res) => {
     for (const item of existingItems) {
       await logAudit(req.user.id, "Delete Donation Received", "DONATION_RECEIVED", item, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     }
-    await notify(req, {
-      title: existingItems.length > 1 ? "Donation Receipts Deleted" : "Donation Receipt Deleted",
-      message: existingItems.length > 1 ? `${existingItems.length} donation receipt(s) deleted.` : `${donationTitleFragment(existingItems[0].donationType, existingItems[0].customDonationType)} receipt (PKR ${Number(existingItems[0].amount).toLocaleString()}) deleted.`,
-      module: "Donations Received",
-      recordId: existingItems.length === 1 ? existingItems[0].id : null,
-      actionType: "DELETE",
-      visibility: "ADMIN_ONLY"
-    });
     return res.status(200).json({ status: 200, message: `${existingItems.length} donation receipt(s) deleted successfully` });
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });

@@ -3,7 +3,6 @@ import { makeHandler } from '../_utils/handler.js';
 import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
-import { notify } from '../_utils/notify.js';
 import { loadPermissions } from '../_services/permission.service.js';
 import { PERMS, SECURITY_PERMISSIONS } from '../_constants/permissions.js';
 import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
@@ -108,14 +107,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     await logAudit(req.user.id, 'Create User', 'USERS', null, { id: newUser.id, email: newUser.email, role: newUser.role.name }, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-    await notify(req, {
-      title: 'User Created',
-      message: `${newUser.fullName || newUser.email} added as ${newUser.role.name}.`,
-      module: 'Users',
-      recordId: newUser.id,
-      actionType: 'CREATE',
-      visibility: 'ADMIN_ONLY',
-    });
 
     return res.status(201).json({
       status: 201,
@@ -168,16 +159,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     await logAudit(req.user.id, 'Modify User', 'USERS', { id: existingUser.id, fullName: existingUser.fullName, email: existingUser.email, role: existingUser.role.name, isActive: existingUser.isActive }, { id: updatedUser.id, fullName: updatedUser.fullName, email: updatedUser.email, role: updatedUser.role.name, isActive: updatedUser.isActive }, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-    await notify(req, {
-      title: password ? 'User Password Reset' : 'User Updated',
-      message: password
-        ? `Password reset for ${updatedUser.fullName || updatedUser.email}.`
-        : `${updatedUser.fullName || updatedUser.email} updated${role && role !== existingUser.role.name ? ` — role changed to ${role}` : ''}.`,
-      module: 'Users',
-      recordId: updatedUser.id,
-      actionType: password ? 'PASSWORD_CHANGE' : 'UPDATE',
-      visibility: 'ADMIN_ONLY',
-    });
 
     return res.status(200).json({
       status: 200,
@@ -236,14 +217,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         req.headers['user-agent']
       );
 
-      await notify(req, {
-        title: 'User Deleted',
-        message: `${existingUser.fullName || existingUser.email} deleted.`,
-        module: 'Users',
-        recordId: existingUser.id,
-        actionType: 'DELETE',
-        visibility: 'SUPER_ADMIN_ONLY',
-      });
 
       return res.status(200).json({ status: 200, message: 'User successfully deleted' });
     } catch (err: any) {

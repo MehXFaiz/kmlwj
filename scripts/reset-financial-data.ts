@@ -27,24 +27,7 @@ const prisma = new PrismaClient({ adapter });
 export async function resetFinancialData(client = prisma) {
   console.log('🔄 Starting reset of all financial data and transactions inside a database transaction...');
 
-  const financialNotificationModules = [
-    'Journal Entries',
-    'Journal',
-    'Income',
-    'Simple Income',
-    'Expense',
-    'Expenses',
-    'Simple Expense',
-    'Invoices',
-    'Revenue',
-    'Hall Booking',
-    'Hall Bookings',
-    'Donations Given',
-    'Donations Received',
-    'Zakat',
-    'Zakat Card',
-    'Zakat Cards',
-  ];
+
 
   const results = await client.$transaction(async (tx) => {
     // 1. Delete Zakat Cards
@@ -78,10 +61,7 @@ export async function resetFinancialData(client = prisma) {
     // 10. Delete Hall Bookings
     const hbCount = await tx.hallBooking.deleteMany({});
     
-    // 11. Delete Financial Notifications
-    const notifCount = await tx.notification.deleteMany({
-      where: { module: { in: financialNotificationModules } },
-    });
+
     
     // 12. Reset Account initialBalance and currentBalance to 0 across all accounts
     const accUpdate = await tx.account.updateMany({
@@ -108,7 +88,6 @@ export async function resetFinancialData(client = prisma) {
       invItemCount: invItemCount.count,
       invCount: invCount.count,
       hbCount: hbCount.count,
-      notifCount: notifCount.count,
       accCount: accUpdate.count,
       revHeadCount: revHeadUpdate.count,
     };
@@ -124,7 +103,6 @@ export async function resetFinancialData(client = prisma) {
   console.log(`Deleted ${results.invCount} Invoices (${results.invItemCount} items)`);
   console.log(`Deleted ${results.hbCount} HallBookings`);
   console.log(`Deleted ${results.zcCount} ZakatCards`);
-  console.log(`Deleted ${results.notifCount} financial Notifications`);
   console.log(`Reset initialBalance and currentBalance to 0 across ${results.accCount} Accounts`);
 
   console.log('\nSystem financial data has been successfully reset.\n\nAll calculations are now starting from zero.\n\nMaster data has been preserved.');

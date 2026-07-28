@@ -2,7 +2,6 @@ import { makeHandler } from "../../_utils/handler.js";
 import { verifyAuth, verifyPermission } from "../../_middlewares/auth.middleware.js";
 import { prisma } from "../../_prisma.js";
 import { logAudit } from "../../_utils/audit.js";
-import { notify } from "../../_utils/notify.js";
 import { PERMS } from "../../_constants/permissions.js";
 import { isAdminOrAbove } from "../../_utils/soft-delete.js";
 const MAX_BULK_IDS = 500;
@@ -59,14 +58,6 @@ var bulk_delete_default = makeHandler(async (req, res) => {
       req.headers["x-forwarded-for"],
       req.headers["user-agent"]
     );
-    await notify(req, {
-      title: "Donors Deleted",
-      message: `${deleted} donor${deleted === 1 ? "" : "s"} deleted.`,
-      module: "Donors",
-      recordId: deleted === 1 ? donors[0].id : null,
-      actionType: "DELETE",
-      visibility: "ADMIN_ONLY"
-    });
   }
   return res.status(200).json({
     status: 200,

@@ -3,7 +3,6 @@ import { makeHandler } from '../_utils/handler.js';
 import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
-import { notify } from '../_utils/notify.js';
 import { AccountingService } from '../_services/accounting.service.js';
 import { PERMS } from '../_constants/permissions.js';
 
@@ -200,13 +199,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       await logAudit(req.user.id, 'Post Invoice', 'INVOICE', invoice, result.updatedInvoice, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-      await notify(req, {
-        title: 'Invoice Posted',
-        message: `Invoice ${(invoice as any).invoiceNumber || (invoice as any).id?.slice(0, 8)} posted (PKR ${Number((invoice as any).totalAmount || 0).toLocaleString()}).`,
-        module: 'Invoices',
-        recordId: (invoice as any).id,
-        actionType: 'APPROVE',
-      });
 
       return res.status(200).json({ status: 200, data: result.updatedInvoice, message: 'Invoice posted and ledger transactions logged successfully' });
     }
@@ -267,13 +259,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       await logAudit(req.user.id, 'Pay Invoice', 'INVOICE', invoice, result.updatedInvoice, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-      await notify(req, {
-        title: 'Invoice Payment Received',
-        message: `Payment recorded for invoice ${(invoice as any).invoiceNumber || (invoice as any).id?.slice(0, 8)}.`,
-        module: 'Invoices',
-        recordId: (invoice as any).id,
-        actionType: 'PAYMENT',
-      });
 
       return res.status(200).json({ status: 200, data: result.updatedInvoice, message: 'Payment recorded and ledger transactions logged successfully' });
     }
@@ -347,13 +332,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       await logAudit(req.user.id, 'Cancel Invoice', 'INVOICE', invoice, result.updatedInvoice, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-      await notify(req, {
-        title: 'Invoice Cancelled',
-        message: `Invoice ${(invoice as any).invoiceNumber || (invoice as any).id?.slice(0, 8)} cancelled and reversed.`,
-        module: 'Invoices',
-        recordId: (invoice as any).id,
-        actionType: 'CANCEL',
-      });
 
       return res.status(200).json({ status: 200, data: result.updatedInvoice, message: 'Invoice cancelled and reversing journal entries logged' });
     }
@@ -419,13 +397,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     await logAudit(req.user.id, 'Create Invoice', 'INVOICE', null, newInvoice, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-    await notify(req, {
-      title: 'Invoice Created',
-      message: `New invoice ${(newInvoice as any).invoiceNumber || (newInvoice as any).id?.slice(0, 8)} created (PKR ${Number((newInvoice as any).totalAmount || 0).toLocaleString()}).`,
-      module: 'Invoices',
-      recordId: (newInvoice as any).id,
-      actionType: 'CREATE',
-    });
 
     return res.status(201).json({ status: 201, data: newInvoice });
   }
@@ -499,13 +470,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     await logAudit(req.user.id, 'Update Invoice', 'INVOICE', existingInvoice, result, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-    await notify(req, {
-      title: 'Invoice Updated',
-      message: `Invoice ${(result as any).invoiceNumber || (result as any).id?.slice(0, 8)} updated.`,
-      module: 'Invoices',
-      recordId: (result as any).id,
-      actionType: 'UPDATE',
-    });
 
     return res.status(200).json({ status: 200, data: result });
   }
@@ -576,14 +540,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       await logAudit(req.user.id, 'Delete Invoice', 'INVOICE', inv, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
     }
 
-    await notify(req, {
-      title: existingInvoices.length > 1 ? 'Invoices Deleted' : 'Invoice Deleted',
-      message: `${existingInvoices.length} invoice(s) deleted.`,
-      module: 'Invoices',
-      recordId: existingInvoices.length === 1 ? existingInvoices[0].id : null,
-      actionType: 'DELETE',
-      visibility: 'ADMIN_ONLY',
-    });
 
     return res.status(200).json({ status: 200, message: `${existingInvoices.length} invoice(s) deleted successfully` });
   }

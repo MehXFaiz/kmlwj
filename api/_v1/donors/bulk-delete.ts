@@ -3,7 +3,6 @@ import { makeHandler } from '../../_utils/handler.js';
 import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../../_middlewares/auth.middleware.js';
 import { prisma } from '../../_prisma.js';
 import { logAudit } from '../../_utils/audit.js';
-import { notify } from '../../_utils/notify.js';
 import { PERMS } from '../../_constants/permissions.js';
 import { isAdminOrAbove } from '../../_utils/soft-delete.js';
 
@@ -94,14 +93,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       req.headers['user-agent']
     );
 
-    await notify(req, {
-      title: 'Donors Deleted',
-      message: `${deleted} donor${deleted === 1 ? '' : 's'} deleted.`,
-      module: 'Donors',
-      recordId: deleted === 1 ? donors[0].id : null,
-      actionType: 'DELETE',
-      visibility: 'ADMIN_ONLY',
-    });
   }
 
   return res.status(200).json({
