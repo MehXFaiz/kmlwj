@@ -19,6 +19,7 @@ import {
   ArrowRight, Wallet, RepeatIcon, Receipt,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { showToast } from '../components/ui/Toast';
 
 /* ─────────────────────────────────────────────
    Animated Counter Hook
