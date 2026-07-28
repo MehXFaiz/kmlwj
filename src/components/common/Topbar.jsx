@@ -23,9 +23,9 @@ const ORG_NAME_URDU = 'کچھی مسلم لوہارواڈھا ویلفیئر ج�
 const urduTitleStyle = {
   fontFamily:
     "'Alvi Nastaleeq Regular', 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Mehr Nastaleeq', 'Noto Nastaliq Urdu', serif",
-  fontWeight: 'normal',
-  lineHeight: 2.9,
-  paddingTop: '0.95em',
+  fontWeight: '600',
+  lineHeight: 2.2,
+  paddingTop: '0.45em',
   letterSpacing: '0px',
   fontFeatureSettings: '"kern" 1, "liga" 1, "calt" 1, "rlig" 1, "init" 1, "medi" 1, "fina" 1',
   fontVariantLigatures: 'common-ligatures contextual',
@@ -142,9 +142,9 @@ export const Topbar = ({ onMobileMenuToggle }) => {
           <Link
             to="/"
             aria-label="KMLWJ home"
-            className="flex items-center shrink-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+            className="flex items-center shrink-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 lg:hidden"
           >
-            <span className="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-xl border border-brand-700/40 bg-brand-950/40 p-1 shadow-inner">
+            <span className="flex items-center justify-center h-9 w-9 rounded-xl border border-brand-700/40 bg-brand-950/40 p-1 shadow-inner">
               <img src={logoImg} alt="" className="h-full w-full object-contain" />
             </span>
           </Link>
@@ -156,15 +156,13 @@ export const Topbar = ({ onMobileMenuToggle }) => {
             dir="rtl"
             lang="ur"
             title={ORG_NAME_URDU}
-            className="select-none text-center max-w-full truncate text-transparent bg-clip-text
-                       bg-gradient-to-r from-[#1C120B] via-[#482F1E] to-[#291A10]
-                       dark:from-brand-300 dark:via-brand-200 dark:to-brand-400
-                       text-[11px] sm:text-[13px] md:text-[15px]"
+            className="select-none text-center max-w-full text-[#F5E6D3] dark:text-[#F3E5D8]
+                       text-[13px] sm:text-[15px] md:text-[17px] font-semibold"
             style={urduTitleStyle}
           >
             {ORG_NAME_URDU}
           </h1>
-          <p className="hidden sm:block -mt-1 text-[8.5px] md:text-[9.5px] font-semibold uppercase tracking-[0.2em] text-slate-500 text-center truncate max-w-full">
+          <p className="hidden sm:block -mt-1 text-[8.5px] md:text-[9.5px] font-semibold uppercase tracking-[0.2em] text-slate-400/80 text-center truncate max-w-full">
             Kutchi Muslim Loharwada Welfare Jamaat
           </p>
         </div>
