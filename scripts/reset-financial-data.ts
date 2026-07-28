@@ -24,40 +24,9 @@ const pool = new pg.Pool({
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-async function main() {
-  console.log('🔄 Starting reset of all financial data and transactions...');
+export async function resetFinancialData(client = prisma) {
+  console.log('🔄 Starting reset of all financial data and transactions inside a database transaction...');
 
-  // Delete transaction lines and entries
-  const jelCount = await prisma.journalEntryLine.deleteMany({});
-  console.log(`Deleted ${jelCount.count} JournalEntryLines`);
-
-  const jeCount = await prisma.journalEntry.deleteMany({});
-  console.log(`Deleted ${jeCount.count} JournalEntries`);
-
-  const donGivenCount = await prisma.donation.deleteMany({});
-  console.log(`Deleted ${donGivenCount.count} Donations Given`);
-
-  const donRecvCount = await prisma.donationReceived.deleteMany({});
-  console.log(`Deleted ${donRecvCount.count} Donations Received`);
-
-  const seCount = await prisma.simpleExpense.deleteMany({});
-  console.log(`Deleted ${seCount.count} SimpleExpenses`);
-
-  const siCount = await prisma.simpleIncome.deleteMany({});
-  console.log(`Deleted ${siCount.count} SimpleIncomes`);
-
-  const rcCount = await prisma.revenueCollection.deleteMany({});
-  console.log(`Deleted ${rcCount.count} RevenueCollections`);
-
-  const invCount = await prisma.invoice.deleteMany({});
-  console.log(`Deleted ${invCount.count} Invoices`);
-
-  const hbCount = await prisma.hallBooking.deleteMany({});
-  console.log(`Deleted ${hbCount.count} HallBookings`);
-
-  // Delete notifications belonging to financial-transaction modules only.
-  // Master-data modules (Users, Members, Welfare, Donors, Chart of Accounts,
-  // Revenue/Expense Heads, Zakat Card, Family Tree) are kept.
   const financialNotificationModules = [
     'Journal Entries',
     'Journal',
@@ -72,35 +41,108 @@ async function main() {
     'Hall Bookings',
     'Donations Given',
     'Donations Received',
+    'Zakat',
+    'Zakat Card',
+    'Zakat Cards',
   ];
-  const notifCount = await prisma.notification.deleteMany({
-    where: { module: { in: financialNotificationModules } },
-  });
-  console.log(`Deleted ${notifCount.count} financial Notifications`);
 
-  // Reset Account initialBalance and currentBalance to 0
-  const accUpdate = await prisma.account.updateMany({
-    data: {
-      initialBalance: 0,
-      currentBalance: 0,
-    },
-  });
-  console.log(`Reset initialBalance and currentBalance to 0 across ${accUpdate.count} Accounts`);
+  const results = await client.$transaction(async (tx) => {
+    // 1. Delete Zakat Cards
+    const zcCount = await tx.zakatCard.deleteMany({});
+    
+    // 2. Delete Journal Entry Lines
+    const jelCount = await tx.journalEntryLine.deleteMany({});
+    
+    // 3. Delete Journal Entries
+    const jeCount = await tx.journalEntry.deleteMany({});
+    
+    // 4. Delete Donations (Given)
+    const donGivenCount = await tx.donation.deleteMany({});
+    
+    // 5. Delete Donations Received
+    const donRecvCount = await tx.donationReceived.deleteMany({});
+    
+    // 6. Delete Simple Expenses
+    const seCount = await tx.simpleExpense.deleteMany({});
+    
+    // 7. Delete Simple Incomes
+    const siCount = await tx.simpleIncome.deleteMany({});
+    
+    // 8. Delete Revenue Collections
+    const rcCount = await tx.revenueCollection.deleteMany({});
+    
+    // 9. Delete Invoice Items & Invoices
+    const invItemCount = await tx.invoiceItem.deleteMany({});
+    const invCount = await tx.invoice.deleteMany({});
+    
+    // 10. Delete Hall Bookings
+    const hbCount = await tx.hallBooking.deleteMany({});
+    
+    // 11. Delete Financial Notifications
+    const notifCount = await tx.notification.deleteMany({
+      where: { module: { in: financialNotificationModules } },
+    });
+    
+    // 12. Reset Account initialBalance and currentBalance to 0 across all accounts
+    const accUpdate = await tx.account.updateMany({
+      data: {
+        initialBalance: 0,
+        currentBalance: 0,
+      },
+    });
 
-  // Reset RevenueHead amount to 0
-  await prisma.revenueHead.updateMany({
-    data: { amount: 0 },
-  });
+    // 13. Reset RevenueHead amounts to 0
+    const revHeadUpdate = await tx.revenueHead.updateMany({
+      data: { amount: 0 },
+    });
 
-  console.log('✅ All financial transactions and amounts cleared to 0 successfully.');
+    return {
+      zcCount: zcCount.count,
+      jelCount: jelCount.count,
+      jeCount: jeCount.count,
+      donGivenCount: donGivenCount.count,
+      donRecvCount: donRecvCount.count,
+      seCount: seCount.count,
+      siCount: siCount.count,
+      rcCount: rcCount.count,
+      invItemCount: invItemCount.count,
+      invCount: invCount.count,
+      hbCount: hbCount.count,
+      notifCount: notifCount.count,
+      accCount: accUpdate.count,
+      revHeadCount: revHeadUpdate.count,
+    };
+  }, { timeout: 60000 });
+
+  console.log(`Deleted ${results.jelCount} JournalEntryLines`);
+  console.log(`Deleted ${results.jeCount} JournalEntries`);
+  console.log(`Deleted ${results.donGivenCount} Donations Given`);
+  console.log(`Deleted ${results.donRecvCount} Donations Received`);
+  console.log(`Deleted ${results.seCount} SimpleExpenses`);
+  console.log(`Deleted ${results.siCount} SimpleIncomes`);
+  console.log(`Deleted ${results.rcCount} RevenueCollections`);
+  console.log(`Deleted ${results.invCount} Invoices (${results.invItemCount} items)`);
+  console.log(`Deleted ${results.hbCount} HallBookings`);
+  console.log(`Deleted ${results.zcCount} ZakatCards`);
+  console.log(`Deleted ${results.notifCount} financial Notifications`);
+  console.log(`Reset initialBalance and currentBalance to 0 across ${results.accCount} Accounts`);
+
+  console.log('\nSystem financial data has been successfully reset.\n\nAll calculations are now starting from zero.\n\nMaster data has been preserved.');
+  return results;
 }
 
-main()
-  .catch((e) => {
-    console.error('❌ Error clearing financial data:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-    await pool.end();
-  });
+async function main() {
+  await resetFinancialData();
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main()
+    .catch((e) => {
+      console.error('❌ Error clearing financial data (transaction rolled back):', e);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+      await pool.end();
+    });
+}

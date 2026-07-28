@@ -7,6 +7,8 @@ import { showToast } from '../components/ui/Toast';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Settings as SettingsIcon, RotateCcw, ShieldCheck, Database, HardDrive, RefreshCw, Lock, Loader2 } from 'lucide-react';
+import api from '../services/api';
+import { syncEngine } from '../services/syncEngine';
 
 export const Settings = () => {
   const { resetAccounts } = useCoaStore();
@@ -30,29 +32,36 @@ export const Settings = () => {
     const confirmed = await useConfirmStore.getState().showConfirm({
       type: 'danger',
       isDangerous: true,
-      title: 'Reset Sandbox?',
-      description: 'This will restore standard charts of accounts and seed journal records.',
+      title: 'Reset Financial System?',
+      description: 'This will remove all dummy financial data from the entire accounting system while keeping Chart of Accounts, Users, Roles, Donors, Members, and Master Data intact.',
       details: [
-        'All manual additions will be cleared.',
-        'All modifications to accounts will be removed.',
-        'Journal records will be reset to factory defaults.',
+        'All Donations, Incomes, Expenses, Invoices, and Journal Entries will be deleted.',
+        'All Cash In Hand and Bank account balances will be set to Rs 0.00.',
+        'All General Ledger transactions and ledger balances will be cleared.',
+        'Dashboard cards, charts, and reports will immediately reflect zero.',
         'This action cannot be undone.',
       ],
-      confirmLabel: 'Reset Sandbox',
+      confirmLabel: 'Reset Financial System',
       cancelLabel: 'Cancel',
-      loadingLabel: 'Resetting...',
-      successMessage: 'Sandbox has been reset to factory defaults.',
+      loadingLabel: 'Resetting Financial System...',
       action: async () => {
-        resetAccounts();
-        resetJournals();
-        logActivity('Reset Sandbox', 'Trial ledger and account databases restored to factory standard templates.');
+        try {
+          await api.post('/api/v1/system-reset');
+          resetAccounts();
+          resetJournals();
+          syncEngine.triggerLocalSync();
+          showToast('System financial data has been successfully reset.\n\nAll calculations are now starting from zero.\n\nMaster data has been preserved.', 'success');
+        } catch (err) {
+          const msg = err.response?.data?.error?.message || 'Failed to reset financial data';
+          showToast(msg, 'error');
+          throw err;
+        }
       },
     });
 
     if (confirmed) {
       setSuccess(true);
-      setTimeout(() => setSuccess(false), 2000);
-      showToast('Sandbox reset to factory defaults.', 'success');
+      setTimeout(() => setSuccess(false), 3000);
     }
   };
 

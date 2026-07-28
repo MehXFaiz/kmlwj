@@ -51,6 +51,7 @@ import searchHandler from './_v1/search.js';
 import simpleExpenseHandler from './_v1/simple-expense.js';
 import simpleIncomeHandler from './_v1/simple-income.js';
 import accountingHealthHandler from './_v1/accounting-health.js';
+import systemResetHandler from './_v1/system-reset.js';
 import zakatCardsHandler from './_v1/zakat-cards.js';
 import { memberVerifyHandler } from './_v1/member-verify.js';
 import { zakatCardVerifyHandler } from './_v1/zakat-card-verify.js';
@@ -190,7 +191,9 @@ app.put('/api/v1/donations', makeExpress(donationsHandler));
 app.patch('/api/v1/donations', makeExpress(donationsHandler));
 app.delete('/api/v1/donations', makeExpress(donationsHandler));
 
-app.delete('/api/v1/donors/bulk-delete', makeExpress(donorsBulkDeleteHandler));
+// app.all so the handler owns method dispatch (405 for anything but DELETE, and the
+// CORS preflight) instead of Express answering a wrong method with a bare 404.
+app.all('/api/v1/donors/bulk-delete', makeExpress(donorsBulkDeleteHandler));
 app.get('/api/v1/donors', makeExpress(donorsHandler));
 app.post('/api/v1/donors', makeExpress(donorsHandler));
 app.put('/api/v1/donors', makeExpress(donorsHandler));
@@ -278,6 +281,9 @@ app.delete('/api/v1/simple-income', makeExpress(simpleIncomeHandler));
 
 // Accounting Health Check Route
 app.get('/api/v1/accounting-health', makeExpress(accountingHealthHandler));
+
+// System Reset Route
+app.post('/api/v1/system-reset', makeExpress(systemResetHandler));
 
 // Notification Routes
 app.get('/api/v1/notifications', makeExpress(notificationsHandler));
