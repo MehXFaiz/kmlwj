@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRevenueStore } from '../store/revenueStore';
 import { useCoaStore } from '../store/coaStore';
 import { useAuthStore } from '../store/authStore';
-import { useNotificationStore } from '../store/notificationStore';
 import {
   TrendingUp, Search, Plus, ChevronDown, ChevronUp,
   CheckCircle2, XCircle, Edit2, Trash2,
@@ -284,7 +283,6 @@ export const RevenueHeads = () => {
   const { heads, fetchHeads, addHead, updateHead, deleteHead } = useRevenueStore();
   const canEditOrDelete = useAuthStore((s) => s.canEditOrDelete);
   const { flatAccounts, fetchAccountsList } = useCoaStore();
-  const { addNotification } = useNotificationStore();
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterCat, setFilterCat] = useState('All');
@@ -337,26 +335,14 @@ export const RevenueHeads = () => {
     try {
       if (editItem) {
         await updateHead(editItem.id, data);
-        addNotification({
-          title: 'Revenue Head Updated',
-          message: `Successfully updated revenue head "${data.name}"`
-        });
       } else {
         await addHead(data);
-        addNotification({
-          title: 'Revenue Head Created',
-          message: `Successfully created revenue head "${data.name}"`
-        });
       }
       setEditItem(null);
       setModalOpen(false);
       showToast(editItem ? 'Revenue head updated successfully' : 'Revenue head created successfully', 'success');
     } catch (err) {
       const errorMsg = err?.response?.data?.error?.message || err.message || 'Failed to save. Please ensure inputs are correct.';
-      addNotification({
-        title: 'Error Saving Revenue Head',
-        message: errorMsg
-      });
       showToast(errorMsg, 'error');
     }
   };

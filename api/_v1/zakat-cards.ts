@@ -4,7 +4,6 @@ import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewa
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
-import { createNotification } from '../_utils/notify.js';
 import { PERMS } from '../_constants/permissions.js';
 import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
 
@@ -266,16 +265,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       req.headers['x-forwarded-for'] as string, req.headers['user-agent']
     );
 
-    await createNotification({
-      title: 'Zakat Card Issued',
-      message: `Zakat card ${result.cardNumber} issued to ${beneficiary.name} — PKR ${parsedAmount.toLocaleString()}.`,
-      module: 'Zakat',
-      recordId: result.id,
-      actionType: 'CREATE',
-      userName: req.user.email,
-      userRole: req.user.role,
-      userId: req.user.id,
-    });
 
     return res.status(201).json({ status: 201, data: result, message: 'Zakat card issued successfully' });
   }
@@ -322,17 +311,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       req.headers['x-forwarded-for'] as string, req.headers['user-agent']
     );
 
-    await createNotification({
-      title: 'Zakat Card Deleted',
-      message: `Zakat card ${card.cardNumber} deleted.`,
-      module: 'Zakat',
-      recordId: targetId,
-      actionType: 'DELETE',
-      userName: req.user.email,
-      userRole: req.user.role,
-      userId: req.user.id,
-      visibility: 'ADMIN_ONLY',
-    });
 
     return res.status(200).json({ status: 200, message: 'Zakat card deleted successfully' });
   }
