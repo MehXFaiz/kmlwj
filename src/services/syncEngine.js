@@ -1,7 +1,6 @@
 import { useDashboardStore } from '../store/dashboardStore';
 import { useLedgerStore } from '../store/ledgerStore';
 import { useAuditStore } from '../store/auditStore';
-import { useNotificationStore } from '../store/notificationStore';
 
 class ERPSyncEngine {
   constructor() {
@@ -71,14 +70,6 @@ class ERPSyncEngine {
       // audit view might not be initialized
     }
 
-    try {
-      const notifState = useNotificationStore.getState();
-      if (notifState && typeof notifState.fetchNotifications === 'function') {
-        notifState.fetchNotifications();
-      }
-    } catch (err) {
-      // notification view might not be initialized
-    }
 
     this.listeners.forEach((listener) => {
       try {

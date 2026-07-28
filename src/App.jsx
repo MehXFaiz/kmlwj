@@ -14,7 +14,6 @@ const ChartOfAccounts = lazy(() => import('./views/ChartOfAccounts').then(m => (
 const GeneralLedger = lazy(() => import('./views/GeneralLedger').then(m => ({ default: m.GeneralLedger })));
 const JournalEntries = lazy(() => import('./views/JournalEntries').then(m => ({ default: m.JournalEntries })));
 const AuditTrail = lazy(() => import('./views/AuditTrail').then(m => ({ default: m.AuditTrail })));
-const Notifications = lazy(() => import('./views/Notifications').then(m => ({ default: m.Notifications })));
 const Settings = lazy(() => import('./views/Settings').then(m => ({ default: m.Settings })));
 const AccountingHealthCheck = lazy(() => import('./views/AccountingHealthCheck').then(m => ({ default: m.AccountingHealthCheck })));
 const Profile = lazy(() => import('./views/Profile').then(m => ({ default: m.Profile })));
@@ -450,7 +449,7 @@ function App() {
                 <AccountingHealthCheck />
               </PermissionGuard>
             } />
-            <Route path="/notifications" element={<Notifications />} />
+
             <Route path="/settings" element={<Settings />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/account" element={<MyAccount />} />
