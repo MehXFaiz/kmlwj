@@ -150,21 +150,18 @@ export const Topbar = ({ onMobileMenuToggle }) => {
           </Link>
         </div>
 
-        {/* ── Centre: Urdu wordmark (primary) + English subtitle ──────────── */}
+        {/* ── Centre: Urdu wordmark (primary) ─────────────────────────────── */}
         <div className="flex-1 flex flex-col items-center justify-center min-w-0 px-2 sm:px-6 overflow-hidden">
           <h1
             dir="rtl"
             lang="ur"
             title={ORG_NAME_URDU}
             className="select-none text-center max-w-full text-[#F5E6D3] dark:text-[#F3E5D8]
-                       text-[13px] sm:text-[15px] md:text-[17px] font-semibold"
+                       text-[14px] sm:text-[16px] md:text-[18px] font-semibold"
             style={urduTitleStyle}
           >
             {ORG_NAME_URDU}
           </h1>
-          <p className="hidden sm:block -mt-1 text-[8.5px] md:text-[9.5px] font-semibold uppercase tracking-[0.2em] text-slate-400/80 text-center truncate max-w-full">
-            Kutchi Muslim Loharwada Welfare Jamaat
-          </p>
         </div>
 
         {/* ── Right: fiscal year · language · profile ─────────────────────── */}
