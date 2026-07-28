@@ -211,14 +211,16 @@ var donors_default = makeHandler(async (req, res) => {
     if (existingDonors.length === 0) {
       return res.status(404).json({ error: { message: "No donors found to delete", status: 404 } });
     }
-    if (isPermanent) {
-      await prisma.donor.deleteMany({ where: { id: { in: ids } } });
-    } else {
-      await prisma.donor.updateMany({
-        where: { id: { in: ids } },
-        data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
-      });
-    }
+    await prisma.$transaction(async (tx) => {
+      if (isPermanent) {
+        await tx.donor.deleteMany({ where: { id: { in: ids } } });
+      } else {
+        await tx.donor.updateMany({
+          where: { id: { in: ids } },
+          data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
+        });
+      }
+    });
     for (const d of existingDonors) {
       await logAudit(req.user.id, isPermanent ? "Permanent Delete Donor" : "Delete Donor", "DONOR", d, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     }

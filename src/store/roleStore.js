@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { roleService, auditService } from '../services/apiServices';
+import { useDashboardStore } from './dashboardStore';
 
 export const useRoleStore = create((set, get) => ({
   roles: [],
@@ -23,6 +24,7 @@ export const useRoleStore = create((set, get) => ({
       await roleService.create(payload);
       await get().fetchRoles();
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
     } catch (err) {
       set({ error: err.message || 'Failed to create role', loading: false });
       throw err;
@@ -35,6 +37,7 @@ export const useRoleStore = create((set, get) => ({
       await roleService.update(id, payload);
       await get().fetchRoles();
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
     } catch (err) {
       set({ error: err.message || 'Failed to update role', loading: false });
       throw err;
@@ -47,6 +50,7 @@ export const useRoleStore = create((set, get) => ({
       await roleService.delete(id);
       await get().fetchRoles();
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
     } catch (err) {
       set({ error: err.message || 'Failed to delete role', loading: false });
       throw err;

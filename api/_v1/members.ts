@@ -297,16 +297,24 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       ? idsRaw.map(String)
       : String(idsRaw).split(',').map(s => s.trim()).filter(Boolean);
 
-    if (isPermanent) {
-      await prisma.member.deleteMany({
-        where: { id: { in: ids } }
-      });
-    } else {
-      await prisma.member.updateMany({
-        where: { id: { in: ids } },
-        data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user.id }
-      });
-    }
+    await prisma.$transaction(async (tx) => {
+      if (isPermanent) {
+        await tx.familyRelationship.deleteMany({
+          where: { OR: [{ memberId: { in: ids } }, { relativeMemberId: { in: ids } }] }
+        });
+        await tx.zakatCard.deleteMany({
+          where: { memberId: { in: ids } }
+        });
+        await tx.member.deleteMany({
+          where: { id: { in: ids } }
+        });
+      } else {
+        await tx.member.updateMany({
+          where: { id: { in: ids } },
+          data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user!.id }
+        });
+      }
+    });
 
     await logAudit(req.user.id, isPermanent ? 'Permanent Delete Member' : 'Delete Member(s)', 'MEMBER', { ids }, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 

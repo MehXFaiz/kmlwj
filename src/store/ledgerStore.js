@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import api from '../services/api';
+import { useDashboardStore } from './dashboardStore';
 
 export const useLedgerStore = create((set, get) => ({
   ledgerData: null,
@@ -29,6 +30,7 @@ export const useLedgerStore = create((set, get) => ({
     try {
       const res = await api.post('/api/v1/general-ledger', entryData);
       await get().fetchLedger(currentFilters);
+      useDashboardStore.getState().invalidateAll();
       return { success: true, data: res.data.data };
     } catch (err) {
       const msg = err.response?.data?.error?.message || err.message || 'Failed to add GL entry';
@@ -42,6 +44,7 @@ export const useLedgerStore = create((set, get) => ({
     try {
       await api.delete(`/api/v1/general-ledger?id=${id}`, { data: { id } });
       await get().fetchLedger(currentFilters);
+      useDashboardStore.getState().invalidateAll();
       return { success: true };
     } catch (err) {
       const msg = err.response?.data?.error?.message || err.message || 'Failed to delete GL entry';
@@ -55,6 +58,7 @@ export const useLedgerStore = create((set, get) => ({
     try {
       await api.delete('/api/v1/general-ledger', { data: { ids } });
       await get().fetchLedger(currentFilters);
+      useDashboardStore.getState().invalidateAll();
       return { success: true };
     } catch (err) {
       const msg = err.response?.data?.error?.message || err.message || 'Failed to bulk delete GL entries';

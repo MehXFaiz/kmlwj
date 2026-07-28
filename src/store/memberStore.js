@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { memberService } from '../services/memberService';
+import { useDashboardStore } from './dashboardStore';
 
 export const useMemberStore = create((set, get) => ({
   members: [],
@@ -20,6 +21,7 @@ export const useMemberStore = create((set, get) => ({
     try {
       const res = await memberService.create(data);
       await get().fetchMembers();
+      useDashboardStore.getState().invalidateAll();
       return res.data;
     } catch (err) {
       set({ error: err.message });
@@ -31,6 +33,7 @@ export const useMemberStore = create((set, get) => ({
     try {
       const res = await memberService.update(id, data);
       await get().fetchMembers();
+      useDashboardStore.getState().invalidateAll();
       return res.data;
     } catch (err) {
       set({ error: err.message });
@@ -44,6 +47,7 @@ export const useMemberStore = create((set, get) => ({
       set(state => ({
         members: state.members.filter(m => m.id !== id)
       }));
+      useDashboardStore.getState().invalidateAll();
     } catch (err) {
       set({ error: err.message });
       throw err;
@@ -54,6 +58,7 @@ export const useMemberStore = create((set, get) => ({
     try {
       const res = await memberService.bulkDelete(ids);
       await get().fetchMembers();
+      useDashboardStore.getState().invalidateAll();
       return res;
     } catch (err) {
       set({ error: err.message });

@@ -286,16 +286,24 @@ var members_default = makeHandler(async (req, res) => {
       return res.status(400).json({ error: { message: "Member ID(s) required", status: 400 } });
     }
     const ids = Array.isArray(idsRaw) ? idsRaw.map(String) : String(idsRaw).split(",").map((s) => s.trim()).filter(Boolean);
-    if (isPermanent) {
-      await prisma.member.deleteMany({
-        where: { id: { in: ids } }
-      });
-    } else {
-      await prisma.member.updateMany({
-        where: { id: { in: ids } },
-        data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
-      });
-    }
+    await prisma.$transaction(async (tx) => {
+      if (isPermanent) {
+        await tx.familyRelationship.deleteMany({
+          where: { OR: [{ memberId: { in: ids } }, { relativeMemberId: { in: ids } }] }
+        });
+        await tx.zakatCard.deleteMany({
+          where: { memberId: { in: ids } }
+        });
+        await tx.member.deleteMany({
+          where: { id: { in: ids } }
+        });
+      } else {
+        await tx.member.updateMany({
+          where: { id: { in: ids } },
+          data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
+        });
+      }
+    });
     await logAudit(req.user.id, isPermanent ? "Permanent Delete Member" : "Delete Member(s)", "MEMBER", { ids }, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     return res.status(200).json({ status: 200, message: `Successfully deleted ${ids.length} member(s)` });
   }

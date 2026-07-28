@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { expenseService } from '../services/apiServices';
+import { useDashboardStore } from './dashboardStore';
 
 export const useExpenseStore = create((set, get) => ({
   heads: [],
@@ -27,6 +28,7 @@ export const useExpenseStore = create((set, get) => ({
       });
       await get().fetchHeads();
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
       return newHead;
     } catch (err) {
       set({ error: err.message || 'Failed to add expense head', loading: false });
@@ -45,6 +47,7 @@ export const useExpenseStore = create((set, get) => ({
       });
       await get().fetchHeads();
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
       return updated;
     } catch (err) {
       set({ error: err.message || 'Failed to update expense head', loading: false });
@@ -58,6 +61,7 @@ export const useExpenseStore = create((set, get) => ({
       await expenseService.delete(id);
       await get().fetchHeads();
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
     } catch (err) {
       set({ error: err.message || 'Failed to delete expense head', loading: false });
       throw err;

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { beneficiaryService } from '../services/beneficiaryService';
+import { useDashboardStore } from './dashboardStore';
 
 export const useBeneficiaryStore = create((set, get) => ({
   beneficiaries: [],
@@ -19,17 +20,20 @@ export const useBeneficiaryStore = create((set, get) => ({
   addBeneficiary: async (data) => {
     const created = await beneficiaryService.create(data);
     await get().fetchBeneficiaries();
+    useDashboardStore.getState().invalidateAll();
     return created;
   },
 
   updateBeneficiary: async (id, data) => {
     const updated = await beneficiaryService.update(id, data);
     await get().fetchBeneficiaries();
+    useDashboardStore.getState().invalidateAll();
     return updated;
   },
 
   deleteBeneficiary: async (id) => {
     await beneficiaryService.delete(id);
     await get().fetchBeneficiaries();
+    useDashboardStore.getState().invalidateAll();
   }
 }));

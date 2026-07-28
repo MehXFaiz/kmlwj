@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { accountService } from '../services/apiServices';
+import { useDashboardStore } from './dashboardStore';
 
 export const getCurrentFiscalYear = () => String(new Date().getFullYear());
 
@@ -163,6 +164,7 @@ export const useCoaStore = create((set, get) => ({
       await accountService.delete(id);
       await get().fetchAccountsTree();
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
     } catch (err) {
       set({ error: err.message || 'Failed to delete account', loading: false });
       throw err;

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { revenueService } from '../services/apiServices';
+import { useDashboardStore } from './dashboardStore';
 
 export const useRevenueStore = create((set, get) => ({
   heads: [],
@@ -29,6 +30,7 @@ export const useRevenueStore = create((set, get) => ({
       });
       await get().fetchHeads();
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
       return newHead;
     } catch (err) {
       set({ error: err.message || 'Failed to add revenue head', loading: false });
@@ -49,6 +51,7 @@ export const useRevenueStore = create((set, get) => ({
       });
       await get().fetchHeads();
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
       return updated;
     } catch (err) {
       set({ error: err.message || 'Failed to update revenue head', loading: false });
@@ -62,6 +65,7 @@ export const useRevenueStore = create((set, get) => ({
       await revenueService.delete(id);
       await get().fetchHeads();
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
     } catch (err) {
       set({ error: err.message || 'Failed to delete revenue head', loading: false });
       throw err;

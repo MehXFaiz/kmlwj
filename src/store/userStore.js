@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { userService } from '../services/apiServices';
+import { useDashboardStore } from './dashboardStore';
 
 export const useUserStore = create((set, get) => ({
   users: [],
@@ -27,6 +28,7 @@ export const useUserStore = create((set, get) => ({
       });
       await get().fetchUsers();
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
       return newUser;
     } catch (err) {
       const errMsg = err.response?.data?.error?.message || err.message || 'Failed to add user';
@@ -46,6 +48,7 @@ export const useUserStore = create((set, get) => ({
       });
       await get().fetchUsers();
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
       return updated;
     } catch (err) {
       const errMsg = err.response?.data?.error?.message || err.message || 'Failed to update user';
@@ -60,6 +63,7 @@ export const useUserStore = create((set, get) => ({
       await userService.delete(id);
       await get().fetchUsers();
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
     } catch (err) {
       const errMsg = err.response?.data?.error?.message || err.message || 'Failed to delete user';
       set({ error: errMsg, loading: false });

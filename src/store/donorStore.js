@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { donorService } from '../services/donorService';
+import { useDashboardStore } from './dashboardStore';
 
 export const useDonorStore = create((set, get) => ({
   donors: [],
@@ -22,6 +23,7 @@ export const useDonorStore = create((set, get) => ({
       const res = await donorService.create(data);
       await get().fetchDonors();
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
       return res;
     } catch (err) {
       set({ error: err.response?.data?.error?.message || err.message, loading: false });
@@ -35,6 +37,7 @@ export const useDonorStore = create((set, get) => ({
       const res = await donorService.update(id, data);
       await get().fetchDonors();
       set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
       return res;
     } catch (err) {
       set({ error: err.response?.data?.error?.message || err.message, loading: false });
@@ -50,6 +53,7 @@ export const useDonorStore = create((set, get) => ({
         donors: state.donors.filter(d => d.id !== id),
         loading: false
       }));
+      useDashboardStore.getState().invalidateAll();
     } catch (err) {
       set({ error: err.response?.data?.error?.message || err.message, loading: false });
       throw err;
@@ -60,12 +64,10 @@ export const useDonorStore = create((set, get) => ({
     set({ error: null });
     try {
       const res = await donorService.bulkDelete(ids);
-      // Drop the rows the server confirmed it deleted so the list and the stats
-      // update before the refetch round-trip completes.
       const removed = new Set(res.deletedIds || ids);
       set(state => ({ donors: state.donors.filter(d => !removed.has(d.id)) }));
-      // Resync against the server — another session may have changed the directory.
       get().fetchDonors();
+      useDashboardStore.getState().invalidateAll();
       return res;
     } catch (err) {
       const message = err.response?.data?.error?.message || err.message || 'Unable to delete selected donors.';

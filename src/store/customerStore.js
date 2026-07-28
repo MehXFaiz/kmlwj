@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { customerService } from '../services/customerService';
+import { useDashboardStore } from './dashboardStore';
 
 export const useCustomerStore = create((set, get) => ({
   customers: [],
@@ -20,6 +21,7 @@ export const useCustomerStore = create((set, get) => ({
     try {
       await customerService.create(data);
       await get().fetchCustomers();
+      useDashboardStore.getState().invalidateAll();
     } catch (err) {
       set({ error: err.message });
       throw err;
@@ -30,6 +32,7 @@ export const useCustomerStore = create((set, get) => ({
     try {
       await customerService.update(id, data);
       await get().fetchCustomers();
+      useDashboardStore.getState().invalidateAll();
     } catch (err) {
       set({ error: err.message });
       throw err;
@@ -42,6 +45,7 @@ export const useCustomerStore = create((set, get) => ({
       set(state => ({
         customers: state.customers.filter(c => c.id !== id)
       }));
+      useDashboardStore.getState().invalidateAll();
     } catch (err) {
       set({ error: err.message });
       throw err;
@@ -52,6 +56,7 @@ export const useCustomerStore = create((set, get) => ({
     try {
       const res = await customerService.bulkDelete(ids);
       await get().fetchCustomers();
+      useDashboardStore.getState().invalidateAll();
       return res;
     } catch (err) {
       set({ error: err.message });
