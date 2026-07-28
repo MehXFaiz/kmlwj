@@ -142,10 +142,12 @@ export const HallBookingGLModal = ({ booking, onClose }) => {
                       <h1
                         className="font-extrabold text-[#482F1E] tracking-normal"
                         style={{
-                          fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
+                          fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Alvi Nastaleeq', serif",
                           fontSize: '15px',
-                          lineHeight: 2.2,
-                          paddingTop: '0.6em'
+                          lineHeight: 2.1,
+                          paddingTop: '0.45em',
+                          wordSpacing: '0.12em',
+                          fontWeight: 500,
                         }}
                       >
                         کچھی مسلم لوہارواڈھا ویلفیئر جماعت

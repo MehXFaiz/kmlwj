@@ -22,12 +22,12 @@ const ORG_NAME_URDU = 'کچھی مسلم لوہارواڈھا ویلفیئر ج�
  */
 const urduTitleStyle = {
   fontFamily:
-    "'Alvi Nastaleeq Regular', 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Mehr Nastaleeq', 'Noto Nastaliq Urdu', serif",
-  fontWeight: '600',
-  lineHeight: 2.2,
-  paddingTop: '0.45em',
+    "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Alvi Nastaleeq', serif",
+  fontWeight: '500',
+  lineHeight: 2.1,
+  paddingTop: '0.35em',
   letterSpacing: '0px',
-  fontFeatureSettings: '"kern" 1, "liga" 1, "calt" 1, "rlig" 1, "init" 1, "medi" 1, "fina" 1',
+  wordSpacing: '0.15em',
   fontVariantLigatures: 'common-ligatures contextual',
   textRendering: 'optimizeLegibility',
   WebkitFontSmoothing: 'antialiased',

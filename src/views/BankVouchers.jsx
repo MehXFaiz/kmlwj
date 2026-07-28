@@ -124,8 +124,8 @@ function VoucherReceiptSlip({ voucher, amount, copyType, t }) {
           {/* Org name (center) */}
           <div style={{ flex: 1 }}>
             <div style={{
-              fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
-              fontSize: '0.92rem', color: '#FFFFFF', lineHeight: 2.2, paddingTop: '0.5em', fontWeight: 700,
+              fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Alvi Nastaleeq', serif",
+              fontSize: '0.92rem', color: '#FFFFFF', lineHeight: 2.1, paddingTop: '0.45em', wordSpacing: '0.12em', fontWeight: 500,
               direction: 'rtl', textAlign: 'right',
             }}>
               کچھی مسلم لوہارواڈھا ویلفیئر جماعت

@@ -126,10 +126,12 @@ function CopySheet({ copyLabel, title, voucherNo, fileNo, formattedDate, paidTo,
             <div
               className="font-semibold text-[#24170f]"
               style={{
-                fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
+                fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Alvi Nastaleeq', serif",
                 fontSize: '0.82rem',
-                lineHeight: 2.2,
-                paddingTop: '0.5em'
+                lineHeight: 2.1,
+                paddingTop: '0.4em',
+                wordSpacing: '0.12em',
+                fontWeight: 500,
               }}
             >
               کچھی مسلم لوہارواڈھا ویلفیئر جماعت

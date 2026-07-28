@@ -225,19 +225,14 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
                 <h1
                   className="font-bold text-slate-900 tracking-normal"
                   style={{
-                    fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
+                    fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Alvi Nastaleeq', serif",
                     color: '#0f172a',
-                    // Nastaliq needs far more vertical room than its own metrics claim.
-                    // Measured on Noto Nastaliq Urdu (the face that actually resolves here):
-                    // the Kaaf dandi inks 0.84em ABOVE the ascent the font declares, so the
-                    // browser reserves a line box shorter than the glyphs it paints and the
-                    // stroke overflowed past the card's overflow-hidden edge. line-height
-                    // clears the descender; the padding absorbs the top overshoot, which
-                    // extra line-height cannot do because half-leading splits evenly.
                     fontSize: '13px',
-                    lineHeight: 2.9,
-                    paddingTop: '0.95em',
+                    lineHeight: 2.3,
+                    paddingTop: '0.6em',
                     paddingBottom: '0.1em',
+                    wordSpacing: '0.12em',
+                    fontWeight: 500,
                   }}
                 >
                   کچھی مسلم لوہارواڈھا ویلفیئر جماعت
