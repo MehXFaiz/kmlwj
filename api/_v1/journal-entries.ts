@@ -79,7 +79,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'POST') {
-    const { postingDate, subsidiary, reference, description, status = 'Draft', lines, voucherType = 'JV' } = req.body;
+    const { voucherNo, postingDate, subsidiary, reference, description, status = 'Draft', lines, voucherType = 'JV' } = req.body;
 
     if (!lines || !Array.isArray(lines) || lines.length === 0) {
       return res.status(400).json({ error: { message: 'Lines are required', status: 400 } });
@@ -101,14 +101,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         }));
 
         return await AccountingService.postTransaction(tx, {
-          voucherNo,
+          voucherNo: voucherNo || undefined,
           postingDate: postingDate ? new Date(postingDate) : new Date(),
           subsidiary: subsidiary || 'Global',
           reference: reference || 'Journal Entry',
           description: description || 'Journal Entry',
           module: 'Journal Entries',
           voucherType,
-          postedBy,
+          postedBy: req.user?.id || 'system',
           status,
           lines: payloadLines,
           ipAddress: req.headers['x-forwarded-for'] as string,

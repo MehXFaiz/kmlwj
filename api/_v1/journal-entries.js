@@ -66,7 +66,7 @@ var journal_entries_default = makeHandler(async (req, res) => {
     return res.status(200).json({ status: 200, data: formatted, meta: { total, page: pageNum, limit: limitNum } });
   }
   if (method === "POST") {
-    const { postingDate, subsidiary, reference, description, status = "Draft", lines, voucherType = "JV" } = req.body;
+    const { voucherNo, postingDate, subsidiary, reference, description, status = "Draft", lines, voucherType = "JV" } = req.body;
     if (!lines || !Array.isArray(lines) || lines.length === 0) {
       return res.status(400).json({ error: { message: "Lines are required", status: 400 } });
     }
@@ -84,14 +84,14 @@ var journal_entries_default = makeHandler(async (req, res) => {
           description: l.description || description || reference
         }));
         return await AccountingService.postTransaction(tx, {
-          voucherNo,
+          voucherNo: voucherNo || void 0,
           postingDate: postingDate ? new Date(postingDate) : /* @__PURE__ */ new Date(),
           subsidiary: subsidiary || "Global",
           reference: reference || "Journal Entry",
           description: description || "Journal Entry",
           module: "Journal Entries",
           voucherType,
-          postedBy,
+          postedBy: req.user?.id || "system",
           status,
           lines: payloadLines,
           ipAddress: req.headers["x-forwarded-for"],
