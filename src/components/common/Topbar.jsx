@@ -1,10 +1,53 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { getCurrentFiscalYear, useCoaStore } from '../../store/coaStore';
 import { useAuthStore } from '../../store/authStore';
 import { Menu, User, Settings, LogOut, ChevronDown, Globe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
+import logoImg from '../../assets/logo.png';
+
+const ORG_NAME_URDU = 'کچھی مسلم لوہارواڈھا ویلفیئر جماعت';
+
+/**
+ * Nastaliq needs far more vertical room than its own metrics declare — the Kaaf
+ * dandi inks roughly 0.85em ABOVE the ascent the face reports, so a normal line
+ * box crops the stroke and the letter reads as "broken". line-height clears the
+ * descender and the top padding absorbs the overshoot, which extra line-height
+ * cannot do on its own because half-leading is split evenly across both edges.
+ *
+ * letterSpacing MUST stay at 0: Nastaliq is a cursive, contextually-joined
+ * script, and any positive tracking pulls the glyphs apart and breaks the
+ * ligature joins.
+ */
+const urduTitleStyle = {
+  fontFamily:
+    "'Alvi Nastaleeq Regular', 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Mehr Nastaleeq', 'Noto Nastaliq Urdu', serif",
+  fontWeight: 'normal',
+  lineHeight: 2.9,
+  paddingTop: '0.95em',
+  letterSpacing: '0px',
+  fontFeatureSettings: '"kern" 1, "liga" 1, "calt" 1, "rlig" 1, "init" 1, "medi" 1, "fina" 1',
+  fontVariantLigatures: 'common-ligatures contextual',
+  textRendering: 'optimizeLegibility',
+  WebkitFontSmoothing: 'antialiased',
+  MozOsxFontSmoothing: 'grayscale',
+  direction: 'rtl',
+  unicodeBidi: 'isolate',
+  whiteSpace: 'nowrap',
+};
+
+/** Every right-hand control shares this height/radius so the row reads as one unit. */
+const controlBase =
+  'h-9 inline-flex items-center gap-1.5 rounded-lg border border-brand-800/40 bg-brand-950/30 ' +
+  'text-slate-400 transition-colors hover:bg-brand-900/25 hover:border-brand-700/60 hover:text-slate-100 ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 ' +
+  'focus-visible:ring-offset-slate-900';
+
+const menuItemClass =
+  'flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-slate-400 rounded-lg w-full text-left ' +
+  'transition-colors hover:bg-brand-900/30 hover:text-slate-100 focus-visible:outline-none ' +
+  'focus-visible:ring-2 focus-visible:ring-brand-500';
 
 export const Topbar = ({ onMobileMenuToggle }) => {
   const { user, loading, logout } = useAuthStore(
@@ -14,7 +57,7 @@ export const Topbar = ({ onMobileMenuToggle }) => {
       logout: state.logout,
     }))
   );
-  const { 
+  const {
     fiscalYear,
     syncFiscalYear,
   } = useCoaStore(
@@ -24,15 +67,14 @@ export const Topbar = ({ onMobileMenuToggle }) => {
     }))
   );
 
-  const navigate = useNavigate();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
-  
+
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const languageMenuRef = useRef(null);
 
   const [currentFiscalYear, setCurrentFiscalYear] = useState(getCurrentFiscalYear);
-  
+
   const { i18n } = useTranslation();
   const language = i18n.language || 'en';
 
@@ -60,6 +102,19 @@ export const Topbar = ({ onMobileMenuToggle }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Escape closes whichever menu is open and returns focus to the page.
+  useEffect(() => {
+    if (!userMenuOpen && !languageMenuOpen) return;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setUserMenuOpen(false);
+        setLanguageMenuOpen(false);
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [userMenuOpen, languageMenuOpen]);
+
   const getInitials = (name) => {
     if (!name) return 'U';
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -68,80 +123,100 @@ export const Topbar = ({ onMobileMenuToggle }) => {
   const displayedFiscalYear = fiscalYear === currentFiscalYear ? fiscalYear : currentFiscalYear;
 
   return (
-    <header className="print-hidden bg-slate-900 z-20 shrink-0 relative" style={{ boxShadow: '0 1px 0 0 rgba(255,255,255,0.04), 0 2px 12px 0 rgba(0,0,0,0.35)' }}>
-      <div className="flex items-center gap-2 px-3 py-2.5 md:px-6 md:py-0 md:h-14">
-        {/* Mobile menu toggle */}
-        <button
-          onClick={onMobileMenuToggle}
-          className="p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 transition-colors lg:hidden shrink-0"
-          aria-label="Toggle navigation menu"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
+    <header
+      className="print-hidden relative z-20 shrink-0 bg-slate-900 border-b border-brand-800/40"
+      style={{ boxShadow: '0 1px 0 0 rgba(150,114,89,0.06), 0 4px 20px 0 rgba(0,0,0,0.45)' }}
+    >
+      <div className="flex items-stretch gap-2 px-3 sm:px-4 md:px-6 min-h-[60px] md:min-h-[76px]">
 
-        {/* Welfare Jamaat Urdu Branding */}
-        <div className="flex-1 flex items-center justify-center min-w-0 px-2 sm:px-4">
-          <span
+        {/* ── Left: mobile menu + brand mark ─────────────────────────────── */}
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+          <button
+            onClick={onMobileMenuToggle}
+            className={`${controlBase} w-9 justify-center lg:hidden`}
+            aria-label="Toggle navigation menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+
+          <Link
+            to="/"
+            aria-label="KMLWJ home"
+            className="flex items-center shrink-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+          >
+            <span className="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-xl border border-brand-700/40 bg-brand-950/40 p-1 shadow-inner">
+              <img src={logoImg} alt="" className="h-full w-full object-contain" />
+            </span>
+          </Link>
+        </div>
+
+        {/* ── Centre: Urdu wordmark (primary) + English subtitle ──────────── */}
+        <div className="flex-1 flex flex-col items-center justify-center min-w-0 px-2 sm:px-6 overflow-hidden">
+          <h1
             dir="rtl"
-            className="text-transparent bg-clip-text bg-gradient-to-r from-[#1C120B] via-[#482F1E] to-[#291A10] dark:from-brand-300 dark:via-brand-200 dark:to-brand-400 select-none text-[13px] sm:text-[16px] text-center whitespace-nowrap overflow-visible"
-            style={{
-              fontFamily: "'Jameel Noori Nastaleeq', 'Mehr Nastaleeq', 'Alvi Nastaleeq Regular', 'Alvi Nastaleeq', 'Noto Nastaliq Urdu', serif",
-              fontWeight: 'normal',
-              lineHeight: 1.4,
-              letterSpacing: '0.01em',
-              direction: 'rtl',
-              unicodeBidi: 'isolate',
-              textRendering: 'optimizeLegibility',
-              WebkitFontSmoothing: 'antialiased',
-              overflow: 'visible',
-              whiteSpace: 'nowrap',
-            }}
+            lang="ur"
+            title={ORG_NAME_URDU}
+            className="select-none text-center max-w-full truncate text-transparent bg-clip-text
+                       bg-gradient-to-r from-[#1C120B] via-[#482F1E] to-[#291A10]
+                       dark:from-brand-300 dark:via-brand-200 dark:to-brand-400
+                       text-[11px] sm:text-[13px] md:text-[15px]"
+            style={urduTitleStyle}
           >
-            کچھی مسلم لوہارواڈھا ویلفیئر جماعت
-          </span>
+            {ORG_NAME_URDU}
+          </h1>
+          <p className="hidden sm:block -mt-1 text-[8.5px] md:text-[9.5px] font-semibold uppercase tracking-[0.2em] text-slate-500 text-center truncate max-w-full">
+            Kutchi Muslim Loharwada Welfare Jamaat
+          </p>
         </div>
 
-        <div className="hidden lg:flex items-center gap-2 shrink-0">
-          <select
-            value={displayedFiscalYear}
-            onChange={syncFiscalYear}
-            className="px-3 py-1.5 rounded-lg border border-slate-800 bg-slate-900/60 text-[11px] font-semibold text-slate-300 focus:outline-none focus:border-brand-500"
-            aria-label="Select fiscal year"
-          >
-            <option value={displayedFiscalYear}>{`FY ${displayedFiscalYear}`}</option>
-          </select>
-        </div>
+        {/* ── Right: fiscal year · language · profile ─────────────────────── */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
 
-        {/* Right side - Actions & User Menu */}
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          {/* Fiscal year */}
+          <div className="hidden md:block">
+            <label htmlFor="topbar-fiscal-year" className="sr-only">Select fiscal year</label>
+            <select
+              id="topbar-fiscal-year"
+              value={displayedFiscalYear}
+              onChange={syncFiscalYear}
+              className={`${controlBase} px-3 text-[11px] font-semibold cursor-pointer appearance-none`}
+            >
+              <option value={displayedFiscalYear}>{`FY ${displayedFiscalYear}`}</option>
+            </select>
+          </div>
 
-          {/* Language Menu */}
+          {/* Language */}
           <div className="relative" ref={languageMenuRef}>
-            <button 
-              onClick={() => {
-                setLanguageMenuOpen(!languageMenuOpen);
-                setUserMenuOpen(false);
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-slate-800 hover:border-slate-700 transition-all cursor-pointer text-slate-400 hover:text-slate-100"
+            <button
+              onClick={() => { setLanguageMenuOpen(!languageMenuOpen); setUserMenuOpen(false); }}
+              className={`${controlBase} px-2.5 cursor-pointer`}
+              aria-haspopup="menu"
+              aria-expanded={languageMenuOpen}
+              aria-label={`Change language, current language ${language === 'en' ? 'English' : 'Urdu'}`}
             >
               <Globe className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline text-[11px] font-bold uppercase tracking-wider">{language === 'en' ? 'EN' : 'UR'}</span>
-              <ChevronDown className="h-3 w-3 text-slate-600" />
+              <span className="hidden sm:inline text-[11px] font-bold uppercase tracking-wider">
+                {language === 'en' ? 'EN' : 'UR'}
+              </span>
+              <ChevronDown className={`h-3 w-3 text-slate-600 transition-transform ${languageMenuOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {languageMenuOpen && (
-              <div className="absolute right-0 mt-2 w-36 bg-slate-900 border border-slate-800/80 rounded-xl shadow-2xl shadow-black/50 z-50 p-1 overflow-hidden">
+              <div role="menu" className="absolute right-0 mt-2 w-36 bg-slate-900 border border-brand-800/50 rounded-xl shadow-2xl shadow-black/50 z-50 p-1 overflow-hidden">
                 <button
+                  role="menuitem"
                   onClick={() => { i18n.changeLanguage('en'); setLanguageMenuOpen(false); }}
-                  className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-lg transition-all ${language === 'en' ? 'bg-slate-800 text-brand-300' : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-100'}`}
+                  className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${language === 'en' ? 'bg-brand-900/40 text-brand-300' : 'text-slate-400 hover:bg-brand-900/30 hover:text-slate-100'}`}
                 >
                   🇺🇸 &nbsp;English
                 </button>
                 <button
+                  role="menuitem"
                   onClick={() => { i18n.changeLanguage('ur'); setLanguageMenuOpen(false); }}
-                  className={`w-full text-right px-3 py-2 text-xs font-semibold rounded-lg transition-all ${language === 'ur' ? 'bg-slate-800 text-brand-300' : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-100'}`}
-                  style={{ fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
+                  className={`w-full text-right px-3 py-2 text-xs font-semibold rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${language === 'ur' ? 'bg-brand-900/40 text-brand-300' : 'text-slate-400 hover:bg-brand-900/30 hover:text-slate-100'}`}
+                  style={{ ...urduTitleStyle, lineHeight: 2, paddingTop: '0.55em' }}
                   dir="rtl"
+                  lang="ur"
                 >
                   اردو 🇵🇰
                 </button>
@@ -149,40 +224,40 @@ export const Topbar = ({ onMobileMenuToggle }) => {
             )}
           </div>
 
-          {/* User menu */}
+          {/* Profile */}
           <div className="relative" ref={userMenuRef}>
-            <button 
-              onClick={() => {
-                setUserMenuOpen(!userMenuOpen);
-                setLanguageMenuOpen(false);
-              }}
-              className="flex items-center gap-2 px-1.5 py-1 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 hover:border-slate-700 transition-all cursor-pointer text-left"
+            <button
+              onClick={() => { setUserMenuOpen(!userMenuOpen); setLanguageMenuOpen(false); }}
+              className={`${controlBase} pl-1 pr-2 cursor-pointer text-left`}
+              aria-haspopup="menu"
+              aria-expanded={userMenuOpen}
+              aria-label="Open account menu"
             >
               {loading ? (
                 <>
-                  <div className="h-7 w-7 rounded-full bg-slate-800 animate-pulse"></div>
-                  <div className="hidden xl:flex flex-col gap-1">
-                    <div className="h-3 w-20 bg-slate-800 animate-pulse rounded"></div>
-                    <div className="h-2 w-12 bg-slate-800 animate-pulse rounded"></div>
-                  </div>
+                  <span className="h-7 w-7 rounded-full bg-brand-900/50 animate-pulse" />
+                  <span className="hidden xl:flex flex-col gap-1">
+                    <span className="h-3 w-20 bg-brand-900/50 animate-pulse rounded" />
+                    <span className="h-2 w-12 bg-brand-900/50 animate-pulse rounded" />
+                  </span>
                 </>
               ) : (
                 <>
-                  <div className="h-7 w-7 rounded-full bg-brand-500/25 border-2 border-brand-500/40 flex items-center justify-center text-brand-300 font-bold text-[11px] select-none">
+                  <span className="h-7 w-7 rounded-full bg-brand-500/25 border-2 border-brand-500/40 flex items-center justify-center text-brand-300 font-bold text-[11px] select-none shrink-0">
                     {getInitials(user?.name || user?.fullName)}
-                  </div>
-                  <div className="hidden xl:flex flex-col text-left pr-1">
-                    <span className="text-xs font-bold text-slate-100 leading-none">{user?.name || user?.fullName || 'Operator'}</span>
+                  </span>
+                  <span className="hidden xl:flex flex-col text-left leading-none">
+                    <span className="text-xs font-bold text-slate-100">{user?.name || user?.fullName || 'Operator'}</span>
                     <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-widest mt-0.5">{user?.role || 'User'}</span>
-                  </div>
-                  <ChevronDown className="h-3 w-3 text-slate-500 hidden xl:block" />
+                  </span>
+                  <ChevronDown className={`h-3 w-3 text-slate-500 hidden xl:block transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
                 </>
               )}
             </button>
 
             {userMenuOpen && !loading && (
-              <div className="absolute right-0 mt-2 w-60 bg-slate-900 border border-slate-800/80 rounded-2xl shadow-2xl shadow-black/60 z-50 overflow-hidden">
-                <div className="px-4 py-3.5 border-b border-slate-800/80 flex items-center gap-3">
+              <div role="menu" className="absolute right-0 mt-2 w-60 bg-slate-900 border border-brand-800/50 rounded-2xl shadow-2xl shadow-black/60 z-50 overflow-hidden">
+                <div className="px-4 py-3.5 border-b border-brand-800/40 flex items-center gap-3">
                   <div className="h-9 w-9 rounded-full bg-brand-500/20 border-2 border-brand-500/40 flex items-center justify-center text-brand-300 font-bold text-sm select-none shrink-0">
                     {getInitials(user?.name || user?.fullName)}
                   </div>
@@ -192,20 +267,21 @@ export const Topbar = ({ onMobileMenuToggle }) => {
                   </div>
                 </div>
                 <div className="p-1.5 flex flex-col gap-0.5">
-                  <Link to="/profile" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-slate-400 hover:bg-slate-800/70 hover:text-slate-100 rounded-xl transition-all w-full text-left">
+                  <Link role="menuitem" to="/profile" onClick={() => setUserMenuOpen(false)} className={menuItemClass}>
                     <User className="h-3.5 w-3.5" /> Profile
                   </Link>
-                  <Link to="/account" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-slate-400 hover:bg-slate-800/70 hover:text-slate-100 rounded-xl transition-all w-full text-left">
+                  <Link role="menuitem" to="/account" onClick={() => setUserMenuOpen(false)} className={menuItemClass}>
                     <User className="h-3.5 w-3.5" /> My Account
                   </Link>
-                  <Link to="/settings" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-slate-400 hover:bg-slate-800/70 hover:text-slate-100 rounded-xl transition-all w-full text-left">
+                  <Link role="menuitem" to="/settings" onClick={() => setUserMenuOpen(false)} className={menuItemClass}>
                     <Settings className="h-3.5 w-3.5" /> Settings
                   </Link>
                 </div>
-                <div className="p-1.5 border-t border-slate-800/80">
+                <div className="p-1.5 border-t border-brand-800/40">
                   <button
+                    role="menuitem"
                     onClick={() => { logout(); setUserMenuOpen(false); }}
-                    className="flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-xl transition-all w-full text-left"
+                    className="flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-red-400 rounded-lg w-full text-left transition-colors hover:bg-red-500/10 hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                   >
                     <LogOut className="h-3.5 w-3.5" /> Sign Out
                   </button>
