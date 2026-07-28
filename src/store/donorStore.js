@@ -57,15 +57,22 @@ export const useDonorStore = create((set, get) => ({
   },
 
   bulkDeleteDonors: async (ids) => {
-    set({ loading: true, error: null });
+    set({ error: null });
     try {
       const res = await donorService.bulkDelete(ids);
-      await get().fetchDonors();
-      set({ loading: false });
+      // Drop the rows the server confirmed it deleted so the list and the stats
+      // update before the refetch round-trip completes.
+      const removed = new Set(res.deletedIds || ids);
+      set(state => ({ donors: state.donors.filter(d => !removed.has(d.id)) }));
+      // Resync against the server — another session may have changed the directory.
+      get().fetchDonors();
       return res;
     } catch (err) {
-      set({ error: err.response?.data?.error?.message || err.message, loading: false });
-      throw err;
+      const message = err.response?.data?.error?.message || err.message || 'Unable to delete selected donors.';
+      set({ error: message });
+      const error = new Error(message);
+      error.status = err.response?.status;
+      throw error;
     }
   }
 }));

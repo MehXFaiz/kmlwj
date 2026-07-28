@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDonorStore } from '../store/donorStore';
 import { useAuthStore } from '../store/authStore';
-import { Users, Search, Plus, Edit2, Trash2, X, Mail, Phone, CreditCard, MapPin, AlertTriangle, CheckCircle } from 'lucide-react';
-import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
+import { Users, Search, Plus, Edit2, Trash2, X, Phone, CreditCard, MapPin, AlertTriangle, CheckCircle, CheckSquare } from 'lucide-react';
+import { pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 import { useConfirm } from '../components/ui/ConfirmationModal';
 
@@ -17,6 +17,7 @@ export const Donors = () => {
   const [selectedIds, setSelectedIds] = useState([]);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const selectAllRef = useRef(null);
 
   useEffect(() => {
     fetchDonors();
@@ -32,6 +33,32 @@ export const Donors = () => {
       d.mobile?.toLowerCase().includes(q)
     );
   }, [donors, search]);
+
+  // Selection is keyed by id and lives outside `filtered`, so it survives searching,
+  // clearing the search, and refetches. Anything that has left the directory
+  // (deleted here, or by another session) is dropped so the count stays honest.
+  useEffect(() => {
+    setSelectedIds(prev => {
+      if (prev.length === 0) return prev;
+      const live = new Set(donors.map(d => d.id));
+      const next = prev.filter(id => live.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [donors]);
+
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const visibleSelectedCount = useMemo(
+    () => filtered.reduce((n, d) => (selectedSet.has(d.id) ? n + 1 : n), 0),
+    [filtered, selectedSet]
+  );
+  const allVisibleSelected = filtered.length > 0 && visibleSelectedCount === filtered.length;
+
+  // `indeterminate` is a DOM property with no JSX attribute — set it directly.
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = visibleSelectedCount > 0 && !allVisibleSelected;
+    }
+  }, [visibleSelectedCount, allVisibleSelected]);
 
   const handleDelete = async (donor) => {
     await confirm({
@@ -53,35 +80,53 @@ export const Donors = () => {
     });
   };
 
-  const handleSelectAll = (e) => {
-    if (e.target.checked) {
-      setSelectedIds(filtered.map(d => d.id));
-    } else {
-      setSelectedIds([]);
-    }
+  // Toggles only the donors currently on screen, so a select-all under an active
+  // search never silently discards a selection made under a previous one.
+  const handleSelectAll = () => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      filtered.forEach(d => (allVisibleSelected ? next.delete(d.id) : next.add(d.id)));
+      return [...next];
+    });
   };
 
-  const handleSelectOne = (id, e) => {
-    e.stopPropagation();
+  const toggleSelection = (id) => {
     setSelectedIds(prev =>
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
     );
   };
 
   const executeBulkDelete = async () => {
+    // Guards a double-click on Delete and a stale modal left open after the
+    // selection was pruned away.
+    if (isDeleting || selectedIds.length === 0) return;
     setIsDeleting(true);
-    await new Promise(resolve => setTimeout(resolve, 15));
     try {
-      await bulkDeleteDonors(selectedIds);
-      showToast(`${selectedIds.length} donor(s) deleted successfully`, 'success');
+      const res = await bulkDeleteDonors(selectedIds);
+      showToast(res?.message || `${selectedIds.length} donors deleted successfully.`, 'success');
       setSelectedIds([]);
+      setShowBulkConfirm(false);
     } catch (err) {
-      showToast(err.message || 'Failed to bulk delete donors', 'error');
+      // Modal stays open on failure so the delete can be retried without reselecting.
+      showToast(err.message || 'Unable to delete selected donors.', 'error');
     } finally {
       setIsDeleting(false);
-      setShowBulkConfirm(false);
     }
   };
+
+  const closeBulkConfirm = () => {
+    if (isDeleting) return;
+    setShowBulkConfirm(false);
+  };
+
+  useEffect(() => {
+    if (!showBulkConfirm) return;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape' && !isDeleting) setShowBulkConfirm(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showBulkConfirm, isDeleting]);
 
   const activeCount = useMemo(() => donors.filter(d => d.isActive).length, [donors]);
 
@@ -97,11 +142,12 @@ export const Donors = () => {
           {canEditOrDelete && selectedIds.length > 0 && (
             <button
               type="button"
+              disabled={isDeleting}
               onClick={() => setShowBulkConfirm(true)}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-sm font-semibold transition-all shadow-lg active:scale-95"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-sm font-semibold transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Trash2 className="h-4 w-4" />
-              <span>Bulk Delete ({selectedIds.length})</span>
+              <span>{isDeleting ? 'Deleting...' : `Delete Selected (${selectedIds.length})`}</span>
             </button>
           )}
           <Link
@@ -134,10 +180,19 @@ export const Donors = () => {
             <Users className="h-6 w-6" />
           </div>
         </div>
+        <div className="p-4 rounded-xl border border-slate-800/80 bg-slate-900/60 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase text-slate-500">Search Results</p>
+            <p className="text-2xl font-black text-slate-200 mt-1">{filtered.length}</p>
+          </div>
+          <div className="p-3 rounded-xl bg-slate-500/10 text-slate-400 border border-slate-600/20">
+            <Search className="h-6 w-6" />
+          </div>
+        </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="flex items-center gap-4 bg-slate-900/40 p-3 rounded-xl border border-slate-800/60">
+      {/* Search Bar + Select All */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-slate-900/40 p-3 rounded-xl border border-slate-800/60">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <input
@@ -148,7 +203,55 @@ export const Donors = () => {
             className="w-full pl-9 pr-4 py-2 rounded-lg bg-slate-950/80 border border-slate-800 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-amber-500"
           />
         </div>
+        {canEditOrDelete && filtered.length > 0 && (
+          <label className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-950/80 border border-slate-800 text-xs font-semibold text-slate-300 cursor-pointer hover:border-slate-700 transition-colors select-none shrink-0">
+            <input
+              ref={selectAllRef}
+              type="checkbox"
+              checked={allVisibleSelected}
+              onChange={handleSelectAll}
+              disabled={isDeleting}
+              className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer disabled:cursor-not-allowed"
+            />
+            <span>Select All ({filtered.length})</span>
+          </label>
+        )}
       </div>
+
+      {/* Selection Toolbar */}
+      {canEditOrDelete && selectedIds.length > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 rounded-xl border border-amber-500/30 bg-amber-500/5 animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="flex items-center gap-2 text-sm font-bold text-amber-400">
+            <CheckSquare className="h-4 w-4" />
+            <span>{selectedIds.length} Selected</span>
+            {selectedIds.length > visibleSelectedCount && (
+              <span className="text-[11px] font-medium text-slate-400">
+                ({selectedIds.length - visibleSelectedCount} hidden by search)
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={() => setShowBulkConfirm(true)}
+              className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-bold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              <span>{isDeleting ? 'Deleting...' : 'Delete Selected'}</span>
+            </button>
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={() => setSelectedIds([])}
+              className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <X className="h-3.5 w-3.5" />
+              <span>Clear Selection</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Grid Card View Container (Reference Style) */}
       <div className="mt-2">
@@ -161,20 +264,27 @@ export const Donors = () => {
             {filtered.map(d => (
               <div
                 key={d.id}
-                className={`group relative rounded-2xl border bg-slate-900/90 p-5 shadow-xl hover:shadow-2xl hover:border-slate-700/80 transition-all duration-300 flex flex-col justify-between ${
-                  selectedIds.includes(d.id) ? 'border-amber-500/60 bg-amber-500/5 shadow-amber-500/10' : 'border-slate-800/80'
+                className={`group relative rounded-2xl border p-5 shadow-xl hover:shadow-2xl transition-all duration-300 flex flex-col justify-between ${
+                  selectedSet.has(d.id)
+                    ? 'border-amber-500/70 bg-amber-500/[0.07] ring-1 ring-amber-500/40 shadow-amber-500/10'
+                    : 'border-slate-800/80 bg-slate-900/90 hover:border-slate-700/80'
                 }`}
               >
                 {/* Card Top: Checkbox, Avatar, Name & Status */}
                 <div>
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3.5">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(d.id)}
-                        onChange={() => handleSelectOne(d.id)}
-                        className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer shrink-0"
-                      />
+                      {canEditOrDelete && (
+                        <input
+                          type="checkbox"
+                          checked={selectedSet.has(d.id)}
+                          onChange={() => toggleSelection(d.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          disabled={isDeleting}
+                          aria-label={`Select ${d.fullName || 'donor'}`}
+                          className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer shrink-0 disabled:cursor-not-allowed disabled:opacity-50"
+                        />
+                      )}
                       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/30 flex items-center justify-center text-amber-400 font-extrabold text-lg shadow-inner shrink-0">
                         {d.fullName ? d.fullName.charAt(0).toUpperCase() : 'D'}
                       </div>
@@ -263,23 +373,34 @@ export const Donors = () => {
       </div>
 
       {showBulkConfirm && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+        <div
+          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={closeBulkConfirm}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="bulk-delete-title"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200"
+          >
             <div className="flex items-center gap-3 text-red-400">
               <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20">
                 <AlertTriangle className="h-6 w-6" />
               </div>
-              <h3 className="text-lg font-bold text-slate-100">Confirm Bulk Deletion</h3>
+              <h3 id="bulk-delete-title" className="text-lg font-bold text-slate-100">
+                Delete {selectedIds.length} selected donor{selectedIds.length === 1 ? '' : 's'}?
+              </h3>
             </div>
             <p className="text-sm text-slate-300 leading-relaxed">
-              Are you sure you want to delete <span className="font-bold text-white">{selectedIds.length}</span> selected donor(s)? This action cannot be undone.
+              This action cannot be undone.
             </p>
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-end gap-3 pt-2">
               <button
                 type="button"
                 disabled={isDeleting}
-                onClick={() => setShowBulkConfirm(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold transition-all disabled:opacity-50"
+                onClick={closeBulkConfirm}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
@@ -287,7 +408,7 @@ export const Donors = () => {
                 type="button"
                 disabled={isDeleting}
                 onClick={executeBulkDelete}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-bold shadow-lg shadow-red-600/20 transition-all disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-bold shadow-lg shadow-red-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isDeleting ? (
                   <>
@@ -297,7 +418,7 @@ export const Donors = () => {
                 ) : (
                   <>
                     <Trash2 className="h-4 w-4" />
-                    Delete {selectedIds.length} Donor(s)
+                    Delete
                   </>
                 )}
               </button>
