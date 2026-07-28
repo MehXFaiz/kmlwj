@@ -26,6 +26,7 @@ var trial_balance_default = makeHandler(async (req, res) => {
           glCode: acc.glCode,
           accountName: acc.accountName,
           accountType: acc.accountType,
+          detailType: acc.detailType,
           debit: acc.debit,
           credit: acc.credit
         };

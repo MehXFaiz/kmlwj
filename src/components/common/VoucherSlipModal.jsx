@@ -123,7 +123,15 @@ function CopySheet({ copyLabel, title, voucherNo, fileNo, formattedDate, paidTo,
           </div>
           <div>
             <div className="text-[10px] font-black uppercase tracking-[0.24em] text-[#8a5e3d]">{copyLabel}</div>
-            <div className="font-semibold text-[#24170f]" style={{ fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif", fontSize: '0.95rem' }}>
+            <div
+              className="font-semibold text-[#24170f]"
+              style={{
+                fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
+                fontSize: '0.82rem',
+                lineHeight: 2.2,
+                paddingTop: '0.5em'
+              }}
+            >
               کچھی مسلم لوہارواڈھا ویلفیئر جماعت
             </div>
           </div>

@@ -228,21 +228,26 @@ export const TrialBalanceSheet = () => {
     // Cash in Hand = Cash GL closing balance only (never a bank account).
     // Bank Balance = sum of bank GL accounts (National Bank of Pakistan + NBP
     // Zakat) only. Both come from the same posted-GL tbReport asset rows.
-    const isCashName = (name) => {
+    const isCashName = (name, detailType) => {
       const n = (name || '').toLowerCase();
-      return (n.includes('cash') || n.includes('hand') || n.includes('petty') || n.includes('till')) && !n.includes('bank');
+      if (n.includes('bank')) return false;
+      if (n.includes('cash') || n.includes('hand') || n.includes('petty') || n.includes('till')) return true;
+      const d = (detailType || '').toLowerCase();
+      return d === 'cash';
     };
-    const isBankName = (name) => {
+    const isBankName = (name, detailType) => {
       const n = (name || '').toLowerCase();
-      return n.includes('bank') || n.includes('nbp') || n.includes('national bank');
+      if (n.includes('bank') || n.includes('nbp') || n.includes('national bank') || n.includes('al-habib') || n.includes('mcb') || n.includes('ubl')) return true;
+      const d = (detailType || '').toLowerCase();
+      return d === 'bank';
     };
 
     const cashInHand = assetEntries
-      .filter(e => isCashName(e.accountName))
+      .filter(e => isCashName(e.accountName, e.detailType))
       .reduce((s, e) => s + debitBal(e), 0);
 
     const bankBalance = assetEntries
-      .filter(e => isBankName(e.accountName))
+      .filter(e => isBankName(e.accountName, e.detailType))
       .reduce((s, e) => s + debitBal(e), 0);
 
     return { expenses, incomes, cashInHand, bankBalance, totalActualExpense, totalActualRevenue };

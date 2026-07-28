@@ -1138,21 +1138,20 @@ export class AccountingService {
   // name-substring heuristic only applies when detailType is unset/generic
   // ('Header', the schema default, or blank).
   static isCashAccount(name: string, detailType: string): boolean {
+    const nameLower = (name || '').toLowerCase();
+    if (nameLower.includes('bank')) return false;
+    if (nameLower.includes('cash') || nameLower.includes('till') || nameLower.includes('petty') || nameLower.includes('hand')) return true;
     const detailLower = (detailType || '').toLowerCase();
     if (detailLower === 'cash') return true;
-    const hasSpecificDetailType = detailLower && detailLower !== 'header';
-    if (hasSpecificDetailType) return false;
-    const nameLower = (name || '').toLowerCase();
-    return nameLower.includes('cash') || nameLower.includes('till') || nameLower.includes('petty') || nameLower.includes('hand');
+    return false;
   }
 
   static isBankAccount(name: string, detailType: string): boolean {
+    const nameLower = (name || '').toLowerCase();
+    if (nameLower.includes('bank') || nameLower.includes('al-habib') || nameLower.includes('nbp') || nameLower.includes('national bank') || nameLower.includes('mcb') || nameLower.includes('ubl') || nameLower.includes('allied') || nameLower.includes('faysal')) return true;
     const detailLower = (detailType || '').toLowerCase();
     if (detailLower === 'bank') return true;
-    const hasSpecificDetailType = detailLower && detailLower !== 'header';
-    if (hasSpecificDetailType) return false;
-    const nameLower = (name || '').toLowerCase();
-    return nameLower.includes('bank') || nameLower.includes('al-habib') || nameLower.includes('nbp') || nameLower.includes('national bank') || nameLower.includes('mcb') || nameLower.includes('ubl') || nameLower.includes('allied') || nameLower.includes('faysal');
+    return false;
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -1415,8 +1414,9 @@ export class AccountingService {
         }
       }
 
-      // Skip accounts with zero balance
-      if (balance.isZero()) continue;
+      // Skip accounts with zero balance unless it's a primary Cash or Bank account or has an initial balance
+      const isCashOrBank = AccountingService.isCashAccount(acc.accountName, acc.detailType) || AccountingService.isBankAccount(acc.accountName, acc.detailType);
+      if (balance.isZero() && !isCashOrBank && (!acc.initialBalance || acc.initialBalance === 0)) continue;
 
       let debit = new Prisma.Decimal(0);
       let credit = new Prisma.Decimal(0);
@@ -1437,6 +1437,7 @@ export class AccountingService {
         glCode: acc.glCode,
         accountName: acc.accountName,
         accountType: acc.accountType?.name || 'Asset',
+        detailType: acc.detailType,
         balance: balance.toNumber(),
         debit: debit.toNumber(),
         credit: credit.toNumber()

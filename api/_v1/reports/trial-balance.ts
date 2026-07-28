@@ -33,6 +33,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           glCode: acc.glCode,
           accountName: acc.accountName,
           accountType: acc.accountType,
+          detailType: acc.detailType,
           debit: acc.debit,
           credit: acc.credit
         };
