@@ -166,40 +166,35 @@ export const TrialBalanceSheet = () => {
     };
 
     // ── LEFT COLUMN: EXPENSE rows ────────────────────────────────────────────
-    const expenseRowDefs = [
-      { desc: 'Bank Charges',               codes: ['4080103'] },
-      { desc: 'Bus Diesel',                  codes: ['4030101'] },
-      { desc: 'Bus Maintenance',             codes: ['4050101'], regex: /bus.*repair|bus.*maintenance/i },
-      { desc: 'Bus Renovation',              regex: /bus.*renovation/i },
-      { desc: 'Annexy Canopy',               regex: /annexy.*canopy|canopy.*annexy/i },
-      { desc: 'Garden Canopy',               regex: /garden.*canopy|canopy.*garden/i },
-      { desc: 'Cleaning Staff Labor',        regex: /cleaning.*labor|clean.*staff/i },
-      { desc: 'Office Equipment',            regex: /office.*equipment|office.*asset/i },
-      { desc: 'Cleaning Equipment',          regex: /cleaning.*equipment/i },
-      { desc: 'Generator Diesel',            codes: ['4080104'], regex: /generator.*fuel|generator.*diesel/i },
-      { desc: 'Diyanat Committee Expenses',  regex: /diyanat.*committee/i },
-      { desc: 'Staff Refreshments',          codes: ['4080101'], regex: /entertainment|refreshment/i },
-      { desc: 'Generator Repair',            codes: ['4050102'], regex: /generator.*repair/i },
-      { desc: 'Cricket Tournament Expenses', regex: /cricket|tournament/i },
-      { desc: 'Monthly Donation Expense',    codes: ['4060101'], regex: /monthly.*donation/i },
-      { desc: 'Electric Equipment',          regex: /electric.*equipment/i },
-      { desc: 'Office Fitting',              regex: /office.*fitting/i },
-      { desc: 'Gardening Expenses',          regex: /garden.*expense|gardening/i },
-      { desc: 'Jamaat Khana Renovation',     regex: /jamaat.*khana.*renovation|jamaat.*khana.*repair/i },
-      { desc: 'Court / Legal Fees',          codes: ['4070101'], regex: /legal.*fee|court/i },
-      { desc: 'General Body Expenses',       codes: ['4080105'], regex: /general.*body|meeting/i },
-      { desc: 'K-Electric Bill',             regex: /k-electric|electricity/i },
-      { desc: 'Medical Center Construction', regex: /medical.*center.*construction/i },
-      { desc: 'Medical Donation',            codes: ['4060103'], regex: /medical.*donation/i },
-      { desc: 'Shadi Biyah Donation',        codes: ['4060102'], regex: /marriage.*donation/i },
-      { desc: 'Zakat Distribution',          regex: /zakat.*dist|zakat.*paid/i },
-      { desc: 'Fitra Distribution',          regex: /fitra.*dist|fitra.*paid/i },
-      { desc: 'Salary',                      regex: /salary|wages/i },
-      { desc: 'Rent',                        regex: /rent/i },
-      { desc: 'Administrative Expenses',     regex: /admin.*expense/i },
-      { desc: 'Education Donation',          regex: /education.*donation/i },
-    ];
-    const expenses = partition(expenseEntries, expenseRowDefs, debitBal, 'Miscellaneous Expenses');
+    // Built dynamically from the Chart of Accounts: one row per EXPENSE account
+    // that carries a posted balance, labelled with that account's own name and
+    // ordered by GL code. There is deliberately NO name/code pattern table here
+    // — the previous version matched entries against a hardcoded list of
+    // descriptions and swept everything unmatched into a "Miscellaneous
+    // Expenses" residual, so an expense posted to e.g. Salary or Hall Expense
+    // showed up under Miscellaneous. Now "Miscellaneous Expenses" is just the
+    // account of that name, and only its own postings land there.
+    const groupByAccount = (items, amtFn) => {
+      const byAccount = new Map();
+      for (const e of items) {
+        const key = e.id || e.glCode || e.accountName;
+        const existing = byAccount.get(key);
+        if (existing) {
+          existing.val += amtFn(e);
+        } else {
+          byAccount.set(key, {
+            desc: e.accountName || e.glCode || 'Unnamed Account',
+            glCode: e.glCode || '',
+            val: amtFn(e)
+          });
+        }
+      }
+      return [...byAccount.values()]
+        .sort((a, b) => String(a.glCode).localeCompare(String(b.glCode)) || a.desc.localeCompare(b.desc))
+        .map((row, idx) => ({ ...row, sNo: String(idx + 1).padStart(2, '0') }));
+    };
+
+    const expenses = groupByAccount(expenseEntries, debitBal);
     const totalActualExpense = expenseEntries.reduce((s, e) => s + debitBal(e), 0);
 
     // ── RIGHT COLUMN: REVENUE rows ───────────────────────────────────────────
