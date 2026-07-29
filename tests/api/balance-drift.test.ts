@@ -191,11 +191,51 @@ describe('Account balance drift', () => {
     await expectNoDrift('after repeated rebuild');
   }, 60000);
 
-  it('integrity checker reports zero cached_balance_drift once balances are rebuilt', async () => {
+  it('POST /accounting-health?action=rebuild-balances repairs injected drift', async () => {
+    const request = (await import('supertest')).default;
+    const jwt = (await import('jsonwebtoken')).default;
+    const app = (await import('../../api/index.js')).default;
+
+    const admin = await prisma.user.findFirst({
+      where: { role: { name: 'Super Admin' } },
+    });
+    if (!admin) throw new Error('No Super Admin to authenticate the rebuild endpoint');
+    const token = jwt.sign(
+      { sub: admin.id, email: admin.email, role: 'Super Admin' },
+      process.env.JWT_SECRET || 'super_secret_jwt_sign_key_123_abc'
+    );
+
+    // Corrupt the cache deliberately, exactly as the old delete paths did.
+    await prisma.account.update({
+      where: { id: cashId },
+      data: { currentBalance: new Prisma.Decimal(-999999) },
+    });
+    expect((await storedBalance(cashId)).equals(await ledgerBalance(cashId))).toBe(false);
+
+    const res = await request(app)
+      .post('/api/v1/accounting-health?action=rebuild-balances')
+      .set('Authorization', `Bearer ${token}`)
+      .send({});
+
+    expect(res.status, JSON.stringify(res.body)).toBe(200);
+    expect(res.body?.data?.accountsUpdated).toBeGreaterThan(0);
+    await expectNoDrift('after rebuild endpoint');
+  }, 120000);
+
+  it('integrity checker reports no cached_balance_drift for the accounts under test', async () => {
     const { AccountingIntegrityService } = await import('../../api/_services/accounting-integrity.service.js');
     await AccountingService.recalculateAllBalances();
     const result = await AccountingIntegrityService.runFullCheck();
-    const drift = result.issues.filter((i: any) => i.type === 'cached_balance_drift');
+
+    // Scoped to this suite's own accounts on purpose. The other test files run
+    // concurrently against the same database and are constantly posting and
+    // deleting entries, so a *global* drift assertion here would report their
+    // in-flight work rather than a defect. Persistent, whole-ledger consistency
+    // is what `npm run db:verify`-style rebuilds cover.
+    const ours = new Set([cashId, revenueId, expenseId]);
+    const drift = result.issues
+      .filter((i: any) => i.type === 'cached_balance_drift' && ours.has(i.item?.id));
+
     expect(drift.map((d: any) => d.description)).toEqual([]);
   }, 120000);
 });

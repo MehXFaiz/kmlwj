@@ -113,4 +113,14 @@ export { invoiceService } from './invoiceService';
 
 export const accountingHealthService = {
   getCheck: () => api.get('/api/v1/accounting-health').then((r) => r.data),
+
+  /**
+   * Rebuilds cached account balances from the posted general ledger.
+   * Pass an accountId to repair a single drifted account, or omit it to
+   * rebuild the whole chart of accounts.
+   */
+  rebuildBalances: (accountId) =>
+    api
+      .post('/api/v1/accounting-health', { action: 'rebuild-balances', accountId })
+      .then((r) => r.data),
 };

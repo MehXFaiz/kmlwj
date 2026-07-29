@@ -1,7 +1,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { accountingHealthService } from '../services/apiServices';
-import { ShieldCheck, ShieldAlert, AlertTriangle, Info, RefreshCw, CheckCircle2, XCircle } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, AlertTriangle, Info, RefreshCw, CheckCircle2, XCircle, Wrench } from 'lucide-react';
 
 const severityStyles = {
   critical: {
@@ -38,6 +38,8 @@ export const AccountingHealthCheck = () => {
   const [checkResult, setCheckResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [repairing, setRepairing] = useState(false);
+  const [repairResult, setRepairResult] = useState(null);
 
   const runCheck = useCallback(async () => {
     setLoading(true);
@@ -53,9 +55,32 @@ export const AccountingHealthCheck = () => {
     }
   }, []);
 
+  /**
+   * Rebuilds cached balances from the posted ledger, then re-runs the check so
+   * the page reflects the repaired state rather than the stale issue list.
+   */
+  const repairBalances = useCallback(async () => {
+    setRepairing(true);
+    setError(null);
+    setRepairResult(null);
+    try {
+      const res = await accountingHealthService.rebuildBalances();
+      setRepairResult(res?.data || null);
+      await runCheck();
+    } catch (err) {
+      console.error('Failed to rebuild account balances:', err);
+      setError(err?.response?.data?.error?.message || 'Failed to rebuild account balances. Please try again.');
+    } finally {
+      setRepairing(false);
+    }
+  }, [runCheck]);
+
   useEffect(() => {
     runCheck();
   }, [runCheck]);
+
+  // Only offer the repair action when there is cached balance drift to fix.
+  const driftCount = (checkResult?.issues || []).filter((i) => i.type === 'cached_balance_drift').length;
 
   return (
     <div className="space-y-6 pb-10">
@@ -70,15 +95,42 @@ export const AccountingHealthCheck = () => {
           <h2 className="text-2xl font-extrabold text-slate-50 tracking-tight">Accounting Health Check</h2>
           <p className="text-xs text-slate-600 mt-0.5 font-medium">Comprehensive integrity verification for your accounting system</p>
         </div>
-        <button
-          onClick={runCheck}
-          disabled={loading}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 hover:border-slate-700 text-slate-500 hover:text-slate-200 transition-all text-xs font-semibold self-start sm:self-auto disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-          {loading ? 'Running Check...' : 'Run Check'}
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {driftCount > 0 && (
+            <button
+              onClick={repairBalances}
+              disabled={repairing || loading}
+              title="Recompute every account balance from the posted general ledger"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-amber-800/60 bg-amber-950/30 hover:bg-amber-900/30 hover:border-amber-700 text-amber-300 transition-all text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Wrench className={`h-3.5 w-3.5 ${repairing ? 'animate-spin' : ''}`} />
+              {repairing ? 'Rebuilding...' : `Repair ${driftCount} Balance${driftCount === 1 ? '' : 's'}`}
+            </button>
+          )}
+          <button
+            onClick={runCheck}
+            disabled={loading || repairing}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 hover:border-slate-700 text-slate-500 hover:text-slate-200 transition-all text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'Running Check...' : 'Run Check'}
+          </button>
+        </div>
       </div>
+
+      {repairResult && (
+        <div className="rounded-xl border border-emerald-900/50 bg-emerald-950/20 px-4 py-3.5 flex items-center gap-3">
+          <div className="h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 border bg-emerald-950 border-emerald-800/50">
+            <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-emerald-300">Balances rebuilt from the general ledger</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              {repairResult.accountsUpdated} account(s) recomputed &middot; drift {repairResult.driftBefore} &rarr; {repairResult.driftAfter}
+            </p>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="rounded-xl border border-red-900/50 bg-red-950/20 px-4 py-3.5 flex items-center gap-3">
