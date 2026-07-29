@@ -255,5 +255,54 @@
     "amountInWords": "Amount in Words",
     "signatureClerk": "Signature Booking Clerk",
     "rulesNote": "Booking will be cancelled if rules written on the back are not followed."
+  },
+  "auth": {
+    "orgName": "کچھی مسلم لوہارواڈھا ویلفیئر جماعت",
+    "logoAlt": "KMLWJ Logo",
+    "heroHeadline": "Financial <hl>clarity</hl><br/>starts here.",
+    "heroSubtitle": "Manage your chart of accounts, journal entries, and financial reports with confidence and precision.",
+    "features": {
+      "security": {
+        "label": "Bank-Grade Security",
+        "desc": "End-to-end encrypted sessions"
+      },
+      "ledger": {
+        "label": "Real-Time Ledger",
+        "desc": "Instant financial insights"
+      },
+      "doubleEntry": {
+        "label": "Double-Entry System",
+        "desc": "GAAP compliant bookkeeping"
+      },
+      "fast": {
+        "label": "Blazing Fast",
+        "desc": "Sub-second report generation"
+      }
+    }
+  },
+  "login": {
+    "welcomeBack": "Welcome Back",
+    "subtitle": "Sign in to your account to continue",
+    "emailLabel": "Email Address",
+    "emailPlaceholder": "name@company.com",
+    "emailTitle": "Please enter a valid email address (e.g. name@company.com)",
+    "passwordLabel": "Password",
+    "forgotPassword": "Forgot password?",
+    "signIn": "Sign In",
+    "encryptionNotice": "Protected by enterprise-grade encryption"
+  },
+  "validation": {
+    "allFieldsRequired": "Please fill in all fields",
+    "invalidEmail": "Please enter a valid email address",
+    "passwordMinLength": "Password must be at least 6 characters long",
+    "required": "This field is required",
+    "invalidPhone": "Invalid phone number",
+    "cnicRequired": "CNIC is required",
+    "amountRequired": "Amount is required"
+  },
+  "messages": {
+    "savedSuccessfully": "Saved successfully",
+    "deletedSuccessfully": "Deleted successfully",
+    "updatedSuccessfully": "Updated successfully"
   }
 }

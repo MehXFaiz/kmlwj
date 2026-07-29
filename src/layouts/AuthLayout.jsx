@@ -1,15 +1,19 @@
 import React from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { ShieldCheck, BarChart3, BookOpen, Zap } from 'lucide-react';
 import logoImg from '../assets/logo.png';
 
+// Copy lives in the translation catalogue; only the icon and key are static here.
 const features = [
-  { icon: ShieldCheck, label: 'Bank-Grade Security', desc: 'End-to-end encrypted sessions' },
-  { icon: BarChart3,   label: 'Real-Time Ledger',    desc: 'Instant financial insights'    },
-  { icon: BookOpen,    label: 'Double-Entry System',  desc: 'GAAP compliant bookkeeping'    },
-  { icon: Zap,         label: 'Blazing Fast',         desc: 'Sub-second report generation'  },
+  { icon: ShieldCheck, key: 'security' },
+  { icon: BarChart3,   key: 'ledger'   },
+  { icon: BookOpen,    key: 'doubleEntry' },
+  { icon: Zap,         key: 'fast'     },
 ];
 
 export const AuthLayout = ({ children }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="min-h-[100dvh] flex flex-col lg:flex-row bg-slate-950 overflow-x-hidden">
 
@@ -44,7 +48,7 @@ export const AuthLayout = ({ children }) => {
               <div className="absolute -inset-2 bg-brand-500/15 rounded-2xl blur-xl" />
               <img
                 src={logoImg}
-                alt="KMLWJ Logo"
+                alt={t('auth.logoAlt')}
                 className="relative w-14 h-14 object-contain"
               />
             </div>
@@ -62,31 +66,31 @@ export const AuthLayout = ({ children }) => {
               lineHeight: 2,
             }}
           >
-            کچھی مسلم لوہارواڈھا ویلفیئر جماعت
+            {t('auth.orgName')}
           </div>
         </div>
 
         {/* ── Middle: Hero headline ── */}
         <div className="relative z-10 animate-[fadeSlideUp_0.8s_ease-out_0.2s_both]">
-          <h1 className="text-4xl xl:text-5xl font-black leading-[1.12] tracking-tight">
-            <span className="text-slate-100">Financial </span>
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-brand-300 via-brand-400 to-brand-500">
-              clarity
-            </span>
-            <br />
-            <span className="text-slate-100">starts here.</span>
+          <h1 className="text-4xl xl:text-5xl font-black leading-[1.12] tracking-tight text-slate-100">
+            <Trans
+              i18nKey="auth.heroHeadline"
+              components={{
+                hl: <span className="bg-clip-text text-transparent bg-gradient-to-r from-brand-300 via-brand-400 to-brand-500" />,
+                br: <br />,
+              }}
+            />
           </h1>
           <p className="text-slate-400 text-sm leading-relaxed mt-5 max-w-sm">
-            Manage your chart of accounts, journal entries, and financial reports
-            with confidence and precision.
+            {t('auth.heroSubtitle')}
           </p>
         </div>
 
         {/* ── Bottom: Feature cards ── */}
         <div className="relative z-10 grid grid-cols-2 gap-3 animate-[fadeSlideUp_0.8s_ease-out_0.4s_both]">
-          {features.map(({ icon: Icon, label, desc }) => (
+          {features.map(({ icon: Icon, key }) => (
             <div
-              key={label}
+              key={key}
               className="group/card flex items-start gap-3 p-4 rounded-2xl bg-white/[0.03] border border-brand-800/15
                          backdrop-blur-sm hover:bg-white/[0.06] hover:border-brand-700/25
                          transition-all duration-300 cursor-default"
@@ -97,8 +101,8 @@ export const AuthLayout = ({ children }) => {
                 <Icon className="w-4 h-4 text-brand-400 group-hover/card:text-brand-300 transition-colors duration-300" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-200">{label}</p>
-                <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{desc}</p>
+                <p className="text-xs font-bold text-slate-200">{t(`auth.features.${key}.label`)}</p>
+                <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{t(`auth.features.${key}.desc`)}</p>
               </div>
             </div>
           ))}
@@ -123,7 +127,7 @@ export const AuthLayout = ({ children }) => {
                 <div className="absolute -inset-2 bg-brand-500/15 rounded-2xl blur-xl" />
                 <img
                   src={logoImg}
-                  alt="KMLWJ Logo"
+                  alt={t('auth.logoAlt')}
                   className="relative w-10 h-10 object-contain"
                 />
               </div>
@@ -141,7 +145,7 @@ export const AuthLayout = ({ children }) => {
                 lineHeight: 2,
               }}
             >
-              کچھی مسلم لوہارواڈھا ویلفیئر جماعت
+              {t('auth.orgName')}
             </div>
           </div>
 

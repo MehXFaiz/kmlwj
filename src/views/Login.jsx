@@ -4,9 +4,11 @@ import { useAuthStore } from '../store/authStore';
 import { Lock, Mail, Loader2, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { useShallow } from 'zustand/react/shallow';
+import { useTranslation } from 'react-i18next';
 
 export const Login = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { login, isAuthenticated, loading, error, successMessage, clearError, clearSuccess } = useAuthStore(
     useShallow((state) => ({
       login: state.login,
@@ -42,17 +44,17 @@ export const Login = () => {
     if (localError) setLocalError('');
 
     if (!email || !password) {
-      setLocalError('Please fill in all fields');
+      setLocalError(t('validation.allFieldsRequired'));
       return;
     }
 
     if (!/^[\w.+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
-      setLocalError('Please enter a valid email address');
+      setLocalError(t('validation.invalidEmail'));
       return;
     }
 
     if (password.length < 6) {
-      setLocalError('Password must be at least 6 characters long');
+      setLocalError(t('validation.passwordMinLength'));
       return;
     }
 
@@ -77,10 +79,10 @@ export const Login = () => {
           {/* Header */}
           <div className="text-center mb-8">
             <h2 className="text-2xl sm:text-[28px] font-extrabold tracking-tight text-slate-100">
-              Welcome Back
+              {t('login.welcomeBack')}
             </h2>
             <p className="text-sm text-slate-500 mt-2 font-medium">
-              Sign in to your account to continue
+              {t('login.subtitle')}
             </p>
           </div>
 
@@ -104,7 +106,7 @@ export const Login = () => {
             {/* Email */}
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-2 tracking-wide uppercase">
-                Email Address
+                {t('login.emailLabel')}
               </label>
               <div className="relative group/input">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -113,11 +115,12 @@ export const Login = () => {
                 <input
                   type="email"
                   id="login-email"
+                  dir="ltr"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  title="Please enter a valid email address (e.g. name@company.com)"
+                  title={t('login.emailTitle')}
                   className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20 text-sm transition-all duration-300 font-medium"
-                  placeholder="name@company.com"
+                  placeholder={t('login.emailPlaceholder')}
                   autoComplete="email"
                   autoCapitalize="none"
                   spellCheck={false}
@@ -130,13 +133,13 @@ export const Login = () => {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-xs font-semibold text-slate-400 tracking-wide uppercase">
-                  Password
+                  {t('login.passwordLabel')}
                 </label>
                 <Link
                   to="/forgot-password"
                   className="text-[11px] font-semibold text-slate-500 hover:text-brand-400 transition-colors duration-200"
                 >
-                  Forgot password?
+                  {t('login.forgotPassword')}
                 </Link>
               </div>
               <div className="relative group/input">
@@ -149,7 +152,7 @@ export const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   pattern="^.{6,}$"
-                  title="Password must be at least 6 characters long."
+                  title={t('validation.passwordMinLength')}
                   className="w-full pl-11 pr-12 py-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20 text-sm transition-all duration-300 font-medium"
                   placeholder="••••••••"
                   autoComplete="current-password"
@@ -180,7 +183,7 @@ export const Login = () => {
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <>
-                  Sign In
+                  {t('login.signIn')}
                   <ArrowRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform duration-300" />
                 </>
               )}
@@ -190,7 +193,7 @@ export const Login = () => {
           {/* Footer */}
           <div className="mt-8 pt-6 border-t border-slate-800/60 text-center">
             <p className="text-xs text-slate-600 font-medium">
-              Protected by enterprise-grade encryption
+              {t('login.encryptionNotice')}
             </p>
           </div>
         </div>

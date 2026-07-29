@@ -586,3 +586,107 @@ html.theme-transition *::after {
     background: white !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   RTL LAYOUT SUPPORT (Urdu)
+   Activated by <html dir="rtl" class="dir-rtl">, which is set by
+   applyLanguageDirection() in src/i18n.js on every language change.
+
+   The codebase uses Tailwind *physical* utilities (ml-/pl-/left-/
+   text-left ...) in ~450 places. Those do not mirror automatically,
+   so this layer remaps the ones that affect layout. Screens migrated
+   to logical utilities (ms-/me-/ps-/pe-/start-/end-) need nothing
+   here and are unaffected by these rules.
+   ═══════════════════════════════════════════════════════════════ */
+
+[dir="rtl"] {
+  /* Flip horizontal margins */
+  .ml-1  { margin-left: 0; margin-right: 0.25rem; }
+  .ml-2  { margin-left: 0; margin-right: 0.5rem; }
+  .ml-3  { margin-left: 0; margin-right: 0.75rem; }
+  .ml-4  { margin-left: 0; margin-right: 1rem; }
+  .ml-auto { margin-left: 0; margin-right: auto; }
+  .mr-1  { margin-right: 0; margin-left: 0.25rem; }
+  .mr-2  { margin-right: 0; margin-left: 0.5rem; }
+  .mr-3  { margin-right: 0; margin-left: 0.75rem; }
+  .mr-4  { margin-right: 0; margin-left: 1rem; }
+  .mr-auto { margin-right: 0; margin-left: auto; }
+
+  /* Flip horizontal padding — pl-9/pl-10 are the icon insets on search inputs */
+  .pl-2  { padding-left: 0; padding-right: 0.5rem; }
+  .pl-3  { padding-left: 0; padding-right: 0.75rem; }
+  .pl-4  { padding-left: 0; padding-right: 1rem; }
+  .pl-9  { padding-left: 0; padding-right: 2.25rem; }
+  .pl-10 { padding-left: 0; padding-right: 2.5rem; }
+  .pr-2  { padding-right: 0; padding-left: 0.5rem; }
+  .pr-3  { padding-right: 0; padding-left: 0.75rem; }
+  .pr-4  { padding-right: 0; padding-left: 1rem; }
+  .pr-10 { padding-right: 0; padding-left: 2.5rem; }
+
+  /* Flip absolute positioning — left-3 is the search-icon anchor */
+  .left-0 { left: auto; right: 0; }
+  .left-1 { left: auto; right: 0.25rem; }
+  .left-3 { left: auto; right: 0.75rem; }
+  .left-4 { left: auto; right: 1rem; }
+  .left-6 { left: auto; right: 1.5rem; }
+  .right-0 { right: auto; left: 0; }
+  .right-3 { right: auto; left: 0.75rem; }
+  .right-4 { right: auto; left: 1rem; }
+  .right-6 { right: auto; left: 1.5rem; }
+
+  /* Flip text alignment */
+  .text-left  { text-align: right; }
+  .text-right { text-align: left; }
+
+  /* Flip directional borders (active-nav indicators) */
+  .border-l   { border-left: 0; border-right-width: 1px; }
+  .border-l-2 { border-left: 0; border-right-width: 2px; }
+  .border-r   { border-right: 0; border-left-width: 1px; }
+  .border-r-2 { border-right: 0; border-left-width: 2px; }
+
+  /* Flip one-sided radii (sidebar active pill) */
+  .rounded-l-full { border-radius: 0 9999px 9999px 0; }
+  .rounded-r-full { border-radius: 9999px 0 0 9999px; }
+}
+
+/* Directional glyphs must mirror; status/logo icons must not. Mark chevrons
+   and arrows with .rtl-flip so only they invert. */
+[dir="rtl"] .rtl-flip { transform: scaleX(-1); }
+
+/* ── Data that stays LTR even in Urdu ──────────────────────────────
+   Numbers, codes and identifiers are not translated and must not be
+   bidi-reordered: CNIC, phone, receipt/voucher numbers, IDs, bank
+   accounts, GL codes, amounts, dates and email addresses.
+   Apply .ltr-data (or dir="ltr") to those cells and inputs. */
+.ltr-data {
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: start;
+}
+
+/* Numeric/code columns keep the Latin sans stack for legibility even when
+   the surrounding page is Nastaleeq. */
+[dir="rtl"] .ltr-data,
+[dir="rtl"] input[type="number"],
+[dir="rtl"] input[type="tel"],
+[dir="rtl"] input[type="email"] {
+  font-family: 'Inter', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Tabular figures stay right-aligned in both directions so decimal points
+   line up in financial tables. */
+[dir="rtl"] td.amount,
+[dir="rtl"] th.amount { text-align: left; direction: ltr; }
+
+/* Nastaleeq has tall ascenders/descenders; give Urdu text room so glyphs
+   are not clipped by the tight line-heights used across the app. */
+.lang-ur body,
+.lang-ur .leading-tight,
+.lang-ur .leading-none { line-height: 2 !important; }
+
+/* Print templates (cards, receipts, slips, vouchers) inherit direction from
+   <html>, so an Urdu session prints RTL without a separate stylesheet. */
+@media print {
+  [dir="rtl"] #print-area { direction: rtl; text-align: right; }
+  [dir="rtl"] #print-area .ltr-data { direction: ltr; }
+}

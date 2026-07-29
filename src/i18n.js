@@ -25,19 +25,40 @@ i18n
     }
   });
 
-// Listen to language changes to update global fonts (keeping layout LTR as requested)
-i18n.on('languageChanged', (lng) => {
-  document.documentElement.lang = lng;
-  document.documentElement.dir = 'ltr'; // Force LTR even for Urdu
-  
-  if (lng === 'ur') {
-    document.documentElement.style.fontFamily = "'Alvi Nastaleeq Regular', 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif";
-  } else {
-    document.documentElement.style.fontFamily = ""; // Revert to default in CSS
-  }
-});
+/** Languages that render right-to-left. */
+const RTL_LANGUAGES = new Set(['ur', 'ar', 'fa', 'ps']);
 
-// Set initial direction to ltr
-document.documentElement.dir = 'ltr';
+export const isRtlLanguage = (lng) => RTL_LANGUAGES.has(String(lng || '').split('-')[0]);
+
+/**
+ * Applies direction, lang and font stack for the active language.
+ *
+ * `dir` is set on <html> so the whole tree flips via CSS logical properties,
+ * and a `lang-ur` / `dir-rtl` class is mirrored onto the root element so
+ * stylesheets can target RTL without relying on the [dir] attribute selector
+ * winning specificity battles against utility classes.
+ *
+ * Note: this deliberately reverses the previous "force LTR even for Urdu"
+ * behaviour — Urdu now renders as a true RTL layout.
+ */
+export function applyLanguageDirection(lng) {
+  const root = document.documentElement;
+  const rtl = isRtlLanguage(lng);
+
+  root.lang = lng;
+  root.dir = rtl ? 'rtl' : 'ltr';
+  root.classList.toggle('dir-rtl', rtl);
+  root.classList.toggle('lang-ur', String(lng || '').startsWith('ur'));
+
+  // Urdu uses the Nastaleeq stack; English reverts to the sans stack in CSS.
+  root.style.fontFamily = rtl
+    ? "'Alvi Nastaleeq Regular', 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif"
+    : '';
+}
+
+i18n.on('languageChanged', applyLanguageDirection);
+
+// Apply immediately for the language the detector resolved on boot.
+applyLanguageDirection(i18n.language || 'en');
 
 export default i18n;
