@@ -117,10 +117,14 @@ var journal_entries_default = makeHandler(async (req, res) => {
       if (!existing) {
         return res.status(404).json({ error: { message: "Journal entry not found", status: 404 } });
       }
-      const restored = await prisma.journalEntry.update({
-        where: { id: targetId },
-        data: { isDeleted: false, deletedAt: null, deletedBy: null }
-      });
+      const restored = await prisma.$transaction(async (tx) => {
+        const je = await tx.journalEntry.update({
+          where: { id: targetId },
+          data: { isDeleted: false, deletedAt: null, deletedBy: null }
+        });
+        await AccountingService.recalculateBalancesForJournalEntry(tx, targetId);
+        return je;
+      }, accountingTxOptions);
       await logAudit(req.user.id, "Restore Journal Entry", "Journal Entries", existing, restored, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, message: "Journal entry restored successfully", data: restored });
     }
@@ -134,6 +138,7 @@ var journal_entries_default = makeHandler(async (req, res) => {
           include: { lines: true }
         });
         if (!je) throw new Error("Journal entry not found");
+        const accountsBefore = je.lines.map((l) => l.accountId);
         const isStatusChangeOnly = status && status !== je.status && reference === void 0 && description === void 0 && postingDate === void 0 && amount === void 0 && !lines;
         if (isStatusChangeOnly) {
           if (je.status === status) return je;
@@ -150,6 +155,7 @@ var journal_entries_default = makeHandler(async (req, res) => {
             where: { id },
             data: { status }
           });
+          await AccountingService.recalculateBalancesForJournalEntry(tx, id);
           return updatedJe;
         }
         const newDate = postingDate ? new Date(postingDate) : je.postingDate;
@@ -180,8 +186,8 @@ var journal_entries_default = makeHandler(async (req, res) => {
             throw new Error(`Accounting Engine Error: Transaction must follow Double Entry Accounting. Total Debit (${plannedDebit.toFixed(2)}) does not equal Total Credit (${plannedCredit.toFixed(2)}).`);
           }
           for (const l of je.lines) {
-            const newDebit = l.debit > 0 ? numAmount : l.debit;
-            const newCredit = l.credit > 0 ? numAmount : l.credit;
+            const newDebit = new Prisma.Decimal(l.debit).gt(0) ? numAmount : l.debit;
+            const newCredit = new Prisma.Decimal(l.credit).gt(0) ? numAmount : l.credit;
             const lineDesc = newDesc !== void 0 ? newDesc : l.description;
             await tx.journalEntryLine.update({
               where: { id: l.id },
@@ -231,11 +237,11 @@ var journal_entries_default = makeHandler(async (req, res) => {
             });
           }
         }
-        if (newStatus === "Posted" || newStatus === "POSTED") {
-          const updatedLines = await tx.journalEntryLine.findMany({ where: { journalEntryId: je.id } });
-          for (const l of updatedLines) {
-            await AccountingService.recalculateAccountBalance(tx, l.accountId);
-          }
+        for (const accountId of /* @__PURE__ */ new Set([...accountsBefore, ...(await tx.journalEntryLine.findMany({
+          where: { journalEntryId: je.id },
+          select: { accountId: true }
+        })).map((l) => l.accountId)])) {
+          await AccountingService.recalculateAccountBalance(tx, accountId);
         }
         return await tx.journalEntry.findUnique({ where: { id }, include: { lines: true } });
       }, accountingTxOptions);
@@ -270,6 +276,7 @@ var journal_entries_default = makeHandler(async (req, res) => {
               where: { id },
               data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
             });
+            await AccountingService.recalculateBalancesForJournalEntry(tx, id);
             if (resJe) results.push(resJe);
           }
         }

@@ -44,6 +44,7 @@ var simple_income_default = makeHandler(async (req, res) => {
           data: { isDeleted: false, deletedAt: null, deletedBy: null }
         }).catch(() => {
         });
+        await AccountingService.recalculateBalancesForJournalEntry(prisma, existing.journalEntryId);
       }
       return res.status(200).json({ status: 200, message: "Income restored successfully", data: restored });
     }
@@ -200,6 +201,7 @@ var simple_income_default = makeHandler(async (req, res) => {
               where: { id: existing.journalEntryId },
               data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
             });
+            await AccountingService.recalculateBalancesForJournalEntry(tx, existing.journalEntryId);
           }
         } catch (e) {
         }

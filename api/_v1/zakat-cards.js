@@ -130,6 +130,7 @@ var zakat_cards_default = makeHandler(async (req, res) => {
           data: { isDeleted: false, deletedAt: null, deletedBy: null }
         }).catch(() => {
         });
+        await AccountingService.recalculateBalancesForJournalEntry(prisma, existing.journalEntryId);
       }
       await logAudit(req.user.id, "Restore Zakat Card", "ZAKAT_CARD", existing, restored, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, message: "Zakat card restored successfully", data: restored });
@@ -249,6 +250,7 @@ var zakat_cards_default = makeHandler(async (req, res) => {
               where: { id: card.journalEntryId },
               data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
             });
+            await AccountingService.recalculateBalancesForJournalEntry(tx, card.journalEntryId);
           }
         } catch (e) {
         }

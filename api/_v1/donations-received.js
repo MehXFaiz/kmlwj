@@ -127,6 +127,7 @@ var donations_received_default = makeHandler(async (req, res) => {
           data: { isDeleted: false, deletedAt: null, deletedBy: null }
         }).catch(() => {
         });
+        await AccountingService.recalculateBalancesForJournalEntry(prisma, existing.journalEntryId);
       }
       await logAudit(req.user.id, "Restore Donation Received", "DONATION_RECEIVED", existing, restored, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, message: "Donation receipt restored successfully", data: restored });
@@ -398,6 +399,7 @@ var donations_received_default = makeHandler(async (req, res) => {
                 where: { id: item.journalEntryId },
                 data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
               });
+              await AccountingService.recalculateBalancesForJournalEntry(tx, item.journalEntryId);
             }
           } catch (e) {
           }

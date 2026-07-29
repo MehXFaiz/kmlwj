@@ -1,7 +1,7 @@
 
 import { Prisma } from '@prisma/client';
 import { prisma } from '../_prisma.js';
-import { AccountingService } from './accounting.service.js';
+import { AccountingService, POSTED_JOURNAL_FILTER } from './accounting.service.js';
 
 export interface IntegrityIssue {
   type: string;
@@ -460,7 +460,11 @@ export class AccountingIntegrityService {
 
     for (const account of accounts) {
       const aggregations = await prisma.journalEntryLine.aggregate({
-        where: { accountId: account.id, journalEntry: { status: 'Posted' } },
+        // Same predicate as recalculateAccountBalance and getPostedAggregates.
+        // This previously omitted `isDeleted`, so the checker agreed with a
+        // stale cache while both disagreed with every financial report — drift
+        // that reports showed but the integrity page could not see.
+        where: { accountId: account.id, journalEntry: POSTED_JOURNAL_FILTER },
         _sum: { debit: true, credit: true },
       });
 

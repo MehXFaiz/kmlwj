@@ -280,6 +280,8 @@ app.delete('/api/v1/simple-income', makeExpress(simpleIncomeHandler));
 
 // Accounting Health Check Route
 app.get('/api/v1/accounting-health', makeExpress(accountingHealthHandler));
+// POST ?action=rebuild-balances — rebuild/repair cached account balances
+app.post('/api/v1/accounting-health', makeExpress(accountingHealthHandler));
 
 // System Reset Route
 app.post('/api/v1/system-reset', makeExpress(systemResetHandler));

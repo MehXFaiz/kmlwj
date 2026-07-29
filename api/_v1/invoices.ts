@@ -518,6 +518,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
                 where: { id: je.id },
                 data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user!.id }
               });
+              // The cached Account.currentBalance must follow the ledger: this entry
+              // just moved in/out of POSTED_JOURNAL_FILTER, so rebuild every account
+              // it touches or the balance keeps the deleted transaction's impact.
+              await AccountingService.recalculateBalancesForJournalEntry(tx, je.id);
             }
           } catch (e) {
             // Ignore if already deleted

@@ -155,6 +155,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           where: { id: existing.journalEntryId },
           data: { isDeleted: false, deletedAt: null, deletedBy: null }
         }).catch(() => {});
+        // The cached Account.currentBalance must follow the ledger: this entry
+        // just moved in/out of POSTED_JOURNAL_FILTER, so rebuild every account
+        // it touches or the balance keeps the deleted transaction's impact.
+        await AccountingService.recalculateBalancesForJournalEntry(prisma, existing.journalEntryId);
       }
       await logAudit(req.user.id, 'Restore Zakat Card', 'ZAKAT_CARD', existing, restored, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
       return res.status(200).json({ status: 200, message: 'Zakat card restored successfully', data: restored });
@@ -291,6 +295,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
               where: { id: card.journalEntryId },
               data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user!.id }
             });
+            // The cached Account.currentBalance must follow the ledger: this entry
+            // just moved in/out of POSTED_JOURNAL_FILTER, so rebuild every account
+            // it touches or the balance keeps the deleted transaction's impact.
+            await AccountingService.recalculateBalancesForJournalEntry(tx, card.journalEntryId);
           }
         } catch (e) {}
       }

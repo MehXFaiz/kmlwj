@@ -30,7 +30,10 @@ export interface PostTransactionPayload {
 }
 
 export interface PostReceiptParams {
-  amount: number;
+  // Callers pass money straight through from Prisma, which hands back Decimal
+  // for money columns. Accepting Decimal here (as AccountingLinePayload already
+  // does) keeps amounts exact instead of forcing a lossy Number() at each site.
+  amount: number | Prisma.Decimal;
   cashOrBankAccountId?: string;
   cashOrBankAccountCode?: string;
   cashOrBankAccountKeyword?: string;
@@ -83,6 +86,20 @@ export interface PostTransferParams {
   userAgent?: string;
   voucherType?: string;
 }
+
+/**
+ * THE definition of "a posting that counts".
+ *
+ * Every balance in the system — the Account.currentBalance cache, the Trial
+ * Balance, Balance Sheet, Income Statement, General Ledger, dashboard cards
+ * and the integrity checker — must agree on which JournalEntry rows are real.
+ * Anything Draft, Pending, Cancelled or soft-deleted contributes nothing.
+ *
+ * Having two slightly different versions of this predicate is what produced
+ * CACHED_BALANCE_DRIFT, so it now lives in exactly one place and every reader
+ * imports it rather than re-spelling the where clause.
+ */
+export const POSTED_JOURNAL_FILTER = { status: 'Posted', isDeleted: false } as const;
 
 export class AccountingService {
   /**
@@ -464,26 +481,17 @@ export class AccountingService {
         }
       });
 
-      if (status === 'Posted') {
-        // Update Account Running Balance using the account's normal balance side.
-        const typeName = (line.account.accountType?.name || '').toUpperCase();
-        const isDebitNormal = ['ASSET', 'EXPENSE'].includes(typeName);
-        const lineDebit = new Prisma.Decimal(line.debit);
-        const lineCredit = new Prisma.Decimal(line.credit);
-        const netChange = isDebitNormal
-          ? lineDebit.minus(lineCredit)
-          : lineCredit.minus(lineDebit);
-        if (!netChange.isZero()) {
-          await tx.account.update({
-            where: { id: line.account.id },
-            data: {
-              currentBalance: {
-                increment: netChange
-              }
-            }
-          });
-        }
-      }
+    }
+
+    // Rebuild the balance cache for every account this entry touched, rather
+    // than applying an incremental delta. An increment is only correct if it
+    // is applied exactly once and never missed; a recalculation derived from
+    // the ledger is idempotent and self-correcting, so the cache cannot drift
+    // away from the posted lines even if this runs twice or a prior write was
+    // lost. Drafts are skipped because their lines fall outside
+    // POSTED_JOURNAL_FILTER and contribute nothing until they are posted.
+    if (status === 'Posted') {
+      await AccountingService.recalculateBalancesForJournalEntry(tx, journalEntry.id);
     }
 
     // 3. Automatically Log Audit Trail inside transaction & emit sync event
@@ -532,7 +540,7 @@ export class AccountingService {
    * Debits Cash/Bank Account and Credits Income/Revenue Account.
    */
   static async postReceipt(tx: any, params: PostReceiptParams) {
-    if (params.amount <= 0) {
+    if (new Prisma.Decimal(params.amount).lte(0)) {
       throw new Error('Accounting Engine Error: Receipt amount must be greater than zero.');
     }
 
@@ -676,9 +684,12 @@ export class AccountingService {
     const aggregations = await tx.journalEntryLine.aggregate({
       where: {
         accountId,
-        journalEntry: {
-          status: 'Posted'
-        }
+        // MUST match AccountingService.getPostedAggregates exactly. Omitting
+        // `isDeleted` here was a source of permanent drift: a soft-deleted
+        // journal entry keeps status 'Posted', so the cache counted postings
+        // that every financial report excluded, and re-running the recalc
+        // faithfully reproduced the stale number instead of correcting it.
+        journalEntry: POSTED_JOURNAL_FILTER
       },
       _sum: {
         debit: true,
@@ -706,26 +717,97 @@ export class AccountingService {
   }
 
   /**
+   * Rebuilds the balance cache for every account touched by one journal entry.
+   *
+   * Call this after ANY change to a journal entry's existence or status —
+   * post, edit, soft delete, restore, reverse. It reads the entry's lines
+   * first (including those of an already-soft-deleted entry, which is why the
+   * line lookup is deliberately unfiltered) and then recomputes each affected
+   * account from the posted ledger.
+   *
+   * Errors are intentionally NOT swallowed: this runs inside the caller's
+   * transaction, so a failure must roll the whole operation back rather than
+   * leave a half-updated cache behind.
+   */
+  static async recalculateBalancesForJournalEntry(tx: any, journalEntryId: string): Promise<string[]> {
+    const lines = await tx.journalEntryLine.findMany({
+      where: { journalEntryId },
+      select: { accountId: true }
+    });
+
+    const accountIds = Array.from(new Set(lines.map((l: any) => l.accountId))) as string[];
+    if (accountIds.length === 0) return [];
+
+    // One statement for all affected accounts. Doing this per account cost
+    // three round trips each, which on a hosted database pushed long postings
+    // past the transaction timeout.
+    await AccountingService.rebuildBalanceCache(tx, accountIds);
+    return accountIds;
+  }
+
+  /**
+   * The one SQL definition of the balance cache, shared by the per-entry recalc
+   * and the full rebuild. Pass `accountIds` to scope it, or omit to rebuild
+   * every posting account.
+   *
+   * Mirrors recalculateAccountBalance exactly:
+   *   debit-normal  (ASSET/EXPENSE)  : initial + debits - credits
+   *   credit-normal (everything else): initial + credits - debits
+   * counting only lines whose parent entry satisfies POSTED_JOURNAL_FILTER.
+   */
+  private static async rebuildBalanceCache(tx: any, accountIds?: string[]): Promise<number> {
+    const scope = accountIds && accountIds.length > 0
+      ? Prisma.sql`AND a2."id" IN (${Prisma.join(accountIds.map(id => Prisma.sql`${id}::uuid`))})`
+      : Prisma.sql`AND a2."accountLevel" IN ('GL', 'SUBSIDIARY')`;
+
+    return tx.$executeRaw(Prisma.sql`
+      UPDATE "Account" a
+      SET "currentBalance" = a2."initialBalance" +
+        CASE
+          WHEN COALESCE(UPPER(t."name"), 'ASSET') IN ('ASSET', 'EXPENSE')
+            THEN COALESCE(s.total_debit, 0) - COALESCE(s.total_credit, 0)
+          ELSE COALESCE(s.total_credit, 0) - COALESCE(s.total_debit, 0)
+        END
+      FROM "Account" a2
+      LEFT JOIN "AccountType" t ON t."id" = a2."accountTypeId"
+      LEFT JOIN (
+        SELECT l."accountId",
+               SUM(l."debit")  AS total_debit,
+               SUM(l."credit") AS total_credit
+        FROM "JournalEntryLine" l
+        JOIN "JournalEntry" j ON j."id" = l."journalEntryId"
+        WHERE j."status" = 'Posted' AND j."isDeleted" = false
+        GROUP BY l."accountId"
+      ) s ON s."accountId" = a2."id"
+      WHERE a."id" = a2."id"
+      ${scope}
+    `);
+  }
+
+  /**
    * Recalculates balances for all GL accounts in the system to ensure Trial Balance,
    * Balance Sheet, and Income Statement remain 100% accurate.
    */
   static async recalculateAllBalances(txObj?: any): Promise<{ updated: number }> {
-    const runInTx = async (tx: any) => {
-      const accounts = await tx.account.findMany({
-        where: { accountLevel: { in: ['GL', 'SUBSIDIARY'] } },
-        select: { id: true }
-      });
-
-      for (const acc of accounts) {
-        await AccountingService.recalculateAccountBalance(tx, acc.id);
-      }
-      return { updated: accounts.length };
-    };
+    // Set-based rebuild: one UPDATE ... FROM statement recomputes every posting
+    // account from the posted ledger.
+    //
+    // The previous implementation looped per account issuing findUnique +
+    // aggregate + update — three network round trips each. Against a hosted
+    // Postgres that blew past the transaction timeout well before it finished
+    // the chart of accounts, so the rebuild utility could never actually
+    // complete. Doing it in a single statement is both atomic and O(1) round
+    // trips, and applies the identical formula as recalculateAccountBalance:
+    //   debit-normal  (ASSET/EXPENSE): initial + debits - credits
+    //   credit-normal (everything else): initial + credits - debits
+    const runInTx = async (tx: any) => ({
+      updated: await AccountingService.rebuildBalanceCache(tx)
+    });
 
     if (txObj) {
       return runInTx(txObj);
     } else {
-      return prisma.$transaction(runInTx);
+      return prisma.$transaction(runInTx, { timeout: 120000, maxWait: 30000 });
     }
   }
 
@@ -887,24 +969,17 @@ export class AccountingService {
     });
 
     // Single source of truth: posting a draft only flips its lines' parent
-    // status to 'Posted' (done above) and refreshes the Account balance cache.
-    // No LedgerEntry rows are written — reports read JournalEntryLine directly.
-    for (const line of je.lines) {
-      const netChange = new Prisma.Decimal(line.debit).minus(new Prisma.Decimal(line.credit));
-      if (!netChange.isZero()) {
-        await tx.account.update({
-          where: { id: line.accountId },
-          data: {
-            currentBalance: {
-              increment: netChange
-            }
-          }
-        });
-        try {
-          await AccountingService.recalculateAccountBalance(tx, line.accountId);
-        } catch (e) {}
-      }
-    }
+    // status to 'Posted' (done above) and rebuilds the Account balance cache
+    // from the ledger. No LedgerEntry rows are written — reports read
+    // JournalEntryLine directly.
+    //
+    // The previous incremental `increment: debit - credit` here was wrong for
+    // credit-normal accounts (REVENUE/LIABILITY/EQUITY): it applied the raw
+    // debit-minus-credit delta regardless of the account's normal side, so a
+    // revenue credit moved the cached balance the wrong way by twice the
+    // amount. A full recalculation is both correct for every account type and
+    // idempotent, so it cannot drift no matter how often it runs.
+    await AccountingService.recalculateBalancesForJournalEntry(tx, je.id);
 
     try {
       await logAudit({
@@ -951,22 +1026,11 @@ export class AccountingService {
       }
     });
 
-    for (const line of je.lines) {
-      const netChange = new Prisma.Decimal(line.credit).minus(new Prisma.Decimal(line.debit));
-      if (!netChange.isZero()) {
-        await tx.account.update({
-          where: { id: line.accountId },
-          data: {
-            currentBalance: {
-              increment: netChange
-            }
-          }
-        });
-        try {
-          await AccountingService.recalculateAccountBalance(tx, line.accountId);
-        } catch (e) {}
-      }
-    }
+    // Status is now 'Cancelled', so these lines no longer satisfy
+    // POSTED_JOURNAL_FILTER and the recalculation naturally removes their
+    // impact — no hand-rolled reversal arithmetic, which is what previously
+    // applied the wrong sign for credit-normal accounts.
+    await AccountingService.recalculateBalancesForJournalEntry(tx, je.id);
 
     try {
       await logAudit({
@@ -1033,22 +1097,10 @@ export class AccountingService {
       }
     });
 
-    for (const line of je.lines) {
-      const netChange = new Prisma.Decimal(line.debit).minus(new Prisma.Decimal(line.credit));
-      if (!netChange.isZero()) {
-        await tx.account.update({
-          where: { id: line.accountId },
-          data: {
-            currentBalance: {
-              increment: netChange
-            }
-          }
-        });
-        try {
-          await AccountingService.recalculateAccountBalance(tx, line.accountId);
-        } catch (e) {}
-      }
-    }
+    // Restoring to 'Posted' brings the lines back inside POSTED_JOURNAL_FILTER;
+    // restoring to any other status leaves them out. Either way the recalc
+    // derives the right cached balance from the ledger.
+    await AccountingService.recalculateBalancesForJournalEntry(tx, je.id);
 
     try {
       await logAudit({
@@ -1173,7 +1225,7 @@ export class AccountingService {
    * to a posting-date window. One groupBy query — no per-account N+1.
    */
   static async getPostedAggregates(opts: { from?: Date; to?: Date; accountIds?: string[] } = {}): Promise<Map<string, { debit: Prisma.Decimal; credit: Prisma.Decimal }>> {
-    const journalWhere: any = { status: 'Posted', isDeleted: false };
+    const journalWhere: any = { ...POSTED_JOURNAL_FILTER };
     if (opts.from || opts.to) {
       journalWhere.postingDate = {};
       if (opts.from) journalWhere.postingDate.gte = opts.from;
@@ -1241,7 +1293,7 @@ export class AccountingService {
     }
 
     // Build Where Clause: posted journal entry lines only (single source of truth)
-    const journalWhere: any = { status: 'Posted', isDeleted: false };
+    const journalWhere: any = { ...POSTED_JOURNAL_FILTER };
     if (startDate || endDate) {
       journalWhere.postingDate = {};
       if (startDate) journalWhere.postingDate.gte = new Date(startDate);
@@ -1416,7 +1468,7 @@ export class AccountingService {
 
       // Skip accounts with zero balance unless it's a primary Cash or Bank account or has an initial balance
       const isCashOrBank = AccountingService.isCashAccount(acc.accountName, acc.detailType) || AccountingService.isBankAccount(acc.accountName, acc.detailType);
-      if (balance.isZero() && !isCashOrBank && (!acc.initialBalance || acc.initialBalance === 0)) continue;
+      if (balance.isZero() && !isCashOrBank && new Prisma.Decimal(acc.initialBalance ?? 0).isZero()) continue;
 
       let debit = new Prisma.Decimal(0);
       let credit = new Prisma.Decimal(0);

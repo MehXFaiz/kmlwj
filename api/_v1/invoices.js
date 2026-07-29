@@ -402,6 +402,7 @@ var invoices_default = makeHandler(async (req, res) => {
                 where: { id: je.id },
                 data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
               });
+              await AccountingService.recalculateBalancesForJournalEntry(tx, je.id);
             }
           } catch (e) {
           }

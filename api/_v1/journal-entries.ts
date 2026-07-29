@@ -138,10 +138,17 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       if (!existing) {
         return res.status(404).json({ error: { message: 'Journal entry not found', status: 404 } });
       }
-      const restored = await prisma.journalEntry.update({
-        where: { id: targetId },
-        data: { isDeleted: false, deletedAt: null, deletedBy: null }
-      });
+      // Un-delete and rebuild the affected balance caches atomically: the entry
+      // re-enters POSTED_JOURNAL_FILTER here, so its impact must come back into
+      // Account.currentBalance in the same commit or the cache is left short.
+      const restored = await prisma.$transaction(async (tx) => {
+        const je = await tx.journalEntry.update({
+          where: { id: targetId },
+          data: { isDeleted: false, deletedAt: null, deletedBy: null }
+        });
+        await AccountingService.recalculateBalancesForJournalEntry(tx, targetId);
+        return je;
+      }, accountingTxOptions);
       await logAudit(req.user.id, 'Restore Journal Entry', 'Journal Entries', existing, restored, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
       return res.status(200).json({ status: 200, message: 'Journal entry restored successfully', data: restored });
     }
@@ -158,6 +165,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         });
 
         if (!je) throw new Error('Journal entry not found');
+
+        // Captured before any line rewrite so an account that this edit removes
+        // from the entry still has its cached balance corrected below.
+        const accountsBefore: string[] = je.lines.map((l: any) => l.accountId);
 
         const isStatusChangeOnly = (status && status !== je.status && reference === undefined && description === undefined && postingDate === undefined && amount === undefined && !lines);
 
@@ -180,6 +191,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             where: { id },
             data: { status }
           });
+          // Any status transition can move this entry into or out of
+          // POSTED_JOURNAL_FILTER (e.g. Posted -> Draft un-posts it), so the
+          // affected balance caches have to be rebuilt either way.
+          await AccountingService.recalculateBalancesForJournalEntry(tx, id);
           return updatedJe;
         }
 
@@ -217,8 +232,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           }
 
           for (const l of je.lines) {
-            const newDebit = l.debit > 0 ? numAmount : l.debit;
-            const newCredit = l.credit > 0 ? numAmount : l.credit;
+            // l.debit/l.credit are Prisma Decimals; compare with Decimal ops
+            // rather than JS `>` so the check is exact.
+            const newDebit = new Prisma.Decimal(l.debit).gt(0) ? numAmount : l.debit;
+            const newCredit = new Prisma.Decimal(l.credit).gt(0) ? numAmount : l.credit;
             const lineDesc = newDesc !== undefined ? newDesc : l.description;
 
             await tx.journalEntryLine.update({
@@ -272,14 +289,20 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           }
         }
 
-        // If status is Posted or becoming Posted, refresh the affected account
-        // balance caches. Reports read JournalEntryLine directly (single source
-        // of truth), so there is no separate ledger table to rewrite here.
-        if (newStatus === 'Posted' || newStatus === 'POSTED') {
-          const updatedLines = await tx.journalEntryLine.findMany({ where: { journalEntryId: je.id } });
-          for (const l of updatedLines) {
-            await AccountingService.recalculateAccountBalance(tx, l.accountId);
-          }
+        // Refresh the affected balance caches on EVERY edit, not only when the
+        // entry ends up Posted. An edit that un-posts an entry, or that rewrites
+        // its lines, changes what the ledger says just as much as one that posts
+        // it — skipping the recalc in those cases left the cache holding the old
+        // amounts. Reports read JournalEntryLine directly (single source of
+        // truth), so there is no separate ledger table to rewrite here.
+        //
+        // Accounts that the edit removed from the entry are recalculated too:
+        // `accountsBefore` is captured ahead of the line rewrite so an account
+        // dropped from the entry still gets its cache corrected.
+        for (const accountId of new Set([...accountsBefore, ...(await tx.journalEntryLine.findMany({
+          where: { journalEntryId: je.id }, select: { accountId: true }
+        })).map((l: any) => l.accountId)])) {
+          await AccountingService.recalculateAccountBalance(tx, accountId as string);
         }
 
         return await tx.journalEntry.findUnique({ where: { id }, include: { lines: true } });
@@ -325,6 +348,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
               where: { id },
               data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user!.id }
             });
+            // Soft delete removes the entry from POSTED_JOURNAL_FILTER, so the
+            // cached balances of every account it touched must be rebuilt. This
+            // omission was the primary source of CACHED_BALANCE_DRIFT: the
+            // ledger dropped the posting while the cache kept it forever.
+            await AccountingService.recalculateBalancesForJournalEntry(tx, id);
             if (resJe) results.push(resJe);
           }
         }
