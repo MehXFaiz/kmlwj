@@ -27,15 +27,35 @@ files:
   - "!node_modules/**/{test,tests,__tests__,.github}/**"
   - "!node_modules/.bin"
 
-# Native addons cannot execute from inside the asar archive (dlopen needs a
-# real file on disk) — unpacked to app.asar.unpacked/ automatically.
-# See prisma/schema.prisma (generates node_modules/.prisma/client/query_engine-windows.dll.node).
-# Password hashing uses bcryptjs (pure JS, no native binding, no build-tools
-# requirement on the packaging machine) specifically to avoid needing a second
-# native module here.
-asarUnpack:
-  - node_modules/@prisma/client/**/*
-  - node_modules/.prisma/**/*
+# Prisma's *generated* client (node_modules/.prisma/client, which contains
+# query_engine-windows.dll.node) has to be copied in via extraResources rather
+# than the `files` list above: electron-builder resolves node_modules through
+# its own dependency walker, which skips dot-directories, and a `files` glob
+# does NOT override that (verified — the folder was still absent from the
+# package). Without it @prisma/client cannot resolve its generated code and the
+# backend dies at import time with a misleading "Named export 'PrismaClient'
+# not found ... CommonJS module" error.
+# `to:` is relative to resources/, so this lands at
+# resources/app/node_modules/.prisma — exactly where Node's resolver looks.
+extraResources:
+  - from: node_modules/.prisma
+    to: app/node_modules/.prisma
+
+# asar is DISABLED deliberately — do not re-enable without re-testing the
+# packaged build end to end. The desktop backend is a real Node.js ESM server
+# (electron-dist/server, forked via utilityProcess) and an asar archive breaks
+# it in two independent ways:
+#   1. A path inside app.asar is not a real filesystem directory, so it cannot
+#      be used as a child process `cwd` — Windows rejects it and Node surfaces
+#      the failure as a misleading `spawn <app>.exe ENOENT`.
+#   2. Node's ESM loader resolves bare specifiers (`import express from 'express'`)
+#      through real filesystem paths; Electron's asar shim covers fs/CommonJS
+#      require but ESM resolution into an archive is not dependable.
+# Prisma's native query engine (query_engine-windows.dll.node) also has to be a
+# real file for dlopen(), which loose files give us for free.
+# Cost of this choice: more files on disk and a slightly slower install. Benefit:
+# the packaged app behaves exactly like the verified dev run.
+asar: false
 
 win:
   target:

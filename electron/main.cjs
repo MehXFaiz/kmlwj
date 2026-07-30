@@ -29,6 +29,13 @@ let splashWindow = null;
 let updater = null;
 let backendUrl = null;
 let healthCheckTimer = null;
+let startupWatchdog = null;
+
+// Longest we'll sit on the splash screen before telling the user something is
+// wrong. Generous, because a cold remote Postgres plus the startup accounting
+// integrity check legitimately takes ~20s on a slow connection — but bounded,
+// so a backend that never reports ready can never hang the app indefinitely.
+const STARTUP_TIMEOUT_MS = 90000;
 
 function iconPath() {
   const ico = path.join(__dirname, '..', 'build', 'icon.ico');
@@ -130,7 +137,17 @@ function startHealthCheck() {
   }, 15000);
 }
 
+// A failing backend can emit several errors in a row (child error, then exit,
+// then a restart attempt). Only the first one should ever reach the user —
+// otherwise they get a stack of identical modal dialogs to dismiss.
+let fatalErrorShown = false;
 function showFatalError(message) {
+  if (fatalErrorShown) {
+    log.error('[fatal-suppressed]', message);
+    return;
+  }
+  fatalErrorShown = true;
+  if (startupWatchdog) clearTimeout(startupWatchdog);
   dialog.showErrorBox('KMLWJ could not start', message);
   app.quit();
 }
@@ -155,6 +172,15 @@ async function boot() {
 
   setSplashStatus('Starting the backend...');
 
+  startupWatchdog = setTimeout(() => {
+    showFatalError(
+      'The application backend did not finish starting in time.\n\n' +
+      'This usually means the database is unreachable. Check your internet ' +
+      `connection and the DATABASE_URL in:\n${envFilePath()}\n\n` +
+      `Technical details are in:\n${log.transports.file.getFile().path}`
+    );
+  }, STARTUP_TIMEOUT_MS);
+
   serverManager.startServer({
     env: envVars,
     envFilePath: envPath,
@@ -167,10 +193,18 @@ async function boot() {
       }
     },
     onReady: ({ url }) => {
+      if (startupWatchdog) {
+        clearTimeout(startupWatchdog);
+        startupWatchdog = null;
+      }
       backendUrl = url;
       setSplashStatus('Loading application...');
-      createMainWindow();
-      updater = initUpdater(mainWindow);
+      // A backend restart re-fires onReady; reuse the existing window and just
+      // point it at the new port instead of opening a second one.
+      if (!mainWindow || mainWindow.isDestroyed()) {
+        createMainWindow();
+        updater = initUpdater(mainWindow);
+      }
       mainWindow.loadURL(url);
       startHealthCheck();
     },
