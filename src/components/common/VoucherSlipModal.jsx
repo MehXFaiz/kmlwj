@@ -113,7 +113,7 @@ function SignatureBlock({ label, name, checked = false }) {
   );
 }
 
-function CopySheet({ copyLabel, title, voucherNo, fileNo, formattedDate, paidTo, paymentMethod, amount, words, remarks, ledgerRows, preparedBy, verifiedBy, authorizedSign, payeeLabel }) {
+function CopySheet({ copyLabel, title, voucherNo, fileNo, formattedDate, paidTo, paymentMethod, amount, words, remarks, ledgerRows, preparedBy, verifiedBy, authorizedSign, payeeLabel, partyLabel = 'Paid To' }) {
   return (
     <div className="rounded-[24px] border border-[#d8c1a1] bg-[#fefcf8] p-3 shadow-[0_18px_40px_rgba(29,18,12,0.08)] print:rounded-none print:shadow-none">
       <div className="mb-3 flex items-center justify-between gap-3 rounded-[18px] border border-[#e7d7bf] bg-gradient-to-r from-[#f6ebdf] to-[#fbf4e9] px-3 py-2.5">
@@ -149,7 +149,7 @@ function CopySheet({ copyLabel, title, voucherNo, fileNo, formattedDate, paidTo,
             <div className="grid gap-2 md:grid-cols-2">
               <FieldChip label="Voucher No" value={voucherNo || '—'} icon={ScrollText} />
               <FieldChip label="Date" value={formattedDate} icon={CalendarDays} />
-              <FieldChip label="Paid To" value={paidTo || '—'} icon={Wallet} />
+              <FieldChip label={partyLabel} value={paidTo || '—'} icon={Wallet} />
               <FieldChip label="Payment Method" value={paymentMethod} icon={Banknote} />
             </div>
           </SectionCard>
@@ -214,13 +214,17 @@ export const VoucherSlipModal = ({
   particulars = '',
   amount = 0,
   preparedBy = 'Operator',
-  payeeLabel = "Payee's Signature"
+  payeeLabel = "Payee's Signature",
+  partyLabel,
 }) => {
   if (!isOpen) return null;
 
   const handlePrint = () => {
     window.print();
   };
+
+  const isCollectionOrReceipt = /RECEIPT|COLLECTION|INCOME|REVENUE|MEMBERSHIP|FEE|DONATION RECEIVED/i.test(title);
+  const computedPartyLabel = partyLabel || (isCollectionOrReceipt ? 'Paid By' : 'Paid To');
 
   const formattedDate = date ? new Date(date).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
   const amountRs = Math.floor(amount || 0).toLocaleString('en-PK');
@@ -296,6 +300,7 @@ export const VoucherSlipModal = ({
                   verifiedBy="Director"
                   authorizedSign="Authorized Sign"
                   payeeLabel={payeeLabel}
+                  partyLabel={computedPartyLabel}
                 />
                 <CopySheet
                   copyLabel="Customer Copy"
@@ -313,6 +318,7 @@ export const VoucherSlipModal = ({
                   verifiedBy="Director"
                   authorizedSign="Authorized Sign"
                   payeeLabel={payeeLabel}
+                  partyLabel={computedPartyLabel}
                 />
               </div>
             </div>

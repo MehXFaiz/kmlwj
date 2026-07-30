@@ -612,6 +612,7 @@ export const SpecializedRevenueSection = ({
           amount={printItem.amount}
           preparedBy={printItem.createdBy?.fullName || 'Operator'}
           payeeLabel="Donor / Payer Sign"
+          partyLabel="Paid By"
         />
       )}
     </DashboardLayout>

@@ -44,6 +44,7 @@ function PrintReceiptModal({ donation, onClose }) {
       amount={donation.amount}
       preparedBy={donation.createdBy?.fullName || 'Operator'}
       payeeLabel="Receiver's Sign"
+      partyLabel="Paid By"
     />
   );
 }
