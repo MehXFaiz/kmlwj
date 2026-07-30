@@ -25,9 +25,7 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 export async function resetFinancialData(client = prisma) {
-  console.log('🔄 Starting reset of all financial data and transactions inside a database transaction...');
-
-
+  console.log('🔄 Starting reset of all test data, financial data, and transactions inside a database transaction...');
 
   const results = await client.$transaction(async (tx) => {
     // 1. Delete Zakat Cards
@@ -60,10 +58,33 @@ export async function resetFinancialData(client = prisma) {
     
     // 10. Delete Hall Bookings
     const hbCount = await tx.hallBooking.deleteMany({});
-    
 
-    
-    // 12. Reset Account initialBalance and currentBalance to 0 across all accounts
+    // 11. Delete Donors
+    const donorCount = await tx.donor.deleteMany({});
+
+    // 12. Delete Family Relationships & Members
+    const familyRelCount = await tx.familyRelationship.deleteMany({});
+    const memberCount = await tx.member.deleteMany({});
+
+    // 13. Delete Beneficiaries
+    const benCount = await tx.beneficiary.deleteMany({});
+
+    // 14. Delete Customers
+    const custCount = await tx.customer.deleteMany({});
+
+    // 15. Delete Audit Logs
+    const auditCount = await tx.auditLog.deleteMany({});
+
+    // 16. Delete non-system test users (keep admin@erp.com and guest@erp.com)
+    const userCount = await tx.user.deleteMany({
+      where: {
+        email: {
+          notIn: ['admin@erp.com', 'guest@erp.com']
+        }
+      }
+    });
+
+    // 17. Reset Account initialBalance and currentBalance to 0 across all accounts
     const accUpdate = await tx.account.updateMany({
       data: {
         initialBalance: 0,
@@ -71,7 +92,7 @@ export async function resetFinancialData(client = prisma) {
       },
     });
 
-    // 13. Reset RevenueHead amounts to 0
+    // 18. Reset RevenueHead amounts to 0
     const revHeadUpdate = await tx.revenueHead.updateMany({
       data: { amount: 0 },
     });
@@ -88,6 +109,13 @@ export async function resetFinancialData(client = prisma) {
       invItemCount: invItemCount.count,
       invCount: invCount.count,
       hbCount: hbCount.count,
+      donorCount: donorCount.count,
+      familyRelCount: familyRelCount.count,
+      memberCount: memberCount.count,
+      benCount: benCount.count,
+      custCount: custCount.count,
+      auditCount: auditCount.count,
+      userCount: userCount.count,
       accCount: accUpdate.count,
       revHeadCount: revHeadUpdate.count,
     };
@@ -103,9 +131,16 @@ export async function resetFinancialData(client = prisma) {
   console.log(`Deleted ${results.invCount} Invoices (${results.invItemCount} items)`);
   console.log(`Deleted ${results.hbCount} HallBookings`);
   console.log(`Deleted ${results.zcCount} ZakatCards`);
+  console.log(`Deleted ${results.donorCount} Donors`);
+  console.log(`Deleted ${results.familyRelCount} Family Relationships`);
+  console.log(`Deleted ${results.memberCount} Members`);
+  console.log(`Deleted ${results.benCount} Beneficiaries`);
+  console.log(`Deleted ${results.custCount} Customers`);
+  console.log(`Deleted ${results.auditCount} Audit Logs`);
+  console.log(`Deleted ${results.userCount} Test Users`);
   console.log(`Reset initialBalance and currentBalance to 0 across ${results.accCount} Accounts`);
 
-  console.log('\nSystem financial data has been successfully reset.\n\nAll calculations are now starting from zero.\n\nMaster data has been preserved.');
+  console.log('\nSystem test data and financial data have been successfully reset.\n\nAll calculations are now starting from zero.\n\nMaster system configuration has been preserved.');
   return results;
 }
 
@@ -116,7 +151,7 @@ async function main() {
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   main()
     .catch((e) => {
-      console.error('❌ Error clearing financial data (transaction rolled back):', e);
+      console.error('❌ Error clearing test and financial data (transaction rolled back):', e);
       process.exit(1);
     })
     .finally(async () => {

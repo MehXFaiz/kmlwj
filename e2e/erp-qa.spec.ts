@@ -1,4 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg';
+import dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({ path: path.resolve('.env'), override: true });
 
 const BASE_URL = 'http://localhost:5173';
 
@@ -6,6 +13,35 @@ const BASE_URL = 'http://localhost:5173';
 test.describe.configure({ mode: 'serial' });
 
 test.describe('ERP E2E QA Test Suite', () => {
+
+  test.afterAll(async () => {
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) return;
+    const pool = new pg.Pool({
+      connectionString,
+      ssl: connectionString.includes('sslmode=require') || connectionString.includes('neon.tech')
+        ? { rejectUnauthorized: false }
+        : undefined,
+    });
+    const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
+    try {
+      const testDonors = await prisma.donor.findMany({ where: { fullName: 'Test E2E Donor' } });
+      for (const d of testDonors) {
+        const donRecs = await prisma.donationReceived.findMany({ where: { donorId: d.id } });
+        for (const dr of donRecs) {
+          if (dr.journalEntryId) {
+            await prisma.journalEntryLine.deleteMany({ where: { journalEntryId: dr.journalEntryId } }).catch(() => {});
+            await prisma.journalEntry.delete({ where: { id: dr.journalEntryId } }).catch(() => {});
+          }
+        }
+        await prisma.donationReceived.deleteMany({ where: { donorId: d.id } }).catch(() => {});
+        await prisma.donor.delete({ where: { id: d.id } }).catch(() => {});
+      }
+    } finally {
+      await prisma.$disconnect();
+      await pool.end();
+    }
+  });
 
   test.beforeEach(async ({ page }) => {
     // Listen for console logs and page errors

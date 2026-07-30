@@ -86,17 +86,35 @@ export async function logAudit(
       reason: options.reason || null
     };
 
-    await prisma.auditLog.create({
-      data: {
-        userId: validUserId,
-        action: options.action,
-        module: options.module,
-        oldValues: enrichedOldValues,
-        newValues: enrichedNewValues,
-        ipAddress: options.ipAddress || null,
-        userAgent: options.userAgent || null,
-      },
-    });
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: validUserId,
+          action: options.action,
+          module: options.module,
+          oldValues: enrichedOldValues,
+          newValues: enrichedNewValues,
+          ipAddress: options.ipAddress || null,
+          userAgent: options.userAgent || null,
+        },
+      });
+    } catch (err: any) {
+      if (err?.code === 'P2003' && validUserId) {
+        await prisma.auditLog.create({
+          data: {
+            userId: null,
+            action: options.action,
+            module: options.module,
+            oldValues: enrichedOldValues,
+            newValues: enrichedNewValues,
+            ipAddress: options.ipAddress || null,
+            userAgent: options.userAgent || null,
+          },
+        });
+      } else {
+        console.error('Failed to log audit:', err);
+      }
+    }
   } catch (error) {
     console.error('Failed to log audit:', error);
   }
