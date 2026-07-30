@@ -283,7 +283,7 @@ export const VoucherSlipModal = ({
               <div className="absolute inset-0 flex items-center justify-center opacity-[0.06] print:opacity-[0.08]">
                 <img src={logoImg} alt="Watermark" className="h-[320px] w-[320px] object-contain" />
               </div>
-              <div className="relative z-10 grid gap-3 xl:grid-cols-2">
+              <div className="relative z-10 grid gap-3 xl:grid-cols-2 print:grid-cols-2">
                 <CopySheet
                   copyLabel="Office Copy"
                   title={title}
