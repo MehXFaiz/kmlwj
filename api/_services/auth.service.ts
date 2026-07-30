@@ -1,5 +1,5 @@
 import { prisma } from '../_prisma.js';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { logger } from '../_utils/logger.js';

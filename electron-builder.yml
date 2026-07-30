@@ -1,0 +1,83 @@
+# electron-builder configuration — Windows desktop packaging for KMLWJ.
+# Run via: npm run dist:win  (see package.json scripts)
+#
+# Build pipeline this depends on (all run automatically by `npm run dist:win`):
+#   1. npm run build              -> dist/                 (Vite production build of the existing React app)
+#   2. npm run build:electron-server -> electron-dist/server/ (api/**/*.ts compiled to plain JS, see scripts/build-electron-server.mjs)
+#   3. electron-builder itself     -> release/                (this file)
+
+appId: com.kmlwj.desktop
+productName: KMLWJ ERP
+copyright: Copyright © ${author} — Kutchi Muslim Loharwada Welfare Jamat
+
+directories:
+  output: release
+  buildResources: build
+
+# Explicit include list — the repo has a lot that the desktop app never needs
+# at runtime (raw TS sources under api/ and scripts/, the Vite dev server,
+# tests, e2e). Only the pre-built artifacts + runtime deps are shipped.
+files:
+  - dist/**/*
+  - electron-dist/**/*
+  - electron/**/*
+  - node_modules/**/*
+  - package.json
+  - "!node_modules/**/*.{md,markdown,map,ts}"
+  - "!node_modules/**/{test,tests,__tests__,.github}/**"
+  - "!node_modules/.bin"
+
+# Native addons cannot execute from inside the asar archive (dlopen needs a
+# real file on disk) — unpacked to app.asar.unpacked/ automatically.
+# See prisma/schema.prisma (generates node_modules/.prisma/client/query_engine-windows.dll.node).
+# Password hashing uses bcryptjs (pure JS, no native binding, no build-tools
+# requirement on the packaging machine) specifically to avoid needing a second
+# native module here.
+asarUnpack:
+  - node_modules/@prisma/client/**/*
+  - node_modules/.prisma/**/*
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  # A single non-square PNG still works — electron-builder auto-generates the
+  # multi-resolution .ico from it at build time. For a crisper taskbar/title
+  # bar icon, replace build/icon.png with a real square 512x512+ source (or
+  # drop in a hand-made build/icon.ico, which takes priority automatically).
+  icon: build/icon.png
+  artifactName: "${productName}-Setup-${version}.${ext}"
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: KMLWJ ERP
+  uninstallDisplayName: KMLWJ Enterprise Financial Suite
+  deleteAppDataOnUninstall: false
+  # installerIcon / uninstallerIcon / installerHeaderIcon deliberately omitted —
+  # NSIS falls back to win.icon above. Setting them explicitly requires a real
+  # pre-made .ico (unlike win.icon, they do NOT auto-convert a PNG), so leave
+  # them unset unless you've placed a hand-made build/icon.ico in build/.
+
+portable:
+  artifactName: "${productName}-Portable-${version}.${ext}"
+
+# Auto-update via GitHub Releases (the repo already has a github.com remote).
+# electron-updater checks this repo's latest Release for a matching
+# `latest.yml` + installer asset. To ship an update: bump "version" in
+# package.json, run `npm run dist:win -- --publish always` with a GH_TOKEN
+# env var that has `repo` scope (or `gh release create` the artifacts from
+# release/ by hand — either way, both the installer AND the auto-generated
+# release/latest.yml must be attached to the GitHub Release for existing
+# installs to detect it).
+publish:
+  provider: github
+  owner: MehXFaiz
+  repo: kmlwj
+
+compression: maximum

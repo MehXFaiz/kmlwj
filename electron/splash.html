@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>KMLWJ</title>
+<style>
+  :root { color-scheme: dark; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #080808;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Segoe UI", "Plus Jakarta Sans", -apple-system, sans-serif;
+    overflow: hidden;
+    -webkit-user-select: none; user-select: none;
+  }
+  .wrap { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+  .logo-ring {
+    width: 96px; height: 96px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 30% 30%, rgba(150,114,89,0.35), rgba(150,114,89,0.05));
+    border: 1px solid rgba(150,114,89,0.35);
+  }
+  .logo-ring img { width: 60px; height: 60px; object-fit: contain; }
+  h1 {
+    color: #fcfbfa; font-size: 15px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  p#status {
+    color: #a3a3a3; font-size: 12px; min-height: 16px;
+  }
+  .bar {
+    width: 220px; height: 3px; border-radius: 999px;
+    background: rgba(255,255,255,0.08); overflow: hidden;
+  }
+  .bar span {
+    display: block; height: 100%; width: 40%;
+    background: linear-gradient(90deg, #7D5A44, #A67C5B, #7D5A44);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+  @keyframes shimmer {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(350%); }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo-ring"><img src="../build/icon.png" alt="KMLWJ" /></div>
+    <h1>KMLWJ Enterprise Financial Suite</h1>
+    <div class="bar"><span></span></div>
+    <p id="status">Starting up&hellip;</p>
+  </div>
+  <script>
+    // No direct `require('electron')` here — nodeIntegration is disabled even
+    // for the splash window. window.splashAPI comes from splash-preload.cjs,
+    // the same contextBridge pattern the main window's preload.cjs uses.
+    window.splashAPI?.onStatus((text) => {
+      document.getElementById('status').textContent = text;
+    });
+  </script>
+</body>
+</html>

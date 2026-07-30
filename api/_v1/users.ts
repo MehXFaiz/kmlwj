@@ -6,7 +6,7 @@ import { logAudit } from '../_utils/audit.js';
 import { loadPermissions } from '../_services/permission.service.js';
 import { PERMS, SECURITY_PERMISSIONS } from '../_constants/permissions.js';
 import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 async function roleGrantsSecurityPermission(roleName: string): Promise<boolean> {
   const role = await prisma.role.findUnique({
