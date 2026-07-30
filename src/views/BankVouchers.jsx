@@ -72,8 +72,8 @@ function VoucherReceiptSlip({ voucher, amount, copyType, t }) {
     ) || voucher.reference?.length > 0;
   }, [voucher]);
 
-  const totalDebit  = voucher.lines?.reduce((s, l) => s + (l.debit  || 0), 0) ?? 0;
-  const totalCredit = voucher.lines?.reduce((s, l) => s + (l.credit || 0), 0) ?? 0;
+  const totalDebit  = voucher.lines?.reduce((s, l) => s + (Number(l.debit)  || 0), 0) ?? 0;
+  const totalCredit = voucher.lines?.reduce((s, l) => s + (Number(l.credit) || 0), 0) ?? 0;
   const dateStr = new Date(voucher.postingDate || voucher.date).toLocaleDateString('en-GB');
   const isOffice = copyType === 'office';
 
@@ -163,7 +163,7 @@ function VoucherReceiptSlip({ voucher, amount, copyType, t }) {
         <div style={{ height: '1px', background: 'rgba(255,255,255,0.15)', margin: '10px 0 8px' }} />
 
         {/* Sub-row: voucher no + date */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justify: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ fontSize: '7.5px', color: 'rgba(255,255,255,0.6)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em' }}>
               Voucher No.
@@ -171,7 +171,7 @@ function VoucherReceiptSlip({ voucher, amount, copyType, t }) {
             <span style={{
               background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)',
               borderRadius: '5px', padding: '1px 8px',
-              fontFamily: 'monospace', fontSize: '10px', fontWeight: 900, color: C.goldLight,
+              fontSize: '10px', fontWeight: 900, color: C.goldLight,
               letterSpacing: '0.05em',
             }}>
               {voucher.voucherNo}
@@ -270,8 +270,8 @@ function VoucherReceiptSlip({ voucher, amount, copyType, t }) {
                 <div style={{ fontSize: '6.5px', fontWeight: 700, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
                   Net Amount
                 </div>
-                <div style={{ fontSize: '13px', fontWeight: 900, color: C.goldLight, fontFamily: 'monospace', marginTop: '1px' }}>
-                  Rs. {amount.toLocaleString('en-PK')}
+                <div style={{ fontSize: '13px', fontWeight: 900, color: C.goldLight, marginTop: '1px', fontVariantNumeric: 'tabular-nums' }}>
+                  Rs. {Number(amount || 0).toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                 </div>
               </div>
             </div>
@@ -293,14 +293,14 @@ function VoucherReceiptSlip({ voucher, amount, copyType, t }) {
               <tr style={{ background: C.creamDeep }}>
                 <th style={{ padding: '5px 8px', textAlign: 'left', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '7px', borderBottom: `1px solid ${C.border}`, width: '60px' }}>Code</th>
                 <th style={{ padding: '5px 8px', textAlign: 'left', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '7px', borderBottom: `1px solid ${C.border}` }}>Account Name / Description</th>
-                <th style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '7px', borderBottom: `1px solid ${C.border}`, width: '70px' }}>Debit</th>
-                <th style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '7px', borderBottom: `1px solid ${C.border}`, width: '70px' }}>Credit</th>
+                <th style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '7px', borderBottom: `1px solid ${C.border}`, width: '100px' }}>Debit</th>
+                <th style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '7px', borderBottom: `1px solid ${C.border}`, width: '100px' }}>Credit</th>
               </tr>
             </thead>
             <tbody>
               {voucher.lines?.map((line, idx) => (
                 <tr key={line.id || idx} style={{ background: idx % 2 === 0 ? '#FFFFFF' : C.paper, borderBottom: `1px solid ${C.borderSoft}` }}>
-                  <td style={{ padding: '5px 8px', fontFamily: 'monospace', fontWeight: 700, color: C.secondary, fontSize: '8px' }}>
+                  <td style={{ padding: '5px 8px', fontWeight: 700, color: C.secondary, fontSize: '8px' }}>
                     {line.accountCode}
                   </td>
                   <td style={{ padding: '5px 8px', color: C.ink, fontWeight: 500 }}>
@@ -309,11 +309,11 @@ function VoucherReceiptSlip({ voucher, amount, copyType, t }) {
                       <div style={{ fontSize: '7.5px', color: C.muted, marginTop: '1px' }}>{line.description}</div>
                     )}
                   </td>
-                  <td style={{ padding: '5px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: line.debit > 0 ? C.ink : C.mutedLight, fontSize: '9px' }}>
-                    {line.debit > 0 ? line.debit.toLocaleString('en-PK', { minimumFractionDigits: 2 }) : '—'}
+                  <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 700, color: Number(line.debit) > 0 ? C.ink : C.mutedLight, fontSize: '9px', fontVariantNumeric: 'tabular-nums' }}>
+                    {Number(line.debit) > 0 ? Number(line.debit).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
                   </td>
-                  <td style={{ padding: '5px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: line.credit > 0 ? C.ink : C.mutedLight, fontSize: '9px' }}>
-                    {line.credit > 0 ? line.credit.toLocaleString('en-PK', { minimumFractionDigits: 2 }) : '—'}
+                  <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 700, color: Number(line.credit) > 0 ? C.ink : C.mutedLight, fontSize: '9px', fontVariantNumeric: 'tabular-nums' }}>
+                    {Number(line.credit) > 0 ? Number(line.credit).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
                   </td>
                 </tr>
               ))}
@@ -331,11 +331,11 @@ function VoucherReceiptSlip({ voucher, amount, copyType, t }) {
                 <td colSpan={2} style={{ padding: '6px 8px', fontSize: '8px', fontWeight: 900, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.18em' }}>
                   Total
                 </td>
-                <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 900, color: C.primary, fontSize: '10px' }}>
-                  {totalDebit > 0 ? totalDebit.toLocaleString('en-PK', { minimumFractionDigits: 2 }) : '—'}
+                <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 900, color: C.primary, fontSize: '9.5px', fontVariantNumeric: 'tabular-nums' }}>
+                  {totalDebit > 0 ? totalDebit.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
                 </td>
-                <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 900, color: C.primary, fontSize: '10px' }}>
-                  {totalCredit > 0 ? totalCredit.toLocaleString('en-PK', { minimumFractionDigits: 2 }) : '—'}
+                <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 900, color: C.primary, fontSize: '9.5px', fontVariantNumeric: 'tabular-nums' }}>
+                  {totalCredit > 0 ? totalCredit.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
                 </td>
               </tr>
             </tfoot>
