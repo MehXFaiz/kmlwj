@@ -5,12 +5,12 @@
 // is off (see main.cjs), so this is the ONLY surface the renderer can reach —
 // no direct `require`, no raw ipcRenderer, no Node globals leak through.
 //
-// The React app itself needs none of this to function: it already talks to
-// the backend over relative `/api/...` fetches (same-origin, see
-// scripts/electron-server-entry.ts) and already uses window.print() /
-// <a download> for printing and exports, both of which work unmodified in a
-// Chromium renderer. This bridge only adds desktop-native extras (toast
-// notifications, backend/connectivity status, native print, auto-update).
+// The React app itself needs none of this to function: it is loaded live from
+// https://kmlwj.com and already talks to its backend over relative `/api/...`
+// fetches (same-origin) and already uses window.print() / <a download> for
+// printing and exports, both of which work unmodified in a Chromium renderer.
+// This bridge only adds desktop-native extras (toast notifications,
+// connectivity status, native print, offline-screen retry, auto-update).
 
 const { contextBridge, ipcRenderer } = require('electron');
 
@@ -28,7 +28,10 @@ contextBridge.exposeInMainWorld('desktop', {
 
   printNative: () => ipcRenderer.send('app:print-native'),
 
-  /** Backend readiness / connectivity pushed from main (server-manager + a periodic health ping). */
+  /** Re-probe the live site and reload it — used by the branded offline screen's Retry button. */
+  retryConnection: () => ipcRenderer.send('app:retry-connection'),
+
+  /** Backend readiness / connectivity pushed from main (a periodic health ping against the live /api/health). */
   onBackendStatus: (callback) => {
     const listener = (_event, status) => callback(status);
     ipcRenderer.on('backend:status', listener);

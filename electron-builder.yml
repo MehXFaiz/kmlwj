@@ -1,10 +1,12 @@
 # electron-builder configuration — Windows desktop packaging for KMLWJ.
 # Run via: npm run dist:win  (see package.json scripts)
 #
-# Build pipeline this depends on (all run automatically by `npm run dist:win`):
-#   1. npm run build              -> dist/                 (Vite production build of the existing React app)
-#   2. npm run build:electron-server -> electron-dist/server/ (api/**/*.ts compiled to plain JS, see scripts/build-electron-server.mjs)
-#   3. electron-builder itself     -> release/                (this file)
+# This is a THIN CLIENT: the React frontend and the Express/Prisma backend both
+# run live on Vercel (https://kmlwj.com). The desktop app is just a native,
+# branded window around that live deployment — it ships no backend, no database
+# engine, and no secrets. Packaging is therefore only the Electron shell files
+# under electron/ plus the handful of runtime npm deps (electron-log,
+# electron-updater). No pre-build step is required.
 
 appId: com.kmlwj.desktop
 productName: KMLWJ ERP
@@ -14,48 +16,19 @@ directories:
   output: release
   buildResources: build
 
-# Explicit include list — the repo has a lot that the desktop app never needs
-# at runtime (raw TS sources under api/ and scripts/, the Vite dev server,
-# tests, e2e). Only the pre-built artifacts + runtime deps are shipped.
+# Only the Electron shell + package.json are needed. node_modules is resolved
+# automatically by electron-builder from package.json's production deps, so we
+# don't glob it here (that would drag in the whole full-stack dependency tree —
+# Prisma, express, the Vite toolchain — none of which the thin client runs).
 files:
-  - dist/**/*
-  - electron-dist/**/*
   - electron/**/*
-  - node_modules/**/*
   - package.json
-  - "!node_modules/**/*.{md,markdown,map,ts}"
-  - "!node_modules/**/{test,tests,__tests__,.github}/**"
-  - "!node_modules/.bin"
+  - "!**/*.{md,markdown,map,ts}"
 
-# Prisma's *generated* client (node_modules/.prisma/client, which contains
-# query_engine-windows.dll.node) has to be copied in via extraResources rather
-# than the `files` list above: electron-builder resolves node_modules through
-# its own dependency walker, which skips dot-directories, and a `files` glob
-# does NOT override that (verified — the folder was still absent from the
-# package). Without it @prisma/client cannot resolve its generated code and the
-# backend dies at import time with a misleading "Named export 'PrismaClient'
-# not found ... CommonJS module" error.
-# `to:` is relative to resources/, so this lands at
-# resources/app/node_modules/.prisma — exactly where Node's resolver looks.
-extraResources:
-  - from: node_modules/.prisma
-    to: app/node_modules/.prisma
-
-# asar is DISABLED deliberately — do not re-enable without re-testing the
-# packaged build end to end. The desktop backend is a real Node.js ESM server
-# (electron-dist/server, forked via utilityProcess) and an asar archive breaks
-# it in two independent ways:
-#   1. A path inside app.asar is not a real filesystem directory, so it cannot
-#      be used as a child process `cwd` — Windows rejects it and Node surfaces
-#      the failure as a misleading `spawn <app>.exe ENOENT`.
-#   2. Node's ESM loader resolves bare specifiers (`import express from 'express'`)
-#      through real filesystem paths; Electron's asar shim covers fs/CommonJS
-#      require but ESM resolution into an archive is not dependable.
-# Prisma's native query engine (query_engine-windows.dll.node) also has to be a
-# real file for dlopen(), which loose files give us for free.
-# Cost of this choice: more files on disk and a slightly slower install. Benefit:
-# the packaged app behaves exactly like the verified dev run.
-asar: false
+# asar ON (the default, and correct for a thin client): there is no local Node
+# backend or native engine that needs loose files on disk, so the app packs into
+# a single compressed archive — smaller, faster to install, and tamper-resistant.
+asar: true
 
 win:
   target:

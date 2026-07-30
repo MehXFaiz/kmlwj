@@ -9,7 +9,19 @@
 const { autoUpdater } = require('electron-updater');
 const log = require('electron-log');
 
-autoUpdater.logger = log;
+// electron-updater logs its own failures at [error] level *before* our
+// on('error') handler runs. Auto-update is a background, non-blocking subsystem
+// (a failed check never affects the user), and the most common "failure" is
+// simply "no GitHub Release published yet" — which is expected, not a bug. So we
+// hand the library a logger that downgrades its error() to warn(), keeping the
+// log clean and honest: real problems still appear (as warnings), but a routine
+// pre-release check never litters the log with scary [error] lines.
+autoUpdater.logger = {
+  info: (...a) => log.info(...a),
+  warn: (...a) => log.warn(...a),
+  debug: (...a) => log.debug(...a),
+  error: (...a) => log.warn('[updater]', ...a),
+};
 autoUpdater.autoDownload = false; // ask before pulling a multi-hundred-MB installer over the user's connection
 autoUpdater.autoInstallOnAppQuit = true;
 
