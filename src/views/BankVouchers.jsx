@@ -403,7 +403,7 @@ function BankVoucherPrintModal({ voucher, onClose }) {
   };
 
   const amount = useMemo(() => {
-    return voucher.lines.reduce((sum, line) => sum + (line.debit || 0), 0);
+    return voucher.lines ? voucher.lines.reduce((sum, line) => sum + (Number(line.debit) || 0), 0) : 0;
   }, [voucher]);
 
   return createPortal(
@@ -506,7 +506,7 @@ function BankVoucherEditModal({ voucher, onClose, onSave }) {
   const [reference, setReference] = useState(voucher.reference || '');
   const [description, setDescription] = useState(voucher.description || '');
   const [amount, setAmount] = useState(() => {
-    const sum = voucher.lines?.reduce((s, l) => s + (l.debit || 0), 0);
+    const sum = voucher.lines?.reduce((s, l) => s + (Number(l.debit) || 0), 0);
     return sum ? sum.toString() : '';
   });
   const [loading, setLoading] = useState(false);
@@ -630,20 +630,21 @@ export const BankVouchers = () => {
   }, [vouchers, search]);
 
   const getVoucherTotal = (v) => {
-    return v.lines.reduce((sum, line) => sum + (line.debit || 0), 0);
+    if (!v.lines || !Array.isArray(v.lines)) return 0;
+    return v.lines.reduce((sum, line) => sum + (Number(line.debit) || 0), 0);
   };
 
   const getOffsetAccount = (v) => {
     // For BP: Offset is the debit account (the expense/asset being paid to)
     // For BR: Offset is the credit account (the revenue/liability received from)
-    const targetLine = v.lines.find(line => v.voucherType === 'BP' ? line.debit > 0 : line.credit > 0);
+    const targetLine = v.lines?.find(line => v.voucherType === 'BP' ? Number(line.debit) > 0 : Number(line.credit) > 0);
     return targetLine ? targetLine.accountCode : '—';
   };
 
   const getBankCode = (v) => {
     // For BP: Credit account is the Bank account
     // For BR: Debit account is the Bank account
-    const targetLine = v.lines.find(line => v.voucherType === 'BP' ? line.credit > 0 : line.debit > 0);
+    const targetLine = v.lines?.find(line => v.voucherType === 'BP' ? Number(line.credit) > 0 : Number(line.debit) > 0);
     return targetLine ? targetLine.accountCode : '—';
   };
 
@@ -919,7 +920,7 @@ export const BankVouchers = () => {
                         <Banknote className="w-3.5 h-3.5 text-amber-400" /> {t('tables.bankVouchers.totalAmount') || 'TOTAL AMOUNT'}
                       </span>
                       <span className="font-bold text-amber-400 text-sm">
-                        PKR {getVoucherTotal(v).toLocaleString()}
+                        PKR {getVoucherTotal(v).toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                       </span>
                     </div>
                     <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
