@@ -115,7 +115,7 @@ function SignatureBlock({ label, name, checked = false }) {
 
 function CopySheet({ copyLabel, title, voucherNo, fileNo, formattedDate, paidTo, paymentMethod, amount, words, remarks, ledgerRows, preparedBy, verifiedBy, authorizedSign, payeeLabel, partyLabel = 'Paid To' }) {
   return (
-    <div className="rounded-[24px] border border-[#d8c1a1] bg-[#fefcf8] p-3 shadow-[0_18px_40px_rgba(29,18,12,0.08)] print:rounded-none print:shadow-none">
+    <div className="voucher-copy-sheet rounded-[24px] border border-[#d8c1a1] bg-[#fefcf8] p-3 shadow-[0_18px_40px_rgba(29,18,12,0.08)] print:rounded-none print:shadow-none">
       <div className="mb-3 flex items-center justify-between gap-3 rounded-[18px] border border-[#e7d7bf] bg-gradient-to-r from-[#f6ebdf] to-[#fbf4e9] px-3 py-2.5">
         <div className="flex items-center gap-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[#d8c1a1] bg-white/80">
@@ -264,7 +264,7 @@ export const VoucherSlipModal = ({
           <style>{`
             @page {
               size: A4 landscape;
-              margin: 7mm;
+              margin: 8mm;
             }
             @media print {
               *, *::before, *::after {
@@ -274,7 +274,14 @@ export const VoucherSlipModal = ({
               }
               body * { visibility: hidden !important; }
               #print-voucher-slip, #print-voucher-slip * { visibility: visible !important; }
-              #print-voucher-slip { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; margin: 0 !important; }
+              #print-voucher-slip {
+                position: absolute !important; left: 0 !important; top: 0 !important;
+                width: 100% !important; margin: 0 !important;
+                page-break-inside: avoid !important; break-inside: avoid !important;
+              }
+              .voucher-copy-sheet {
+                page-break-inside: avoid !important; break-inside: avoid !important;
+              }
             }
           `}</style>
 

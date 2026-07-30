@@ -78,7 +78,7 @@ function VoucherReceiptSlip({ voucher, amount, copyType, t }) {
   const isOffice = copyType === 'office';
 
   return (
-    <div style={{
+    <div className="voucher-receipt-slip" style={{
       backgroundColor: C.paper,
       color: C.ink,
       fontFamily: "'Inter', 'Plus Jakarta Sans', system-ui, sans-serif",
@@ -464,6 +464,7 @@ function BankVoucherPrintModal({ voucher, onClose }) {
                 overflow: visible !important;
                 z-index: 999999 !important;
                 display: block !important;
+                page-break-inside: avoid !important; break-inside: avoid !important;
               }
               .print-hide { display: none !important; }
               #print-receipt {
@@ -471,7 +472,10 @@ function BankVoucherPrintModal({ voucher, onClose }) {
                 margin: 0 !important; padding: 0 !important;
                 display: block !important; background: white !important;
               }
-              @page { size: A4 landscape; margin: 6mm; }
+              .voucher-receipt-slip {
+                page-break-inside: avoid !important; break-inside: avoid !important;
+              }
+              @page { size: A4 landscape; margin: 8mm; }
             }
           `}</style>
 
