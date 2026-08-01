@@ -95,9 +95,14 @@ app.use(helmet({
 // Global Rate Limiting
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 200 : 10000, // Limit each IP to 200 requests per `window` (here, per 15 minutes)
+  max: process.env.NODE_ENV === 'production' ? 2500 : 10000, // Multi-tab and multi-user desktop friendly limit (2500 req / 15 min per IP)
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Exclude background health probes so Electron connectivity checks never consume user rate limit quota
+    const url = req.originalUrl || req.url || '';
+    return url.includes('/api/health') || url.includes('/api/v1/health');
+  },
   message: { error: { message: 'Too many requests from this IP, please try again after 15 minutes', status: 429 } }
 });
 
