@@ -60,15 +60,24 @@ var revenue_collections_default = makeHandler(async (req, res) => {
       ...categoryFilter ? { category: categoryFilter } : {},
       ...getDeletedFilter(req.query)
     };
-    const collections = await prisma.revenueCollection.findMany({
-      where: whereClause,
-      include: {
-        bankAccount: true,
-        createdBy: { select: { id: true, fullName: true, email: true } }
-      },
-      orderBy: { createdAt: "desc" }
-    });
-    return res.status(200).json({ status: 200, data: collections });
+    const { limit = "1000", page = "1" } = req.query;
+    const limitNum = parseInt(limit) || 1e3;
+    const pageNum = parseInt(page) || 1;
+    const skip = (pageNum - 1) * limitNum;
+    const [collections, total] = await Promise.all([
+      prisma.revenueCollection.findMany({
+        where: whereClause,
+        include: {
+          bankAccount: true,
+          createdBy: { select: { id: true, fullName: true, email: true } }
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limitNum
+      }),
+      prisma.revenueCollection.count({ where: whereClause })
+    ]);
+    return res.status(200).json({ status: 200, data: collections, meta: { total, page: pageNum, limit: limitNum } });
   }
   if (method === "PUT" || method === "POST" || method === "PATCH") {
     if (action === "restore") {

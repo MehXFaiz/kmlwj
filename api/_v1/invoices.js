@@ -90,15 +90,25 @@ var invoices_default = makeHandler(async (req, res) => {
       }
       return res.status(200).json({ status: 200, data: invoice });
     }
-    const invoices = await prisma.invoice.findMany({
-      where: getDeletedFilter(req.query),
-      include: {
-        customer: true,
-        items: true
-      },
-      orderBy: { createdAt: "desc" }
-    });
-    return res.status(200).json({ status: 200, data: invoices });
+    const { limit = "1000", page = "1" } = req.query;
+    const limitNum = parseInt(limit) || 1e3;
+    const pageNum = parseInt(page) || 1;
+    const skip = (pageNum - 1) * limitNum;
+    const whereClause = getDeletedFilter(req.query);
+    const [invoices, total] = await Promise.all([
+      prisma.invoice.findMany({
+        where: whereClause,
+        include: {
+          customer: true,
+          items: true
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limitNum
+      }),
+      prisma.invoice.count({ where: whereClause })
+    ]);
+    return res.status(200).json({ status: 200, data: invoices, meta: { total, page: pageNum, limit: limitNum } });
   }
   if (method === "PUT" || method === "POST" || method === "PATCH") {
     if (action === "restore") {

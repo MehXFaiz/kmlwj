@@ -96,16 +96,26 @@ var zakat_cards_default = makeHandler(async (req, res) => {
       if (!card) return res.status(404).json({ error: { message: "Zakat card not found", status: 404 } });
       return res.status(200).json({ status: 200, data: card });
     }
-    const cards = await prisma.zakatCard.findMany({
-      where: getDeletedFilter(req.query),
-      include: {
-        member: true,
-        beneficiary: true,
-        createdBy: { select: { id: true, fullName: true, email: true } }
-      },
-      orderBy: { createdAt: "desc" }
-    });
-    return res.status(200).json({ status: 200, data: cards });
+    const { limit = "1000", page = "1" } = req.query;
+    const limitNum = parseInt(limit) || 1e3;
+    const pageNum = parseInt(page) || 1;
+    const skip = (pageNum - 1) * limitNum;
+    const whereClause = getDeletedFilter(req.query);
+    const [cards, total] = await Promise.all([
+      prisma.zakatCard.findMany({
+        where: whereClause,
+        include: {
+          member: true,
+          beneficiary: true,
+          createdBy: { select: { id: true, fullName: true, email: true } }
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limitNum
+      }),
+      prisma.zakatCard.count({ where: whereClause })
+    ]);
+    return res.status(200).json({ status: 200, data: cards, meta: { total, page: pageNum, limit: limitNum } });
   }
   if (method === "PUT" || method === "POST" || method === "PATCH") {
     if (action === "restore") {
