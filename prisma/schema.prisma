@@ -563,6 +563,8 @@ model RevenueCollection {
   updatedAt       DateTime       @updatedAt
 
   @@index([isDeleted])
+  @@index([eventDate])
+  @@index([bankAccountId])
 }
 
 model Member {
