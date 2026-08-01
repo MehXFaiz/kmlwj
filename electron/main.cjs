@@ -185,7 +185,7 @@ function startHealthCheck() {
     if (!mainWindow || mainWindow.isDestroyed()) return;
     const reachable = await checkReachable(4000);
     mainWindow.webContents.send('backend:status', { reachable });
-  }, 15000);
+  }, 30000);
 }
 
 // Only the first fatal error should ever reach the user — otherwise a flaky
