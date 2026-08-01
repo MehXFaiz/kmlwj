@@ -118,16 +118,29 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(200).json({ status: 200, data: invoice });
     }
 
-    const invoices = await prisma.invoice.findMany({
-      where: getDeletedFilter(req.query),
-      include: {
-        customer: true,
-        items: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    // Bounded default instead of an unconditional full-table scan — 1000 comfortably
+    // covers current usage while capping worst-case query cost as the table grows.
+    const { limit = '1000', page = '1' } = req.query as any;
+    const limitNum = parseInt(limit) || 1000;
+    const pageNum = parseInt(page) || 1;
+    const skip = (pageNum - 1) * limitNum;
+    const whereClause = getDeletedFilter(req.query);
 
-    return res.status(200).json({ status: 200, data: invoices });
+    const [invoices, total] = await Promise.all([
+      prisma.invoice.findMany({
+        where: whereClause,
+        include: {
+          customer: true,
+          items: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limitNum,
+      }),
+      prisma.invoice.count({ where: whereClause }),
+    ]);
+
+    return res.status(200).json({ status: 200, data: invoices, meta: { total, page: pageNum, limit: limitNum } });
   }
 
   if (method === 'PUT' || method === 'POST' || method === 'PATCH') {

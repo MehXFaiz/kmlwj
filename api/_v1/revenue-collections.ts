@@ -79,15 +79,27 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       ...(categoryFilter ? { category: categoryFilter } : {}),
       ...getDeletedFilter(req.query),
     };
-    const collections = await prisma.revenueCollection.findMany({
-      where: whereClause,
-      include: {
-        bankAccount: true,
-        createdBy: { select: { id: true, fullName: true, email: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    return res.status(200).json({ status: 200, data: collections });
+    // Bounded default instead of an unconditional full-table scan — 1000 comfortably
+    // covers current usage while capping worst-case query cost as the table grows.
+    const { limit = '1000', page = '1' } = req.query as any;
+    const limitNum = parseInt(limit) || 1000;
+    const pageNum = parseInt(page) || 1;
+    const skip = (pageNum - 1) * limitNum;
+
+    const [collections, total] = await Promise.all([
+      prisma.revenueCollection.findMany({
+        where: whereClause,
+        include: {
+          bankAccount: true,
+          createdBy: { select: { id: true, fullName: true, email: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limitNum,
+      }),
+      prisma.revenueCollection.count({ where: whereClause }),
+    ]);
+    return res.status(200).json({ status: 200, data: collections, meta: { total, page: pageNum, limit: limitNum } });
   }
 
   if (method === 'PUT' || method === 'POST' || method === 'PATCH') {

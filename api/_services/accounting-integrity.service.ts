@@ -458,18 +458,25 @@ export class AccountingIntegrityService {
       include: { accountType: true },
     });
 
-    for (const account of accounts) {
-      const aggregations = await prisma.journalEntryLine.aggregate({
-        // Same predicate as recalculateAccountBalance and getPostedAggregates.
-        // This previously omitted `isDeleted`, so the checker agreed with a
-        // stale cache while both disagreed with every financial report — drift
-        // that reports showed but the integrity page could not see.
-        where: { accountId: account.id, journalEntry: POSTED_JOURNAL_FILTER },
-        _sum: { debit: true, credit: true },
-      });
+    // One grouped aggregate for every account instead of one aggregate query
+    // per account (this loop previously issued N+1 queries — on a ledger with
+    // hundreds of GL/SUBSIDIARY accounts that's hundreds of round-trips).
+    // Same predicate as recalculateAccountBalance and getPostedAggregates.
+    // This previously omitted `isDeleted`, so the checker agreed with a
+    // stale cache while both disagreed with every financial report — drift
+    // that reports showed but the integrity page could not see.
+    const sums = await prisma.journalEntryLine.groupBy({
+      by: ['accountId'],
+      where: { accountId: { in: accounts.map((a) => a.id) }, journalEntry: POSTED_JOURNAL_FILTER },
+      _sum: { debit: true, credit: true },
+    });
+    const sumsByAccountId = new Map(sums.map((s) => [s.accountId, s._sum]));
 
-      const totalDebit = new Prisma.Decimal(aggregations._sum.debit ?? 0);
-      const totalCredit = new Prisma.Decimal(aggregations._sum.credit ?? 0);
+    for (const account of accounts) {
+      const aggregations = sumsByAccountId.get(account.id);
+
+      const totalDebit = new Prisma.Decimal(aggregations?.debit ?? 0);
+      const totalCredit = new Prisma.Decimal(aggregations?.credit ?? 0);
       const initialBalance = new Prisma.Decimal(account.initialBalance ?? 0);
 
       const typeName = account.accountType?.name?.toUpperCase() || 'ASSET';

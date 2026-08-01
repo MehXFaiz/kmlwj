@@ -13,15 +13,27 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   if (!await verifyPermission(req, res, PERMS.VIEW_AUDIT)) return;
 
   if (method === 'GET') {
-    const dbLogs = await prisma.auditLog.findMany({
-      include: {
-        user: {
-          select: { fullName: true, email: true }
-        }
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 100, // Limit to recent 100 logs
-    });
+    // Same 100-per-page default as before (no behavior change for existing
+    // callers), but now real pagination via ?page=N reaches older logs, which
+    // were previously unreachable at any offset.
+    const { limit = '100', page = '1' } = req.query as any;
+    const limitNum = parseInt(limit) || 100;
+    const pageNum = parseInt(page) || 1;
+    const skip = (pageNum - 1) * limitNum;
+
+    const [dbLogs, total] = await Promise.all([
+      prisma.auditLog.findMany({
+        include: {
+          user: {
+            select: { fullName: true, email: true }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limitNum,
+      }),
+      prisma.auditLog.count(),
+    ]);
 
     const formatted = dbLogs.map((log) => ({
       id: log.id,
@@ -37,7 +49,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       newValues: log.newValues || null,
     }));
 
-    return res.status(200).json({ status: 200, data: formatted });
+    return res.status(200).json({ status: 200, data: formatted, meta: { total, page: pageNum, limit: limitNum } });
   }
 
   return res.status(405).json({ error: { message: 'Method Not Allowed', status: 405 } });

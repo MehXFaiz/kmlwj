@@ -198,6 +198,8 @@ model AuditLog {
   ipAddress String?
   userAgent String?
   createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 model JournalEntry {
@@ -350,6 +352,9 @@ model Donation {
   updatedAt      DateTime       @updatedAt
 
   @@index([isDeleted])
+  @@index([bankAccountId])
+  @@index([beneficiaryId])
+  @@index([createdAt])
 }
 
 // ── Simple Income ─────────────────────────────────────────────
@@ -372,6 +377,9 @@ model SimpleIncome {
   createdAt      DateTime    @default(now())
 
   @@index([isDeleted])
+  @@index([date])
+  @@index([revenueHeadId])
+  @@index([bankAccountId])
 }
 
 // ── Simple Expense ────────────────────────────────────────────
@@ -395,6 +403,9 @@ model SimpleExpense {
   createdAt      DateTime    @default(now())
 
   @@index([isDeleted])
+  @@index([date])
+  @@index([expenseHeadId])
+  @@index([bankAccountId])
 }
 
 model HallBooking {
@@ -456,6 +467,8 @@ model HallBooking {
   // apply this constraint change — not run automatically as part of this fix.
   @@unique([hallId, programDate, timings], name: "hallId_programDate_timings")
   @@index([isDeleted])
+  @@index([bankAccountId])
+  @@index([createdById])
 }
 
 model Customer {
@@ -503,6 +516,10 @@ model Invoice {
   updatedAt     DateTime      @updatedAt
 
   @@index([isDeleted])
+  @@index([customerId])
+  @@index([issueDate])
+  @@index([dueDate])
+  @@index([status])
 }
 
 model InvoiceItem {
