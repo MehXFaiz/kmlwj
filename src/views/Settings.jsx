@@ -6,9 +6,86 @@ import { useConfirmStore } from '../store/confirmStore';
 import { showToast } from '../components/ui/Toast';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Settings as SettingsIcon, RotateCcw, ShieldCheck, Database, HardDrive, RefreshCw, Lock, Loader2 } from 'lucide-react';
+import { Settings as SettingsIcon, RotateCcw, ShieldCheck, Database, HardDrive, RefreshCw, Lock, Loader2, Monitor, CheckCircle2, DownloadCloud } from 'lucide-react';
 import api from '../services/api';
 import { syncEngine } from '../services/syncEngine';
+import { useUpdaterStore } from '../store/updaterStore';
+
+const DesktopUpdateCard = () => {
+  const { isElectron, version, status, latestVersion, progress, errorMessage } = useUpdaterStore();
+  const checkForUpdates = useUpdaterStore((s) => s.checkForUpdates);
+  const restartAndInstall = useUpdaterStore((s) => s.restartAndInstall);
+
+  useEffect(() => {
+    useUpdaterStore.getState().init();
+  }, []);
+
+  if (!isElectron) return null;
+
+  const statusLine = {
+    idle: null,
+    checking: 'Checking for updates…',
+    available: `Update ${latestVersion || ''} found — starting download…`,
+    downloading: `Downloading update ${latestVersion || ''}… ${progress}%`,
+    downloaded: `Update ${latestVersion || ''} downloaded and ready to install.`,
+    'up-to-date': "You're on the latest version.",
+    error: errorMessage || 'Update check failed.',
+  }[status];
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <Monitor className="h-5 w-5 text-brand-400" />
+          <CardTitle>Desktop App</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3 text-xs leading-relaxed text-slate-400">
+        <div>
+          <span className="block font-bold text-[10px] text-slate-500 uppercase">App Version</span>
+          <span className="block font-medium text-slate-300 mt-0.5">{version || '—'}</span>
+        </div>
+
+        {statusLine && (
+          <div className={`flex items-start gap-2 p-2.5 rounded-lg border ${
+            status === 'error'
+              ? 'bg-red-950/30 border-red-900/40 text-red-300'
+              : status === 'downloaded' || status === 'up-to-date'
+                ? 'bg-emerald-950/30 border-emerald-900/40 text-emerald-300'
+                : 'bg-slate-900/40 border-slate-800 text-slate-300'
+          }`}>
+            {status === 'downloading' || status === 'checking' || status === 'available' ? (
+              <Loader2 className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 animate-spin" />
+            ) : status === 'downloaded' || status === 'up-to-date' ? (
+              <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+            ) : (
+              <DownloadCloud className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+            )}
+            <span className="font-medium">{statusLine}</span>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={checkForUpdates}
+            disabled={status === 'checking' || status === 'downloading'}
+            className="gap-1.5 cursor-pointer"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${status === 'checking' ? 'animate-spin' : ''}`} />
+            <span>Check for Updates</span>
+          </Button>
+          {status === 'downloaded' && (
+            <Button size="sm" onClick={restartAndInstall} className="gap-1.5 cursor-pointer">
+              <span>Restart to Install</span>
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 export const Settings = () => {
   const { resetAccounts } = useCoaStore();
@@ -258,7 +335,8 @@ export const Settings = () => {
         </div>
 
         {/* Informative column */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 space-y-6">
+          <DesktopUpdateCard />
           <Card className="h-full">
             <CardHeader>
               <div className="flex items-center gap-2">

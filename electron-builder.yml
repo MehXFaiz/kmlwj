@@ -93,6 +93,15 @@ portable:
 # release/ by hand — either way, both the installer AND the auto-generated
 # release/latest.yml must be attached to the GitHub Release for existing
 # installs to detect it).
+#
+# This is the complete config electron-updater needs — nothing else to add:
+#   - `publish` below is the provider electron-updater reads at runtime
+#     (electron/updater.cjs just calls autoUpdater.checkForUpdates(), which
+#     resolves this config automatically; the provider isn't duplicated there).
+#   - `release/latest.yml` is generated automatically for the nsis target
+#     whenever a `publish` block is present — no separate flag needed.
+#   - nsis differential (delta) packages are on by default in electron-builder,
+#     so returning users download only the changed bytes, not a full reinstall.
 publish:
   provider: github
   owner: MehXFaiz

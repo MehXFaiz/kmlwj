@@ -45,7 +45,11 @@ let mainWindow = null;
 let splashWindow = null;
 let updater = null;
 let healthCheckTimer = null;
+let updateCheckTimer = null;
 let startupWatchdog = null;
+
+// How often to check for app updates while running, per spec.
+const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
 
 // Longest we'll sit on the splash screen before showing the offline screen.
 // A cold Vercel serverless start plus TLS can legitimately take ~10s on a slow
@@ -166,12 +170,16 @@ function createMainWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     closeSplash();
-    if (!isDev) updater?.checkForUpdates();
+    if (!isDev) {
+      updater?.checkForUpdates();
+      startUpdateCheckTimer();
+    }
   });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
     if (healthCheckTimer) clearInterval(healthCheckTimer);
+    if (updateCheckTimer) clearInterval(updateCheckTimer);
   });
 }
 
@@ -190,6 +198,14 @@ function startHealthCheck() {
     const reachable = await checkReachable(4000);
     mainWindow.webContents.send('backend:status', { reachable });
   }, 30000);
+}
+
+/** Re-checks for an app update every 30 minutes while the app is running (in addition to the one-time check on startup). checkForUpdates() already swallows its own errors, so a machine that's offline at the 30-minute mark just quietly tries again next interval. */
+function startUpdateCheckTimer() {
+  if (updateCheckTimer) clearInterval(updateCheckTimer);
+  updateCheckTimer = setInterval(() => {
+    updater?.checkForUpdates();
+  }, UPDATE_CHECK_INTERVAL_MS);
 }
 
 // Only the first fatal error should ever reach the user — otherwise a flaky

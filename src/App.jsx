@@ -6,6 +6,7 @@ import { Sidebar } from './components/common/Sidebar';
 import { Topbar } from './components/common/Topbar';
 import { useAuthStore } from './store/authStore';
 import { ToastContainer } from './components/ui/Toast';
+import { UpdateBanner } from './components/common/UpdateBanner';
 
 // Lazy-loaded views for code splitting
 // ConfirmationModal pulls in framer-motion (a sizable dependency); it's always
@@ -303,6 +304,9 @@ function App() {
     <>
       {/* Global toast notifications — replaces all alert() calls */}
       <ToastContainer />
+
+      {/* Desktop-only: background update download / restart-to-install prompt */}
+      <UpdateBanner />
       
       {/* Global confirmation & alert modals */}
       <Suspense fallback={null}>

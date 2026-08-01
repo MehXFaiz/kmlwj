@@ -5,6 +5,20 @@
 // static file host serving latest.yml + the installer) — see the comments
 // there. Until then this module simply no-ops on checkForUpdates() failures
 // instead of throwing, so a dev build without a publish target never crashes.
+//
+// Rollback / data-safety guarantees, and why nothing extra is implemented here:
+// - electron-updater verifies the downloaded installer's sha512 (from
+//   latest.yml) before ever emitting 'update-downloaded' — a corrupted or
+//   truncated download (e.g. connection dropped mid-transfer, which is how
+//   "offline mid-update" actually manifests) fails verification and the app
+//   just keeps running the current version; quitAndInstall() is never reached.
+// - This app has no local database or local uploaded files to protect (see
+//   the "thin client" note in main.cjs — all data lives in the cloud DB /
+//   Cloudinary). NSIS-based electron-builder updates only ever replace files
+//   under the installation directory; they never touch `app.getPath('userData')`
+//   (where things like the persisted theme preference live), and
+//   `deleteAppDataOnUninstall: false` in electron-builder.yml keeps that true
+//   on uninstall too. There is nothing update-specific to preserve beyond that.
 
 const { autoUpdater } = require('electron-updater');
 const log = require('electron-log');
@@ -22,8 +36,8 @@ autoUpdater.logger = {
   debug: (...a) => log.debug(...a),
   error: (...a) => log.warn('[updater]', ...a),
 };
-autoUpdater.autoDownload = false; // ask before pulling a multi-hundred-MB installer over the user's connection
-autoUpdater.autoInstallOnAppQuit = true;
+autoUpdater.autoDownload = true; // download in the background as soon as an update is found, per spec
+autoUpdater.autoInstallOnAppQuit = true; // falls back to installing on natural quit if the user never clicks "Restart Now"
 
 function initUpdater(mainWindow) {
   const send = (channel, payload) => {
@@ -45,7 +59,11 @@ function initUpdater(mainWindow) {
   return {
     checkForUpdates: () => autoUpdater.checkForUpdates().catch((error) => log.warn('[updater] check failed:', error?.message)),
     downloadUpdate: () => autoUpdater.downloadUpdate().catch((error) => log.warn('[updater] download failed:', error?.message)),
-    quitAndInstall: () => autoUpdater.quitAndInstall(),
+    // isSilent=true: the NSIS installer runs with no UI of its own — the only
+    // user-facing confirmation is the "Restart Now" click that triggers this.
+    // isForceRunAfter=true: relaunches the app once the silent install finishes,
+    // so "Restart Now" actually restarts rather than just quitting.
+    quitAndInstall: () => autoUpdater.quitAndInstall(true, true),
   };
 }
 
