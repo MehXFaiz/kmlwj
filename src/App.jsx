@@ -6,9 +6,12 @@ import { Sidebar } from './components/common/Sidebar';
 import { Topbar } from './components/common/Topbar';
 import { useAuthStore } from './store/authStore';
 import { ToastContainer } from './components/ui/Toast';
-import { ConfirmationModal } from './components/ui/ConfirmationModal';
 
 // Lazy-loaded views for code splitting
+// ConfirmationModal pulls in framer-motion (a sizable dependency); it's always
+// mounted but only ever visually renders after a user action, so it's split
+// out of the eager main bundle the same way the routes below are.
+const ConfirmationModal = lazy(() => import('./components/ui/ConfirmationModal').then(m => ({ default: m.ConfirmationModal })));
 const Dashboard = lazy(() => import('./views/Dashboard').then(m => ({ default: m.Dashboard })));
 const ChartOfAccounts = lazy(() => import('./views/ChartOfAccounts').then(m => ({ default: m.ChartOfAccounts })));
 const GeneralLedger = lazy(() => import('./views/GeneralLedger').then(m => ({ default: m.GeneralLedger })));
@@ -302,7 +305,9 @@ function App() {
       <ToastContainer />
       
       {/* Global confirmation & alert modals */}
-      <ConfirmationModal />
+      <Suspense fallback={null}>
+        <ConfirmationModal />
+      </Suspense>
 
       {/* Splash screen — shown until loading sequence completes */}
       {!splashDone && <SplashScreen onComplete={() => setSplashDone(true)} />}

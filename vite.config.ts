@@ -20,5 +20,19 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    build: {
+      rollupOptions: {
+        output: {
+          // Split stable, rarely-changing libraries into their own chunk so
+          // browsers can cache them across app deploys instead of
+          // re-downloading them every time route/app code changes.
+          manualChunks: {
+            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+            'vendor-i18n': ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
+            'vendor-icons': ['lucide-react'],
+          },
+        },
+      },
+    },
   }
 })

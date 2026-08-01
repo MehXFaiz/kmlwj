@@ -16,14 +16,39 @@ directories:
   output: release
   buildResources: build
 
-# Only the Electron shell + package.json are needed. node_modules is resolved
-# automatically by electron-builder from package.json's production deps, so we
-# don't glob it here (that would drag in the whole full-stack dependency tree —
-# Prisma, express, the Vite toolchain — none of which the thin client runs).
+# Only the Electron shell + package.json are needed. Despite the comment this
+# used to have, electron-builder's default node_modules resolution does NOT
+# trim to what main.cjs actually requires — package.json's single "dependencies"
+# block mixes electron-only packages (electron-log, electron-updater) with the
+# entire web app's runtime deps (react, prisma, express, xlsx, jspdf, recharts,
+# framer-motion, ...), and without an explicit exclude electron-builder ships
+# all of it, bloating the asar with code the thin client never runs.
+#
+# The explicit list below is the exact runtime require() closure of main.cjs's
+# two heavy deps (electron-log, electron-updater), verified by actually
+# requiring both in Node and inspecting require.cache, cross-checked against
+# every literal require() call in their source for conditionally-loaded
+# packages. Do not trim this list without re-verifying the same way — a single
+# missing transitive dependency here throws inside boot() with no try/catch
+# around it, which breaks app startup entirely, not just auto-update.
 files:
   - electron/**/*
   - package.json
   - "!**/*.{md,markdown,map,ts}"
+  - "!node_modules/**/*"
+  - "node_modules/electron-log/**/*"
+  - "node_modules/electron-updater/**/*"
+  - "node_modules/graceful-fs/**/*"
+  - "node_modules/has-flag/**/*"
+  - "node_modules/js-yaml/**/*"
+  - "node_modules/jsonfile/**/*"
+  - "node_modules/lazy-val/**/*"
+  - "node_modules/lodash.escaperegexp/**/*"
+  - "node_modules/lodash.isequal/**/*"
+  - "node_modules/sax/**/*"
+  - "node_modules/supports-color/**/*"
+  - "node_modules/universalify/**/*"
+  - "node_modules/argparse/**/*"
 
 # asar ON (the default, and correct for a thin client): there is no local Node
 # backend or native engine that needs loose files on disk, so the app packs into
