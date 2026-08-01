@@ -25,7 +25,11 @@ const log = require('electron-log');
 
 const { showNotification } = require('./notifications.cjs');
 const { buildMenu } = require('./menu.cjs');
-const { initUpdater } = require('./updater.cjs');
+// electron-updater (required lazily inside boot(), not here) pulls in a sizable
+// dependency tree (builder-util-runtime, semver, fs-extra) — requiring it at
+// module top would run that synchronously before app.whenReady() can even be
+// registered, delaying the splash window's first paint for no benefit since
+// updates aren't checked until well after the main window exists.
 
 const isDev = !app.isPackaged;
 
@@ -208,19 +212,18 @@ async function boot() {
   log.info(`[boot] thin client target: ${LIVE_URL}`);
 
   createMainWindow();
+
+  // Deferred require — see comment near the top-level imports.
+  const { initUpdater } = require('./updater.cjs');
   updater = initUpdater(mainWindow);
 
-  // Probe once so a truly offline machine lands on the branded offline screen
-  // rather than staring at a spinner. If it's reachable we load the live app;
-  // if not, the offline screen offers a Retry that re-runs this whole flow.
-  const reachable = await checkReachable();
-  if (reachable) {
-    setSplashStatus('Loading application...');
-    mainWindow.loadURL(LIVE_URL);
-  } else {
-    log.warn('[boot] live site unreachable at startup — showing offline screen');
-    loadOfflineScreen();
-  }
+  // Load immediately instead of waiting on a separate reachability probe first:
+  // loadURL's own failure (DNS/connection error) already routes to the branded
+  // offline screen via the did-fail-load handler below, so the extra network
+  // round-trip this used to do serially before every startup was pure latency
+  // with no behavioral difference.
+  setSplashStatus('Loading application...');
+  mainWindow.loadURL(LIVE_URL).catch(() => {});
 
   startHealthCheck();
 }
@@ -261,12 +264,10 @@ ipcMain.on('app:print-native', () => {
 });
 
 // Retry from the offline screen re-runs the reachability probe + load.
-ipcMain.on('app:retry-connection', async () => {
+ipcMain.on('app:retry-connection', () => {
   fatalErrorShown = false;
   if (!mainWindow || mainWindow.isDestroyed()) createMainWindow();
-  const reachable = await checkReachable();
-  if (reachable) mainWindow.loadURL(LIVE_URL);
-  else loadOfflineScreen();
+  mainWindow.loadURL(LIVE_URL).catch(() => {});
 });
 
 ipcMain.on('app:check-for-updates', () => updater?.checkForUpdates());
