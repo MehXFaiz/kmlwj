@@ -71,9 +71,15 @@ win:
 nsis:
   oneClick: false
   perMachine: false
-  allowToChangeInstallationDirectory: true
+  # Fixed install path (no directory picker in the wizard) so every install —
+  # and every silent auto-update overwrite — always lands in the same place.
+  allowToChangeInstallationDirectory: false
   createDesktopShortcut: true
   createStartMenuShortcut: true
+  # Explicit even though it's electron-builder's default: relaunch the app
+  # after the installer finishes, for both a fresh install and a silent
+  # auto-update (quitAndInstall's isForceRunAfter also relies on this).
+  runAfterFinish: true
   shortcutName: KMLWJ ERP
   uninstallDisplayName: KMLWJ Enterprise Financial Suite
   deleteAppDataOnUninstall: false

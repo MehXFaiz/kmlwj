@@ -12,7 +12,7 @@ import { syncEngine } from '../services/syncEngine';
 import { useUpdaterStore } from '../store/updaterStore';
 
 const DesktopUpdateCard = () => {
-  const { isElectron, version, status, latestVersion, progress, errorMessage } = useUpdaterStore();
+  const { isElectron, version, status, latestVersion, releaseNotes, progress, errorMessage, lastChecked } = useUpdaterStore();
   const checkForUpdates = useUpdaterStore((s) => s.checkForUpdates);
   const restartAndInstall = useUpdaterStore((s) => s.restartAndInstall);
 
@@ -32,6 +32,10 @@ const DesktopUpdateCard = () => {
     error: errorMessage || 'Update check failed.',
   }[status];
 
+  const lastCheckedLabel = lastChecked
+    ? new Date(lastChecked).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+    : 'Never';
+
   return (
     <Card>
       <CardHeader>
@@ -41,9 +45,19 @@ const DesktopUpdateCard = () => {
         </div>
       </CardHeader>
       <CardContent className="space-y-3 text-xs leading-relaxed text-slate-400">
-        <div>
-          <span className="block font-bold text-[10px] text-slate-500 uppercase">App Version</span>
-          <span className="block font-medium text-slate-300 mt-0.5">{version || '—'}</span>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <span className="block font-bold text-[10px] text-slate-500 uppercase">Current Version</span>
+            <span className="block font-medium text-slate-300 mt-0.5">{version || '—'}</span>
+          </div>
+          <div>
+            <span className="block font-bold text-[10px] text-slate-500 uppercase">Latest Version</span>
+            <span className="block font-medium text-slate-300 mt-0.5">{latestVersion || version || '—'}</span>
+          </div>
+          <div className="col-span-2">
+            <span className="block font-bold text-[10px] text-slate-500 uppercase">Last Checked</span>
+            <span className="block font-medium text-slate-300 mt-0.5">{lastCheckedLabel}</span>
+          </div>
         </div>
 
         {statusLine && (
@@ -65,6 +79,15 @@ const DesktopUpdateCard = () => {
           </div>
         )}
 
+        {(status === 'available' || status === 'downloading' || status === 'downloaded') && releaseNotes && (
+          <div>
+            <span className="block font-bold text-[10px] text-slate-500 uppercase">Release Notes</span>
+            <div className="mt-1 p-2.5 rounded-lg border border-slate-800 bg-slate-900/40 text-slate-300 whitespace-pre-wrap max-h-32 overflow-y-auto">
+              {releaseNotes}
+            </div>
+          </div>
+        )}
+
         <div className="flex gap-2">
           <Button
             variant="secondary"
@@ -78,7 +101,7 @@ const DesktopUpdateCard = () => {
           </Button>
           {status === 'downloaded' && (
             <Button size="sm" onClick={restartAndInstall} className="gap-1.5 cursor-pointer">
-              <span>Restart to Install</span>
+              <span>Install Update</span>
             </Button>
           )}
         </div>

@@ -37,16 +37,23 @@ export function UpdateBanner() {
       )}
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-slate-100">
-          {ready ? `Update ${latestVersion || ''} ready to install` : `Downloading update ${latestVersion || ''}…`}
-        </p>
-        {!ready && (
-          <div className="mt-1.5 h-1.5 rounded-full bg-slate-800 overflow-hidden">
-            <div
-              className="h-full bg-amber-500 transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+        {ready ? (
+          <>
+            <p className="text-sm font-semibold text-slate-100">New Version Available</p>
+            <p className="text-xs text-slate-400 mt-0.5">Version: {latestVersion || ''}</p>
+          </>
+        ) : (
+          <>
+            <p className="text-sm font-semibold text-slate-100">
+              Downloading update {latestVersion || ''}… {Math.round(progress)}%
+            </p>
+            <div className="mt-1.5 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+              <div
+                className="h-full bg-amber-500 transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </>
         )}
       </div>
 
@@ -56,13 +63,13 @@ export function UpdateBanner() {
             onClick={() => setDismissed(true)}
             className="text-xs font-semibold px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors cursor-pointer whitespace-nowrap"
           >
-            Later
+            Remind Me Later
           </button>
           <button
             onClick={restartAndInstall}
             className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white transition-colors cursor-pointer whitespace-nowrap"
           >
-            Restart Now
+            Install Now
           </button>
         </div>
       ) : (

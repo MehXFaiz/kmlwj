@@ -39,6 +39,16 @@ autoUpdater.logger = {
 autoUpdater.autoDownload = true; // download in the background as soon as an update is found, per spec
 autoUpdater.autoInstallOnAppQuit = true; // falls back to installing on natural quit if the user never clicks "Restart Now"
 
+// electron-updater's UpdateInfo.releaseNotes is either a plain string or (when
+// a single check spans multiple published versions) an array of per-version
+// {version, note} entries — normalize both into one string for the renderer.
+function normalizeReleaseNotes(notes) {
+  if (!notes) return null;
+  if (typeof notes === 'string') return notes;
+  if (Array.isArray(notes)) return notes.map((n) => n?.note).filter(Boolean).join('\n\n') || null;
+  return null;
+}
+
 function initUpdater(mainWindow) {
   const send = (channel, payload) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -52,7 +62,7 @@ function initUpdater(mainWindow) {
   });
   autoUpdater.on('update-available', (info) => {
     log.info('[updater] update available:', info.version);
-    send('updater:status', { state: 'available', version: info.version });
+    send('updater:status', { state: 'available', version: info.version, releaseNotes: normalizeReleaseNotes(info.releaseNotes) });
   });
   autoUpdater.on('update-not-available', () => {
     log.info('[updater] up to date');
@@ -64,7 +74,7 @@ function initUpdater(mainWindow) {
   });
   autoUpdater.on('update-downloaded', (info) => {
     log.info('[updater] update downloaded, ready to install:', info.version);
-    send('updater:status', { state: 'downloaded', version: info.version });
+    send('updater:status', { state: 'downloaded', version: info.version, releaseNotes: normalizeReleaseNotes(info.releaseNotes) });
   });
   autoUpdater.on('error', (error) => {
     log.warn('[updater] error (expected until a publish target is configured):', error?.message);
