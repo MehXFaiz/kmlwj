@@ -244,10 +244,20 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           let journalEntryId: string | null = null;
 
           if (txStatus === 'POSTED') {
+            // GENERAL_DONATION and CUSTOM both post to the 'General Donation' revenue
+            // account. Resolve it via the same ensure-or-create getter used for the
+            // Cash in Hand account, rather than the fragile keyword fallback in
+            // resolveAccount(), so a Chart of Accounts missing this leaf account never
+            // surfaces as an "Account not found" error to the user.
+            const isGeneralDonation = donationType === 'CUSTOM' || donationType === 'GENERAL_DONATION';
+            const generalDonationAccount = isGeneralDonation
+              ? await AccountingService.ensureGeneralDonationAccount(tx)
+              : null;
             const postingResult = await AccountingService.postReceipt(tx, {
               amount: parsedAmount,
               cashOrBankAccountId: debitAccountId!,
-              incomeAccountKeyword: donationType === 'CUSTOM' ? 'General Donation' : donationType,
+              incomeAccountId: generalDonationAccount ? generalDonationAccount.id : undefined,
+              incomeAccountKeyword: generalDonationAccount ? undefined : donationType,
               reference: receiptNo,
               description: narration || `Received ${donationType === 'CUSTOM' ? customDonationType : donationType} from ${donor.fullName} (${donor.donorCode})`,
               module: 'Donations Received',
@@ -368,10 +378,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           const updatedNarration = narration !== undefined ? narration : existing.narration;
           const updatedDate = receiptDate !== undefined ? new Date(receiptDate) : existing.receiptDate;
 
+          const isGeneralDonation = updatedType === 'CUSTOM' || updatedType === 'GENERAL_DONATION';
+          const generalDonationAccount = isGeneralDonation
+            ? await AccountingService.ensureGeneralDonationAccount(tx)
+            : null;
           const postingResult = await AccountingService.postReceipt(tx, {
             amount: updatedAmount,
             cashOrBankAccountId: debitAccountId,
-            incomeAccountKeyword: updatedType === 'CUSTOM' ? 'General Donation' : updatedType,
+            incomeAccountId: generalDonationAccount ? generalDonationAccount.id : undefined,
+            incomeAccountKeyword: generalDonationAccount ? undefined : updatedType,
             reference: existing.receiptNo,
             description: updatedNarration || `Received ${updatedType === 'CUSTOM' ? updatedCustomType : updatedType} from ${existing.donor.fullName}`,
             module: 'Donations Received',

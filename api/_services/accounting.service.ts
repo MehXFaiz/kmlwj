@@ -167,6 +167,64 @@ export class AccountingService {
     return cashAccount;
   }
 
+  /**
+   * Ensures a dedicated leaf 'General Donation' revenue account exists and returns it.
+   * Donations Received defaults new receipts to this type, so it must always resolve
+   * deterministically instead of depending on Chart of Accounts having been seeded
+   * with a matching leaf account (see 'General Donation' Accounting Engine Error).
+   */
+  static async ensureGeneralDonationAccount(tx: any) {
+    let donationAccount = await tx.account.findFirst({
+      where: {
+        accountName: { equals: 'General Donation', mode: 'insensitive' },
+        isLocked: false,
+        children: { none: {} }
+      },
+      orderBy: { glCode: 'asc' }
+    });
+
+    if (donationAccount) return donationAccount;
+
+    const parentAccount = await tx.account.findFirst({
+      where: {
+        OR: [
+          { glCode: '3020400' },
+          { accountName: { equals: 'Other Income', mode: 'insensitive' } }
+        ]
+      }
+    });
+
+    const revenueType = await tx.accountType.findFirst({
+      where: { name: { in: ['Revenue', 'REVENUE', 'Revenues'] } }
+    });
+
+    let glCode = '3020408';
+    let codeCounter = 8;
+    while (await tx.account.findUnique({ where: { glCode } })) {
+      codeCounter++;
+      glCode = `302040${codeCounter}`;
+    }
+
+    donationAccount = await tx.account.create({
+      data: {
+        glCode,
+        accountName: 'General Donation',
+        accountLevel: 'GL',
+        parentId: parentAccount ? parentAccount.id : null,
+        accountTypeId: revenueType ? revenueType.id : (parentAccount ? parentAccount.accountTypeId : null),
+        detailType: 'Revenue',
+        currency: 'PKR',
+        subsidiary: ['Global'],
+        initialBalance: 0,
+        currentBalance: 0,
+        isSystemDefined: true,
+        description: 'General/unrestricted donation income'
+      }
+    });
+
+    return donationAccount;
+  }
+
   static async getOrCreateAccountsReceivable(tx: any) {
     let arAccount = await tx.account.findFirst({
       where: {

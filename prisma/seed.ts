@@ -400,6 +400,7 @@ async function main() {
     { glCode: '3020405', accountName: 'Coconut Income', parentCode: '3020400', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Coconut income' },
     { glCode: '3020406', accountName: 'Qurbani Cow Hide Income', parentCode: '3020400', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Qurbani cow hide income' },
     { glCode: '3020407', accountName: 'Lighting Commission', parentCode: '3020400', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Lighting commission' },
+    { glCode: '3020408', accountName: 'General Donation', parentCode: '3020400', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'General/unrestricted donation income' },
     // Under Salaries Expense (4010100)
     { glCode: '4010101', accountName: 'Staff Salary',         parentCode: '4010100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Monthly staff salary disbursement' },
     { glCode: '4010102', accountName: 'Staff Bonus',          parentCode: '4010100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Staff bonus' },

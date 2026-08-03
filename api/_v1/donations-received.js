@@ -209,10 +209,13 @@ var donations_received_default = makeHandler(async (req, res) => {
           const receiptNo = await nextReceiptNo(tx);
           let journalEntryId = null;
           if (txStatus === "POSTED") {
+            const isGeneralDonation = donationType === "CUSTOM" || donationType === "GENERAL_DONATION";
+            const generalDonationAccount = isGeneralDonation ? await AccountingService.ensureGeneralDonationAccount(tx) : null;
             const postingResult = await AccountingService.postReceipt(tx, {
               amount: parsedAmount,
               cashOrBankAccountId: debitAccountId,
-              incomeAccountKeyword: donationType === "CUSTOM" ? "General Donation" : donationType,
+              incomeAccountId: generalDonationAccount ? generalDonationAccount.id : void 0,
+              incomeAccountKeyword: generalDonationAccount ? void 0 : donationType,
               reference: receiptNo,
               description: narration || `Received ${donationType === "CUSTOM" ? customDonationType : donationType} from ${donor.fullName} (${donor.donorCode})`,
               module: "Donations Received",
@@ -314,10 +317,13 @@ var donations_received_default = makeHandler(async (req, res) => {
           const updatedCustomType = customDonationType !== void 0 ? customDonationType : existing.customDonationType;
           const updatedNarration = narration !== void 0 ? narration : existing.narration;
           const updatedDate = receiptDate !== void 0 ? new Date(receiptDate) : existing.receiptDate;
+          const isGeneralDonation = updatedType === "CUSTOM" || updatedType === "GENERAL_DONATION";
+          const generalDonationAccount = isGeneralDonation ? await AccountingService.ensureGeneralDonationAccount(tx) : null;
           const postingResult = await AccountingService.postReceipt(tx, {
             amount: updatedAmount,
             cashOrBankAccountId: debitAccountId,
-            incomeAccountKeyword: updatedType === "CUSTOM" ? "General Donation" : updatedType,
+            incomeAccountId: generalDonationAccount ? generalDonationAccount.id : void 0,
+            incomeAccountKeyword: generalDonationAccount ? void 0 : updatedType,
             reference: existing.receiptNo,
             description: updatedNarration || `Received ${updatedType === "CUSTOM" ? updatedCustomType : updatedType} from ${existing.donor.fullName}`,
             module: "Donations Received",
