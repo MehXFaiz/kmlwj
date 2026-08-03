@@ -51,12 +51,20 @@ export function UpdateBanner() {
       </div>
 
       {ready ? (
-        <button
-          onClick={restartAndInstall}
-          className="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white transition-colors cursor-pointer whitespace-nowrap"
-        >
-          Restart Now
-        </button>
+        <div className="flex-shrink-0 flex items-center gap-2">
+          <button
+            onClick={() => setDismissed(true)}
+            className="text-xs font-semibold px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors cursor-pointer whitespace-nowrap"
+          >
+            Later
+          </button>
+          <button
+            onClick={restartAndInstall}
+            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white transition-colors cursor-pointer whitespace-nowrap"
+          >
+            Restart Now
+          </button>
+        </div>
       ) : (
         <button
           onClick={() => setDismissed(true)}

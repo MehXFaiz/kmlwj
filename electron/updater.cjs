@@ -46,11 +46,26 @@ function initUpdater(mainWindow) {
     }
   };
 
-  autoUpdater.on('checking-for-update', () => send('updater:status', { state: 'checking' }));
-  autoUpdater.on('update-available', (info) => send('updater:status', { state: 'available', version: info.version }));
-  autoUpdater.on('update-not-available', () => send('updater:status', { state: 'up-to-date' }));
-  autoUpdater.on('download-progress', (progress) => send('updater:progress', { percent: progress.percent }));
-  autoUpdater.on('update-downloaded', (info) => send('updater:status', { state: 'downloaded', version: info.version }));
+  autoUpdater.on('checking-for-update', () => {
+    log.info('[updater] checking for update');
+    send('updater:status', { state: 'checking' });
+  });
+  autoUpdater.on('update-available', (info) => {
+    log.info('[updater] update available:', info.version);
+    send('updater:status', { state: 'available', version: info.version });
+  });
+  autoUpdater.on('update-not-available', () => {
+    log.info('[updater] up to date');
+    send('updater:status', { state: 'up-to-date' });
+  });
+  autoUpdater.on('download-progress', (progress) => {
+    log.debug('[updater] download progress:', `${Math.round(progress.percent)}%`);
+    send('updater:progress', { percent: progress.percent });
+  });
+  autoUpdater.on('update-downloaded', (info) => {
+    log.info('[updater] update downloaded, ready to install:', info.version);
+    send('updater:status', { state: 'downloaded', version: info.version });
+  });
   autoUpdater.on('error', (error) => {
     log.warn('[updater] error (expected until a publish target is configured):', error?.message);
     send('updater:status', { state: 'error', message: error?.message });
