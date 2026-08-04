@@ -1,6 +1,6 @@
 import React, { useState, lazy, Suspense, useEffect, Component } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { TrendingUp, TrendingDown, FileText, RefreshCw, Plus, X, BookOpen } from 'lucide-react';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { BookOpen } from 'lucide-react';
 import { SplashScreen } from './components/common/SplashScreen';
 import { Sidebar } from './components/common/Sidebar';
 import { Topbar } from './components/common/Topbar';
@@ -141,74 +141,6 @@ class ChunkErrorBoundary extends Component {
   }
 }
 
-/* ──────────────────────────────────────────────────
-   Mobile Floating Action Button
-   Visible only on small screens (hidden on lg+)
-───────────────────────────────────────────────── */
-const MobileFab = () => {
-  const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
-
-  const actions = [
-    { label: 'Add Income', desc: 'Record money received', icon: TrendingUp, color: 'text-emerald-400 bg-emerald-950/80 border-emerald-800/60', path: '/bank-vouchers/revenue/new' },
-    { label: 'Add Expense', desc: 'Record money spent', icon: TrendingDown, color: 'text-red-400 bg-red-950/80 border-red-800/60', path: '/bank-vouchers/expense/new' },
-    { label: 'Journal Entry', desc: 'Manual entry', icon: FileText, color: 'text-amber-400 bg-amber-950/80 border-amber-800/60', path: '/journals' },
-    { label: 'Transfer', desc: 'Move between accounts', icon: RefreshCw, color: 'text-violet-400 bg-violet-950/80 border-violet-800/60', path: '/bank-vouchers/transfer/new' },
-  ];
-
-  return (
-    <>
-      {/* Backdrop */}
-      {open && (
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[80] lg:hidden"
-          onClick={() => setOpen(false)}
-        />
-      )}
-
-      {/* Action sheet */}
-      {open && (
-        <div className="fixed bottom-24 left-4 right-4 z-[90] lg:hidden">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-slate-800/80">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Quick Action</p>
-              <p className="text-[11px] text-slate-600 mt-0.5">What would you like to do?</p>
-            </div>
-            <div className="p-3 space-y-2">
-              {actions.map((action) => (
-                <button
-                  key={action.path}
-                  onClick={() => { navigate(action.path); setOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border transition-all active:scale-[0.98] ${action.color}`}
-                >
-                  <div className="h-10 w-10 rounded-xl bg-slate-900/60 flex items-center justify-center flex-shrink-0">
-                    <action.icon className="h-5 w-5" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-sm font-bold">{action.label}</p>
-                    <p className="text-[11px] opacity-70 mt-0.5">{action.desc}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* FAB Button */}
-      <button
-        onClick={() => setOpen(prev => !prev)}
-        className="fixed bottom-6 right-5 z-[90] lg:hidden w-14 h-14 rounded-full bg-amber-600 hover:bg-amber-500 active:scale-95 shadow-2xl shadow-amber-900/60 flex items-center justify-center text-white transition-all duration-200"
-        aria-label="Quick actions"
-      >
-        {open
-          ? <X className="h-6 w-6" />
-          : <Plus className="h-6 w-6" />}
-      </button>
-    </>
-  );
-};
-
 // Protected Routes Shell
 const ProtectedRoutesWrapper = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -252,9 +184,6 @@ const ProtectedRoutesWrapper = () => {
           </div>
         </main>
       </div>
-
-      {/* Mobile FAB — quick actions floating button */}
-      <MobileFab />
     </div>
   );
 };
