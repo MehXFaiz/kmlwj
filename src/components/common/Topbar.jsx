@@ -5,7 +5,6 @@ import { useAuthStore } from '../../store/authStore';
 import { Menu, User, Settings, LogOut, ChevronDown, Globe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-import logoImg from '../../assets/logo.png';
 
 const ORG_NAME_URDU = 'کچھی مسلم لوہارواڈھا ویلفیئر جماعت';
 
@@ -138,16 +137,6 @@ export const Topbar = ({ onMobileMenuToggle }) => {
           >
             <Menu className="h-5 w-5" />
           </button>
-
-          <Link
-            to="/"
-            aria-label="KMLWJ home"
-            className="flex items-center shrink-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 lg:hidden"
-          >
-            <span className="flex items-center justify-center h-9 w-9 rounded-xl border border-brand-700/40 bg-brand-950/40 p-1 shadow-inner">
-              <img src={logoImg} alt="" className="h-full w-full object-contain" />
-            </span>
-          </Link>
         </div>
 
         {/* ── Centre: Urdu wordmark (primary) ─────────────────────────────── */}
