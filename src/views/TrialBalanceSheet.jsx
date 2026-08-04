@@ -452,22 +452,24 @@ export const TrialBalanceSheet = () => {
 
         <div className="flex flex-wrap items-center gap-3">
           {/* View Switcher Toggle */}
-          <div className="inline-flex rounded-lg bg-slate-900 border border-slate-800 p-0.5">
+          <div className="grid grid-cols-2 w-full sm:w-auto sm:inline-flex rounded-lg bg-slate-900 border border-slate-800 p-0.5">
             <button
               onClick={() => setViewMode('matrix')}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${viewMode === 'matrix' ? 'bg-brand-400 text-slate-50 shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+              className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${viewMode === 'matrix' ? 'bg-brand-400 text-slate-50 shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
               title="Matrix View (Urdu Paper Layout)"
             >
-              <Grid className="h-3.5 w-3.5" />
-              <span>Dual-Column Matrix</span>
+              <Grid className="h-3.5 w-3.5 shrink-0" />
+              <span className="sm:hidden">Matrix</span>
+              <span className="hidden sm:inline">Dual-Column Matrix</span>
             </button>
             <button
               onClick={() => setViewMode('ledger')}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${viewMode === 'ledger' ? 'bg-brand-400 text-slate-50 shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+              className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${viewMode === 'ledger' ? 'bg-brand-400 text-slate-50 shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
               title="Standard Hierarchical Table View"
             >
-              <List className="h-3.5 w-3.5" />
-              <span>Standard Ledger</span>
+              <List className="h-3.5 w-3.5 shrink-0" />
+              <span className="sm:hidden">Ledger</span>
+              <span className="hidden sm:inline">Standard Ledger</span>
             </button>
           </div>
 
@@ -492,22 +494,22 @@ export const TrialBalanceSheet = () => {
       <Card className="bg-slate-900/40 border-slate-800 print:hidden">
         <CardContent className="p-4 flex flex-col sm:flex-row items-end justify-between gap-4">
           <div className="flex flex-wrap items-center gap-4 w-full">
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 flex-1 min-w-[130px] sm:flex-none">
               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">From Date</label>
               <input
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="bg-slate-950/60 border border-slate-800 rounded-xl text-xs py-2 px-3 text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-400/30 w-44"
+                className="w-full sm:w-44 bg-slate-950/60 border border-slate-800 rounded-xl text-xs py-2 px-3 text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
               />
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 flex-1 min-w-[130px] sm:flex-none">
               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">To Date</label>
               <input
                 type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="bg-slate-950/60 border border-slate-800 rounded-xl text-xs py-2 px-3 text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-400/30 w-44"
+                className="w-full sm:w-44 bg-slate-950/60 border border-slate-800 rounded-xl text-xs py-2 px-3 text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
               />
             </div>
             {(fromDate || toDate) && (
@@ -593,7 +595,7 @@ export const TrialBalanceSheet = () => {
             <div className="overflow-x-auto print:overflow-visible">
               <div className="bg-slate-900/80 print:bg-slate-100 px-4 py-3 border-b border-slate-800 print:border-slate-300 flex items-center justify-between">
                 <h3 className="font-bold text-sm text-slate-200 print:text-slate-900 uppercase tracking-wider">Payments / Expenditures</h3>
-                <span className="text-xs text-slate-500 font-mono print:hidden">Left Column (Debit Outcomes)</span>
+                <span className="hidden md:inline text-xs text-slate-500 font-mono print:hidden">Left Column (Debit Outcomes)</span>
               </div>
               <table className="w-full text-left text-xs border-collapse min-w-[450px]">
                 <thead>
@@ -645,7 +647,7 @@ export const TrialBalanceSheet = () => {
             <div className="overflow-x-auto print:overflow-visible">
               <div className="bg-slate-900/80 print:bg-slate-100 px-4 py-3 border-b border-slate-800 print:border-slate-300 flex items-center justify-between">
                 <h3 className="font-bold text-sm text-slate-200 print:text-slate-900 uppercase tracking-wider">Receipts / Income</h3>
-                <span className="text-xs text-slate-500 font-mono print:hidden">Right Column (Credit Inflows)</span>
+                <span className="hidden md:inline text-xs text-slate-500 font-mono print:hidden">Right Column (Credit Inflows)</span>
               </div>
               <table className="w-full text-left text-xs border-collapse min-w-[450px]">
                 <thead>
