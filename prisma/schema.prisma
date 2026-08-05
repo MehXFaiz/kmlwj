@@ -391,7 +391,9 @@ model IncomeCategory {
   id             String            @id @default(uuid()) @db.Uuid
   name           String            @unique
   description    String?
-  accountId      String?           @db.Uuid
+  // @unique: two categories must never share one GL account — otherwise
+  // postings from different categories become indistinguishable in reports.
+  accountId      String?           @unique @db.Uuid
   account        Account?          @relation(fields: [accountId], references: [id])
   isActive       Boolean           @default(true)
   isDeleted      Boolean           @default(false)

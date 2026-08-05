@@ -327,6 +327,7 @@ async function main() {
     { glCode: '3020200', accountName: 'Fitra',                parentCode: '3020000', accountTypeName: 'REVENUE',   detailType: 'Header', description: 'Fitra collection' },
     { glCode: '3020300', accountName: 'Qurbani',              parentCode: '3020000', accountTypeName: 'REVENUE',   detailType: 'Header', description: 'Qurbani space/fees' },
     { glCode: '3020400', accountName: 'Other Income',         parentCode: '3020000', accountTypeName: 'REVENUE',   detailType: 'Header', description: 'Bus booking, membership fee, decoration commission, etc.' },
+    { glCode: '3020500', accountName: 'Add Income Categories', parentCode: '3020000', accountTypeName: 'REVENUE',  detailType: 'Header', description: 'Revenue GL accounts mapped from the Add Income module\'s Income Categories' },
     // Under Salaries & Wages (4010100)
     { glCode: '4010100', accountName: 'Salaries Expense',     parentCode: '4010000', accountTypeName: 'EXPENSE',   detailType: 'Header', description: 'Monthly payroll cost' },
     // Under Hall Expenses (4020000)
@@ -413,6 +414,18 @@ async function main() {
     { glCode: '3020406', accountName: 'Qurbani Cow Hide Income', parentCode: '3020400', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Qurbani cow hide income' },
     { glCode: '3020407', accountName: 'Lighting Commission', parentCode: '3020400', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Lighting commission' },
     { glCode: '3020408', accountName: 'General Donation', parentCode: '3020400', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'General/unrestricted donation income' },
+    // Under Add Income Categories (3020500) — one leaf per active Add Income
+    // module IncomeCategory, mapped via IncomeCategory.accountId (never by
+    // name — see ensureDefaultCategories()'s backfill below and api/_v1/add-income.ts).
+    { glCode: '3020501', accountName: 'Other Income', parentCode: '3020500', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Add Income module — Other Income category' },
+    { glCode: '3020502', accountName: 'Haqqani Decoration Income', parentCode: '3020500', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Add Income module — Haqqani Decoration Income category' },
+    { glCode: '3020503', accountName: 'Shouqat Eco Sound Income', parentCode: '3020500', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Add Income module — Shouqat Eco Sound Income category' },
+    { glCode: '3020504', accountName: 'Sharjeel Eco Sound Income', parentCode: '3020500', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Add Income module — Sharjeel Eco Sound Income category' },
+    { glCode: '3020505', accountName: 'Rizwan Eco Sound Income', parentCode: '3020500', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Add Income module — Rizwan Eco Sound Income category' },
+    { glCode: '3020506', accountName: 'Election Committee Income', parentCode: '3020500', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Add Income module — Election Committee Income category' },
+    { glCode: '3020507', accountName: 'Software Invoice Income', parentCode: '3020500', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Add Income module — Software Invoice Income category' },
+    { glCode: '3020508', accountName: 'Monthly Donation', parentCode: '3020500', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Add Income module — Monthly Donation category' },
+    { glCode: '3020509', accountName: 'Ramzan Zakat Income', parentCode: '3020500', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Add Income module — Ramzan Zakat Income category' },
     // Under Salaries Expense (4010100)
     { glCode: '4010101', accountName: 'Staff Salary',         parentCode: '4010100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Monthly staff salary disbursement' },
     { glCode: '4010102', accountName: 'Staff Bonus',          parentCode: '4010100', accountTypeName: 'EXPENSE', detailType: 'Expense', description: 'Staff bonus' },

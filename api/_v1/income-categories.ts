@@ -30,23 +30,40 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       data: { name: 'Other Income' }
     }).catch(() => {});
 
-    const defaultCats = [
-      'Other Income',
-      'Haqqani Decoration Income',
-      'Shouqat Eco Sound Income',
-      'Sharjeel Eco Sound Income',
-      'Rizwan Eco Sound Income',
-      'Election Committee Income',
-      'Software Invoice Income',
-      'Monthly Donation',
-      'Ramzan Zakat Income',
-    ];
+    // name -> GL leaf code, matching the 3020501-3020509 accounts seeded
+    // under 3020500 "Add Income Categories" in prisma/seed.ts.
+    const defaultCatGlCodes: Record<string, string> = {
+      'Other Income': '3020501',
+      'Haqqani Decoration Income': '3020502',
+      'Shouqat Eco Sound Income': '3020503',
+      'Sharjeel Eco Sound Income': '3020504',
+      'Rizwan Eco Sound Income': '3020505',
+      'Election Committee Income': '3020506',
+      'Software Invoice Income': '3020507',
+      'Monthly Donation': '3020508',
+      'Ramzan Zakat Income': '3020509',
+    };
 
-    for (const catName of defaultCats) {
+    for (const catName of Object.keys(defaultCatGlCodes)) {
       await prisma.incomeCategory.upsert({
         where: { name: catName },
         update: { isDeleted: false },
         create: { name: catName, isActive: true }
+      }).catch(() => {});
+    }
+
+    // Auto-map: fill in accountId for any of the above categories that don't
+    // have one yet (never overwrites an admin's existing/changed mapping —
+    // this is what makes 'HaqqaniDecorationIncome'-style crashes impossible
+    // by the time a user ever opens the Add Income form). Safe to re-run.
+    for (const [catName, glCode] of Object.entries(defaultCatGlCodes)) {
+      const category = await prisma.incomeCategory.findUnique({ where: { name: catName } }).catch(() => null);
+      if (!category || category.accountId) continue;
+      const account = await prisma.account.findUnique({ where: { glCode } }).catch(() => null);
+      if (!account) continue;
+      await prisma.incomeCategory.update({
+        where: { id: category.id },
+        data: { accountId: account.id }
       }).catch(() => {});
     }
   };
