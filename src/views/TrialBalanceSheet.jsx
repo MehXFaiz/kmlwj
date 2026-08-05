@@ -138,7 +138,6 @@ export const TrialBalanceSheet = () => {
     const typeOf = (e) => (e.accountType || '').toUpperCase();
     const expenseEntries = entries.filter(e => typeOf(e) === 'EXPENSE');
     const revenueEntries = entries.filter(e => typeOf(e) === 'REVENUE' || typeOf(e) === 'INCOME');
-    const assetEntries   = entries.filter(e => typeOf(e) === 'ASSET');
 
     // Debit-normal balance for expenses/assets; credit-normal for revenue.
     const debitBal  = (e) => Math.max(0, (e.debit || 0) - (e.credit || 0));
@@ -219,33 +218,35 @@ export const TrialBalanceSheet = () => {
     const incomes = partition(revenueEntries, revenueRowDefs, creditBal, 'Other Income');
     const totalActualRevenue = revenueEntries.reduce((s, e) => s + creditBal(e), 0);
 
-    // ── CASH IN HAND vs BANK BALANCE (Requirement 9) ─────────────────────────
-    // Cash in Hand = Cash GL closing balance only (never a bank account).
-    // Bank Balance = sum of bank GL accounts (National Bank of Pakistan + NBP
-    // Zakat) only. Both come from the same posted-GL tbReport asset rows.
-    const isCashName = (name, detailType) => {
-      const n = (name || '').toLowerCase();
-      if (n.includes('bank')) return false;
-      if (n.includes('cash') || n.includes('hand') || n.includes('petty') || n.includes('till')) return true;
-      const d = (detailType || '').toLowerCase();
-      return d === 'cash';
+    return { expenses, incomes, totalActualExpense, totalActualRevenue };
+  }, [tbReport]);
+
+  // ── OPENING / CLOSING BALANCES (proper accounting-standard presentation) ──
+  // Cash in Hand, every Bank individually, Advance & Loan, Receivable, and a
+  // residual Other Assets bucket. Read directly from the backend's
+  // openingBalances/closingBalances — computed in AccountingService.getTrialBalance
+  // from initialBalance + posted JournalEntryLine rows only. No client-side
+  // name-matching, no cached values: this IS the single source of truth.
+  const emptyCat = { total: 0, accounts: [] };
+  const balanceSheetCategories = useMemo(() => {
+    const opening = tbReport?.openingBalances || {};
+    const closing = tbReport?.closingBalances || {};
+    return {
+      opening: {
+        cashInHand: opening.cashInHand || emptyCat,
+        banks: opening.banks || emptyCat,
+        advanceAndLoan: opening.advanceAndLoan || emptyCat,
+        receivable: opening.receivable || emptyCat,
+        otherAssets: opening.otherAssets || emptyCat,
+      },
+      closing: {
+        cashInHand: closing.cashInHand || emptyCat,
+        banks: closing.banks || emptyCat,
+        advanceAndLoan: closing.advanceAndLoan || emptyCat,
+        receivable: closing.receivable || emptyCat,
+        otherAssets: closing.otherAssets || emptyCat,
+      },
     };
-    const isBankName = (name, detailType) => {
-      const n = (name || '').toLowerCase();
-      if (n.includes('bank') || n.includes('nbp') || n.includes('national bank') || n.includes('al-habib') || n.includes('mcb') || n.includes('ubl')) return true;
-      const d = (detailType || '').toLowerCase();
-      return d === 'bank';
-    };
-
-    const cashInHand = assetEntries
-      .filter(e => isCashName(e.accountName, e.detailType))
-      .reduce((s, e) => s + debitBal(e), 0);
-
-    const bankBalance = assetEntries
-      .filter(e => isBankName(e.accountName, e.detailType))
-      .reduce((s, e) => s + debitBal(e), 0);
-
-    return { expenses, incomes, cashInHand, bankBalance, totalActualExpense, totalActualRevenue };
   }, [tbReport]);
 
   const filteredData = useMemo(() => {

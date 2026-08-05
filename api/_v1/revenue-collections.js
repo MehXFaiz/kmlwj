@@ -255,6 +255,10 @@ var revenue_collections_default = makeHandler(async (req, res) => {
     return res.status(201).json({ status: 201, data: result });
   }
   if (method === "DELETE") {
+    const isPermanent = req.query.permanent === "true" || req.query.action === "permanent_delete" || req.body?.permanent === true;
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can permanently delete records", status: 403 } });
+    }
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
     if (!idsRaw) {
       return res.status(400).json({ error: { message: "Record ID(s) required", status: 400 } });
@@ -264,7 +268,7 @@ var revenue_collections_default = makeHandler(async (req, res) => {
       return res.status(400).json({ error: { message: "No valid ID provided", status: 400 } });
     }
     try {
-      const deletedItems = await prisma.$transaction(async (tx) => {
+      const affectedItems = await prisma.$transaction(async (tx) => {
         const items = await tx.revenueCollection.findMany({
           where: { id: { in: ids } }
         });
@@ -272,31 +276,46 @@ var revenue_collections_default = makeHandler(async (req, res) => {
           throw new Error("No records found to delete");
         }
         for (const item of items) {
-          if (item.status === "POSTED" && item.journalEntryId) {
+          if (item.journalEntryId) {
             try {
-              await AccountingService.deleteJournalEntry(tx, item.journalEntryId, req.user.id, `${item.category} Deleted`);
+              if (isPermanent) {
+                await AccountingService.deleteJournalEntry(tx, item.journalEntryId, req.user.id, `${item.category} Permanently Deleted`);
+              } else {
+                await tx.journalEntry.update({
+                  where: { id: item.journalEntryId },
+                  data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
+                });
+                await AccountingService.recalculateBalancesForJournalEntry(tx, item.journalEntryId);
+              }
             } catch (e) {
             }
           }
         }
-        await tx.revenueCollection.deleteMany({
-          where: { id: { in: items.map((i) => i.id) } }
-        });
+        if (isPermanent) {
+          await tx.revenueCollection.deleteMany({
+            where: { id: { in: items.map((i) => i.id) } }
+          });
+        } else {
+          await tx.revenueCollection.updateMany({
+            where: { id: { in: items.map((i) => i.id) } },
+            data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
+          });
+        }
         return items;
       }, accountingTxOptions);
       await logAudit(
         req.user.id,
-        "Delete Revenue Collection",
+        isPermanent ? "Permanent Delete Revenue Collection" : "Delete Revenue Collection",
         "REVENUE",
         null,
-        { count: deletedItems.length, ids: deletedItems.map((i) => i.id) },
+        { count: affectedItems.length, ids: affectedItems.map((i) => i.id), permanent: isPermanent },
         req.headers["x-forwarded-for"],
         req.headers["user-agent"]
       );
       return res.status(200).json({
         status: 200,
-        message: `${deletedItems.length} record(s) deleted successfully`,
-        data: deletedItems
+        message: `${affectedItems.length} record(s) deleted successfully`,
+        data: affectedItems
       });
     } catch (err) {
       return res.status(400).json({ error: { message: err.message || "Failed to delete record(s)", status: 400 } });
@@ -387,46 +406,6 @@ var revenue_collections_default = makeHandler(async (req, res) => {
     }, accountingTxOptions);
     await logAudit(req.user.id, `Update & Post ${category}`, "REVENUE", existingItem, updatedItem, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     return res.status(200).json({ status: 200, data: updatedItem });
-  }
-  if (method === "DELETE") {
-    const isPermanent = req.query.permanent === "true" || req.query.action === "permanent_delete" || req.body?.permanent === true;
-    if (isPermanent && !await isSuperAdmin(req)) {
-      return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can permanently delete records", status: 403 } });
-    }
-    const targetId = id || req.body?.id;
-    if (!targetId) {
-      return res.status(400).json({ error: { message: "Collection ID is required", status: 400 } });
-    }
-    const existing = await prisma.revenueCollection.findUnique({ where: { id: targetId } });
-    if (!existing) {
-      return res.status(404).json({ error: { message: "Record not found", status: 404 } });
-    }
-    await prisma.$transaction(async (tx) => {
-      if (existing.journalEntryId) {
-        try {
-          if (isPermanent) {
-            await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user.id, "Revenue Collection Permanently Deleted");
-          } else {
-            await tx.journalEntry.update({
-              where: { id: existing.journalEntryId },
-              data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
-            });
-            await AccountingService.recalculateBalancesForJournalEntry(tx, existing.journalEntryId);
-          }
-        } catch (e) {
-        }
-      }
-      if (isPermanent) {
-        await tx.revenueCollection.delete({ where: { id: targetId } });
-      } else {
-        await tx.revenueCollection.update({
-          where: { id: targetId },
-          data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
-        });
-      }
-    });
-    await logAudit(req.user.id, isPermanent ? "Permanent Delete Revenue Collection" : "Delete Revenue Collection", "REVENUE", existing, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    return res.status(200).json({ status: 200, message: "Revenue collection deleted successfully" });
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
 });

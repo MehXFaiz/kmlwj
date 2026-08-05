@@ -137,9 +137,33 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       if (!existing) {
         return res.status(404).json({ error: { message: 'Donation not found', status: 404 } });
       }
-      const restored = await prisma.donation.update({
-        where: { id },
-        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      const restored = await prisma.$transaction(async (tx) => {
+        const updated = await tx.donation.update({
+          where: { id },
+          data: { isDeleted: false, deletedAt: null, deletedBy: null }
+        });
+
+        // An APPROVED donation's journal entry was soft-deleted alongside it —
+        // restore it too and rebuild the cached balances, or the restored
+        // donation stays invisible to every report (same bug fixed for Simple
+        // Income / Invoices). Same reference lookup the delete path already uses.
+        if (updated.status === 'APPROVED') {
+          const ref = `DON-${updated.id.substring(0, 8)}`;
+          const je = await tx.journalEntry.findFirst({ where: { reference: ref, isDeleted: true } });
+          if (je) {
+            try {
+              await tx.journalEntry.update({
+                where: { id: je.id },
+                data: { isDeleted: false, deletedAt: null, deletedBy: null }
+              });
+              await AccountingService.recalculateBalancesForJournalEntry(tx, je.id);
+            } catch (e) {
+              // Ignore if already restored
+            }
+          }
+        }
+
+        return updated;
       });
       await logAudit(req.user.id, 'Restore Donation', 'DONATION', existing, restored, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
       return res.status(200).json({ status: 200, message: 'Donation restored successfully', data: restored });

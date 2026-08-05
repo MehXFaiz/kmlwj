@@ -449,6 +449,10 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     }
   }
   if (method === "DELETE") {
+    const isPermanent = req.query.permanent === "true" || req.query.action === "permanent_delete" || req.body?.permanent === true;
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can permanently delete records", status: 403 } });
+    }
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
     if (!idsRaw) {
       return res.status(400).json({ error: { message: "Booking ID(s) required", status: 400 } });
@@ -458,7 +462,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
       return res.status(400).json({ error: { message: "No valid booking ID provided", status: 400 } });
     }
     try {
-      const deletedBookings = await prisma.$transaction(async (tx) => {
+      const affectedBookings = await prisma.$transaction(async (tx) => {
         const bookings = await tx.hallBooking.findMany({
           where: { id: { in: ids } }
         });
@@ -466,31 +470,46 @@ var hall_bookings_default = makeHandler(async (req, res) => {
           throw new Error("No hall bookings found to delete");
         }
         for (const booking of bookings) {
-          if (booking.status === "POSTED" && booking.journalEntryId) {
+          if (booking.journalEntryId) {
             try {
-              await AccountingService.deleteJournalEntry(tx, booking.journalEntryId, req.user.id, "Hall Booking Deleted");
+              if (isPermanent) {
+                await AccountingService.deleteJournalEntry(tx, booking.journalEntryId, req.user.id, "Hall Booking Permanently Deleted");
+              } else {
+                await tx.journalEntry.update({
+                  where: { id: booking.journalEntryId },
+                  data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
+                });
+                await AccountingService.recalculateBalancesForJournalEntry(tx, booking.journalEntryId);
+              }
             } catch (e) {
             }
           }
         }
-        await tx.hallBooking.deleteMany({
-          where: { id: { in: bookings.map((b) => b.id) } }
-        });
+        if (isPermanent) {
+          await tx.hallBooking.deleteMany({
+            where: { id: { in: bookings.map((b) => b.id) } }
+          });
+        } else {
+          await tx.hallBooking.updateMany({
+            where: { id: { in: bookings.map((b) => b.id) } },
+            data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
+          });
+        }
         return bookings;
       });
       await logAudit(
         req.user.id,
-        "Delete Hall Booking",
+        isPermanent ? "Permanent Delete Hall Booking" : "Delete Hall Booking",
         "REVENUE",
         null,
-        { count: deletedBookings.length, ids: deletedBookings.map((b) => b.id) },
+        { count: affectedBookings.length, ids: affectedBookings.map((b) => b.id), permanent: isPermanent },
         req.headers["x-forwarded-for"],
         req.headers["user-agent"]
       );
       return res.status(200).json({
         status: 200,
-        message: `${deletedBookings.length} hall booking(s) deleted successfully`,
-        data: deletedBookings
+        message: `${affectedBookings.length} hall booking(s) deleted successfully`,
+        data: affectedBookings
       });
     } catch (err) {
       return res.status(400).json({ error: { message: err.message || "Failed to delete hall booking(s)", status: 400 } });
@@ -743,46 +762,6 @@ var hall_bookings_default = makeHandler(async (req, res) => {
       }
       throw err;
     }
-  }
-  if (method === "DELETE") {
-    const isPermanent = req.query.permanent === "true" || req.query.action === "permanent_delete" || req.body?.permanent === true;
-    if (isPermanent && !await isSuperAdmin(req)) {
-      return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can permanently delete records", status: 403 } });
-    }
-    const targetId = req.query.id || req.body?.id;
-    if (!targetId) {
-      return res.status(400).json({ error: { message: "Booking ID is required", status: 400 } });
-    }
-    const existing = await prisma.hallBooking.findUnique({ where: { id: targetId } });
-    if (!existing) {
-      return res.status(404).json({ error: { message: "Booking not found", status: 404 } });
-    }
-    await prisma.$transaction(async (tx) => {
-      if (existing.journalEntryId) {
-        try {
-          if (isPermanent) {
-            await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user.id, "Hall Booking Permanently Deleted");
-          } else {
-            await tx.journalEntry.update({
-              where: { id: existing.journalEntryId },
-              data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
-            });
-            await AccountingService.recalculateBalancesForJournalEntry(tx, existing.journalEntryId);
-          }
-        } catch (e) {
-        }
-      }
-      if (isPermanent) {
-        await tx.hallBooking.delete({ where: { id: targetId } });
-      } else {
-        await tx.hallBooking.update({
-          where: { id: targetId },
-          data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
-        });
-      }
-    });
-    await logAudit(req.user.id, isPermanent ? "Permanent Delete Hall Booking" : "Delete Hall Booking", "REVENUE", existing, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    return res.status(200).json({ status: 200, message: "Hall booking deleted successfully" });
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
 });

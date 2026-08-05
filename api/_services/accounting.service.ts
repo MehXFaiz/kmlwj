@@ -1482,8 +1482,14 @@ export class AccountingService {
     // All balances derive from posted journal entry lines — the single source
     // of truth. Three aggregate windows cover every case in one query each:
     //   period      → P&L accounts (activity inside the range)
-    //   cumulative  → balance-sheet accounts (everything up to `to`)
-    //   prior       → retained earnings carried in from before `from`
+    //   cumulative  → balance-sheet accounts (everything up to `to`) — this IS
+    //                 each Asset account's CLOSING balance as of `to`
+    //   prior       → everything posted strictly before `from` — combined with
+    //                 initialBalance, this IS each Asset account's OPENING
+    //                 balance as of `from` (falls back to plain initialBalance
+    //                 when `from` is unset, since priorAggregates is then an
+    //                 empty map and naturalBalance treats a missing aggregate
+    //                 as zero activity)
     const periodAggregates = await AccountingService.getPostedAggregates({ from, to });
     const cumulativeAggregates = hasDateFilter
       ? await AccountingService.getPostedAggregates({ to })
@@ -1497,6 +1503,25 @@ export class AccountingService {
     let openingRetainedEarnings = new Prisma.Decimal(0);
 
     const formatted: any[] = [];
+
+    // ── Opening/Closing Balance categories (proper accounting-standard
+    // presentation): Cash in Hand, every Bank individually, Advance & Loan,
+    // Receivable, and a residual "Other Assets" bucket for anything else.
+    // Every figure comes from initialBalance + posted JournalEntryLine
+    // aggregates only, via the exact same naturalBalance()/getPostedAggregates()
+    // helpers every other report in this service uses — nothing cached, and no
+    // account *name* is hardcoded, only the small set of `detailType`
+    // conventions seeded in prisma/seed.ts (Cash / Bank / Receivable / Advance),
+    // with the existing isCashAccount/isBankAccount name-fallback for any older
+    // account whose detailType predates that convention.
+    type CategoryKey = 'cashInHand' | 'banks' | 'advanceAndLoan' | 'receivable' | 'otherAssets';
+    const emptyCategory = () => ({ total: new Prisma.Decimal(0), accounts: [] as { glCode: string; name: string; balance: number }[] });
+    const openingCats: Record<CategoryKey, ReturnType<typeof emptyCategory>> = {
+      cashInHand: emptyCategory(), banks: emptyCategory(), advanceAndLoan: emptyCategory(), receivable: emptyCategory(), otherAssets: emptyCategory(),
+    };
+    const closingCats: Record<CategoryKey, ReturnType<typeof emptyCategory>> = {
+      cashInHand: emptyCategory(), banks: emptyCategory(), advanceAndLoan: emptyCategory(), receivable: emptyCategory(), otherAssets: emptyCategory(),
+    };
 
     for (const acc of activeAccounts) {
       const typeName = acc.accountType?.name?.toUpperCase() || 'ASSET';
@@ -1522,6 +1547,28 @@ export class AccountingService {
         } else {
           openingRetainedEarnings = openingRetainedEarnings.minus(pd.minus(pc));
         }
+      }
+
+      // Opening/Closing Balance breakdown — real (leaf, postable) Asset
+      // accounts only. Independent of the hasDateFilter/isPnl branching above:
+      // this always reflects true point-in-time balances, never a
+      // period-only movement, which is exactly what "Opening Balance" and
+      // "Closing Balance" mean for a balance-sheet account.
+      if (typeName === 'ASSET' && acc.accountLevel === 'GL') {
+        const openingBal = AccountingService.naturalBalance(typeName, acc.initialBalance, priorAggregates.get(acc.id));
+        const closingBal = AccountingService.naturalBalance(typeName, acc.initialBalance, cumulativeAggregates.get(acc.id));
+
+        let key: CategoryKey;
+        if (AccountingService.isBankAccount(acc.accountName, acc.detailType)) key = 'banks';
+        else if (AccountingService.isCashAccount(acc.accountName, acc.detailType)) key = 'cashInHand';
+        else if ((acc.detailType || '').toLowerCase() === 'receivable') key = 'receivable';
+        else if ((acc.detailType || '').toLowerCase() === 'advance') key = 'advanceAndLoan';
+        else key = 'otherAssets';
+
+        openingCats[key].total = openingCats[key].total.plus(openingBal);
+        openingCats[key].accounts.push({ glCode: acc.glCode, name: acc.accountName, balance: openingBal.toNumber() });
+        closingCats[key].total = closingCats[key].total.plus(closingBal);
+        closingCats[key].accounts.push({ glCode: acc.glCode, name: acc.accountName, balance: closingBal.toNumber() });
       }
 
       // Skip accounts with zero balance unless it's a primary Cash or Bank account or has an initial balance
@@ -1570,12 +1617,22 @@ export class AccountingService {
       else totalCredit = totalCredit.plus(absAmt);
     }
 
+    const serializeCategories = (cats: Record<CategoryKey, ReturnType<typeof emptyCategory>>) => ({
+      cashInHand: { total: cats.cashInHand.total.toNumber(), accounts: cats.cashInHand.accounts },
+      banks: { total: cats.banks.total.toNumber(), accounts: cats.banks.accounts },
+      advanceAndLoan: { total: cats.advanceAndLoan.total.toNumber(), accounts: cats.advanceAndLoan.accounts },
+      receivable: { total: cats.receivable.total.toNumber(), accounts: cats.receivable.accounts },
+      otherAssets: { total: cats.otherAssets.total.toNumber(), accounts: cats.otherAssets.accounts },
+    });
+
     const diff = totalDebit.minus(totalCredit).abs();
     return {
       accounts: formatted,
       totalDebit: totalDebit.toNumber(),
       totalCredit: totalCredit.toNumber(),
-      difference: diff.toNumber()
+      difference: diff.toNumber(),
+      openingBalances: serializeCategories(openingCats),
+      closingBalances: serializeCategories(closingCats),
     };
   }
 

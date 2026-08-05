@@ -313,6 +313,7 @@ async function main() {
     // Under Current Assets (1010000)
     { glCode: '1010100', accountName: 'Cash & Bank Balances', parentCode: '1010000', accountTypeName: 'ASSET',     detailType: 'Header', description: 'All cash and bank balance accounts' },
     { glCode: '1010200', accountName: 'Accounts Receivable',  parentCode: '1010000', accountTypeName: 'ASSET',     detailType: 'Header', description: 'Amounts owed to the organization' },
+    { glCode: '1010300', accountName: 'Advances & Loans',     parentCode: '1010000', accountTypeName: 'ASSET',     detailType: 'Header', description: 'Advances and loans given, expected to be recovered' },
     // Under Non-Current Assets (1020000)
     { glCode: '1020100', accountName: 'Fixed Assets',         parentCode: '1020000', accountTypeName: 'ASSET',     detailType: 'Header', description: 'Property, plant and equipment' },
     // Under Current Liabilities (2010000)
@@ -379,8 +380,19 @@ async function main() {
   console.log('Seeding Level 4 GL Accounts...');
   const glAccounts = [
     // Under Cash & Bank Balances (1010100)
-    { glCode: '1010101', accountName: 'National Bank of Pakistan', parentCode: '1010100', accountTypeName: 'ASSET',   detailType: 'Cash', description: 'National Bank of Pakistan — main current account' },
-    { glCode: '1010102', accountName: 'NBP Zakat Bank',            parentCode: '1010100', accountTypeName: 'ASSET',   detailType: 'Cash', description: 'NBP Zakat Bank — dedicated zakat collection account' },
+    // SQA fix: these two are real bank accounts, not cash — they were tagged
+    // detailType 'Cash' and only worked in reports via a name-substring fallback
+    // (isBankAccount() matching "Bank" in the name). Trial Balance's opening/
+    // closing balance categorization keys off detailType, so this needs to be
+    // correct data, not a name guess. No monetary figure is affected — only
+    // which report bucket these two are grouped under.
+    { glCode: '1010101', accountName: 'National Bank of Pakistan', parentCode: '1010100', accountTypeName: 'ASSET',   detailType: 'Bank', description: 'National Bank of Pakistan — main current account' },
+    { glCode: '1010102', accountName: 'NBP Zakat Bank',            parentCode: '1010100', accountTypeName: 'ASSET',   detailType: 'Bank', description: 'NBP Zakat Bank — dedicated zakat collection account' },
+    { glCode: '1010103', accountName: 'Cash in Hand',              parentCode: '1010100', accountTypeName: 'ASSET',   detailType: 'Cash', description: 'Physical cash held on premises' },
+    // Under Accounts Receivable (1010200)
+    { glCode: '1010201', accountName: 'Accounts Receivable',       parentCode: '1010200', accountTypeName: 'ASSET',   detailType: 'Receivable', description: 'Amounts owed to the organization by third parties' },
+    // Under Advances & Loans (1010300)
+    { glCode: '1010301', accountName: 'Advances & Loans',          parentCode: '1010300', accountTypeName: 'ASSET',   detailType: 'Advance', description: 'Advances and loans given, expected to be recovered' },
     // Under Hall Booking (3010100)
     { glCode: '3010101', accountName: 'Bagh-e-Hajiani Kareema', parentCode: '3010100', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Bagh-e-Hajiani Kareema booking income — rate: Rs 46,000' },
     { glCode: '3010102', accountName: 'Sadaya Hall',           parentCode: '3010100', accountTypeName: 'REVENUE', detailType: 'Revenue', description: 'Sadaya Hall booking income — rate: Rs 28,000' },

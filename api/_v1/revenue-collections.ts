@@ -314,6 +314,17 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'DELETE') {
+    // Bulk-ID parsing (supports single or multiple IDs) merged with the
+    // soft-delete-by-default + permanent-delete-gated-by-Super-Admin logic
+    // that used to live in a second, unreachable 'DELETE' block below it —
+    // that block always lost because this one already returns unconditionally.
+    // The result was every delete here being an irreversible hard-delete with
+    // no permission gate, and Restore therefore always 404ing.
+    const isPermanent = req.query.permanent === 'true' || req.query.action === 'permanent_delete' || req.body?.permanent === true;
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can permanently delete records', status: 403 } });
+    }
+
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
     if (!idsRaw) {
       return res.status(400).json({ error: { message: 'Record ID(s) required', status: 400 } });
@@ -328,7 +339,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     try {
-      const deletedItems = await prisma.$transaction(async (tx) => {
+      const affectedItems = await prisma.$transaction(async (tx) => {
         const items = await tx.revenueCollection.findMany({
           where: { id: { in: ids } }
         });
@@ -338,28 +349,46 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         }
 
         for (const item of items) {
-          if (item.status === 'POSTED' && item.journalEntryId) {
+          if (item.journalEntryId) {
             try {
-              await AccountingService.deleteJournalEntry(tx, item.journalEntryId, req.user!.id, `${item.category} Deleted`);
+              if (isPermanent) {
+                await AccountingService.deleteJournalEntry(tx, item.journalEntryId, req.user!.id, `${item.category} Permanently Deleted`);
+              } else {
+                await tx.journalEntry.update({
+                  where: { id: item.journalEntryId },
+                  data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user!.id }
+                });
+                // The cached Account.currentBalance must follow the ledger: this entry
+                // just moved in/out of POSTED_JOURNAL_FILTER, so rebuild every account
+                // it touches or the balance keeps the deleted transaction's impact.
+                await AccountingService.recalculateBalancesForJournalEntry(tx, item.journalEntryId);
+              }
             } catch (e) {
               // Ignore if already deleted
             }
           }
         }
 
-        await tx.revenueCollection.deleteMany({
-          where: { id: { in: items.map(i => i.id) } }
-        });
+        if (isPermanent) {
+          await tx.revenueCollection.deleteMany({
+            where: { id: { in: items.map(i => i.id) } }
+          });
+        } else {
+          await tx.revenueCollection.updateMany({
+            where: { id: { in: items.map(i => i.id) } },
+            data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user!.id }
+          });
+        }
 
         return items;
       }, accountingTxOptions);
 
       await logAudit(
         req.user.id,
-        'Delete Revenue Collection',
+        isPermanent ? 'Permanent Delete Revenue Collection' : 'Delete Revenue Collection',
         'REVENUE',
         null,
-        { count: deletedItems.length, ids: deletedItems.map(i => i.id) },
+        { count: affectedItems.length, ids: affectedItems.map(i => i.id), permanent: isPermanent },
         req.headers['x-forwarded-for'] as string,
         req.headers['user-agent']
       );
@@ -367,8 +396,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       return res.status(200).json({
         status: 200,
-        message: `${deletedItems.length} record(s) deleted successfully`,
-        data: deletedItems
+        message: `${affectedItems.length} record(s) deleted successfully`,
+        data: affectedItems
       });
     } catch (err: any) {
       return res.status(400).json({ error: { message: err.message || 'Failed to delete record(s)', status: 400 } });
@@ -470,58 +499,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
 
     return res.status(200).json({ status: 200, data: updatedItem });
-  }
-
-  if (method === 'DELETE') {
-    const isPermanent = req.query.permanent === 'true' || req.query.action === 'permanent_delete' || req.body?.permanent === true;
-    if (isPermanent && !await isSuperAdmin(req)) {
-      return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can permanently delete records', status: 403 } });
-    }
-
-    const targetId = id || req.body?.id;
-    if (!targetId) {
-      return res.status(400).json({ error: { message: 'Collection ID is required', status: 400 } });
-    }
-
-    const existing = await prisma.revenueCollection.findUnique({ where: { id: targetId } });
-    if (!existing) {
-      return res.status(404).json({ error: { message: 'Record not found', status: 404 } });
-    }
-
-    await prisma.$transaction(async (tx) => {
-      if (existing.journalEntryId) {
-        try {
-          if (isPermanent) {
-            await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user!.id, 'Revenue Collection Permanently Deleted');
-          } else {
-            await tx.journalEntry.update({
-              where: { id: existing.journalEntryId },
-              data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user!.id }
-            });
-            // The cached Account.currentBalance must follow the ledger: this entry
-            // just moved in/out of POSTED_JOURNAL_FILTER, so rebuild every account
-            // it touches or the balance keeps the deleted transaction's impact.
-            await AccountingService.recalculateBalancesForJournalEntry(tx, existing.journalEntryId);
-          }
-        } catch (e) {
-          // Ignore if already deleted
-        }
-      }
-
-      if (isPermanent) {
-        await tx.revenueCollection.delete({ where: { id: targetId } });
-      } else {
-        await tx.revenueCollection.update({
-          where: { id: targetId },
-          data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user!.id }
-        });
-      }
-    });
-
-    await logAudit(req.user.id, isPermanent ? 'Permanent Delete Revenue Collection' : 'Delete Revenue Collection', 'REVENUE', existing, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
-
-
-    return res.status(200).json({ status: 200, message: 'Revenue collection deleted successfully' });
   }
 
   return res.status(405).json({ error: { message: 'Method Not Allowed', status: 405 } });

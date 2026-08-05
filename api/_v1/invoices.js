@@ -4,6 +4,7 @@ import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { PERMS } from "../_constants/permissions.js";
+import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 function generateInvoiceNumber() {
   const date = /* @__PURE__ */ new Date();
   const year = date.getFullYear().toString().slice(-2);
@@ -123,9 +124,31 @@ var invoices_default = makeHandler(async (req, res) => {
       if (!existing) {
         return res.status(404).json({ error: { message: "Invoice not found", status: 404 } });
       }
-      const restored = await prisma.invoice.update({
-        where: { id: targetId },
-        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      const restored = await prisma.$transaction(async (tx) => {
+        const updated = await tx.invoice.update({
+          where: { id: targetId },
+          data: { isDeleted: false, deletedAt: null, deletedBy: null }
+        });
+        const jes = await tx.journalEntry.findMany({
+          where: {
+            isDeleted: true,
+            OR: [
+              { reference: { contains: updated.invoiceNo } },
+              { description: { contains: updated.invoiceNo } }
+            ]
+          }
+        });
+        for (const je of jes) {
+          try {
+            await tx.journalEntry.update({
+              where: { id: je.id },
+              data: { isDeleted: false, deletedAt: null, deletedBy: null }
+            });
+            await AccountingService.recalculateBalancesForJournalEntry(tx, je.id);
+          } catch (e) {
+          }
+        }
+        return updated;
       });
       await logAudit(req.user.id, "Restore Invoice", "INVOICE", existing, restored, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, message: "Invoice restored successfully", data: restored });

@@ -54,7 +54,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
               : endDate
               ? `Up to ${endDate}`
               : 'All Time'
-          }
+          },
+          // Opening (as of startDate, or account inception if unset) and
+          // Closing (as of endDate, or now if unset) balances for Cash in
+          // Hand, every Bank, Advance & Loan, Receivable, and Other Assets.
+          // Computed entirely in AccountingService.getTrialBalance from
+          // posted JournalEntryLine rows — never cached, never hardcoded.
+          openingBalances: tb.openingBalances,
+          closingBalances: tb.closingBalances
         }
       });
     } catch (err: any) {
