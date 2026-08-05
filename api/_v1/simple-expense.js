@@ -67,21 +67,6 @@ var simple_expense_default = makeHandler(async (req, res) => {
       if (!expenseHead) {
         throw new Error("Expense head not found");
       }
-      const expenseAccountId = expenseHead.accountId || expenseHead.account?.id;
-      const postingResult = await AccountingService.postPayment(tx, {
-        amount: numAmount,
-        cashOrBankAccountId: paymentMethod === "BANK" && bankAccountId ? bankAccountId : void 0,
-        cashOrBankAccountKeyword: paymentMethod !== "BANK" ? "Cash" : void 0,
-        expenseAccountId: expenseAccountId || void 0,
-        expenseAccountKeyword: !expenseAccountId ? expenseHead.name || "Expense" : void 0,
-        description: description || `Expense for ${expenseHead.name}`,
-        reference: reference || "Expense Payment",
-        module: "Simple Expense",
-        postedBy: req.user.id,
-        postingDate: date ? new Date(date) : /* @__PURE__ */ new Date(),
-        ipAddress: req.headers["x-forwarded-for"] || req.socket?.remoteAddress,
-        userAgent: req.headers["user-agent"]
-      });
       const expense = await tx.simpleExpense.create({
         data: {
           date: date ? new Date(date) : /* @__PURE__ */ new Date(),
@@ -92,7 +77,8 @@ var simple_expense_default = makeHandler(async (req, res) => {
           paymentMethod: paymentMethod || "CASH",
           bankAccountId: paymentMethod === "BANK" ? bankAccountId : null,
           reference,
-          journalEntryId: postingResult.journalEntry.id,
+          status: "PENDING_POST",
+          journalEntryId: null,
           createdById: req.user.id
         },
         include: { expenseHead: true }
@@ -101,7 +87,7 @@ var simple_expense_default = makeHandler(async (req, res) => {
         await tx.auditLog.create({
           data: {
             userId: req.user.id,
-            action: "Create Simple Expense",
+            action: "Create Simple Expense (Pending Post)",
             module: "Expense",
             newValues: { amount: numAmount, expenseHead: expenseHead.name, paidTo, description }
           }

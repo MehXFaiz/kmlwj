@@ -154,20 +154,6 @@ var add_income_default = makeHandler(async (req, res) => {
         throw err;
       }
       const cleanSubCategory = subCategory && subCategory.trim() ? subCategory.trim() : null;
-      const postingDescription = remarks ? `${remarks} (${category.name}${cleanSubCategory ? ` - ${cleanSubCategory}` : ""})` : `Income received for ${category.name}${cleanSubCategory ? ` - ${cleanSubCategory}` : ""}`;
-      const postingResult = await AccountingService.postReceipt(tx, {
-        amount: numAmount,
-        cashOrBankAccountId: (normalizedPaymentMethod === "BANK" || normalizedPaymentMethod === "ONLINE" || normalizedPaymentMethod === "CHEQUE") && bankAccountId ? bankAccountId : void 0,
-        cashOrBankAccountKeyword: !(normalizedPaymentMethod === "BANK" && bankAccountId) ? "Cash" : void 0,
-        incomeAccountId: creditAccountId,
-        description: postingDescription,
-        reference: referenceNumber || `Income Ref #${Date.now().toString().slice(-6)}`,
-        module: "Add Income",
-        postedBy: req.user.id,
-        postingDate: date ? new Date(date) : /* @__PURE__ */ new Date(),
-        ipAddress: req.headers["x-forwarded-for"] || req.socket?.remoteAddress,
-        userAgent: req.headers["user-agent"]
-      });
       const incomeRecord = await tx.addIncomeRecord.create({
         data: {
           categoryId: category.id,
@@ -179,20 +165,20 @@ var add_income_default = makeHandler(async (req, res) => {
           referenceNumber: referenceNumber ? referenceNumber.trim() : null,
           remarks: remarks ? remarks.trim() : null,
           attachmentUrl: attachmentUrl || null,
-          journalEntryId: postingResult.journalEntry.id,
+          status: "PENDING_POST",
+          journalEntryId: null,
           createdById: req.user.id
         },
         include: {
           category: true,
           bankAccount: { select: { id: true, glCode: true, accountName: true } },
-          createdBy: { select: { id: true, fullName: true, email: true } },
-          journalEntry: { select: { id: true, voucherNo: true, status: true } }
+          createdBy: { select: { id: true, fullName: true, email: true } }
         }
       });
-      await logAudit(req.user.id, "Create Income Record", "Add Income", null, incomeRecord, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      await logAudit(req.user.id, "Create Income Record (Pending Post)", "Add Income", null, incomeRecord, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return incomeRecord;
     }, accountingTxOptions);
-    return res.status(201).json({ status: 201, message: "Income record created successfully", data: result });
+    return res.status(201).json({ status: 201, message: "Income record saved as Pending Post", data: result });
   }
   if (method === "PUT") {
     const { id, categoryId, customCategoryName, subCategory, amount, date, paymentMethod, bankAccountId, referenceNumber, remarks, attachmentUrl } = req.body;
