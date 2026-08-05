@@ -516,10 +516,10 @@ export const AddIncomeForm = () => {
                 </button>
               </div>
 
-              {/* Income Category & Other Income Type Grid (Side-by-side 50/50 on desktop when Other Income selected, 100% full width otherwise) */}
+              {/* Row 1: Income Category & Conditional Dropdowns/Inputs */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                 {/* Main Income Category Dropdown */}
-                <div className={isOtherIncomeSelected ? 'col-span-1' : 'col-span-full'}>
+                <div className={(isOtherIncomeSelected || isCustomCategorySelected) ? 'col-span-1' : 'col-span-full'}>
                   <label className={labelStyle}>
                     Income Category <span className="text-red-400">*</span>
                   </label>
@@ -544,7 +544,7 @@ export const AddIncomeForm = () => {
                   </select>
                 </div>
 
-                {/* Conditional 1: Other Income Type Dropdown (side-by-side with Income Category on desktop) */}
+                {/* Conditional 1: Other Income Type Dropdown (side-by-side 50/50 with Income Category on desktop) */}
                 {isOtherIncomeSelected && (
                   <div className="col-span-1 animate-in fade-in duration-200">
                     <label className={labelStyle}>
@@ -566,7 +566,24 @@ export const AddIncomeForm = () => {
                   </div>
                 )}
 
-                {/* Nested Conditional: Custom Other Income text input (when Other Income Type === 'Other') */}
+                {/* Conditional 2: Custom Income Category Input (side-by-side 50/50 with Income Category on desktop) */}
+                {isCustomCategorySelected && (
+                  <div className="col-span-1 animate-in fade-in duration-200">
+                    <label className={labelStyle}>
+                      Custom Income Category <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Enter Income Category"
+                      value={form.customCategoryName}
+                      onChange={(e) => handleInputChange('customCategoryName', e.target.value)}
+                      className={inputStyle}
+                      required={isCustomCategorySelected}
+                    />
+                  </div>
+                )}
+
+                {/* Nested Sub-conditional: Custom Other Income text input (when Other Income Type === 'Other') */}
                 {isOtherIncomeSelected && form.otherIncomeType === 'Other' && (
                   <div className="col-span-full animate-in fade-in duration-200">
                     <label className={labelStyle}>
@@ -582,26 +599,9 @@ export const AddIncomeForm = () => {
                     />
                   </div>
                 )}
-
-                {/* Conditional 2: Custom Income Category Input (when main dropdown === 'CUSTOM') */}
-                {isCustomCategorySelected && (
-                  <div className="col-span-full animate-in fade-in duration-200">
-                    <label className={labelStyle}>
-                      Custom Income Category <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter Income Category"
-                      value={form.customCategoryName}
-                      onChange={(e) => handleInputChange('customCategoryName', e.target.value)}
-                      className={inputStyle}
-                      required={isCustomCategorySelected}
-                    />
-                  </div>
-                )}
               </div>
 
-              {/* Amount & Date */}
+              {/* Row 2: Amount & Date */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className={labelStyle}>
@@ -640,9 +640,9 @@ export const AddIncomeForm = () => {
                 </div>
               </div>
 
-              {/* Payment Method & Bank Account */}
+              {/* Row 3: Payment Method & Bank Account */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
+                <div className={(form.paymentMethod === 'BANK' || form.paymentMethod === 'ONLINE' || form.paymentMethod === 'CHEQUE') ? 'col-span-1' : 'col-span-full'}>
                   <label className={labelStyle}>
                     Payment Method <span className="text-red-400">*</span>
                   </label>
@@ -660,7 +660,7 @@ export const AddIncomeForm = () => {
 
                 {/* Bank Account — Visible for Bank, Online, Cheque */}
                 {(form.paymentMethod === 'BANK' || form.paymentMethod === 'ONLINE' || form.paymentMethod === 'CHEQUE') && (
-                  <div className="animate-in fade-in duration-200">
+                  <div className="col-span-1 animate-in fade-in duration-200">
                     <label className={labelStyle}>
                       Bank Account {form.paymentMethod === 'BANK' && <span className="text-red-400">*</span>}
                     </label>
