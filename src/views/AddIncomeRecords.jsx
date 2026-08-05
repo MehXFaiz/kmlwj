@@ -96,7 +96,7 @@ export const AddIncomeRecords = () => {
     const exportData = records.map((r, idx) => ({
       'S.No': idx + 1,
       'Date': r.date ? new Date(r.date).toLocaleDateString('en-GB') : '',
-      'Category': r.category?.name || 'N/A',
+      'Category': r.category?.name ? (r.subCategory ? `${r.category.name} - ${r.subCategory}` : r.category.name) : 'N/A',
       'Amount (PKR)': Number(r.amount) || 0,
       'Payment Method': r.paymentMethod || 'CASH',
       'Bank Account': r.bankAccount?.accountName || 'Cash in Hand',
@@ -373,7 +373,7 @@ export const AddIncomeRecords = () => {
                         {rec.date ? new Date(rec.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                       </td>
                       <td className="py-3 px-4 font-semibold text-slate-200">
-                        {rec.category?.name || 'Unassigned'}
+                        {rec.category?.name ? (rec.subCategory ? `${rec.category.name} - ${rec.subCategory}` : rec.category.name) : 'Unassigned'}
                       </td>
                       <td className="py-3 px-4 font-bold font-mono text-brand-300 whitespace-nowrap">
                         PKR {Number(rec.amount || 0).toLocaleString('en-PK', { minimumFractionDigits: 2 })}
