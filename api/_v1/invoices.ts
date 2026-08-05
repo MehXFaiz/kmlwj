@@ -5,6 +5,7 @@ import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
 import { PERMS } from '../_constants/permissions.js';
+import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
 
 function generateInvoiceNumber() {
   const date = new Date();
@@ -156,9 +157,37 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       if (!existing) {
         return res.status(404).json({ error: { message: 'Invoice not found', status: 404 } });
       }
-      const restored = await prisma.invoice.update({
-        where: { id: targetId },
-        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      const restored = await prisma.$transaction(async (tx) => {
+        const updated = await tx.invoice.update({
+          where: { id: targetId },
+          data: { isDeleted: false, deletedAt: null, deletedBy: null }
+        });
+
+        // The invoice's journal entry(ies) were soft-deleted alongside it — restore
+        // those too and rebuild the cached balances, or the restored invoice would
+        // stay invisible to every report (same drift bug fixed for Simple Income).
+        const jes = await tx.journalEntry.findMany({
+          where: {
+            isDeleted: true,
+            OR: [
+              { reference: { contains: updated.invoiceNo } },
+              { description: { contains: updated.invoiceNo } }
+            ]
+          }
+        });
+        for (const je of jes) {
+          try {
+            await tx.journalEntry.update({
+              where: { id: je.id },
+              data: { isDeleted: false, deletedAt: null, deletedBy: null }
+            });
+            await AccountingService.recalculateBalancesForJournalEntry(tx, je.id);
+          } catch (e) {
+            // Ignore if already restored
+          }
+        }
+
+        return updated;
       });
       await logAudit(req.user.id, 'Restore Invoice', 'INVOICE', existing, restored, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
       return res.status(200).json({ status: 200, message: 'Invoice restored successfully', data: restored });
