@@ -39,6 +39,7 @@ import {
   MinusCircle,
   FileText,
   CreditCard,
+  Link2,
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -240,6 +241,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
           ],
         },
         { name: t('sidebar.incomeCategories'), hint: t('sidebar.incomeCategoriesHint'), icon: TrendingUp, path: '/revenue-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
+        { name: t('sidebar.incomeCategoryMapping'), hint: t('sidebar.incomeCategoryMappingHint'), icon: Link2, path: '/income-category-mapping', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
         { name: t('sidebar.expenseCategories'), hint: t('sidebar.expenseCategoriesHint'), icon: TrendingDown, path: '/expense-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
         { name: t('sidebar.systemAccounts'), hint: t('sidebar.systemAccountsHint'), icon: ShieldCheck, path: '/reserved', perms: ['MANAGE_RESERVED_CODES'] },
         { name: t('sidebar.trialBalanceMatrix'), hint: t('sidebar.trialBalanceMatrixHint'), icon: Layers, path: '/trial-balance-sheet', perms: ['VIEW_REPORTS'] },
