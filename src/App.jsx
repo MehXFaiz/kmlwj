@@ -295,6 +295,9 @@ function App() {
               </PermissionGuard>
             } />
             <Route path="/add-income" element={<AddIncome />} />
+            <Route path="/add-income/new" element={<AddIncome />} />
+            <Route path="/add-income/edit/:id" element={<AddIncome />} />
+            <Route path="/add-income/records" element={<AddIncome />} />
             <Route path="/income" element={
               <PermissionGuard requiredPerms={['RECORD_INCOME', 'CREATE_ACCOUNT']}>
                 <Income />
