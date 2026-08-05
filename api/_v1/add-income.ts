@@ -124,9 +124,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'POST') {
-    const { categoryId, amount, date, paymentMethod, bankAccountId, referenceNumber, remarks, attachmentUrl } = req.body;
+    const { categoryId, customCategoryName, subCategory, amount, date, paymentMethod, bankAccountId, referenceNumber, remarks, attachmentUrl } = req.body;
 
-    if (!categoryId || amount === undefined || amount === null) {
+    if ((!categoryId && !customCategoryName) || amount === undefined || amount === null) {
       return res.status(400).json({ error: { message: 'Income Category and Amount are required fields', status: 400 } });
     }
 
@@ -142,16 +142,32 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const numAmount = amountCheck.amount;
 
     const result = await prisma.$transaction(async (tx) => {
-      const category = await tx.incomeCategory.findUnique({
-        where: { id: categoryId },
-        include: { account: true }
-      });
+      let category;
+      if (categoryId === 'CUSTOM' || (customCategoryName && customCategoryName.trim())) {
+        const catName = (customCategoryName || 'Custom Income').trim();
+        category = await tx.incomeCategory.findUnique({ where: { name: catName } });
+        if (!category) {
+          category = await tx.incomeCategory.create({
+            data: { name: catName, description: 'Custom Income Category', isActive: true }
+          });
+        }
+      } else {
+        category = await tx.incomeCategory.findUnique({
+          where: { id: categoryId },
+          include: { account: true }
+        });
+      }
 
       if (!category) {
         throw new Error('Income Category not found');
       }
 
       const creditAccountId = category.accountId || category.account?.id;
+      const cleanSubCategory = subCategory && subCategory.trim() ? subCategory.trim() : null;
+
+      const postingDescription = remarks
+        ? `${remarks} (${category.name}${cleanSubCategory ? ` - ${cleanSubCategory}` : ''})`
+        : `Income received for ${category.name}${cleanSubCategory ? ` - ${cleanSubCategory}` : ''}`;
 
       // Post Double Entry Journal Entry
       const postingResult = await AccountingService.postReceipt(tx, {
@@ -160,7 +176,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         cashOrBankAccountKeyword: !(normalizedPaymentMethod === 'BANK' && bankAccountId) ? 'Cash' : undefined,
         incomeAccountId: creditAccountId || undefined,
         incomeAccountKeyword: !creditAccountId ? (category.name || 'Income') : undefined,
-        description: remarks || `Income received for ${category.name}`,
+        description: postingDescription,
         reference: referenceNumber || `Income Ref #${Date.now().toString().slice(-6)}`,
         module: 'Add Income',
         postedBy: req.user!.id,
@@ -171,7 +187,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       const incomeRecord = await tx.addIncomeRecord.create({
         data: {
-          categoryId,
+          categoryId: category.id,
+          subCategory: cleanSubCategory,
           amount: numAmount,
           date: date ? new Date(date) : new Date(),
           paymentMethod: normalizedPaymentMethod as any,
@@ -199,10 +216,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'PUT') {
-    const { id, categoryId, amount, date, paymentMethod, bankAccountId, referenceNumber, remarks, attachmentUrl } = req.body;
+    const { id, categoryId, customCategoryName, subCategory, amount, date, paymentMethod, bankAccountId, referenceNumber, remarks, attachmentUrl } = req.body;
 
     const targetId = id || idParam;
-    if (!targetId || !categoryId || amount === undefined) {
+    if (!targetId || (!categoryId && !customCategoryName) || amount === undefined) {
       return res.status(400).json({ error: { message: 'Record ID, Income Category, and Amount are required', status: 400 } });
     }
 
@@ -234,16 +251,32 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         } catch (e) {}
       }
 
-      const category = await tx.incomeCategory.findUnique({
-        where: { id: categoryId },
-        include: { account: true }
-      });
+      let category;
+      if (categoryId === 'CUSTOM' || (customCategoryName && customCategoryName.trim())) {
+        const catName = (customCategoryName || 'Custom Income').trim();
+        category = await tx.incomeCategory.findUnique({ where: { name: catName } });
+        if (!category) {
+          category = await tx.incomeCategory.create({
+            data: { name: catName, description: 'Custom Income Category', isActive: true }
+          });
+        }
+      } else {
+        category = await tx.incomeCategory.findUnique({
+          where: { id: categoryId },
+          include: { account: true }
+        });
+      }
 
       if (!category) {
         throw new Error('Income Category not found');
       }
 
       const creditAccountId = category.accountId || category.account?.id;
+      const cleanSubCategory = subCategory && subCategory.trim() ? subCategory.trim() : null;
+
+      const postingDescription = remarks
+        ? `${remarks} (${category.name}${cleanSubCategory ? ` - ${cleanSubCategory}` : ''})`
+        : `Income received for ${category.name}${cleanSubCategory ? ` - ${cleanSubCategory}` : ''}`;
 
       // Create updated Journal Entry
       const postingResult = await AccountingService.postReceipt(tx, {
@@ -252,7 +285,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         cashOrBankAccountKeyword: !(normalizedPaymentMethod === 'BANK' && bankAccountId) ? 'Cash' : undefined,
         incomeAccountId: creditAccountId || undefined,
         incomeAccountKeyword: !creditAccountId ? (category.name || 'Income') : undefined,
-        description: remarks || `Income received for ${category.name}`,
+        description: postingDescription,
         reference: referenceNumber || `Income Ref #${Date.now().toString().slice(-6)}`,
         module: 'Add Income',
         postedBy: req.user!.id,
@@ -264,7 +297,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       const updatedRecord = await tx.addIncomeRecord.update({
         where: { id: targetId },
         data: {
-          categoryId,
+          categoryId: category.id,
+          subCategory: cleanSubCategory,
           amount: numAmount,
           date: date ? new Date(date) : new Date(),
           paymentMethod: normalizedPaymentMethod as any,

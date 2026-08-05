@@ -18,34 +18,47 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   // Default initial categories to ensure DB is never empty on first load
   const ensureDefaultCategories = async () => {
-    const count = await prisma.incomeCategory.count({ where: { isDeleted: false } });
-    if (count === 0) {
-      const defaultCats = [
-        'Donation Income',
-        'Other Income (Coconuts, Oil, Battery, Scraps, Rabi-ul-Awal, Qurbani Space)',
-        'Haqqani Decoration Income',
-        'Shouqat Eco Sound Income',
-        'Sharjeel Eco Sound Income',
-        'Rizwan Eco Sound Income',
-        'Election Committee Income',
-        'Software Invoice Income',
-        'Monthly Donation',
-        'Ramzan Zakat Income',
-      ];
-      for (const catName of defaultCats) {
-        await prisma.incomeCategory.upsert({
-          where: { name: catName },
-          update: { isDeleted: false },
-          create: { name: catName, isActive: true }
-        }).catch(() => {});
-      }
+    // Soft-delete Donation Income if present per requirement
+    await prisma.incomeCategory.updateMany({
+      where: { name: 'Donation Income' },
+      data: { isDeleted: true, deletedAt: new Date() }
+    }).catch(() => {});
+
+    // Rename legacy category name if present
+    await prisma.incomeCategory.updateMany({
+      where: { name: 'Other Income (Coconuts, Oil, Battery, Scraps, Rabi-ul-Awal, Qurbani Space)' },
+      data: { name: 'Other Income' }
+    }).catch(() => {});
+
+    const defaultCats = [
+      'Other Income',
+      'Haqqani Decoration Income',
+      'Shouqat Eco Sound Income',
+      'Sharjeel Eco Sound Income',
+      'Rizwan Eco Sound Income',
+      'Election Committee Income',
+      'Software Invoice Income',
+      'Monthly Donation',
+      'Ramzan Zakat Income',
+    ];
+
+    for (const catName of defaultCats) {
+      await prisma.incomeCategory.upsert({
+        where: { name: catName },
+        update: { isDeleted: false },
+        create: { name: catName, isActive: true }
+      }).catch(() => {});
     }
   };
 
   if (method === 'GET') {
     await ensureDefaultCategories();
+    const filter = getDeletedFilter(req.query);
     const categories = await prisma.incomeCategory.findMany({
-      where: getDeletedFilter(req.query),
+      where: {
+        ...filter,
+        NOT: { name: 'Donation Income' }
+      },
       orderBy: { createdAt: 'asc' },
       include: {
         account: { select: { id: true, glCode: true, accountName: true } }

@@ -619,9 +619,14 @@ async function main() {
   }
 
   // 12. Seed Income Categories for Add Income Module
+  // Soft-delete Donation Income if present per project requirement
+  await prisma.incomeCategory.updateMany({
+    where: { name: 'Donation Income' },
+    data: { isDeleted: true, deletedAt: new Date() }
+  }).catch(() => {});
+
   const defaultIncomeCategories = [
-    { name: 'Donation Income', description: 'General and restricted donation income' },
-    { name: 'Other Income (Coconuts, Oil, Battery, Scraps, Rabi-ul-Awal, Qurbani Space)', description: 'Miscellaneous community assets, scrap sales and event space income' },
+    { name: 'Other Income', description: 'Miscellaneous income (Coconuts, Oil, Battery, Scraps, Rabi-ul-Awal, Qurbani Space, etc.)' },
     { name: 'Haqqani Decoration Income', description: 'Haqqani decoration services income' },
     { name: 'Shouqat Eco Sound Income', description: 'Shouqat eco sound system rental income' },
     { name: 'Sharjeel Eco Sound Income', description: 'Sharjeel eco sound system rental income' },

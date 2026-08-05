@@ -408,6 +408,7 @@ model AddIncomeRecord {
   id              String         @id @default(uuid()) @db.Uuid
   categoryId      String         @db.Uuid
   category        IncomeCategory @relation(fields: [categoryId], references: [id])
+  subCategory     String?
   amount          Decimal        @db.Decimal(18, 2)
   date            DateTime       @default(now())
   paymentMethod   PaymentMethod  @default(CASH)

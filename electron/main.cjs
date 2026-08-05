@@ -39,6 +39,11 @@ const LIVE_URL = (process.env.KMLWJ_APP_URL || 'https://kmlwj.com').replace(/\/+
 
 log.transports.file.level = 'info';
 log.transports.console.level = isDev ? 'debug' : false; // no console noise in production
+// 5 MB before rotating to main.old.log (electron-log's 1MB default rotates
+// too often for a support-facing log of a long-running desktop app — this
+// keeps a longer troubleshooting window while still bounding disk usage).
+log.transports.file.maxSize = 5 * 1024 * 1024;
+log.info(`[boot] log file: ${log.transports.file.getFile().path}`);
 Object.assign(console, log.functions); // route any stray console.* through electron-log too
 
 let mainWindow = null;

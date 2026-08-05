@@ -31,6 +31,16 @@ import {
 } from 'lucide-react';
 import { pageActionsClass } from '../components/common/responsive';
 
+const OTHER_INCOME_TYPES = [
+  'Coconuts',
+  'Oil',
+  'Battery',
+  'Scraps',
+  'Rabi-ul-Awal',
+  'Qurbani Space',
+  'Other'
+];
+
 export const AddIncomeForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -52,9 +62,17 @@ export const AddIncomeForm = () => {
 
   const { flatAccounts, fetchAccountsList } = useCoaStore();
 
+  // Available categories without "Donation Income"
+  const availableCategories = useMemo(() => {
+    return categories.filter(c => c.name !== 'Donation Income');
+  }, [categories]);
+
   // Form State
   const [form, setForm] = useState({
     categoryId: '',
+    otherIncomeType: '',
+    customOtherIncome: '',
+    customCategoryName: '',
     amount: '',
     date: new Date().toISOString().split('T')[0],
     paymentMethod: 'CASH',
@@ -86,20 +104,62 @@ export const AddIncomeForm = () => {
 
   // Set default category when categories load
   useEffect(() => {
-    if (categories.length > 0 && !form.categoryId && !id) {
-      setForm(prev => ({ ...prev, categoryId: categories[0].id }));
+    if (availableCategories.length > 0 && !form.categoryId && !id) {
+      setForm(prev => ({ ...prev, categoryId: availableCategories[0].id }));
     }
-  }, [categories, form.categoryId, id]);
+  }, [availableCategories, form.categoryId, id]);
+
+  // Check category selections
+  const selectedCategoryObj = useMemo(() => {
+    if (form.categoryId === 'CUSTOM') return null;
+    return availableCategories.find(c => String(c.id) === String(form.categoryId)) || null;
+  }, [availableCategories, form.categoryId]);
+
+  const isOtherIncomeSelected = useMemo(() => {
+    return selectedCategoryObj?.name === 'Other Income';
+  }, [selectedCategoryObj]);
+
+  const isCustomCategorySelected = form.categoryId === 'CUSTOM';
 
   // Load existing record when editing
   useEffect(() => {
-    if (id) {
+    if (id && availableCategories.length > 0) {
       setFetchingRecord(true);
       addIncomeService.getRecordById(id)
         .then((rec) => {
           if (rec) {
+            const isOther = rec.category?.name === 'Other Income';
+            const standardSub = rec.subCategory && OTHER_INCOME_TYPES.includes(rec.subCategory);
+
+            let otherType = '';
+            let customOtherText = '';
+            let isCustomCat = false;
+            let customCatText = '';
+
+            if (isOther) {
+              if (rec.subCategory) {
+                if (standardSub && rec.subCategory !== 'Other') {
+                  otherType = rec.subCategory;
+                } else {
+                  otherType = 'Other';
+                  customOtherText = rec.subCategory;
+                }
+              }
+            } else {
+              const matchedCat = availableCategories.find(c => c.id === rec.categoryId || c.name === rec.category?.name);
+              if (!matchedCat) {
+                isCustomCat = true;
+                customCatText = rec.category?.name || '';
+              }
+            }
+
+            const catIdValue = isCustomCat ? 'CUSTOM' : (rec.categoryId || rec.category?.id || '');
+
             setForm({
-              categoryId: rec.categoryId || rec.category?.id || '',
+              categoryId: catIdValue,
+              otherIncomeType: otherType,
+              customOtherIncome: customOtherText,
+              customCategoryName: customCatText,
               amount: rec.amount ? String(rec.amount) : '',
               date: rec.date ? new Date(rec.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
               paymentMethod: rec.paymentMethod || 'CASH',
@@ -119,7 +179,7 @@ export const AddIncomeForm = () => {
         })
         .finally(() => setFetchingRecord(false));
     }
-  }, [id, navigate]);
+  }, [id, availableCategories, navigate]);
 
   // Warn on unsaved changes when leaving
   useEffect(() => {
@@ -156,24 +216,31 @@ export const AddIncomeForm = () => {
     );
   }, [flatAccounts]);
 
-  // Selected Category Object & mapped GL Account
-  const selectedCategory = useMemo(() => {
-    return categories.find(c => String(c.id) === String(form.categoryId)) || null;
-  }, [categories, form.categoryId]);
-
-  const selectedCategoryAccount = useMemo(() => {
-    if (selectedCategory?.account) return selectedCategory.account;
-    if (selectedCategory?.accountId) {
-      return flatAccounts.find(a => String(a.id) === String(selectedCategory.accountId)) || null;
+  // Display Name of Selected Category & Subcategory for Accounting Preview
+  const displayCategoryName = useMemo(() => {
+    if (isCustomCategorySelected) {
+      return form.customCategoryName ? form.customCategoryName.trim() : 'Custom Income Category';
     }
-    // Fallback: search Revenue accounts in CoA by name match
-    return flatAccounts.find(a =>
-      (a.type === 'Revenue' || a.accountType?.name === 'Revenue') &&
-      !a.isLocked &&
-      selectedCategory &&
-      a.name.toLowerCase().includes(selectedCategory.name.toLowerCase().slice(0, 8))
-    ) || flatAccounts.find(a => a.type === 'Revenue' || a.accountType?.name === 'Revenue') || null;
-  }, [selectedCategory, flatAccounts]);
+    if (isOtherIncomeSelected) {
+      if (form.otherIncomeType === 'Other') {
+        return form.customOtherIncome ? `Other Income - ${form.customOtherIncome.trim()}` : 'Other Income';
+      }
+      if (form.otherIncomeType) {
+        return `Other Income - ${form.otherIncomeType}`;
+      }
+      return 'Other Income';
+    }
+    return selectedCategoryObj?.name || 'Income Category';
+  }, [isCustomCategorySelected, isOtherIncomeSelected, form.customCategoryName, form.otherIncomeType, form.customOtherIncome, selectedCategoryObj]);
+
+  // Mapped GL Account
+  const selectedCategoryAccount = useMemo(() => {
+    if (selectedCategoryObj?.account) return selectedCategoryObj.account;
+    if (selectedCategoryObj?.accountId) {
+      return flatAccounts.find(a => String(a.id) === String(selectedCategoryObj.accountId)) || null;
+    }
+    return flatAccounts.find(a => a.type === 'Revenue' || a.accountType?.name === 'Revenue') || null;
+  }, [selectedCategoryObj, flatAccounts]);
 
   // Selected Bank Account object
   const selectedBankAccount = useMemo(() => {
@@ -190,14 +257,14 @@ export const AddIncomeForm = () => {
       : '1010103 - Cash in Hand';
     
     const creditAccountName = selectedCategoryAccount
-      ? `${selectedCategoryAccount.glCode || '3010101'} - ${selectedCategoryAccount.name || selectedCategoryAccount.accountName}`
-      : `3010101 - ${selectedCategory?.name || 'Income Account'}`;
+      ? `${selectedCategoryAccount.glCode || '3010101'} - ${displayCategoryName}`
+      : `3010101 - ${displayCategoryName}`;
 
     return [
       { type: 'Debit', account: debitAccountName, amount: numAmount, side: 'DEBIT' },
       { type: 'Credit', account: creditAccountName, amount: numAmount, side: 'CREDIT' }
     ];
-  }, [form.amount, form.paymentMethod, selectedBankAccount, selectedCategoryAccount, selectedCategory]);
+  }, [form.amount, form.paymentMethod, selectedBankAccount, selectedCategoryAccount, displayCategoryName]);
 
   const handleInputChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -239,6 +306,31 @@ export const AddIncomeForm = () => {
       return;
     }
 
+    let finalCustomCategoryName = '';
+    let finalSubCategory = null;
+
+    if (isCustomCategorySelected) {
+      if (!form.customCategoryName || !form.customCategoryName.trim()) {
+        showToast('Please enter a Custom Income Category name', 'warning');
+        return;
+      }
+      finalCustomCategoryName = form.customCategoryName.trim();
+    } else if (isOtherIncomeSelected) {
+      if (!form.otherIncomeType) {
+        showToast('Please select an Other Income Type', 'warning');
+        return;
+      }
+      if (form.otherIncomeType === 'Other') {
+        if (!form.customOtherIncome || !form.customOtherIncome.trim()) {
+          showToast('Please enter Custom Other Income name', 'warning');
+          return;
+        }
+        finalSubCategory = form.customOtherIncome.trim();
+      } else {
+        finalSubCategory = form.otherIncomeType;
+      }
+    }
+
     const numAmount = parseFloat(form.amount);
     if (isNaN(numAmount) || numAmount <= 0) {
       showToast('Please enter a valid positive amount', 'warning');
@@ -250,13 +342,26 @@ export const AddIncomeForm = () => {
       return;
     }
 
+    const payload = {
+      categoryId: form.categoryId,
+      customCategoryName: finalCustomCategoryName,
+      subCategory: finalSubCategory,
+      amount: form.amount,
+      date: form.date,
+      paymentMethod: form.paymentMethod,
+      bankAccountId: form.bankAccountId,
+      referenceNumber: form.referenceNumber,
+      remarks: form.remarks,
+      attachmentUrl: form.attachmentUrl
+    };
+
     setSubmitting(true);
     try {
       if (id) {
-        await updateRecord(id, form);
-        showToast('Income entry updated successfully! Journal Voucher revised.', 'success');
+        await updateRecord(id, payload);
+        showToast('Income entry updated successfully!', 'success');
       } else {
-        await createRecord(form);
+        await createRecord(payload);
         showToast('Income entry saved successfully! Journal Voucher posted.', 'success');
       }
 
@@ -264,7 +369,10 @@ export const AddIncomeForm = () => {
 
       if (saveAndNew) {
         setForm({
-          categoryId: categories.length > 0 ? categories[0].id : '',
+          categoryId: availableCategories.length > 0 ? availableCategories[0].id : '',
+          otherIncomeType: '',
+          customOtherIncome: '',
+          customCategoryName: '',
           amount: '',
           date: new Date().toISOString().split('T')[0],
           paymentMethod: 'CASH',
@@ -374,7 +482,7 @@ export const AddIncomeForm = () => {
             className="flex items-center gap-2 px-3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-slate-300 text-xs font-semibold transition-all cursor-pointer"
           >
             <Tag className="h-4 w-4 text-brand-400" />
-            Manage Categories ({categories.length})
+            Manage Categories ({availableCategories.length})
           </button>
 
           <Link
@@ -387,7 +495,7 @@ export const AddIncomeForm = () => {
         </div>
       </div>
 
-      {/* Main Form Form Body */}
+      {/* Main Form Body */}
       <form onSubmit={(e) => { e.preventDefault(); handleSave(false); }} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
@@ -402,7 +510,7 @@ export const AddIncomeForm = () => {
                 <span className="text-[10px] text-slate-500 font-mono">Step 1 of 2</span>
               </div>
 
-              {/* Income Category */}
+              {/* Main Income Category Dropdown */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className={labelStyle}>
@@ -413,26 +521,87 @@ export const AddIncomeForm = () => {
                     onClick={() => { setEditingCategory(null); setCategoryForm({ name: '', description: '', accountId: '', isActive: true }); setIsCategoryModalOpen(true); }}
                     className="text-[11px] font-semibold text-brand-400 hover:text-brand-300 flex items-center gap-1 cursor-pointer"
                   >
-                    <Plus className="h-3 w-3" /> New Category
+                    <Plus className="h-3 w-3" /> Manage Categories
                   </button>
                 </div>
                 <select
                   value={form.categoryId}
-                  onChange={(e) => handleInputChange('categoryId', e.target.value)}
+                  onChange={(e) => {
+                    handleInputChange('categoryId', e.target.value);
+                    if (e.target.value !== 'CUSTOM') {
+                      handleInputChange('customCategoryName', '');
+                    }
+                  }}
                   className={inputStyle}
                   required
                 >
                   <option value="" disabled>Select Income Category</option>
-                  {categories.map((cat) => (
+                  {availableCategories.map((cat) => (
                     <option key={cat.id} value={cat.id}>
                       {cat.name}
                     </option>
                   ))}
+                  <option value="CUSTOM">Custom</option>
                 </select>
-                {selectedCategory?.description && (
-                  <p className="text-[11px] text-slate-500 mt-1 italic">{selectedCategory.description}</p>
-                )}
               </div>
+
+              {/* Conditional 1: Other Income Type Dropdown (when Other Income selected) */}
+              {isOtherIncomeSelected && (
+                <div className="animate-in fade-in duration-200 space-y-4 p-3.5 bg-slate-950/40 border border-slate-800 rounded-xl">
+                  <div>
+                    <label className={labelStyle}>
+                      Other Income Type <span className="text-red-400">*</span>
+                    </label>
+                    <select
+                      value={form.otherIncomeType}
+                      onChange={(e) => handleInputChange('otherIncomeType', e.target.value)}
+                      className={inputStyle}
+                      required={isOtherIncomeSelected}
+                    >
+                      <option value="" disabled>Select Other Income Type</option>
+                      {OTHER_INCOME_TYPES.map((typeOption) => (
+                        <option key={typeOption} value={typeOption}>
+                          {typeOption}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Nested Conditional: Custom Other Income text input (when Other Income Type === 'Other') */}
+                  {form.otherIncomeType === 'Other' && (
+                    <div className="animate-in fade-in duration-200">
+                      <label className={labelStyle}>
+                        Custom Other Income <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter Other Income Name"
+                        value={form.customOtherIncome}
+                        onChange={(e) => handleInputChange('customOtherIncome', e.target.value)}
+                        className={inputStyle}
+                        required={form.otherIncomeType === 'Other'}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Conditional 2: Custom Income Category Input (when main dropdown === 'CUSTOM') */}
+              {isCustomCategorySelected && (
+                <div className="animate-in fade-in duration-200 p-3.5 bg-slate-950/40 border border-slate-800 rounded-xl">
+                  <label className={labelStyle}>
+                    Custom Income Category <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter Income Category"
+                    value={form.customCategoryName}
+                    onChange={(e) => handleInputChange('customCategoryName', e.target.value)}
+                    className={inputStyle}
+                    required={isCustomCategorySelected}
+                  />
+                </div>
+              )}
 
               {/* Amount & Date */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -612,13 +781,13 @@ export const AddIncomeForm = () => {
               {/* Mapped GL Account */}
               <div className="p-3.5 bg-slate-950/70 border border-slate-800/80 rounded-xl space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400 font-semibold">Mapped GL Account:</span>
+                  <span className="text-slate-400 font-semibold">GL Account:</span>
                   <span className="font-mono text-brand-300 font-bold">
                     {selectedCategoryAccount?.glCode || '3010101'}
                   </span>
                 </div>
                 <p className="text-xs font-bold text-slate-200">
-                  {selectedCategoryAccount?.name || selectedCategoryAccount?.accountName || (selectedCategory?.name ? `${selectedCategory.name} Account` : 'General Income Account')}
+                  {displayCategoryName}
                 </p>
                 <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1">
                   <span>Level: {selectedCategoryAccount?.accountLevel || 'GL'}</span>
@@ -629,7 +798,7 @@ export const AddIncomeForm = () => {
               {/* Live Ledger Entry Preview */}
               <div className="space-y-2">
                 <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
-                  <span>Ledger Entry Preview</span>
+                  <span>Ledger Preview</span>
                   <span className="text-[10px] text-emerald-400 font-mono font-normal">Double-Entry Balanced</span>
                 </h4>
 
@@ -666,18 +835,18 @@ export const AddIncomeForm = () => {
               <div className="p-3.5 bg-brand-950/20 border border-brand-500/20 rounded-xl space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-brand-300 flex items-center gap-1.5">
-                    <ShieldCheck className="h-4 w-4 text-brand-400" /> Auto Journal Voucher
+                    <ShieldCheck className="h-4 w-4 text-brand-400" /> Auto Journal Preview
                   </span>
                   <span className="text-[10px] font-mono bg-brand-950 text-brand-300 border border-brand-800 px-1.5 py-0.5 rounded">
                     Voucher: BR-AUTO
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Saving this income entry creates a posted <strong className="text-slate-200">Bank/Cash Receipt (BR)</strong> journal entry. General Ledger, Trial Balance, Income Statement, and Dashboard totals will update automatically.
+                  Saving this income entry creates a posted <strong className="text-slate-200">Bank/Cash Receipt (BR)</strong> journal entry. General Ledger, Trial Balance, Income Statement, and Dashboard totals will update automatically using <strong className="text-slate-200">{displayCategoryName}</strong>.
                 </p>
               </div>
 
-              {/* Action Buttons */}
+              {/* Actions Section */}
               <div className="pt-4 border-t border-slate-800/80 space-y-2.5">
                 <button
                   type="button"
@@ -690,7 +859,7 @@ export const AddIncomeForm = () => {
                   }`}
                 >
                   {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  {submitting ? 'Saving Income Record...' : id ? 'Update Income Record' : 'Save Income'}
+                  {submitting ? 'Saving Income Record...' : id ? 'Update Income' : 'Save Income'}
                 </button>
 
                 {!id && (
@@ -809,10 +978,10 @@ export const AddIncomeForm = () => {
             {/* Categories List */}
             <div className="space-y-2">
               <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Configured Income Categories ({categories.length})
+                Configured Income Categories ({availableCategories.length})
               </h4>
               <div className="max-h-60 overflow-y-auto border border-slate-800 rounded-xl divide-y divide-slate-800">
-                {categories.map((cat) => (
+                {availableCategories.map((cat) => (
                   <div key={cat.id} className="p-3 flex items-center justify-between hover:bg-slate-900/60 transition-colors">
                     <div>
                       <span className="font-bold text-xs text-slate-200">{cat.name}</span>

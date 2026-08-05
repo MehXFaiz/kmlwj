@@ -1,6 +1,18 @@
 'use strict';
 
-const { Menu, app, shell } = require('electron');
+const { Menu, app, shell, dialog } = require('electron');
+
+/** Native "About" dialog — shows the installed version per the auto-update spec (users need to see what they're currently running, separate from the Settings page's live updater status). */
+function showAboutDialog(mainWindow) {
+  dialog.showMessageBox(mainWindow, {
+    type: 'info',
+    title: 'About KMLWJ ERP',
+    message: 'KMLWJ Enterprise Financial Suite',
+    detail: `Version ${app.getVersion()}\nCopyright © ${new Date().getFullYear()} Kutchi Muslim Loharwada Welfare Jamat\n\nhttps://kmlwj.com`,
+    buttons: ['OK'],
+    noLink: true,
+  });
+}
 
 /**
  * Native application menu. DevTools / reload-from-source items only appear in
@@ -46,9 +58,12 @@ function buildMenu({ mainWindow, isDev }) {
       submenu: [
         {
           label: 'About KMLWJ',
+          click: () => showAboutDialog(mainWindow),
+        },
+        {
+          label: 'Visit kmlwj.com',
           click: () => shell.openExternal('https://kmlwj.com'),
         },
-        { label: `Version ${app.getVersion()}`, enabled: false },
       ],
     },
   ];
