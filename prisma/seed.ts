@@ -638,19 +638,24 @@ async function main() {
     data: { isDeleted: true, deletedAt: new Date() }
   }).catch(() => {});
 
+  // glCode matches the 3020501-3020509 leaves seeded above under 3020500
+  // "Add Income Categories" — this is the mapping that replaces the old
+  // name-keyword posting fallback that crashed with "Account not found in
+  // Chart of Accounts for identifier '<category name>'".
   const defaultIncomeCategories = [
-    { name: 'Other Income', description: 'Miscellaneous income (Coconuts, Oil, Battery, Scraps, Rabi-ul-Awal, Qurbani Space, etc.)' },
-    { name: 'Haqqani Decoration Income', description: 'Haqqani decoration services income' },
-    { name: 'Shouqat Eco Sound Income', description: 'Shouqat eco sound system rental income' },
-    { name: 'Sharjeel Eco Sound Income', description: 'Sharjeel eco sound system rental income' },
-    { name: 'Rizwan Eco Sound Income', description: 'Rizwan eco sound system rental income' },
-    { name: 'Election Committee Income', description: 'Election committee contributions and fees' },
-    { name: 'Software Invoice Income', description: 'Software and tech invoice income' },
-    { name: 'Monthly Donation', description: 'Regular monthly recurring donations' },
-    { name: 'Ramzan Zakat Income', description: 'Ramzan Zakat collection income' },
+    { name: 'Other Income', description: 'Miscellaneous income (Coconuts, Oil, Battery, Scraps, Rabi-ul-Awal, Qurbani Space, etc.)', glCode: '3020501' },
+    { name: 'Haqqani Decoration Income', description: 'Haqqani decoration services income', glCode: '3020502' },
+    { name: 'Shouqat Eco Sound Income', description: 'Shouqat eco sound system rental income', glCode: '3020503' },
+    { name: 'Sharjeel Eco Sound Income', description: 'Sharjeel eco sound system rental income', glCode: '3020504' },
+    { name: 'Rizwan Eco Sound Income', description: 'Rizwan eco sound system rental income', glCode: '3020505' },
+    { name: 'Election Committee Income', description: 'Election committee contributions and fees', glCode: '3020506' },
+    { name: 'Software Invoice Income', description: 'Software and tech invoice income', glCode: '3020507' },
+    { name: 'Monthly Donation', description: 'Regular monthly recurring donations', glCode: '3020508' },
+    { name: 'Ramzan Zakat Income', description: 'Ramzan Zakat collection income', glCode: '3020509' },
   ];
 
   for (const cat of defaultIncomeCategories) {
+    const glAccount = await prisma.account.findUnique({ where: { glCode: cat.glCode } });
     const existingCat = await prisma.incomeCategory.findUnique({
       where: { name: cat.name }
     });
@@ -659,8 +664,15 @@ async function main() {
         data: {
           name: cat.name,
           description: cat.description,
+          accountId: glAccount?.id || null,
           isActive: true,
         }
+      });
+    } else if (!existingCat.accountId && glAccount) {
+      // Backfill only — never overwrite an admin's own mapping.
+      await prisma.incomeCategory.update({
+        where: { id: existingCat.id },
+        data: { accountId: glAccount.id }
       });
     }
   }

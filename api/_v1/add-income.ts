@@ -154,7 +154,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       } else {
         category = await tx.incomeCategory.findUnique({
           where: { id: categoryId },
-          include: { account: true }
+          include: { account: { include: { accountType: true } } }
         });
       }
 
@@ -163,19 +163,37 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       }
 
       const creditAccountId = category.accountId || category.account?.id;
+
+      // Never fall back to posting by category name/text — that's exactly
+      // what produced "Accounting Engine Error: Account not found in Chart
+      // of Accounts for identifier 'HaqqaniDecorationIncome'"-style crashes.
+      // Every Income Category must be explicitly mapped (Chart of Accounts >
+      // Income Category Mapping) before it can be used to record income.
+      if (!creditAccountId) {
+        const err: any = new Error('This income category is not linked with any Revenue GL Account. Please map it from Chart of Accounts.');
+        err.status = 400;
+        throw err;
+      }
+      const mappedAccountType = category.account?.accountType?.name?.toUpperCase();
+      if (mappedAccountType && mappedAccountType !== 'REVENUE') {
+        const err: any = new Error(`This income category is mapped to a non-Revenue account (${category.account?.accountName}). Please map it to a Revenue GL Account from Chart of Accounts.`);
+        err.status = 400;
+        throw err;
+      }
+
       const cleanSubCategory = subCategory && subCategory.trim() ? subCategory.trim() : null;
 
       const postingDescription = remarks
         ? `${remarks} (${category.name}${cleanSubCategory ? ` - ${cleanSubCategory}` : ''})`
         : `Income received for ${category.name}${cleanSubCategory ? ` - ${cleanSubCategory}` : ''}`;
 
-      // Post Double Entry Journal Entry
+      // Post Double Entry Journal Entry — always by the mapped Account ID /
+      // GL Code, never by category text.
       const postingResult = await AccountingService.postReceipt(tx, {
         amount: numAmount,
         cashOrBankAccountId: (normalizedPaymentMethod === 'BANK' || normalizedPaymentMethod === 'ONLINE' || normalizedPaymentMethod === 'CHEQUE') && bankAccountId ? bankAccountId : undefined,
         cashOrBankAccountKeyword: !(normalizedPaymentMethod === 'BANK' && bankAccountId) ? 'Cash' : undefined,
-        incomeAccountId: creditAccountId || undefined,
-        incomeAccountKeyword: !creditAccountId ? (category.name || 'Income') : undefined,
+        incomeAccountId: creditAccountId,
         description: postingDescription,
         reference: referenceNumber || `Income Ref #${Date.now().toString().slice(-6)}`,
         module: 'Add Income',
@@ -263,7 +281,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       } else {
         category = await tx.incomeCategory.findUnique({
           where: { id: categoryId },
-          include: { account: true }
+          include: { account: { include: { accountType: true } } }
         });
       }
 
@@ -272,19 +290,33 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       }
 
       const creditAccountId = category.accountId || category.account?.id;
+
+      // Same guard as POST — never fall back to posting by category name/text.
+      if (!creditAccountId) {
+        const err: any = new Error('This income category is not linked with any Revenue GL Account. Please map it from Chart of Accounts.');
+        err.status = 400;
+        throw err;
+      }
+      const mappedAccountType = category.account?.accountType?.name?.toUpperCase();
+      if (mappedAccountType && mappedAccountType !== 'REVENUE') {
+        const err: any = new Error(`This income category is mapped to a non-Revenue account (${category.account?.accountName}). Please map it to a Revenue GL Account from Chart of Accounts.`);
+        err.status = 400;
+        throw err;
+      }
+
       const cleanSubCategory = subCategory && subCategory.trim() ? subCategory.trim() : null;
 
       const postingDescription = remarks
         ? `${remarks} (${category.name}${cleanSubCategory ? ` - ${cleanSubCategory}` : ''})`
         : `Income received for ${category.name}${cleanSubCategory ? ` - ${cleanSubCategory}` : ''}`;
 
-      // Create updated Journal Entry
+      // Create updated Journal Entry — always by the mapped Account ID / GL
+      // Code, never by category text.
       const postingResult = await AccountingService.postReceipt(tx, {
         amount: numAmount,
         cashOrBankAccountId: (normalizedPaymentMethod === 'BANK' || normalizedPaymentMethod === 'ONLINE' || normalizedPaymentMethod === 'CHEQUE') && bankAccountId ? bankAccountId : undefined,
         cashOrBankAccountKeyword: !(normalizedPaymentMethod === 'BANK' && bankAccountId) ? 'Cash' : undefined,
-        incomeAccountId: creditAccountId || undefined,
-        incomeAccountKeyword: !creditAccountId ? (category.name || 'Income') : undefined,
+        incomeAccountId: creditAccountId,
         description: postingDescription,
         reference: referenceNumber || `Income Ref #${Date.now().toString().slice(-6)}`,
         module: 'Add Income',

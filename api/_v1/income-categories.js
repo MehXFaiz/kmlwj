@@ -11,34 +11,55 @@ var income_categories_default = makeHandler(async (req, res) => {
   const action = req.query.action || req.body?.action;
   const isAdminOrSuperAdmin = req.user.role === "Admin" || req.user.role === "Super Admin" || await isSuperAdmin(req);
   const ensureDefaultCategories = async () => {
-    const count = await prisma.incomeCategory.count({ where: { isDeleted: false } });
-    if (count === 0) {
-      const defaultCats = [
-        "Donation Income",
-        "Other Income (Coconuts, Oil, Battery, Scraps, Rabi-ul-Awal, Qurbani Space)",
-        "Haqqani Decoration Income",
-        "Shouqat Eco Sound Income",
-        "Sharjeel Eco Sound Income",
-        "Rizwan Eco Sound Income",
-        "Election Committee Income",
-        "Software Invoice Income",
-        "Monthly Donation",
-        "Ramzan Zakat Income"
-      ];
-      for (const catName of defaultCats) {
-        await prisma.incomeCategory.upsert({
-          where: { name: catName },
-          update: { isDeleted: false },
-          create: { name: catName, isActive: true }
-        }).catch(() => {
-        });
-      }
+    await prisma.incomeCategory.updateMany({
+      where: { name: "Donation Income" },
+      data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date() }
+    }).catch(() => {
+    });
+    await prisma.incomeCategory.updateMany({
+      where: { name: "Other Income (Coconuts, Oil, Battery, Scraps, Rabi-ul-Awal, Qurbani Space)" },
+      data: { name: "Other Income" }
+    }).catch(() => {
+    });
+    const defaultCatGlCodes = {
+      "Other Income": "3020501",
+      "Haqqani Decoration Income": "3020502",
+      "Shouqat Eco Sound Income": "3020503",
+      "Sharjeel Eco Sound Income": "3020504",
+      "Rizwan Eco Sound Income": "3020505",
+      "Election Committee Income": "3020506",
+      "Software Invoice Income": "3020507",
+      "Monthly Donation": "3020508",
+      "Ramzan Zakat Income": "3020509"
+    };
+    for (const catName of Object.keys(defaultCatGlCodes)) {
+      await prisma.incomeCategory.upsert({
+        where: { name: catName },
+        update: { isDeleted: false },
+        create: { name: catName, isActive: true }
+      }).catch(() => {
+      });
+    }
+    for (const [catName, glCode] of Object.entries(defaultCatGlCodes)) {
+      const category = await prisma.incomeCategory.findUnique({ where: { name: catName } }).catch(() => null);
+      if (!category || category.accountId) continue;
+      const account = await prisma.account.findUnique({ where: { glCode } }).catch(() => null);
+      if (!account) continue;
+      await prisma.incomeCategory.update({
+        where: { id: category.id },
+        data: { accountId: account.id }
+      }).catch(() => {
+      });
     }
   };
   if (method === "GET") {
     await ensureDefaultCategories();
+    const filter = getDeletedFilter(req.query);
     const categories = await prisma.incomeCategory.findMany({
-      where: getDeletedFilter(req.query),
+      where: {
+        ...filter,
+        NOT: { name: "Donation Income" }
+      },
       orderBy: { createdAt: "asc" },
       include: {
         account: { select: { id: true, glCode: true, accountName: true } }

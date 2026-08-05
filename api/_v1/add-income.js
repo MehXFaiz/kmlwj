@@ -105,8 +105,8 @@ var add_income_default = makeHandler(async (req, res) => {
     return res.status(403).json({ error: { message: "Forbidden: Only Admin and Super Admin can Add/Edit/Delete Income records", status: 403 } });
   }
   if (method === "POST") {
-    const { categoryId, amount, date, paymentMethod, bankAccountId, referenceNumber, remarks, attachmentUrl } = req.body;
-    if (!categoryId || amount === void 0 || amount === null) {
+    const { categoryId, customCategoryName, subCategory, amount, date, paymentMethod, bankAccountId, referenceNumber, remarks, attachmentUrl } = req.body;
+    if (!categoryId && !customCategoryName || amount === void 0 || amount === null) {
       return res.status(400).json({ error: { message: "Income Category and Amount are required fields", status: 400 } });
     }
     const normalizedPaymentMethod = (paymentMethod || "CASH").toUpperCase();
@@ -119,21 +119,44 @@ var add_income_default = makeHandler(async (req, res) => {
     }
     const numAmount = amountCheck.amount;
     const result = await prisma.$transaction(async (tx) => {
-      const category = await tx.incomeCategory.findUnique({
-        where: { id: categoryId },
-        include: { account: true }
-      });
+      let category;
+      if (categoryId === "CUSTOM" || customCategoryName && customCategoryName.trim()) {
+        const catName = (customCategoryName || "Custom Income").trim();
+        category = await tx.incomeCategory.findUnique({ where: { name: catName } });
+        if (!category) {
+          category = await tx.incomeCategory.create({
+            data: { name: catName, description: "Custom Income Category", isActive: true }
+          });
+        }
+      } else {
+        category = await tx.incomeCategory.findUnique({
+          where: { id: categoryId },
+          include: { account: { include: { accountType: true } } }
+        });
+      }
       if (!category) {
         throw new Error("Income Category not found");
       }
       const creditAccountId = category.accountId || category.account?.id;
+      if (!creditAccountId) {
+        const err = new Error("This income category is not linked with any Revenue GL Account. Please map it from Chart of Accounts.");
+        err.status = 400;
+        throw err;
+      }
+      const mappedAccountType = category.account?.accountType?.name?.toUpperCase();
+      if (mappedAccountType && mappedAccountType !== "REVENUE") {
+        const err = new Error(`This income category is mapped to a non-Revenue account (${category.account?.accountName}). Please map it to a Revenue GL Account from Chart of Accounts.`);
+        err.status = 400;
+        throw err;
+      }
+      const cleanSubCategory = subCategory && subCategory.trim() ? subCategory.trim() : null;
+      const postingDescription = remarks ? `${remarks} (${category.name}${cleanSubCategory ? ` - ${cleanSubCategory}` : ""})` : `Income received for ${category.name}${cleanSubCategory ? ` - ${cleanSubCategory}` : ""}`;
       const postingResult = await AccountingService.postReceipt(tx, {
         amount: numAmount,
         cashOrBankAccountId: (normalizedPaymentMethod === "BANK" || normalizedPaymentMethod === "ONLINE" || normalizedPaymentMethod === "CHEQUE") && bankAccountId ? bankAccountId : void 0,
         cashOrBankAccountKeyword: !(normalizedPaymentMethod === "BANK" && bankAccountId) ? "Cash" : void 0,
-        incomeAccountId: creditAccountId || void 0,
-        incomeAccountKeyword: !creditAccountId ? category.name || "Income" : void 0,
-        description: remarks || `Income received for ${category.name}`,
+        incomeAccountId: creditAccountId,
+        description: postingDescription,
         reference: referenceNumber || `Income Ref #${Date.now().toString().slice(-6)}`,
         module: "Add Income",
         postedBy: req.user.id,
@@ -143,7 +166,8 @@ var add_income_default = makeHandler(async (req, res) => {
       });
       const incomeRecord = await tx.addIncomeRecord.create({
         data: {
-          categoryId,
+          categoryId: category.id,
+          subCategory: cleanSubCategory,
           amount: numAmount,
           date: date ? new Date(date) : /* @__PURE__ */ new Date(),
           paymentMethod: normalizedPaymentMethod,
@@ -167,9 +191,9 @@ var add_income_default = makeHandler(async (req, res) => {
     return res.status(201).json({ status: 201, message: "Income record created successfully", data: result });
   }
   if (method === "PUT") {
-    const { id, categoryId, amount, date, paymentMethod, bankAccountId, referenceNumber, remarks, attachmentUrl } = req.body;
+    const { id, categoryId, customCategoryName, subCategory, amount, date, paymentMethod, bankAccountId, referenceNumber, remarks, attachmentUrl } = req.body;
     const targetId = id || idParam;
-    if (!targetId || !categoryId || amount === void 0) {
+    if (!targetId || !categoryId && !customCategoryName || amount === void 0) {
       return res.status(400).json({ error: { message: "Record ID, Income Category, and Amount are required", status: 400 } });
     }
     const normalizedPaymentMethod = (paymentMethod || "CASH").toUpperCase();
@@ -195,21 +219,44 @@ var add_income_default = makeHandler(async (req, res) => {
         } catch (e) {
         }
       }
-      const category = await tx.incomeCategory.findUnique({
-        where: { id: categoryId },
-        include: { account: true }
-      });
+      let category;
+      if (categoryId === "CUSTOM" || customCategoryName && customCategoryName.trim()) {
+        const catName = (customCategoryName || "Custom Income").trim();
+        category = await tx.incomeCategory.findUnique({ where: { name: catName } });
+        if (!category) {
+          category = await tx.incomeCategory.create({
+            data: { name: catName, description: "Custom Income Category", isActive: true }
+          });
+        }
+      } else {
+        category = await tx.incomeCategory.findUnique({
+          where: { id: categoryId },
+          include: { account: { include: { accountType: true } } }
+        });
+      }
       if (!category) {
         throw new Error("Income Category not found");
       }
       const creditAccountId = category.accountId || category.account?.id;
+      if (!creditAccountId) {
+        const err = new Error("This income category is not linked with any Revenue GL Account. Please map it from Chart of Accounts.");
+        err.status = 400;
+        throw err;
+      }
+      const mappedAccountType = category.account?.accountType?.name?.toUpperCase();
+      if (mappedAccountType && mappedAccountType !== "REVENUE") {
+        const err = new Error(`This income category is mapped to a non-Revenue account (${category.account?.accountName}). Please map it to a Revenue GL Account from Chart of Accounts.`);
+        err.status = 400;
+        throw err;
+      }
+      const cleanSubCategory = subCategory && subCategory.trim() ? subCategory.trim() : null;
+      const postingDescription = remarks ? `${remarks} (${category.name}${cleanSubCategory ? ` - ${cleanSubCategory}` : ""})` : `Income received for ${category.name}${cleanSubCategory ? ` - ${cleanSubCategory}` : ""}`;
       const postingResult = await AccountingService.postReceipt(tx, {
         amount: numAmount,
         cashOrBankAccountId: (normalizedPaymentMethod === "BANK" || normalizedPaymentMethod === "ONLINE" || normalizedPaymentMethod === "CHEQUE") && bankAccountId ? bankAccountId : void 0,
         cashOrBankAccountKeyword: !(normalizedPaymentMethod === "BANK" && bankAccountId) ? "Cash" : void 0,
-        incomeAccountId: creditAccountId || void 0,
-        incomeAccountKeyword: !creditAccountId ? category.name || "Income" : void 0,
-        description: remarks || `Income received for ${category.name}`,
+        incomeAccountId: creditAccountId,
+        description: postingDescription,
         reference: referenceNumber || `Income Ref #${Date.now().toString().slice(-6)}`,
         module: "Add Income",
         postedBy: req.user.id,
@@ -220,7 +267,8 @@ var add_income_default = makeHandler(async (req, res) => {
       const updatedRecord = await tx.addIncomeRecord.update({
         where: { id: targetId },
         data: {
-          categoryId,
+          categoryId: category.id,
+          subCategory: cleanSubCategory,
           amount: numAmount,
           date: date ? new Date(date) : /* @__PURE__ */ new Date(),
           paymentMethod: normalizedPaymentMethod,
