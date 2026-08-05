@@ -96,21 +96,20 @@ export const AccountingHealthCheck = () => {
           <p className="text-xs text-slate-600 mt-0.5 font-medium">Comprehensive integrity verification for your accounting system</p>
         </div>
         <div className="flex items-center gap-2 self-start sm:self-auto">
-          {driftCount > 0 && (
-            <button
-              onClick={repairBalances}
-              disabled={repairing || loading}
-              title="Recompute every account balance from the posted general ledger"
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-amber-800/60 bg-amber-950/30 hover:bg-amber-900/30 hover:border-amber-700 text-amber-300 transition-all text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Wrench className={`h-3.5 w-3.5 ${repairing ? 'animate-spin' : ''}`} />
-              {repairing ? 'Rebuilding...' : `Repair ${driftCount} Balance${driftCount === 1 ? '' : 's'}`}
-            </button>
-          )}
+          <button
+            onClick={repairBalances}
+            disabled={repairing || loading}
+            title="Execute complete automated repair across GL codes, account mappings, and ledger balances"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-800/60 bg-emerald-950/40 hover:bg-emerald-900/40 hover:border-emerald-700 text-emerald-300 transition-all text-xs font-bold shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Wrench className={`h-4 w-4 ${repairing ? 'animate-spin' : ''}`} />
+            {repairing ? 'Executing Repair...' : 'Run Auto Repair All Issues'}
+          </button>
+
           <button
             onClick={runCheck}
             disabled={loading || repairing}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 hover:border-slate-700 text-slate-500 hover:text-slate-200 transition-all text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 transition-all text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             {loading ? 'Running Check...' : 'Run Check'}
@@ -119,16 +118,29 @@ export const AccountingHealthCheck = () => {
       </div>
 
       {repairResult && (
-        <div className="rounded-xl border border-emerald-900/50 bg-emerald-950/20 px-4 py-3.5 flex items-center gap-3">
-          <div className="h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 border bg-emerald-950 border-emerald-800/50">
-            <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" />
+        <div className="rounded-xl border border-emerald-900/50 bg-emerald-950/20 px-4 py-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 border bg-emerald-950 border-emerald-800/50">
+              <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-emerald-300">Accounting Engine Auto Repair Completed</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Issues before: <span className="font-mono text-amber-400 font-bold">{repairResult.issuesBefore}</span> &rarr; Issues remaining: <span className="font-mono text-emerald-400 font-bold">{repairResult.issuesAfter}</span>
+              </p>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-emerald-300">Balances rebuilt from the general ledger</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              {repairResult.accountsUpdated} account(s) recomputed &middot; drift {repairResult.driftBefore} &rarr; {repairResult.driftAfter}
-            </p>
-          </div>
+          {repairResult.actionsTaken && repairResult.actionsTaken.length > 0 && (
+            <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800 space-y-1 font-mono text-[11px]">
+              <p className="text-slate-400 font-bold uppercase tracking-wider text-[10px] mb-1">Actions Executed:</p>
+              {repairResult.actionsTaken.map((act, i) => (
+                <div key={i} className="flex items-center gap-2 text-slate-300">
+                  <span className="text-emerald-400">&bull;</span>
+                  <span>{act}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

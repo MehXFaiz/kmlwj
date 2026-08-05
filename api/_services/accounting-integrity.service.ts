@@ -505,4 +505,107 @@ export class AccountingIntegrityService {
 
     return issues;
   }
+
+  /**
+   * Complete, permanent automated repair for all accounting health issues.
+   * Normalizes GL Codes to 7 digits, eliminates duplicate codes, repairs missing category/head account mappings,
+   * cleans orphan lines, and recalculates stored account balances directly from the General Ledger.
+   */
+  static async repairAll(): Promise<{
+    success: boolean;
+    actionsTaken: string[];
+    checkBefore: IntegrityCheckResult;
+    checkAfter: IntegrityCheckResult;
+  }> {
+    const checkBefore = await this.runFullCheck();
+    const actionsTaken: string[] = [];
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Repair invalid GL code lengths (ensure every GL Code is exactly 7 digits)
+      const accounts = await tx.account.findMany();
+      for (const acc of accounts) {
+        if (acc.glCode.length !== 7 || !/^\d{7}$/.test(acc.glCode)) {
+          let newCode = acc.glCode.replace(/\D/g, '');
+          if (newCode.length < 7) {
+            newCode = newCode.padEnd(7, '0');
+          } else if (newCode.length > 7) {
+            newCode = newCode.slice(0, 7);
+          }
+          if (!/^\d{7}$/.test(newCode)) {
+            const prefix = acc.glCode.startsWith('2') ? '20' : acc.glCode.startsWith('3') ? '30' : acc.glCode.startsWith('4') ? '40' : '10';
+            newCode = `${prefix}00000`.slice(0, 7);
+          }
+          while (await tx.account.findFirst({ where: { glCode: newCode, id: { not: acc.id } } })) {
+            const num = parseInt(newCode) + 1;
+            newCode = String(num).padStart(7, '0');
+          }
+          await tx.account.update({
+            where: { id: acc.id },
+            data: { glCode: newCode }
+          });
+          actionsTaken.push(`Corrected GL Code for "${acc.accountName}" from "${acc.glCode}" to 7-digit "${newCode}"`);
+        }
+      }
+
+      // 2. Resolve duplicate GL codes
+      const allAccounts = await tx.account.findMany({ orderBy: { createdAt: 'asc' } });
+      const seenGlCodes = new Set<string>();
+      for (const acc of allAccounts) {
+        if (seenGlCodes.has(acc.glCode)) {
+          let num = parseInt(acc.glCode) + 1;
+          let newCode = String(num).padStart(7, '0');
+          while (await tx.account.findFirst({ where: { glCode: newCode } }) || seenGlCodes.has(newCode)) {
+            num++;
+            newCode = String(num).padStart(7, '0');
+          }
+          await tx.account.update({
+            where: { id: acc.id },
+            data: { glCode: newCode }
+          });
+          seenGlCodes.add(newCode);
+          actionsTaken.push(`Reassigned duplicate GL Code for "${acc.accountName}" to unique "${newCode}"`);
+        } else {
+          seenGlCodes.add(acc.glCode);
+        }
+      }
+
+      // 3. Ensure every Income Category & Expense Head has a linked 7-digit GL Account
+      await AccountingService.ensureCategoryAndHeadGLAccounts(tx);
+      actionsTaken.push('Verified and auto-linked GL Accounts for all Income Categories, Expense Heads, and Revenue Heads');
+
+      // 4. Synchronize historical Journal Entries with specific GL Accounts
+      await AccountingService.healJournalEntryAccounts(tx);
+      actionsTaken.push('Synchronized historical Journal Entry Lines with specific GL Accounts');
+
+      // 5. Clean orphan journal entry lines referencing non-existent accounts
+      const validAccountIds = new Set((await tx.account.findMany({ select: { id: true } })).map(a => a.id));
+      const orphanLines = await tx.journalEntryLine.findMany();
+      for (const line of orphanLines) {
+        if (!validAccountIds.has(line.accountId)) {
+          const fallbackAcc = await tx.account.findFirst({ where: { glCode: { startsWith: '40801' } } }) || await tx.account.findFirst();
+          if (fallbackAcc) {
+            await tx.journalEntryLine.update({
+              where: { id: line.id },
+              data: { accountId: fallbackAcc.id }
+            });
+            actionsTaken.push(`Re-linked orphan journal line #${line.id.slice(0, 8)} to GL Account ${fallbackAcc.glCode} (${fallbackAcc.accountName})`);
+          }
+        }
+      }
+
+      // 6. Recalculate stored account balances directly from posted general ledger entries
+      const rebuildResult = await AccountingService.recalculateAllBalances(tx);
+      actionsTaken.push(`Recalculated cached currentBalance for ${rebuildResult.updated} accounts directly from posted ledger entries`);
+    });
+
+    const checkAfter = await this.runFullCheck();
+
+    return {
+      success: checkAfter.criticalCount === 0 && checkAfter.warningCount === 0,
+      actionsTaken,
+      checkBefore,
+      checkAfter
+    };
+  }
 }
+

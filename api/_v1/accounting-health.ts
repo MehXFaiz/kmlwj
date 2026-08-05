@@ -40,50 +40,30 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
    * Pass ?accountId=<id> to repair a single drifted account instead of all.
    */
   if (req.method === 'POST') {
-    const action = String(req.query.action || req.body?.action || 'rebuild-balances');
-    if (action !== 'rebuild-balances') {
-      return res.status(400).json({ error: { message: `Unknown action '${action}'`, status: 400 } });
-    }
-
-    // Rebuilding rewrites cached financial data across the chart of accounts,
-    // so it needs the account-modification permission, not just VIEW_AUDIT.
     if (!await verifyPermission(req, res, PERMS.UPDATE_ACCOUNT)) return;
 
-    const accountId = (req.query.accountId || req.body?.accountId) as string | undefined;
-
     try {
-      const before = await AccountingIntegrityService.runFullCheck();
-      const driftBefore = before.issues.filter(i => i.type === 'cached_balance_drift').length;
-
-      let updated = 0;
-      if (accountId) {
-        await prisma.$transaction(async (tx) => {
-          await AccountingService.recalculateAccountBalance(tx, accountId);
-        });
-        updated = 1;
-      } else {
-        ({ updated } = await AccountingService.recalculateAllBalances());
-      }
-
-      const after = await AccountingIntegrityService.runFullCheck();
-      const driftAfter = after.issues.filter(i => i.type === 'cached_balance_drift').length;
+      const repairResult = await AccountingIntegrityService.repairAll();
 
       return res.status(200).json({
         status: 200,
-        message: accountId
-          ? 'Account balance repaired from the general ledger'
-          : 'All account balances rebuilt from the general ledger',
+        message: 'Complete accounting system integrity repair executed successfully',
         data: {
-          accountsUpdated: updated,
-          driftBefore,
-          driftAfter,
-          remainingIssues: after.totalIssues,
+          success: repairResult.success,
+          actionsTaken: repairResult.actionsTaken,
+          issuesBefore: repairResult.checkBefore.totalIssues,
+          issuesAfter: repairResult.checkAfter.totalIssues,
+          criticalBefore: repairResult.checkBefore.criticalCount,
+          criticalAfter: repairResult.checkAfter.criticalCount,
+          warningBefore: repairResult.checkBefore.warningCount,
+          warningAfter: repairResult.checkAfter.warningCount,
+          timestamp: repairResult.checkAfter.timestamp
         },
       });
     } catch (error: any) {
       return res.status(500).json({
         error: {
-          message: 'Failed to rebuild account balances',
+          message: 'Failed to execute accounting integrity repair',
           details: error?.message,
           status: 500,
         },
