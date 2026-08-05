@@ -8,6 +8,30 @@ import { reportsService } from '../services/apiServices';
 import { useJournalStore } from '../store/journalStore';
 import { useDashboardStore } from '../store/dashboardStore';
 
+// Cash in Hand / each Bank (dynamic count) / Advance & Loan / Receivable /
+// Other Assets — one tile per category, fully driven by whatever the backend
+// returns. No account name or count is hardcoded here.
+const BalanceCategoryGrid = ({ categories, formatMoney }) => {
+  const tiles = [
+    { key: 'cash', label: 'Cash in Hand', value: categories.cashInHand.total },
+    ...categories.banks.accounts.map((b) => ({ key: `bank-${b.glCode}`, label: b.name, value: b.balance })),
+    { key: 'advance', label: 'Advance & Loan', value: categories.advanceAndLoan.total },
+    { key: 'receivable', label: 'Receivable', value: categories.receivable.total },
+    { key: 'other', label: 'Other Assets', value: categories.otherAssets.total },
+  ];
+
+  return (
+    <div className="flex flex-wrap gap-3">
+      {tiles.map((tile) => (
+        <div key={tile.key} className="flex-1 min-w-[150px] rounded-xl bg-slate-950/60 border border-slate-800 px-3.5 py-2.5">
+          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider truncate" title={tile.label}>{tile.label}</p>
+          <p className="text-sm font-mono font-bold text-slate-200 mt-0.5">{formatMoney(tile.value)}</p>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export const TrialBalanceSheet = () => {
   const { treeAccounts, fetchAccountsTree } = useCoaStore();
   const { tbReport, loading: isLoadingTb, fetchTbReport, version } = useDashboardStore();
@@ -581,6 +605,20 @@ export const TrialBalanceSheet = () => {
         </Card>
       </div>
 
+      {/* OPENING BALANCES — proper accounting-standard presentation, shown
+          regardless of view mode. Every figure is read straight from
+          tbReport.openingBalances (AccountingService.getTrialBalance),
+          computed from initialBalance + posted ledger lines only. */}
+      <Card className="bg-slate-900/60 border-slate-800">
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest">Opening Balances</h3>
+            <span className="text-[11px] text-slate-500 font-mono">As of {fromDate || 'Inception'}</span>
+          </div>
+          <BalanceCategoryGrid categories={balanceSheetCategories.opening} formatMoney={formatMoney} />
+        </CardContent>
+      </Card>
+
       {/* MATRIX VIEW MODE */}
       {viewMode === 'matrix' && (
         <Card className="overflow-hidden border border-slate-800 print:border-slate-300 print:bg-white print:shadow-none">
@@ -853,6 +891,18 @@ export const TrialBalanceSheet = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* CLOSING BALANCES — mirrors Opening Balances above, shown regardless
+          of view mode, read straight from tbReport.closingBalances. */}
+      <Card className="bg-slate-900/60 border-slate-800">
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest">Closing Balances</h3>
+            <span className="text-[11px] text-slate-500 font-mono">As of {toDate || 'Today'}</span>
+          </div>
+          <BalanceCategoryGrid categories={balanceSheetCategories.closing} formatMoney={formatMoney} />
+        </CardContent>
+      </Card>
 
       {/* Detail drawer Form modal */}
       <AccountFormDrawer
