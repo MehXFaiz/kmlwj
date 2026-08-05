@@ -606,6 +606,35 @@ async function main() {
     }
   }
 
+  // 12. Seed Income Categories for Add Income Module
+  const defaultIncomeCategories = [
+    { name: 'Donation Income', description: 'General and restricted donation income' },
+    { name: 'Other Income (Coconuts, Oil, Battery, Scraps, Rabi-ul-Awal, Qurbani Space)', description: 'Miscellaneous community assets, scrap sales and event space income' },
+    { name: 'Haqqani Decoration Income', description: 'Haqqani decoration services income' },
+    { name: 'Shouqat Eco Sound Income', description: 'Shouqat eco sound system rental income' },
+    { name: 'Sharjeel Eco Sound Income', description: 'Sharjeel eco sound system rental income' },
+    { name: 'Rizwan Eco Sound Income', description: 'Rizwan eco sound system rental income' },
+    { name: 'Election Committee Income', description: 'Election committee contributions and fees' },
+    { name: 'Software Invoice Income', description: 'Software and tech invoice income' },
+    { name: 'Monthly Donation', description: 'Regular monthly recurring donations' },
+    { name: 'Ramzan Zakat Income', description: 'Ramzan Zakat collection income' },
+  ];
+
+  for (const cat of defaultIncomeCategories) {
+    const existingCat = await prisma.incomeCategory.findUnique({
+      where: { name: cat.name }
+    });
+    if (!existingCat) {
+      await prisma.incomeCategory.create({
+        data: {
+          name: cat.name,
+          description: cat.description,
+          isActive: true,
+        }
+      });
+    }
+  }
+
   console.log('Database seeding completed successfully!');
 }
 

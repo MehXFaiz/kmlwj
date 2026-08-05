@@ -34,6 +34,7 @@ model User {
   revenueCollections       RevenueCollection[] @relation("RevenueCollectionCreatedBy")
   donationsReceivedCreated DonationReceived[]  @relation("DonationReceivedCreatedBy")
   zakatCardsCreated        ZakatCard[]         @relation("ZakatCardCreatedBy")
+  addIncomesCreated        AddIncomeRecord[]   @relation("AddIncomeCreatedBy")
 
   @@index([isDeleted])
 }
@@ -122,6 +123,8 @@ model Account {
   revenueCollections     RevenueCollection[] @relation("RevenueCollectionBankAccount")
   donationsReceivedCash  DonationReceived[]  @relation("DonationReceivedCashAccount")
   donationsReceivedBank  DonationReceived[]  @relation("DonationReceivedBankAccount")
+  incomeCategoryAccounts IncomeCategory[]
+  addIncomeBanks         AddIncomeRecord[]   @relation("AddIncomeBankAccount")
 
   // Tree-building (parent lookups) and level-scoped scans hit these constantly.
   @@index([parentId])
@@ -222,6 +225,7 @@ model JournalEntry {
   revenueCollection RevenueCollection? @relation("RevenueCollectionJournalEntry")
   donationReceived DonationReceived?   @relation("DonationReceivedJournalEntry")
   zakatCard        ZakatCard?          @relation("ZakatCardJournalEntry")
+  addIncomeRecord  AddIncomeRecord?    @relation("AddIncomeJournalEntry")
 
   // Every financial report filters posted lines by their parent JournalEntry's
   // status (+ posting-date window) via getPostedAggregates — this is the single
@@ -379,6 +383,52 @@ model SimpleIncome {
   @@index([isDeleted])
   @@index([date])
   @@index([revenueHeadId])
+  @@index([bankAccountId])
+}
+
+// ── Add Income Module ─────────────────────────────────────────
+model IncomeCategory {
+  id             String            @id @default(uuid()) @db.Uuid
+  name           String            @unique
+  description    String?
+  accountId      String?           @db.Uuid
+  account        Account?          @relation(fields: [accountId], references: [id])
+  isActive       Boolean           @default(true)
+  isDeleted      Boolean           @default(false)
+  deletedAt      DateTime?
+  deletedBy      String?           @db.Uuid
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  incomeRecords  AddIncomeRecord[]
+
+  @@index([isDeleted])
+}
+
+model AddIncomeRecord {
+  id              String         @id @default(uuid()) @db.Uuid
+  categoryId      String         @db.Uuid
+  category        IncomeCategory @relation(fields: [categoryId], references: [id])
+  amount          Decimal        @db.Decimal(18, 2)
+  date            DateTime       @default(now())
+  paymentMethod   PaymentMethod  @default(CASH)
+  bankAccountId   String?        @db.Uuid
+  bankAccount     Account?       @relation("AddIncomeBankAccount", fields: [bankAccountId], references: [id])
+  referenceNumber String?
+  remarks         String?
+  attachmentUrl   String?        @db.Text
+  journalEntryId  String?        @unique @db.Uuid
+  journalEntry    JournalEntry?  @relation("AddIncomeJournalEntry", fields: [journalEntryId], references: [id])
+  createdById     String?        @db.Uuid
+  createdBy       User?          @relation("AddIncomeCreatedBy", fields: [createdById], references: [id])
+  isDeleted       Boolean        @default(false)
+  deletedAt       DateTime?
+  deletedBy       String?        @db.Uuid
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([isDeleted])
+  @@index([date])
+  @@index([categoryId])
   @@index([bankAccountId])
 }
 

@@ -42,6 +42,7 @@ const DonationReports = lazy(() => import('./views/DonationReports').then(m => (
 const Invoices = lazy(() => import('./views/Invoices').then(m => ({ default: m.Invoices })));
 
 // Operation Module Views
+const AddIncome = lazy(() => import('./views/AddIncome').then(m => ({ default: m.AddIncome })));
 const Income = lazy(() => import('./views/Income').then(m => ({ default: m.Income })));
 const Expenses = lazy(() => import('./views/Expenses').then(m => ({ default: m.Expenses })));
 
@@ -293,6 +294,7 @@ function App() {
                 <Reports />
               </PermissionGuard>
             } />
+            <Route path="/add-income" element={<AddIncome />} />
             <Route path="/income" element={
               <PermissionGuard requiredPerms={['RECORD_INCOME', 'CREATE_ACCOUNT']}>
                 <Income />

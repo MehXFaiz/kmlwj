@@ -175,6 +175,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
     {
       title: t('sidebar.moneyIn', 'Money In'),
       items: [
+        { name: 'Add Income', hint: 'Log & manage extra income entries', icon: PlusCircle, path: '/add-income' },
         { name: t('sidebar.hallBookings', 'Hall Bookings'), hint: t('sidebar.hallBookingsHint', 'Manage hall reservations'), icon: Calendar, path: '/hall-bookings' },
         { name: 'Donations Received', hint: 'Charitable inflow receipts', icon: Heart, path: '/donations-received' },
         { name: 'Donors Directory', hint: 'Manage registered donors', icon: Users, path: '/donors' },

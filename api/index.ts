@@ -53,6 +53,8 @@ import simpleIncomeHandler from './_v1/simple-income.js';
 import accountingHealthHandler from './_v1/accounting-health.js';
 import systemResetHandler from './_v1/system-reset.js';
 import zakatCardsHandler from './_v1/zakat-cards.js';
+import incomeCategoriesHandler from './_v1/income-categories.js';
+import addIncomeHandler from './_v1/add-income.js';
 import { memberVerifyHandler } from './_v1/member-verify.js';
 import { zakatCardVerifyHandler } from './_v1/zakat-card-verify.js';
 import { uploadFields, handleUploadError } from './_middlewares/upload.middleware.js';
@@ -282,6 +284,17 @@ app.get('/api/v1/simple-income', makeExpress(simpleIncomeHandler));
 app.post('/api/v1/simple-income', makeExpress(simpleIncomeHandler));
 app.put('/api/v1/simple-income', makeExpress(simpleIncomeHandler));
 app.delete('/api/v1/simple-income', makeExpress(simpleIncomeHandler));
+
+// Add Income Module Routes (Income Categories & Add Income Records)
+app.get('/api/v1/income-categories', makeExpress(incomeCategoriesHandler));
+app.post('/api/v1/income-categories', makeExpress(incomeCategoriesHandler));
+app.put('/api/v1/income-categories', makeExpress(incomeCategoriesHandler));
+app.delete('/api/v1/income-categories', makeExpress(incomeCategoriesHandler));
+
+app.get('/api/v1/add-income', makeExpress(addIncomeHandler));
+app.post('/api/v1/add-income', makeExpress(addIncomeHandler));
+app.put('/api/v1/add-income', makeExpress(addIncomeHandler));
+app.delete('/api/v1/add-income', makeExpress(addIncomeHandler));
 
 // Accounting Health Check Route
 app.get('/api/v1/accounting-health', makeExpress(accountingHealthHandler));
