@@ -57,6 +57,8 @@
     "expenses": "Expenses",
     "incomeCategories": "Income Categories",
     "incomeCategoriesHint": "Revenue account heads",
+    "incomeCategoryMapping": "Income Category Mapping",
+    "incomeCategoryMappingHint": "Map Add Income categories to GL accounts",
     "expenseCategories": "Expense Categories",
     "expenseCategoriesHint": "Expense account heads",
     "systemAccounts": "System Accounts",

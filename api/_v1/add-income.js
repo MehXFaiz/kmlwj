@@ -122,10 +122,14 @@ var add_income_default = makeHandler(async (req, res) => {
       let category;
       if (categoryId === "CUSTOM" || customCategoryName && customCategoryName.trim()) {
         const catName = (customCategoryName || "Custom Income").trim();
-        category = await tx.incomeCategory.findUnique({ where: { name: catName } });
+        category = await tx.incomeCategory.findUnique({
+          where: { name: catName },
+          include: { account: { include: { accountType: true } } }
+        });
         if (!category) {
           category = await tx.incomeCategory.create({
-            data: { name: catName, description: "Custom Income Category", isActive: true }
+            data: { name: catName, description: "Custom Income Category", isActive: true },
+            include: { account: { include: { accountType: true } } }
           });
         }
       } else {
@@ -222,10 +226,14 @@ var add_income_default = makeHandler(async (req, res) => {
       let category;
       if (categoryId === "CUSTOM" || customCategoryName && customCategoryName.trim()) {
         const catName = (customCategoryName || "Custom Income").trim();
-        category = await tx.incomeCategory.findUnique({ where: { name: catName } });
+        category = await tx.incomeCategory.findUnique({
+          where: { name: catName },
+          include: { account: { include: { accountType: true } } }
+        });
         if (!category) {
           category = await tx.incomeCategory.create({
-            data: { name: catName, description: "Custom Income Category", isActive: true }
+            data: { name: catName, description: "Custom Income Category", isActive: true },
+            include: { account: { include: { accountType: true } } }
           });
         }
       } else {

@@ -23,6 +23,7 @@ const AccountingHealthCheck = lazy(() => import('./views/AccountingHealthCheck')
 const Profile = lazy(() => import('./views/Profile').then(m => ({ default: m.Profile })));
 const MyAccount = lazy(() => import('./views/MyAccount').then(m => ({ default: m.MyAccount })));
 const RevenueHeads = lazy(() => import('./views/RevenueHeads').then(m => ({ default: m.RevenueHeads })));
+const IncomeCategoryMapping = lazy(() => import('./views/IncomeCategoryMapping').then(m => ({ default: m.IncomeCategoryMapping })));
 const ExpenseHeads = lazy(() => import('./views/ExpenseHeads').then(m => ({ default: m.ExpenseHeads })));
 const ReservedCodes = lazy(() => import('./views/ReservedCodes').then(m => ({ default: m.ReservedCodes })));
 const UsersRoles = lazy(() => import('./views/UsersRoles').then(m => ({ default: m.UsersRoles })));
@@ -277,6 +278,11 @@ function App() {
             <Route path="/revenue-heads" element={
               <PermissionGuard requiredPerms={['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT']}>
                 <RevenueHeads />
+              </PermissionGuard>
+            } />
+            <Route path="/income-category-mapping" element={
+              <PermissionGuard requiredPerms={['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT']}>
+                <IncomeCategoryMapping />
               </PermissionGuard>
             } />
             <Route path="/expense-heads" element={

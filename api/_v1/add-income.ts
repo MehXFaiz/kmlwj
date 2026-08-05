@@ -145,10 +145,17 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       let category;
       if (categoryId === 'CUSTOM' || (customCategoryName && customCategoryName.trim())) {
         const catName = (customCategoryName || 'Custom Income').trim();
-        category = await tx.incomeCategory.findUnique({ where: { name: catName } });
+        category = await tx.incomeCategory.findUnique({
+          where: { name: catName },
+          include: { account: { include: { accountType: true } } }
+        });
         if (!category) {
+          // A freshly created custom category has no accountId yet — it will
+          // correctly fail the "not linked with any Revenue GL Account" guard
+          // below until an admin maps it, same as any other unmapped category.
           category = await tx.incomeCategory.create({
-            data: { name: catName, description: 'Custom Income Category', isActive: true }
+            data: { name: catName, description: 'Custom Income Category', isActive: true },
+            include: { account: { include: { accountType: true } } }
           });
         }
       } else {
@@ -272,10 +279,17 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       let category;
       if (categoryId === 'CUSTOM' || (customCategoryName && customCategoryName.trim())) {
         const catName = (customCategoryName || 'Custom Income').trim();
-        category = await tx.incomeCategory.findUnique({ where: { name: catName } });
+        category = await tx.incomeCategory.findUnique({
+          where: { name: catName },
+          include: { account: { include: { accountType: true } } }
+        });
         if (!category) {
+          // A freshly created custom category has no accountId yet — it will
+          // correctly fail the "not linked with any Revenue GL Account" guard
+          // below until an admin maps it, same as any other unmapped category.
           category = await tx.incomeCategory.create({
-            data: { name: catName, description: 'Custom Income Category', isActive: true }
+            data: { name: catName, description: 'Custom Income Category', isActive: true },
+            include: { account: { include: { accountType: true } } }
           });
         }
       } else {

@@ -57,6 +57,8 @@
     "expenses": "اخراجات",
     "incomeCategories": "آمدنی کے زمرے",
     "incomeCategoriesHint": "آمدنی کے اکاؤنٹس",
+    "incomeCategoryMapping": "آمدنی کے زمرے کی میپنگ",
+    "incomeCategoryMappingHint": "آمدنی کے زمروں کو جی ایل اکاؤنٹس سے منسلک کریں",
     "expenseCategories": "اخراجات کے زمرے",
     "expenseCategoriesHint": "اخراجات کے اکاؤنٹس",
     "systemAccounts": "سسٹم اکاؤنٹس",
