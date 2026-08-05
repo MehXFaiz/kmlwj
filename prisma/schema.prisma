@@ -423,6 +423,12 @@ model AddIncomeRecord {
   journalEntry    JournalEntry?  @relation("AddIncomeJournalEntry", fields: [journalEntryId], references: [id])
   createdById     String?        @db.Uuid
   createdBy       User?          @relation("AddIncomeCreatedBy", fields: [createdById], references: [id])
+  status          String         @default("PENDING_POST")
+  postedAt        DateTime?
+  postedById      String?        @db.Uuid
+  revertedAt      DateTime?
+  revertedById    String?        @db.Uuid
+  revertReason    String?
   isDeleted       Boolean        @default(false)
   deletedAt       DateTime?
   deletedBy       String?        @db.Uuid
@@ -450,6 +456,12 @@ model SimpleExpense {
   journalEntryId String?     @db.Uuid
   createdById    String?     @db.Uuid
   createdBy      User?       @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
+  status         String      @default("PENDING_POST")
+  postedAt       DateTime?
+  postedById     String?     @db.Uuid
+  revertedAt     DateTime?
+  revertedById   String?     @db.Uuid
+  revertReason   String?
   isDeleted      Boolean     @default(false)
   deletedAt      DateTime?
   deletedBy      String?     @db.Uuid

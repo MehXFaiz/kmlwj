@@ -55,6 +55,7 @@ import systemResetHandler from './_v1/system-reset.js';
 import zakatCardsHandler from './_v1/zakat-cards.js';
 import incomeCategoriesHandler from './_v1/income-categories.js';
 import addIncomeHandler from './_v1/add-income.js';
+import ledgerPostHandler from './_v1/ledger-post.js';
 import { memberVerifyHandler } from './_v1/member-verify.js';
 import { zakatCardVerifyHandler } from './_v1/zakat-card-verify.js';
 import { uploadFields, handleUploadError } from './_middlewares/upload.middleware.js';
@@ -290,6 +291,9 @@ app.get('/api/v1/income-categories', makeExpress(incomeCategoriesHandler));
 app.post('/api/v1/income-categories', makeExpress(incomeCategoriesHandler));
 app.put('/api/v1/income-categories', makeExpress(incomeCategoriesHandler));
 app.delete('/api/v1/income-categories', makeExpress(incomeCategoriesHandler));
+
+app.post('/api/v1/ledger-post', makeExpress(ledgerPostHandler));
+app.put('/api/v1/ledger-post', makeExpress(ledgerPostHandler));
 
 app.get('/api/v1/add-income', makeExpress(addIncomeHandler));
 app.post('/api/v1/add-income', makeExpress(addIncomeHandler));
