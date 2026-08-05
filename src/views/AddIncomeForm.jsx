@@ -507,48 +507,46 @@ export const AddIncomeForm = () => {
                   <TrendingUp className="h-4 w-4 text-brand-400" />
                   Income Information
                 </h3>
-                <span className="text-[10px] text-slate-500 font-mono">Step 1 of 2</span>
+                <button
+                  type="button"
+                  onClick={() => { setEditingCategory(null); setCategoryForm({ name: '', description: '', accountId: '', isActive: true }); setIsCategoryModalOpen(true); }}
+                  className="text-[11px] font-semibold text-brand-400 hover:text-brand-300 flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="h-3 w-3" /> Manage Categories
+                </button>
               </div>
 
-              {/* Main Income Category Dropdown */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
+              {/* Income Category & Other Income Type Grid (Side-by-side 50/50 on desktop when Other Income selected, 100% full width otherwise) */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                {/* Main Income Category Dropdown */}
+                <div className={isOtherIncomeSelected ? 'col-span-1' : 'col-span-full'}>
                   <label className={labelStyle}>
                     Income Category <span className="text-red-400">*</span>
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => { setEditingCategory(null); setCategoryForm({ name: '', description: '', accountId: '', isActive: true }); setIsCategoryModalOpen(true); }}
-                    className="text-[11px] font-semibold text-brand-400 hover:text-brand-300 flex items-center gap-1 cursor-pointer"
+                  <select
+                    value={form.categoryId}
+                    onChange={(e) => {
+                      handleInputChange('categoryId', e.target.value);
+                      if (e.target.value !== 'CUSTOM') {
+                        handleInputChange('customCategoryName', '');
+                      }
+                    }}
+                    className={inputStyle}
+                    required
                   >
-                    <Plus className="h-3 w-3" /> Manage Categories
-                  </button>
+                    <option value="" disabled>Select Income Category</option>
+                    {availableCategories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                    <option value="CUSTOM">Custom</option>
+                  </select>
                 </div>
-                <select
-                  value={form.categoryId}
-                  onChange={(e) => {
-                    handleInputChange('categoryId', e.target.value);
-                    if (e.target.value !== 'CUSTOM') {
-                      handleInputChange('customCategoryName', '');
-                    }
-                  }}
-                  className={inputStyle}
-                  required
-                >
-                  <option value="" disabled>Select Income Category</option>
-                  {availableCategories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))}
-                  <option value="CUSTOM">Custom</option>
-                </select>
-              </div>
 
-              {/* Conditional 1: Other Income Type Dropdown (when Other Income selected) */}
-              {isOtherIncomeSelected && (
-                <div className="animate-in fade-in duration-200 space-y-4 p-3.5 bg-slate-950/40 border border-slate-800 rounded-xl">
-                  <div>
+                {/* Conditional 1: Other Income Type Dropdown (side-by-side with Income Category on desktop) */}
+                {isOtherIncomeSelected && (
+                  <div className="col-span-1 animate-in fade-in duration-200">
                     <label className={labelStyle}>
                       Other Income Type <span className="text-red-400">*</span>
                     </label>
@@ -566,42 +564,42 @@ export const AddIncomeForm = () => {
                       ))}
                     </select>
                   </div>
+                )}
 
-                  {/* Nested Conditional: Custom Other Income text input (when Other Income Type === 'Other') */}
-                  {form.otherIncomeType === 'Other' && (
-                    <div className="animate-in fade-in duration-200">
-                      <label className={labelStyle}>
-                        Custom Other Income <span className="text-red-400">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Enter Other Income Name"
-                        value={form.customOtherIncome}
-                        onChange={(e) => handleInputChange('customOtherIncome', e.target.value)}
-                        className={inputStyle}
-                        required={form.otherIncomeType === 'Other'}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
+                {/* Nested Conditional: Custom Other Income text input (when Other Income Type === 'Other') */}
+                {isOtherIncomeSelected && form.otherIncomeType === 'Other' && (
+                  <div className="col-span-full animate-in fade-in duration-200">
+                    <label className={labelStyle}>
+                      Custom Other Income <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Enter Other Income Name"
+                      value={form.customOtherIncome}
+                      onChange={(e) => handleInputChange('customOtherIncome', e.target.value)}
+                      className={inputStyle}
+                      required={form.otherIncomeType === 'Other'}
+                    />
+                  </div>
+                )}
 
-              {/* Conditional 2: Custom Income Category Input (when main dropdown === 'CUSTOM') */}
-              {isCustomCategorySelected && (
-                <div className="animate-in fade-in duration-200 p-3.5 bg-slate-950/40 border border-slate-800 rounded-xl">
-                  <label className={labelStyle}>
-                    Custom Income Category <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Enter Income Category"
-                    value={form.customCategoryName}
-                    onChange={(e) => handleInputChange('customCategoryName', e.target.value)}
-                    className={inputStyle}
-                    required={isCustomCategorySelected}
-                  />
-                </div>
-              )}
+                {/* Conditional 2: Custom Income Category Input (when main dropdown === 'CUSTOM') */}
+                {isCustomCategorySelected && (
+                  <div className="col-span-full animate-in fade-in duration-200">
+                    <label className={labelStyle}>
+                      Custom Income Category <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Enter Income Category"
+                      value={form.customCategoryName}
+                      onChange={(e) => handleInputChange('customCategoryName', e.target.value)}
+                      className={inputStyle}
+                      required={isCustomCategorySelected}
+                    />
+                  </div>
+                )}
+              </div>
 
               {/* Amount & Date */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
