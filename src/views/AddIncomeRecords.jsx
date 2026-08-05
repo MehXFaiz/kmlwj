@@ -28,6 +28,8 @@ import {
 import { pageActionsClass } from '../components/common/responsive';
 import * as XLSX from 'xlsx';
 
+import { ledgerService } from '../services/apiServices';
+
 export const AddIncomeRecords = () => {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
@@ -53,6 +55,10 @@ export const AddIncomeRecords = () => {
   const [pageSize, setPageSize] = useState(50);
 
   const [deletingRecordId, setDeletingRecordId] = useState(null);
+  const [postingRecord, setPostingRecord] = useState(null);
+  const [revertingRecord, setRevertingRecord] = useState(null);
+  const [revertReason, setRevertReason] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     fetchCategories();
@@ -73,6 +79,47 @@ export const AddIncomeRecords = () => {
   useEffect(() => {
     loadRecordsData();
   }, [loadRecordsData]);
+
+  // Handle Ledger Post
+  const handlePostToLedger = async () => {
+    if (!postingRecord) return;
+    if (!isAdminOrSuperAdmin) {
+      showToast('Forbidden: Only Admin and Super Admin can Post to Ledger', 'error');
+      return;
+    }
+    try {
+      setActionLoading(true);
+      await ledgerService.postToLedger('Add Income', postingRecord.id);
+      showToast('Transaction posted successfully to the General Ledger', 'success');
+      setPostingRecord(null);
+      loadRecordsData();
+    } catch (err) {
+      showToast(err.response?.data?.error?.message || err.message || 'Failed to post transaction', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Handle Posting Revert
+  const handleRevertPosting = async () => {
+    if (!revertingRecord) return;
+    if (!isAdminOrSuperAdmin) {
+      showToast('Forbidden: Only Admin and Super Admin can Revert Posting', 'error');
+      return;
+    }
+    try {
+      setActionLoading(true);
+      await ledgerService.revertPosting('Add Income', revertingRecord.id, revertReason);
+      showToast('Transaction posting reverted successfully from General Ledger', 'success');
+      setRevertingRecord(null);
+      setRevertReason('');
+      loadRecordsData();
+    } catch (err) {
+      showToast(err.response?.data?.error?.message || err.message || 'Failed to revert posting', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   // Confirm Record Delete
   const handleDeleteRecord = async () => {
@@ -334,6 +381,7 @@ export const AddIncomeRecords = () => {
                 <th className="py-3 px-4">Date</th>
                 <th className="py-3 px-4">Category</th>
                 <th className="py-3 px-4">Amount</th>
+                <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4">Payment Method</th>
                 <th className="py-3 px-4">Bank Account</th>
                 <th className="py-3 px-4">Ref # / Journal</th>
@@ -345,14 +393,14 @@ export const AddIncomeRecords = () => {
             <tbody className="divide-y divide-slate-800/60">
               {loading && records.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-500">
+                  <td colSpan={10} className="py-12 text-center text-slate-500">
                     <div className="h-6 w-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                     Loading income records...
                   </td>
                 </tr>
               ) : records.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-500">
+                  <td colSpan={10} className="py-12 text-center text-slate-500">
                     <TrendingUp className="h-10 w-10 mx-auto text-slate-700 mb-2" />
                     <p className="font-semibold text-slate-400">No income records found</p>
                     <p className="text-[11px] text-slate-600 mt-1">Try adjusting filters or click "Add Income Entry"</p>
@@ -367,6 +415,24 @@ export const AddIncomeRecords = () => {
                     ONLINE: 'bg-amber-950/80 text-amber-400 border-amber-800/50'
                   }[rec.paymentMethod] || 'bg-slate-800 text-slate-300 border-slate-700';
 
+                  const isPosted = rec.status === 'POSTED';
+                  const isReverted = rec.status === 'REVERTED';
+                  const isPending = !isPosted && !isReverted;
+
+                  const statusBadge = isPosted ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border uppercase bg-emerald-950/80 text-emerald-400 border-emerald-800/60">
+                      🟢 Posted
+                    </span>
+                  ) : isReverted ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border uppercase bg-red-950/80 text-red-400 border-red-800/60">
+                      🔴 Reverted
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border uppercase bg-amber-950/80 text-amber-400 border-amber-800/60">
+                      🟡 Pending Post
+                    </span>
+                  );
+
                   return (
                     <tr key={rec.id} className="hover:bg-slate-800/40 transition-colors">
                       <td className="py-3 px-4 font-mono text-slate-300 whitespace-nowrap">
@@ -377,6 +443,9 @@ export const AddIncomeRecords = () => {
                       </td>
                       <td className="py-3 px-4 font-bold font-mono text-brand-300 whitespace-nowrap">
                         PKR {Number(rec.amount || 0).toLocaleString('en-PK', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        {statusBadge}
                       </td>
                       <td className="py-3 px-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border uppercase ${methodBadge}`}>
@@ -423,29 +492,76 @@ export const AddIncomeRecords = () => {
                       </td>
                       <td className="py-3 px-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
-                          <Link
-                            to={`/add-income/edit/${rec.id}`}
-                            className={`p-1.5 rounded-lg border transition-colors ${
-                              isAdminOrSuperAdmin
-                                ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-brand-400 border-slate-700 cursor-pointer'
-                                : 'bg-slate-900 text-slate-600 border-slate-800 pointer-events-none'
-                            }`}
-                            title={isAdminOrSuperAdmin ? 'Edit Record' : 'Admin only'}
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </Link>
-                          <button
-                            onClick={() => setDeletingRecordId(rec.id)}
-                            disabled={!isAdminOrSuperAdmin}
-                            className={`p-1.5 rounded-lg border transition-colors ${
-                              isAdminOrSuperAdmin
-                                ? 'bg-red-950/40 hover:bg-red-900/60 text-red-400 border-red-900/40 cursor-pointer'
-                                : 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed'
-                            }`}
-                            title={isAdminOrSuperAdmin ? 'Delete Record' : 'Admin only'}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          {isPending && (
+                            <button
+                              onClick={() => setPostingRecord(rec)}
+                              disabled={!isAdminOrSuperAdmin}
+                              className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-all shadow-sm ${
+                                isAdminOrSuperAdmin
+                                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 cursor-pointer'
+                                  : 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
+                              }`}
+                            >
+                              Post to Ledger
+                            </button>
+                          )}
+
+                          {isPosted && (
+                            <button
+                              onClick={() => setRevertingRecord(rec)}
+                              disabled={!isAdminOrSuperAdmin}
+                              className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-all shadow-sm ${
+                                isAdminOrSuperAdmin
+                                  ? 'bg-amber-600 hover:bg-amber-500 text-white border-amber-500 cursor-pointer'
+                                  : 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
+                              }`}
+                            >
+                              Revert Posting
+                            </button>
+                          )}
+
+                          {isReverted && (
+                            <button
+                              onClick={() => setPostingRecord(rec)}
+                              disabled={!isAdminOrSuperAdmin}
+                              className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-all shadow-sm ${
+                                isAdminOrSuperAdmin
+                                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 cursor-pointer'
+                                  : 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
+                              }`}
+                            >
+                              Post Again
+                            </button>
+                          )}
+
+                          {isPending && (
+                            <Link
+                              to={`/add-income/edit/${rec.id}`}
+                              className={`p-1.5 rounded-lg border transition-colors ${
+                                isAdminOrSuperAdmin
+                                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-brand-400 border-slate-700 cursor-pointer'
+                                  : 'bg-slate-900 text-slate-600 border-slate-800 pointer-events-none'
+                              }`}
+                              title={isAdminOrSuperAdmin ? 'Edit Record' : 'Admin only'}
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </Link>
+                          )}
+
+                          {(isPending || isReverted) && (
+                            <button
+                              onClick={() => setDeletingRecordId(rec.id)}
+                              disabled={!isAdminOrSuperAdmin}
+                              className={`p-1.5 rounded-lg border transition-colors ${
+                                isAdminOrSuperAdmin
+                                  ? 'bg-red-950/40 hover:bg-red-900/60 text-red-400 border-red-900/40 cursor-pointer'
+                                  : 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed'
+                              }`}
+                              title={isAdminOrSuperAdmin ? 'Delete Record' : 'Admin only'}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -483,6 +599,84 @@ export const AddIncomeRecords = () => {
         )}
       </Card>
 
+      {/* Post to Ledger confirmation modal */}
+      {postingRecord && (
+        <Modal
+          isOpen={!!postingRecord}
+          onClose={() => setPostingRecord(null)}
+          title="Post to General Ledger"
+        >
+          <div className="space-y-4 pt-2">
+            <p className="text-xs text-slate-300">
+              Are you sure you want to post this transaction to the General Ledger?
+            </p>
+            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1 text-xs font-mono">
+              <p className="text-slate-400">Category: <span className="text-slate-200">{postingRecord.category?.name}</span></p>
+              <p className="text-slate-400">Amount: <span className="text-emerald-400 font-bold">PKR {Number(postingRecord.amount).toLocaleString('en-PK', { minimumFractionDigits: 2 })}</span></p>
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                onClick={() => setPostingRecord(null)}
+                disabled={actionLoading}
+                className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePostToLedger}
+                disabled={actionLoading}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold cursor-pointer flex items-center gap-2"
+              >
+                {actionLoading && <div className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                Confirm Post to Ledger
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Revert Posting confirmation modal */}
+      {revertingRecord && (
+        <Modal
+          isOpen={!!revertingRecord}
+          onClose={() => setRevertingRecord(null)}
+          title="Revert Ledger Posting"
+        >
+          <div className="space-y-4 pt-2">
+            <p className="text-xs text-slate-300">
+              This will reverse all accounting effects for this transaction in the General Ledger. Continue?
+            </p>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 mb-1">Reason for Revert (Optional)</label>
+              <input
+                type="text"
+                placeholder="Enter reason for reverting posting..."
+                value={revertReason}
+                onChange={(e) => setRevertReason(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                onClick={() => setRevertingRecord(null)}
+                disabled={actionLoading}
+                className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRevertPosting}
+                disabled={actionLoading}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold cursor-pointer flex items-center gap-2"
+              >
+                {actionLoading && <div className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                Confirm Revert Posting
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {/* Delete confirmation modal */}
       {deletingRecordId && (
         <Modal
@@ -493,7 +687,6 @@ export const AddIncomeRecords = () => {
           <div className="space-y-4 pt-2">
             <p className="text-xs text-slate-300">
               Are you sure you want to delete this income record?
-              The corresponding journal entry will also be soft deleted and account balances updated.
             </p>
             <div className="flex items-center justify-end gap-2 pt-2">
               <button

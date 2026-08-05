@@ -82,23 +82,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         throw new Error('Expense head not found');
       }
 
-      const expenseAccountId = expenseHead.accountId || expenseHead.account?.id;
-
-      const postingResult = await AccountingService.postPayment(tx, {
-        amount: numAmount,
-        cashOrBankAccountId: paymentMethod === 'BANK' && bankAccountId ? bankAccountId : undefined,
-        cashOrBankAccountKeyword: paymentMethod !== 'BANK' ? 'Cash' : undefined,
-        expenseAccountId: expenseAccountId || undefined,
-        expenseAccountKeyword: !expenseAccountId ? (expenseHead.name || 'Expense') : undefined,
-        description: description || `Expense for ${expenseHead.name}`,
-        reference: reference || 'Expense Payment',
-        module: 'Simple Expense',
-        postedBy: req.user!.id,
-        postingDate: date ? new Date(date) : new Date(),
-        ipAddress: (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress,
-        userAgent: req.headers['user-agent']
-      });
-
       const expense = await tx.simpleExpense.create({
         data: {
           date: date ? new Date(date) : new Date(),
@@ -109,7 +92,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           paymentMethod: paymentMethod || 'CASH',
           bankAccountId: paymentMethod === 'BANK' ? bankAccountId : null,
           reference,
-          journalEntryId: postingResult.journalEntry.id,
+          status: 'PENDING_POST',
+          journalEntryId: null,
           createdById: req.user!.id
         },
         include: { expenseHead: true }
@@ -119,7 +103,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         await tx.auditLog.create({
           data: {
             userId: req.user!.id,
-            action: 'Create Simple Expense',
+            action: 'Create Simple Expense (Pending Post)',
             module: 'Expense',
             newValues: { amount: numAmount, expenseHead: expenseHead.name, paidTo, description }
           }
