@@ -284,9 +284,10 @@ export const TrialBalanceSheet = () => {
     const totalExp = matrixData.totalActualExpense || 0;
     const totalInc = matrixData.totalActualRevenue || 0;
     const netSurplus = totalInc - totalExp; // positive = surplus, negative = deficit
-    const { cashInHand, bankBalance } = matrixData;
+    const cashInHand = balanceSheetCategories.closing.cashInHand.total || 0;
+    const bankBalance = balanceSheetCategories.closing.banks.total || 0;
     // Requirement 9: Closing Cash in Trial Balance = Cash in Hand + Bank Balance.
-    const closingCash = (cashInHand || 0) + (bankBalance || 0);
+    const closingCash = cashInHand + bankBalance;
     return {
       totalExpenses: totalExp,
       totalIncomes: totalInc,
