@@ -221,25 +221,10 @@ export const TrialBalanceSheet = () => {
     const totalActualExpense = expenseEntries.reduce((s, e) => s + debitBal(e), 0);
 
     // ── RIGHT COLUMN: REVENUE rows ───────────────────────────────────────────
-    const revenueRowDefs = [
-      { desc: 'Donation Received',        codes: ['3020000', '3020100'], regex: /general.*donation|donation.*received/i },
-      { desc: 'Zakat Received',           codes: ['3020101'], regex: /zakat.*received|zakat.*income/i },
-      { desc: 'Fitra Received',           codes: ['3020201'], regex: /fitra/i },
-      { desc: 'Membership Fees',          codes: ['3020402'], regex: /membership.*fee/i },
-      { desc: 'Hall Booking Income',      codes: ['3010101', '3010102', '3010103', '3010104'], regex: /hall.*booking/i },
-      { desc: 'Bus Booking',              codes: ['3020401'], regex: /bus.*booking/i },
-      { desc: 'Decoration Income',        codes: ['3020403'], regex: /decoration.*commission|decoration.*income/i },
-      { desc: 'Light Decoration Income',  regex: /light.*decoration/i },
-      { desc: 'Donation (Shadi Biyah)',   codes: ['3020404'], regex: /marriage.*donation.*received/i },
-      { desc: 'Scrap Sale (Raddi)',       regex: /scrap.*raddi|raddi/i },
-      { desc: 'Scrap Sale (Scrap)',       regex: /scrap.*sale|scrap.*sold/i },
-      { desc: 'Commission Income',        regex: /commission.*income/i },
-      { desc: 'Qurbani Income',           regex: /qurbani/i },
-      { desc: 'Coconut Income',           regex: /coconut/i },
-      { desc: 'Profit / Interest NBP',    regex: /profit.*nbp|interest.*nbp/i },
-      { desc: 'Loan / Salary Advance',    regex: /salary.*loan|advance.*loan/i },
-    ];
-    const incomes = partition(revenueEntries, revenueRowDefs, creditBal, 'Other Income');
+    // Built dynamically from the Chart of Accounts: one row per REVENUE account
+    // that carries a posted balance, labelled with that account's own name and
+    // ordered by GL code.
+    const incomes = groupByAccount(revenueEntries, creditBal);
     const totalActualRevenue = revenueEntries.reduce((s, e) => s + creditBal(e), 0);
 
     return { expenses, incomes, totalActualExpense, totalActualRevenue };

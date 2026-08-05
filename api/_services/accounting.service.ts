@@ -1264,6 +1264,273 @@ export class AccountingService {
     return false;
   }
 
+  /**
+   * Automatic resolution & synchronization helper for all Income Categories, Subcategories,
+   * and Expense Heads. Guarantees that EVERY category and head has its own dedicated
+   * leaf GL Account in the Chart of Accounts, preventing fallback to "Other Income"
+   * or "Miscellaneous Expenses".
+   */
+  static async ensureCategoryAndHeadGLAccounts(tx: any = prisma) {
+    try {
+      // 1. Ensure parent header for Add Income Categories (3020500)
+      let addIncomeParent = await tx.account.findFirst({
+        where: { glCode: '3020500' }
+      });
+      if (!addIncomeParent) {
+        const rootRevenueParent = await tx.account.findFirst({
+          where: { glCode: '3020000' }
+        }) || await tx.account.findFirst({ where: { glCode: '3000000' } });
+
+        const revenueType = await tx.accountType.findFirst({
+          where: { name: { in: ['REVENUE', 'Revenue'] } }
+        });
+
+        if (rootRevenueParent) {
+          addIncomeParent = await tx.account.create({
+            data: {
+              glCode: '3020500',
+              accountName: 'Add Income Categories',
+              accountLevel: 'SUBSIDIARY',
+              parentId: rootRevenueParent.id,
+              accountTypeId: revenueType ? revenueType.id : rootRevenueParent.accountTypeId,
+              detailType: 'Header',
+              description: 'Control account for Add Income module categories'
+            }
+          }).catch(() => null);
+        }
+      }
+
+      // 2. Ensure parent header for Expense Heads (4080000 or 4000000)
+      let expenseParent = await tx.account.findFirst({
+        where: { glCode: '4080000' }
+      }) || await tx.account.findFirst({ where: { glCode: '4000000' } });
+
+      const revenueType = await tx.accountType.findFirst({
+        where: { name: { in: ['REVENUE', 'Revenue'] } }
+      });
+      const expenseType = await tx.accountType.findFirst({
+        where: { name: { in: ['EXPENSE', 'Expense'] } }
+      });
+
+      // 3. Helper to create or find a leaf GL Account for Income
+      const getOrCreateIncomeAccount = async (accountName: string) => {
+        let acc = await tx.account.findFirst({
+          where: { accountName: { equals: accountName, mode: 'insensitive' }, children: { none: {} }, isDeleted: false }
+        });
+        if (acc) return acc;
+
+        const lastGl = await tx.account.findFirst({
+          where: { glCode: { startsWith: '30205' } },
+          orderBy: { glCode: 'desc' }
+        });
+        const lastNum = lastGl ? parseInt(lastGl.glCode.slice(-3)) || 500 : 500;
+        let glCode = `30205${String(lastNum + 1).padStart(2, '0')}`;
+        while (await tx.account.findUnique({ where: { glCode } })) {
+          const num = parseInt(glCode.slice(-3)) + 1;
+          glCode = `30205${String(num).padStart(2, '0')}`;
+        }
+
+        return tx.account.create({
+          data: {
+            glCode,
+            accountName,
+            accountLevel: 'GL',
+            parentId: addIncomeParent ? addIncomeParent.id : null,
+            accountTypeId: revenueType ? revenueType.id : null,
+            detailType: 'Revenue',
+            description: `GL Account for ${accountName}`
+          }
+        });
+      };
+
+      // 4. Helper to create or find a leaf GL Account for Expenses
+      const getOrCreateExpenseAccount = async (accountName: string) => {
+        let acc = await tx.account.findFirst({
+          where: { accountName: { equals: accountName, mode: 'insensitive' }, children: { none: {} }, isDeleted: false }
+        });
+        if (acc) return acc;
+
+        const knownAliases: Record<string, string> = {
+          'Salary': 'Staff Salary',
+          'Rent': 'Building Rent',
+          'Electricity Bill': 'K-Electric Bill',
+          'Generator Expense': 'Generator Fuel',
+          'Bus Expense': 'Bus Diesel',
+          'Medical Expense': 'Medical Donations',
+          'Hall Expense': 'Hall Operating Costs',
+          'Education Donation': 'Education Donation'
+        };
+
+        const mappedName = knownAliases[accountName];
+        if (mappedName) {
+          acc = await tx.account.findFirst({
+            where: { accountName: { equals: mappedName, mode: 'insensitive' }, children: { none: {} }, isDeleted: false }
+          });
+          if (acc) return acc;
+        }
+
+        const lastGl = await tx.account.findFirst({
+          where: { glCode: { startsWith: '40801' } },
+          orderBy: { glCode: 'desc' }
+        });
+        const lastNum = lastGl ? parseInt(lastGl.glCode.slice(-3)) || 100 : 100;
+        let glCode = `40801${String(lastNum + 1).padStart(2, '0')}`;
+        while (await tx.account.findUnique({ where: { glCode } })) {
+          const num = parseInt(glCode.slice(-3)) + 1;
+          glCode = `40801${String(num).padStart(2, '0')}`;
+        }
+
+        return tx.account.create({
+          data: {
+            glCode,
+            accountName,
+            accountLevel: 'GL',
+            parentId: expenseParent ? expenseParent.id : null,
+            accountTypeId: expenseType ? expenseType.id : null,
+            detailType: 'Expense',
+            description: `GL Account for ${accountName}`
+          }
+        });
+      };
+
+      // Link all Income Categories to GL Accounts
+      const categories = await tx.incomeCategory.findMany({ where: { isDeleted: false } });
+      for (const cat of categories) {
+        if (!cat.accountId) {
+          const glAcc = await getOrCreateIncomeAccount(cat.name);
+          await tx.incomeCategory.update({
+            where: { id: cat.id },
+            data: { accountId: glAcc.id }
+          }).catch(() => {});
+        }
+      }
+
+      // Link all Expense Heads to GL Accounts
+      const heads = await tx.expenseHead.findMany({ where: { isDeleted: false } });
+      for (const head of heads) {
+        if (!head.accountId) {
+          const glAcc = await getOrCreateExpenseAccount(head.name);
+          await tx.expenseHead.update({
+            where: { id: head.id },
+            data: { accountId: glAcc.id }
+          }).catch(() => {});
+        }
+      }
+    } catch (err) {
+      console.warn('ensureCategoryAndHeadGLAccounts error:', err);
+    }
+  }
+
+  /**
+   * Self-healing utility that checks all existing Journal Entries for AddIncome and SimpleExpense
+   * and ensures their ledger lines are assigned to their specific GL Accounts.
+   */
+  static async healJournalEntryAccounts(tx: any = prisma) {
+    try {
+      await AccountingService.ensureCategoryAndHeadGLAccounts(tx);
+
+      const affectedAccountIds = new Set<string>();
+
+      // Fix AddIncomeRecord postings
+      const incomeRecords = await tx.addIncomeRecord.findMany({
+        where: { isDeleted: false, journalEntryId: { not: null } },
+        include: { category: true }
+      });
+
+      for (const rec of incomeRecords) {
+        if (!rec.journalEntryId) continue;
+        
+        let targetAccountId: string | null = null;
+        if (rec.subCategory && rec.subCategory.trim()) {
+          const subName = `Other Income - ${rec.subCategory.trim()}`;
+          let acc = await tx.account.findFirst({
+            where: { accountName: { equals: subName, mode: 'insensitive' }, isDeleted: false }
+          });
+          if (!acc) {
+            const parent = await tx.account.findFirst({ where: { glCode: '3020500' } });
+            const revType = await tx.accountType.findFirst({ where: { name: { in: ['REVENUE', 'Revenue'] } } });
+            const lastGl = await tx.account.findFirst({ where: { glCode: { startsWith: '30205' } }, orderBy: { glCode: 'desc' } });
+            const lastNum = lastGl ? parseInt(lastGl.glCode.slice(-3)) || 510 : 510;
+            let glCode = `30205${String(lastNum + 1).padStart(2, '0')}`;
+            while (await tx.account.findUnique({ where: { glCode } })) {
+              const num = parseInt(glCode.slice(-3)) + 1;
+              glCode = `30205${String(num).padStart(2, '0')}`;
+            }
+            acc = await tx.account.create({
+              data: {
+                glCode,
+                accountName: subName,
+                accountLevel: 'GL',
+                parentId: parent ? parent.id : null,
+                accountTypeId: revType ? revType.id : null,
+                detailType: 'Revenue',
+                description: `GL Account for ${subName}`
+              }
+            });
+          }
+          targetAccountId = acc.id;
+        } else if (rec.category?.accountId) {
+          targetAccountId = rec.category.accountId;
+        }
+
+        if (targetAccountId) {
+          const creditLine = await tx.journalEntryLine.findFirst({
+            where: { journalEntryId: rec.journalEntryId, credit: { gt: 0 } }
+          });
+          if (creditLine && creditLine.accountId !== targetAccountId) {
+            affectedAccountIds.add(creditLine.accountId);
+            affectedAccountIds.add(targetAccountId);
+            await tx.journalEntryLine.update({
+              where: { id: creditLine.id },
+              data: { accountId: targetAccountId }
+            });
+          }
+        }
+      }
+
+      // Fix SimpleExpense postings
+      const simpleExpenses = await tx.simpleExpense.findMany({
+        where: { isDeleted: false, journalEntryId: { not: null } },
+        include: { expenseHead: true }
+      });
+
+      for (const exp of simpleExpenses) {
+        if (!exp.journalEntryId) continue;
+        let targetAccountId: string | null = exp.expenseHead?.accountId || null;
+        
+        if (!targetAccountId && exp.expenseHead?.name) {
+          let acc = await tx.account.findFirst({
+            where: { accountName: { equals: exp.expenseHead.name, mode: 'insensitive' }, isDeleted: false }
+          });
+          if (acc) {
+            targetAccountId = acc.id;
+          }
+        }
+
+        if (targetAccountId) {
+          const debitLine = await tx.journalEntryLine.findFirst({
+            where: { journalEntryId: exp.journalEntryId, debit: { gt: 0 } }
+          });
+          if (debitLine && debitLine.accountId !== targetAccountId) {
+            affectedAccountIds.add(debitLine.accountId);
+            affectedAccountIds.add(targetAccountId);
+            await tx.journalEntryLine.update({
+              where: { id: debitLine.id },
+              data: { accountId: targetAccountId }
+            });
+          }
+        }
+      }
+
+      // Recalculate balances for all affected accounts
+      for (const accId of affectedAccountIds) {
+        await AccountingService.recalculateAccountBalance(tx, accId).catch(() => {});
+      }
+    } catch (err) {
+      console.warn('healJournalEntryAccounts error:', err);
+    }
+  }
+
   // ──────────────────────────────────────────────────────────────────────────
   // SINGLE SOURCE OF TRUTH for every financial report.
   //
@@ -1467,6 +1734,8 @@ export class AccountingService {
   }
 
   static async getTrialBalance(startDate?: string, endDate?: string) {
+    await AccountingService.healJournalEntryAccounts().catch(() => {});
+
     const activeAccounts = await prisma.account.findMany({
       where: { isDeleted: false },
       include: {
