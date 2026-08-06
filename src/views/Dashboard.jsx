@@ -30,6 +30,11 @@ function useAnimatedCounter(target, duration = 1200, prefix = '', suffix = '', d
   const startValRef = useRef(0);
 
   useEffect(() => {
+    // Guard against a transient non-finite target (e.g. a render before
+    // async data arrives) — animating toward NaN/Infinity would otherwise
+    // corrupt startValRef.current for every subsequent run.
+    if (!Number.isFinite(target)) return;
+
     const startVal = startValRef.current;
     const diff = target - startVal;
     if (diff === 0) return;
@@ -42,9 +47,22 @@ function useAnimatedCounter(target, duration = 1200, prefix = '', suffix = '', d
     const animate = (ts) => {
       if (!startRef.current) startRef.current = ts;
       const elapsed = ts - startRef.current;
-      const progress = Math.min(elapsed / duration, 1);
+      // Clamp to [0, 1] — elapsed can briefly go negative when this effect
+      // is re-entered (React StrictMode's double-invoke, or `target`
+      // changing again mid-animation) and a stale rAF callback still fires
+      // with an earlier timestamp than the new startRef. An unclamped lower
+      // bound feeds a negative `t` into easeOutQuart, whose (1-t)^4 term
+      // explodes — the astronomical "Rs 34,877,...e+63" values this produced.
+      const progress = Math.min(Math.max(elapsed / duration, 0), 1);
       const eased = easeOutQuart(progress);
-      const current = startVal + diff * eased;
+      // The displayed value can never legitimately fall outside the range
+      // between where this animation started and where it's going — clamp
+      // defensively so any numerical instability in the easing curve (e.g.
+      // from overlapping animate() loops racing on the same refs) can never
+      // reach the screen as a garbled figure, regardless of its cause.
+      const lo = Math.min(startVal, target);
+      const hi = Math.max(startVal, target);
+      const current = Math.min(Math.max(startVal + diff * eased, lo), hi);
       setValue(current);
       if (progress < 1) {
         frameRef.current = requestAnimationFrame(animate);
@@ -115,7 +133,7 @@ function KpiCard({ title, value, prefix = '', suffix = '', decimals = 0, icon: I
 /* ─────────────────────────────────────────────
    Stat Card — premium redesign
 ───────────────────────────────────────────── */
-function StatCard({ title, value, icon: Icon, iconBg, iconColor, trend, trendLabel, trendColor, accentBar, delay = 0 }) {
+function StatCard({ title, value, icon: Icon, iconBg, iconColor, trend, trendLabel, trendColor, accentBar, delay = 0, subLabel }) {
   const [visible, setVisible] = useState(false);
   const animated = useAnimatedCounter(visible ? value : 0, 1100, 'Rs ', '', 2);
 
@@ -152,6 +170,9 @@ function StatCard({ title, value, icon: Icon, iconBg, iconColor, trend, trendLab
             {trend === 'neutral' && <Activity         className="h-3 w-3" />}
             <span>{trendLabel}</span>
           </div>
+        )}
+        {subLabel && (
+          <p className="mt-1 text-[10px] font-medium text-slate-600 tracking-wide">{subLabel}</p>
         )}
       </div>
     </div>
@@ -418,6 +439,12 @@ export const Dashboard = () => {
         // Do NOT clamp to 0 — overdrafts and losses must be visible
         cashBalance: dbStats.summary.cashBalance || 0,
         bankBalance: dbStats.summary.bankBalance || 0,
+        // As of the fiscal year's start — reconciles against Cash in Hand:
+        // Opening Cash + this period's Net Surplus should explain the closing
+        // balance, instead of Cash in Hand looking disconnected from Net Surplus.
+        openingCashBalance: dbStats.summary.openingCashBalance ?? (dbStats.summary.cashBalance || 0),
+        openingBankBalance: dbStats.summary.openingBankBalance ?? (dbStats.summary.bankBalance || 0),
+        netAssets: dbStats.summary.netAssets ?? ((dbStats.summary.totalAssets || 0) - (dbStats.summary.totalLiabilities || 0)),
         netIncome,
         grossMargin: dbStats.summary.totalRevenue > 0 ? (netIncome / dbStats.summary.totalRevenue * 100) : 0,
         isEquationBalanced: dbStats.summary.isEquationBalanced ?? true,
@@ -457,9 +484,13 @@ export const Dashboard = () => {
     const netIncome = revenue - expenses;
     const totalEquityWithNetIncome = equity + netIncome;
     return {
-      assets, liabilities, equity: totalEquityWithNetIncome, baseEquity: equity, revenue, expenses,
+      assets, liabilities, netAssets: assets - liabilities, equity: totalEquityWithNetIncome, baseEquity: equity, revenue, expenses,
       // Do NOT clamp to 0 — overdrafts and losses must be visible
       cashBalance, bankBalance,
+      // This fallback path has no period scoping (client-side cumulative
+      // balances only) — opening === closing here, same as the "no date
+      // filter" case in getFinancialSummary.
+      openingCashBalance: cashBalance, openingBankBalance: bankBalance,
       netIncome,
       grossMargin: revenue > 0 ? (netIncome / revenue * 100) : 0,
       isEquationBalanced: Math.abs(assets - (liabilities + totalEquityWithNetIncome)) < 0.01,
@@ -592,6 +623,11 @@ export const Dashboard = () => {
             trendLabel: (stats.cashBalance || 0) < 0 ? 'Overdraft' : t('dashboard.availableCash'),
             trendColor: (stats.cashBalance || 0) < 0 ? 'text-red-400' : 'text-slate-400',
             accentBar: (stats.cashBalance || 0) < 0 ? 'from-red-500 to-red-400' : 'from-blue-500 to-blue-400',
+            // Reconciles this figure against Net Surplus: Opening + this
+            // period's movement = the Cash in Hand shown above — otherwise a
+            // break-even year next to a large cumulative balance looks like a
+            // bug when it's actually prior-period cash carried forward.
+            subLabel: `Opening: Rs ${(stats.openingCashBalance || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
             delay: 160,
           },
           {

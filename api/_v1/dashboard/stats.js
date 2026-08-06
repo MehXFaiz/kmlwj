@@ -66,6 +66,9 @@ var stats_default = makeHandler(async (req, res) => {
   const totalExpense = summaryResult.totalExpense;
   const cashBalance = Math.max(0, summaryResult.cashBalance);
   const bankBalance = Math.max(0, summaryResult.bankBalance);
+  const openingCashBalance = Math.max(0, summaryResult.openingCashBalance ?? cashBalance);
+  const openingBankBalance = Math.max(0, summaryResult.openingBankBalance ?? bankBalance);
+  const netAssets = summaryResult.netAssets ?? totalAssets - totalLiabilities;
   const netIncome = summaryResult.netPeriodIncome;
   const baseEquity = summaryResult.totalEquity - netIncome;
   const totalEquityWithNetIncome = summaryResult.totalEquity;
@@ -158,12 +161,15 @@ var stats_default = makeHandler(async (req, res) => {
       summary: {
         totalAssets,
         totalLiabilities,
+        netAssets,
         totalEquity: totalEquityWithNetIncome,
         baseEquity,
         totalRevenue,
         totalExpense,
         cashBalance,
         bankBalance,
+        openingCashBalance,
+        openingBankBalance,
         netIncome,
         isEquationBalanced
       },

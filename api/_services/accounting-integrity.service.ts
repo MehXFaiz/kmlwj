@@ -531,6 +531,7 @@ export class AccountingIntegrityService {
     actionsTaken: string[];
     accountsChecked: number;
     accountsRepaired: number;
+    accountsUpdated: number;
     accountsSkipped: number;
     warningsFixed: number;
     executionTimeMs: number;

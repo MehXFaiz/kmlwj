@@ -2180,6 +2180,13 @@ export class AccountingService {
     let totalExpense = new Prisma.Decimal(0);
     let cashBalance = new Prisma.Decimal(0);
     let bankBalance = new Prisma.Decimal(0);
+    // Balance as of the instant before `startDate` — the "Opening Cash"/
+    // "Opening Bank" a period's Cash in Hand formula (Opening + Receipts -
+    // Payments) reconciles against. Without this, Cash in Hand (cumulative
+    // since account inception) and Net Surplus (this period only) look
+    // unrelated even though both are individually correct.
+    let openingCashBalance = new Prisma.Decimal(0);
+    let openingBankBalance = new Prisma.Decimal(0);
     let openingRetainedEarnings = new Prisma.Decimal(0);
 
     const from = startDate ? new Date(startDate) : undefined;
@@ -2210,10 +2217,18 @@ export class AccountingService {
 
       if (typeName === 'ASSET' || typeName === 'ASSETS') {
         totalAssets = totalAssets.plus(bal);
+        // Opening = balance as of the instant before `from` (same
+        // priorAggregates already computed above for retained earnings).
+        // With no date filter, opening === closing, same as today.
+        const openingBal = from
+          ? AccountingService.naturalBalance(typeName, acc.initialBalance, priorAggregates.get(acc.id))
+          : bal;
         if (this.isBankAccount(acc.accountName, acc.detailType)) {
           bankBalance = bankBalance.plus(bal);
+          openingBankBalance = openingBankBalance.plus(openingBal);
         } else if (this.isCashAccount(acc.accountName, acc.detailType)) {
           cashBalance = cashBalance.plus(bal);
+          openingCashBalance = openingCashBalance.plus(openingBal);
         }
       } else if (typeName === 'LIABILITY' || typeName === 'LIABILITIES') {
         totalLiabilities = totalLiabilities.plus(bal.lt(0) ? bal.abs() : bal);
@@ -2249,10 +2264,16 @@ export class AccountingService {
       totalAssets: totalAssets.toNumber(),
       totalLiabilities: totalLiabilities.toNumber(),
       totalEquity: totalEquity.toNumber(),
+      // Assets - Liabilities, independent of the Equity/retained-earnings
+      // rollup above — the direct "Net Assets" figure requested for the
+      // Dashboard, always internally consistent with totalAssets/totalLiabilities.
+      netAssets: totalAssets.minus(totalLiabilities).toNumber(),
       totalRevenue: totalRevenue.toNumber(),
       totalExpense: totalExpense.toNumber(),
       cashBalance: Math.max(0, cashBalance.toNumber()),
       bankBalance: Math.max(0, bankBalance.toNumber()),
+      openingCashBalance: Math.max(0, openingCashBalance.toNumber()),
+      openingBankBalance: Math.max(0, openingBankBalance.toNumber()),
       netPeriodIncome: netPeriodIncome.toNumber(),
       openingRetainedEarnings: openingRetainedEarnings.toNumber(),
       retainedEarnings: retainedEarnings.toNumber()
