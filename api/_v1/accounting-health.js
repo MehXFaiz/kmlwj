@@ -48,6 +48,7 @@ var accounting_health_default = makeHandler(async (req, res) => {
           // already folded into actionsTaken as readable strings today.
           accountsChecked: repairResult.accountsChecked,
           accountsRepaired: repairResult.accountsRepaired,
+          accountsUpdated: repairResult.accountsUpdated,
           accountsSkipped: repairResult.accountsSkipped,
           warningsFixed: repairResult.warningsFixed,
           executionTimeMs: repairResult.executionTimeMs,

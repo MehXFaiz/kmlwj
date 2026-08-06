@@ -698,6 +698,7 @@ export class AccountingIntegrityService {
 
     const accountsChecked = allAccounts.length; // every Chart of Accounts row evaluated by Steps 1/2/6
     const accountsRepaired = repairedItems.length;
+    const accountsUpdated = Math.max(repairedItems.length, balanceGroups.reduce((acc, g) => acc + g.count, 0));
     const accountsSkipped = skippedItems.length;
     const warningsFixed = Math.max(0, checkBefore.warningCount - checkAfter.warningCount);
 
@@ -708,13 +709,14 @@ export class AccountingIntegrityService {
     if (skippedItems.length > 0) {
       logger.warn({ skippedCount: skippedItems.length, skippedItems }, 'Auto-repair completed with some items skipped — see individual log entries above for full detail on each');
     }
-    logger.info({ accountsChecked, accountsRepaired, accountsSkipped, warningsFixed, executionTimeMs, issuesBefore: checkBefore.totalIssues, issuesAfter: checkAfter.totalIssues }, 'Auto-repair run complete');
+    logger.info({ accountsChecked, accountsRepaired, accountsUpdated, accountsSkipped, warningsFixed, executionTimeMs, issuesBefore: checkBefore.totalIssues, issuesAfter: checkAfter.totalIssues }, 'Auto-repair run complete');
 
     return {
       success: checkAfter.criticalCount === 0 && checkAfter.warningCount === 0,
       actionsTaken,
       accountsChecked,
       accountsRepaired,
+      accountsUpdated,
       accountsSkipped,
       warningsFixed,
       executionTimeMs,
