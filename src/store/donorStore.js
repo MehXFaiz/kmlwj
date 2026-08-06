@@ -49,10 +49,8 @@ export const useDonorStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       await donorService.delete(id);
-      set(state => ({
-        donors: state.donors.filter(d => d.id !== id),
-        loading: false
-      }));
+      await get().fetchDonors();
+      set({ loading: false });
       useDashboardStore.getState().invalidateAll();
     } catch (err) {
       set({ error: err.response?.data?.error?.message || err.message, loading: false });
@@ -61,17 +59,16 @@ export const useDonorStore = create((set, get) => ({
   },
 
   bulkDeleteDonors: async (ids) => {
-    set({ error: null });
+    set({ loading: true, error: null });
     try {
       const res = await donorService.bulkDelete(ids);
-      const removed = new Set(res.deletedIds || ids);
-      set(state => ({ donors: state.donors.filter(d => !removed.has(d.id)) }));
-      get().fetchDonors();
+      await get().fetchDonors();
+      set({ loading: false });
       useDashboardStore.getState().invalidateAll();
       return res;
     } catch (err) {
       const message = err.response?.data?.error?.message || err.message || 'Unable to delete selected donors.';
-      set({ error: message });
+      set({ error: message, loading: false });
       const error = new Error(message);
       error.status = err.response?.status;
       throw error;

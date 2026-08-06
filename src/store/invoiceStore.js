@@ -56,9 +56,7 @@ export const useInvoiceStore = create((set, get) => ({
   deleteInvoice: async (id) => {
     try {
       await invoiceService.delete(id);
-      set((state) => ({
-        invoices: state.invoices.filter((inv) => inv.id !== id),
-      }));
+      await get().fetchInvoices();
       useDashboardStore.getState().invalidateAll();
     } catch (err) {
       set({ error: err.message });

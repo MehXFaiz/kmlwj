@@ -44,9 +44,7 @@ export const useMemberStore = create((set, get) => ({
   deleteMember: async (id) => {
     try {
       await memberService.delete(id);
-      set(state => ({
-        members: state.members.filter(m => m.id !== id)
-      }));
+      await get().fetchMembers();
       useDashboardStore.getState().invalidateAll();
     } catch (err) {
       set({ error: err.message });

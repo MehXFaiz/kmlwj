@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
+import { logger } from '../_utils/logger.js';
 import { AccountingSyncService } from './accounting-sync.service.js';
 import { FundValidationService, InsufficientFundsError } from './fund-validation.service.js';
 
@@ -100,6 +101,43 @@ export interface PostTransferParams {
  * imports it rather than re-spelling the where clause.
  */
 export const POSTED_JOURNAL_FILTER = { status: 'Posted', isDeleted: false } as const;
+
+/** Result of one item's auto-repair attempt — used by every per-item-isolated repair loop. */
+export interface RepairItem {
+  id?: string;
+  glCode?: string;
+  name?: string;
+  action?: string;
+  reason?: string;
+}
+
+/**
+ * Maps a raw Prisma/Postgres error into the short, plain-English reason the
+ * Accounting Health Check UI shows next to a skipped item (e.g. "GL Code
+ * 30205510 — Reason: Invalid GL Length"). Falls back to the raw message
+ * untouched for anything unrecognized, so nothing is ever silently reduced
+ * to a generic string — the full error is always logged separately by the
+ * caller alongside this classification, never in place of it.
+ */
+export function classifyError(err: any): string {
+  const code = err?.code;
+  if (code === 'P2002') return `Duplicate value violates a unique constraint (${err?.meta?.target || 'unknown field'})`;
+  if (code === 'P2003') return `Parent Account Missing (foreign key constraint on ${err?.meta?.field_name || 'related record'})`;
+  if (code === 'P2025') return 'Ledger Mapping Missing (referenced record not found)';
+  if (code === 'P2028') return 'Transaction timed out';
+  if (typeof err?.message === 'string' && err.message.length > 0) return err.message;
+  return 'Unknown error';
+}
+
+/** Full structured detail for server-side logs — never shown to the user, always logged. */
+export function errDetails(err: any) {
+  return {
+    message: err?.message,
+    code: err?.code,
+    meta: err?.meta,
+    stack: err?.stack,
+  };
+}
 
 export class AccountingService {
   /**
@@ -1270,7 +1308,16 @@ export class AccountingService {
    * leaf GL Account in the Chart of Accounts, preventing fallback to "Other Income"
    * or "Miscellaneous Expenses".
    */
-  static async ensureCategoryAndHeadGLAccounts(tx: any = prisma) {
+  /**
+   * Links every unmapped Income Category / Expense Head to a real GL Account.
+   * Each item is resolved and linked independently — one item's failure (a
+   * GL-code collision it can't resolve, a missing parent header, etc.) is
+   * caught, logged in full, and recorded in `skipped` with a plain-English
+   * reason; every other item still gets attempted. Nothing is silently lost.
+   */
+  static async ensureCategoryAndHeadGLAccounts(tx: any = prisma): Promise<{ repaired: RepairItem[]; skipped: RepairItem[] }> {
+    const repaired: RepairItem[] = [];
+    const skipped: RepairItem[] = [];
     try {
       // 1. Ensure parent header for Add Income Categories (3020500)
       let addIncomeParent = await tx.account.findFirst({
@@ -1393,41 +1440,63 @@ export class AccountingService {
         });
       };
 
-      // Link all Income Categories to GL Accounts
+      // Link all Income Categories to GL Accounts — one item at a time, each
+      // isolated so a single category that can't be resolved (e.g. a GL-code
+      // collision it can't work around) doesn't block every other category.
       const categories = await tx.incomeCategory.findMany({ where: { isDeleted: false } });
       for (const cat of categories) {
-        if (!cat.accountId) {
+        if (cat.accountId) continue;
+        try {
           const glAcc = await getOrCreateIncomeAccount(cat.name);
           await tx.incomeCategory.update({
             where: { id: cat.id },
             data: { accountId: glAcc.id }
-          }).catch(() => {});
+          });
+          repaired.push({ id: cat.id, name: cat.name, glCode: glAcc.glCode, action: `Linked Income Category "${cat.name}" to GL ${glAcc.glCode}` });
+        } catch (err: any) {
+          logger.error({ err: errDetails(err), categoryId: cat.id, categoryName: cat.name }, 'Auto-repair: failed to link Income Category to a GL account');
+          skipped.push({ id: cat.id, name: cat.name, reason: classifyError(err) });
         }
       }
 
-      // Link all Expense Heads to GL Accounts
+      // Link all Expense Heads to GL Accounts — same per-item isolation.
       const heads = await tx.expenseHead.findMany({ where: { isDeleted: false } });
       for (const head of heads) {
-        if (!head.accountId) {
+        if (head.accountId) continue;
+        try {
           const glAcc = await getOrCreateExpenseAccount(head.name);
           await tx.expenseHead.update({
             where: { id: head.id },
             data: { accountId: glAcc.id }
-          }).catch(() => {});
+          });
+          repaired.push({ id: head.id, name: head.name, glCode: glAcc.glCode, action: `Linked Expense Head "${head.name}" to GL ${glAcc.glCode}` });
+        } catch (err: any) {
+          logger.error({ err: errDetails(err), expenseHeadId: head.id, expenseHeadName: head.name }, 'Auto-repair: failed to link Expense Head to a GL account');
+          skipped.push({ id: head.id, name: head.name, reason: classifyError(err) });
         }
       }
-    } catch (err) {
-      console.warn('ensureCategoryAndHeadGLAccounts error:', err);
+    } catch (err: any) {
+      // Only the shared setup above (parent headers, account types) can reach
+      // here — the per-item loops handle their own errors and never rethrow.
+      logger.error({ err: errDetails(err) }, 'Auto-repair: ensureCategoryAndHeadGLAccounts setup failed');
+      skipped.push({ reason: classifyError(err), action: 'Failed before per-item linking could start' });
     }
+    return { repaired, skipped };
   }
 
   /**
    * Self-healing utility that checks all existing Journal Entries for AddIncome and SimpleExpense
    * and ensures their ledger lines are assigned to their specific GL Accounts.
+   * Each record is repaired independently — one record's failure never blocks
+   * the rest, and every failure is logged with its record id and reason.
    */
-  static async healJournalEntryAccounts(tx: any = prisma) {
+  static async healJournalEntryAccounts(tx: any = prisma): Promise<{ repaired: RepairItem[]; skipped: RepairItem[] }> {
+    const repaired: RepairItem[] = [];
+    const skipped: RepairItem[] = [];
     try {
-      await AccountingService.ensureCategoryAndHeadGLAccounts(tx);
+      const catResult = await AccountingService.ensureCategoryAndHeadGLAccounts(tx);
+      repaired.push(...catResult.repaired);
+      skipped.push(...catResult.skipped);
 
       const affectedAccountIds = new Set<string>();
 
@@ -1439,52 +1508,57 @@ export class AccountingService {
 
       for (const rec of incomeRecords) {
         if (!rec.journalEntryId) continue;
-        
-        let targetAccountId: string | null = null;
-        if (rec.subCategory && rec.subCategory.trim()) {
-          const subName = `Other Income - ${rec.subCategory.trim()}`;
-          let acc = await tx.account.findFirst({
-            where: { accountName: { equals: subName, mode: 'insensitive' }, isDeleted: false }
-          });
-          if (!acc) {
-            const parent = await tx.account.findFirst({ where: { glCode: '3020500' } });
-            const revType = await tx.accountType.findFirst({ where: { name: { in: ['REVENUE', 'Revenue'] } } });
-            const lastGl = await tx.account.findFirst({ where: { glCode: { startsWith: '30205' } }, orderBy: { glCode: 'desc' } });
-            const lastNum = lastGl ? parseInt(lastGl.glCode.slice(-3)) || 510 : 510;
-            let glCode = `30205${String(lastNum + 1).padStart(2, '0')}`;
-            while (await tx.account.findUnique({ where: { glCode } })) {
-              const num = parseInt(glCode.slice(-3)) + 1;
-              glCode = `30205${String(num).padStart(2, '0')}`;
-            }
-            acc = await tx.account.create({
-              data: {
-                glCode,
-                accountName: subName,
-                accountLevel: 'GL',
-                parentId: parent ? parent.id : null,
-                accountTypeId: revType ? revType.id : null,
-                detailType: 'Revenue',
-                description: `GL Account for ${subName}`
+        try {
+          let targetAccountId: string | null = null;
+          if (rec.subCategory && rec.subCategory.trim()) {
+            const subName = `Other Income - ${rec.subCategory.trim()}`;
+            let acc = await tx.account.findFirst({
+              where: { accountName: { equals: subName, mode: 'insensitive' }, isDeleted: false }
+            });
+            if (!acc) {
+              const parent = await tx.account.findFirst({ where: { glCode: '3020500' } });
+              const revType = await tx.accountType.findFirst({ where: { name: { in: ['REVENUE', 'Revenue'] } } });
+              const lastGl = await tx.account.findFirst({ where: { glCode: { startsWith: '30205' } }, orderBy: { glCode: 'desc' } });
+              const lastNum = lastGl ? parseInt(lastGl.glCode.slice(-3)) || 510 : 510;
+              let glCode = `30205${String(lastNum + 1).padStart(2, '0')}`;
+              while (await tx.account.findUnique({ where: { glCode } })) {
+                const num = parseInt(glCode.slice(-3)) + 1;
+                glCode = `30205${String(num).padStart(2, '0')}`;
               }
-            });
+              acc = await tx.account.create({
+                data: {
+                  glCode,
+                  accountName: subName,
+                  accountLevel: 'GL',
+                  parentId: parent ? parent.id : null,
+                  accountTypeId: revType ? revType.id : null,
+                  detailType: 'Revenue',
+                  description: `GL Account for ${subName}`
+                }
+              });
+            }
+            targetAccountId = acc.id;
+          } else if (rec.category?.accountId) {
+            targetAccountId = rec.category.accountId;
           }
-          targetAccountId = acc.id;
-        } else if (rec.category?.accountId) {
-          targetAccountId = rec.category.accountId;
-        }
 
-        if (targetAccountId) {
-          const creditLine = await tx.journalEntryLine.findFirst({
-            where: { journalEntryId: rec.journalEntryId, credit: { gt: 0 } }
-          });
-          if (creditLine && creditLine.accountId !== targetAccountId) {
-            affectedAccountIds.add(creditLine.accountId);
-            affectedAccountIds.add(targetAccountId);
-            await tx.journalEntryLine.update({
-              where: { id: creditLine.id },
-              data: { accountId: targetAccountId }
+          if (targetAccountId) {
+            const creditLine = await tx.journalEntryLine.findFirst({
+              where: { journalEntryId: rec.journalEntryId, credit: { gt: 0 } }
             });
+            if (creditLine && creditLine.accountId !== targetAccountId) {
+              affectedAccountIds.add(creditLine.accountId);
+              affectedAccountIds.add(targetAccountId);
+              await tx.journalEntryLine.update({
+                where: { id: creditLine.id },
+                data: { accountId: targetAccountId }
+              });
+              repaired.push({ id: rec.id, action: `Re-linked Add Income record ${rec.id.slice(0, 8)} to its category's GL account` });
+            }
           }
+        } catch (err: any) {
+          logger.error({ err: errDetails(err), addIncomeRecordId: rec.id, journalEntryId: rec.journalEntryId }, 'Auto-repair: failed to heal Add Income journal line');
+          skipped.push({ id: rec.id, reason: classifyError(err) });
         }
       }
 
@@ -1496,39 +1570,52 @@ export class AccountingService {
 
       for (const exp of simpleExpenses) {
         if (!exp.journalEntryId) continue;
-        let targetAccountId: string | null = exp.expenseHead?.accountId || null;
-        
-        if (!targetAccountId && exp.expenseHead?.name) {
-          let acc = await tx.account.findFirst({
-            where: { accountName: { equals: exp.expenseHead.name, mode: 'insensitive' }, isDeleted: false }
-          });
-          if (acc) {
-            targetAccountId = acc.id;
-          }
-        }
+        try {
+          let targetAccountId: string | null = exp.expenseHead?.accountId || null;
 
-        if (targetAccountId) {
-          const debitLine = await tx.journalEntryLine.findFirst({
-            where: { journalEntryId: exp.journalEntryId, debit: { gt: 0 } }
-          });
-          if (debitLine && debitLine.accountId !== targetAccountId) {
-            affectedAccountIds.add(debitLine.accountId);
-            affectedAccountIds.add(targetAccountId);
-            await tx.journalEntryLine.update({
-              where: { id: debitLine.id },
-              data: { accountId: targetAccountId }
+          if (!targetAccountId && exp.expenseHead?.name) {
+            let acc = await tx.account.findFirst({
+              where: { accountName: { equals: exp.expenseHead.name, mode: 'insensitive' }, isDeleted: false }
             });
+            if (acc) {
+              targetAccountId = acc.id;
+            }
           }
+
+          if (targetAccountId) {
+            const debitLine = await tx.journalEntryLine.findFirst({
+              where: { journalEntryId: exp.journalEntryId, debit: { gt: 0 } }
+            });
+            if (debitLine && debitLine.accountId !== targetAccountId) {
+              affectedAccountIds.add(debitLine.accountId);
+              affectedAccountIds.add(targetAccountId);
+              await tx.journalEntryLine.update({
+                where: { id: debitLine.id },
+                data: { accountId: targetAccountId }
+              });
+              repaired.push({ id: exp.id, action: `Re-linked Expense record ${exp.id.slice(0, 8)} to its head's GL account` });
+            }
+          }
+        } catch (err: any) {
+          logger.error({ err: errDetails(err), simpleExpenseId: exp.id, journalEntryId: exp.journalEntryId }, 'Auto-repair: failed to heal Expense journal line');
+          skipped.push({ id: exp.id, reason: classifyError(err) });
         }
       }
 
-      // Recalculate balances for all affected accounts
+      // Recalculate balances for all accounts touched above
       for (const accId of affectedAccountIds) {
-        await AccountingService.recalculateAccountBalance(tx, accId).catch(() => {});
+        try {
+          await AccountingService.recalculateAccountBalance(tx, accId);
+        } catch (err: any) {
+          logger.error({ err: errDetails(err), accountId: accId }, 'Auto-repair: failed to recalculate balance for an affected account');
+          skipped.push({ id: accId, reason: classifyError(err) });
+        }
       }
-    } catch (err) {
-      console.warn('healJournalEntryAccounts error:', err);
+    } catch (err: any) {
+      logger.error({ err: errDetails(err) }, 'Auto-repair: healJournalEntryAccounts setup failed');
+      skipped.push({ reason: classifyError(err), action: 'Failed before per-record healing could start' });
     }
+    return { repaired, skipped };
   }
 
   // ──────────────────────────────────────────────────────────────────────────

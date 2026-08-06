@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { zakatCardService } from '../services/zakatCardService';
 import { useDashboardStore } from './dashboardStore';
 
-export const useZakatCardStore = create((set) => ({
+export const useZakatCardStore = create((set, get) => ({
   cards: [],
   loading: false,
   error: null,
@@ -18,15 +18,29 @@ export const useZakatCardStore = create((set) => ({
   },
 
   issueCard: async (data) => {
-    const res = await zakatCardService.create(data);
-    set((state) => ({ cards: [res.data, ...state.cards] }));
-    useDashboardStore.getState().invalidateAll();
-    return res.data;
+    set({ loading: true, error: null });
+    try {
+      const res = await zakatCardService.create(data);
+      await get().fetchCards();
+      set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
+      return res.data;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      throw err;
+    }
   },
 
   deleteCard: async (id) => {
-    await zakatCardService.delete(id);
-    set((state) => ({ cards: state.cards.filter((c) => c.id !== id) }));
-    useDashboardStore.getState().invalidateAll();
+    set({ loading: true, error: null });
+    try {
+      await zakatCardService.delete(id);
+      await get().fetchCards();
+      set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      throw err;
+    }
   },
 }));

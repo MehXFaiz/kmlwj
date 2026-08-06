@@ -1,7 +1,8 @@
 
 import { Prisma } from '@prisma/client';
 import { prisma } from '../_prisma.js';
-import { AccountingService, POSTED_JOURNAL_FILTER } from './accounting.service.js';
+import { logger } from '../_utils/logger.js';
+import { AccountingService, POSTED_JOURNAL_FILTER, classifyError, errDetails, type RepairItem } from './accounting.service.js';
 
 export interface IntegrityIssue {
   type: string;
@@ -510,99 +511,215 @@ export class AccountingIntegrityService {
    * Complete, permanent automated repair for all accounting health issues.
    * Normalizes GL Codes to 7 digits, eliminates duplicate codes, repairs missing category/head account mappings,
    * cleans orphan lines, and recalculates stored account balances directly from the General Ledger.
+   *
+   * Design: every account/category/head/line is repaired in its own isolated
+   * step (single-statement Prisma writes are already atomic per item; the
+   * multi-step category/head linking and journal healing isolate themselves
+   * internally — see AccountingService.ensureCategoryAndHeadGLAccounts /
+   * healJournalEntryAccounts). One item's failure is caught, logged in full
+   * (SQL/Prisma error, code, meta, stack, the specific account id/GL code),
+   * classified into a short plain-English reason, and recorded in `skipped`
+   * — every other item still gets attempted. Nothing throws out of this
+   * method for a single bad account; only a total infrastructure failure
+   * (e.g. the DB connection itself dropping) can still throw, and even that
+   * is fully logged before it propagates. The final balance rebuild
+   * (Step 6) is the one genuinely batch, thousands-of-accounts-in-seconds
+   * operation — a single set-based SQL UPDATE — kept exactly as-is.
    */
   static async repairAll(): Promise<{
     success: boolean;
     actionsTaken: string[];
+    accountsChecked: number;
+    accountsRepaired: number;
+    accountsSkipped: number;
+    warningsFixed: number;
+    executionTimeMs: number;
+    repairedItems: RepairItem[];
+    skippedItems: RepairItem[];
     checkBefore: IntegrityCheckResult;
     checkAfter: IntegrityCheckResult;
   }> {
+    const startedAt = Date.now();
     const checkBefore = await this.runFullCheck();
     const actionsTaken: string[] = [];
+    const repairedItems: RepairItem[] = [];
+    const skippedItems: RepairItem[] = [];
 
-    await prisma.$transaction(async (tx) => {
-      // 1. Repair invalid GL code lengths (ensure every GL Code is exactly 7 digits)
-      const accounts = await tx.account.findMany();
-      for (const acc of accounts) {
-        if (acc.glCode.length !== 7 || !/^\d{7}$/.test(acc.glCode)) {
-          let newCode = acc.glCode.replace(/\D/g, '');
-          if (newCode.length < 7) {
-            newCode = newCode.padEnd(7, '0');
-          } else if (newCode.length > 7) {
-            newCode = newCode.slice(0, 7);
-          }
-          if (!/^\d{7}$/.test(newCode)) {
-            const prefix = acc.glCode.startsWith('2') ? '20' : acc.glCode.startsWith('3') ? '30' : acc.glCode.startsWith('4') ? '40' : '10';
-            newCode = `${prefix}00000`.slice(0, 7);
-          }
-          while (await tx.account.findFirst({ where: { glCode: newCode, id: { not: acc.id } } })) {
-            const num = parseInt(newCode) + 1;
-            newCode = String(num).padStart(7, '0');
-          }
-          await tx.account.update({
-            where: { id: acc.id },
-            data: { glCode: newCode }
-          });
-          actionsTaken.push(`Corrected GL Code for "${acc.accountName}" from "${acc.glCode}" to 7-digit "${newCode}"`);
+    // Step 1 — Repair invalid GL code lengths (ensure every GL Code is exactly
+    // 7 digits). One account at a time: a collision this account's new code
+    // can't resolve doesn't stop the rest of the chart of accounts.
+    const accountsForLengthFix = await prisma.account.findMany();
+    for (const acc of accountsForLengthFix) {
+      if (acc.glCode.length === 7 && /^\d{7}$/.test(acc.glCode)) continue;
+      try {
+        let newCode = acc.glCode.replace(/\D/g, '');
+        if (newCode.length < 7) {
+          newCode = newCode.padEnd(7, '0');
+        } else if (newCode.length > 7) {
+          newCode = newCode.slice(0, 7);
         }
-      }
-
-      // 2. Resolve duplicate GL codes
-      const allAccounts = await tx.account.findMany({ orderBy: { createdAt: 'asc' } });
-      const seenGlCodes = new Set<string>();
-      for (const acc of allAccounts) {
-        if (seenGlCodes.has(acc.glCode)) {
-          let num = parseInt(acc.glCode) + 1;
-          let newCode = String(num).padStart(7, '0');
-          while (await tx.account.findFirst({ where: { glCode: newCode } }) || seenGlCodes.has(newCode)) {
-            num++;
-            newCode = String(num).padStart(7, '0');
-          }
-          await tx.account.update({
-            where: { id: acc.id },
-            data: { glCode: newCode }
-          });
-          seenGlCodes.add(newCode);
-          actionsTaken.push(`Reassigned duplicate GL Code for "${acc.accountName}" to unique "${newCode}"`);
-        } else {
-          seenGlCodes.add(acc.glCode);
+        if (!/^\d{7}$/.test(newCode)) {
+          const prefix = acc.glCode.startsWith('2') ? '20' : acc.glCode.startsWith('3') ? '30' : acc.glCode.startsWith('4') ? '40' : '10';
+          newCode = `${prefix}00000`.slice(0, 7);
         }
-      }
-
-      // 3. Ensure every Income Category & Expense Head has a linked 7-digit GL Account
-      await AccountingService.ensureCategoryAndHeadGLAccounts(tx);
-      actionsTaken.push('Verified and auto-linked GL Accounts for all Income Categories, Expense Heads, and Revenue Heads');
-
-      // 4. Synchronize historical Journal Entries with specific GL Accounts
-      await AccountingService.healJournalEntryAccounts(tx);
-      actionsTaken.push('Synchronized historical Journal Entry Lines with specific GL Accounts');
-
-      // 5. Clean orphan journal entry lines referencing non-existent accounts
-      const validAccountIds = new Set((await tx.account.findMany({ select: { id: true } })).map(a => a.id));
-      const orphanLines = await tx.journalEntryLine.findMany();
-      for (const line of orphanLines) {
-        if (!validAccountIds.has(line.accountId)) {
-          const fallbackAcc = await tx.account.findFirst({ where: { glCode: { startsWith: '40801' } } }) || await tx.account.findFirst();
-          if (fallbackAcc) {
-            await tx.journalEntryLine.update({
-              where: { id: line.id },
-              data: { accountId: fallbackAcc.id }
-            });
-            actionsTaken.push(`Re-linked orphan journal line #${line.id.slice(0, 8)} to GL Account ${fallbackAcc.glCode} (${fallbackAcc.accountName})`);
-          }
+        while (await prisma.account.findFirst({ where: { glCode: newCode, id: { not: acc.id } } })) {
+          const num = parseInt(newCode) + 1;
+          newCode = String(num).padStart(7, '0');
         }
+        await prisma.account.update({ where: { id: acc.id }, data: { glCode: newCode } });
+        const action = `Corrected GL Code for "${acc.accountName}" from "${acc.glCode}" to 7-digit "${newCode}"`;
+        actionsTaken.push(action);
+        repairedItems.push({ id: acc.id, glCode: newCode, name: acc.accountName, action });
+      } catch (err: any) {
+        logger.error({ err: errDetails(err), accountId: acc.id, glCode: acc.glCode }, 'Auto-repair: failed to normalize GL Code length');
+        const reason = classifyError(err);
+        actionsTaken.push(`✘ GL Code ${acc.glCode} (${acc.accountName}) — Reason: Invalid GL Length, repair failed: ${reason}`);
+        skippedItems.push({ id: acc.id, glCode: acc.glCode, name: acc.accountName, reason });
       }
+    }
 
-      // 6. Recalculate stored account balances directly from posted general ledger entries
-      const rebuildResult = await AccountingService.recalculateAllBalances(tx);
+    // Step 2 — Resolve duplicate GL codes, one collision at a time.
+    const allAccounts = await prisma.account.findMany({ orderBy: { createdAt: 'asc' } });
+    const seenGlCodes = new Set<string>();
+    for (const acc of allAccounts) {
+      if (!seenGlCodes.has(acc.glCode)) {
+        seenGlCodes.add(acc.glCode);
+        continue;
+      }
+      try {
+        let num = parseInt(acc.glCode) + 1;
+        let newCode = String(num).padStart(7, '0');
+        while (await prisma.account.findFirst({ where: { glCode: newCode } }) || seenGlCodes.has(newCode)) {
+          num++;
+          newCode = String(num).padStart(7, '0');
+        }
+        await prisma.account.update({ where: { id: acc.id }, data: { glCode: newCode } });
+        seenGlCodes.add(newCode);
+        const action = `Reassigned duplicate GL Code for "${acc.accountName}" to unique "${newCode}"`;
+        actionsTaken.push(action);
+        repairedItems.push({ id: acc.id, glCode: newCode, name: acc.accountName, action });
+      } catch (err: any) {
+        logger.error({ err: errDetails(err), accountId: acc.id, glCode: acc.glCode }, 'Auto-repair: failed to resolve duplicate GL Code');
+        const reason = classifyError(err);
+        actionsTaken.push(`✘ GL Code ${acc.glCode} (${acc.accountName}) — Reason: Duplicate GL Code, repair failed: ${reason}`);
+        skippedItems.push({ id: acc.id, glCode: acc.glCode, name: acc.accountName, reason });
+      }
+    }
+
+    // Step 3 — Ensure every Income Category & Expense Head has a linked GL
+    // Account (already isolates per-item internally).
+    const categoryHeadResult = await AccountingService.ensureCategoryAndHeadGLAccounts(prisma);
+    repairedItems.push(...categoryHeadResult.repaired);
+    skippedItems.push(...categoryHeadResult.skipped);
+    if (categoryHeadResult.repaired.length > 0) {
+      actionsTaken.push(`Verified and auto-linked GL Accounts for ${categoryHeadResult.repaired.length} Income Categories / Expense Heads`);
+    }
+    for (const s of categoryHeadResult.skipped) {
+      actionsTaken.push(`✘ ${s.name || s.id || 'Unknown item'} — Reason: Ledger Mapping Missing, repair failed: ${s.reason}`);
+    }
+
+    // Step 4 — Synchronize historical Journal Entries with specific GL
+    // Accounts (already isolates per-record internally).
+    const journalHealResult = await AccountingService.healJournalEntryAccounts(prisma);
+    repairedItems.push(...journalHealResult.repaired);
+    skippedItems.push(...journalHealResult.skipped);
+    if (journalHealResult.repaired.length > 0) {
+      actionsTaken.push(`Synchronized ${journalHealResult.repaired.length} historical Journal Entry Lines with their specific GL Accounts`);
+    }
+
+    // Step 5 — Clean orphan journal entry lines referencing non-existent
+    // accounts, one line at a time.
+    const validAccountIds = new Set((await prisma.account.findMany({ select: { id: true } })).map(a => a.id));
+    const orphanLines = await prisma.journalEntryLine.findMany({ where: { accountId: { notIn: Array.from(validAccountIds) } } });
+    for (const line of orphanLines) {
+      try {
+        const fallbackAcc = await prisma.account.findFirst({ where: { glCode: { startsWith: '40801' } } }) || await prisma.account.findFirst();
+        if (!fallbackAcc) {
+          throw Object.assign(new Error('No fallback GL Account exists in the Chart of Accounts'), { code: 'NO_FALLBACK' });
+        }
+        await prisma.journalEntryLine.update({ where: { id: line.id }, data: { accountId: fallbackAcc.id } });
+        const action = `Re-linked orphan journal line #${line.id.slice(0, 8)} to GL Account ${fallbackAcc.glCode} (${fallbackAcc.accountName})`;
+        actionsTaken.push(action);
+        repairedItems.push({ id: line.id, action });
+      } catch (err: any) {
+        logger.error({ err: errDetails(err), journalEntryLineId: line.id, orphanAccountId: line.accountId }, 'Auto-repair: failed to re-link orphan journal line');
+        const reason = classifyError(err);
+        actionsTaken.push(`✘ Journal line #${line.id.slice(0, 8)} — Reason: Orphan Account Reference, repair failed: ${reason}`);
+        skippedItems.push({ id: line.id, reason });
+      }
+    }
+
+    // Step 6 — Recalculate stored account balances directly from posted
+    // general ledger entries. This is the one genuinely batch step: a single
+    // set-based SQL UPDATE covering every posting account in one round trip
+    // (AccountingService.rebuildBalanceCache, via recalculateAllBalances),
+    // so this scales to thousands of accounts without looping per account.
+    let balanceGroups: { label: string; count: number }[] = [];
+    try {
+      const rebuildResult = await AccountingService.recalculateAllBalances();
       actionsTaken.push(`Recalculated cached currentBalance for ${rebuildResult.updated} accounts directly from posted ledger entries`);
-    });
+
+      // Grouped confirmation lines ("✔ Cash In Hand rebuilt", "✔ Bank
+      // rebuilt", ...) — the richer per-category detail requirement #9 asks
+      // for, without needing a UI change: these are just more strings in the
+      // same actionsTaken list the page already renders.
+      const rebuiltAccounts = await prisma.account.findMany({
+        where: { accountLevel: { in: ['GL', 'SUBSIDIARY'] }, isDeleted: false },
+        include: { accountType: true },
+      });
+      const groups = new Map<string, number>();
+      for (const acc of rebuiltAccounts) {
+        const detail = (acc.detailType || '').toLowerCase();
+        const typeName = (acc.accountType?.name || '').toUpperCase();
+        let label: string;
+        if (detail === 'cash') label = 'Cash In Hand';
+        else if (detail === 'bank') label = 'Bank';
+        else if (typeName === 'REVENUE') label = 'Revenue';
+        else if (typeName === 'EXPENSE') label = 'Expenses';
+        else if (typeName === 'ASSET') label = 'Assets';
+        else if (typeName === 'LIABILITY') label = 'Liabilities';
+        else if (typeName === 'EQUITY') label = 'Equity';
+        else label = 'Other Accounts';
+        groups.set(label, (groups.get(label) || 0) + 1);
+      }
+      balanceGroups = Array.from(groups.entries()).map(([label, count]) => ({ label, count }));
+      for (const g of balanceGroups) {
+        actionsTaken.push(`✔ ${g.label} rebuilt (${g.count} account${g.count === 1 ? '' : 's'})`);
+      }
+    } catch (err: any) {
+      logger.error({ err: errDetails(err) }, 'Auto-repair: batch balance rebuild failed');
+      const reason = classifyError(err);
+      actionsTaken.push(`✘ Balance rebuild — Reason: ${reason}`);
+      skippedItems.push({ reason, action: 'Batch currentBalance rebuild (Step 6)' });
+    }
 
     const checkAfter = await this.runFullCheck();
+    const executionTimeMs = Date.now() - startedAt;
+
+    const accountsChecked = allAccounts.length; // every Chart of Accounts row evaluated by Steps 1/2/6
+    const accountsRepaired = repairedItems.length;
+    const accountsSkipped = skippedItems.length;
+    const warningsFixed = Math.max(0, checkBefore.warningCount - checkAfter.warningCount);
+
+    actionsTaken.unshift(
+      `Summary: ${accountsChecked} accounts checked | ${accountsRepaired} repaired | ${accountsSkipped} skipped | ${warningsFixed} warnings fixed | Execution time: ${executionTimeMs}ms`
+    );
+
+    if (skippedItems.length > 0) {
+      logger.warn({ skippedCount: skippedItems.length, skippedItems }, 'Auto-repair completed with some items skipped — see individual log entries above for full detail on each');
+    }
+    logger.info({ accountsChecked, accountsRepaired, accountsSkipped, warningsFixed, executionTimeMs, issuesBefore: checkBefore.totalIssues, issuesAfter: checkAfter.totalIssues }, 'Auto-repair run complete');
 
     return {
       success: checkAfter.criticalCount === 0 && checkAfter.warningCount === 0,
       actionsTaken,
+      accountsChecked,
+      accountsRepaired,
+      accountsSkipped,
+      warningsFixed,
+      executionTimeMs,
+      repairedItems,
+      skippedItems,
       checkBefore,
       checkAfter
     };

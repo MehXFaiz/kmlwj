@@ -113,6 +113,7 @@ export { invoiceService } from './invoiceService';
 
 export const accountingHealthService = {
   getCheck: () => api.get('/api/v1/accounting-health').then((r) => r.data),
+  rebuildBalances: () => api.post('/api/v1/accounting-health').then((r) => r.data),
 };
 
 export const ledgerService = {

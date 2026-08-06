@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import api from '../services/api';
 import { useDashboardStore } from './dashboardStore';
 
-export const useHallBookingStore = create((set) => ({
+export const useHallBookingStore = create((set, get) => ({
   bookings: [],
   loading: false,
   error: null,
@@ -20,7 +20,7 @@ export const useHallBookingStore = create((set) => ({
   addBooking: async (bookingData) => {
     try {
       const response = await api.post('/api/v1/hall-bookings', bookingData);
-      set((state) => ({ bookings: [response.data.data, ...state.bookings] }));
+      await get().fetchBookings();
       useDashboardStore.getState().invalidateAll();
       return response.data.data;
     } catch (error) {
@@ -40,9 +40,7 @@ export const useHallBookingStore = create((set) => ({
   updateBooking: async (id, bookingData) => {
     try {
       const response = await api.put(`/api/v1/hall-bookings?id=${id}`, bookingData);
-      set((state) => ({
-        bookings: state.bookings.map(b => b.id === id ? response.data.data : b)
-      }));
+      await get().fetchBookings();
       useDashboardStore.getState().invalidateAll();
       return response.data.data;
     } catch (error) {
@@ -53,9 +51,7 @@ export const useHallBookingStore = create((set) => ({
   postBooking: async (id) => {
     try {
       const response = await api.post('/api/v1/hall-bookings?action=approve', { id });
-      set((state) => ({
-        bookings: state.bookings.map(b => b.id === id ? { ...b, ...response.data.data } : b)
-      }));
+      await get().fetchBookings();
       useDashboardStore.getState().invalidateAll();
       return response.data.data;
     } catch (error) {
@@ -66,9 +62,7 @@ export const useHallBookingStore = create((set) => ({
   revertBooking: async (id) => {
     try {
       const response = await api.post('/api/v1/hall-bookings?action=revert', { id });
-      set((state) => ({
-        bookings: state.bookings.map(b => b.id === id ? { ...b, ...response.data.data } : b)
-      }));
+      await get().fetchBookings();
       useDashboardStore.getState().invalidateAll();
       return response.data.data;
     } catch (error) {
@@ -79,7 +73,7 @@ export const useHallBookingStore = create((set) => ({
   deleteBooking: async (id) => {
     try {
       await api.delete(`/api/v1/hall-bookings?id=${id}`);
-      set((state) => ({ bookings: state.bookings.filter((b) => b.id !== id) }));
+      await get().fetchBookings();
       useDashboardStore.getState().invalidateAll();
     } catch (error) {
       throw error;
@@ -89,7 +83,7 @@ export const useHallBookingStore = create((set) => ({
   bulkDeleteBookings: async (ids) => {
     try {
       const response = await api.delete('/api/v1/hall-bookings', { data: { ids } });
-      set((state) => ({ bookings: state.bookings.filter((b) => !ids.includes(b.id)) }));
+      await get().fetchBookings();
       useDashboardStore.getState().invalidateAll();
       return { success: true, data: response.data };
     } catch (error) {

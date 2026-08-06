@@ -60,10 +60,8 @@ export const useDonationReceivedStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       await donationReceivedService.delete(id);
-      set(state => ({
-        donations: state.donations.filter(d => d.id !== id),
-        loading: false
-      }));
+      await get().fetchDonations();
+      set({ loading: false });
       useDashboardStore.getState().invalidateAll();
     } catch (err) {
       set({ error: err.response?.data?.error?.message || err.message, loading: false });

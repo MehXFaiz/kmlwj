@@ -21,7 +21,7 @@ export const useRevenueCollectionStore = create((set, get) => ({
   addCollection: async (data) => {
     try {
       const response = await api.post('/api/v1/revenue-collections', data);
-      set((state) => ({ collections: [response.data.data, ...state.collections] }));
+      await get().fetchCollections();
       useDashboardStore.getState().invalidateAll();
       return response.data.data;
     } catch (error) {
@@ -32,9 +32,7 @@ export const useRevenueCollectionStore = create((set, get) => ({
   updateCollection: async (id, data) => {
     try {
       const response = await api.put(`/api/v1/revenue-collections?id=${id}`, data);
-      set((state) => ({
-        collections: state.collections.map(c => c.id === id ? response.data.data : c)
-      }));
+      await get().fetchCollections();
       useDashboardStore.getState().invalidateAll();
       return response.data.data;
     } catch (error) {
@@ -45,9 +43,7 @@ export const useRevenueCollectionStore = create((set, get) => ({
   postCollection: async (id) => {
     try {
       const response = await api.post('/api/v1/revenue-collections?action=approve', { id });
-      set((state) => ({
-        collections: state.collections.map(c => c.id === id ? { ...c, ...response.data.data } : c)
-      }));
+      await get().fetchCollections();
       useDashboardStore.getState().invalidateAll();
       return response.data.data;
     } catch (error) {
@@ -58,9 +54,7 @@ export const useRevenueCollectionStore = create((set, get) => ({
   revertCollection: async (id) => {
     try {
       const response = await api.post('/api/v1/revenue-collections?action=revert', { id });
-      set((state) => ({
-        collections: state.collections.map(c => c.id === id ? { ...c, ...response.data.data } : c)
-      }));
+      await get().fetchCollections();
       useDashboardStore.getState().invalidateAll();
       return response.data.data;
     } catch (error) {
@@ -71,7 +65,7 @@ export const useRevenueCollectionStore = create((set, get) => ({
   deleteCollection: async (id) => {
     try {
       await api.delete(`/api/v1/revenue-collections?id=${id}`);
-      set((state) => ({ collections: state.collections.filter((c) => c.id !== id) }));
+      await get().fetchCollections();
       useDashboardStore.getState().invalidateAll();
     } catch (error) {
       throw error;
@@ -81,9 +75,7 @@ export const useRevenueCollectionStore = create((set, get) => ({
   bulkDeleteCollections: async (ids) => {
     try {
       const response = await api.delete('/api/v1/revenue-collections', { data: { ids } });
-      set((state) => ({
-        collections: state.collections.filter((c) => !ids.includes(c.id))
-      }));
+      await get().fetchCollections();
       useDashboardStore.getState().invalidateAll();
       return { success: true, count: response.data?.data?.length || ids.length };
     } catch (error) {

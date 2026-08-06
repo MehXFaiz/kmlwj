@@ -42,9 +42,7 @@ export const useCustomerStore = create((set, get) => ({
   deleteCustomer: async (id) => {
     try {
       await customerService.delete(id);
-      set(state => ({
-        customers: state.customers.filter(c => c.id !== id)
-      }));
+      await get().fetchCustomers();
       useDashboardStore.getState().invalidateAll();
     } catch (err) {
       set({ error: err.message });

@@ -22,8 +22,8 @@ export const useSimpleExpenseStore = create((set, get) => ({
   createExpense: async (expenseData) => {
     set({ error: null });
     try {
-      const { data } = await api.post('/api/v1/simple-expense', expenseData);
-      set(state => ({ expenses: [data.data, ...state.expenses] }));
+      await api.post('/api/v1/simple-expense', expenseData);
+      await get().fetchExpenses();
       useDashboardStore.getState().invalidateAll();
       return true;
     } catch (error) {
@@ -35,10 +35,8 @@ export const useSimpleExpenseStore = create((set, get) => ({
   updateExpense: async (id, expenseData) => {
     set({ error: null });
     try {
-      const { data } = await api.put('/api/v1/simple-expense', { id, ...expenseData });
-      set(state => ({
-        expenses: state.expenses.map(e => e.id === id ? data.data : e)
-      }));
+      await api.put('/api/v1/simple-expense', { id, ...expenseData });
+      await get().fetchExpenses();
       useDashboardStore.getState().invalidateAll();
       return true;
     } catch (error) {
@@ -51,9 +49,7 @@ export const useSimpleExpenseStore = create((set, get) => ({
     set({ error: null });
     try {
       await api.delete(`/api/v1/simple-expense?id=${id}`);
-      set(state => ({
-        expenses: state.expenses.filter(e => e.id !== id)
-      }));
+      await get().fetchExpenses();
       useDashboardStore.getState().invalidateAll();
       return true;
     } catch (error) {
