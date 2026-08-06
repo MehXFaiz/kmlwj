@@ -125,15 +125,31 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     try {
       const [forward, backward] = await prisma.$transaction([
-        prisma.familyRelationship.create({
-          data: {
+        prisma.familyRelationship.upsert({
+          where: { memberId_relatedMemberId: { memberId, relatedMemberId } },
+          update: {
+            relationshipType,
+            customLabel: relationshipType === 'OTHER' ? (customLabel || null) : null,
+            isDeleted: false,
+            deletedAt: null,
+            deletedBy: null,
+          },
+          create: {
             memberId, relatedMemberId, relationshipType,
             customLabel: relationshipType === 'OTHER' ? (customLabel || null) : null,
           },
           include: { relatedMember: { select: MEMBER_SELECT } },
         }),
-        prisma.familyRelationship.create({
-          data: {
+        prisma.familyRelationship.upsert({
+          where: { memberId_relatedMemberId: { memberId: relatedMemberId, relatedMemberId: memberId } },
+          update: {
+            relationshipType: reciprocal,
+            customLabel: reciprocal === 'OTHER' ? (reciprocalCustomLabel || customLabel || null) : null,
+            isDeleted: false,
+            deletedAt: null,
+            deletedBy: null,
+          },
+          create: {
             memberId: relatedMemberId, relatedMemberId: memberId, relationshipType: reciprocal,
             customLabel: reciprocal === 'OTHER' ? (reciprocalCustomLabel || customLabel || null) : null,
           },
@@ -142,7 +158,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       ]);
 
       await logAudit(req.user.id, 'Link Family Member', 'MEMBER', null, { forward, backward }, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
-
 
       return res.status(201).json({ status: 201, data: forward });
     } catch (err: any) {

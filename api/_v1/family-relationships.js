@@ -140,8 +140,16 @@ var family_relationships_default = makeHandler(async (req, res) => {
     }
     try {
       const [forward, backward] = await prisma.$transaction([
-        prisma.familyRelationship.create({
-          data: {
+        prisma.familyRelationship.upsert({
+          where: { memberId_relatedMemberId: { memberId, relatedMemberId } },
+          update: {
+            relationshipType,
+            customLabel: relationshipType === "OTHER" ? customLabel || null : null,
+            isDeleted: false,
+            deletedAt: null,
+            deletedBy: null
+          },
+          create: {
             memberId,
             relatedMemberId,
             relationshipType,
@@ -149,8 +157,16 @@ var family_relationships_default = makeHandler(async (req, res) => {
           },
           include: { relatedMember: { select: MEMBER_SELECT } }
         }),
-        prisma.familyRelationship.create({
-          data: {
+        prisma.familyRelationship.upsert({
+          where: { memberId_relatedMemberId: { memberId: relatedMemberId, relatedMemberId: memberId } },
+          update: {
+            relationshipType: reciprocal,
+            customLabel: reciprocal === "OTHER" ? reciprocalCustomLabel || customLabel || null : null,
+            isDeleted: false,
+            deletedAt: null,
+            deletedBy: null
+          },
+          create: {
             memberId: relatedMemberId,
             relatedMemberId: memberId,
             relationshipType: reciprocal,
