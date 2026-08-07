@@ -391,12 +391,15 @@ export const VoucherSlipModal = ({
             @media print {
               @page {
                 size: A4 landscape;
-                margin: 3mm 4mm !important;
+                margin: 2mm 3mm !important;
               }
               html, body {
                 margin: 0 !important;
                 padding: 0 !important;
                 background: #ffffff !important;
+                width: 100% !important;
+                height: 100% !important;
+                overflow: visible !important;
               }
               *, *::before, *::after {
                 -webkit-print-color-adjust: exact !important;
@@ -416,14 +419,17 @@ export const VoucherSlipModal = ({
                 filter: none !important;
               }
               #print-voucher-slip {
-                position: absolute !important;
+                position: fixed !important;
                 left: 0 !important;
                 top: 0 !important;
-                width: 100% !important;
+                width: 100vw !important;
+                height: auto !important;
                 margin: 0 !important;
                 padding: 0 !important;
                 box-shadow: none !important;
                 border: none !important;
+                background: #ffffff !important;
+                z-index: 9999999 !important;
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
               }

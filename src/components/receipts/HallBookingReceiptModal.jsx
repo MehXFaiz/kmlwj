@@ -777,20 +777,18 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
                 filter: none !important;
               }
               #print-receipt-modal {
-                position: absolute !important;
+                position: fixed !important;
                 left: 0 !important;
                 top: 0 !important;
-                width: 100% !important;
+                width: 100vw !important;
                 height: auto !important;
-                max-height: 291mm !important;
                 background: #ffffff !important;
                 padding: 0 !important;
                 margin: 0 !important;
-                overflow: hidden !important;
                 box-shadow: none !important;
                 border: none !important;
                 outline: none !important;
-                z-index: 999999 !important;
+                z-index: 9999999 !important;
                 display: block !important;
               }
               #print-receipt-modal > div {
