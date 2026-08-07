@@ -23,23 +23,27 @@ function getMemberQrUrl(member) {
 
 const PRINT_STYLES = `
 @media print {
-  @page { margin: 0; size: auto; }
-  /* Force full-color print for every element on the page — kills the
-     browser default that strips background colors/images during printing. */
+  @page { margin: 0; size: A4 portrait; }
   *, *::before, *::after {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
   }
   body * { visibility: hidden !important; }
-  #print-area, #print-area * {
+  #print-area, #print-area *,
+  #pvc-print-sheet, #pvc-print-sheet *,
+  #pvc-print-portal, #pvc-print-portal * {
     visibility: visible !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
   }
-  #print-area img, #print-area svg { filter: none !important; }
-  #print-area { position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: white !important; }
+  #print-area img, #print-area svg,
+  #pvc-print-sheet img, #pvc-print-sheet svg { filter: none !important; opacity: 1 !important; }
+  #print-area, #pvc-print-sheet {
+    position: fixed !important; left: 0 !important; top: 0 !important;
+    width: 210mm !important; background: white !important;
+  }
 }
 `;
 
@@ -58,19 +62,69 @@ function SingleCardPrintArea({ card, areaRef }) {
   return (
     <div id="print-area" ref={areaRef} style={{
       position: 'fixed', left: '-9999px', top: 0,
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', gap: '4mm',
-      width: '100mm', padding: '4mm',
+      display: 'flex', flexDirection: 'row', alignItems: 'center',
+      justifyContent: 'center', gap: '6mm',
+      width: '210mm', padding: '10mm',
       fontFamily: '"Plus Jakarta Sans", Inter, sans-serif',
     }}>
+      {/* Front Side (Left) */}
       <div style={{ width: `${CARD_W_MM}mm`, height: `${CARD_H_MM}mm`, display: 'flex', flexDirection: 'column' }}>
         <ZakatCardFront card={card} />
       </div>
+      {/* Back Side (Right) */}
       <div style={{ width: `${CARD_W_MM}mm`, height: `${CARD_H_MM}mm`, display: 'flex', flexDirection: 'column' }}>
         <ZakatCardBack card={card} />
       </div>
     </div>
   );
+}
+
+function ZakatA4PrintArea({ cards, areaRef }) {
+  return (
+    <div id="print-area" ref={areaRef} style={{
+      position: 'fixed', left: '-9999px', top: 0,
+      fontFamily: '"Plus Jakarta Sans", Inter, sans-serif',
+    }}>
+      {chunk(cards, 5).map((group, pageIdx) => (
+        <div key={pageIdx} style={{
+          width: '210mm', height: '297mm',
+          padding: '6mm 8mm',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-start',
+          gap: '3.5mm',
+          pageBreakAfter: 'always',
+          boxSizing: 'border-box',
+        }}>
+          {group.map((c) => (
+            <div key={c.id} style={{
+              display: 'flex',
+              flexDirection: 'row',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '6mm',
+              height: `${CARD_H_MM}mm`,
+            }}>
+              {/* Front Side (LEFT) */}
+              <div style={{ width: `${CARD_W_MM}mm`, height: `${CARD_H_MM}mm`, display: 'flex', flexDirection: 'column' }}>
+                <ZakatCardFront card={c} />
+              </div>
+              {/* Back Side (RIGHT) */}
+              <div style={{ width: `${CARD_W_MM}mm`, height: `${CARD_H_MM}mm`, display: 'flex', flexDirection: 'column' }}>
+                <ZakatCardBack card={c} />
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function chunk(arr, size) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
 }
 
 function IssueModal({ beneficiaries, beneficiariesLoading, onClose, onSubmit }) {

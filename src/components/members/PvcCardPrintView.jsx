@@ -25,15 +25,15 @@ const CARD_H_MM = 53.98;
 const PVC_PRINT_CSS = `
 @media print {
   @page {
-    size: ${CARD_W_MM}mm ${CARD_H_MM}mm;
+    size: A4 portrait;
     margin: 0;
   }
   html, body {
     margin: 0 !important;
     padding: 0 !important;
     background: #ffffff !important;
-    width: ${CARD_W_MM}mm !important;
-    height: ${CARD_H_MM}mm !important;
+    width: 210mm !important;
+    height: 297mm !important;
   }
   /* Force full-color output on every element */
   *, *::before, *::after {
@@ -56,7 +56,7 @@ const PVC_PRINT_CSS = `
     inset: auto !important;
     padding: 0 !important;
     margin: 0 !important;
-    width: ${CARD_W_MM}mm !important;
+    width: 210mm !important;
     height: auto !important;
     overflow: visible !important;
   }
@@ -64,27 +64,24 @@ const PVC_PRINT_CSS = `
     position: static !important;
     display: block !important;
     background: #ffffff !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    width: ${CARD_W_MM}mm !important;
+    padding: 10mm 0 !important;
+    margin: 0 auto !important;
+    width: 210mm !important;
   }
   .pvc-card-page {
-    width: ${CARD_W_MM}mm !important;
+    width: 210mm !important;
     height: ${CARD_H_MM}mm !important;
     display: flex !important;
-    flex-direction: column !important;
-    break-after: page;
-    page-break-after: always;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6mm !important;
     break-inside: avoid;
     page-break-inside: avoid;
     overflow: hidden !important;
     box-sizing: border-box !important;
     border-radius: 0 !important;
     box-shadow: none !important;
-  }
-  .pvc-card-page:last-child {
-    break-after: auto;
-    page-break-after: auto;
   }
   /* Kill any transforms that could scale the card */
   .pvc-card-page, .pvc-card-page * {
@@ -318,14 +315,20 @@ export function PvcCardPrintView({
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px',
         }}
       >
-        <PreviewLabel text="Page 1 · Front" />
-        <div style={{ width: `${CARD_W_MM}mm`, height: `${CARD_H_MM}mm`, display: 'flex', flexDirection: 'column', borderRadius: '3mm', overflow: 'hidden', boxShadow: '0 12px 40px rgba(0,0,0,0.55)' }}>
-          {renderFront({ variant, data })}
-        </div>
+        <div style={{ display: 'flex', flexDirection: 'row', gap: '24px', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+            <PreviewLabel text="Front Side (Left)" />
+            <div style={{ width: `${CARD_W_MM}mm`, height: `${CARD_H_MM}mm`, display: 'flex', flexDirection: 'column', borderRadius: '3mm', overflow: 'hidden', boxShadow: '0 12px 40px rgba(0,0,0,0.55)' }}>
+              {renderFront({ variant, data })}
+            </div>
+          </div>
 
-        <PreviewLabel text="Page 2 · Back" />
-        <div style={{ width: `${CARD_W_MM}mm`, height: `${CARD_H_MM}mm`, display: 'flex', flexDirection: 'column', borderRadius: '3mm', overflow: 'hidden', boxShadow: '0 12px 40px rgba(0,0,0,0.55)' }}>
-          {renderBack({ variant, data })}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+            <PreviewLabel text="Back Side (Right)" />
+            <div style={{ width: `${CARD_W_MM}mm`, height: `${CARD_H_MM}mm`, display: 'flex', flexDirection: 'column', borderRadius: '3mm', overflow: 'hidden', boxShadow: '0 12px 40px rgba(0,0,0,0.55)' }}>
+              {renderBack({ variant, data })}
+            </div>
+          </div>
         </div>
 
         <div style={{
@@ -340,18 +343,24 @@ export function PvcCardPrintView({
         </div>
       </div>
 
-      {/* ── Print sheet (the only element visible during printing) ── */}
+      {/* ── Print sheet (the only element visible during printing: Front Left, Back Right) ── */}
       <div
         id="pvc-print-sheet"
         ref={sheetRef}
         style={{
           position: 'fixed', left: '-9999px', top: 0,
-          width: `${CARD_W_MM}mm`, background: '#ffffff',
+          width: '210mm', background: '#ffffff',
         }}
         aria-hidden="true"
       >
-        <CardPage>{renderFront({ variant, data })}</CardPage>
-        <CardPage>{renderBack({ variant, data })}</CardPage>
+        <div className="pvc-card-page">
+          <div style={{ width: `${CARD_W_MM}mm`, height: `${CARD_H_MM}mm`, display: 'flex', flexDirection: 'column' }}>
+            {renderFront({ variant, data })}
+          </div>
+          <div style={{ width: `${CARD_W_MM}mm`, height: `${CARD_H_MM}mm`, display: 'flex', flexDirection: 'column' }}>
+            {renderBack({ variant, data })}
+          </div>
+        </div>
       </div>
 
       <style>{`@keyframes pvc-spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }`}</style>

@@ -569,7 +569,7 @@ html.theme-transition *::after {
   font-family: "Plus Jakarta Sans", Inter, sans-serif;
 }
 
-/* Print: exact CR80 dimensions */
+/* Print: card print support */
 @media print {
   .membership-card-wrapper {
     width: 85.60mm !important;
@@ -577,11 +577,13 @@ html.theme-transition *::after {
     border-radius: 3mm !important;
   }
 
-  /* Force the card print area to render with its inline colors preserved.
-     Every browser must print backgrounds, borders, gradients, SVGs, and
-     images exactly as displayed on screen. */
+  /* Force all card print elements to remain visible and preserve background colors/images */
   #print-area,
-  #print-area * {
+  #print-area *,
+  #pvc-print-sheet,
+  #pvc-print-sheet *,
+  #pvc-print-portal,
+  #pvc-print-portal * {
     visibility: visible !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
@@ -589,18 +591,11 @@ html.theme-transition *::after {
   }
 
   #print-area img,
-  #print-area svg {
+  #print-area svg,
+  #pvc-print-sheet img,
+  #pvc-print-sheet svg {
     filter: none !important;
     opacity: revert !important;
-  }
-
-  #print-area {
-    position: fixed !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    height: auto !important;
-    background: white !important;
   }
 }
 

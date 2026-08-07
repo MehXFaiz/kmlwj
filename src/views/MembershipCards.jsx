@@ -23,23 +23,27 @@ function getMemberQrUrl(member) {
 /* ── Print styles injected once ── */
 const PRINT_STYLES = `
 @media print {
-  @page { margin: 0; size: auto; }
-  /* Force full-color print for every element on the page — kills the
-     browser default that strips background colors/images during printing. */
+  @page { margin: 0; size: A4 portrait; }
   *, *::before, *::after {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
   }
   body * { visibility: hidden !important; }
-  #print-area, #print-area * {
+  #print-area, #print-area *,
+  #pvc-print-sheet, #pvc-print-sheet *,
+  #pvc-print-portal, #pvc-print-portal * {
     visibility: visible !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
   }
-  #print-area img, #print-area svg { filter: none !important; }
-  #print-area { position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: white !important; }
+  #print-area img, #print-area svg,
+  #pvc-print-sheet img, #pvc-print-sheet svg { filter: none !important; opacity: 1 !important; }
+  #print-area, #pvc-print-sheet {
+    position: fixed !important; left: 0 !important; top: 0 !important;
+    width: 210mm !important; background: white !important;
+  }
 }
 `;
 
@@ -55,21 +59,21 @@ function injectPrintStyles() {
 const CARD_W_MM = 85.6;
 const CARD_H_MM = 53.98;
 
-/* ─────────── Single-card print layout ─────────── */
+/* ─────────── Single-card print layout (Front on Left, Back on Right) ─────────── */
 function SingleCardPrintArea({ member, areaRef }) {
   return (
     <div id="print-area" ref={areaRef} style={{
       position: 'fixed', left: '-9999px', top: 0,
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', gap: '4mm',
-      width: '100mm', padding: '4mm',
+      display: 'flex', flexDirection: 'row', alignItems: 'center',
+      justifyContent: 'center', gap: '6mm',
+      width: '210mm', padding: '10mm',
       fontFamily: '"Plus Jakarta Sans", Inter, sans-serif',
     }}>
-      {/* Front */}
+      {/* Front Side (Left) */}
       <div style={{ width: `${CARD_W_MM}mm`, height: `${CARD_H_MM}mm`, display: 'flex', flexDirection: 'column' }}>
         <CardFront member={member} />
       </div>
-      {/* Back */}
+      {/* Back Side (Right) */}
       <div style={{ width: `${CARD_W_MM}mm`, height: `${CARD_H_MM}mm`, display: 'flex', flexDirection: 'column' }}>
         <CardBack member={member} />
       </div>
@@ -77,49 +81,43 @@ function SingleCardPrintArea({ member, areaRef }) {
   );
 }
 
-/* ─────────── A4 bulk print layout (4 cards per page, front+back pairs) ─────────── */
+/* ─────────── A4 bulk print layout (5 cards per A4 page, Front on Left & Back on Right) ─────────── */
 function A4PrintArea({ members, areaRef }) {
-  // 4 cards per page arranged as 2×2 grid on A4 (210mm × 297mm)
+  // 5 cards per A4 page arranged vertically, each card having Front (Left) + Back (Right) side-by-side
   return (
     <div id="print-area" ref={areaRef} style={{
       position: 'fixed', left: '-9999px', top: 0,
       fontFamily: '"Plus Jakarta Sans", Inter, sans-serif',
     }}>
-      {chunk(members, 4).map((group, pageIdx) => (
+      {chunk(members, 5).map((group, pageIdx) => (
         <div key={pageIdx} style={{
           width: '210mm', height: '297mm',
-          padding: '8mm',
-          display: 'grid',
-          gridTemplateRows: `${CARD_H_MM}mm 6mm ${CARD_H_MM}mm`,
-          gridTemplateColumns: `${CARD_W_MM}mm 5mm ${CARD_W_MM}mm`,
+          padding: '6mm 8mm',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-start',
+          gap: '3.5mm',
           pageBreakAfter: 'always',
           boxSizing: 'border-box',
         }}>
-          {group.slice(0, 2).map((m, i) => (
-            <React.Fragment key={m.id}>
-              {/* Front */}
-              <div style={{
-                gridRow: 1, gridColumn: i === 0 ? 1 : 3,
-                width: `${CARD_W_MM}mm`, height: `${CARD_H_MM}mm`,
-                display: 'flex', flexDirection: 'column'
-              }}>
+          {group.map((m) => (
+            <div key={m.id} style={{
+              display: 'flex',
+              flexDirection: 'row',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '6mm',
+              height: `${CARD_H_MM}mm`,
+            }}>
+              {/* Front Side (LEFT) */}
+              <div style={{ width: `${CARD_W_MM}mm`, height: `${CARD_H_MM}mm`, display: 'flex', flexDirection: 'column' }}>
                 <CardFront member={m} />
               </div>
-            </React.Fragment>
-          ))}
-          {/* Gap row */}
-          <div style={{ gridRow: 2, gridColumn: '1 / -1' }} />
-          {group.slice(0, 2).map((m, i) => (
-            <React.Fragment key={`back-${m.id}`}>
-              {/* Back */}
-              <div style={{
-                gridRow: 3, gridColumn: i === 0 ? 1 : 3,
-                width: `${CARD_W_MM}mm`, height: `${CARD_H_MM}mm`,
-                display: 'flex', flexDirection: 'column'
-              }}>
+              {/* Back Side (RIGHT) */}
+              <div style={{ width: `${CARD_W_MM}mm`, height: `${CARD_H_MM}mm`, display: 'flex', flexDirection: 'column' }}>
                 <CardBack member={m} />
               </div>
-            </React.Fragment>
+            </div>
           ))}
         </div>
       ))}
@@ -147,7 +145,7 @@ function PreviewModal({ member, onClose, onPrint, onPrintPvc, onCopyQr }) {
         background: '#111', borderRadius: '16px',
         border: '1px solid #333',
         padding: '28px',
-        maxWidth: '480px', width: '100%',
+        maxWidth: '720px', width: '100%',
         boxShadow: '0 24px 60px rgba(0,0,0,0.6)'
       }}>
         {/* Header */}
@@ -164,15 +162,19 @@ function PreviewModal({ member, onClose, onPrint, onPrintPvc, onCopyQr }) {
           </button>
         </div>
 
-        {/* Card previews */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
-          <div style={{ fontSize: '10px', color: '#64748b', alignSelf: 'flex-start', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Front</div>
-          <div style={{ width: '320px', height: '202px', display: 'flex', flexDirection: 'column', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
-            <CardFront member={member} />
+        {/* Card previews side-by-side (Front Left, Back Right) */}
+        <div style={{ display: 'flex', flexDirection: 'row', gap: '16px', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+            <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Front Side (Left)</div>
+            <div style={{ width: '320px', height: '202px', display: 'flex', flexDirection: 'column', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+              <CardFront member={member} />
+            </div>
           </div>
-          <div style={{ fontSize: '10px', color: '#64748b', alignSelf: 'flex-start', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: '6px' }}>Back</div>
-          <div style={{ width: '320px', height: '202px', display: 'flex', flexDirection: 'column', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
-            <CardBack member={member} />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+            <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Back Side (Right)</div>
+            <div style={{ width: '320px', height: '202px', display: 'flex', flexDirection: 'column', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+              <CardBack member={member} />
+            </div>
           </div>
         </div>
 
