@@ -122,6 +122,8 @@ export class AccountingBalanceRebuildService {
       let cashReceipts = new Prisma.Decimal(0);
       let cashPayments = new Prisma.Decimal(0);
 
+      let priorRetainedEarnings = new Prisma.Decimal(0);
+
       for (const acc of leafAccounts) {
         const typeName = (acc.accountType?.name || '').toUpperCase();
         const initBal = new Prisma.Decimal(acc.initialBalance ?? 0);
@@ -138,12 +140,26 @@ export class AccountingBalanceRebuildService {
           const pCredit = pAgg?.credit ?? new Prisma.Decimal(0);
           const netRev = pCredit.minus(pDebit);
           totalRevenue = totalRevenue.plus(netRev);
+
+          if (from) {
+            const prAgg = priorMap.get(acc.id);
+            const prDebit = prAgg?.debit ?? new Prisma.Decimal(0);
+            const prCredit = prAgg?.credit ?? new Prisma.Decimal(0);
+            priorRetainedEarnings = priorRetainedEarnings.plus(prCredit.minus(prDebit));
+          }
         } else if (typeName === 'EXPENSE' || typeName === 'EXPENSES') {
           const pAgg = periodMap.get(acc.id);
           const pDebit = pAgg?.debit ?? new Prisma.Decimal(0);
           const pCredit = pAgg?.credit ?? new Prisma.Decimal(0);
           const netExp = pDebit.minus(pCredit);
           totalExpense = totalExpense.plus(netExp);
+
+          if (from) {
+            const prAgg = priorMap.get(acc.id);
+            const prDebit = prAgg?.debit ?? new Prisma.Decimal(0);
+            const prCredit = prAgg?.credit ?? new Prisma.Decimal(0);
+            priorRetainedEarnings = priorRetainedEarnings.minus(prDebit.minus(prCredit));
+          }
         } else if (typeName === 'ASSET' || typeName === 'ASSETS') {
           const cAgg = cumulativeMap.get(acc.id);
           const cDebit = cAgg?.debit ?? new Prisma.Decimal(0);
@@ -185,7 +201,8 @@ export class AccountingBalanceRebuildService {
       }
 
       const netPeriodIncome = totalRevenue.minus(totalExpense);
-      const totalEquityWithIncome = totalEquity.plus(netPeriodIncome);
+      const totalRetainedEarnings = priorRetainedEarnings.plus(netPeriodIncome);
+      const totalEquityWithIncome = totalEquity.plus(totalRetainedEarnings);
       const netAssets = totalAssets.minus(totalLiabilities);
       const isEquationBalanced = Math.abs(totalAssets.minus(totalLiabilities.plus(totalEquityWithIncome)).toNumber()) < 0.01;
 
