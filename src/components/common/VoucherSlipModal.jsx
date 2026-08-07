@@ -199,6 +199,16 @@ function CopySheet({
           </div>
         </div>
 
+        {/* ── EXPLICIT ITEM VOUCHER DECLARATION BANNER ── */}
+        <div className="my-2 flex items-center gap-2 rounded-xl bg-slate-100 p-2 border border-slate-300 text-xs font-semibold text-slate-900 shadow-sm">
+          <span className="shrink-0 px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider text-white" style={{ backgroundColor: theme.accentColor }}>
+            VOUCHER ITEM
+          </span>
+          <span className="text-[11px] text-slate-900 font-bold truncate">
+            This is the official voucher for <u className="underline decoration-2 font-extrabold" style={{ textDecorationColor: theme.accentColor }}>{ledgerRows[0]?.account || title}</u>.
+          </span>
+        </div>
+
         {/* ── LEDGER ACCOUNTING TABLE ── */}
         <div className="overflow-hidden rounded-xl border border-slate-300 shadow-sm mb-3">
           <table className="w-full text-left border-collapse">
