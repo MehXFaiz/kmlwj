@@ -2,8 +2,8 @@ import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import logoSrc from '../../assets/logo.png';
 
-const ORG_LINE1    = 'KUTCHI MUSLIM LOHARWADA';
-const ORG_LINE2    = 'WELFARE JAMAT';
+const ORG_LINE1    = 'KUTCHI MUSLIM LOHARWADA WELFARE';
+const ORG_LINE2    = 'JAMAT';
 const ORG_REGD     = '(REGD. 1219)';
 const ORG_RETURN   = 'Kutchi Muslim Loharwada Jamat, Jumma Baloch Road, New Kalri, Lyari, Karachi.';
 const ORG_EMAIL    = 'info@kmlwj.org';
@@ -44,7 +44,8 @@ function CardShell({ children }) {
       <div style={{
         position: 'absolute', inset: 0, zIndex: 1,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        opacity: 0.14, pointerEvents: 'none',
+        opacity: 0.16, pointerEvents: 'none',
+        filter: 'brightness(1.8) contrast(1.2)',
       }}>
         <img src={logoSrc} alt="" style={{ width: '58%', height: 'auto', objectFit: 'contain' }} />
       </div>
@@ -99,38 +100,33 @@ export function CardFront({ member }) {
         {/* ── MAIN: header + details ── */}
         <div style={{
           flex: 1, display: 'flex', flexDirection: 'column',
-          padding: '4px 6px 0 2px', minWidth: 0,
+          padding: '4px 4px 0 2px', minWidth: 0,
         }}>
-          {/* Header */}
-          <div style={{ textAlign: 'center', paddingRight: '50px' }}>
+          {/* Header: KUTCHI MUSLIM LOHARWADA WELFARE in one single line */}
+          <div style={{ textAlign: 'center', paddingRight: '52px' }}>
             <div style={{
-              fontSize: '11.5px', fontWeight: 900, color: GOLD_LABEL,
-              letterSpacing: '0.04em', lineHeight: 1.2, textTransform: 'uppercase',
+              fontSize: '9.5px', fontWeight: 900, color: GOLD_LABEL,
+              letterSpacing: '0.01em', lineHeight: 1.2, textTransform: 'uppercase',
+              whiteSpace: 'nowrap',
             }}>
               {ORG_LINE1}
             </div>
             <div style={{
-              fontSize: '11.5px', fontWeight: 900, color: GOLD_LABEL,
-              letterSpacing: '0.04em', lineHeight: 1.2, textTransform: 'uppercase',
+              fontSize: '10.5px', fontWeight: 900, color: GOLD_LABEL,
+              letterSpacing: '0.1em', lineHeight: 1.2, textTransform: 'uppercase',
             }}>
-              {ORG_LINE2}
-            </div>
-            <div style={{
-              fontSize: '7.5px', color: 'rgba(255,255,255,0.95)', fontWeight: 800,
-              letterSpacing: '0.06em', marginTop: '1px', lineHeight: 1.2,
-            }}>
-              {ORG_REGD}
+              {ORG_LINE2} <span style={{ fontSize: '7.5px', color: 'rgba(255,255,255,0.95)', fontWeight: 800, letterSpacing: '0.04em' }}>{ORG_REGD}</span>
             </div>
             <div style={{
               fontSize: '11px', fontWeight: 900, color: GOLD_TYPE,
-              letterSpacing: '0.18em', marginTop: '2px', textTransform: 'uppercase',
+              letterSpacing: '0.18em', marginTop: '1px', textTransform: 'uppercase',
             }}>
               MEMBERSHIP CARD
             </div>
             {/* Orange divider */}
             <div style={{
               height: '2px', background: DIVIDER,
-              margin: '3px auto 0', width: '85%',
+              margin: '2px auto 0', width: '85%',
               borderRadius: '1px',
             }} />
           </div>
@@ -166,13 +162,21 @@ export function CardFront({ member }) {
           </div>
         </div>
 
-        {/* ── TOP-RIGHT: Bigger Logo ── */}
+        {/* ── TOP-RIGHT: Bright Gold Emblem Logo ── */}
         <div style={{
-          position: 'absolute', top: '4px', right: '6px',
+          position: 'absolute', top: '3px', right: '4px',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           zIndex: 10,
+          background: 'rgba(255, 213, 79, 0.2)',
+          border: '1.5px solid #FFD54F',
+          borderRadius: '10px',
+          padding: '2px',
+          boxShadow: '0 0 8px rgba(255,213,79,0.5)',
         }}>
-          <img src={logoSrc} alt="Logo" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
+          <img src={logoSrc} alt="Logo" style={{
+            width: '42px', height: '42px', objectFit: 'contain',
+            filter: 'brightness(2.2) contrast(1.4) drop-shadow(0 0 3px #FFD54F)',
+          }} />
         </div>
       </div>
 
