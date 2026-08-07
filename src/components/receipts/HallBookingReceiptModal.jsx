@@ -216,8 +216,8 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
            ══════════════════════════════════════════════════════════ */}
         <div className="relative z-10 border-b-2 border-emerald-800/60 pb-1.5 mb-1.5 flex items-center justify-between gap-2">
           {/* Left Block: Logo + Organization Name */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-11 h-11 shrink-0 flex items-center justify-center p-0.5 border border-emerald-700/30 rounded-lg bg-emerald-50/60">
+          <div className="flex items-center gap-3">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 flex items-center justify-center p-1 border-2 border-emerald-700/40 rounded-xl bg-white shadow-xs">
               <img src={logoImg} alt="KMLWJ Logo" className="w-full h-full object-contain" />
             </div>
             <div>
@@ -227,12 +227,12 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
                   style={{
                     fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Alvi Nastaleeq', serif",
                     color: '#0f172a',
-                    fontSize: '13px',
+                    fontSize: '14px',
                     lineHeight: 2.3,
                     paddingTop: '0.6em',
                     paddingBottom: '0.1em',
                     wordSpacing: '0.12em',
-                    fontWeight: 500,
+                    fontWeight: 600,
                   }}
                 >
                   کچھی مسلم لوہارواڈھا ویلفیئر جماعت
@@ -249,7 +249,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
                 </span>
               </div>
               <h2
-                className="text-[11px] font-black tracking-wide uppercase mt-0.5"
+                className="text-[11px] sm:text-[12px] font-black tracking-wide uppercase mt-0.5"
                 style={{ color: '#065f46' }}
               >
                 KUTCHI MUSLIM LOHARWADA WELFARE JAMAAT (REGD.)
@@ -575,31 +575,16 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
         </div>
 
         {/* ══════════════════════════════════════════════════════════
-           5. FOUR EXECUTIVE SIGNATURE BLOCKS & FOOTER (COMPACT & SPACED)
+           5. THREE EXECUTIVE SIGNATURE BLOCKS & FOOTER (WITH SIGNATURE SPACE)
            ══════════════════════════════════════════════════════════ */}
-        <div className="relative z-10 grid grid-cols-4 items-end gap-2 text-center pt-2.5 pb-0.5">
-          {/* Sign 1 */}
+        <div className="relative z-10 grid grid-cols-3 items-end gap-3 text-center pt-3 pb-1">
+          {/* Sign 1: Received By */}
           <div className="flex flex-col items-center">
-            <div className="w-16 border-b-2 border-slate-700 pb-0.5 mb-1" />
+            <div className="h-11 w-full flex items-end justify-center pb-1">
+              <div className="w-24 sm:w-28 border-b-2 border-slate-800" />
+            </div>
             <span
-              className="text-xs font-bold block leading-relaxed"
-              style={{
-                fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
-                color: '#0f172a'
-              }}
-            >
-              بکنگ کلرک
-            </span>
-            <span className="text-[7px] font-bold text-slate-500 uppercase">
-              Booking Clerk
-            </span>
-          </div>
-
-          {/* Sign 2 */}
-          <div className="flex flex-col items-center">
-            <div className="w-16 border-b-2 border-slate-700 pb-0.5 mb-1" />
-            <span
-              className="text-xs font-bold block leading-relaxed"
+              className="text-xs sm:text-sm font-bold block leading-relaxed"
               style={{
                 fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
                 color: '#0f172a'
@@ -607,16 +592,18 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
             >
               وصول کنندہ
             </span>
-            <span className="text-[7px] font-bold text-slate-500 uppercase">
+            <span className="text-[8px] font-extrabold text-slate-600 uppercase tracking-wider">
               Received By
             </span>
           </div>
 
-          {/* Sign 3 */}
+          {/* Sign 2: Discount Approval */}
           <div className="flex flex-col items-center">
-            <div className="w-16 border-b-2 border-slate-700 pb-0.5 mb-1" />
+            <div className="h-11 w-full flex items-end justify-center pb-1">
+              <div className="w-24 sm:w-28 border-b-2 border-slate-800" />
+            </div>
             <span
-              className="text-xs font-bold block leading-relaxed"
+              className="text-xs sm:text-sm font-bold block leading-relaxed"
               style={{
                 fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
                 color: '#0f172a'
@@ -624,16 +611,18 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
             >
               رعایت کی منظوری
             </span>
-            <span className="text-[7px] font-bold text-slate-500 uppercase">
+            <span className="text-[8px] font-extrabold text-slate-600 uppercase tracking-wider">
               Discount Approval
             </span>
           </div>
 
-          {/* Sign 4 */}
+          {/* Sign 3: General Secretary */}
           <div className="flex flex-col items-center relative">
-            <div className="w-16 border-b-2 border-slate-700 pb-0.5 mb-1" />
+            <div className="h-11 w-full flex items-end justify-center pb-1">
+              <div className="w-24 sm:w-28 border-b-2 border-slate-800" />
+            </div>
             <span
-              className="text-xs font-bold block leading-relaxed"
+              className="text-xs sm:text-sm font-bold block leading-relaxed"
               style={{
                 fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
                 color: '#0f172a'
@@ -641,7 +630,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
             >
               جنرل سیکریٹری
             </span>
-            <span className="text-[7px] font-bold text-slate-500 uppercase">
+            <span className="text-[8px] font-extrabold text-slate-600 uppercase tracking-wider">
               General Secretary
             </span>
           </div>
