@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { Printer, X, Receipt } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 import { paymentMethodLabel } from '../../constants/paymentMethods';
@@ -355,14 +356,14 @@ export const VoucherSlipModal = ({
     }
   ];
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-2 sm:p-4 print:p-0 print:static print:inset-auto print:block backdrop-blur-sm">
-      <div className="absolute inset-0 print:hidden" onClick={onClose} />
+  const modalContent = (
+    <div id="print-slip-portal-root" className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-2 sm:p-4 backdrop-blur-sm print:static print:p-0 print:bg-white print:block">
+      <div className="absolute inset-0 print-hide-elem" onClick={onClose} />
 
       <div className="relative z-10 flex max-h-[96vh] w-full max-w-7xl flex-col overflow-hidden rounded-[28px] border border-slate-700 bg-[#0F172A] shadow-2xl print:max-h-none print:shadow-none print:border-none print:bg-white print:w-full print:static print:block">
         
         {/* Modal Top Bar */}
-        <div className="flex items-center justify-between border-b border-slate-800 bg-[#0B132B] px-5 py-3.5 print:hidden">
+        <div className="print-hide-elem flex items-center justify-between border-b border-slate-800 bg-[#0B132B] px-5 py-3.5">
           <div className="flex items-center gap-2.5">
             <Receipt className="h-5 w-5 text-[#C5A059]" />
             <span className="text-xs font-black uppercase tracking-[0.25em] text-slate-100">
@@ -399,39 +400,35 @@ export const VoucherSlipModal = ({
                 background: #ffffff !important;
                 width: 100% !important;
                 height: 100% !important;
-                overflow: visible !important;
               }
               *, *::before, *::after {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
                 color-adjust: exact !important;
               }
-              body * {
-                visibility: hidden !important;
+              body > *:not(#print-slip-portal-root) {
+                display: none !important;
               }
-              #print-voucher-slip, #print-voucher-slip * {
-                visibility: visible !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                color-adjust: exact !important;
+              .print-hide-elem {
+                display: none !important;
               }
-              #print-voucher-slip img, #print-voucher-slip svg {
-                filter: none !important;
-              }
-              #print-voucher-slip {
-                position: fixed !important;
+              #print-slip-portal-root {
+                display: block !important;
+                position: absolute !important;
                 left: 0 !important;
                 top: 0 !important;
-                width: 100vw !important;
+                width: 100% !important;
                 height: auto !important;
                 margin: 0 !important;
                 padding: 0 !important;
-                box-shadow: none !important;
-                border: none !important;
                 background: #ffffff !important;
-                z-index: 9999999 !important;
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
+                z-index: 99999999 !important;
+              }
+              #print-voucher-sheet-container {
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
               }
               .voucher-copy-sheet {
                 page-break-inside: avoid !important;
@@ -441,8 +438,8 @@ export const VoucherSlipModal = ({
             }
           `}</style>
 
-          <div id="print-voucher-slip" className="mx-auto w-full max-w-[1800px] rounded-[24px] bg-slate-900 p-2 print:p-0 print:rounded-none print:shadow-none print:border-none">
-            <div className="relative overflow-hidden rounded-[20px] bg-slate-900 p-2.5 print:p-0 print:border-none">
+          <div id="print-voucher-sheet-container" className="mx-auto w-full max-w-[1800px] rounded-[24px] bg-slate-900 p-2 print:p-0 print:bg-white print:rounded-none print:shadow-none print:border-none">
+            <div className="relative overflow-hidden rounded-[20px] bg-slate-900 p-2.5 print:p-0 print:bg-white print:border-none">
               <div className="relative z-10 grid gap-3 xl:grid-cols-2 print:grid-cols-2">
                 <CopySheet
                   copyLabel="Office Copy"
@@ -488,6 +485,8 @@ export const VoucherSlipModal = ({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default VoucherSlipModal;
