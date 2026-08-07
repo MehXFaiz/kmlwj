@@ -76,10 +76,11 @@ export function CardFront({ member }) {
             background: GOLD,
             borderRadius: '2px',
           }} />
-          {/* Portrait */}
+          {/* Portrait (1:1 Aspect Ratio) */}
           <div style={{
             position: 'relative', zIndex: 2,
-            width: '50px', height: '62px',
+            width: '54px', height: '54px',
+            aspectRatio: '1 / 1',
             background: WHITE,
             borderRadius: '10px',
             border: `3px solid ${GOLD}`,
@@ -88,7 +89,7 @@ export function CardFront({ member }) {
             boxShadow: '0 4px 10px rgba(0,0,0,0.5)',
           }}>
             {member?.photoUrl ? (
-              <img src={member.photoUrl} alt="Photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={member.photoUrl} alt="Photo" style={{ width: '100%', height: '100%', objectFit: 'cover', aspectRatio: '1 / 1' }} />
             ) : (
               <span style={{ fontSize: '6px', color: '#555', fontWeight: 600, textAlign: 'center', lineHeight: 1.3 }}>portrait{'\n'}here</span>
             )}

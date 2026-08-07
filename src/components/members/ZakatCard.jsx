@@ -88,9 +88,11 @@ export function ZakatCardFront({ card }) {
             background: BORDER,
             borderRadius: '2px',
           }} />
+          {/* Portrait (1:1 Aspect Ratio) */}
           <div style={{
             position: 'relative', zIndex: 2,
-            width: '50px', height: '62px',
+            width: '54px', height: '54px',
+            aspectRatio: '1 / 1',
             background: PRIMARY_TEXT,
             borderRadius: '10px',
             border: `3px solid ${BORDER}`,
@@ -99,7 +101,7 @@ export function ZakatCardFront({ card }) {
             boxShadow: '0 4px 10px rgba(0,0,0,0.5)',
           }}>
             {(beneficiary?.photoUrl || member?.photoUrl) ? (
-              <img src={beneficiary?.photoUrl || member?.photoUrl} alt="Photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={beneficiary?.photoUrl || member?.photoUrl} alt="Photo" style={{ width: '100%', height: '100%', objectFit: 'cover', aspectRatio: '1 / 1' }} />
             ) : (
               <span style={{ fontSize: '6px', color: '#555', fontWeight: 600, textAlign: 'center', lineHeight: 1.3 }}>portrait{'\n'}here</span>
             )}
