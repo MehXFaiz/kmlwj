@@ -5,9 +5,10 @@ import { useCoaStore } from '../store/coaStore';
 import { useAuthStore } from '../store/authStore';
 import { useJournalStore, calculateAccountBalances } from '../store/journalStore';
 import { showToast } from '../components/ui/Toast';
-import { MinusCircle, Search, X, CheckCircle2, TrendingDown, Building2, Banknote, Edit, Trash2 } from 'lucide-react';
+import { MinusCircle, Search, X, CheckCircle2, TrendingDown, Building2, Banknote, Edit, Trash2, Printer } from 'lucide-react';
 import { useConfirm } from '../components/ui/ConfirmationModal';
 import { paymentMethodLabel } from '../constants/paymentMethods';
+import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 
 function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editingExpense }) {
   const { journals } = useJournalStore();
@@ -365,6 +366,7 @@ export const Expenses = () => {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
+  const [printExpense, setPrintExpense] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -453,38 +455,45 @@ export const Expenses = () => {
                         <span className="text-sm font-mono font-bold text-red-400">
                           {exp.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </span>
-                        {canEditOrDelete && (
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => { setEditingExpense(exp); setIsModalOpen(true); }}
-                              className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-amber-400 transition-colors"
-                              title="Edit Expense">
-                              <Edit className="h-3.5 w-3.5" />
+                            <button onClick={() => setPrintExpense(exp)}
+                              className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-[#C5A059] transition-colors"
+                              title="Print Executive Expense Voucher">
+                              <Printer className="h-3.5 w-3.5" />
                             </button>
-                            <button onClick={async () => {
-                              await confirm({
-                                title: 'Delete Expense',
-                                description: `Are you sure you want to permanently delete this expense?`,
-                                details: {
-                                  'Expense Head': exp.expenseHead?.name || '—',
-                                  'Paid To': exp.paidTo || '—',
-                                  'Amount': `Rs. ${exp.amount?.toLocaleString()}`,
-                                  'Warning': 'This will remove the expense from the system and reverse its ledger entry.'
-                                },
-                                type: 'error',
-                                confirmLabel: 'Delete',
-                                loadingLabel: 'Deleting...',
-                                successMessage: 'Expense deleted successfully.',
-                                action: async () => {
-                                  await deleteExpense(exp.id);
-                                }
-                              });
-                            }}
-                              className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-red-400 transition-colors"
-                              title="Delete Expense">
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
+                            {canEditOrDelete && (
+                              <>
+                                <button onClick={() => { setEditingExpense(exp); setIsModalOpen(true); }}
+                                  className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-amber-400 transition-colors"
+                                  title="Edit Expense">
+                                  <Edit className="h-3.5 w-3.5" />
+                                </button>
+                                <button onClick={async () => {
+                                  await confirm({
+                                    title: 'Delete Expense',
+                                    description: `Are you sure you want to permanently delete this expense?`,
+                                    details: {
+                                      'Expense Head': exp.expenseHead?.name || '—',
+                                      'Paid To': exp.paidTo || '—',
+                                      'Amount': `Rs. ${exp.amount?.toLocaleString()}`,
+                                      'Warning': 'This will remove the expense from the system and reverse its ledger entry.'
+                                    },
+                                    type: 'error',
+                                    confirmLabel: 'Delete',
+                                    loadingLabel: 'Deleting...',
+                                    successMessage: 'Expense deleted successfully.',
+                                    action: async () => {
+                                      await deleteExpense(exp.id);
+                                    }
+                                  });
+                                }}
+                                  className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-red-400 transition-colors"
+                                  title="Delete Expense">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </>
+                            )}
                           </div>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -511,6 +520,25 @@ export const Expenses = () => {
         accounts={accounts}
         editingExpense={editingExpense}
       />
+
+      {printExpense && (
+        <VoucherSlipModal
+          isOpen={true}
+          onClose={() => setPrintExpense(null)}
+          title="EXPENSE PAYMENT VOUCHER"
+          voucherNo={printExpense.id?.slice(0, 8)?.toUpperCase() || 'EXP-VOUCHER'}
+          fileNo={printExpense.reference || 'EXPENSE'}
+          date={printExpense.date}
+          name={printExpense.paidTo || 'Paid To Recipient'}
+          paymentMethod={printExpense.paymentMethod}
+          accountName={printExpense.expenseHead?.name || 'Expense Account'}
+          particulars={printExpense.description || 'Expense payment disbursement'}
+          amount={printExpense.amount}
+          preparedBy="System Admin"
+          payeeLabel="Payee Signature"
+          partyLabel="Paid To"
+        />
+      )}
     </div>
   );
 };

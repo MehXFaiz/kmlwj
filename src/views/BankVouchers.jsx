@@ -8,6 +8,7 @@ import { pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 import { useTranslation } from 'react-i18next';
 import { useConfirm } from '../components/ui/ConfirmationModal';
+import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 import logoImg from '../assets/logo.png';
 
 // Helper to render number to English words for standard printed receipt
@@ -396,8 +397,12 @@ function VoucherReceiptSlip({ voucher, amount, copyType, t }) {
 
 // ── Print Modal ──
 function BankVoucherPrintModal({ voucher, onClose }) {
-  const { t } = useTranslation();
+  if (!voucher) return null;
+  const isPayment = voucher.voucherType === 'BP';
+  const amount = voucher.lines ? voucher.lines.reduce((sum, line) => sum + (Number(line.debit) || 0), 0) : 0;
+  const firstLine = voucher.lines?.[0];
 
+<<<<<<< HEAD
   const handlePrint = () => {
     window.print();
   };
@@ -499,6 +504,25 @@ function BankVoucherPrintModal({ voucher, onClose }) {
       </div>
     </div>,
     document.body
+=======
+  return (
+    <VoucherSlipModal
+      isOpen={true}
+      onClose={onClose}
+      title={isPayment ? 'BANK PAYMENT VOUCHER' : 'BANK RECEIPT VOUCHER'}
+      voucherNo={voucher.voucherNo || voucher.id?.slice(0, 8)?.toUpperCase()}
+      fileNo={voucher.chequeNo ? `Cheque #${voucher.chequeNo}` : 'BANK'}
+      date={voucher.date}
+      name={voucher.paidTo || voucher.payee || 'Recipient / Bank Account'}
+      paymentMethod={voucher.paymentMethod || 'BANK'}
+      accountName={firstLine?.accountName || 'Bank Account'}
+      particulars={voucher.narration || firstLine?.narration || 'Bank transaction entry'}
+      amount={amount}
+      preparedBy="System Admin"
+      payeeLabel={isPayment ? "Payee Signature" : "Depositor Signature"}
+      partyLabel={isPayment ? 'Paid To' : 'Received From'}
+    />
+>>>>>>> 651ed43e2d35f4ad4be5f7dcc7dc1b53f3db5d42
   );
 }
 

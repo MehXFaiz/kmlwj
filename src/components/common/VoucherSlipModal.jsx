@@ -1,5 +1,6 @@
 import React from 'react';
-import { Printer, X, FileText, CheckCircle2, ShieldCheck, Receipt, Landmark } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Printer, X, Receipt } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 import { paymentMethodLabel } from '../../constants/paymentMethods';
 
@@ -39,6 +40,84 @@ const numberToWords = (num) => {
   return wordResult.trim() || 'Zero';
 };
 
+const VOUCHER_THEMES = {
+  DEBIT: {
+    key: 'DEBIT',
+    badge: 'DEBIT PAYMENT VOUCHER',
+    topGradient: 'from-[#881337] via-[#E11D48] to-[#881337]',
+    accentColor: '#E11D48',
+    borderColor: '#FB7185',
+    headerBg: 'bg-[#881337]',
+    badgeClass: 'bg-[#881337] text-white',
+    amountBg: 'from-[#4C0519] to-[#881337]',
+    tagline: 'OFFICIAL EXPENSE OUTFLOW RECORD',
+    tableHeaderBg: 'bg-[#881337]',
+    defaultPartyLabel: 'Paid To (Recipient)'
+  },
+  CREDIT: {
+    key: 'CREDIT',
+    badge: 'CREDIT RECEIPT VOUCHER',
+    topGradient: 'from-[#065F46] via-[#10B981] to-[#065F46]',
+    accentColor: '#10B981',
+    borderColor: '#34D399',
+    headerBg: 'bg-[#065F46]',
+    badgeClass: 'bg-[#065F46] text-white',
+    amountBg: 'from-[#064E3B] to-[#065F46]',
+    tagline: 'OFFICIAL FINANCIAL INFLOW RECEIPT',
+    tableHeaderBg: 'bg-[#065F46]',
+    defaultPartyLabel: 'Received From (Donor / Payee)'
+  },
+  ZAKAT: {
+    key: 'ZAKAT',
+    badge: 'ZAKAT & WELFARE AID VOUCHER',
+    topGradient: 'from-[#3B1D0D] via-[#C88A58] to-[#3B1D0D]',
+    accentColor: '#C88A58',
+    borderColor: '#D49B6A',
+    headerBg: 'bg-[#3B1D0D]',
+    badgeClass: 'bg-[#3B1D0D] text-white',
+    amountBg: 'from-[#3B1D0D] to-[#5C2E15]',
+    tagline: 'CHARITABLE WELFARE OUTFLOW RECORD',
+    tableHeaderBg: 'bg-[#3B1D0D]',
+    defaultPartyLabel: 'Beneficiary / Recipient Name'
+  },
+  BANK: {
+    key: 'BANK',
+    badge: 'BANK TRANSACTION VOUCHER',
+    topGradient: 'from-[#0B192C] via-[#0284C7] to-[#0B192C]',
+    accentColor: '#0284C7',
+    borderColor: '#38BDF8',
+    headerBg: 'bg-[#0B192C]',
+    badgeClass: 'bg-[#0B192C] text-white',
+    amountBg: 'from-[#0B192C] to-[#1E293B]',
+    tagline: 'OFFICIAL BANKING TRANSACTION SLIP',
+    tableHeaderBg: 'bg-[#0B192C]',
+    defaultPartyLabel: 'Bank Account / Payee'
+  },
+  TRANSFER: {
+    key: 'TRANSFER',
+    badge: 'JOURNAL & TRANSFER VOUCHER',
+    topGradient: 'from-[#3B0764] via-[#A855F7] to-[#3B0764]',
+    accentColor: '#A855F7',
+    borderColor: '#C084FC',
+    headerBg: 'bg-[#3B0764]',
+    badgeClass: 'bg-[#3B0764] text-white',
+    amountBg: 'from-[#3B0764] to-[#581C87]',
+    tagline: 'INTERNAL LEDGER ACCOUNT TRANSFER',
+    tableHeaderBg: 'bg-[#3B0764]',
+    defaultPartyLabel: 'Transfer Source / Target Account'
+  }
+};
+
+const resolveVoucherTheme = (title, typeProp) => {
+  const t = (title || typeProp || '').toUpperCase();
+  if (t.includes('ZAKAT') || t.includes('BENEFICIARY') || t.includes('AID')) return VOUCHER_THEMES.ZAKAT;
+  if (t.includes('EXPENSE') || t.includes('DEBIT') || t.includes('PAYMENT OUT')) return VOUCHER_THEMES.DEBIT;
+  if (t.includes('INCOME') || t.includes('RECEIPT') || t.includes('REVENUE') || t.includes('COLLECTION') || t.includes('CREDIT')) return VOUCHER_THEMES.CREDIT;
+  if (t.includes('BANK') || t.includes('CHEQUE') || t.includes('DEPOSIT')) return VOUCHER_THEMES.BANK;
+  if (t.includes('TRANSFER') || t.includes('JOURNAL') || t.includes('GL')) return VOUCHER_THEMES.TRANSFER;
+  return VOUCHER_THEMES.DEBIT;
+};
+
 function CopySheet({
   copyLabel,
   title,
@@ -55,47 +134,48 @@ function CopySheet({
   verifiedBy,
   authorizedSign,
   payeeLabel,
-  partyLabel = 'Paid To'
+  partyLabel
 }) {
   const isOffice = copyLabel.toLowerCase().includes('office');
+  const theme = resolveVoucherTheme(title);
+  const displayPartyLabel = partyLabel || theme.defaultPartyLabel;
 
   return (
-    <div className="voucher-copy-sheet relative flex flex-col justify-between rounded-2xl border-2 border-[#C5A059] bg-[#FFFFFF] p-3.5 sm:p-4 shadow-xl print:rounded-none print:shadow-none print:border-slate-800 print:p-3 overflow-hidden text-slate-800">
-
-      {/* Top Metallic Gold & Navy Gradient Accent Bar */}
-      <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#0F172A] via-[#C5A059] to-[#0F172A]" />
+    <div
+      className="voucher-copy-sheet relative flex flex-col justify-between rounded-2xl border-2 bg-[#FFFFFF] p-3.5 sm:p-4 shadow-xl print:rounded-none print:shadow-none print:border-slate-800 print:p-3 overflow-hidden text-slate-800"
+      style={{ borderColor: theme.borderColor }}
+    >
+      {/* Dynamic Top Theme Accent Bar */}
+      <div className={`absolute top-0 left-0 right-0 h-2 bg-gradient-to-r ${theme.topGradient}`} />
 
       <div>
         {/* ── HEADER SECTION ── */}
-        <div className="flex items-center justify-between border-b-2 border-[#C5A059]/40 pb-3 pt-1">
+        <div className="flex items-center justify-between border-b-2 pb-3 pt-1" style={{ borderColor: `${theme.accentColor}40` }}>
           {/* Logo & Jamaat Header */}
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-2 border-[#C5A059] bg-[#0F172A] shadow-md">
-              <img src={logoImg} alt="Logo" className="h-7 w-7 object-contain" />
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border-2 bg-[#0F172A] shadow-lg p-1" style={{ borderColor: theme.accentColor }}>
+              <img src={logoImg} alt="Logo" className="h-10 w-10 object-contain" />
             </div>
             <div>
-              <div className="text-[11px] font-black uppercase tracking-[0.15em] text-[#0F172A] leading-tight">
+              <div className="text-xs sm:text-sm font-black uppercase tracking-[0.16em] text-[#0F172A] leading-tight">
                 KUTCHI MUSLIM LOHARWADA WELFARE JAMAT
               </div>
-              <div
-                className="text-xs font-bold text-[#C5A059] leading-tight mt-0.5"
-                style={{
-                  fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif",
-                  lineHeight: 1.3,
-                }}
-              >
-                کچی مسلم لوہارواڈھا ویلفیئر جماعت
+              <div className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] mt-1" style={{ color: theme.accentColor }}>
+                KARACHI &bull; PAKISTAN &bull; {theme.tagline}
               </div>
             </div>
           </div>
 
-          {/* Copy Badge & Voucher Type */}
+          {/* Copy Badge & Voucher Type Badge */}
           <div className="flex flex-col items-end gap-1 shrink-0">
             <span className={`px-3 py-0.5 rounded-md text-[9.5px] font-black uppercase tracking-[0.18em] text-white shadow-sm ${isOffice ? 'bg-[#0F172A]' : 'bg-[#065F46]'}`}>
               {copyLabel}
             </span>
-            <span className="px-3 py-1 rounded-lg border border-[#C5A059] bg-[#F8FAFC] text-[10px] font-black uppercase tracking-[0.15em] text-[#1E293B] shadow-inner">
-              {title}
+            <span
+              className="px-3 py-1 rounded-lg border text-[10px] font-black uppercase tracking-[0.15em] shadow-inner"
+              style={{ borderColor: theme.borderColor, color: '#0F172A', backgroundColor: '#F8FAFC' }}
+            >
+              {title || theme.badge}
             </span>
           </div>
         </div>
@@ -111,22 +191,32 @@ function CopySheet({
             <div className="text-xs font-bold text-slate-800 mt-0.5">{formattedDate}</div>
           </div>
           <div className="border-r border-slate-200 pr-2 pl-1">
-            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{partyLabel}</div>
+            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{displayPartyLabel}</div>
             <div className="text-xs font-black text-[#0F172A] truncate mt-0.5">{paidTo || '—'}</div>
           </div>
           <div className="pl-1">
             <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Payment Mode</div>
-            <div className="text-xs font-bold text-[#C5A059] mt-0.5">{paymentMethod}</div>
+            <div className="text-xs font-bold mt-0.5" style={{ color: theme.accentColor }}>{paymentMethod}</div>
           </div>
+        </div>
+
+        {/* ── EXPLICIT ITEM VOUCHER DECLARATION BANNER ── */}
+        <div className="my-2 flex items-center gap-2 rounded-xl bg-slate-100 p-2 border border-slate-300 text-xs font-semibold text-slate-900 shadow-sm">
+          <span className="shrink-0 px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider text-white" style={{ backgroundColor: theme.accentColor }}>
+            VOUCHER ITEM
+          </span>
+          <span className="text-[11px] text-slate-900 font-bold truncate">
+            This is the official voucher for <u className="underline decoration-2 font-extrabold" style={{ textDecorationColor: theme.accentColor }}>{ledgerRows[0]?.account || title}</u>.
+          </span>
         </div>
 
         {/* ── LEDGER ACCOUNTING TABLE ── */}
         <div className="overflow-hidden rounded-xl border border-slate-300 shadow-sm mb-3">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#0F172A] text-white text-[9.5px] font-black uppercase tracking-wider">
+              <tr className={`${theme.tableHeaderBg} text-white text-[9.5px] font-black uppercase tracking-wider`}>
                 <th className="py-2 px-3 border-r border-slate-700">Account Head & Particular Narration</th>
-                <th className="py-2 px-3 text-right w-32">Debit (PKR)</th>
+                <th className="py-2 px-3 text-right w-32">Amount (PKR)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs">
@@ -143,9 +233,9 @@ function CopySheet({
               ))}
             </tbody>
             <tfoot>
-              <tr className="bg-[#F1F5F9] border-t-2 border-[#C5A059] text-xs font-black text-slate-900">
+              <tr className="bg-[#F1F5F9] border-t-2 text-xs font-black text-slate-900" style={{ borderColor: theme.accentColor }}>
                 <td className="py-1.5 px-3 uppercase tracking-wider text-[10px] text-[#0F172A] border-r border-slate-300">
-                  Total Debited Outflow
+                  Total Financial Outflow / Inflow
                 </td>
                 <td className="py-1.5 px-3 text-right text-slate-900 font-extrabold">
                   Rs {Number(amount || 0).toLocaleString('en-PK')}
@@ -159,7 +249,7 @@ function CopySheet({
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 mb-3">
           <div className="sm:col-span-7 bg-[#F8FAFC] p-2.5 rounded-xl border border-slate-200 flex flex-col justify-between">
             <div>
-              <span className="text-[9px] font-black uppercase tracking-wider text-[#C5A059]">Amount in Words:</span>
+              <span className="text-[9px] font-black uppercase tracking-wider" style={{ color: theme.accentColor }}>Amount in Words:</span>
               <div className="text-xs font-bold italic text-slate-900 mt-0.5">
                 "{words} Only"
               </div>
@@ -171,8 +261,11 @@ function CopySheet({
             )}
           </div>
 
-          <div className="sm:col-span-5 bg-gradient-to-r from-[#0F172A] to-[#1E293B] p-2.5 rounded-xl border-2 border-[#C5A059] text-white flex flex-col justify-center items-end text-right shadow-md">
-            <span className="text-[8.5px] font-black uppercase tracking-[0.2em] text-[#C5A059]">Net Debit Amount</span>
+          <div
+            className={`sm:col-span-5 bg-gradient-to-r ${theme.amountBg} p-2.5 rounded-xl border-2 text-white flex flex-col justify-center items-end text-right shadow-md`}
+            style={{ borderColor: theme.borderColor }}
+          >
+            <span className="text-[8.5px] font-black uppercase tracking-[0.2em] opacity-90">Net Amount</span>
             <span className="text-lg sm:text-xl font-black text-white tracking-tight mt-0.5">
               Rs {Number(amount || 0).toLocaleString('en-PK')}/-
             </span>
@@ -209,15 +302,15 @@ function CopySheet({
           <div className="text-center bg-[#F8FAFC] p-1.5 rounded-lg border border-slate-200">
             <div className="h-6" />
             <div className="border-t border-slate-300 pt-1 text-[8.5px] font-black uppercase tracking-wider text-slate-500 truncate">
-              {payeeLabel || 'Receiver'}
+              {payeeLabel || 'Receiver Signature'}
             </div>
           </div>
         </div>
 
         {/* Bottom Official Footer Bar */}
         <div className="mt-2 flex items-center justify-between text-[8px] font-bold uppercase tracking-wider text-slate-400 pt-1 border-t border-slate-100">
-          <span>Ref: {fileNo || 'KMLWJ-FIN-VOUCHER'}</span>
-          <span>Official Financial Receipt • Commercial Print Ready</span>
+          <span>Ref: {fileNo || 'KMLWJ-VOUCHER'}</span>
+          <span>Official Financial Document • Commercial Print Ready</span>
         </div>
       </div>
 
@@ -240,7 +333,7 @@ export const VoucherSlipModal = ({
   particulars = '',
   amount = 0,
   preparedBy = 'System Admin',
-  payeeLabel = "Payee's Signature",
+  payeeLabel = "Payee Signature",
   partyLabel,
 }) => {
   if (!isOpen) return null;
@@ -250,31 +343,31 @@ export const VoucherSlipModal = ({
   };
 
   const isCollectionOrReceipt = /RECEIPT|COLLECTION|INCOME|REVENUE|MEMBERSHIP|FEE|DONATION RECEIVED/i.test(title);
-  const computedPartyLabel = partyLabel || (isCollectionOrReceipt ? 'Paid By' : 'Paid To');
+  const computedPartyLabel = partyLabel || (isCollectionOrReceipt ? 'Paid By / Donor' : 'Paid To / Recipient');
 
   const formattedDate = date ? new Date(date).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
   const words = numberToWords(amount || 0);
   const paymentMethod = paymentMethodLabel(paymentMethodProp ?? debitCredit);
   const ledgerRows = [
     {
-      account: accountName || 'Donation Disbursement / Aid Account',
-      narration: particulars || 'Financial assistance disbursement entry',
+      account: accountName || 'Primary Ledger Account',
+      narration: particulars || 'Financial entry particulars',
       amount: amount || 0
     }
   ];
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-2 sm:p-4 print:p-0 print:static print:inset-auto print:block backdrop-blur-sm">
-      <div className="absolute inset-0 print:hidden" onClick={onClose} />
+  const modalContent = (
+    <div id="print-slip-portal-root" className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-2 sm:p-4 backdrop-blur-sm print:static print:p-0 print:bg-white print:block">
+      <div className="absolute inset-0 print-hide-elem" onClick={onClose} />
 
       <div className="relative z-10 flex max-h-[96vh] w-full max-w-7xl flex-col overflow-hidden rounded-[28px] border border-slate-700 bg-[#0F172A] shadow-2xl print:max-h-none print:shadow-none print:border-none print:bg-white print:w-full print:static print:block">
         
         {/* Modal Top Bar */}
-        <div className="flex items-center justify-between border-b border-slate-800 bg-[#0B132B] px-5 py-3.5 print:hidden">
+        <div className="print-hide-elem flex items-center justify-between border-b border-slate-800 bg-[#0B132B] px-5 py-3.5">
           <div className="flex items-center gap-2.5">
             <Receipt className="h-5 w-5 text-[#C5A059]" />
             <span className="text-xs font-black uppercase tracking-[0.25em] text-slate-100">
-              Executive Debit Voucher Preview
+              {title} PREVIEW
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -299,41 +392,43 @@ export const VoucherSlipModal = ({
             @media print {
               @page {
                 size: A4 landscape;
-                margin: 3mm 4mm !important;
+                margin: 2mm 3mm !important;
               }
               html, body {
                 margin: 0 !important;
                 padding: 0 !important;
                 background: #ffffff !important;
+                width: 100% !important;
+                height: 100% !important;
               }
               *, *::before, *::after {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
                 color-adjust: exact !important;
               }
-              body * {
-                visibility: hidden !important;
+              body > *:not(#print-slip-portal-root) {
+                display: none !important;
               }
-              #print-voucher-slip, #print-voucher-slip * {
-                visibility: visible !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                color-adjust: exact !important;
+              .print-hide-elem {
+                display: none !important;
               }
-              #print-voucher-slip img, #print-voucher-slip svg {
-                filter: none !important;
-              }
-              #print-voucher-slip {
+              #print-slip-portal-root {
+                display: block !important;
                 position: absolute !important;
                 left: 0 !important;
                 top: 0 !important;
                 width: 100% !important;
+                height: auto !important;
                 margin: 0 !important;
                 padding: 0 !important;
-                box-shadow: none !important;
-                border: none !important;
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
+                background: #ffffff !important;
+                z-index: 99999999 !important;
+              }
+              #print-voucher-sheet-container {
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
               }
               .voucher-copy-sheet {
                 page-break-inside: avoid !important;
@@ -343,8 +438,8 @@ export const VoucherSlipModal = ({
             }
           `}</style>
 
-          <div id="print-voucher-slip" className="mx-auto w-full max-w-[1800px] rounded-[24px] bg-slate-900 p-2 print:p-0 print:rounded-none print:shadow-none print:border-none">
-            <div className="relative overflow-hidden rounded-[20px] bg-slate-900 p-2.5 print:p-0 print:border-none">
+          <div id="print-voucher-sheet-container" className="mx-auto w-full max-w-[1800px] rounded-[24px] bg-slate-900 p-2 print:p-0 print:bg-white print:rounded-none print:shadow-none print:border-none">
+            <div className="relative overflow-hidden rounded-[20px] bg-slate-900 p-2.5 print:p-0 print:bg-white print:border-none">
               <div className="relative z-10 grid gap-3 xl:grid-cols-2 print:grid-cols-2">
                 <CopySheet
                   copyLabel="Office Copy"
@@ -390,6 +485,8 @@ export const VoucherSlipModal = ({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default VoucherSlipModal;
