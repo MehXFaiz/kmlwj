@@ -52,6 +52,11 @@ export const DonationForm = () => {
     }
   }, [id, donations]);
 
+  const selectedBeneficiary = useMemo(() => {
+    if (!form.beneficiaryId) return null;
+    return beneficiaries.find(b => b.id === form.beneficiaryId) || null;
+  }, [form.beneficiaryId, beneficiaries]);
+
   const hasDonationThisMonth = useMemo(() => {
     if (!form.beneficiaryId) return false;
     const now = new Date();
@@ -264,6 +269,46 @@ export const DonationForm = () => {
                       </div>
                     </div>
                   )}
+                  {selectedBeneficiary && (
+                    <div className="mt-3.5 p-3.5 rounded-xl bg-slate-950/90 border border-amber-500/40 flex flex-col sm:flex-row items-center sm:items-start gap-4 shadow-lg">
+                      {/* Profile Picture Frame */}
+                      <div className="relative w-20 h-24 rounded-xl border-2 border-amber-500/60 overflow-hidden bg-slate-900 shrink-0 flex items-center justify-center shadow-md">
+                        {selectedBeneficiary.photoUrl ? (
+                          <img
+                            src={selectedBeneficiary.photoUrl}
+                            alt={selectedBeneficiary.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center text-slate-500 p-2 text-center">
+                            <Users className="w-8 h-8 text-amber-500/60 mb-1" />
+                            <span className="text-[9.5px] font-bold text-slate-400">No Photo</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Recipient Data & Badges */}
+                      <div className="flex-1 min-w-0 w-full">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <UserCheck className="w-4 h-4 text-emerald-400" />
+                            <h4 className="text-base font-bold text-slate-100 truncate">{selectedBeneficiary.name}</h4>
+                          </div>
+                          <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+                            Registered Recipient Profile
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 mt-2.5 text-xs text-slate-300 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
+                          <div><span className="text-slate-500 font-semibold">CNIC:</span> <strong className="text-slate-200">{selectedBeneficiary.cnic || '—'}</strong></div>
+                          <div><span className="text-slate-500 font-semibold">Mobile:</span> <strong className="text-slate-200">{selectedBeneficiary.mobile || '—'}</strong></div>
+                          <div><span className="text-slate-500 font-semibold">Gham Name:</span> <strong className="text-amber-300">{selectedBeneficiary.gham || selectedBeneficiary.ghamName || '—'}</strong></div>
+                          <div><span className="text-slate-500 font-semibold">Address:</span> <strong className="text-slate-200 truncate">{selectedBeneficiary.address || '—'}</strong></div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-1.5 mt-2 text-[11px] text-slate-400">
                     <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                     <span>Select from your registered welfare beneficiaries to automatically populate contact details below.</span>
