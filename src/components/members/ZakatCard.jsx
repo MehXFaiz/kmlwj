@@ -88,20 +88,20 @@ export function ZakatCardFront({ card }) {
             background: 'linear-gradient(180deg, #FFE082 0%, #D4AF37 50%, #B38F24 100%)',
             boxShadow: '0 0 6px rgba(212,175,55,0.4)',
           }} />
-          {/* Portrait Photo (72px x 72px - 1:1 Aspect Ratio) */}
+          {/* Portrait Photo (70px x 102px - 1:1.50 Aspect Ratio) */}
           <div style={{
             position: 'relative', zIndex: 2,
-            width: '72px', height: '72px',
-            aspectRatio: '1 / 1',
+            width: '70px', height: '102px',
+            aspectRatio: '1 / 1.5',
             background: '#FFFFFF',
-            borderRadius: '12px',
-            border: '3px solid #D4AF37',
+            borderRadius: '10px',
+            border: '2.5px solid #D4AF37',
             overflow: 'hidden',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
           }}>
             {(beneficiary?.photoUrl || member?.photoUrl) ? (
-              <img src={beneficiary?.photoUrl || member?.photoUrl} alt="Photo" style={{ width: '100%', height: '100%', objectFit: 'cover', aspectRatio: '1 / 1' }} />
+              <img src={beneficiary?.photoUrl || member?.photoUrl} alt="Photo" style={{ width: '100%', height: '100%', objectFit: 'cover', aspectRatio: '1 / 1.5' }} />
             ) : (
               <span style={{ fontSize: '7px', color: '#555', fontWeight: 700, textAlign: 'center', lineHeight: 1.3 }}>portrait{'\n'}here</span>
             )}

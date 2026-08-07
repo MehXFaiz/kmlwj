@@ -669,7 +669,7 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
       id="print-receipt-modal"
       className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto print:p-0 print:bg-white print:backdrop-blur-none print:static print:inset-auto print:block"
     >
-      <div className="w-full max-w-4xl bg-slate-100 rounded-2xl shadow-2xl flex flex-col max-h-[96vh] print:max-h-none print:shadow-none print:rounded-none overflow-hidden print:overflow-visible border border-slate-700/50 print:border-none print:static print:block print:w-full print:bg-white">
+      <div className="w-full max-w-4xl bg-slate-100 rounded-2xl shadow-2xl flex flex-col max-h-[96vh] print:max-h-none print:shadow-none print:rounded-none overflow-hidden print:overflow-visible border-0 print:border-none print:static print:block print:w-full print:bg-white">
         {/* ══════════════════════════════════════════════════════════
            TOP ACTION BAR (HIDDEN IN PRINT)
            ══════════════════════════════════════════════════════════ */}
@@ -747,61 +747,68 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
             @media print {
               @page {
                 size: A4 portrait;
-                margin: 3mm 4mm !important;
+                margin: 0 !important;
               }
               html, body {
                 margin: 0 !important;
                 padding: 0 !important;
-                height: 100% !important;
-                overflow: hidden !important;
                 background: #ffffff !important;
+                width: 210mm !important;
+                height: 297mm !important;
+                overflow: hidden !important;
               }
               *, *::before, *::after {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
                 color-adjust: exact !important;
               }
-              body * {
-                visibility: hidden !important;
+              body > *:not(#print-receipt-modal) {
+                display: none !important;
               }
               .print-hide-bar,
               .print-hide-bar * {
                 display: none !important;
               }
-              #print-receipt-modal,
-              #print-receipt-modal * {
-                visibility: visible !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                color-adjust: exact !important;
-              }
-              #print-receipt-modal img, #print-receipt-modal svg { filter: none !important; }
               #print-receipt-modal {
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 100% !important;
+                position: static !important;
+                width: 210mm !important;
                 height: auto !important;
-                max-height: 291mm !important;
-                background: white !important;
+                max-height: 297mm !important;
+                background: #ffffff !important;
                 padding: 0 !important;
-                margin: 0 !important;
+                margin: 0 auto !important;
                 overflow: hidden !important;
+                box-shadow: none !important;
+                border: none !important;
+                outline: none !important;
                 z-index: 999999 !important;
                 display: block !important;
               }
-              #print-receipt-wrapper {
-                position: static !important;
-                width: 100% !important;
-                max-width: 100% !important;
+              #print-receipt-modal > div {
+                width: 210mm !important;
+                max-width: 210mm !important;
+                border: none !important;
+                outline: none !important;
+                box-shadow: none !important;
                 margin: 0 auto !important;
                 padding: 0 !important;
+                background: #ffffff !important;
+                border-radius: 0 !important;
+              }
+              #print-receipt-wrapper {
+                position: static !important;
+                width: 210mm !important;
+                max-width: 210mm !important;
+                margin: 0 auto !important;
+                padding: 2mm 3mm !important;
                 display: flex !important;
                 flex-direction: column !important;
                 justify-content: space-between !important;
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
                 box-sizing: border-box !important;
+                border: none !important;
+                box-shadow: none !important;
               }
             }
           `}</style>

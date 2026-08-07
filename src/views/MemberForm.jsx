@@ -318,7 +318,7 @@ export const MemberForm = () => {
               />
 
               <p className="text-xs text-slate-500 text-center mt-4 leading-relaxed px-2">
-                1:1 ratio portrait works best for ID card printing.
+                1:1.5 ratio portrait works best for ID card printing.
               </p>
             </div>
 

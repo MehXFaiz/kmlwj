@@ -68,20 +68,20 @@ export function CardFront({ member }) {
             background: 'linear-gradient(180deg, #091D4A 0%, #061539 50%, #030C24 100%)',
             boxShadow: '0 0 4px rgba(6,21,57,0.3)',
           }} />
-          {/* Portrait Photo (70px x 70px) */}
+          {/* Portrait Photo (70px x 102px - 1:1.50 Aspect Ratio) */}
           <div style={{
             position: 'relative', zIndex: 2,
-            width: '70px', height: '70px',
-            aspectRatio: '1 / 1',
+            width: '70px', height: '102px',
+            aspectRatio: '1 / 1.5',
             background: '#FFFFFF',
-            borderRadius: '12px',
+            borderRadius: '10px',
             border: '2.5px solid #061539',
             overflow: 'hidden',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 3px 10px rgba(0,0,0,0.25)',
           }}>
             {member?.photoUrl ? (
-              <img src={member.photoUrl} alt="Photo" style={{ width: '100%', height: '100%', objectFit: 'cover', aspectRatio: '1 / 1' }} />
+              <img src={member.photoUrl} alt="Photo" style={{ width: '100%', height: '100%', objectFit: 'cover', aspectRatio: '1 / 1.5' }} />
             ) : (
               <span style={{ fontSize: '7px', color: '#555', fontWeight: 700, textAlign: 'center', lineHeight: 1.3 }}>portrait{'\n'}here</span>
             )}
