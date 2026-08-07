@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate, Link } from 'react-router-dom';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
 import { useAuthStore } from '../store/authStore';
-import { FileSpreadsheet, Search, Plus, Printer, CheckCircle, XCircle, Trash2, AlertTriangle, Edit, X, Banknote, Building2, Calendar, ArrowUpRight, ArrowDownLeft, FileText, ChevronDown, ChevronUp, Layers } from 'lucide-react';
+import { FileSpreadsheet, Search, Plus, Printer, CheckCircle, XCircle, Trash2, AlertTriangle, Edit, X, Banknote, Building2, Calendar, ArrowUpRight, FileText, ChevronDown, ChevronUp, Layers } from 'lucide-react';
 import { pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 import { useTranslation } from 'react-i18next';
@@ -144,7 +144,7 @@ function VoucherReceiptSlip({ voucher, amount, copyType, t }) {
               fontSize: '9px', fontWeight: 900, color: C.goldLight,
               letterSpacing: '0.22em', textTransform: 'uppercase',
             }}>
-              {voucher.voucherType === 'BP' ? 'Bank Payment Voucher' : 'Bank Receipt Voucher'}
+              Bank Payment Voucher
             </div>
             <div style={{
               display: 'inline-block', marginTop: '4px',
@@ -419,7 +419,7 @@ function BankVoucherPrintModal({ voucher, onClose }) {
           <div className="flex items-center gap-2.5">
             <Printer className="h-4 w-4" style={{ color: C.goldLight }} />
             <span className="text-sm font-bold text-slate-200">
-              {voucher.voucherType === 'BP' ? t('tables.bankVouchers.printBankPayment') : t('tables.bankVouchers.printBankReceipt')}
+              {t('tables.bankVouchers.printBankPayment')}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -545,7 +545,7 @@ function BankVoucherEditModal({ voucher, onClose, onSave }) {
               <Edit className="h-4 w-4 text-amber-400" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-200">Edit {voucher.voucherType === 'BP' ? 'Expense' : 'Voucher'} ({voucher.voucherNo})</h3>
+              <h3 className="text-sm font-bold text-slate-200">Edit Expense ({voucher.voucherNo})</h3>
               <p className="text-[11px] text-slate-500">Update voucher details & amount</p>
             </div>
           </div>
@@ -602,7 +602,6 @@ export const BankVouchers = () => {
   const confirm = useConfirm();
   
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState('BP'); // BP (Payments), BR (Receipts)
   const [printItem, setPrintItem] = useState(null);
   const [editItem, setEditItem] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
@@ -612,12 +611,12 @@ export const BankVouchers = () => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    fetchVouchers(activeTab);
-  }, [activeTab, fetchVouchers]);
+    fetchVouchers('BP');
+  }, [fetchVouchers]);
 
   const handleSaveEdit = async (updatedData) => {
     try {
-      await updateVoucher(updatedData.id, updatedData, activeTab);
+      await updateVoucher(updatedData.id, updatedData, 'BP');
       showToast('Voucher updated successfully', 'success');
     } catch (err) {
       showToast(err.message || 'Failed to update voucher', 'error');
@@ -640,15 +639,13 @@ export const BankVouchers = () => {
 
   const getOffsetAccount = (v) => {
     // For BP: Offset is the debit account (the expense/asset being paid to)
-    // For BR: Offset is the credit account (the revenue/liability received from)
-    const targetLine = v.lines?.find(line => v.voucherType === 'BP' ? Number(line.debit) > 0 : Number(line.credit) > 0);
+    const targetLine = v.lines?.find(line => Number(line.debit) > 0);
     return targetLine ? targetLine.accountCode : '—';
   };
 
   const getBankCode = (v) => {
-    // For BP: Credit account is the Bank account
-    // For BR: Debit account is the Bank account
-    const targetLine = v.lines?.find(line => v.voucherType === 'BP' ? Number(line.credit) > 0 : Number(line.debit) > 0);
+    // For BP: Credit account is the Bank/Cash account
+    const targetLine = v.lines?.find(line => Number(line.credit) > 0);
     return targetLine ? targetLine.accountCode : '—';
   };
 
@@ -661,7 +658,8 @@ export const BankVouchers = () => {
       const match = v.description.match(/\(([^)]+)\)/);
       if (match && match[1]) return match[1];
     }
-    const targetLine = v.lines?.find(line => v.voucherType === 'BP' ? line.debit > 0 : line.credit > 0);
+    // For BP: debit line carries the expense account name
+    const targetLine = v.lines?.find(line => line.debit > 0);
     if (targetLine?.accountName) return targetLine.accountName;
     if (targetLine?.description) {
       const match = targetLine.description.match(/\(([^)]+)\)/);
@@ -684,7 +682,7 @@ export const BankVouchers = () => {
       loadingLabel: 'Posting...',
       successMessage: 'Voucher has been posted successfully.',
       action: async () => {
-        await updateVoucherStatus(v.dbId, 'Posted', activeTab);
+        await updateVoucherStatus(v.dbId, 'Posted', 'BP');
       }
     });
   };
@@ -703,7 +701,7 @@ export const BankVouchers = () => {
       loadingLabel: 'Voiding...',
       successMessage: 'Voucher has been voided successfully.',
       action: async () => {
-        await updateVoucherStatus(v.dbId, 'Cancelled', activeTab);
+        await updateVoucherStatus(v.dbId, 'Cancelled', 'BP');
       }
     });
   };
@@ -722,7 +720,7 @@ export const BankVouchers = () => {
       loadingLabel: 'Deleting...',
       successMessage: 'Voucher has been deleted successfully.',
       action: async () => {
-        await deleteVoucher(v.dbId, activeTab);
+        await deleteVoucher(v.dbId, 'BP');
       }
     });
   };
@@ -746,7 +744,7 @@ export const BankVouchers = () => {
     setIsDeleting(true);
     await new Promise(resolve => setTimeout(resolve, 15));
     try {
-      await bulkDeleteVouchers(selectedIds, activeTab);
+      await bulkDeleteVouchers(selectedIds, 'BP');
       showToast(`${selectedIds.length} voucher(s) deleted successfully`, 'success');
       setSelectedIds([]);
     } catch (err) {
@@ -793,37 +791,18 @@ export const BankVouchers = () => {
               <span>Bulk Delete ({selectedIds.length})</span>
             </button>
           )}
-          {activeTab === 'BR' ? (
-            <>
-              <Link to="/bank-vouchers/revenue/new"
-                className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-900/40 transition-all flex-1 sm:flex-none">
-                <Plus className="h-4 w-4" /> {t('forms.addRevenue')}
-              </Link>
-              <Link to="/bank-vouchers/new"
-                className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all text-xs font-semibold flex-1 sm:flex-none">
-                {t('tables.bankVouchers.advancedReceipt')}
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link to="/bank-vouchers/expense/new"
-                className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-lg shadow-rose-900/40 transition-all flex-1 sm:flex-none">
-                <Plus className="h-4 w-4" /> {t('forms.addExpense')}
-              </Link>
-            </>
-          )}
+          <Link to="/bank-vouchers/expense/new"
+            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-lg shadow-rose-900/40 transition-all flex-1 sm:flex-none">
+            <Plus className="h-4 w-4" /> {t('forms.addExpense')}
+          </Link>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex items-center border-b border-slate-800/80 scrollbar-none overflow-x-auto whitespace-nowrap">
-        <button onClick={() => setActiveTab('BP')}
-          className={`px-4 py-3 text-xs font-bold transition-all relative border-b-2 -mb-[2px] cursor-pointer ${activeTab === 'BP' ? 'text-amber-400 border-amber-500 font-extrabold' : 'text-slate-400 border-transparent hover:text-slate-200'}`}>
+        <button
+          className="px-4 py-3 text-xs font-extrabold transition-all relative border-b-2 -mb-[2px] text-amber-400 border-amber-500 cursor-default">
           {t('tables.bankVouchers.bankPaymentsBP')}
-        </button>
-        <button onClick={() => setActiveTab('BR')}
-          className={`px-4 py-3 text-xs font-bold transition-all relative border-b-2 -mb-[2px] cursor-pointer ${activeTab === 'BR' ? 'text-amber-400 border-amber-500 font-extrabold' : 'text-slate-400 border-transparent hover:text-slate-200'}`}>
-          {t('tables.bankVouchers.bankReceiptsBR')}
         </button>
       </div>
 
