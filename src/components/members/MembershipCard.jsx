@@ -102,24 +102,24 @@ export function CardFront({ member }) {
           flex: 1, display: 'flex', flexDirection: 'column',
           padding: '4px 4px 0 2px', minWidth: 0,
         }}>
-          {/* Header: KUTCHI MUSLIM LOHARWADA WELFARE in one single line */}
-          <div style={{ textAlign: 'center', paddingRight: '52px' }}>
+          {/* Header: KUTCHI MUSLIM LOHARWADA WELFARE in one single line without overlapping logo */}
+          <div style={{ textAlign: 'center', paddingRight: '56px' }}>
             <div style={{
-              fontSize: '9.5px', fontWeight: 900, color: GOLD_LABEL,
-              letterSpacing: '0.01em', lineHeight: 1.2, textTransform: 'uppercase',
+              fontSize: '8.4px', fontWeight: 900, color: GOLD_LABEL,
+              letterSpacing: '0em', lineHeight: 1.2, textTransform: 'uppercase',
               whiteSpace: 'nowrap',
             }}>
               {ORG_LINE1}
             </div>
             <div style={{
-              fontSize: '10.5px', fontWeight: 900, color: GOLD_LABEL,
-              letterSpacing: '0.1em', lineHeight: 1.2, textTransform: 'uppercase',
+              fontSize: '9.5px', fontWeight: 900, color: GOLD_LABEL,
+              letterSpacing: '0.08em', lineHeight: 1.2, textTransform: 'uppercase',
             }}>
               {ORG_LINE2} <span style={{ fontSize: '7.5px', color: 'rgba(255,255,255,0.95)', fontWeight: 800, letterSpacing: '0.04em' }}>{ORG_REGD}</span>
             </div>
             <div style={{
-              fontSize: '11px', fontWeight: 900, color: GOLD_TYPE,
-              letterSpacing: '0.18em', marginTop: '1px', textTransform: 'uppercase',
+              fontSize: '10.5px', fontWeight: 900, color: GOLD_TYPE,
+              letterSpacing: '0.16em', marginTop: '1px', textTransform: 'uppercase',
             }}>
               MEMBERSHIP CARD
             </div>
