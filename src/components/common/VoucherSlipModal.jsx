@@ -39,36 +39,24 @@ const numberToWords = (num) => {
   return wordResult.trim() || 'Zero';
 };
 
-const theme = {
-  paper: '#fcf8f2',
-  paperDeep: '#f5ebde',
-  ink: '#24170f',
-  muted: '#6f5a45',
-  accent: '#8a5e3d',
-  accentSoft: '#b88b63',
-  border: '#d8c1a1',
-  line: '#e9dcc9',
-  success: '#5b4a39'
-};
-
 function FieldChip({ label, value, icon: Icon }) {
   return (
-    <div className="rounded-xl border border-[#e7d7bf] bg-white/80 px-2.5 py-1.5 shadow-[0_1px_0_rgba(0,0,0,0.03)]">
-      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7b6751]">
+    <div className="rounded-xl border border-[#e7d7bf] bg-white/80 px-2.5 py-1.5 print:py-1 shadow-[0_1px_0_rgba(0,0,0,0.03)]">
+      <div className="flex items-center gap-1.5 text-[9.5px] font-bold uppercase tracking-[0.18em] text-[#7b6751]">
         {Icon ? <Icon className="h-3 w-3" /> : null}
         <span>{label}</span>
       </div>
-      <div className="mt-0.5 text-xs font-semibold text-[#24170f] truncate">{value || '—'}</div>
+      <div className="mt-0.5 text-xs font-bold text-[#24170f] truncate">{value || '—'}</div>
     </div>
   );
 }
 
 function SectionCard({ title, icon: Icon, children }) {
   return (
-    <div className="rounded-[16px] border border-[#e7d7bf] bg-white/80 p-2 print:p-1.5 shadow-[0_12px_32px_rgba(120,85,46,0.06)]">
+    <div className="rounded-[16px] border border-[#e7d7bf] bg-white/80 p-2.5 print:p-2 shadow-[0_8px_24px_rgba(120,85,46,0.04)]">
       <div className="mb-1.5 flex items-center gap-1.5 border-b border-[#efe2cf] pb-1">
         {Icon ? <Icon className="h-3.5 w-3.5 text-[#8a5e3d]" /> : null}
-        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#7b6751]">{title}</h3>
+        <h3 className="text-[9.5px] font-black uppercase tracking-[0.2em] text-[#7b6751]">{title}</h3>
       </div>
       {children}
     </div>
@@ -85,14 +73,14 @@ function LedgerTable({ rows, total }) {
       {rows.map((row, index) => (
         <div key={`${row.account}-${index}`} className={`grid grid-cols-[1.2fr_0.8fr] items-start px-2.5 py-1.5 text-xs ${index % 2 ? 'bg-white/60' : 'bg-transparent'}`}>
           <div className="pr-2">
-            <div className="font-semibold text-[#24170f]">{row.account}</div>
+            <div className="font-bold text-[#24170f] truncate">{row.account}</div>
             <div className="mt-0.5 text-[10px] text-[#7b6751] truncate">{row.narration}</div>
           </div>
-          <div className="text-right font-semibold text-[#24170f]">Rs {Number(row.amount || 0).toLocaleString('en-PK')}</div>
+          <div className="text-right font-bold text-[#24170f]">Rs {Number(row.amount || 0).toLocaleString('en-PK')}</div>
         </div>
       ))}
       <div className="grid grid-cols-[1.2fr_0.8fr] border-t border-[#e7d7bf] bg-[#f6ebdf] px-2.5 py-1.5 text-xs font-black text-[#24170f]">
-        <span className="uppercase tracking-[0.2em]">Total</span>
+        <span className="uppercase tracking-[0.18em]">Total</span>
         <span className="text-right">Rs {Number(total || 0).toLocaleString('en-PK')}</span>
       </div>
     </div>
@@ -101,52 +89,52 @@ function LedgerTable({ rows, total }) {
 
 function SignatureBlock({ label, name, checked = false }) {
   return (
-    <div className="rounded-[14px] border border-[#e7d7bf] bg-[#fcf7ef] px-2.5 py-1.5">
+    <div className="rounded-[14px] border border-[#e7d7bf] bg-[#fcf7ef] px-2.5 py-1.5 print:py-1">
       <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.2em] text-[#7b6751]">
         <span className={`flex h-3.5 w-3.5 items-center justify-center rounded border ${checked ? 'border-[#8a5e3d] bg-[#8a5e3d]' : 'border-[#cdb79f] bg-white'}`}>
           {checked ? <CheckSquare2 className="h-2.5 w-2.5 text-white" /> : null}
         </span>
         {label}
       </div>
-      <div className="mt-1 border-b border-dashed border-[#cdb79f] pb-0.5 text-xs font-semibold text-[#24170f]">{name || '________________'}</div>
+      <div className="mt-1 border-b border-dashed border-[#cdb79f] pb-0.5 text-xs font-bold text-[#24170f] truncate">{name || '________________'}</div>
     </div>
   );
 }
 
 function CopySheet({ copyLabel, title, voucherNo, fileNo, formattedDate, paidTo, paymentMethod, amount, words, remarks, ledgerRows, preparedBy, verifiedBy, authorizedSign, payeeLabel, partyLabel = 'Paid To' }) {
   return (
-    <div className="voucher-copy-sheet rounded-[20px] border border-[#d8c1a1] bg-[#fefcf8] p-2.5 print:p-2 shadow-[0_18px_40px_rgba(29,18,12,0.08)] print:rounded-none print:shadow-none">
-      <div className="mb-2 flex items-center justify-between gap-2 rounded-[14px] border border-[#e7d7bf] bg-gradient-to-r from-[#f6ebdf] to-[#fbf4e9] px-2.5 py-1.5">
+    <div className="voucher-copy-sheet rounded-[20px] border border-[#d8c1a1] bg-[#fefcf8] p-2.5 print:p-2 shadow-[0_12px_30px_rgba(29,18,12,0.06)] print:rounded-none print:shadow-none print:border-slate-300">
+      <div className="mb-2 flex items-center justify-between gap-2 rounded-[14px] border border-[#e7d7bf] bg-gradient-to-r from-[#f6ebdf] to-[#fbf4e9] px-2.5 py-1.5 print:py-1">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#d8c1a1] bg-white/80">
-            <img src={logoImg} alt="Logo" className="h-6 w-6 object-contain" />
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#d8c1a1] bg-white/80">
+            <img src={logoImg} alt="Logo" className="h-5 w-5 object-contain" />
           </div>
           <div>
             <div className="text-[9px] font-black uppercase tracking-[0.2em] text-[#8a5e3d]">{copyLabel}</div>
             <div
-              className="font-semibold text-[#24170f]"
+              className="font-bold text-[#24170f]"
               style={{
                 fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Alvi Nastaleeq', serif",
-                fontSize: '0.78rem',
-                lineHeight: 1.4,
+                fontSize: '0.75rem',
+                lineHeight: 1.5,
                 paddingTop: '0.1em',
                 wordSpacing: '0.1em',
-                fontWeight: 500,
+                fontWeight: 600,
               }}
             >
               کچھی مسلم لوہارواڈھا ویلفیئر جماعت
             </div>
           </div>
         </div>
-        <div className="rounded-full border border-[#d8c1a1] bg-white/80 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-[0.24em] text-[#8a5e3d]">
+        <div className="rounded-full border border-[#d8c1a1] bg-white/80 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-[0.24em] text-[#8a5e3d] shrink-0">
           {title}
         </div>
       </div>
 
-      <div className="grid gap-2 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="space-y-2">
+      <div className="grid gap-2 print:gap-1.5 lg:grid-cols-[1.05fr_0.95fr] print:grid-cols-[1.05fr_0.95fr]">
+        <div className="space-y-2 print:space-y-1.5">
           <SectionCard title="Voucher Details" icon={FileText}>
-            <div className="grid gap-1.5 md:grid-cols-2">
+            <div className="grid gap-1.5 md:grid-cols-2 print:grid-cols-2">
               <FieldChip label="Voucher No" value={voucherNo || '—'} icon={ScrollText} />
               <FieldChip label="Date" value={formattedDate} icon={CalendarDays} />
               <FieldChip label={partyLabel} value={paidTo || '—'} icon={Wallet} />
@@ -155,30 +143,30 @@ function CopySheet({ copyLabel, title, voucherNo, fileNo, formattedDate, paidTo,
           </SectionCard>
 
           <SectionCard title="Remarks & Amount" icon={SquarePen}>
-            <div className="space-y-1.5">
-              <div className="rounded-[14px] border border-[#e7d7bf] bg-[#fcf7ef] p-2 text-xs text-[#24170f]">
+            <div className="space-y-1.5 print:space-y-1">
+              <div className="rounded-[12px] border border-[#e7d7bf] bg-[#fcf7ef] p-2 print:p-1.5 text-xs text-[#24170f]">
                 <div className="text-[9px] font-black uppercase tracking-[0.2em] text-[#7b6751]">Amount in Words</div>
-                <div className="mt-0.5 font-semibold">{words} Only</div>
+                <div className="mt-0.5 font-bold">{words} Only</div>
               </div>
-              <div className="rounded-[14px] border border-[#e7d7bf] bg-[#fcf7ef] p-2 text-xs text-[#24170f]">
+              <div className="rounded-[12px] border border-[#e7d7bf] bg-[#fcf7ef] p-2 print:p-1.5 text-xs text-[#24170f]">
                 <div className="text-[9px] font-black uppercase tracking-[0.2em] text-[#7b6751]">Remarks</div>
-                <div className="mt-0.5 font-medium">{remarks || 'No remarks provided.'}</div>
+                <div className="mt-0.5 font-medium truncate">{remarks || 'No remarks provided.'}</div>
               </div>
-              <div className="rounded-[14px] border border-[#8a5e3d] bg-[#f6ebdf] p-2 text-right">
+              <div className="rounded-[12px] border border-[#8a5e3d] bg-[#f6ebdf] p-2 print:p-1.5 text-right">
                 <div className="text-[9px] font-black uppercase tracking-[0.2em] text-[#7b6751]">Net Amount</div>
-                <div className="mt-0.5 text-xl font-black text-[#24170f]">Rs {Number(amount || 0).toLocaleString('en-PK')}</div>
+                <div className="mt-0.5 text-lg sm:text-xl print:text-lg font-black text-[#24170f]">Rs {Number(amount || 0).toLocaleString('en-PK')}</div>
               </div>
             </div>
           </SectionCard>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 print:space-y-1.5">
           <SectionCard title="Ledger Entries" icon={BadgeCheck}>
             <LedgerTable rows={ledgerRows} total={amount || 0} />
           </SectionCard>
 
           <SectionCard title="Authorizations" icon={Signature}>
-            <div className="grid gap-1.5 sm:grid-cols-2">
+            <div className="grid gap-1.5 sm:grid-cols-2 print:grid-cols-2">
               <SignatureBlock label="Prepared By" name={preparedBy || 'Operator'} checked />
               <SignatureBlock label="Verified By" name={verifiedBy || '—'} />
               <SignatureBlock label="Authorized Sign" name={authorizedSign || '—'} />
@@ -188,7 +176,7 @@ function CopySheet({ copyLabel, title, voucherNo, fileNo, formattedDate, paidTo,
         </div>
       </div>
 
-      <div className="mt-2 flex items-center justify-between rounded-[14px] border border-dashed border-[#d8c1a1] px-2.5 py-1 text-[9px] uppercase tracking-[0.2em] text-[#7b6751]">
+      <div className="mt-2 print:mt-1 flex items-center justify-between rounded-[12px] border border-dashed border-[#d8c1a1] px-2.5 py-1 text-[9px] uppercase tracking-[0.2em] text-[#7b6751]">
         <span>Reference: {fileNo || '—'}</span>
         <span>Commercial Print Ready</span>
       </div>
@@ -254,17 +242,19 @@ export const VoucherSlipModal = ({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-[#f5ebde] p-3 sm:p-5 print:p-0 print:overflow-visible print:bg-white">
+        <div className="flex-1 overflow-y-auto bg-[#f5ebde] p-3 sm:p-4 print:p-0 print:overflow-visible print:bg-white">
           <style>{`
-            @page {
-              size: A4 landscape;
-              margin: 4mm 5mm !important;
-            }
             @media print {
+              @page {
+                size: A4 landscape;
+                margin: 3mm 4mm !important;
+              }
               html, body {
                 margin: 0 !important;
                 padding: 0 !important;
                 height: 100% !important;
+                width: 297mm !important;
+                max-height: 210mm !important;
                 overflow: hidden !important;
                 background: #ffffff !important;
               }
@@ -273,35 +263,39 @@ export const VoucherSlipModal = ({
                 print-color-adjust: exact !important;
                 color-adjust: exact !important;
               }
-              body * { visibility: hidden !important; }
-              #print-voucher-slip, #print-voucher-slip * { visibility: visible !important; }
+              body > *:not(.fixed) {
+                display: none !important;
+              }
+              #print-voucher-slip, #print-voucher-slip * {
+                visibility: visible !important;
+              }
               #print-voucher-slip {
                 position: absolute !important;
                 left: 0 !important;
                 top: 0 !important;
-                width: 100% !important;
-                max-width: 287mm !important;
-                max-height: 200mm !important;
+                width: 291mm !important;
+                max-width: 291mm !important;
                 margin: 0 auto !important;
                 padding: 0 !important;
-                background: white !important;
-                overflow: hidden !important;
                 box-shadow: none !important;
                 border: none !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
               }
               .voucher-copy-sheet {
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
+                box-shadow: none !important;
               }
             }
           `}</style>
 
-          <div id="print-voucher-slip" className="mx-auto w-full max-w-[1800px] rounded-[28px] border border-[#d8c1a1] bg-[#fcf8f2] p-2 shadow-[0_20px_45px_rgba(36,23,15,0.12)] print:rounded-none print:shadow-none">
-            <div className="relative overflow-hidden rounded-[24px] border border-[#e7d7bf] bg-[radial-gradient(circle_at_top_left,_rgba(138,94,61,0.06),_transparent_45%),linear-gradient(135deg,_#fcf8f2_0%,_#f6ebdf_100%)] p-3 print:p-0">
-              <div className="absolute inset-0 flex items-center justify-center opacity-[0.06] print:opacity-[0.08]">
-                <img src={logoImg} alt="Watermark" className="h-[320px] w-[320px] object-contain" />
+          <div id="print-voucher-slip" className="mx-auto w-full max-w-[1800px] rounded-[24px] border border-[#d8c1a1] bg-[#fcf8f2] p-2 print:p-0 shadow-[0_20px_45px_rgba(36,23,15,0.12)] print:rounded-none print:shadow-none print:border-none">
+            <div className="relative overflow-hidden rounded-[20px] border border-[#e7d7bf] bg-[radial-gradient(circle_at_top_left,_rgba(138,94,61,0.06),_transparent_45%),linear-gradient(135deg,_#fcf8f2_0%,_#f6ebdf_100%)] p-2.5 print:p-0 print:border-none">
+              <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] print:opacity-[0.06]">
+                <img src={logoImg} alt="Watermark" className="h-[260px] w-[260px] object-contain" />
               </div>
-              <div className="relative z-10 grid gap-3 xl:grid-cols-2 print:grid-cols-2">
+              <div className="relative z-10 grid gap-2.5 xl:grid-cols-2 print:grid-cols-2">
                 <CopySheet
                   copyLabel="Office Copy"
                   title={title}

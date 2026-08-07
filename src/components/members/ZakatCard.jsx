@@ -2,37 +2,24 @@ import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import logoSrc from '../../assets/logo.png';
 
-const ORG_LINE1    = 'KUTCHI MUSLIM LOHARWADA WELFARE';
-const ORG_LINE2    = 'JAMAT';
-const ORG_REGD     = '(REGD. 1219)';
-const ORG_RETURN   = 'Kutchi Muslim Loharwada Jamat, Jumma Baloch Road, New Kalri, Lyari, Karachi.';
-const ORG_EMAIL    = 'info@kmlwj.org';
-const ORG_WEBSITE  = 'www.kmlwj.org';
-
-/* ── Design palette (Bright Warm Gold/Amber & Brown) ── */
-const PRIMARY_BG     = '#6D2800';  // Rich warm brown
-const BORDER         = '#E5B83B';  // Bright gold border
-const ACCENT_BROWN   = '#E5B83B';  // Bright gold footer strip
-const LIGHT_CREAM    = '#FFE082';  // Bright golden yellow text
-const DIVIDER        = '#FF9800';  // Bright orange divider
-const PRIMARY_TEXT   = '#FFFFFF';
-const SECONDARY_TEXT = '#FFD54F';  // Bright gold labels
-const MUTED_TEXT     = '#FFECB3';
-const BADGE_BG       = '#FFFFFF';
-const DARK_TEXT      = '#2C1605';
-const WATERMARK_OPACITY = 0.16;
+const ORG_LINE1    = 'KUTCHI MUSLIM';
+const ORG_LINE2    = 'LOHARWADA WELFARE JAMAT';
+const ORG_RETURN   = 'Jamat Khana, Loharwada Karachi - Pakistan';
+const ORG_PHONE    = '021-32524455';
+const ORG_WEBSITE  = 'www.loharwadajamat.org';
 
 function fmt(val) { return val || '—'; }
 function fmtDate(val) {
   if (!val) return '—';
   const d = new Date(val);
   if (isNaN(d.getTime())) return val;
-  return d.toLocaleDateString('en-PK', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
 }
 function fmtAmount(val) {
   if (!val && val !== 0) return '—';
   return `Rs ${Number(val).toLocaleString('en-PK')}`;
 }
+
 function CardShell({ children }) {
   return (
     <div style={{
@@ -41,178 +28,278 @@ function CardShell({ children }) {
       flex: 1,
       display: 'flex',
       flexDirection: 'column',
-      background: 'linear-gradient(135deg, #CFD2D6 0%, #ECEEF0 50%, #C3C6CB 100%)',
-      border: '3.5px solid #D4AF37',
+      background: 'linear-gradient(135deg, #E6E8EA 0%, #F4F6F7 50%, #D8DCE0 100%)',
+      border: '1px solid #C88A58',
       borderRadius: 'inherit',
       boxSizing: 'border-box',
+      fontFamily: "'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif",
     }}>
-      {/* Watermark crest (high visibility center logo watermark) */}
-      <div style={{
-        position: 'absolute', inset: 0, zIndex: 1,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        opacity: 0.22, pointerEvents: 'none',
-        filter: 'contrast(1.3)',
-      }}>
-        <img src={logoSrc} alt="" style={{ width: '58%', height: 'auto', objectFit: 'contain' }} />
-      </div>
       {children}
     </div>
   );
 }
 
-/* ─────────────────────────────────── FRONT ─────────────────────────────────── */
+/* ─────────────────────────────────── FRONT CARD ─────────────────────────────────── */
 export function ZakatCardFront({ card }) {
   const beneficiary = card?.beneficiary || null;
   const member = card?.member || null;
-  const displayName = beneficiary?.name || member?.fullName || '';
-  const displayCnic = beneficiary?.cnic || null;
+  const displayName = (beneficiary?.name || member?.fullName || 'BENEFICIARY NAME').toUpperCase();
+  const cardNo = card?.cardNumber || member?.memberNo || 'KM LJ 25 0123';
+  const issueDate = fmtDate(card?.issueDate || member?.doi || new Date());
+  const extraInfo = card?.zakatAmount ? fmtAmount(card?.zakatAmount) : (member?.bloodGroup || member?.area || 'B+');
+  const photoUrl = beneficiary?.photoUrl || member?.photoUrl;
+
+  const VERIFY_BASE = (typeof window !== 'undefined' && window.location?.origin)
+    ? window.location.origin
+    : 'https://kmlwj.com';
+  const qrValue = card?.cardNumber
+    ? `${VERIFY_BASE}/verify/zakat/${encodeURIComponent(card.cardNumber)}`
+    : member?.memberNo
+    ? `${VERIFY_BASE}/verify/member/${encodeURIComponent(member.memberNo)}`
+    : `${VERIFY_BASE}/verify/zakat`;
 
   return (
     <CardShell>
-      {/* ── BODY: band + photo | header + details + logo ── */}
-      <div style={{
-        position: 'relative', zIndex: 3, flex: 1,
-        display: 'flex', flexDirection: 'row',
-      }}>
-        {/* ── LEFT: Gold Ribbon Band with Large Portrait (72px x 72px) ── */}
-        <div style={{
-          position: 'relative', flexShrink: 0,
-          width: '84px', alignSelf: 'stretch',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          {/* vertical gold stripe */}
+      {/* ── TOP RIGHT & RIGHT SIDE CHOCOLATE BROWN CURVED WAVE ── */}
+      <svg style={{
+        position: 'absolute', top: 0, right: 0,
+        width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1,
+      }} viewBox="0 0 340 215" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="brownGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#4A2511" />
+            <stop offset="50%" stopColor="#3B1D0D" />
+            <stop offset="100%" stopColor="#251006" />
+          </linearGradient>
+          <linearGradient id="copperGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#D49B6A" />
+            <stop offset="50%" stopColor="#C88A58" />
+            <stop offset="100%" stopColor="#8C4F2B" />
+          </linearGradient>
+        </defs>
+
+        {/* Top-Right Decorative Corner Shield */}
+        <path d="M 230 0 L 340 0 L 340 65 Q 280 40 230 0 Z" fill="url(#brownGrad)" />
+        <path d="M 228 0 Q 280 42 340 67" fill="none" stroke="url(#copperGrad)" strokeWidth="2.5" />
+
+        {/* Main Right Side Wave Container for Photo & Signature */}
+        <path d="M 340 35 C 255 75 240 120 260 175 C 270 195 300 205 340 205 Z" fill="url(#brownGrad)" />
+        <path d="M 340 35 C 255 75 240 120 260 175 C 270 195 300 205 340 205" fill="none" stroke="url(#copperGrad)" strokeWidth="2.5" />
+      </svg>
+
+      {/* ── CARD BODY ── */}
+      <div style={{ position: 'relative', zIndex: 2, flex: 1, display: 'flex', flexDirection: 'column' }}>
+
+        {/* ── TOP HEADER SECTION ── */}
+        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', padding: '7px 10px 0 10px' }}>
+          {/* Mosque Logo Icon */}
           <div style={{
-            position: 'absolute', top: 0, bottom: 0, left: '50%',
-            transform: 'translateX(-50%)',
-            width: '16px',
-            background: 'linear-gradient(180deg, #FFE082 0%, #D4AF37 50%, #B38F24 100%)',
-            boxShadow: '0 0 6px rgba(212,175,55,0.4)',
-          }} />
-          {/* Portrait Photo (70px x 102px - 1:1.50 Aspect Ratio) */}
+            width: '38px', height: '38px', flexShrink: 0, marginRight: '8px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <img src={logoSrc} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </div>
+
+          {/* Titles & Tagline */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{
+              fontSize: '11px', fontWeight: 900, color: '#2A1408',
+              letterSpacing: '0.02em', lineHeight: 1.1, textTransform: 'uppercase',
+            }}>
+              {ORG_LINE1} {ORG_LINE2}
+            </div>
+            {/* Diamond Separator Line */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', margin: '2px 0' }}>
+              <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, #C88A58 0%, transparent 100%)' }} />
+              <div style={{ width: '3px', height: '3px', transform: 'rotate(45deg)', background: '#C88A58' }} />
+              <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, transparent 0%, #C88A58 100%)' }} />
+            </div>
+            {/* Tagline */}
+            <div style={{
+              fontSize: '7px', fontWeight: 800, color: '#5E4130',
+              letterSpacing: '0.18em', textTransform: 'uppercase',
+            }}>
+              UNITY &bull; WELFARE &bull; SERVICE
+            </div>
+          </div>
+
+          {/* Top Right MEMBER ID / Year Badge inside Brown Curve */}
           <div style={{
-            position: 'relative', zIndex: 2,
-            width: '70px', height: '102px',
-            aspectRatio: '1 / 1.5',
+            textAlign: 'right', zIndex: 3, paddingRight: '4px', paddingTop: '2px'
+          }}>
+            <div style={{ fontSize: '7px', fontWeight: 800, color: '#E0C0A8', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+              CARD NO
+            </div>
+            <div style={{ fontSize: '13px', fontWeight: 900, color: '#FFFFFF', letterSpacing: '0.04em', lineHeight: 1 }}>
+              2025
+            </div>
+            {/* Small ornament under year */}
+            <div style={{ fontSize: '6px', color: '#D49B6A', textAlign: 'center', marginTop: '1px' }}>
+              &#9670;&#9644;&#9670;
+            </div>
+          </div>
+        </div>
+
+        {/* ── CENTER SECTION: LEFT DETAILS & RIGHT PHOTO FRAME ── */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'row', padding: '6px 10px 0 10px', alignItems: 'center' }}>
+
+          {/* Left Details List with Round Icon Badges */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3.5px', pr: '4px' }}>
+
+            {/* Name */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{
+                width: '16px', height: '16px', borderRadius: '50%', background: '#3D1B0E',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.5">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </div>
+              <span style={{ fontSize: '8.5px', color: '#555555', fontWeight: 700, width: '56px', flexShrink: 0 }}>Name</span>
+              <span style={{ fontSize: '8.5px', color: '#555555', fontWeight: 700, margin: '0 2px' }}>:</span>
+              <span style={{ fontSize: '9px', color: '#111111', fontWeight: 900, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {displayName}
+              </span>
+            </div>
+
+            {/* Member ID / Card No */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{
+                width: '16px', height: '16px', borderRadius: '50%', background: '#3D1B0E',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.5">
+                  <rect x="2" y="4" width="20" height="16" rx="2" />
+                  <line x1="6" y1="9" x2="10" y2="9" />
+                  <line x1="6" y1="13" x2="14" y2="13" />
+                </svg>
+              </div>
+              <span style={{ fontSize: '8.5px', color: '#555555', fontWeight: 700, width: '56px', flexShrink: 0 }}>Card No</span>
+              <span style={{ fontSize: '8.5px', color: '#555555', fontWeight: 700, margin: '0 2px' }}>:</span>
+              <span style={{ fontSize: '9px', color: '#111111', fontWeight: 900 }}>
+                {cardNo}
+              </span>
+            </div>
+
+            {/* Issue Date */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{
+                width: '16px', height: '16px', borderRadius: '50%', background: '#3D1B0E',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.5">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+              </div>
+              <span style={{ fontSize: '8.5px', color: '#555555', fontWeight: 700, width: '56px', flexShrink: 0 }}>Issue Date</span>
+              <span style={{ fontSize: '8.5px', color: '#555555', fontWeight: 700, margin: '0 2px' }}>:</span>
+              <span style={{ fontSize: '9px', color: '#111111', fontWeight: 900 }}>
+                {issueDate}
+              </span>
+            </div>
+
+            {/* Zakat Amount / Extra Info */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{
+                width: '16px', height: '16px', borderRadius: '50%', background: '#3D1B0E',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.5">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              </div>
+              <span style={{ fontSize: '8.5px', color: '#555555', fontWeight: 700, width: '56px', flexShrink: 0 }}>Amount</span>
+              <span style={{ fontSize: '8.5px', color: '#555555', fontWeight: 700, margin: '0 2px' }}>:</span>
+              <span style={{ fontSize: '9px', color: '#111111', fontWeight: 900 }}>
+                {extraInfo}
+              </span>
+            </div>
+          </div>
+
+          {/* Right Side Photo Box embedded over brown curve */}
+          <div style={{
+            position: 'relative', zIndex: 10,
+            width: '66px', height: '94px',
+            aspectRatio: '1 / 1.42',
             background: '#FFFFFF',
-            borderRadius: '10px',
-            border: '2.5px solid #D4AF37',
+            borderRadius: '12px',
+            border: '2.5px solid #C88A58',
             overflow: 'hidden',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
+            marginLeft: '6px',
+            flexShrink: 0,
           }}>
-            {(beneficiary?.photoUrl || member?.photoUrl) ? (
-              <img src={beneficiary?.photoUrl || member?.photoUrl} alt="Photo" style={{ width: '100%', height: '100%', objectFit: 'cover', aspectRatio: '1 / 1.5' }} />
+            {photoUrl ? (
+              <img src={photoUrl} alt="Photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              <span style={{ fontSize: '7px', color: '#555', fontWeight: 700, textAlign: 'center', lineHeight: 1.3 }}>portrait{'\n'}here</span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#888888' }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#666666" strokeWidth="1.5">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </div>
             )}
           </div>
         </div>
 
-        {/* ── MAIN: header + details ── */}
+        {/* ── LOWER SECTION: LEFT QR CODE & RIGHT AUTHORIZED SIGNATURE ── */}
         <div style={{
-          flex: 1, display: 'flex', flexDirection: 'column',
-          padding: '4px 4px 0 2px', minWidth: 0,
+          display: 'flex', flexDirection: 'row', alignItems: 'flex-end',
+          justifyContent: 'space-between', padding: '2px 10px 4px 10px',
         }}>
-          {/* Header: KUTCHI MUSLIM LOHARWADA WELFARE in one single line */}
-          <div style={{ textAlign: 'center', paddingRight: '54px' }}>
-            <div style={{
-              fontSize: '8.5px', fontWeight: 900, color: '#000000',
-              letterSpacing: '0.01em', lineHeight: 1.15, textTransform: 'uppercase',
-              whiteSpace: 'nowrap',
-            }}>
-              {ORG_LINE1}
-            </div>
-            <div style={{
-              fontSize: '9.5px', fontWeight: 900, color: '#000000',
-              letterSpacing: '0.06em', lineHeight: 1.15, textTransform: 'uppercase',
-            }}>
-              {ORG_LINE2} <span style={{ fontSize: '7.5px', color: '#333333', fontWeight: 800 }}>{ORG_REGD}</span>
-            </div>
-            
-            {/* Bright Metallic Gold Pill Badge */}
-            <div style={{
-              display: 'inline-block',
-              background: 'linear-gradient(135deg, #FFE082 0%, #D4AF37 100%)',
-              color: '#000000',
-              fontSize: '10px', fontWeight: 900,
-              letterSpacing: '0.14em', marginTop: '2px', padding: '1.5px 12px',
-              borderRadius: '10px', textTransform: 'uppercase',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-            }}>
-              ZAKAT CARD
-            </div>
-          </div>
-
-          {/* Details list (larger 10.5px bold text) */}
+          {/* Bottom Left Small QR Code */}
           <div style={{
-            flex: 1, display: 'flex', flexDirection: 'column',
-            justifyContent: 'center', gap: '2.5px',
-            padding: '3px 2px 0 2px',
+            background: '#FFFFFF', padding: '2px', borderRadius: '4px',
+            border: '1.5px solid #C88A58', boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+            width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            {[
-              ['Zakat Card No', card?.cardNumber],
-              ['Name',          displayName],
-              ['CNIC',          displayCnic || member?.cnic],
-              ['S/O',           member?.fatherName],
-              ['Area / Jamaat', member?.area || member?.ghamName],
-              ['Zakat Amount',  fmtAmount(card?.zakatAmount)],
-              ['Issue Date',    fmtDate(card?.issueDate)],
-            ].filter(([, v]) => v).map(([label, value]) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                <span style={{
-                  fontSize: '10.5px', color: '#111111', fontWeight: 900,
-                  minWidth: '84px', flexShrink: 0, letterSpacing: '0.01em',
-                }}>
-                  {label}:
-                </span>
-                <span style={{
-                  fontSize: '10.5px', color: '#000000', fontWeight: 800,
-                  lineHeight: 1.25, wordBreak: 'break-all',
-                }}>
-                  {fmt(value)}
-                </span>
-              </div>
-            ))}
+            <QRCodeSVG value={qrValue} size={128} style={{ width: '100%', height: '100%' }} />
+          </div>
+
+          {/* Right Signature Area inside Brown Curve */}
+          <div style={{ zIndex: 10, textAlign: 'center', paddingRight: '4px' }}>
+            {/* Cursive Signature Graphic */}
+            <div style={{
+              fontFamily: "'Brush Script MT', 'Dancing Script', 'Cursive', cursive",
+              fontSize: '14px', color: '#FFFFFF', fontStyle: 'italic',
+              lineHeight: 1, marginBottom: '2px', textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+            }}>
+              Suj
+            </div>
+            <div style={{
+              fontSize: '6.5px', fontWeight: 800, color: '#E0C0A8',
+              letterSpacing: '0.12em', textTransform: 'uppercase',
+            }}>
+              AUTHORIZED SIGNATURE
+            </div>
           </div>
         </div>
 
-        {/* ── TOP-RIGHT: Larger Logo Badge (48px x 48px) ── */}
+        {/* ── BOTTOM FULL-WIDTH SLOGAN STRIP ── */}
         <div style={{
-          position: 'absolute', top: '3px', right: '4px',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 10,
-          background: 'rgba(212, 175, 55, 0.18)',
-          border: '1.5px solid #D4AF37',
-          borderRadius: '8px',
-          padding: '2px',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+          background: '#3B1D0D', padding: '3.5px 0', textAlign: 'center',
+          borderTop: '1px solid #C88A58', marginTop: 'auto',
         }}>
-          <img src={logoSrc} alt="Logo" style={{
-            width: '44px', height: '44px', objectFit: 'contain',
-          }} />
+          <span style={{ fontSize: '7.5px', fontWeight: 900, color: '#FFFFFF', letterSpacing: '0.14em', textTransform: 'uppercase' }}>
+            &mdash; TOGETHER WE GROW, TOGETHER WE SERVE &mdash;
+          </span>
         </div>
-      </div>
 
-      {/* ── FOOTER strip ── */}
-      <div style={{
-        position: 'relative', zIndex: 3,
-        background: 'linear-gradient(90deg, #FFE082 0%, #D4AF37 50%, #FFE082 100%)',
-        padding: '3px 8px',
-        display: 'flex', alignItems: 'center', gap: '6px',
-        minHeight: '20px',
-      }}>
-        <svg width="10" height="12" viewBox="0 0 24 32" style={{ flexShrink: 0 }}>
-          <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0zm0 16.8A4.8 4.8 0 1 1 12 7.2a4.8 4.8 0 0 1 0 9.6z" fill="#000000"/>
-        </svg>
-        <span style={{ fontSize: '8.5px', color: '#000000', fontWeight: 900, lineHeight: 1.25 }}>
-          If found please return it to {ORG_RETURN}
-        </span>
       </div>
     </CardShell>
   );
 }
 
-/* ─────────────────────────────────── BACK ─────────────────────────────────── */
+/* ─────────────────────────────────── BACK CARD ─────────────────────────────────── */
 export function ZakatCardBack({ card }) {
   const beneficiary = card?.beneficiary || null;
   const member = card?.member || null;
@@ -226,130 +313,186 @@ export function ZakatCardBack({ card }) {
     ? `${VERIFY_BASE}/verify/zakat/${encodeURIComponent(card.cardNumber)}`
     : member?.memberNo
     ? `${VERIFY_BASE}/verify/member/${encodeURIComponent(member.memberNo)}`
-    : null;
+    : `${VERIFY_BASE}/verify/zakat`;
 
   return (
     <CardShell>
-      {/* ── HEADER ── */}
-      <div style={{
-        position: 'relative', zIndex: 3, textAlign: 'center',
-        padding: '4px 12px 3px',
-        borderBottom: '2px solid #D4AF37',
-        background: 'rgba(212, 175, 55, 0.15)',
-      }}>
-        <div style={{
-          fontSize: '10.5px', fontWeight: 900, color: '#000000',
-          letterSpacing: '0.22em', textTransform: 'uppercase',
-        }}>
-          BENEFICIARY INFORMATION
-        </div>
-      </div>
+      {/* ── LEFT CHOCOLATE BROWN SIDEBAR CURVE ── */}
+      <svg style={{
+        position: 'absolute', top: 0, left: 0,
+        width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1,
+      }} viewBox="0 0 340 215" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="backBrownGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#4A2511" />
+            <stop offset="50%" stopColor="#3B1D0D" />
+            <stop offset="100%" stopColor="#251006" />
+          </linearGradient>
+        </defs>
 
-      {/* ── BODY ── */}
-      <div style={{
-        position: 'relative', zIndex: 3, flex: 1,
-        display: 'flex', flexDirection: 'column',
-        padding: '5px 10px 0 12px',
-      }}>
-        {/* Details list + QR Code side-by-side */}
-        <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', flex: 1 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '3.5px', flex: 1, paddingRight: '4px' }}>
-            {[
-              ['Ghaam',        member?.ghamName],
-              ['Address',      address ? (address.length > 45 ? address.slice(0, 45) + '…' : address) : null],
-              ['Contact',      mobile],
-              ['Issuing Date', fmtDate(card?.issueDate)],
-            ].filter(([, v]) => v).map(([label, value]) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                <span style={{
-                  fontSize: '10.5px', color: '#111111', fontWeight: 900,
-                  minWidth: '78px', flexShrink: 0,
-                }}>
-                  {label}:
-                </span>
-                <span style={{ fontSize: '10.5px', color: '#000000', fontWeight: 800, lineHeight: 1.25 }}>
-                  {fmt(value)}
-                </span>
-              </div>
-            ))}
+        {/* Left Side Curved Panel */}
+        <path d="M 0 0 L 95 0 C 75 60 75 140 95 190 L 0 190 Z" fill="url(#backBrownGrad)" />
+        <path d="M 95 0 C 75 60 75 140 95 190" fill="none" stroke="#C88A58" strokeWidth="2.5" />
+      </svg>
+
+      {/* ── CARD BODY ── */}
+      <div style={{ position: 'relative', zIndex: 2, flex: 1, display: 'flex', flexDirection: 'column' }}>
+
+        {/* ── MAIN CONTENT GRID ── */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'row', padding: '8px 10px 4px 10px' }}>
+
+          {/* Left Brown Section: Logo & Jamaat Title */}
+          <div style={{
+            width: '74px', flexShrink: 0, display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', textAlign: 'center', pr: '4px',
+          }}>
+            <img src={logoSrc} alt="Logo" style={{ width: '36px', height: '36px', objectFit: 'contain', filter: 'brightness(1.2)' }} />
+            <div style={{
+              fontSize: '7.5px', fontWeight: 900, color: '#FFFFFF',
+              letterSpacing: '0.04em', lineHeight: 1.15, textTransform: 'uppercase', marginTop: '6px',
+            }}>
+              KUTCHI MUSLIM LOHARWADA WELFARE JAMAT
+            </div>
+            <div style={{ fontSize: '6px', color: '#D49B6A', marginTop: '4px' }}>
+              &#9670;&#9644;&#9670;
+            </div>
           </div>
 
-          {/* QR Code placed on Back side */}
-          {qrValue && (
-            <div style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', flexShrink: 0,
-              marginLeft: '4px'
-            }}>
-              <div style={{
-                background: '#FFFFFF',
-                padding: '3px',
-                borderRadius: '6px',
-                width: '52px',
-                height: '52px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxSizing: 'border-box',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                border: '1.5px solid #D4AF37',
-              }}>
-                <QRCodeSVG
-                  value={qrValue}
-                  size={512}
-                  bgColor="#FFFFFF"
-                  fgColor="#000000"
-                  level="H"
-                  includeMargin={true}
-                  marginSize={4}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    display: 'block',
-                    imageRendering: 'pixelated',
-                    shapeRendering: 'crispEdges',
-                  }}
-                />
+          {/* Center & Right Sections: Rules + Large Verification QR Code */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingLeft: '12px', minWidth: 0 }}>
+
+            {/* Header: Property Notice */}
+            <div style={{ textAlign: 'center', marginBottom: '6px' }}>
+              <div style={{ fontSize: '7px', fontWeight: 700, color: '#555555', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                THIS CARD IS PROPERTY OF
               </div>
-              <span style={{ fontSize: '6px', color: '#000000', fontWeight: 900, letterSpacing: '0.04em' }}>
-                VERIFY QR
-              </span>
+              <div style={{ fontSize: '9px', fontWeight: 900, color: '#2A1408', letterSpacing: '0.04em', textTransform: 'uppercase', marginTop: '1px' }}>
+                KUTCHI MUSLIM LOHARWADA WELFARE JAMAT
+              </div>
+              {/* Divider */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', margin: '3px auto 0', width: '80%' }}>
+                <div style={{ flex: 1, height: '1px', background: '#C88A58' }} />
+                <div style={{ width: '3px', height: '3px', transform: 'rotate(45deg)', background: '#C88A58' }} />
+                <div style={{ flex: 1, height: '1px', background: '#C88A58' }} />
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* Signature lines */}
-        <div style={{
-          marginTop: 'auto', paddingBottom: '3px',
-          display: 'flex', justifyContent: 'space-around',
-          alignItems: 'flex-end',
-        }}>
-          {['Chairman', 'President'].map(title => (
-            <div key={title} style={{ textAlign: 'center', minWidth: '75px' }}>
+            {/* Rules & Large QR Side by Side */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
+
+              {/* 3 Terms Rules with Circular Brown Icon Badges */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+
+                {/* Rule 1 */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                  <div style={{
+                    width: '15px', height: '15px', borderRadius: '50%', background: '#3D1B0E',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px',
+                  }}>
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.5">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                  </div>
+                  <span style={{ fontSize: '7.5px', color: '#333333', fontWeight: 700, lineHeight: 1.25 }}>
+                    This card is issued to the beneficiary of Kutchi Muslim Loharwada Welfare Jamat.
+                  </span>
+                </div>
+
+                {/* Rule 2 */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                  <div style={{
+                    width: '15px', height: '15px', borderRadius: '50%', background: '#3D1B0E',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px',
+                  }}>
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.5">
+                      <rect x="2" y="4" width="20" height="16" rx="2" />
+                      <line x1="6" y1="9" x2="10" y2="9" />
+                    </svg>
+                  </div>
+                  <span style={{ fontSize: '7.5px', color: '#333333', fontWeight: 700, lineHeight: 1.25 }}>
+                    This card is non-transferable. Please carry it with you at all times.
+                  </span>
+                </div>
+
+                {/* Rule 3 */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                  <div style={{
+                    width: '15px', height: '15px', borderRadius: '50%', background: '#3D1B0E',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px',
+                  }}>
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.5">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                    </svg>
+                  </div>
+                  <span style={{ fontSize: '7.5px', color: '#333333', fontWeight: 700, lineHeight: 1.25 }}>
+                    If found, please return to the Jamat Office.
+                  </span>
+                </div>
+
+              </div>
+
+              {/* Verification QR Box */}
               <div style={{
-                borderBottom: '1.5px solid #D4AF37',
-                marginBottom: '2px', height: '10px',
-              }} />
-              <span style={{ fontSize: '8.5px', color: '#000000', fontWeight: 900, letterSpacing: '0.04em' }}>
-                {title}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', flexShrink: 0,
+              }}>
+                <div style={{
+                  background: '#FFFFFF', padding: '3px', borderRadius: '8px',
+                  width: '52px', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)', border: '1.5px solid #C88A58',
+                }}>
+                  <QRCodeSVG value={qrValue} size={128} style={{ width: '100%', height: '100%' }} />
+                </div>
+                <span style={{ fontSize: '6px', color: '#3D1B0E', fontWeight: 900, letterSpacing: '0.04em' }}>
+                  VERIFY QR
+                </span>
+              </div>
 
-      {/* ── FOOTER strip ── */}
-      <div style={{
-        position: 'relative', zIndex: 3,
-        background: 'linear-gradient(90deg, #FFE082 0%, #D4AF37 50%, #FFE082 100%)',
-        padding: '3px 10px',
-        display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px',
-      }}>
-        <span style={{ fontSize: '8.5px', color: '#000000', fontWeight: 900 }}>
-          <span style={{ fontWeight: 900 }}>Email:</span> {ORG_EMAIL}
-        </span>
-        <span style={{ fontSize: '8.5px', color: '#000000', fontWeight: 900 }}>
-          <span style={{ fontWeight: 900 }}>Web:</span> {ORG_WEBSITE}
-        </span>
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* ── BOTTOM FOOTER STRIP ── */}
+        <div style={{
+          background: '#3B1D0D', padding: '3.5px 8px',
+          display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+          borderTop: '1px solid #C88A58', marginTop: 'auto',
+        }}>
+          {/* Location */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#C88A58" strokeWidth="2.5">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            <span style={{ fontSize: '7px', color: '#FFFFFF', fontWeight: 800, textTransform: 'uppercase' }}>
+              {ORG_RETURN}
+            </span>
+          </div>
+
+          {/* Contact */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#C88A58" strokeWidth="2.5">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+            </svg>
+            <span style={{ fontSize: '7px', color: '#FFFFFF', fontWeight: 800 }}>
+              {ORG_PHONE}
+            </span>
+          </div>
+
+          {/* Website */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#C88A58" strokeWidth="2.5">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            </svg>
+            <span style={{ fontSize: '7px', color: '#FFFFFF', fontWeight: 800 }}>
+              {ORG_WEBSITE}
+            </span>
+          </div>
+        </div>
+
       </div>
     </CardShell>
   );
@@ -368,3 +511,5 @@ export function ZakatCardPreview({ card }) {
     </div>
   );
 }
+
+export default ZakatCardPreview;

@@ -35,10 +35,10 @@ function CardShell({ children }) {
       <div style={{
         position: 'absolute', inset: 0, zIndex: 1,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        opacity: 0.18, pointerEvents: 'none',
-        filter: 'contrast(1.2)',
+        opacity: 0.22, pointerEvents: 'none',
+        filter: 'contrast(1.25)',
       }}>
-        <img src={logoSrc} alt="" style={{ width: '56%', height: 'auto', objectFit: 'contain' }} />
+        <img src={logoSrc} alt="" style={{ width: '70%', height: 'auto', objectFit: 'contain' }} />
       </div>
       {children}
     </div>
@@ -94,7 +94,7 @@ export function CardFront({ member }) {
           padding: '4px 4px 0 2px', minWidth: 0,
         }}>
           {/* Header: KUTCHI MUSLIM LOHARWADA WELFARE */}
-          <div style={{ textAlign: 'center', paddingRight: '48px' }}>
+          <div style={{ textAlign: 'center', paddingRight: '56px' }}>
             <div style={{
               fontSize: '8.5px', fontWeight: 900, color: '#000000',
               letterSpacing: '0.01em', lineHeight: 1.15, textTransform: 'uppercase',
@@ -154,14 +154,19 @@ export function CardFront({ member }) {
           </div>
         </div>
 
-        {/* ── TOP-RIGHT: Logo Badge ── */}
+        {/* ── TOP-RIGHT: Enlarged Prominent Logo Badge ── */}
         <div style={{
-          position: 'absolute', top: '3px', right: '4px',
+          position: 'absolute', top: '2px', right: '3px',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           zIndex: 10,
+          background: 'rgba(6, 21, 57, 0.08)',
+          border: '1.5px solid rgba(6, 21, 57, 0.25)',
+          borderRadius: '8px',
+          padding: '2px',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
         }}>
           <img src={logoSrc} alt="Logo" style={{
-            width: '42px', height: '42px', objectFit: 'contain',
+            width: '52px', height: '52px', objectFit: 'contain',
           }} />
         </div>
       </div>
