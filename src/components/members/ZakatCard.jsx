@@ -123,21 +123,8 @@ export function ZakatCardFront({ card }) {
             </div>
           </div>
 
-          {/* Top Right MEMBER ID / Year Badge inside Brown Curve */}
-          <div style={{
-            textAlign: 'right', zIndex: 3, paddingRight: '4px', paddingTop: '2px'
-          }}>
-            <div style={{ fontSize: '7px', fontWeight: 800, color: '#E0C0A8', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-              CARD NO
-            </div>
-            <div style={{ fontSize: '13px', fontWeight: 900, color: '#FFFFFF', letterSpacing: '0.04em', lineHeight: 1 }}>
-              2025
-            </div>
-            {/* Small ornament under year */}
-            <div style={{ fontSize: '6px', color: '#D49B6A', textAlign: 'center', marginTop: '1px' }}>
-              &#9670;&#9644;&#9670;
-            </div>
-          </div>
+          {/* Top Right Corner (Clean Brown Wave) */}
+          <div style={{ width: '40px', height: '20px', zIndex: 3 }} />
         </div>
 
         {/* ── CENTER SECTION: LEFT DETAILS & RIGHT PHOTO FRAME ── */}
@@ -331,8 +318,8 @@ export function ZakatCardBack({ card }) {
         </defs>
 
         {/* Left Side Curved Panel */}
-        <path d="M 0 0 L 95 0 C 75 60 75 140 95 190 L 0 190 Z" fill="url(#backBrownGrad)" />
-        <path d="M 95 0 C 75 60 75 140 95 190" fill="none" stroke="#C88A58" strokeWidth="2.5" />
+        <path d="M 0 0 L 115 0 C 95 65 95 135 115 190 L 0 190 Z" fill="url(#backBrownGrad)" />
+        <path d="M 115 0 C 95 65 95 135 115 190" fill="none" stroke="#C88A58" strokeWidth="2.5" />
       </svg>
 
       {/* ── CARD BODY ── */}
@@ -343,23 +330,25 @@ export function ZakatCardBack({ card }) {
 
           {/* Left Brown Section: Logo & Jamaat Title */}
           <div style={{
-            width: '74px', flexShrink: 0, display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center', textAlign: 'center', pr: '4px',
+            width: '90px', flexShrink: 0, display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', textAlign: 'center',
+            paddingRight: '6px', paddingLeft: '4px', boxSizing: 'border-box',
           }}>
-            <img src={logoSrc} alt="Logo" style={{ width: '36px', height: '36px', objectFit: 'contain', filter: 'brightness(1.2)' }} />
+            <img src={logoSrc} alt="Logo" style={{ width: '34px', height: '34px', objectFit: 'contain', filter: 'brightness(1.2)' }} />
             <div style={{
-              fontSize: '7.5px', fontWeight: 900, color: '#FFFFFF',
-              letterSpacing: '0.04em', lineHeight: 1.15, textTransform: 'uppercase', marginTop: '6px',
+              fontSize: '7px', fontWeight: 900, color: '#FFFFFF',
+              letterSpacing: '0.02em', lineHeight: 1.15, textTransform: 'uppercase', marginTop: '5px',
+              maxWidth: '82px', wordBreak: 'break-word',
             }}>
               KUTCHI MUSLIM LOHARWADA WELFARE JAMAT
             </div>
-            <div style={{ fontSize: '6px', color: '#D49B6A', marginTop: '4px' }}>
+            <div style={{ fontSize: '6px', color: '#D49B6A', marginTop: '3px' }}>
               &#9670;&#9644;&#9670;
             </div>
           </div>
 
           {/* Center & Right Sections: Rules + Large Verification QR Code */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingLeft: '12px', minWidth: 0 }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingLeft: '8px', minWidth: 0 }}>
 
             {/* Header: Property Notice */}
             <div style={{ textAlign: 'center', marginBottom: '6px' }}>
