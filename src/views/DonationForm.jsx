@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useDonationStore } from '../store/donationStore';
 import { useCoaStore } from '../store/coaStore';
 import { useBeneficiaryStore } from '../store/beneficiaryStore';
-import { Heart, ChevronLeft, Save, ShieldCheck, CheckCircle2, Users, UserCheck, Sparkles, AlertCircle } from 'lucide-react';
+import { beneficiaryService } from '../services/beneficiaryService';
+import { Heart, ChevronLeft, Save, ShieldCheck, CheckCircle2, Users, UserCheck, Sparkles, AlertCircle, Camera, Loader2, Upload } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
 import { DONATION_TYPES } from '../constants/donationTypes';
 
@@ -56,6 +57,44 @@ export const DonationForm = () => {
     if (!form.beneficiaryId) return null;
     return beneficiaries.find(b => b.id === form.beneficiaryId) || null;
   }, [form.beneficiaryId, beneficiaries]);
+
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoProgress, setPhotoProgress] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const handleUploadRecipientPhoto = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedBeneficiary) return;
+    e.target.value = '';
+
+    const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      showToast('Please choose a valid image file (JPEG, PNG, WEBP).', 'warning');
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      showToast('Image is too large. Maximum size is 8MB.', 'warning');
+      return;
+    }
+
+    setUploadingPhoto(true);
+    setPhotoProgress(0);
+
+    try {
+      const urls = await beneficiaryService.uploadFile('photo', file, (pct) => setPhotoProgress(pct));
+      const newPhotoUrl = urls?.photoUrl || urls?.url;
+      if (newPhotoUrl) {
+        await beneficiaryService.update(selectedBeneficiary.id, { photoUrl: newPhotoUrl });
+        await fetchBeneficiaries();
+        showToast('Recipient photo uploaded & updated successfully!', 'success');
+      }
+    } catch (err) {
+      showToast(err?.message || 'Failed to upload photo', 'error');
+    } finally {
+      setUploadingPhoto(false);
+      setTimeout(() => setPhotoProgress(null), 800);
+    }
+  };
 
   const hasDonationThisMonth = useMemo(() => {
     if (!form.beneficiaryId) return false;
@@ -271,20 +310,50 @@ export const DonationForm = () => {
                   )}
                   {selectedBeneficiary && (
                     <div className="mt-3.5 p-3.5 rounded-xl bg-slate-950/90 border border-amber-500/40 flex flex-col sm:flex-row items-center sm:items-start gap-4 shadow-lg">
-                      {/* Profile Picture Frame */}
-                      <div className="relative w-20 h-24 rounded-xl border-2 border-amber-500/60 overflow-hidden bg-slate-900 shrink-0 flex items-center justify-center shadow-md">
-                        {selectedBeneficiary.photoUrl ? (
-                          <img
-                            src={selectedBeneficiary.photoUrl}
-                            alt={selectedBeneficiary.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex flex-col items-center justify-center text-slate-500 p-2 text-center">
-                            <Users className="w-8 h-8 text-amber-500/60 mb-1" />
-                            <span className="text-[9.5px] font-bold text-slate-400">No Photo</span>
-                          </div>
-                        )}
+                      {/* Profile Picture Frame with Interactive Click-to-Upload */}
+                      <div className="relative group shrink-0">
+                        <div
+                          onClick={() => !uploadingPhoto && fileInputRef.current?.click()}
+                          title="Click to upload or change recipient photo"
+                          className={`relative w-20 h-24 sm:w-24 sm:h-28 rounded-xl border-2 border-dashed
+                            ${uploadingPhoto ? 'cursor-wait border-amber-400' : 'cursor-pointer border-amber-500/60 hover:border-amber-400'}
+                            overflow-hidden bg-slate-900 flex flex-col items-center justify-center shadow-lg transition-all`}
+                        >
+                          {selectedBeneficiary.photoUrl ? (
+                            <>
+                              <img
+                                src={selectedBeneficiary.photoUrl}
+                                alt={selectedBeneficiary.name}
+                                className="w-full h-full object-cover group-hover:opacity-40 transition-opacity"
+                              />
+                              <div className="absolute inset-0 bg-slate-950/75 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity p-1 text-center">
+                                <Camera className="w-5 h-5 text-amber-400 mb-1" />
+                                <span className="text-[9.5px] font-bold text-amber-300">Change Photo</span>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center group-hover:text-amber-300 transition-colors">
+                              <Camera className="w-7 h-7 text-amber-400 mb-1 group-hover:scale-110 transition-transform" />
+                              <span className="text-[9.5px] font-bold text-amber-400">Upload Photo</span>
+                            </div>
+                          )}
+
+                          {uploadingPhoto && (
+                            <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center gap-1.5 z-20">
+                              <Loader2 className="w-5 h-5 text-amber-400 animate-spin" />
+                              <span className="text-[10px] font-bold text-amber-300">{photoProgress ?? 0}%</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/gif,image/webp"
+                          onChange={handleUploadRecipientPhoto}
+                          className="hidden"
+                          disabled={uploadingPhoto}
+                        />
                       </div>
 
                       {/* Recipient Data & Badges */}
