@@ -4,24 +4,23 @@ import logoSrc from '../../assets/logo.png';
 
 const ORG_LINE1    = 'KUTCHI MUSLIM LOHARWADA';
 const ORG_LINE2    = 'WELFARE JAMAT';
-const ORG_REGD     = '(REGD. 1319)';
+const ORG_REGD     = '(REGD. 1219)';
 const ORG_RETURN   = 'Kutchi Muslim Loharwada Jamat, Jumma Baloch Road, New Kalri, Lyari, Karachi.';
 const ORG_EMAIL    = 'info@kmlwj.org';
 const ORG_WEBSITE  = 'www.kmlwj.org';
 
-/* ── Design palette (requested warm brown theme) ── */
-const PRIMARY_BG     = '#5A382D';
-const SECONDARY_BG   = '#6B4638';
-const ACCENT_BROWN   = '#7A5243';
-const LIGHT_CREAM    = '#EAD8C8';
-const BORDER         = '#C9A88A';
-const DIVIDER        = '#B99272';
+/* ── Design palette (Bright Warm Gold/Amber & Brown) ── */
+const PRIMARY_BG     = '#6D2800';  // Rich warm brown
+const BORDER         = '#E5B83B';  // Bright gold border
+const ACCENT_BROWN   = '#E5B83B';  // Bright gold footer strip
+const LIGHT_CREAM    = '#FFE082';  // Bright golden yellow text
+const DIVIDER        = '#FF9800';  // Bright orange divider
 const PRIMARY_TEXT   = '#FFFFFF';
-const SECONDARY_TEXT = '#EAD8C8';
-const MUTED_TEXT     = '#D7C2B3';
-const BADGE_BG       = '#E6C7AE';
-const BADGE_TEXT     = '#4A2E24';
-const WATERMARK_OPACITY = 0.082;
+const SECONDARY_TEXT = '#FFD54F';  // Bright gold labels
+const MUTED_TEXT     = '#FFECB3';
+const BADGE_BG       = '#FFFFFF';
+const DARK_TEXT      = '#2C1605';
+const WATERMARK_OPACITY = 0.14;
 
 function fmt(val) { return val || '—'; }
 function fmtDate(val) {
@@ -55,7 +54,7 @@ function CardShell({ children }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         opacity: WATERMARK_OPACITY, pointerEvents: 'none',
       }}>
-        <img src={logoSrc} alt="" style={{ width: '55%', height: 'auto', objectFit: 'contain' }} />
+        <img src={logoSrc} alt="" style={{ width: '58%', height: 'auto', objectFit: 'contain' }} />
       </div>
       {children}
     </div>
@@ -69,19 +68,9 @@ export function ZakatCardFront({ card }) {
   const displayName = beneficiary?.name || member?.fullName || '';
   const displayCnic = beneficiary?.cnic || null;
 
-  /* ── QR verification URL: prefer zakat card number, fall back to member ── */
-  const VERIFY_BASE = (typeof window !== 'undefined' && window.location?.origin)
-    ? window.location.origin
-    : 'https://kmlwj.com';
-  const qrValue = card?.cardNumber
-    ? `${VERIFY_BASE}/verify/zakat/${encodeURIComponent(card.cardNumber)}`
-    : member?.memberNo
-    ? `${VERIFY_BASE}/verify/member/${encodeURIComponent(member.memberNo)}`
-    : null;
-
   return (
     <CardShell>
-      {/* ── BODY: band + photo | header + details + logo/qr ── */}
+      {/* ── BODY: band + photo | header + details + big logo ── */}
       <div style={{
         position: 'relative', zIndex: 3, flex: 1,
         display: 'flex', flexDirection: 'row',
@@ -89,30 +78,30 @@ export function ZakatCardFront({ card }) {
         {/* ── LEFT: Gold vertical band with portrait ── */}
         <div style={{
           position: 'relative', flexShrink: 0,
-          width: '68px', alignSelf: 'stretch',
+          width: '72px', alignSelf: 'stretch',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <div style={{
             position: 'absolute', top: 0, bottom: 0, left: '50%',
             transform: 'translateX(-50%)',
-            width: '14px',
+            width: '16px',
             background: BORDER,
             borderRadius: '2px',
           }} />
           <div style={{
             position: 'relative', zIndex: 2,
-            width: '46px', height: '58px',
-            background: LIGHT_CREAM,
+            width: '50px', height: '62px',
+            background: PRIMARY_TEXT,
             borderRadius: '10px',
             border: `3px solid ${BORDER}`,
             overflow: 'hidden',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 3px 8px rgba(0,0,0,0.5)',
+            boxShadow: '0 4px 10px rgba(0,0,0,0.5)',
           }}>
             {(beneficiary?.photoUrl || member?.photoUrl) ? (
               <img src={beneficiary?.photoUrl || member?.photoUrl} alt="Photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              <span style={{ fontSize: '5px', color: MUTED_TEXT, fontWeight: 500, textAlign: 'center', lineHeight: 1.3 }}>portrait{'\n'}here</span>
+              <span style={{ fontSize: '6px', color: '#555', fontWeight: 600, textAlign: 'center', lineHeight: 1.3 }}>portrait{'\n'}here</span>
             )}
           </div>
         </div>
@@ -120,37 +109,37 @@ export function ZakatCardFront({ card }) {
         {/* ── MAIN: header + details ── */}
         <div style={{
           flex: 1, display: 'flex', flexDirection: 'column',
-          padding: '6px 6px 0 6px', minWidth: 0,
+          padding: '5px 6px 0 4px', minWidth: 0,
         }}>
           {/* Header */}
-          <div style={{ textAlign: 'center', paddingRight: '44px' }}>
+          <div style={{ textAlign: 'center', paddingRight: '52px' }}>
             <div style={{
-              fontSize: '8.5px', fontWeight: 800, color: LIGHT_CREAM,
-              letterSpacing: '0.05em', lineHeight: 1.3, textTransform: 'uppercase',
+              fontSize: '10px', fontWeight: 900, color: LIGHT_CREAM,
+              letterSpacing: '0.04em', lineHeight: 1.25, textTransform: 'uppercase',
             }}>
               {ORG_LINE1}
             </div>
             <div style={{
-              fontSize: '8.5px', fontWeight: 800, color: LIGHT_CREAM,
-              letterSpacing: '0.05em', lineHeight: 1.3, textTransform: 'uppercase',
+              fontSize: '10px', fontWeight: 900, color: LIGHT_CREAM,
+              letterSpacing: '0.04em', lineHeight: 1.25, textTransform: 'uppercase',
             }}>
               {ORG_LINE2}
             </div>
             <div style={{
-              fontSize: '5px', color: SECONDARY_TEXT, fontWeight: 700,
+              fontSize: '6.5px', color: MUTED_TEXT, fontWeight: 700,
               letterSpacing: '0.06em', marginTop: '1px', lineHeight: 1.2,
             }}>
               {ORG_REGD}
             </div>
             <div style={{
-              fontSize: '7px', fontWeight: 800, color: LIGHT_CREAM,
-              letterSpacing: '0.18em', marginTop: '2px', textTransform: 'uppercase',
+              fontSize: '9.5px', fontWeight: 900, color: LIGHT_CREAM,
+              letterSpacing: '0.2em', marginTop: '2px', textTransform: 'uppercase',
             }}>
               ZAKAT CARD
             </div>
             <div style={{
               height: '2px', background: DIVIDER,
-              margin: '2px auto 0', width: '80%',
+              margin: '3px auto 0', width: '85%',
               borderRadius: '1px',
             }} />
           </div>
@@ -170,15 +159,15 @@ export function ZakatCardFront({ card }) {
               ['Zakat Amount',  fmtAmount(card?.zakatAmount)],
               ['Issue Date',    fmtDate(card?.issueDate)],
             ].filter(([, v]) => v).map(([label, value]) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '3px' }}>
+              <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
                 <span style={{
-                  fontSize: '6.5px', color: SECONDARY_TEXT, fontWeight: 800,
-                  minWidth: '62px', flexShrink: 0, letterSpacing: '0.01em',
+                  fontSize: '8px', color: SECONDARY_TEXT, fontWeight: 800,
+                  minWidth: '76px', flexShrink: 0, letterSpacing: '0.01em',
                 }}>
                   {label}:
                 </span>
                 <span style={{
-                  fontSize: '6.5px', color: PRIMARY_TEXT, fontWeight: 600,
+                  fontSize: '8px', color: PRIMARY_TEXT, fontWeight: 700,
                   lineHeight: 1.2, wordBreak: 'break-all',
                 }}>
                   {fmt(value)}
@@ -188,45 +177,13 @@ export function ZakatCardFront({ card }) {
           </div>
         </div>
 
-        {/* ── TOP-RIGHT: Logo + QR stacked ── */}
+        {/* ── TOP-RIGHT: Bigger Logo (QR code moved to Back) ── */}
         <div style={{
-          position: 'absolute', top: '6px', right: '6px',
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', gap: '3px', zIndex: 10,
+          position: 'absolute', top: '6px', right: '8px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 10,
         }}>
-          <img src={logoSrc} alt="" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
-          {qrValue && (
-            <div style={{
-              background: BADGE_BG,
-              padding: '2px',
-              border: `1px solid ${BORDER}`,
-              borderRadius: '3px',
-              width: '36px',
-              height: '36px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxSizing: 'border-box',
-            }}>
-              {/* High-resolution SVG QR: renders at 512px internal, scaled sharply via CSS */}
-              <QRCodeSVG
-                value={qrValue}
-                size={512}
-                bgColor={BADGE_BG}
-                fgColor="#000000"
-                level="H"
-                includeMargin={true}
-                marginSize={4}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'block',
-                  imageRendering: 'pixelated',
-                  shapeRendering: 'crispEdges',
-                }}
-              />
-            </div>
-          )}
+          <img src={logoSrc} alt="Logo" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
         </div>
       </div>
 
@@ -235,13 +192,13 @@ export function ZakatCardFront({ card }) {
         position: 'relative', zIndex: 3,
         background: ACCENT_BROWN,
         padding: '4px 8px',
-        display: 'flex', alignItems: 'center', gap: '5px',
-        minHeight: '20px',
+        display: 'flex', alignItems: 'center', gap: '6px',
+        minHeight: '22px',
       }}>
-        <svg width="8" height="10" viewBox="0 0 24 32" style={{ flexShrink: 0 }}>
-          <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0zm0 16.8A4.8 4.8 0 1 1 12 7.2a4.8 4.8 0 0 1 0 9.6z" fill={PRIMARY_TEXT}/>
+        <svg width="10" height="12" viewBox="0 0 24 32" style={{ flexShrink: 0 }}>
+          <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0zm0 16.8A4.8 4.8 0 1 1 12 7.2a4.8 4.8 0 0 1 0 9.6z" fill={DARK_TEXT}/>
         </svg>
-        <span style={{ fontSize: '5.5px', color: PRIMARY_TEXT, fontWeight: 600, lineHeight: 1.35 }}>
+        <span style={{ fontSize: '7px', color: DARK_TEXT, fontWeight: 700, lineHeight: 1.35 }}>
           If found please return it to {ORG_RETURN}
         </span>
       </div>
@@ -256,17 +213,26 @@ export function ZakatCardBack({ card }) {
   const address = beneficiary?.address || member?.address;
   const mobile = beneficiary?.mobile || member?.mobile;
 
+  const VERIFY_BASE = (typeof window !== 'undefined' && window.location?.origin)
+    ? window.location.origin
+    : 'https://kmlwj.com';
+  const qrValue = card?.cardNumber
+    ? `${VERIFY_BASE}/verify/zakat/${encodeURIComponent(card.cardNumber)}`
+    : member?.memberNo
+    ? `${VERIFY_BASE}/verify/member/${encodeURIComponent(member.memberNo)}`
+    : null;
+
   return (
     <CardShell>
       {/* ── HEADER ── */}
       <div style={{
         position: 'relative', zIndex: 3, textAlign: 'center',
-        padding: '7px 12px 4px',
+        padding: '6px 12px 4px',
         borderBottom: `2px solid ${BORDER}`,
       }}>
         <div style={{
-          fontSize: '8px', fontWeight: 800, color: LIGHT_CREAM,
-          letterSpacing: '0.2em', textTransform: 'uppercase',
+          fontSize: '9.5px', fontWeight: 900, color: LIGHT_CREAM,
+          letterSpacing: '0.22em', textTransform: 'uppercase',
         }}>
           BENEFICIARY INFORMATION
         </div>
@@ -275,41 +241,87 @@ export function ZakatCardBack({ card }) {
       {/* ── BODY ── */}
       <div style={{
         position: 'relative', zIndex: 3, flex: 1,
-        display: 'flex', flexDirection: 'column', gap: '4px',
-        padding: '6px 16px 0 18px',
+        display: 'flex', flexDirection: 'column',
+        padding: '6px 12px 0 14px',
       }}>
-        {[
-          ['Ghaam',        member?.ghamName],
-          ['Address',      address ? (address.length > 40 ? address.slice(0, 40) + '…' : address) : null],
-          ['Contact',      mobile],
-          ['Issuing Date', fmtDate(card?.issueDate)],
-        ].filter(([, v]) => v).map(([label, value]) => (
-          <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-            <span style={{
-              fontSize: '7px', color: SECONDARY_TEXT, fontWeight: 800,
-              minWidth: '58px', flexShrink: 0,
-            }}>
-              {label}:
-            </span>
-            <span style={{ fontSize: '7px', color: PRIMARY_TEXT, fontWeight: 600, lineHeight: 1.3 }}>
-              {fmt(value)}
-            </span>
+        {/* Details list + QR Code side-by-side */}
+        <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', flex: 1 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, paddingRight: '6px' }}>
+            {[
+              ['Ghaam',        member?.ghamName],
+              ['Address',      address ? (address.length > 45 ? address.slice(0, 45) + '…' : address) : null],
+              ['Contact',      mobile],
+              ['Issuing Date', fmtDate(card?.issueDate)],
+            ].filter(([, v]) => v).map(([label, value]) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                <span style={{
+                  fontSize: '8.5px', color: SECONDARY_TEXT, fontWeight: 800,
+                  minWidth: '68px', flexShrink: 0,
+                }}>
+                  {label}:
+                </span>
+                <span style={{ fontSize: '8.5px', color: PRIMARY_TEXT, fontWeight: 700, lineHeight: 1.3 }}>
+                  {fmt(value)}
+                </span>
+              </div>
+            ))}
           </div>
-        ))}
+
+          {/* QR Code placed on Back side */}
+          {qrValue && (
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', flexShrink: 0,
+              marginLeft: '4px'
+            }}>
+              <div style={{
+                background: BADGE_BG,
+                padding: '3px',
+                borderRadius: '4px',
+                width: '46px',
+                height: '46px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxSizing: 'border-box',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+              }}>
+                <QRCodeSVG
+                  value={qrValue}
+                  size={512}
+                  bgColor={BADGE_BG}
+                  fgColor="#000000"
+                  level="H"
+                  includeMargin={true}
+                  marginSize={4}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'block',
+                    imageRendering: 'pixelated',
+                    shapeRendering: 'crispEdges',
+                  }}
+                />
+              </div>
+              <span style={{ fontSize: '5.5px', color: SECONDARY_TEXT, fontWeight: 800, letterSpacing: '0.04em' }}>
+                VERIFY QR
+              </span>
+            </div>
+          )}
+        </div>
 
         {/* Signature lines */}
         <div style={{
-          marginTop: 'auto', paddingBottom: '5px',
-          display: 'flex', justifyContent: 'space-between',
+          marginTop: 'auto', paddingBottom: '4px',
+          display: 'flex', justifyContent: 'space-around',
           alignItems: 'flex-end',
         }}>
           {['Chairman', 'President'].map(title => (
-            <div key={title} style={{ textAlign: 'center', minWidth: '68px' }}>
+            <div key={title} style={{ textAlign: 'center', minWidth: '75px' }}>
               <div style={{
-                borderBottom: `1px solid ${BORDER}`,
-                marginBottom: '2px', height: '12px',
+                borderBottom: `1.5px solid ${BORDER}`,
+                marginBottom: '2px', height: '10px',
               }} />
-              <span style={{ fontSize: '6px', color: PRIMARY_TEXT, fontWeight: 700, letterSpacing: '0.04em' }}>
+              <span style={{ fontSize: '7.5px', color: PRIMARY_TEXT, fontWeight: 800, letterSpacing: '0.04em' }}>
                 {title}
               </span>
             </div>
@@ -322,12 +334,12 @@ export function ZakatCardBack({ card }) {
         position: 'relative', zIndex: 3,
         background: ACCENT_BROWN,
         padding: '4px 10px',
-        display: 'flex', flexWrap: 'wrap', gap: '12px',
+        display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px',
       }}>
-        <span style={{ fontSize: '5.8px', color: PRIMARY_TEXT, fontWeight: 600 }}>
+        <span style={{ fontSize: '7.5px', color: DARK_TEXT, fontWeight: 700 }}>
           <span style={{ fontWeight: 800 }}>Email:</span> {ORG_EMAIL}
         </span>
-        <span style={{ fontSize: '5.8px', color: PRIMARY_TEXT, fontWeight: 600 }}>
+        <span style={{ fontSize: '7.5px', color: DARK_TEXT, fontWeight: 700 }}>
           <span style={{ fontWeight: 800 }}>Web:</span> {ORG_WEBSITE}
         </span>
       </div>
