@@ -252,23 +252,6 @@ export function ZakatCardFront({ card }) {
             <QRCodeSVG value={qrValue} size={128} style={{ width: '100%', height: '100%' }} />
           </div>
 
-          {/* Right Signature Area inside Brown Curve */}
-          <div style={{ zIndex: 10, textAlign: 'center', paddingRight: '4px' }}>
-            {/* Cursive Signature Graphic */}
-            <div style={{
-              fontFamily: "'Brush Script MT', 'Dancing Script', 'Cursive', cursive",
-              fontSize: '14px', color: '#FFFFFF', fontStyle: 'italic',
-              lineHeight: 1, marginBottom: '2px', textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-            }}>
-              Suj
-            </div>
-            <div style={{
-              fontSize: '6.5px', fontWeight: 800, color: '#E0C0A8',
-              letterSpacing: '0.12em', textTransform: 'uppercase',
-            }}>
-              AUTHORIZED SIGNATURE
-            </div>
-          </div>
         </div>
 
         {/* ── BOTTOM FULL-WIDTH SLOGAN STRIP ── */}
