@@ -4,6 +4,7 @@ import { logAudit } from '../_utils/audit.js';
 import { logger } from '../_utils/logger.js';
 import { AccountingSyncService } from './accounting-sync.service.js';
 import { FundValidationService, InsufficientFundsError } from './fund-validation.service.js';
+import { AccountingBalanceRebuildService } from './accounting-balance-rebuild.service.js';
 
 export interface AccountingLinePayload {
   accountCode?: string;      // GL Code (e.g., '1010101' or '3010101')
@@ -2168,116 +2169,8 @@ export class AccountingService {
   }
 
   static async getFinancialSummary(startDate?: string, endDate?: string) {
-    const allAccounts = await prisma.account.findMany({
-      where: { isDeleted: false },
-      include: { accountType: true }
-    });
-
-    let totalAssets = new Prisma.Decimal(0);
-    let totalLiabilities = new Prisma.Decimal(0);
-    let totalEquity = new Prisma.Decimal(0);
-    let totalRevenue = new Prisma.Decimal(0);
-    let totalExpense = new Prisma.Decimal(0);
-    let cashBalance = new Prisma.Decimal(0);
-    let bankBalance = new Prisma.Decimal(0);
-    // Balance as of the instant before `startDate` — the "Opening Cash"/
-    // "Opening Bank" a period's Cash in Hand formula (Opening + Receipts -
-    // Payments) reconciles against. Without this, Cash in Hand (cumulative
-    // since account inception) and Net Surplus (this period only) look
-    // unrelated even though both are individually correct.
-    let openingCashBalance = new Prisma.Decimal(0);
-    let openingBankBalance = new Prisma.Decimal(0);
-    let openingRetainedEarnings = new Prisma.Decimal(0);
-
-    const from = startDate ? new Date(startDate) : undefined;
-    const to = endDate ? AccountingService.endOfDay(endDate) : undefined;
-    const hasDateFilter = Boolean(from || to);
-
-    const periodAggregates = await AccountingService.getPostedAggregates({ from, to });
-    const cumulativeAggregates = hasDateFilter
-      ? await AccountingService.getPostedAggregates({ to })
-      : periodAggregates;
-    const priorAggregates = from
-      ? await AccountingService.getPostedAggregates({ to: new Date(from.getTime() - 1) })
-      : new Map<string, { debit: Prisma.Decimal; credit: Prisma.Decimal }>();
-
-    for (const acc of allAccounts) {
-      const typeName = (acc.accountType?.name || '').toUpperCase();
-      const isLeaf = !allAccounts.some(a => a.parentId === acc.id);
-      if (!isLeaf) continue;
-
-      const isPnl = ['REVENUE', 'INCOME', 'EXPENSE', 'EXPENSES'].includes(typeName);
-
-      let bal: Prisma.Decimal;
-      if (hasDateFilter && isPnl) {
-        bal = AccountingService.naturalBalance(typeName, 0, periodAggregates.get(acc.id));
-      } else {
-        bal = AccountingService.naturalBalance(typeName, acc.initialBalance, cumulativeAggregates.get(acc.id));
-      }
-
-      if (typeName === 'ASSET' || typeName === 'ASSETS') {
-        totalAssets = totalAssets.plus(bal);
-        // Opening = balance as of the instant before `from` (same
-        // priorAggregates already computed above for retained earnings).
-        // With no date filter, opening === closing, same as today.
-        const openingBal = from
-          ? AccountingService.naturalBalance(typeName, acc.initialBalance, priorAggregates.get(acc.id))
-          : bal;
-        if (this.isBankAccount(acc.accountName, acc.detailType)) {
-          bankBalance = bankBalance.plus(bal);
-          openingBankBalance = openingBankBalance.plus(openingBal);
-        } else if (this.isCashAccount(acc.accountName, acc.detailType)) {
-          cashBalance = cashBalance.plus(bal);
-          openingCashBalance = openingCashBalance.plus(openingBal);
-        }
-      } else if (typeName === 'LIABILITY' || typeName === 'LIABILITIES') {
-        totalLiabilities = totalLiabilities.plus(bal.lt(0) ? bal.abs() : bal);
-      } else if (typeName === 'EQUITY') {
-        totalEquity = totalEquity.plus(bal);
-      } else if (typeName === 'REVENUE' || typeName === 'INCOME') {
-        totalRevenue = totalRevenue.plus(bal);
-      } else if (typeName === 'EXPENSE' || typeName === 'EXPENSES' || (acc.glCode.startsWith('4') && !acc.glCode.startsWith('3') && !acc.glCode.startsWith('1') && !acc.glCode.startsWith('2'))) {
-        totalExpense = totalExpense.plus(bal);
-      }
-
-      if (startDate && isPnl) {
-        const prior = priorAggregates.get(acc.id);
-        const pd = prior?.debit ?? new Prisma.Decimal(0);
-        const pc = prior?.credit ?? new Prisma.Decimal(0);
-        if (typeName === 'REVENUE' || typeName === 'INCOME') {
-          openingRetainedEarnings = openingRetainedEarnings.plus(pc.minus(pd));
-        } else {
-          openingRetainedEarnings = openingRetainedEarnings.minus(pd.minus(pc));
-        }
-      }
-    }
-
-    const netPeriodIncome = totalRevenue.minus(totalExpense);
-    let retainedEarnings = netPeriodIncome;
-    if (startDate) {
-      retainedEarnings = retainedEarnings.plus(openingRetainedEarnings);
-    }
-
-    totalEquity = totalEquity.plus(retainedEarnings);
-
-    return {
-      totalAssets: totalAssets.toNumber(),
-      totalLiabilities: totalLiabilities.toNumber(),
-      totalEquity: totalEquity.toNumber(),
-      // Assets - Liabilities, independent of the Equity/retained-earnings
-      // rollup above — the direct "Net Assets" figure requested for the
-      // Dashboard, always internally consistent with totalAssets/totalLiabilities.
-      netAssets: totalAssets.minus(totalLiabilities).toNumber(),
-      totalRevenue: totalRevenue.toNumber(),
-      totalExpense: totalExpense.toNumber(),
-      cashBalance: Math.max(0, cashBalance.toNumber()),
-      bankBalance: Math.max(0, bankBalance.toNumber()),
-      openingCashBalance: Math.max(0, openingCashBalance.toNumber()),
-      openingBankBalance: Math.max(0, openingBankBalance.toNumber()),
-      netPeriodIncome: netPeriodIncome.toNumber(),
-      openingRetainedEarnings: openingRetainedEarnings.toNumber(),
-      retainedEarnings: retainedEarnings.toNumber()
-    };
+    const summary = await AccountingBalanceRebuildService.rebuildAllSummaries(prisma, startDate, endDate);
+    return summary;
   }
 
   static async getCashFlow(startDate?: string, endDate?: string) {
