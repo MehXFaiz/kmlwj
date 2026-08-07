@@ -24,20 +24,21 @@ import { showToast } from '../components/ui/Toast';
    Animated Counter Hook
 ───────────────────────────────────────────── */
 function useAnimatedCounter(target, duration = 1200, prefix = '', suffix = '', decimals = 0) {
-  const [value, setValue] = useState(0);
+  const numericTarget = Number.isFinite(Number(target)) ? Number(target) : 0;
+  const [value, setValue] = useState(numericTarget);
   const frameRef = useRef(null);
   const startRef = useRef(null);
-  const startValRef = useRef(0);
+  const startValRef = useRef(numericTarget);
 
   useEffect(() => {
-    // Guard against a transient non-finite target (e.g. a render before
-    // async data arrives) — animating toward NaN/Infinity would otherwise
-    // corrupt startValRef.current for every subsequent run.
-    if (!Number.isFinite(target)) return;
-
-    const startVal = startValRef.current;
-    const diff = target - startVal;
-    if (diff === 0) return;
+    const numTarget = Number.isFinite(Number(target)) ? Number(target) : 0;
+    const startVal = Number.isFinite(Number(startValRef.current)) ? Number(startValRef.current) : 0;
+    const diff = numTarget - startVal;
+    if (Math.abs(diff) < 0.0001) {
+      setValue(numTarget);
+      startValRef.current = numTarget;
+      return;
+    }
 
     startRef.current = null;
     if (frameRef.current) cancelAnimationFrame(frameRef.current);
@@ -47,36 +48,26 @@ function useAnimatedCounter(target, duration = 1200, prefix = '', suffix = '', d
     const animate = (ts) => {
       if (!startRef.current) startRef.current = ts;
       const elapsed = ts - startRef.current;
-      // Clamp to [0, 1] — elapsed can briefly go negative when this effect
-      // is re-entered (React StrictMode's double-invoke, or `target`
-      // changing again mid-animation) and a stale rAF callback still fires
-      // with an earlier timestamp than the new startRef. An unclamped lower
-      // bound feeds a negative `t` into easeOutQuart, whose (1-t)^4 term
-      // explodes — the astronomical "Rs 34,877,...e+63" values this produced.
       const progress = Math.min(Math.max(elapsed / duration, 0), 1);
       const eased = easeOutQuart(progress);
-      // The displayed value can never legitimately fall outside the range
-      // between where this animation started and where it's going — clamp
-      // defensively so any numerical instability in the easing curve (e.g.
-      // from overlapping animate() loops racing on the same refs) can never
-      // reach the screen as a garbled figure, regardless of its cause.
-      const lo = Math.min(startVal, target);
-      const hi = Math.max(startVal, target);
+      const lo = Math.min(startVal, numTarget);
+      const hi = Math.max(startVal, numTarget);
       const current = Math.min(Math.max(startVal + diff * eased, lo), hi);
       setValue(current);
       if (progress < 1) {
         frameRef.current = requestAnimationFrame(animate);
       } else {
-        startValRef.current = target;
+        startValRef.current = numTarget;
       }
     };
     frameRef.current = requestAnimationFrame(animate);
     return () => { if (frameRef.current) cancelAnimationFrame(frameRef.current); };
   }, [target, duration]);
 
+  const numValue = Number.isFinite(Number(value)) ? Number(value) : 0;
   const formatted = decimals > 0
-    ? value.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
-    : Math.round(value).toLocaleString();
+    ? numValue.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+    : Math.round(numValue).toLocaleString();
   return `${prefix}${formatted}${suffix}`;
 }
 

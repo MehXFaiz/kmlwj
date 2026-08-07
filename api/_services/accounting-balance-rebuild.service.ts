@@ -138,7 +138,7 @@ export class AccountingBalanceRebuildService {
           const pCredit = pAgg?.credit ?? new Prisma.Decimal(0);
           const netRev = pCredit.minus(pDebit);
           totalRevenue = totalRevenue.plus(netRev);
-        } else if (typeName === 'EXPENSE' || typeName === 'EXPENSES' || acc.glCode.startsWith('4')) {
+        } else if (typeName === 'EXPENSE' || typeName === 'EXPENSES') {
           const pAgg = periodMap.get(acc.id);
           const pDebit = pAgg?.debit ?? new Prisma.Decimal(0);
           const pCredit = pAgg?.credit ?? new Prisma.Decimal(0);
