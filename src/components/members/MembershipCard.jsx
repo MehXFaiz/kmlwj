@@ -35,19 +35,24 @@ function CardShell({ children }) {
       flex: 1,
       display: 'flex',
       flexDirection: 'column',
-      background: GREEN,
-      border: `4px solid ${GOLD}`,
+      background: 'linear-gradient(135deg, #01301B 0%, #00562E 50%, #014224 100%)',
+      border: `3.5px solid ${GOLD}`,
       borderRadius: 'inherit',
       boxSizing: 'border-box',
     }}>
-      {/* Watermark crest */}
+      {/* Background radial highlight & watermark */}
+      <div style={{
+        position: 'absolute', inset: 0, zIndex: 1,
+        background: 'radial-gradient(circle at 65% 35%, rgba(255, 213, 79, 0.08) 0%, transparent 60%)',
+        pointerEvents: 'none',
+      }} />
       <div style={{
         position: 'absolute', inset: 0, zIndex: 1,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         opacity: 0.16, pointerEvents: 'none',
-        filter: 'brightness(1.8) contrast(1.2)',
+        filter: 'brightness(2.0) contrast(1.3)',
       }}>
-        <img src={logoSrc} alt="" style={{ width: '58%', height: 'auto', objectFit: 'contain' }} />
+        <img src={logoSrc} alt="" style={{ width: '56%', height: 'auto', objectFit: 'contain' }} />
       </div>
       {children}
     </div>
@@ -58,7 +63,7 @@ function CardShell({ children }) {
 export function CardFront({ member }) {
   return (
     <CardShell>
-      {/* ── BODY: band + photo | header + details + big logo ── */}
+      {/* ── BODY: band + photo | header + details + logo ── */}
       <div style={{
         position: 'relative', zIndex: 3, flex: 1,
         display: 'flex', flexDirection: 'row',
@@ -66,28 +71,28 @@ export function CardFront({ member }) {
         {/* ── LEFT: Gold vertical band with portrait ── */}
         <div style={{
           position: 'relative', flexShrink: 0,
-          width: '84px', alignSelf: 'stretch',
+          width: '80px', alignSelf: 'stretch',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           {/* vertical band */}
           <div style={{
             position: 'absolute', top: 0, bottom: 0, left: '50%',
             transform: 'translateX(-50%)',
-            width: '18px',
-            background: GOLD,
+            width: '14px',
+            background: 'linear-gradient(180deg, #FFE082 0%, #D4AF37 50%, #B38F24 100%)',
             borderRadius: '2px',
           }} />
-          {/* Portrait (1:1 Aspect Ratio - 68px x 68px) */}
+          {/* Portrait (1:1 Aspect Ratio - 66px x 66px) */}
           <div style={{
             position: 'relative', zIndex: 2,
-            width: '68px', height: '68px',
+            width: '66px', height: '66px',
             aspectRatio: '1 / 1',
             background: WHITE,
             borderRadius: '10px',
-            border: `3px solid ${GOLD}`,
+            border: `2.5px solid ${GOLD}`,
             overflow: 'hidden',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 10px rgba(0,0,0,0.5)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
           }}>
             {member?.photoUrl ? (
               <img src={member.photoUrl} alt="Photo" style={{ width: '100%', height: '100%', objectFit: 'cover', aspectRatio: '1 / 1' }} />
@@ -102,40 +107,41 @@ export function CardFront({ member }) {
           flex: 1, display: 'flex', flexDirection: 'column',
           padding: '4px 4px 0 2px', minWidth: 0,
         }}>
-          {/* Header: KUTCHI MUSLIM LOHARWADA WELFARE in one single line without overlapping logo */}
-          <div style={{ textAlign: 'center', paddingRight: '56px' }}>
+          {/* Header: KUTCHI MUSLIM LOHARWADA WELFARE in one single line without logo overlap */}
+          <div style={{ textAlign: 'center', paddingRight: '54px' }}>
             <div style={{
               fontSize: '8.4px', fontWeight: 900, color: GOLD_LABEL,
-              letterSpacing: '0em', lineHeight: 1.2, textTransform: 'uppercase',
+              letterSpacing: '0.01em', lineHeight: 1.15, textTransform: 'uppercase',
               whiteSpace: 'nowrap',
             }}>
               {ORG_LINE1}
             </div>
             <div style={{
-              fontSize: '9.5px', fontWeight: 900, color: GOLD_LABEL,
-              letterSpacing: '0.08em', lineHeight: 1.2, textTransform: 'uppercase',
+              fontSize: '9.2px', fontWeight: 900, color: GOLD_LABEL,
+              letterSpacing: '0.06em', lineHeight: 1.15, textTransform: 'uppercase',
             }}>
-              {ORG_LINE2} <span style={{ fontSize: '7.5px', color: 'rgba(255,255,255,0.95)', fontWeight: 800, letterSpacing: '0.04em' }}>{ORG_REGD}</span>
+              {ORG_LINE2} <span style={{ fontSize: '7.2px', color: 'rgba(255,255,255,0.92)', fontWeight: 800 }}>{ORG_REGD}</span>
             </div>
+            
+            {/* Membership Card Gold Badge */}
             <div style={{
-              fontSize: '10.5px', fontWeight: 900, color: GOLD_TYPE,
-              letterSpacing: '0.16em', marginTop: '1px', textTransform: 'uppercase',
+              display: 'inline-block',
+              background: 'linear-gradient(135deg, #FFE082 0%, #D4AF37 100%)',
+              color: DARK_TEXT,
+              fontSize: '9px', fontWeight: 900,
+              letterSpacing: '0.14em', marginTop: '2px', padding: '1px 8px',
+              borderRadius: '3px', textTransform: 'uppercase',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
             }}>
               MEMBERSHIP CARD
             </div>
-            {/* Orange divider */}
-            <div style={{
-              height: '2px', background: DIVIDER,
-              margin: '2px auto 0', width: '85%',
-              borderRadius: '1px',
-            }} />
           </div>
 
           {/* Details */}
           <div style={{
             flex: 1, display: 'flex', flexDirection: 'column',
-            justifyContent: 'center', gap: '3px',
-            padding: '3px 2px 0 2px',
+            justifyContent: 'center', gap: '2.5px',
+            padding: '4px 2px 0 2px',
           }}>
             {[
               ['Membership No', member?.memberNo],
@@ -146,14 +152,14 @@ export function CardFront({ member }) {
             ].map(([label, value]) => (
               <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
                 <span style={{
-                  fontSize: '10.5px', color: GOLD_LABEL, fontWeight: 900,
-                  minWidth: '84px', flexShrink: 0, letterSpacing: '0.01em',
+                  fontSize: '9.2px', color: GOLD_LABEL, fontWeight: 900,
+                  minWidth: '78px', flexShrink: 0, letterSpacing: '0.01em',
                 }}>
                   {label}:
                 </span>
                 <span style={{
-                  fontSize: '10.5px', color: WHITE, fontWeight: 800,
-                  lineHeight: 1.25, wordBreak: 'break-all',
+                  fontSize: '9.2px', color: WHITE, fontWeight: 800,
+                  lineHeight: 1.2, wordBreak: 'break-all',
                 }}>
                   {fmt(value)}
                 </span>
@@ -167,14 +173,14 @@ export function CardFront({ member }) {
           position: 'absolute', top: '3px', right: '4px',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           zIndex: 10,
-          background: 'rgba(255, 213, 79, 0.2)',
+          background: 'rgba(255, 213, 79, 0.22)',
           border: '1.5px solid #FFD54F',
-          borderRadius: '10px',
+          borderRadius: '8px',
           padding: '2px',
           boxShadow: '0 0 8px rgba(255,213,79,0.5)',
         }}>
           <img src={logoSrc} alt="Logo" style={{
-            width: '42px', height: '42px', objectFit: 'contain',
+            width: '40px', height: '40px', objectFit: 'contain',
             filter: 'brightness(2.2) contrast(1.4) drop-shadow(0 0 3px #FFD54F)',
           }} />
         </div>
@@ -183,15 +189,15 @@ export function CardFront({ member }) {
       {/* ── FOOTER strip ── */}
       <div style={{
         position: 'relative', zIndex: 3,
-        background: GOLD,
+        background: 'linear-gradient(90deg, #FFE082 0%, #D4AF37 50%, #FFE082 100%)',
         padding: '3px 8px',
         display: 'flex', alignItems: 'center', gap: '6px',
-        minHeight: '22px',
+        minHeight: '20px',
       }}>
         <svg width="10" height="12" viewBox="0 0 24 32" style={{ flexShrink: 0 }}>
           <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0zm0 16.8A4.8 4.8 0 1 1 12 7.2a4.8 4.8 0 0 1 0 9.6z" fill={DARK_TEXT}/>
         </svg>
-        <span style={{ fontSize: '8.5px', color: DARK_TEXT, fontWeight: 800, lineHeight: 1.3 }}>
+        <span style={{ fontSize: '8px', color: DARK_TEXT, fontWeight: 800, lineHeight: 1.25 }}>
           If found please return it to {ORG_RETURN}
         </span>
       </div>
@@ -213,11 +219,12 @@ export function CardBack({ member }) {
       {/* ── HEADER ── */}
       <div style={{
         position: 'relative', zIndex: 3, textAlign: 'center',
-        padding: '5px 12px 3px',
+        padding: '4px 12px 3px',
+        background: 'rgba(255, 213, 79, 0.12)',
         borderBottom: `2px solid ${GOLD}`,
       }}>
         <div style={{
-          fontSize: '11px', fontWeight: 900, color: GOLD_TYPE,
+          fontSize: '10px', fontWeight: 900, color: GOLD_TYPE,
           letterSpacing: '0.22em', textTransform: 'uppercase',
         }}>
           MEMBER INFORMATION
@@ -232,7 +239,7 @@ export function CardBack({ member }) {
       }}>
         {/* Details list + QR Code side-by-side */}
         <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', flex: 1 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '3.5px', flex: 1, paddingRight: '4px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1, paddingRight: '4px' }}>
             {[
               ['Ghaam',        member?.ghamName],
               ['Address',      member?.address ? (member.address.length > 45 ? member.address.slice(0, 45) + '…' : member.address) : null],
@@ -241,12 +248,12 @@ export function CardBack({ member }) {
             ].map(([label, value]) => (
               <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
                 <span style={{
-                  fontSize: '10.5px', color: GOLD_LABEL, fontWeight: 900,
-                  minWidth: '78px', flexShrink: 0,
+                  fontSize: '9.2px', color: GOLD_LABEL, fontWeight: 900,
+                  minWidth: '72px', flexShrink: 0,
                 }}>
                   {label}:
                 </span>
-                <span style={{ fontSize: '10.5px', color: WHITE, fontWeight: 800, lineHeight: 1.25 }}>
+                <span style={{ fontSize: '9.2px', color: WHITE, fontWeight: 800, lineHeight: 1.25 }}>
                   {fmt(value)}
                 </span>
               </div>
@@ -262,14 +269,14 @@ export function CardBack({ member }) {
               <div style={{
                 background: WHITE,
                 padding: '3px',
-                borderRadius: '4px',
-                width: '52px',
-                height: '52px',
+                borderRadius: '5px',
+                width: '50px',
+                height: '50px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxSizing: 'border-box',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
               }}>
                 <QRCodeSVG
                   value={qrValue}
@@ -304,10 +311,10 @@ export function CardBack({ member }) {
           {['Chairman', 'President'].map(title => (
             <div key={title} style={{ textAlign: 'center', minWidth: '75px' }}>
               <div style={{
-                borderBottom: `1.5px solid ${WHITE}`,
+                borderBottom: `1.5px solid ${GOLD}`,
                 marginBottom: '2px', height: '10px',
               }} />
-              <span style={{ fontSize: '8.5px', color: WHITE, fontWeight: 900, letterSpacing: '0.04em' }}>
+              <span style={{ fontSize: '8px', color: GOLD_LABEL, fontWeight: 900, letterSpacing: '0.04em' }}>
                 {title}
               </span>
             </div>
@@ -318,14 +325,14 @@ export function CardBack({ member }) {
       {/* ── FOOTER strip ── */}
       <div style={{
         position: 'relative', zIndex: 3,
-        background: GOLD,
+        background: 'linear-gradient(90deg, #FFE082 0%, #D4AF37 50%, #FFE082 100%)',
         padding: '3px 10px',
         display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px',
       }}>
-        <span style={{ fontSize: '8.5px', color: DARK_TEXT, fontWeight: 800 }}>
+        <span style={{ fontSize: '8px', color: DARK_TEXT, fontWeight: 800 }}>
           <span style={{ fontWeight: 900 }}>Email:</span> {ORG_EMAIL}
         </span>
-        <span style={{ fontSize: '8.5px', color: DARK_TEXT, fontWeight: 800 }}>
+        <span style={{ fontSize: '8px', color: DARK_TEXT, fontWeight: 800 }}>
           <span style={{ fontWeight: 900 }}>Web:</span> {ORG_WEBSITE}
         </span>
       </div>
