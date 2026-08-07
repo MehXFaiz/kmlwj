@@ -188,7 +188,6 @@
       "bankVouchers": "Bank Vouchers",
       "bankVouchersDesc": "Manage bank payout payments and incoming receipt vouchers",
       "advancedReceipt": "Advanced Receipt",
-      "advancedPayment": "Advanced Payment",
       "bankPaymentsBP": "Bank Payments (BP)",
       "bankReceiptsBR": "Bank Receipts (BR)",
       "searchPlaceholder": "Search by voucher #, reference or remarks...",
