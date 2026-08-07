@@ -9,9 +9,12 @@ import {
   uuidSchema,
 } from './common.schema.js';
 
-const urlOrPathSchema = z.string().trim().refine((val) => !val.startsWith('data:'), {
-  message: 'Send an image URL, not Base64 data. Use /api/v1/upload first.',
-}).optional();
+const urlOrPathSchema = z.preprocess(
+  (val) => (val === null || val === undefined || val === '' ? undefined : val),
+  z.string().trim().refine((val) => !val.startsWith('data:'), {
+    message: 'Send an image URL, not Base64 data. Use /api/v1/upload first.',
+  }).optional()
+);
 
 export const createMemberSchema = z.object({
   memberNo: optionalSanitizedString({ max: 50, fieldName: 'Member No' }),
