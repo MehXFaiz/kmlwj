@@ -5,18 +5,9 @@ import logoSrc from '../../assets/logo.png';
 const ORG_LINE1    = 'KUTCHI MUSLIM LOHARWADA WELFARE';
 const ORG_LINE2    = 'JAMAT';
 const ORG_REGD     = '(REGD. 1219)';
-const ORG_RETURN   = 'Kutchi Muslim Loharwada Jamat, Jumma Baloch Road, New Kalri, Lyari, Karachi.';
+const ORG_RETURN   = 'If found please return it to Kutchi Muslim Loharwada Jamat, Jumma Baloch Road, New Kalri, Lyari, Karachi.';
 const ORG_EMAIL    = 'info@kmlwj.org';
 const ORG_WEBSITE  = 'www.kmlwj.org';
-
-/* ── Design palette (Bright, Vibrant & Highly Legible) ── */
-const GREEN      = '#006837';   // Vibrant bright emerald/forest green
-const GOLD       = '#D4AF37';   // Bright gold border and accents
-const GOLD_LABEL = '#FFD54F';   // High-contrast bright yellow/gold for labels
-const GOLD_TYPE  = '#FFC107';   // Bright yellow gold card type heading
-const DIVIDER    = '#FF9800';   // Bright orange rule under heading
-const WHITE      = '#FFFFFF';
-const DARK_TEXT  = '#0A2912';   // Rich dark text on golden footer strip
 
 function fmt(val) { return val || '—'; }
 function fmtDate(val) {
@@ -35,8 +26,8 @@ function CardShell({ children }) {
       flex: 1,
       display: 'flex',
       flexDirection: 'column',
-      background: 'linear-gradient(135deg, #CFD2D6 0%, #ECEEF0 50%, #C3C6CB 100%)',
-      border: '3.5px solid #D4AF37',
+      background: 'linear-gradient(135deg, #D7DCE2 0%, #F0F3F5 50%, #C9CED6 100%)',
+      border: '3.5px solid #061539',
       borderRadius: 'inherit',
       boxSizing: 'border-box',
     }}>
@@ -44,10 +35,10 @@ function CardShell({ children }) {
       <div style={{
         position: 'absolute', inset: 0, zIndex: 1,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        opacity: 0.22, pointerEvents: 'none',
-        filter: 'contrast(1.3)',
+        opacity: 0.18, pointerEvents: 'none',
+        filter: 'contrast(1.2)',
       }}>
-        <img src={logoSrc} alt="" style={{ width: '58%', height: 'auto', objectFit: 'contain' }} />
+        <img src={logoSrc} alt="" style={{ width: '56%', height: 'auto', objectFit: 'contain' }} />
       </div>
       {children}
     </div>
@@ -63,31 +54,31 @@ export function CardFront({ member }) {
         position: 'relative', zIndex: 3, flex: 1,
         display: 'flex', flexDirection: 'row',
       }}>
-        {/* ── LEFT: Gold Ribbon Band with Large Portrait (72px x 72px) ── */}
+        {/* ── LEFT: Dark Navy Vertical Ribbon Band with Profile Photo ── */}
         <div style={{
           position: 'relative', flexShrink: 0,
           width: '84px', alignSelf: 'stretch',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          {/* vertical gold stripe */}
+          {/* vertical navy stripe */}
           <div style={{
             position: 'absolute', top: 0, bottom: 0, left: '50%',
             transform: 'translateX(-50%)',
-            width: '16px',
-            background: 'linear-gradient(180deg, #FFE082 0%, #D4AF37 50%, #B38F24 100%)',
-            boxShadow: '0 0 6px rgba(212,175,55,0.4)',
+            width: '18px',
+            background: 'linear-gradient(180deg, #091D4A 0%, #061539 50%, #030C24 100%)',
+            boxShadow: '0 0 4px rgba(6,21,57,0.3)',
           }} />
-          {/* Portrait Photo (72px x 72px - 1:1 Aspect Ratio) */}
+          {/* Portrait Photo (70px x 70px) */}
           <div style={{
             position: 'relative', zIndex: 2,
-            width: '72px', height: '72px',
+            width: '70px', height: '70px',
             aspectRatio: '1 / 1',
             background: '#FFFFFF',
             borderRadius: '12px',
-            border: '3px solid #D4AF37',
+            border: '2.5px solid #061539',
             overflow: 'hidden',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
+            boxShadow: '0 3px 10px rgba(0,0,0,0.25)',
           }}>
             {member?.photoUrl ? (
               <img src={member.photoUrl} alt="Photo" style={{ width: '100%', height: '100%', objectFit: 'cover', aspectRatio: '1 / 1' }} />
@@ -102,8 +93,8 @@ export function CardFront({ member }) {
           flex: 1, display: 'flex', flexDirection: 'column',
           padding: '4px 4px 0 2px', minWidth: 0,
         }}>
-          {/* Header: KUTCHI MUSLIM LOHARWADA WELFARE in one single line */}
-          <div style={{ textAlign: 'center', paddingRight: '54px' }}>
+          {/* Header: KUTCHI MUSLIM LOHARWADA WELFARE */}
+          <div style={{ textAlign: 'center', paddingRight: '48px' }}>
             <div style={{
               fontSize: '8.5px', fontWeight: 900, color: '#000000',
               letterSpacing: '0.01em', lineHeight: 1.15, textTransform: 'uppercase',
@@ -115,24 +106,24 @@ export function CardFront({ member }) {
               fontSize: '9.5px', fontWeight: 900, color: '#000000',
               letterSpacing: '0.06em', lineHeight: 1.15, textTransform: 'uppercase',
             }}>
-              {ORG_LINE2} <span style={{ fontSize: '7.5px', color: '#333333', fontWeight: 800 }}>{ORG_REGD}</span>
+              {ORG_LINE2} <span style={{ fontSize: '7.5px', color: '#555555', fontWeight: 800 }}>{ORG_REGD}</span>
             </div>
             
-            {/* Bright Metallic Gold Pill Badge */}
+            {/* Deep Navy Pill Badge */}
             <div style={{
               display: 'inline-block',
-              background: 'linear-gradient(135deg, #FFE082 0%, #D4AF37 100%)',
-              color: '#000000',
-              fontSize: '10px', fontWeight: 900,
+              background: '#061539',
+              color: '#FFFFFF',
+              fontSize: '9.5px', fontWeight: 900,
               letterSpacing: '0.14em', marginTop: '2px', padding: '1.5px 12px',
-              borderRadius: '10px', textTransform: 'uppercase',
+              borderRadius: '12px', textTransform: 'uppercase',
               boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
             }}>
               MEMBERSHIP CARD
             </div>
           </div>
 
-          {/* Details list (larger 10.5px bold text) */}
+          {/* Details list */}
           <div style={{
             flex: 1, display: 'flex', flexDirection: 'column',
             justifyContent: 'center', gap: '2.5px',
@@ -147,7 +138,7 @@ export function CardFront({ member }) {
             ].map(([label, value]) => (
               <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
                 <span style={{
-                  fontSize: '10.5px', color: '#111111', fontWeight: 900,
+                  fontSize: '10.5px', color: '#000000', fontWeight: 900,
                   minWidth: '84px', flexShrink: 0, letterSpacing: '0.01em',
                 }}>
                   {label}:
@@ -163,19 +154,14 @@ export function CardFront({ member }) {
           </div>
         </div>
 
-        {/* ── TOP-RIGHT: Larger Logo Badge (48px x 48px) ── */}
+        {/* ── TOP-RIGHT: Logo Badge ── */}
         <div style={{
           position: 'absolute', top: '3px', right: '4px',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           zIndex: 10,
-          background: 'rgba(212, 175, 55, 0.18)',
-          border: '1.5px solid #D4AF37',
-          borderRadius: '8px',
-          padding: '2px',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
         }}>
           <img src={logoSrc} alt="Logo" style={{
-            width: '44px', height: '44px', objectFit: 'contain',
+            width: '42px', height: '42px', objectFit: 'contain',
           }} />
         </div>
       </div>
@@ -183,16 +169,16 @@ export function CardFront({ member }) {
       {/* ── FOOTER strip ── */}
       <div style={{
         position: 'relative', zIndex: 3,
-        background: 'linear-gradient(90deg, #FFE082 0%, #D4AF37 50%, #FFE082 100%)',
+        background: '#061539',
         padding: '3px 8px',
         display: 'flex', alignItems: 'center', gap: '6px',
         minHeight: '20px',
       }}>
         <svg width="10" height="12" viewBox="0 0 24 32" style={{ flexShrink: 0 }}>
-          <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0zm0 16.8A4.8 4.8 0 1 1 12 7.2a4.8 4.8 0 0 1 0 9.6z" fill="#000000"/>
+          <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0zm0 16.8A4.8 4.8 0 1 1 12 7.2a4.8 4.8 0 0 1 0 9.6z" fill="#FFFFFF"/>
         </svg>
-        <span style={{ fontSize: '8.5px', color: '#000000', fontWeight: 900, lineHeight: 1.25 }}>
-          If found please return it to {ORG_RETURN}
+        <span style={{ fontSize: '8px', color: '#FFFFFF', fontWeight: 700, lineHeight: 1.25 }}>
+          {ORG_RETURN}
         </span>
       </div>
     </CardShell>
@@ -214,11 +200,10 @@ export function CardBack({ member }) {
       <div style={{
         position: 'relative', zIndex: 3, textAlign: 'center',
         padding: '4px 12px 3px',
-        borderBottom: '2px solid #D4AF37',
-        background: 'rgba(212, 175, 55, 0.15)',
+        background: '#061539',
       }}>
         <div style={{
-          fontSize: '10.5px', fontWeight: 900, color: '#000000',
+          fontSize: '10.5px', fontWeight: 900, color: '#FFFFFF',
           letterSpacing: '0.22em', textTransform: 'uppercase',
         }}>
           MEMBER INFORMATION
@@ -242,7 +227,7 @@ export function CardBack({ member }) {
             ].map(([label, value]) => (
               <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
                 <span style={{
-                  fontSize: '10.5px', color: '#111111', fontWeight: 900,
+                  fontSize: '10.5px', color: '#000000', fontWeight: 900,
                   minWidth: '78px', flexShrink: 0,
                 }}>
                   {label}:
@@ -270,8 +255,8 @@ export function CardBack({ member }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxSizing: 'border-box',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                border: '1.5px solid #D4AF37',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                border: '1px solid #061539',
               }}>
                 <QRCodeSVG
                   value={qrValue}
@@ -306,7 +291,7 @@ export function CardBack({ member }) {
           {['Chairman', 'President'].map(title => (
             <div key={title} style={{ textAlign: 'center', minWidth: '75px' }}>
               <div style={{
-                borderBottom: '1.5px solid #D4AF37',
+                borderBottom: '1.5px solid #061539',
                 marginBottom: '2px', height: '10px',
               }} />
               <span style={{ fontSize: '8.5px', color: '#000000', fontWeight: 900, letterSpacing: '0.04em' }}>
@@ -320,16 +305,23 @@ export function CardBack({ member }) {
       {/* ── FOOTER strip ── */}
       <div style={{
         position: 'relative', zIndex: 3,
-        background: 'linear-gradient(90deg, #FFE082 0%, #D4AF37 50%, #FFE082 100%)',
+        background: '#061539',
         padding: '3px 10px',
-        display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        gap: '16px',
       }}>
-        <span style={{ fontSize: '8.5px', color: '#000000', fontWeight: 900 }}>
-          <span style={{ fontWeight: 900 }}>Email:</span> {ORG_EMAIL}
+        <span style={{ fontSize: '8.5px', color: '#FFFFFF', fontWeight: 700 }}>
+          <span style={{ fontWeight: 800 }}>Email:</span> {ORG_EMAIL}
         </span>
-        <span style={{ fontSize: '8.5px', color: '#000000', fontWeight: 900 }}>
-          <span style={{ fontWeight: 900 }}>Web:</span> {ORG_WEBSITE}
+        <span style={{ fontSize: '8.5px', color: '#FFFFFF', fontWeight: 700 }}>
+          <span style={{ fontWeight: 800 }}>Web:</span> {ORG_WEBSITE}
         </span>
+        {/* Sparkle icon at far right of back footer */}
+        <div style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', opacity: 0.9 }}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="#FFFFFF">
+            <path d="M12 0L14.59 8.41L23 11L14.59 13.59L12 22L9.41 13.59L1 11L9.41 8.41L12 0Z" />
+          </svg>
+        </div>
       </div>
     </CardShell>
   );
@@ -348,4 +340,5 @@ export function MembershipCardPreview({ member }) {
     </div>
   );
 }
+
 
