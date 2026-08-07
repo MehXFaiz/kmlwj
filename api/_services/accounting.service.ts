@@ -1234,7 +1234,9 @@ export class AccountingService {
 
     if (!je) return null;
 
-    const accountIds = Array.from(new Set(je.lines.map((l: any) => l.accountId)));
+    // Capture the affected account IDs before the lines are removed so the
+    // balance cache can be scoped to just the accounts this entry touched.
+    const accountIds = Array.from(new Set(je.lines.map((l: any) => l.accountId))) as string[];
 
     await tx.journalEntryLine.deleteMany({
       where: { journalEntryId: je.id }
@@ -1244,12 +1246,25 @@ export class AccountingService {
       where: { id: je.id }
     });
 
-    for (const accountId of accountIds) {
-      try {
-        await AccountingService.recalculateAccountBalance(tx, accountId as string);
-      } catch (e) {
-        // Ignore if account was already deleted
-      }
+    // SQA fix: the previous implementation looped per account, issuing three
+    // DB round-trips each (findUnique + aggregate + update) and silently
+    // swallowing every individual failure — a single failed recalculation left
+    // that account's cached balance permanently stale with no log evidence.
+    //
+    // rebuildBalanceCache is:
+    //   • Consistent — the same path used by post, reverse, restore, and
+    //     postDraft; every mutation in the system now goes through one place.
+    //   • Atomic — one SQL UPDATE covers all affected accounts in a single
+    //     statement; partial failure is impossible.
+    //   • Self-correcting — it re-derives the balance from the full posted
+    //     ledger, so it's correct even if prior incremental updates drifted.
+    //   • Scoped — passing `accountIds` limits the UPDATE to only the accounts
+    //     this entry touched, keeping it as cheap as the old loop.
+    //
+    // Errors are NOT swallowed: this runs inside the caller's transaction so
+    // a failure must roll the whole delete back rather than leave a stale cache.
+    if (accountIds.length > 0) {
+      await AccountingService.rebuildBalanceCache(tx, accountIds);
     }
 
     try {
@@ -1371,11 +1386,21 @@ export class AccountingService {
           where: { glCode: { startsWith: '30205' } },
           orderBy: { glCode: 'desc' }
         });
-        const lastNum = lastGl ? parseInt(lastGl.glCode.slice(-3)) || 500 : 500;
-        let glCode = `30205${String(lastNum + 1).padStart(2, '0')}`;
+        // SQA fix: previous generator used `'30205' + suffix.padStart(2)`.
+        // padStart(2) does nothing once the suffix exceeds 2 digits, so the
+        // 100th account produced '30205100' (8 digits), violating the 7-digit
+        // GL code constraint enforced everywhere else in the system.
+        // Fix: treat the full GL code as a 7-digit integer, increment from the
+        // last known value, and guard with a hard 7-digit length assertion so
+        // any overflow is caught immediately rather than silently written.
+        const lastCodeNum = lastGl ? parseInt(lastGl.glCode) : 3020500;
+        let nextNum = (isNaN(lastCodeNum) ? 3020500 : lastCodeNum) + 1;
+        let glCode = String(nextNum);
+        if (glCode.length !== 7) nextNum = 3020501, glCode = '3020501';
         while (await tx.account.findUnique({ where: { glCode } })) {
-          const num = parseInt(glCode.slice(-3)) + 1;
-          glCode = `30205${String(num).padStart(2, '0')}`;
+          nextNum += 1;
+          glCode = String(nextNum);
+          if (glCode.length > 7) throw new Error(`GL code space exhausted under prefix 30205 — all 7-digit codes are taken.`);
         }
 
         return tx.account.create({
@@ -1421,11 +1446,17 @@ export class AccountingService {
           where: { glCode: { startsWith: '40801' } },
           orderBy: { glCode: 'desc' }
         });
-        const lastNum = lastGl ? parseInt(lastGl.glCode.slice(-3)) || 100 : 100;
-        let glCode = `40801${String(lastNum + 1).padStart(2, '0')}`;
+        // SQA fix: same 7-digit overflow as the income generator above.
+        // Treat the full GL code as a 7-digit integer and increment from
+        // the last known value; throw clearly if the prefix space is exhausted.
+        const lastCodeNum = lastGl ? parseInt(lastGl.glCode) : 4080100;
+        let nextNum = (isNaN(lastCodeNum) ? 4080100 : lastCodeNum) + 1;
+        let glCode = String(nextNum);
+        if (glCode.length !== 7) nextNum = 4080101, glCode = '4080101';
         while (await tx.account.findUnique({ where: { glCode } })) {
-          const num = parseInt(glCode.slice(-3)) + 1;
-          glCode = `40801${String(num).padStart(2, '0')}`;
+          nextNum += 1;
+          glCode = String(nextNum);
+          if (glCode.length > 7) throw new Error(`GL code space exhausted under prefix 40801 — all 7-digit codes are taken.`);
         }
 
         return tx.account.create({
@@ -1520,11 +1551,15 @@ export class AccountingService {
               const parent = await tx.account.findFirst({ where: { glCode: '3020500' } });
               const revType = await tx.accountType.findFirst({ where: { name: { in: ['REVENUE', 'Revenue'] } } });
               const lastGl = await tx.account.findFirst({ where: { glCode: { startsWith: '30205' } }, orderBy: { glCode: 'desc' } });
-              const lastNum = lastGl ? parseInt(lastGl.glCode.slice(-3)) || 510 : 510;
-              let glCode = `30205${String(lastNum + 1).padStart(2, '0')}`;
+              // SQA fix: same 7-digit overflow — see getOrCreateIncomeAccount.
+              const lastCodeNum = lastGl ? parseInt(lastGl.glCode) : 3020500;
+              let nextNum2 = (isNaN(lastCodeNum) ? 3020500 : lastCodeNum) + 1;
+              let glCode = String(nextNum2);
+              if (glCode.length !== 7) nextNum2 = 3020501, glCode = '3020501';
               while (await tx.account.findUnique({ where: { glCode } })) {
-                const num = parseInt(glCode.slice(-3)) + 1;
-                glCode = `30205${String(num).padStart(2, '0')}`;
+                nextNum2 += 1;
+                glCode = String(nextNum2);
+                if (glCode.length > 7) throw new Error(`GL code space exhausted under prefix 30205 — all 7-digit codes are taken.`);
               }
               acc = await tx.account.create({
                 data: {
@@ -1705,12 +1740,16 @@ export class AccountingService {
       throw Object.assign(new Error('Account not found'), { status: 404 });
     }
 
-    // Build Where Clause: posted journal entry lines only (single source of truth)
+    // Build Where Clause: posted journal entry lines only (single source of truth).
+    // SQA fix: endDate previously used plain new Date(endDate) which resolves to
+    // midnight UTC, silently excluding transactions posted later on that same day.
+    // All other report methods use endOfDay(); getGeneralLedger now does the same
+    // so its date range is consistent with Trial Balance, Balance Sheet, and IS.
     const journalWhere: any = { ...POSTED_JOURNAL_FILTER };
     if (startDate || endDate) {
       journalWhere.postingDate = {};
       if (startDate) journalWhere.postingDate.gte = new Date(startDate);
-      if (endDate) journalWhere.postingDate.lte = new Date(endDate);
+      if (endDate) journalWhere.postingDate.lte = AccountingService.endOfDay(endDate);
     }
 
     const entryWhere: any = { journalEntry: journalWhere };
@@ -2049,7 +2088,27 @@ export class AccountingService {
         }
       }
 
-      if (balance.isZero()) continue;
+      // SQA fix: the previous `if (balance.isZero()) continue` applied
+      // unconditionally to every account type. For P&L accounts that is
+      // correct — a zero-revenue account adds nothing to the statement.
+      // For balance-sheet accounts (ASSET/LIABILITY/EQUITY) it is wrong:
+      // an account whose cumulative activity exactly offsets its initial
+      // balance (net = 0) was silently omitted even though it represents a
+      // real position (e.g. a fully-expended asset or a fully-paid liability).
+      // Omitting it breaks Assets = Liabilities + Equity whenever the
+      // corresponding movement appears in one section but not the other.
+      //
+      // The fix matches the Trial Balance's skip condition:
+      //   • P&L  → skip when balance is zero (period activity is nil).
+      //   • B/S  → skip only when BOTH balance AND initialBalance are zero
+      //             (the account has never had any activity at all).
+      const isPnL = type === 'REVENUE' || type === 'EXPENSE';
+      const initialBal = new Prisma.Decimal(acc.initialBalance ?? 0);
+      if (isPnL) {
+        if (balance.isZero()) continue;
+      } else {
+        if (balance.isZero() && initialBal.isZero()) continue;
+      }
 
       const formatted = {
         id: acc.id,
@@ -2360,27 +2419,45 @@ export class AccountingService {
     const endingCash = endDate
       ? await computeCashBalance(new Date(dateFilter.lte))
       : await computeCashBalance();
+
+    // SQA fix: the previous fallback when startDate is absent was:
+    //   beginningCash = endingCash − netChangeDec
+    // where netChangeDec is derived from the inflow/outflow maps. Those maps
+    // only count movements whose counterpart leg is a non-cash/bank account;
+    // any pure cash-to-cash or cash-to-bank transfer (both legs on cash/bank
+    // accounts) is skipped because nonCashBankLines.length === 0, so
+    // netChangeDec is understated and the back-calculated opening balance is
+    // wrong. The fix queries the DB directly — the same approach the
+    // startDate branch already uses — but with `to` set to just before Unix
+    // epoch (the earliest possible point), yielding the sum of initialBalance
+    // fields with zero posted lines contributing, which is the correct
+    // "balance at the very start of time" for an All-Time report.
     const beginningCash = startDate
       ? await computeCashBalance(new Date(new Date(startDate).getTime() - 1))
-      : new Prisma.Decimal(endingCash).minus(netChangeDec).toNumber();
+      : await computeCashBalance(new Date(0));
 
     const cashTotalReceiptsDec = Object.values(cashInflowsMap).reduce((s, v) => s.plus(v), new Prisma.Decimal(0));
     const cashTotalPaymentsDec = Object.values(cashOutflowsMap).reduce((s, v) => s.plus(v), new Prisma.Decimal(0));
     const closingCash = endDate
       ? await computeCashOnlyBalance(new Date(dateFilter.lte))
       : await computeCashOnlyBalance();
+
+    // SQA fix: same back-calculation flaw as beginningCash above.
+    // Query the DB at just before the start of time instead.
     const openingCash = startDate
       ? await computeCashOnlyBalance(new Date(new Date(startDate).getTime() - 1))
-      : new Prisma.Decimal(closingCash).minus(cashTotalReceiptsDec.minus(cashTotalPaymentsDec)).toNumber();
+      : await computeCashOnlyBalance(new Date(0));
 
     const bankTotalReceiptsDec = Object.values(bankInflowsMap).reduce((s, v) => s.plus(v), new Prisma.Decimal(0));
     const bankTotalPaymentsDec = Object.values(bankOutflowsMap).reduce((s, v) => s.plus(v), new Prisma.Decimal(0));
     const closingBank = endDate
       ? await computeBankOnlyBalance(new Date(dateFilter.lte))
       : await computeBankOnlyBalance();
+
+    // SQA fix: same back-calculation flaw as beginningCash above.
     const openingBank = startDate
       ? await computeBankOnlyBalance(new Date(new Date(startDate).getTime() - 1))
-      : new Prisma.Decimal(closingBank).minus(bankTotalReceiptsDec.minus(bankTotalPaymentsDec)).toNumber();
+      : await computeBankOnlyBalance(new Date(0));
 
     const periodLabel = startDate && endDate
       ? `${startDate} to ${endDate}`

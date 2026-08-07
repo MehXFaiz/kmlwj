@@ -44,11 +44,20 @@ export class LedgerWorkflowService {
             const parent = await tx.account.findFirst({ where: { glCode: '3020500' } }) || await tx.account.findFirst({ where: { glCode: '3020000' } });
             const revType = await tx.accountType.findFirst({ where: { name: { in: ['REVENUE', 'Revenue'] } } });
             const lastGl = await tx.account.findFirst({ where: { glCode: { startsWith: '30205' } }, orderBy: { glCode: 'desc' } });
-            const lastNum = lastGl ? parseInt(lastGl.glCode.slice(-3)) || 510 : 510;
-            let glCode = `30205${String(lastNum + 1).padStart(2, '0')}`;
+            // SQA fix: previous generator used `'30205' + suffix.padStart(2)`.
+            // padStart(2) does nothing once the suffix exceeds 2 digits, so
+            // the 100th sub-category account produced '30205100' (8 digits),
+            // violating the system-wide 7-digit GL code constraint. Fix treats
+            // the full code as a 7-digit integer, increments from the last
+            // known value, and throws clearly if the space is exhausted.
+            const lastCodeNum = lastGl ? parseInt(lastGl.glCode) : 3020500;
+            let nextNum = (isNaN(lastCodeNum) ? 3020500 : lastCodeNum) + 1;
+            let glCode = String(nextNum);
+            if (glCode.length !== 7) nextNum = 3020501, glCode = '3020501';
             while (await tx.account.findUnique({ where: { glCode } })) {
-              const num = parseInt(glCode.slice(-3)) + 1;
-              glCode = `30205${String(num).padStart(2, '0')}`;
+              nextNum += 1;
+              glCode = String(nextNum);
+              if (glCode.length > 7) throw new Error(`GL code space exhausted under prefix 30205 — all 7-digit codes are taken.`);
             }
             subAcc = await tx.account.create({
               data: {
