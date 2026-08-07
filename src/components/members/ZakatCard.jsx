@@ -348,3 +348,17 @@ export function ZakatCardBack({ card }) {
     </CardShell>
   );
 }
+
+/* ────────────────────── Full Card preview (front + back) ────────────────────── */
+export function ZakatCardPreview({ card }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'row', gap: '16px', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+      <div className="membership-card-wrapper">
+        <ZakatCardFront card={card} />
+      </div>
+      <div className="membership-card-wrapper">
+        <ZakatCardBack card={card} />
+      </div>
+    </div>
+  );
+}

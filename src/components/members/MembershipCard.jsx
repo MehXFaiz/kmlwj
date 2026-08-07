@@ -332,7 +332,7 @@ export function CardBack({ member }) {
 /* ────────────────────── Full Card preview (front + back) ────────────────────── */
 export function MembershipCardPreview({ member }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
+    <div style={{ display: 'flex', flexDirection: 'row', gap: '16px', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
       <div className="membership-card-wrapper">
         <CardFront member={member} />
       </div>
