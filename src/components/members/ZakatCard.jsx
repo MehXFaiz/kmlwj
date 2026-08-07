@@ -427,39 +427,38 @@ export function ZakatCardBack({ card }) {
 
         {/* ── BOTTOM FOOTER STRIP ── */}
         <div style={{
-          background: '#3B1D0D', padding: '3.5px 8px',
+          background: '#3B1D0D', padding: '3px 6px',
           display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-          borderTop: '1px solid #C88A58', marginTop: 'auto',
+          borderTop: '1px solid #C88A58', marginTop: 'auto', gap: '4px',
         }}>
           {/* Location */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#C88A58" strokeWidth="2.5">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-              <circle cx="12" cy="10" r="3" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
+            <svg width="8" height="8" viewBox="0 0 24 32" style={{ flexShrink: 0 }}>
+              <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0zm0 16.8A4.8 4.8 0 1 1 12 7.2a4.8 4.8 0 0 1 0 9.6z" fill="#C88A58"/>
             </svg>
-            <span style={{ fontSize: '7px', color: '#FFFFFF', fontWeight: 800, textTransform: 'uppercase' }}>
+            <span style={{ fontSize: '6.5px', color: '#FFFFFF', fontWeight: 800, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
               {ORG_RETURN}
             </span>
           </div>
 
           {/* Contact */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#C88A58" strokeWidth="2.5">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
+            <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#C88A58" strokeWidth="2.5" style={{ flexShrink: 0 }}>
               <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
             </svg>
-            <span style={{ fontSize: '7px', color: '#FFFFFF', fontWeight: 800 }}>
+            <span style={{ fontSize: '6.5px', color: '#FFFFFF', fontWeight: 800, whiteSpace: 'nowrap' }}>
               {ORG_PHONE}
             </span>
           </div>
 
           {/* Website */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#C88A58" strokeWidth="2.5">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
+            <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#C88A58" strokeWidth="2.5" style={{ flexShrink: 0 }}>
               <circle cx="12" cy="12" r="10" />
               <line x1="2" y1="12" x2="22" y2="12" />
               <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
             </svg>
-            <span style={{ fontSize: '7px', color: '#FFFFFF', fontWeight: 800 }}>
+            <span style={{ fontSize: '6.5px', color: '#FFFFFF', fontWeight: 800, whiteSpace: 'nowrap' }}>
               {ORG_WEBSITE}
             </span>
           </div>
