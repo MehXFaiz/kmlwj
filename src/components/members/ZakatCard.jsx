@@ -114,12 +114,12 @@ export function ZakatCardFront({ card }) {
               <div style={{ width: '3px', height: '3px', transform: 'rotate(45deg)', background: '#C88A58' }} />
               <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, transparent 0%, #C88A58 100%)' }} />
             </div>
-            {/* Tagline */}
+            {/* Card Subtitle */}
             <div style={{
-              fontSize: '7px', fontWeight: 800, color: '#5E4130',
-              letterSpacing: '0.18em', textTransform: 'uppercase',
+              fontSize: '8.5px', fontWeight: 900, color: '#8C4F2B',
+              letterSpacing: '0.2em', textTransform: 'uppercase',
             }}>
-              UNITY &bull; WELFARE &bull; SERVICE
+              ZAKAT CARD
             </div>
           </div>
 
