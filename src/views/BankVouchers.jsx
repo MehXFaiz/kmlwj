@@ -8,6 +8,7 @@ import { pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 import { useTranslation } from 'react-i18next';
 import { useConfirm } from '../components/ui/ConfirmationModal';
+import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 import logoImg from '../assets/logo.png';
 
 // Helper to render number to English words for standard printed receipt
@@ -396,109 +397,28 @@ function VoucherReceiptSlip({ voucher, amount, copyType, t }) {
 
 // ── Print Modal ──
 function BankVoucherPrintModal({ voucher, onClose }) {
-  const { t } = useTranslation();
+  if (!voucher) return null;
+  const isPayment = voucher.voucherType === 'BP';
+  const amount = voucher.lines ? voucher.lines.reduce((sum, line) => sum + (Number(line.debit) || 0), 0) : 0;
+  const firstLine = voucher.lines?.[0];
 
-  const handlePrint = () => {
-    window.print();
-  };
-
-  const amount = useMemo(() => {
-    return voucher.lines ? voucher.lines.reduce((sum, line) => sum + (Number(line.debit) || 0), 0) : 0;
-  }, [voucher]);
-
-  return createPortal(
-    <div id="print-modal-portal" className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 print:p-0 print:static print:inset-auto print:block overflow-y-auto">
-      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm print:hidden" onClick={onClose} />
-
-      <div className="relative z-10 w-full max-w-6xl rounded-2xl overflow-hidden flex flex-col max-h-[96vh] print:max-h-none print:shadow-none print:border-none print:bg-white print:w-full print:static print:block print:max-w-none"
-        style={{ background: '#1C140E', border: '1px solid #3B2A20', boxShadow: '0 25px 60px rgba(0,0,0,0.5)' }}>
-
-        {/* Modal header — hidden on print */}
-        <div className="print-hide flex items-center justify-between px-6 py-3.5 shrink-0 print:hidden"
-          style={{ borderBottom: '1px solid #3B2A20', background: '#150F09' }}>
-          <div className="flex items-center gap-2.5">
-            <Printer className="h-4 w-4" style={{ color: C.goldLight }} />
-            <span className="text-sm font-bold text-slate-200">
-              {voucher.voucherType === 'BP' ? t('tables.bankVouchers.printBankPayment') : t('tables.bankVouchers.printBankReceipt')}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={handlePrint}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer"
-              style={{ background: C.secondary, color: '#fff' }}
-              onMouseEnter={e => e.currentTarget.style.background = C.primary}
-              onMouseLeave={e => e.currentTarget.style.background = C.secondary}>
-              <Printer className="h-3.5 w-3.5" /> {t('tables.bankVouchers.print')}
-            </button>
-            <button onClick={onClose} className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-white/10 transition-all">
-              <XCircle className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Printable content */}
-        <div id="print-receipt" className="p-5 overflow-y-auto flex-1 print:overflow-visible print:p-0 print:static print:w-full print:block"
-          style={{ background: '#2A1C12' }}>
-          <style>{`
-            @media print {
-              *, *::before, *::after {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                color-adjust: exact !important;
-              }
-              body * { visibility: hidden !important; }
-              #print-modal-portal, #print-modal-portal * {
-                visibility: visible !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                color-adjust: exact !important;
-              }
-              #print-modal-portal img, #print-modal-portal svg { filter: none !important; }
-              #print-modal-portal {
-                position: absolute !important;
-                left: 0 !important; top: 0 !important;
-                width: 100% !important; max-width: 100% !important;
-                height: auto !important; min-height: 100% !important;
-                background: white !important;
-                padding: 0 !important; margin: 0 !important;
-                overflow: visible !important;
-                z-index: 999999 !important;
-                display: block !important;
-                page-break-inside: avoid !important; break-inside: avoid !important;
-              }
-              .print-hide { display: none !important; }
-              #print-receipt {
-                width: 100% !important; max-width: 100% !important;
-                margin: 0 !important; padding: 0 !important;
-                display: block !important; background: white !important;
-              }
-              .voucher-receipt-slip {
-                page-break-inside: avoid !important; break-inside: avoid !important;
-              }
-              @page { size: A4 landscape; margin: 8mm; }
-            }
-          `}</style>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 w-full print:grid-cols-2 print:gap-3 print:w-full">
-            <VoucherReceiptSlip voucher={voucher} amount={amount} copyType="office"   t={t} />
-            <VoucherReceiptSlip voucher={voucher} amount={amount} copyType="customer" t={t} />
-          </div>
-        </div>
-
-        {/* Footer actions — hidden on print */}
-        <div className="print-hide flex justify-end gap-3 px-6 py-3 shrink-0 print:hidden"
-          style={{ borderTop: '1px solid #3B2A20', background: '#150F09' }}>
-          <button onClick={onClose}
-            className="px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer"
-            style={{ border: '1px solid #3B2A20', color: '#94867A', background: 'transparent' }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#2A1C12'; e.currentTarget.style.color = '#D4C4B0'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#94867A'; }}>
-            {t('tables.bankVouchers.close')}
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body
+  return (
+    <VoucherSlipModal
+      isOpen={true}
+      onClose={onClose}
+      title={isPayment ? 'BANK PAYMENT VOUCHER' : 'BANK RECEIPT VOUCHER'}
+      voucherNo={voucher.voucherNo || voucher.id?.slice(0, 8)?.toUpperCase()}
+      fileNo={voucher.chequeNo ? `Cheque #${voucher.chequeNo}` : 'BANK'}
+      date={voucher.date}
+      name={voucher.paidTo || voucher.payee || 'Recipient / Bank Account'}
+      paymentMethod={voucher.paymentMethod || 'BANK'}
+      accountName={firstLine?.accountName || 'Bank Account'}
+      particulars={voucher.narration || firstLine?.narration || 'Bank transaction entry'}
+      amount={amount}
+      preparedBy="System Admin"
+      payeeLabel={isPayment ? "Payee Signature" : "Depositor Signature"}
+      partyLabel={isPayment ? 'Paid To' : 'Received From'}
+    />
   );
 }
 

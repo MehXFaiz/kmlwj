@@ -69,22 +69,16 @@ function CopySheet({
         {/* ── HEADER SECTION ── */}
         <div className="flex items-center justify-between border-b-2 border-[#C5A059]/40 pb-3 pt-1">
           {/* Logo & Jamaat Header */}
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-2 border-[#C5A059] bg-[#0F172A] shadow-md">
-              <img src={logoImg} alt="Logo" className="h-7 w-7 object-contain" />
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border-2 border-[#C5A059] bg-[#0F172A] shadow-lg p-1">
+              <img src={logoImg} alt="Logo" className="h-10 w-10 object-contain" />
             </div>
             <div>
-              <div className="text-[11px] font-black uppercase tracking-[0.15em] text-[#0F172A] leading-tight">
+              <div className="text-xs sm:text-sm font-black uppercase tracking-[0.16em] text-[#0F172A] leading-tight">
                 KUTCHI MUSLIM LOHARWADA WELFARE JAMAT
               </div>
-              <div
-                className="text-xs font-bold text-[#C5A059] leading-tight mt-0.5"
-                style={{
-                  fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif",
-                  lineHeight: 1.3,
-                }}
-              >
-                کچی مسلم لوہارواڈھا ویلفیئر جماعت
+              <div className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-[#C5A059] mt-1">
+                KARACHI &bull; PAKISTAN
               </div>
             </div>
           </div>

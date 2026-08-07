@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { useIncomeStore } from '../store/incomeStore';
 import { useRevenueStore } from '../store/revenueStore';
 import { useCoaStore } from '../store/coaStore';
-import { PlusCircle, Search, X, CheckCircle2, TrendingUp, Building2, Banknote } from 'lucide-react';
+import { PlusCircle, Search, X, CheckCircle2, TrendingUp, Building2, Banknote, Printer } from 'lucide-react';
 import { paymentMethodLabel } from '../constants/paymentMethods';
+import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 
 function IncomeModal({ isOpen, onClose, onSave, revenueHeads, accounts }) {
   const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], revenueHeadId: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
@@ -120,6 +121,7 @@ export const Income = () => {
   const { accounts, fetchAccounts } = useCoaStore();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [printIncome, setPrintIncome] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -202,9 +204,16 @@ export const Income = () => {
                       {inc.reference && <p className="text-[9px] text-slate-500 mt-0.5 font-mono">{inc.reference}</p>}
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <span className="text-sm font-mono font-bold text-emerald-400">
-                        {inc.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </span>
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="text-sm font-mono font-bold text-emerald-400">
+                          {inc.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </span>
+                        <button onClick={() => setPrintIncome(inc)}
+                          className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition-colors"
+                          title="Print Executive Income Voucher">
+                          <Printer className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -224,6 +233,25 @@ export const Income = () => {
         revenueHeads={revenueHeads}
         accounts={accounts}
       />
+
+      {printIncome && (
+        <VoucherSlipModal
+          isOpen={true}
+          onClose={() => setPrintIncome(null)}
+          title="INCOME RECEIPT VOUCHER"
+          voucherNo={printIncome.id?.slice(0, 8)?.toUpperCase() || 'INC-VOUCHER'}
+          fileNo={printIncome.reference || 'INCOME'}
+          date={printIncome.date}
+          name={printIncome.revenueHead?.name || 'Income Depositor'}
+          paymentMethod={printIncome.paymentMethod}
+          accountName={printIncome.revenueHead?.name || 'Revenue Account'}
+          particulars={printIncome.description || 'Income receipt entry'}
+          amount={printIncome.amount}
+          preparedBy="System Admin"
+          payeeLabel="Collector Signature"
+          partyLabel="Paid By"
+        />
+      )}
     </div>
   );
 };
