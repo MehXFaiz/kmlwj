@@ -123,8 +123,22 @@ export function ZakatCardFront({ card }) {
             </div>
           </div>
 
-          {/* Top Right Corner (Clean Brown Wave) */}
-          <div style={{ width: '40px', height: '20px', zIndex: 3 }} />
+          {/* Top Right ZAKAT CARD Badge inside Brown Curve */}
+          <div style={{
+            textAlign: 'right', zIndex: 3, paddingRight: '6px', paddingTop: '3px',
+          }}>
+            <div style={{
+              fontSize: '9.5px', fontWeight: 900, color: '#FFFFFF',
+              letterSpacing: '0.1em', textTransform: 'uppercase',
+              textShadow: '0 1px 2px rgba(0,0,0,0.5)', whiteSpace: 'nowrap',
+            }}>
+              ZAKAT CARD
+            </div>
+            {/* Small ornament under text */}
+            <div style={{ fontSize: '5.5px', color: '#D49B6A', textAlign: 'center', marginTop: '1px' }}>
+              &#9670;&#9644;&#9670;
+            </div>
+          </div>
         </div>
 
         {/* ── CENTER SECTION: LEFT DETAILS & RIGHT PHOTO FRAME ── */}
