@@ -94,7 +94,7 @@ export function ZakatCardFront({ card }) {
         <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', padding: '7px 10px 0 10px' }}>
           {/* Mosque Logo Icon */}
           <div style={{
-            width: '38px', height: '38px', flexShrink: 0, marginRight: '8px',
+            width: '48px', height: '48px', flexShrink: 0, marginRight: '9px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <img src={logoSrc} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -116,8 +116,8 @@ export function ZakatCardFront({ card }) {
             </div>
             {/* Card Subtitle */}
             <div style={{
-              fontSize: '8.5px', fontWeight: 900, color: '#8C4F2B',
-              letterSpacing: '0.2em', textTransform: 'uppercase',
+              fontSize: '11px', fontWeight: 900, color: '#3B1D0D',
+              letterSpacing: '0.22em', textTransform: 'uppercase', lineHeight: 1.1, marginTop: '1px',
             }}>
               ZAKAT CARD
             </div>
@@ -317,7 +317,7 @@ export function ZakatCardBack({ card }) {
             alignItems: 'center', justifyContent: 'center', textAlign: 'center',
             paddingRight: '6px', paddingLeft: '4px', boxSizing: 'border-box',
           }}>
-            <img src={logoSrc} alt="Logo" style={{ width: '34px', height: '34px', objectFit: 'contain', filter: 'brightness(1.2)' }} />
+            <img src={logoSrc} alt="Logo" style={{ width: '42px', height: '42px', objectFit: 'contain', filter: 'brightness(1.2)' }} />
             <div style={{
               fontSize: '7px', fontWeight: 900, color: '#FFFFFF',
               letterSpacing: '0.02em', lineHeight: 1.15, textTransform: 'uppercase', marginTop: '5px',
