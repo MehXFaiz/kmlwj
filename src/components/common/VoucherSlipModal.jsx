@@ -252,10 +252,6 @@ export const VoucherSlipModal = ({
               html, body {
                 margin: 0 !important;
                 padding: 0 !important;
-                height: 100% !important;
-                width: 297mm !important;
-                max-height: 210mm !important;
-                overflow: hidden !important;
                 background: #ffffff !important;
               }
               *, *::before, *::after {
@@ -263,19 +259,24 @@ export const VoucherSlipModal = ({
                 print-color-adjust: exact !important;
                 color-adjust: exact !important;
               }
-              body > *:not(.fixed) {
-                display: none !important;
+              body * {
+                visibility: hidden !important;
               }
               #print-voucher-slip, #print-voucher-slip * {
                 visibility: visible !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+              }
+              #print-voucher-slip img, #print-voucher-slip svg {
+                filter: none !important;
               }
               #print-voucher-slip {
                 position: absolute !important;
                 left: 0 !important;
                 top: 0 !important;
-                width: 291mm !important;
-                max-width: 291mm !important;
-                margin: 0 auto !important;
+                width: 100% !important;
+                margin: 0 !important;
                 padding: 0 !important;
                 box-shadow: none !important;
                 border: none !important;

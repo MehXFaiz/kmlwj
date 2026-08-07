@@ -41,8 +41,8 @@ const PRINT_STYLES = `
   #print-area img, #print-area svg,
   #pvc-print-sheet img, #pvc-print-sheet svg { filter: none !important; opacity: 1 !important; }
   #print-area, #pvc-print-sheet {
-    position: fixed !important; left: 0 !important; top: 0 !important;
-    width: 210mm !important; background: white !important;
+    position: absolute !important; left: 0 !important; top: 0 !important;
+    width: 210mm !important; background: #ffffff !important; margin: 0 !important;
   }
 }
 `;

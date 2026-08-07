@@ -747,36 +747,45 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
             @media print {
               @page {
                 size: A4 portrait;
-                margin: 0 !important;
+                margin: 3mm 4mm !important;
               }
               html, body {
                 margin: 0 !important;
                 padding: 0 !important;
                 background: #ffffff !important;
-                width: 210mm !important;
-                height: 297mm !important;
-                overflow: hidden !important;
               }
               *, *::before, *::after {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
                 color-adjust: exact !important;
               }
-              body > *:not(#print-receipt-modal) {
-                display: none !important;
+              body * {
+                visibility: hidden !important;
               }
               .print-hide-bar,
               .print-hide-bar * {
                 display: none !important;
               }
+              #print-receipt-modal,
+              #print-receipt-modal * {
+                visibility: visible !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+              }
+              #print-receipt-modal img, #print-receipt-modal svg {
+                filter: none !important;
+              }
               #print-receipt-modal {
-                position: static !important;
-                width: 210mm !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
                 height: auto !important;
-                max-height: 297mm !important;
+                max-height: 291mm !important;
                 background: #ffffff !important;
                 padding: 0 !important;
-                margin: 0 auto !important;
+                margin: 0 !important;
                 overflow: hidden !important;
                 box-shadow: none !important;
                 border: none !important;
@@ -785,22 +794,22 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
                 display: block !important;
               }
               #print-receipt-modal > div {
-                width: 210mm !important;
-                max-width: 210mm !important;
+                width: 100% !important;
+                max-width: 100% !important;
                 border: none !important;
                 outline: none !important;
                 box-shadow: none !important;
-                margin: 0 auto !important;
+                margin: 0 !important;
                 padding: 0 !important;
                 background: #ffffff !important;
                 border-radius: 0 !important;
               }
               #print-receipt-wrapper {
                 position: static !important;
-                width: 210mm !important;
-                max-width: 210mm !important;
+                width: 100% !important;
+                max-width: 100% !important;
                 margin: 0 auto !important;
-                padding: 2mm 3mm !important;
+                padding: 0 !important;
                 display: flex !important;
                 flex-direction: column !important;
                 justify-content: space-between !important;

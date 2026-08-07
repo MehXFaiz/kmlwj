@@ -41,32 +41,38 @@ const PVC_PRINT_CSS = `
     print-color-adjust: exact !important;
     color-adjust: exact !important;
   }
-  /* Hide the entire application while printing */
-  body > *:not(#pvc-print-portal) {
+  body * {
+    visibility: hidden !important;
+  }
+  .pvc-no-print, .pvc-no-print * {
     display: none !important;
   }
-  /* Hide non-print UI within the portal (buttons, header, backdrop) */
-  #pvc-print-portal .pvc-no-print {
-    display: none !important;
+  #pvc-print-portal,
+  #pvc-print-sheet,
+  #pvc-print-sheet * {
+    visibility: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
-  /* Reveal only the print sheet */
   #pvc-print-portal {
-    position: static !important;
-    background: #ffffff !important;
-    inset: auto !important;
-    padding: 0 !important;
-    margin: 0 !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
     width: 210mm !important;
-    height: auto !important;
-    overflow: visible !important;
+    background: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
   #pvc-print-sheet {
-    position: static !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 210mm !important;
     display: block !important;
     background: #ffffff !important;
     padding: 10mm 0 !important;
     margin: 0 auto !important;
-    width: 210mm !important;
   }
   .pvc-card-page {
     width: 210mm !important;
