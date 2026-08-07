@@ -41,32 +41,19 @@ function CardShell({ children }) {
       flex: 1,
       display: 'flex',
       flexDirection: 'column',
-      background: 'linear-gradient(135deg, #381200 0%, #682600 50%, #3D1500 100%)',
-      border: '3px solid #FFD700',
-      outline: '1px solid rgba(255,215,0,0.5)',
-      outlineOffset: '-4px',
+      background: 'linear-gradient(135deg, #CFD2D6 0%, #ECEEF0 50%, #C3C6CB 100%)',
+      border: '3.5px solid #D4AF37',
       borderRadius: 'inherit',
       boxSizing: 'border-box',
     }}>
-      {/* Geometric Gold Accent Shapes */}
-      <div style={{
-        position: 'absolute', top: '-25px', right: '-25px', width: '120px', height: '120px',
-        background: 'radial-gradient(circle, rgba(255,215,0,0.18) 0%, transparent 70%)',
-        pointerEvents: 'none', zIndex: 1,
-      }} />
-      <div style={{
-        position: 'absolute', bottom: '-20px', left: '-20px', width: '100px', height: '100px',
-        background: 'radial-gradient(circle, rgba(255,215,0,0.12) 0%, transparent 70%)',
-        pointerEvents: 'none', zIndex: 1,
-      }} />
-      {/* Watermark crest */}
+      {/* Watermark crest (high visibility center logo watermark) */}
       <div style={{
         position: 'absolute', inset: 0, zIndex: 1,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        opacity: 0.15, pointerEvents: 'none',
-        filter: 'brightness(2.4) contrast(1.4)',
+        opacity: 0.22, pointerEvents: 'none',
+        filter: 'contrast(1.3)',
       }}>
-        <img src={logoSrc} alt="" style={{ width: '54%', height: 'auto', objectFit: 'contain' }} />
+        <img src={logoSrc} alt="" style={{ width: '58%', height: 'auto', objectFit: 'contain' }} />
       </div>
       {children}
     </div>
@@ -82,35 +69,36 @@ export function ZakatCardFront({ card }) {
 
   return (
     <CardShell>
-      {/* ── BODY ── */}
+      {/* ── BODY: band + photo | header + details + logo ── */}
       <div style={{
         position: 'relative', zIndex: 3, flex: 1,
         display: 'flex', flexDirection: 'row',
       }}>
-        {/* ── LEFT: Gold Ribbon Band with Portrait ── */}
+        {/* ── LEFT: Gold Ribbon Band with Large Portrait (72px x 72px) ── */}
         <div style={{
           position: 'relative', flexShrink: 0,
-          width: '78px', alignSelf: 'stretch',
+          width: '84px', alignSelf: 'stretch',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
+          {/* vertical gold stripe */}
           <div style={{
             position: 'absolute', top: 0, bottom: 0, left: '50%',
             transform: 'translateX(-50%)',
             width: '16px',
-            background: 'linear-gradient(180deg, #FFE082 0%, #E5B83B 50%, #997415 100%)',
-            boxShadow: '0 0 8px rgba(229,184,59,0.4)',
+            background: 'linear-gradient(180deg, #FFE082 0%, #D4AF37 50%, #B38F24 100%)',
+            boxShadow: '0 0 6px rgba(212,175,55,0.4)',
           }} />
-          {/* Portrait (64px x 64px, 1:1 ratio) */}
+          {/* Portrait Photo (72px x 72px - 1:1 Aspect Ratio) */}
           <div style={{
             position: 'relative', zIndex: 2,
-            width: '64px', height: '64px',
+            width: '72px', height: '72px',
             aspectRatio: '1 / 1',
             background: '#FFFFFF',
             borderRadius: '12px',
-            border: '2.5px solid #FFD700',
+            border: '3px solid #D4AF37',
             overflow: 'hidden',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 14px rgba(0,0,0,0.7), 0 0 8px rgba(255,215,0,0.3)',
+            boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
           }}>
             {(beneficiary?.photoUrl || member?.photoUrl) ? (
               <img src={beneficiary?.photoUrl || member?.photoUrl} alt="Photo" style={{ width: '100%', height: '100%', objectFit: 'cover', aspectRatio: '1 / 1' }} />
@@ -125,41 +113,40 @@ export function ZakatCardFront({ card }) {
           flex: 1, display: 'flex', flexDirection: 'column',
           padding: '4px 4px 0 2px', minWidth: 0,
         }}>
-          {/* Header */}
-          <div style={{ textAlign: 'center', paddingRight: '50px' }}>
+          {/* Header: KUTCHI MUSLIM LOHARWADA WELFARE in one single line */}
+          <div style={{ textAlign: 'center', paddingRight: '54px' }}>
             <div style={{
-              fontSize: '8.2px', fontWeight: 900, color: '#FFE082',
-              letterSpacing: '0.02em', lineHeight: 1.15, textTransform: 'uppercase',
+              fontSize: '8.5px', fontWeight: 900, color: '#000000',
+              letterSpacing: '0.01em', lineHeight: 1.15, textTransform: 'uppercase',
               whiteSpace: 'nowrap',
-              textShadow: '0 1px 2px rgba(0,0,0,0.8)',
             }}>
               {ORG_LINE1}
             </div>
             <div style={{
-              fontSize: '9px', fontWeight: 900, color: '#FFE082',
+              fontSize: '9.5px', fontWeight: 900, color: '#000000',
               letterSpacing: '0.06em', lineHeight: 1.15, textTransform: 'uppercase',
             }}>
-              {ORG_LINE2} <span style={{ fontSize: '7px', color: 'rgba(255,255,255,0.9)', fontWeight: 800 }}>{ORG_REGD}</span>
+              {ORG_LINE2} <span style={{ fontSize: '7.5px', color: '#333333', fontWeight: 800 }}>{ORG_REGD}</span>
             </div>
             
-            {/* Solid Metallic Gold Pill Badge */}
+            {/* Bright Metallic Gold Pill Badge */}
             <div style={{
               display: 'inline-block',
-              background: 'linear-gradient(135deg, #FFD700 0%, #E5B83B 50%, #B8860B 100%)',
-              color: '#381200',
-              fontSize: '9px', fontWeight: 900,
-              letterSpacing: '0.15em', marginTop: '2px', padding: '1.5px 10px',
-              borderRadius: '12px', textTransform: 'uppercase',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.5)',
+              background: 'linear-gradient(135deg, #FFE082 0%, #D4AF37 100%)',
+              color: '#000000',
+              fontSize: '10px', fontWeight: 900,
+              letterSpacing: '0.14em', marginTop: '2px', padding: '1.5px 12px',
+              borderRadius: '10px', textTransform: 'uppercase',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
             }}>
               ZAKAT CARD
             </div>
           </div>
 
-          {/* Details list with Frosted Glass Rows */}
+          {/* Details list (larger 10.5px bold text) */}
           <div style={{
             flex: 1, display: 'flex', flexDirection: 'column',
-            justifyContent: 'center', gap: '2px',
+            justifyContent: 'center', gap: '2.5px',
             padding: '3px 2px 0 2px',
           }}>
             {[
@@ -171,21 +158,16 @@ export function ZakatCardFront({ card }) {
               ['Zakat Amount',  fmtAmount(card?.zakatAmount)],
               ['Issue Date',    fmtDate(card?.issueDate)],
             ].filter(([, v]) => v).map(([label, value]) => (
-              <div key={label} style={{
-                display: 'flex', alignItems: 'baseline', gap: '4px',
-                background: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '4px', padding: '1px 4px',
-                borderLeft: '2px solid #FFD700',
-              }}>
+              <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
                 <span style={{
-                  fontSize: '9px', color: '#FFE082', fontWeight: 900,
-                  minWidth: '76px', flexShrink: 0, letterSpacing: '0.01em',
+                  fontSize: '10.5px', color: '#111111', fontWeight: 900,
+                  minWidth: '84px', flexShrink: 0, letterSpacing: '0.01em',
                 }}>
                   {label}:
                 </span>
                 <span style={{
-                  fontSize: '9px', color: '#FFFFFF', fontWeight: 800,
-                  lineHeight: 1.2, wordBreak: 'break-all',
+                  fontSize: '10.5px', color: '#000000', fontWeight: 800,
+                  lineHeight: 1.25, wordBreak: 'break-all',
                 }}>
                   {fmt(value)}
                 </span>
@@ -194,20 +176,19 @@ export function ZakatCardFront({ card }) {
           </div>
         </div>
 
-        {/* ── TOP-RIGHT: Embossed Gold Logo Coin ── */}
+        {/* ── TOP-RIGHT: Larger Logo Badge (48px x 48px) ── */}
         <div style={{
           position: 'absolute', top: '3px', right: '4px',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           zIndex: 10,
-          background: 'linear-gradient(135deg, rgba(255,215,0,0.3) 0%, rgba(184,134,11,0.15) 100%)',
-          border: '1.5px solid #FFD700',
-          borderRadius: '50%',
-          width: '42px', height: '42px',
-          boxShadow: '0 0 10px rgba(255,215,0,0.5)',
+          background: 'rgba(212, 175, 55, 0.18)',
+          border: '1.5px solid #D4AF37',
+          borderRadius: '8px',
+          padding: '2px',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
         }}>
           <img src={logoSrc} alt="Logo" style={{
-            width: '36px', height: '36px', objectFit: 'contain',
-            filter: 'brightness(2.4) contrast(1.5) drop-shadow(0 0 3px #FFD700)',
+            width: '44px', height: '44px', objectFit: 'contain',
           }} />
         </div>
       </div>
@@ -215,16 +196,15 @@ export function ZakatCardFront({ card }) {
       {/* ── FOOTER strip ── */}
       <div style={{
         position: 'relative', zIndex: 3,
-        background: 'linear-gradient(90deg, #FFE082 0%, #E5B83B 50%, #FFE082 100%)',
+        background: 'linear-gradient(90deg, #FFE082 0%, #D4AF37 50%, #FFE082 100%)',
         padding: '3px 8px',
         display: 'flex', alignItems: 'center', gap: '6px',
         minHeight: '20px',
-        boxShadow: '0 -2px 6px rgba(0,0,0,0.3)',
       }}>
         <svg width="10" height="12" viewBox="0 0 24 32" style={{ flexShrink: 0 }}>
-          <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0zm0 16.8A4.8 4.8 0 1 1 12 7.2a4.8 4.8 0 0 1 0 9.6z" fill="#381200"/>
+          <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0zm0 16.8A4.8 4.8 0 1 1 12 7.2a4.8 4.8 0 0 1 0 9.6z" fill="#000000"/>
         </svg>
-        <span style={{ fontSize: '8px', color: '#381200', fontWeight: 900, lineHeight: 1.25 }}>
+        <span style={{ fontSize: '8.5px', color: '#000000', fontWeight: 900, lineHeight: 1.25 }}>
           If found please return it to {ORG_RETURN}
         </span>
       </div>
@@ -254,11 +234,11 @@ export function ZakatCardBack({ card }) {
       <div style={{
         position: 'relative', zIndex: 3, textAlign: 'center',
         padding: '4px 12px 3px',
-        background: 'rgba(255, 215, 0, 0.15)',
-        borderBottom: '2px solid #FFD700',
+        borderBottom: '2px solid #D4AF37',
+        background: 'rgba(212, 175, 55, 0.15)',
       }}>
         <div style={{
-          fontSize: '9.5px', fontWeight: 900, color: '#FFE082',
+          fontSize: '10.5px', fontWeight: 900, color: '#000000',
           letterSpacing: '0.22em', textTransform: 'uppercase',
         }}>
           BENEFICIARY INFORMATION
@@ -273,26 +253,21 @@ export function ZakatCardBack({ card }) {
       }}>
         {/* Details list + QR Code side-by-side */}
         <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', flex: 1 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1, paddingRight: '4px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3.5px', flex: 1, paddingRight: '4px' }}>
             {[
               ['Ghaam',        member?.ghamName],
               ['Address',      address ? (address.length > 45 ? address.slice(0, 45) + '…' : address) : null],
               ['Contact',      mobile],
               ['Issuing Date', fmtDate(card?.issueDate)],
             ].filter(([, v]) => v).map(([label, value]) => (
-              <div key={label} style={{
-                display: 'flex', alignItems: 'baseline', gap: '4px',
-                background: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '4px', padding: '1.5px 5px',
-                borderLeft: '2px solid #FFD700',
-              }}>
+              <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
                 <span style={{
-                  fontSize: '9px', color: '#FFE082', fontWeight: 900,
-                  minWidth: '70px', flexShrink: 0,
+                  fontSize: '10.5px', color: '#111111', fontWeight: 900,
+                  minWidth: '78px', flexShrink: 0,
                 }}>
                   {label}:
                 </span>
-                <span style={{ fontSize: '9px', color: '#FFFFFF', fontWeight: 800, lineHeight: 1.25 }}>
+                <span style={{ fontSize: '10.5px', color: '#000000', fontWeight: 800, lineHeight: 1.25 }}>
                   {fmt(value)}
                 </span>
               </div>
@@ -309,14 +284,14 @@ export function ZakatCardBack({ card }) {
                 background: '#FFFFFF',
                 padding: '3px',
                 borderRadius: '6px',
-                width: '50px',
-                height: '50px',
+                width: '52px',
+                height: '52px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxSizing: 'border-box',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.6), 0 0 6px rgba(255,215,0,0.3)',
-                border: '1.5px solid #FFD700',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                border: '1.5px solid #D4AF37',
               }}>
                 <QRCodeSVG
                   value={qrValue}
@@ -335,7 +310,7 @@ export function ZakatCardBack({ card }) {
                   }}
                 />
               </div>
-              <span style={{ fontSize: '6px', color: '#FFE082', fontWeight: 900, letterSpacing: '0.04em' }}>
+              <span style={{ fontSize: '6px', color: '#000000', fontWeight: 900, letterSpacing: '0.04em' }}>
                 VERIFY QR
               </span>
             </div>
@@ -351,10 +326,10 @@ export function ZakatCardBack({ card }) {
           {['Chairman', 'President'].map(title => (
             <div key={title} style={{ textAlign: 'center', minWidth: '75px' }}>
               <div style={{
-                borderBottom: '1.5px solid #FFD700',
+                borderBottom: '1.5px solid #D4AF37',
                 marginBottom: '2px', height: '10px',
               }} />
-              <span style={{ fontSize: '8px', color: '#FFE082', fontWeight: 900, letterSpacing: '0.04em' }}>
+              <span style={{ fontSize: '8.5px', color: '#000000', fontWeight: 900, letterSpacing: '0.04em' }}>
                 {title}
               </span>
             </div>
@@ -365,15 +340,14 @@ export function ZakatCardBack({ card }) {
       {/* ── FOOTER strip ── */}
       <div style={{
         position: 'relative', zIndex: 3,
-        background: 'linear-gradient(90deg, #FFE082 0%, #E5B83B 50%, #FFE082 100%)',
+        background: 'linear-gradient(90deg, #FFE082 0%, #D4AF37 50%, #FFE082 100%)',
         padding: '3px 10px',
         display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px',
-        boxShadow: '0 -2px 6px rgba(0,0,0,0.3)',
       }}>
-        <span style={{ fontSize: '8px', color: '#381200', fontWeight: 800 }}>
+        <span style={{ fontSize: '8.5px', color: '#000000', fontWeight: 900 }}>
           <span style={{ fontWeight: 900 }}>Email:</span> {ORG_EMAIL}
         </span>
-        <span style={{ fontSize: '8px', color: '#381200', fontWeight: 800 }}>
+        <span style={{ fontSize: '8.5px', color: '#000000', fontWeight: 900 }}>
           <span style={{ fontWeight: 900 }}>Web:</span> {ORG_WEBSITE}
         </span>
       </div>
