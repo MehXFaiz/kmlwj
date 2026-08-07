@@ -322,37 +322,6 @@ export const MemberForm = () => {
               </p>
             </div>
 
-            {/* CNIC Images */}
-            <div className="bg-slate-900 rounded-2xl border border-slate-800 p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <IdCard className="w-4 h-4 text-amber-400" />
-                <h3 className="text-sm font-semibold text-slate-300">CNIC Images</h3>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs font-semibold text-slate-500 mb-2 text-center">Front Side</p>
-                  <ImageUploadField
-                    label="CNIC Front"
-                    fieldName="cnicFront"
-                    currentUrl={cnicFrontUrl}
-                    onUploaded={(url) => { setCnicFrontUrl(url || ''); onUploadSuccess('cnicFront'); }}
-                    onError={(msg) => onUploadError('cnicFront', msg)}
-                  />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-slate-500 mb-2 text-center">Back Side</p>
-                  <ImageUploadField
-                    label="CNIC Back"
-                    fieldName="cnicBack"
-                    currentUrl={cnicBackUrl}
-                    onUploaded={(url) => { setCnicBackUrl(url || ''); onUploadSuccess('cnicBack'); }}
-                    onError={(msg) => onUploadError('cnicBack', msg)}
-                  />
-                </div>
-              </div>
-            </div>
-
             {/* Info Card */}
             <div className="bg-amber-500/5 rounded-2xl border border-amber-500/20 p-5">
               <div className="flex items-center gap-2 mb-4">
