@@ -90,8 +90,20 @@ export class FundValidationService {
     const totalCredit = new Prisma.Decimal(aggregations._sum.credit ?? 0);
     const initialBalance = new Prisma.Decimal(account.initialBalance ?? 0);
 
-    // Asset normal balance = initial + debit - credit
-    const availableBalanceDecimal = initialBalance.plus(totalDebit).minus(totalCredit);
+    // SQA fix: the previous implementation always applied the debit-normal
+    // formula (initial + debit − credit) regardless of account type.  That
+    // is correct for ASSET accounts (the only accounts currently passed to
+    // this method) but would silently produce a wrong balance for any
+    // LIABILITY, EQUITY, or REVENUE account whose credits represent an
+    // increase rather than a decrease.  Applying the same type-aware
+    // branching used by AccountingService.naturalBalance / recalculateAccountBalance
+    // makes this method correct for every account type and eliminates the
+    // latent risk of a future caller passing a non-asset account.
+    const typeName = (account.accountType?.name || 'ASSET').toUpperCase();
+    const isDebitNormal = ['ASSET', 'ASSETS', 'EXPENSE', 'EXPENSES'].includes(typeName);
+    const availableBalanceDecimal = isDebitNormal
+      ? initialBalance.plus(totalDebit).minus(totalCredit)   // debit-normal: ASSET / EXPENSE
+      : initialBalance.plus(totalCredit).minus(totalDebit);  // credit-normal: LIABILITY / EQUITY / REVENUE
     const availableBalance = availableBalanceDecimal.toNumber();
 
     const { isCash, isBank } = FundValidationService.isCashOrBankAccount(account.accountName, account.detailType);

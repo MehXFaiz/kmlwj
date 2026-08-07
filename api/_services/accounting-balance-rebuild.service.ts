@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../_prisma.js';
 import { logger } from '../_utils/logger.js';
-import { POSTED_JOURNAL_FILTER } from './accounting.service.js';
+import { POSTED_JOURNAL_FILTER, AccountingService } from './accounting.service.js';
 
 export interface FinancialSummaryTotals {
   totalAssets: number;
@@ -127,11 +127,17 @@ export class AccountingBalanceRebuildService {
       for (const acc of leafAccounts) {
         const typeName = (acc.accountType?.name || '').toUpperCase();
         const initBal = new Prisma.Decimal(acc.initialBalance ?? 0);
-        const nameLower = (acc.accountName || '').toLowerCase();
-        const detailLower = (acc.detailType || '').toLowerCase();
 
-        const isCash = detailLower === 'cash' || (nameLower.includes('cash') || nameLower.includes('till') || nameLower.includes('petty') || nameLower.includes('hand')) && !nameLower.includes('bank');
-        const isBank = detailLower === 'bank' || nameLower.includes('bank') || nameLower.includes('al-habib') || nameLower.includes('nbp') || nameLower.includes('mcb') || nameLower.includes('ubl') || nameLower.includes('allied') || nameLower.includes('faysal');
+        // SQA fix: the previous inline logic duplicated the isCash/isBank
+        // classification from AccountingService but with a subtle operator-
+        // precedence bug: `detailLower === 'cash'` short-circuits the ||,
+        // so the `&& !nameLower.includes('bank')` guard was never evaluated
+        // when detailType was 'cash' — a "Cash at Bank" account (detailType
+        // 'cash', name containing 'bank') became both isCash=true AND
+        // isBank=true, inflating one of the two summary buckets. Delegating
+        // to the canonical helpers guarantees mutual exclusion.
+        const isCash = AccountingService.isCashAccount(acc.accountName, acc.detailType);
+        const isBank = AccountingService.isBankAccount(acc.accountName, acc.detailType);
 
         // P&L Accounts: Revenue and Expenses (EXCLUDE initial balance from period P&L)
         if (typeName === 'REVENUE' || typeName === 'INCOME') {
