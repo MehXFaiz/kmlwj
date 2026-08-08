@@ -113,7 +113,7 @@ export const TransferForm = () => {
       await addVoucher(payload);
       navigate('/bank-vouchers');
     } catch (err) {
-      showToast(err.message || "Failed to post transfer", "error");
+      showToast(err?.response?.data?.error?.message || err.message || "Failed to post transfer", "error");
     } finally {
       setLoading(false);
     }

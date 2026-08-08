@@ -5,6 +5,7 @@ import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { PERMS } from "../_constants/permissions.js";
 import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
+import { validateAmount } from "../_utils/amount.js";
 const CARD_NO_PREFIX = "ZK-";
 async function nextCardNumber(tx) {
   const existing = await tx.zakatCard.findMany({
@@ -151,10 +152,11 @@ var zakat_cards_default = makeHandler(async (req, res) => {
     if (!beneficiaryId || !zakatAmount) {
       return res.status(400).json({ error: { message: "Beneficiary and zakat amount are required", status: 400 } });
     }
-    const parsedAmount = parseFloat(zakatAmount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      return res.status(400).json({ error: { message: "Zakat amount must be greater than 0", status: 400 } });
+    const amountCheck = validateAmount(zakatAmount);
+    if (!amountCheck.valid) {
+      return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
     }
+    const parsedAmount = amountCheck.amount;
     const beneficiary = await prisma.beneficiary.findUnique({ where: { id: beneficiaryId } });
     if (!beneficiary) {
       return res.status(404).json({ error: { message: "Beneficiary not found", status: 404 } });

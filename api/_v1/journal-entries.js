@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
+import { FundValidationService } from "../_services/fund-validation.service.js";
 import { PERMS } from "../_constants/permissions.js";
 import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };
@@ -113,11 +114,30 @@ var journal_entries_default = makeHandler(async (req, res) => {
       if (!targetId) {
         return res.status(400).json({ error: { message: "Missing journal entry id", status: 400 } });
       }
-      const existing = await prisma.journalEntry.findUnique({ where: { id: targetId } });
+      const existing = await prisma.journalEntry.findUnique({ where: { id: targetId }, include: { lines: true } });
       if (!existing) {
         return res.status(404).json({ error: { message: "Journal entry not found", status: 404 } });
       }
       const restored = await prisma.$transaction(async (tx) => {
+        if (existing.status === "Posted") {
+          const creditByAccount = /* @__PURE__ */ new Map();
+          for (const l of existing.lines) {
+            const credit = new Prisma.Decimal(l.credit ?? 0);
+            if (credit.greaterThan(0)) {
+              creditByAccount.set(l.accountId, (creditByAccount.get(l.accountId) ?? new Prisma.Decimal(0)).plus(credit));
+            }
+          }
+          for (const [accountId, requiredAmount] of creditByAccount) {
+            await FundValidationService.validateAndLockFunds(tx, {
+              accountId,
+              requiredAmount: requiredAmount.toNumber(),
+              module: "Journal Entries (Restore)",
+              userId: req.user.id,
+              ipAddress: req.headers["x-forwarded-for"],
+              userAgent: req.headers["user-agent"]
+            });
+          }
+        }
         const je = await tx.journalEntry.update({
           where: { id: targetId },
           data: { isDeleted: false, deletedAt: null, deletedBy: null }
@@ -162,43 +182,30 @@ var journal_entries_default = makeHandler(async (req, res) => {
         const newRef = reference !== void 0 ? reference : je.reference;
         const newDesc = description !== void 0 ? description : je.description;
         const newStatus = status || je.status;
-        await tx.journalEntry.update({
-          where: { id },
-          data: {
-            postingDate: newDate,
-            reference: newRef,
-            description: newDesc !== void 0 ? newDesc || null : void 0,
-            status: newStatus
-          }
-        });
+        let plannedLines = null;
+        let mode = null;
         if (amount !== void 0 && !lines && je.lines.length > 0) {
+          mode = "amount";
           const numAmount = Number(amount);
           if (!Number.isFinite(numAmount) || numAmount <= 0) {
             throw new Error("Accounting Engine Error: Amount must be a positive number.");
           }
-          const plannedLines = je.lines.map((l) => ({
-            debit: l.debit > 0 ? numAmount : l.debit,
-            credit: l.credit > 0 ? numAmount : l.credit
+          plannedLines = je.lines.map((l) => ({
+            id: l.id,
+            accountId: l.accountId,
+            // l.debit/l.credit are Prisma Decimals; compare with Decimal ops
+            // rather than JS `>` so the check is exact.
+            debit: new Prisma.Decimal(l.debit).gt(0) ? numAmount : Number(l.debit),
+            credit: new Prisma.Decimal(l.credit).gt(0) ? numAmount : Number(l.credit),
+            description: newDesc !== void 0 ? newDesc : l.description
           }));
           const plannedDebit = plannedLines.reduce((sum, l) => sum.plus(new Prisma.Decimal(l.debit)), new Prisma.Decimal(0));
           const plannedCredit = plannedLines.reduce((sum, l) => sum.plus(new Prisma.Decimal(l.credit)), new Prisma.Decimal(0));
           if (!plannedDebit.equals(plannedCredit)) {
             throw new Error(`Accounting Engine Error: Transaction must follow Double Entry Accounting. Total Debit (${plannedDebit.toFixed(2)}) does not equal Total Credit (${plannedCredit.toFixed(2)}).`);
           }
-          for (const l of je.lines) {
-            const newDebit = new Prisma.Decimal(l.debit).gt(0) ? numAmount : l.debit;
-            const newCredit = new Prisma.Decimal(l.credit).gt(0) ? numAmount : l.credit;
-            const lineDesc = newDesc !== void 0 ? newDesc : l.description;
-            await tx.journalEntryLine.update({
-              where: { id: l.id },
-              data: {
-                debit: newDebit,
-                credit: newCredit,
-                description: lineDesc
-              }
-            });
-          }
         } else if (lines && Array.isArray(lines) && lines.length > 0) {
+          mode = "lines";
           if (lines.length < 2) {
             throw new Error("Accounting Engine Error: Transaction must contain at least two accounting lines for double-entry posting.");
           }
@@ -222,17 +229,72 @@ var journal_entries_default = makeHandler(async (req, res) => {
           if (totalDebit.lte(0)) {
             throw new Error("Accounting Engine Error: Transaction amount must be greater than zero.");
           }
+          plannedLines = lines.map((l) => ({
+            accountId: l.accountId,
+            debit: Number(l.debit) || 0,
+            credit: Number(l.credit) || 0,
+            description: l.description || newDesc || newRef || je.description
+          }));
+        }
+        if (plannedLines && newStatus === "Posted") {
+          const oldCreditByAccount = /* @__PURE__ */ new Map();
+          if (je.status === "Posted") {
+            for (const l of je.lines) {
+              const credit = new Prisma.Decimal(l.credit ?? 0);
+              if (credit.greaterThan(0)) {
+                oldCreditByAccount.set(l.accountId, (oldCreditByAccount.get(l.accountId) ?? new Prisma.Decimal(0)).plus(credit));
+              }
+            }
+          }
+          const newCreditByAccount = /* @__PURE__ */ new Map();
+          for (const l of plannedLines) {
+            const credit = new Prisma.Decimal(l.credit ?? 0);
+            if (credit.greaterThan(0)) {
+              newCreditByAccount.set(l.accountId, (newCreditByAccount.get(l.accountId) ?? new Prisma.Decimal(0)).plus(credit));
+            }
+          }
+          for (const [accountId, newCredit] of newCreditByAccount) {
+            const delta = newCredit.minus(oldCreditByAccount.get(accountId) ?? new Prisma.Decimal(0));
+            if (delta.greaterThan(0)) {
+              await FundValidationService.validateAndLockFunds(tx, {
+                accountId,
+                requiredAmount: delta.toNumber(),
+                module: "Journal Entries",
+                userId: req.user.id,
+                ipAddress: req.headers["x-forwarded-for"],
+                userAgent: req.headers["user-agent"]
+              });
+            }
+          }
+        }
+        await tx.journalEntry.update({
+          where: { id },
+          data: {
+            postingDate: newDate,
+            reference: newRef,
+            description: newDesc !== void 0 ? newDesc || null : void 0,
+            status: newStatus
+          }
+        });
+        if (mode === "amount" && plannedLines) {
+          for (const l of plannedLines) {
+            await tx.journalEntryLine.update({
+              where: { id: l.id },
+              data: { debit: l.debit, credit: l.credit, description: l.description }
+            });
+          }
+        } else if (mode === "lines" && plannedLines) {
           await tx.journalEntryLine.deleteMany({
             where: { journalEntryId: je.id }
           });
-          for (const l of lines) {
+          for (const l of plannedLines) {
             await tx.journalEntryLine.create({
               data: {
                 journalEntryId: je.id,
                 accountId: l.accountId,
-                description: l.description || newDesc || newRef || je.description,
-                debit: Number(l.debit) || 0,
-                credit: Number(l.credit) || 0
+                description: l.description,
+                debit: l.debit,
+                credit: l.credit
               }
             });
           }

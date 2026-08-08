@@ -5,6 +5,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
+import { FundValidationService } from '../_services/fund-validation.service.js';
 import { PERMS } from '../_constants/permissions.js';
 import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
 
@@ -134,7 +135,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       if (!targetId) {
         return res.status(400).json({ error: { message: 'Missing journal entry id', status: 400 } });
       }
-      const existing = await prisma.journalEntry.findUnique({ where: { id: targetId } });
+      const existing = await prisma.journalEntry.findUnique({ where: { id: targetId }, include: { lines: true } });
       if (!existing) {
         return res.status(404).json({ error: { message: 'Journal entry not found', status: 404 } });
       }
@@ -142,6 +143,30 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       // re-enters POSTED_JOURNAL_FILTER here, so its impact must come back into
       // Account.currentBalance in the same commit or the cache is left short.
       const restored = await prisma.$transaction(async (tx) => {
+        // A previously-Posted entry contributed nothing to the ledger while
+        // soft-deleted; restoring it is a fresh draw on whatever it credits,
+        // and the account it draws from may have moved on in the meantime —
+        // validate before letting it re-enter POSTED_JOURNAL_FILTER.
+        if (existing.status === 'Posted') {
+          const creditByAccount = new Map<string, Prisma.Decimal>();
+          for (const l of existing.lines) {
+            const credit = new Prisma.Decimal(l.credit ?? 0);
+            if (credit.greaterThan(0)) {
+              creditByAccount.set(l.accountId, (creditByAccount.get(l.accountId) ?? new Prisma.Decimal(0)).plus(credit));
+            }
+          }
+          for (const [accountId, requiredAmount] of creditByAccount) {
+            await FundValidationService.validateAndLockFunds(tx, {
+              accountId,
+              requiredAmount: requiredAmount.toNumber(),
+              module: 'Journal Entries (Restore)',
+              userId: req.user!.id,
+              ipAddress: req.headers['x-forwarded-for'] as string,
+              userAgent: req.headers['user-agent'],
+            });
+          }
+        }
+
         const je = await tx.journalEntry.update({
           where: { id: targetId },
           data: { isDeleted: false, deletedAt: null, deletedBy: null }
@@ -204,50 +229,41 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         const newDesc = description !== undefined ? description : je.description;
         const newStatus = status || je.status;
 
-        await tx.journalEntry.update({
-          where: { id },
-          data: {
-            postingDate: newDate,
-            reference: newRef,
-            description: newDesc !== undefined ? (newDesc || null) : undefined,
-            status: newStatus
-          }
-        });
+        // Plan the line rewrite (if any) WITHOUT writing yet, so available
+        // funds can be validated against the pre-edit state before anything
+        // is mutated — mirroring the validate-then-write order postDraft/
+        // restoreCancelledJournalEntry already use. The journalEntry.update
+        // below (including the status flip) is deferred past the fund check
+        // too: it runs on the same `tx`, so writing it first would already be
+        // visible to FundValidationService's balance query and corrupt the
+        // "was this entry already Posted" comparison the delta math relies on.
+        type PlannedLine = { id?: string; accountId: string; debit: number; credit: number; description?: string | null };
+        let plannedLines: PlannedLine[] | null = null;
+        let mode: 'amount' | 'lines' | null = null;
 
-        // If amount changed without custom lines array
         if (amount !== undefined && !lines && je.lines.length > 0) {
+          mode = 'amount';
           const numAmount = Number(amount);
           if (!Number.isFinite(numAmount) || numAmount <= 0) {
             throw new Error('Accounting Engine Error: Amount must be a positive number.');
           }
 
-          const plannedLines = je.lines.map((l: any) => ({
-            debit: l.debit > 0 ? numAmount : l.debit,
-            credit: l.credit > 0 ? numAmount : l.credit,
+          plannedLines = je.lines.map((l: any) => ({
+            id: l.id,
+            accountId: l.accountId,
+            // l.debit/l.credit are Prisma Decimals; compare with Decimal ops
+            // rather than JS `>` so the check is exact.
+            debit: new Prisma.Decimal(l.debit).gt(0) ? numAmount : Number(l.debit),
+            credit: new Prisma.Decimal(l.credit).gt(0) ? numAmount : Number(l.credit),
+            description: newDesc !== undefined ? newDesc : l.description,
           }));
-          const plannedDebit = plannedLines.reduce((sum: Prisma.Decimal, l: any) => sum.plus(new Prisma.Decimal(l.debit)), new Prisma.Decimal(0));
-          const plannedCredit = plannedLines.reduce((sum: Prisma.Decimal, l: any) => sum.plus(new Prisma.Decimal(l.credit)), new Prisma.Decimal(0));
+          const plannedDebit = plannedLines.reduce((sum: Prisma.Decimal, l) => sum.plus(new Prisma.Decimal(l.debit)), new Prisma.Decimal(0));
+          const plannedCredit = plannedLines.reduce((sum: Prisma.Decimal, l) => sum.plus(new Prisma.Decimal(l.credit)), new Prisma.Decimal(0));
           if (!plannedDebit.equals(plannedCredit)) {
             throw new Error(`Accounting Engine Error: Transaction must follow Double Entry Accounting. Total Debit (${plannedDebit.toFixed(2)}) does not equal Total Credit (${plannedCredit.toFixed(2)}).`);
           }
-
-          for (const l of je.lines) {
-            // l.debit/l.credit are Prisma Decimals; compare with Decimal ops
-            // rather than JS `>` so the check is exact.
-            const newDebit = new Prisma.Decimal(l.debit).gt(0) ? numAmount : l.debit;
-            const newCredit = new Prisma.Decimal(l.credit).gt(0) ? numAmount : l.credit;
-            const lineDesc = newDesc !== undefined ? newDesc : l.description;
-
-            await tx.journalEntryLine.update({
-              where: { id: l.id },
-              data: {
-                debit: newDebit,
-                credit: newCredit,
-                description: lineDesc
-              }
-            });
-          }
         } else if (lines && Array.isArray(lines) && lines.length > 0) {
+          mode = 'lines';
           if (lines.length < 2) {
             throw new Error('Accounting Engine Error: Transaction must contain at least two accounting lines for double-entry posting.');
           }
@@ -273,17 +289,87 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             throw new Error('Accounting Engine Error: Transaction amount must be greater than zero.');
           }
 
+          plannedLines = lines.map((l: any) => ({
+            accountId: l.accountId,
+            debit: Number(l.debit) || 0,
+            credit: Number(l.credit) || 0,
+            description: l.description || newDesc || newRef || je.description,
+          }));
+        }
+
+        // Validate available funds BEFORE writing anything, using the
+        // pre-edit `je.status`/`je.lines` (still the current DB state at this
+        // point, since nothing above has written yet). Only the INCREASE in
+        // credit to an account matters — a decrease only frees balance, and a
+        // Draft entry's own lines don't count toward the posted ledger yet,
+        // so its prior contribution is 0. FundValidationService itself
+        // no-ops for non-Asset accounts, so this only ever blocks a genuine
+        // Cash/Bank overdraft.
+        if (plannedLines && newStatus === 'Posted') {
+          const oldCreditByAccount = new Map<string, Prisma.Decimal>();
+          if (je.status === 'Posted') {
+            for (const l of je.lines) {
+              const credit = new Prisma.Decimal(l.credit ?? 0);
+              if (credit.greaterThan(0)) {
+                oldCreditByAccount.set(l.accountId, (oldCreditByAccount.get(l.accountId) ?? new Prisma.Decimal(0)).plus(credit));
+              }
+            }
+          }
+
+          const newCreditByAccount = new Map<string, Prisma.Decimal>();
+          for (const l of plannedLines) {
+            const credit = new Prisma.Decimal(l.credit ?? 0);
+            if (credit.greaterThan(0)) {
+              newCreditByAccount.set(l.accountId, (newCreditByAccount.get(l.accountId) ?? new Prisma.Decimal(0)).plus(credit));
+            }
+          }
+
+          for (const [accountId, newCredit] of newCreditByAccount) {
+            const delta = newCredit.minus(oldCreditByAccount.get(accountId) ?? new Prisma.Decimal(0));
+            if (delta.greaterThan(0)) {
+              await FundValidationService.validateAndLockFunds(tx, {
+                accountId,
+                requiredAmount: delta.toNumber(),
+                module: 'Journal Entries',
+                userId: req.user!.id,
+                ipAddress: req.headers['x-forwarded-for'] as string,
+                userAgent: req.headers['user-agent'],
+              });
+            }
+          }
+        }
+
+        // Only after every check above passes: write the metadata/status
+        // change and, if planned, rewrite the lines.
+        await tx.journalEntry.update({
+          where: { id },
+          data: {
+            postingDate: newDate,
+            reference: newRef,
+            description: newDesc !== undefined ? (newDesc || null) : undefined,
+            status: newStatus
+          }
+        });
+
+        if (mode === 'amount' && plannedLines) {
+          for (const l of plannedLines) {
+            await tx.journalEntryLine.update({
+              where: { id: l.id },
+              data: { debit: l.debit, credit: l.credit, description: l.description }
+            });
+          }
+        } else if (mode === 'lines' && plannedLines) {
           await tx.journalEntryLine.deleteMany({
             where: { journalEntryId: je.id }
           });
-          for (const l of lines) {
+          for (const l of plannedLines) {
             await tx.journalEntryLine.create({
               data: {
                 journalEntryId: je.id,
                 accountId: l.accountId,
-                description: l.description || newDesc || newRef || je.description,
-                debit: Number(l.debit) || 0,
-                credit: Number(l.credit) || 0,
+                description: l.description,
+                debit: l.debit,
+                credit: l.credit,
               }
             });
           }

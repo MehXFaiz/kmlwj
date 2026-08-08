@@ -539,7 +539,7 @@ export const BankVouchers = () => {
       await updateVoucher(updatedData.id, updatedData, 'BP');
       showToast('Voucher updated successfully', 'success');
     } catch (err) {
-      showToast(err.message || 'Failed to update voucher', 'error');
+      showToast(err?.response?.data?.error?.message || err.message || 'Failed to update voucher', 'error');
       throw err;
     }
   };
@@ -668,7 +668,7 @@ export const BankVouchers = () => {
       showToast(`${selectedIds.length} voucher(s) deleted successfully`, 'success');
       setSelectedIds([]);
     } catch (err) {
-      showToast(err.message || 'Failed to bulk delete vouchers', 'error');
+      showToast(err?.response?.data?.error?.message || err.message || 'Failed to bulk delete vouchers', 'error');
     } finally {
       setIsDeleting(false);
       setShowBulkConfirm(false);

@@ -159,7 +159,7 @@ export const DonationForm = () => {
       }
       setTimeout(() => navigate('/donations'), 1200);
     } catch (err) {
-      showToast(err.message || 'Failed to save donation', 'error');
+      showToast(err?.response?.data?.error?.message || err.message || 'Failed to save donation', 'error');
     } finally {
       setLoading(false);
     }

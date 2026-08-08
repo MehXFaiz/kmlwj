@@ -294,26 +294,26 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     if (requestedCreateStatus !== void 0 && !isKnownStatus(requestedCreateStatus)) {
       return res.status(400).json({ error: { message: `Status must be one of: ${HALL_BOOKING_STATUSES.join(", ")}`, status: 400 } });
     }
-    const parsedHallCharges = parseFloat(rawHallCharges);
+    const parsedHallCharges = Math.round(parseFloat(rawHallCharges) * 100) / 100;
     if (isNaN(parsedHallCharges) || parsedHallCharges <= 0) {
       return res.status(400).json({ error: { message: "Hall Charges must be greater than 0", status: 400 } });
     }
-    const parsedDiscount = discount != null ? parseFloat(discount) : 0;
+    const parsedDiscount = discount != null ? Math.round(parseFloat(discount) * 100) / 100 : 0;
     if (isNaN(parsedDiscount) || parsedDiscount < 0) {
       return res.status(400).json({ error: { message: "Discount cannot be negative", status: 400 } });
     }
     if (parsedDiscount > parsedHallCharges) {
       return res.status(400).json({ error: { message: "Discount cannot exceed Hall Charges", status: 400 } });
     }
-    const calculatedNetAmount = parsedHallCharges - parsedDiscount;
-    const parsedReceivedAmount = receivedAmount != null ? parseFloat(receivedAmount) : 0;
+    const calculatedNetAmount = Math.round((parsedHallCharges - parsedDiscount) * 100) / 100;
+    const parsedReceivedAmount = receivedAmount != null ? Math.round(parseFloat(receivedAmount) * 100) / 100 : 0;
     if (isNaN(parsedReceivedAmount) || parsedReceivedAmount < 0) {
       return res.status(400).json({ error: { message: "Received Amount cannot be negative", status: 400 } });
     }
     if (parsedReceivedAmount > calculatedNetAmount) {
       return res.status(400).json({ error: { message: "Received Amount cannot exceed Net Amount", status: 400 } });
     }
-    const calculatedRemainingAmount = calculatedNetAmount - parsedReceivedAmount;
+    const calculatedRemainingAmount = Math.round((calculatedNetAmount - parsedReceivedAmount) * 100) / 100;
     if ((paymentMethod === "BANK" || paymentMethod === "CHEQUE") && !bankAccountId) {
       return res.status(400).json({ error: { message: "Bank account is required for Bank/Cheque payment methods", status: 400 } });
     }
@@ -566,26 +566,26 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         return res.status(400).json({ error: { message: `Cannot change booking status from '${existingBooking.status}' to '${requestedUpdateStatus}'.`, status: 400 } });
       }
     }
-    const parsedHallCharges = parseFloat(rawHallCharges);
+    const parsedHallCharges = Math.round(parseFloat(rawHallCharges) * 100) / 100;
     if (isNaN(parsedHallCharges) || parsedHallCharges <= 0) {
       return res.status(400).json({ error: { message: "Hall Charges must be greater than 0", status: 400 } });
     }
-    const parsedDiscount = discount != null ? parseFloat(discount) : 0;
+    const parsedDiscount = discount != null ? Math.round(parseFloat(discount) * 100) / 100 : 0;
     if (isNaN(parsedDiscount) || parsedDiscount < 0) {
       return res.status(400).json({ error: { message: "Discount cannot be negative", status: 400 } });
     }
     if (parsedDiscount > parsedHallCharges) {
       return res.status(400).json({ error: { message: "Discount cannot exceed Hall Charges", status: 400 } });
     }
-    const calculatedNetAmount = parsedHallCharges - parsedDiscount;
-    const parsedReceivedAmount = receivedAmount != null ? parseFloat(receivedAmount) : 0;
+    const calculatedNetAmount = Math.round((parsedHallCharges - parsedDiscount) * 100) / 100;
+    const parsedReceivedAmount = receivedAmount != null ? Math.round(parseFloat(receivedAmount) * 100) / 100 : 0;
     if (isNaN(parsedReceivedAmount) || parsedReceivedAmount < 0) {
       return res.status(400).json({ error: { message: "Received Amount cannot be negative", status: 400 } });
     }
     if (parsedReceivedAmount > calculatedNetAmount) {
       return res.status(400).json({ error: { message: "Received Amount cannot exceed Net Amount", status: 400 } });
     }
-    const calculatedRemainingAmount = calculatedNetAmount - parsedReceivedAmount;
+    const calculatedRemainingAmount = Math.round((calculatedNetAmount - parsedReceivedAmount) * 100) / 100;
     if ((paymentMethod === "BANK" || paymentMethod === "CHEQUE") && !bankAccountId) {
       return res.status(400).json({ error: { message: "Bank account is required for Bank/Cheque payment methods", status: 400 } });
     }

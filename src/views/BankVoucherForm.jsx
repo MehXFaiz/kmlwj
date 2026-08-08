@@ -142,7 +142,7 @@ export const BankVoucherForm = () => {
       showToast('Transaction saved and posted to records!', 'success');
       navigate('/bank-vouchers');
     } catch (err) {
-      showToast(err.message || "Couldn't save the transaction. Please try again.", 'error');
+      showToast(err?.response?.data?.error?.message || err.message || "Couldn't save the transaction. Please try again.", 'error');
     } finally {
       setLoading(false);
     }

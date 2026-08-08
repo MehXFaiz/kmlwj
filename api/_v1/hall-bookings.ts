@@ -377,11 +377,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if (requestedCreateStatus !== undefined && !isKnownStatus(requestedCreateStatus)) {
       return res.status(400).json({ error: { message: `Status must be one of: ${HALL_BOOKING_STATUSES.join(', ')}`, status: 400 } });
     }
-    const parsedHallCharges = parseFloat(rawHallCharges);
+    // Round to cents at every parse/derive step (matches validateAmount()/
+    // computeInvoiceTotals()'s convention elsewhere) so float noise from
+    // parseFloat/subtraction never reaches the ledger as a fractional-cent
+    // debit/credit.
+    const parsedHallCharges = Math.round(parseFloat(rawHallCharges) * 100) / 100;
     if (isNaN(parsedHallCharges) || parsedHallCharges <= 0) {
       return res.status(400).json({ error: { message: 'Hall Charges must be greater than 0', status: 400 } });
     }
-    const parsedDiscount = discount != null ? parseFloat(discount) : 0;
+    const parsedDiscount = discount != null ? Math.round(parseFloat(discount) * 100) / 100 : 0;
     if (isNaN(parsedDiscount) || parsedDiscount < 0) {
       return res.status(400).json({ error: { message: 'Discount cannot be negative', status: 400 } });
     }
@@ -389,9 +393,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Discount cannot exceed Hall Charges', status: 400 } });
     }
 
-    const calculatedNetAmount = parsedHallCharges - parsedDiscount;
+    const calculatedNetAmount = Math.round((parsedHallCharges - parsedDiscount) * 100) / 100;
 
-    const parsedReceivedAmount = receivedAmount != null ? parseFloat(receivedAmount) : 0;
+    const parsedReceivedAmount = receivedAmount != null ? Math.round(parseFloat(receivedAmount) * 100) / 100 : 0;
     if (isNaN(parsedReceivedAmount) || parsedReceivedAmount < 0) {
       return res.status(400).json({ error: { message: 'Received Amount cannot be negative', status: 400 } });
     }
@@ -399,7 +403,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Received Amount cannot exceed Net Amount', status: 400 } });
     }
 
-    const calculatedRemainingAmount = calculatedNetAmount - parsedReceivedAmount;
+    const calculatedRemainingAmount = Math.round((calculatedNetAmount - parsedReceivedAmount) * 100) / 100;
 
     if ((paymentMethod === 'BANK' || paymentMethod === 'CHEQUE') && !bankAccountId) {
       return res.status(400).json({ error: { message: 'Bank account is required for Bank/Cheque payment methods', status: 400 } });
@@ -716,11 +720,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         return res.status(400).json({ error: { message: `Cannot change booking status from '${existingBooking.status}' to '${requestedUpdateStatus}'.`, status: 400 } });
       }
     }
-    const parsedHallCharges = parseFloat(rawHallCharges);
+    // Round to cents at every parse/derive step (matches validateAmount()/
+    // computeInvoiceTotals()'s convention elsewhere) so float noise from
+    // parseFloat/subtraction never reaches the ledger as a fractional-cent
+    // debit/credit.
+    const parsedHallCharges = Math.round(parseFloat(rawHallCharges) * 100) / 100;
     if (isNaN(parsedHallCharges) || parsedHallCharges <= 0) {
       return res.status(400).json({ error: { message: 'Hall Charges must be greater than 0', status: 400 } });
     }
-    const parsedDiscount = discount != null ? parseFloat(discount) : 0;
+    const parsedDiscount = discount != null ? Math.round(parseFloat(discount) * 100) / 100 : 0;
     if (isNaN(parsedDiscount) || parsedDiscount < 0) {
       return res.status(400).json({ error: { message: 'Discount cannot be negative', status: 400 } });
     }
@@ -728,9 +736,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Discount cannot exceed Hall Charges', status: 400 } });
     }
 
-    const calculatedNetAmount = parsedHallCharges - parsedDiscount;
+    const calculatedNetAmount = Math.round((parsedHallCharges - parsedDiscount) * 100) / 100;
 
-    const parsedReceivedAmount = receivedAmount != null ? parseFloat(receivedAmount) : 0;
+    const parsedReceivedAmount = receivedAmount != null ? Math.round(parseFloat(receivedAmount) * 100) / 100 : 0;
     if (isNaN(parsedReceivedAmount) || parsedReceivedAmount < 0) {
       return res.status(400).json({ error: { message: 'Received Amount cannot be negative', status: 400 } });
     }
@@ -738,7 +746,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Received Amount cannot exceed Net Amount', status: 400 } });
     }
 
-    const calculatedRemainingAmount = calculatedNetAmount - parsedReceivedAmount;
+    const calculatedRemainingAmount = Math.round((calculatedNetAmount - parsedReceivedAmount) * 100) / 100;
 
     if ((paymentMethod === 'BANK' || paymentMethod === 'CHEQUE') && !bankAccountId) {
       return res.status(400).json({ error: { message: 'Bank account is required for Bank/Cheque payment methods', status: 400 } });

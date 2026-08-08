@@ -115,7 +115,7 @@ export const JournalEntries = () => {
       showToast(`${selectedIds.length} journal entry(s) deleted successfully`, 'success');
       setSelectedIds([]);
     } catch (err) {
-      showToast(err.message || 'Failed to bulk delete journal entries', 'error');
+      showToast(err?.response?.data?.error?.message || err.message || 'Failed to bulk delete journal entries', 'error');
     } finally {
       setIsDeleting(false);
       setShowBulkConfirm(false);
