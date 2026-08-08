@@ -1306,7 +1306,7 @@ export class AccountingService {
     if (nameLower.includes('bank')) return false;
     if (nameLower.includes('cash') || nameLower.includes('till') || nameLower.includes('petty') || nameLower.includes('hand')) return true;
     const detailLower = (detailType || '').toLowerCase();
-    if (detailLower === 'cash') return true;
+    if (detailLower === 'cash' || detailLower === 'pettycash') return true;
     return false;
   }
 

@@ -298,6 +298,13 @@ app.post('/api/v1/income-categories', makeExpress(incomeCategoriesHandler));
 app.put('/api/v1/income-categories', makeExpress(incomeCategoriesHandler));
 app.delete('/api/v1/income-categories', makeExpress(incomeCategoriesHandler));
 
+import pettyCashHandler from './_v1/petty-cash.js';
+
+app.get('/api/v1/petty-cash', makeExpress(pettyCashHandler));
+app.post('/api/v1/petty-cash', makeExpress(pettyCashHandler));
+app.put('/api/v1/petty-cash', makeExpress(pettyCashHandler));
+app.delete('/api/v1/petty-cash', makeExpress(pettyCashHandler));
+
 app.post('/api/v1/ledger-post', makeExpress(ledgerPostHandler));
 app.put('/api/v1/ledger-post', makeExpress(ledgerPostHandler));
 

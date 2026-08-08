@@ -35,6 +35,9 @@ model User {
   donationsReceivedCreated DonationReceived[]  @relation("DonationReceivedCreatedBy")
   zakatCardsCreated        ZakatCard[]         @relation("ZakatCardCreatedBy")
   addIncomesCreated        AddIncomeRecord[]   @relation("AddIncomeCreatedBy")
+  pettyCashCreated         PettyCashTransaction[] @relation("PettyCashCreatedBy")
+  pettyCashReconciled      PettyCashReconciliation[] @relation("PettyCashReconciledBy")
+  pettyCashApproved        PettyCashReconciliation[] @relation("PettyCashApprovedBy")
   aiRepairLogs             AiRepairLog[]
 
   @@index([isDeleted])
@@ -125,6 +128,11 @@ model Account {
   donationsReceivedBank  DonationReceived[]  @relation("DonationReceivedBankAccount")
   incomeCategoryAccounts IncomeCategory[]
   addIncomeBanks         AddIncomeRecord[]   @relation("AddIncomeBankAccount")
+  pettyCashConfigs       PettyCashConfig[]
+  pettyCashAccounts      PettyCashTransaction[] @relation("PettyCashAccount")
+  pettyCashSourceAccounts PettyCashTransaction[] @relation("PettyCashSourceAccount")
+  pettyCashExpenseAccounts PettyCashTransaction[] @relation("PettyCashExpenseAccount")
+  pettyCashReconciliations PettyCashReconciliation[]
 
   // Tree-building (parent lookups) and level-scoped scans hit these constantly.
   @@index([parentId])
@@ -186,6 +194,7 @@ model ExpenseHead {
   deletedBy      String?         @db.Uuid
   createdAt      DateTime        @default(now())
   simpleExpenses SimpleExpense[]
+  pettyCashTransactions PettyCashTransaction[]
 
   @@index([isDeleted])
 }
@@ -226,6 +235,7 @@ model JournalEntry {
   donationReceived  DonationReceived?  @relation("DonationReceivedJournalEntry")
   zakatCard         ZakatCard?         @relation("ZakatCardJournalEntry")
   addIncomeRecord   AddIncomeRecord?   @relation("AddIncomeJournalEntry")
+  pettyCashTransaction PettyCashTransaction? @relation("PettyCashJournalEntry")
 
   // Every financial report filters posted lines by their parent JournalEntry's
   // status (+ posting-date window) via getPostedAggregates — this is the single
@@ -862,4 +872,79 @@ model AiRepairLog {
 
   @@index([createdAt])
   @@index([issueId])
+}
+
+// ── Petty Cash Module ─────────────────────────────────────────────────────
+model PettyCashConfig {
+  id            String   @id @default(uuid()) @db.Uuid
+  accountId     String   @unique @db.Uuid
+  account       Account  @relation(fields: [accountId], references: [id])
+  fundLimit     Decimal  @default(50000) @db.Decimal(18, 2)
+  custodianName String   @default("Authorized Custodian")
+  status        String   @default("ACTIVE") // ACTIVE | SUSPENDED
+  remarks       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model PettyCashTransaction {
+  id                 String       @id @default(uuid()) @db.Uuid
+  voucherNo          String       @unique
+  transactionType    String // OPENING_BALANCE | TRANSFER_IN | TRANSFER_OUT | EXPENSE | REPLENISHMENT | ADMIN_ADJUSTMENT
+  pettyCashAccountId String       @db.Uuid
+  pettyCashAccount   Account      @relation("PettyCashAccount", fields: [pettyCashAccountId], references: [id])
+  sourceAccountId    String?      @db.Uuid
+  sourceAccount      Account?     @relation("PettyCashSourceAccount", fields: [sourceAccountId], references: [id])
+  expenseAccountId   String?      @db.Uuid
+  expenseAccount     Account?     @relation("PettyCashExpenseAccount", fields: [expenseAccountId], references: [id])
+  expenseHeadId      String?      @db.Uuid
+  expenseHead        ExpenseHead? @relation(fields: [expenseHeadId], references: [id])
+  amount             Decimal      @db.Decimal(18, 2)
+  date               DateTime     @default(now())
+  paidTo             String?
+  referenceNo        String?
+  narration          String?
+  attachmentUrl      String?      @db.Text
+  journalEntryId     String?      @unique @db.Uuid
+  journalEntry       JournalEntry? @relation("PettyCashJournalEntry", fields: [journalEntryId], references: [id])
+  createdById        String       @db.Uuid
+  createdBy          User         @relation("PettyCashCreatedBy", fields: [createdById], references: [id])
+  postedAt           DateTime?
+  postedById         String?      @db.Uuid
+  revertedAt         DateTime?
+  revertedById       String?      @db.Uuid
+  revertReason       String?
+  isDeleted          Boolean      @default(false)
+  deletedAt          DateTime?
+  deletedBy          String?      @db.Uuid
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@index([isDeleted])
+  @@index([date])
+  @@index([pettyCashAccountId])
+  @@index([transactionType])
+}
+
+model PettyCashReconciliation {
+  id                 String    @id @default(uuid()) @db.Uuid
+  pettyCashAccountId String    @db.Uuid
+  pettyCashAccount   Account   @relation(fields: [pettyCashAccountId], references: [id])
+  reconciliationDate DateTime  @default(now())
+  systemBalance      Decimal   @db.Decimal(18, 2)
+  physicalCount      Decimal   @db.Decimal(18, 2)
+  difference         Decimal   @db.Decimal(18, 2)
+  explanation        String?
+  status             String    @default("PENDING_APPROVAL") // PENDING_APPROVAL | APPROVED | REJECTED
+  reconciledById     String    @db.Uuid
+  reconciledBy       User      @relation("PettyCashReconciledBy", fields: [reconciledById], references: [id])
+  approvedById       String?   @db.Uuid
+  approvedBy         User?     @relation("PettyCashApprovedBy", fields: [approvedById], references: [id])
+  approvedAt         DateTime?
+  journalEntryId     String?   @unique @db.Uuid
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([pettyCashAccountId])
+  @@index([reconciliationDate])
 }

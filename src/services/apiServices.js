@@ -138,3 +138,17 @@ export const ledgerService = {
     api.post('/api/v1/ledger-post?action=revert', { module, recordId, reason }).then((r) => r.data),
 };
 
+export const pettyCashService = {
+  getConfig: () => api.get('/api/v1/petty-cash?action=config').then((r) => r.data),
+  updateConfig: (data) => api.put('/api/v1/petty-cash?action=config', data).then((r) => r.data),
+  getRegister: (params = {}) => api.get('/api/v1/petty-cash?action=register', { params }).then((r) => r.data),
+  addCash: (data) => api.post('/api/v1/petty-cash?action=add-cash', data).then((r) => r.data),
+  recordExpense: (data) => api.post('/api/v1/petty-cash?action=expense', data).then((r) => r.data),
+  replenish: (data) => api.post('/api/v1/petty-cash?action=replenish', data).then((r) => r.data),
+  reconcile: (data) => api.post('/api/v1/petty-cash?action=reconcile', data).then((r) => r.data),
+  approveReconciliation: (data) => api.post('/api/v1/petty-cash?action=approve-reconciliation', data).then((r) => r.data),
+  revert: (data) => api.post('/api/v1/petty-cash?action=revert', data).then((r) => r.data),
+  getVoucher: (id) => api.get(`/api/v1/petty-cash?action=voucher&id=${id}`).then((r) => r.data),
+};
+
+
