@@ -32,7 +32,9 @@ async function runPettyCashTests() {
     }
   });
 
-  if (!expenseAccount) throw new Error('No Expense account found for testing.');
+  const validUser = await prisma.user.findFirst({ where: { isDeleted: false } });
+  if (!validUser) throw new Error('No active User found for testing.');
+  const userId = validUser.id;
 
   const createdTxIds: string[] = [];
   const createdJeIds: string[] = [];
@@ -51,7 +53,7 @@ async function runPettyCashTests() {
       sourceAccountId: bankAccount.id,
       amount: 5000,
       narration: 'Test Transfer to Petty Cash',
-      createdById: '00000000-0000-0000-0000-000000000000'
+      createdById: userId
     });
     createdTxIds.push(transferTx.id);
     if (transferTx.journalEntryId) createdJeIds.push(transferTx.journalEntryId);
@@ -73,7 +75,7 @@ async function runPettyCashTests() {
       amount: 1200,
       paidTo: 'Office Stationery Mart',
       narration: 'Purchased paper clips and pens',
-      createdById: '00000000-0000-0000-0000-000000000000'
+      createdById: userId
     });
     createdTxIds.push(expenseTx.id);
     if (expenseTx.journalEntryId) createdJeIds.push(expenseTx.journalEntryId);
@@ -93,7 +95,7 @@ async function runPettyCashTests() {
       sourceAccountId: bankAccount.id,
       amount: 1200,
       narration: 'Replenish Petty Cash Fund',
-      createdById: '00000000-0000-0000-0000-000000000000',
+      createdById: userId,
       isReplenishment: true
     });
     createdTxIds.push(replenishTx.id);
@@ -114,7 +116,7 @@ async function runPettyCashTests() {
         expenseAccountId: expenseAccount.id,
         amount: 999999,
         paidTo: 'Invalid High Amount',
-        createdById: '00000000-0000-0000-0000-000000000000'
+        createdById: userId
       });
     } catch (err: any) {
       t4Blocked = true;
@@ -130,7 +132,7 @@ async function runPettyCashTests() {
       await PettyCashService.addCash({
         sourceAccountId: bankAccount.id,
         amount: 1000000,
-        createdById: '00000000-0000-0000-0000-000000000000'
+        createdById: userId
       });
     } catch (err: any) {
       t5Blocked = true;
@@ -148,7 +150,7 @@ async function runPettyCashTests() {
   } finally {
     console.log('\n--- CLEANING UP TEST TRANSACTIONS (ZERO DUMMY DATA RULE) ---');
     for (const txId of createdTxIds) {
-      await PettyCashService.revertTransaction(txId, '00000000-0000-0000-0000-000000000000', 'Automated Test Cleanup');
+      await PettyCashService.revertTransaction(txId, userId, 'Automated Test Cleanup');
       await prisma.pettyCashTransaction.delete({ where: { id: txId } }).catch(() => {});
     }
     for (const jeId of createdJeIds) {

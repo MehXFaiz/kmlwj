@@ -1,4 +1,6 @@
+import { PrismaClient } from "@prisma/client";
 import { PettyCashService } from "../_services/petty-cash.service.js";
+const prisma = new PrismaClient();
 async function handler(req, res) {
   const { method, query, body, user } = req;
   const action = query.action || (req.path ? req.path.split("/").pop() : "");
@@ -40,7 +42,11 @@ async function handler(req, res) {
       }
     }
     if (method === "POST") {
-      const createdById = user?.id || "00000000-0000-0000-0000-000000000000";
+      let createdById = user?.id;
+      if (!createdById) {
+        const defaultUser = await prisma.user.findFirst({ where: { isDeleted: false } });
+        createdById = defaultUser?.id || "00000000-0000-0000-0000-000000000000";
+      }
       if (action === "add-cash" || action === "transfer-in") {
         const result = await PettyCashService.addCash({
           sourceAccountId: body.sourceAccountId,
