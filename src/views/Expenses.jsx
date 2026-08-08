@@ -171,7 +171,7 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
     }
 
     if (val > avail) {
-      showToast(`Cannot record expense: Amount (Rs. ${val.toLocaleString()}) exceeds available balance (Rs. ${Math.max(0, avail).toLocaleString()}) in ${accName}.`, 'error');
+      showToast(`Cannot record expense: Amount (Rs. ${val.toLocaleString()}) exceeds available balance (Rs. ${avail.toLocaleString()}) in ${accName}.`, 'error');
       return;
     }
 

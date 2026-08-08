@@ -214,6 +214,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
         { name: t('sidebar.cashFlow'), hint: t('sidebar.cashFlowHint'), icon: Activity, path: '/reports?tab=cash-flow', perms: ['VIEW_REPORTS'] },
         { name: t('sidebar.generalLedger'), hint: t('sidebar.generalLedgerHint'), icon: BookOpen, path: '/ledger' },
         { name: t('sidebar.trialBalance'), hint: t('sidebar.trialBalanceHint'), icon: Layers, path: '/reports?tab=trial-balance', perms: ['VIEW_REPORTS'] },
+        { name: t('sidebar.trialBalanceMatrix'), hint: t('sidebar.trialBalanceMatrixHint'), icon: Layers, path: '/trial-balance-sheet', perms: ['VIEW_REPORTS'] },
       ],
     },
     {
@@ -244,7 +245,6 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
         { name: t('sidebar.incomeCategoryMapping'), hint: t('sidebar.incomeCategoryMappingHint'), icon: Link2, path: '/income-category-mapping', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
         { name: t('sidebar.expenseCategories'), hint: t('sidebar.expenseCategoriesHint'), icon: TrendingDown, path: '/expense-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
         { name: t('sidebar.systemAccounts'), hint: t('sidebar.systemAccountsHint'), icon: ShieldCheck, path: '/reserved', perms: ['MANAGE_RESERVED_CODES'] },
-        { name: t('sidebar.trialBalanceMatrix'), hint: t('sidebar.trialBalanceMatrixHint'), icon: Layers, path: '/trial-balance-sheet', perms: ['VIEW_REPORTS'] },
         { name: t('sidebar.usersAccess'), hint: t('sidebar.usersAccessHint'), icon: BadgeCheck, path: '/users-roles', perms: ['MANAGE_USERS', 'MANAGE_ROLES'] },
         { name: t('sidebar.auditTrail'), hint: t('sidebar.auditTrailHint'), icon: History, path: '/audit', perms: ['VIEW_REPORTS', 'MANAGE_USERS'] },
         { name: 'Accounting Health Check', hint: 'Verify accounting integrity & consistency', icon: ShieldCheck, path: '/accounting-health', perms: ['VIEW_REPORTS', 'MANAGE_USERS'] },

@@ -27,6 +27,7 @@
     "dist:win:publish": "electron-builder --win --publish always"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.116.0",
     "@hookform/resolvers": "^5.4.0",
     "@prisma/adapter-pg": "^6.4.0",
     "@prisma/client": "^6.4.0",

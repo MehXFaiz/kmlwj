@@ -116,6 +116,21 @@ export const accountingHealthService = {
   rebuildBalances: () => api.post('/api/v1/accounting-health').then((r) => r.data),
 };
 
+export const aiAccountingService = {
+  getIssues: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return api.get(`/api/v1/ai-accounting/issues${qs ? `?${qs}` : ''}`).then((r) => r.data);
+  },
+  runAudit: () => api.post('/api/v1/ai-accounting/audit').then((r) => r.data),
+  analyze: (issueIds) => api.post('/api/v1/ai-accounting/analyze', issueIds ? { issueIds } : {}).then((r) => r.data),
+  autoRepair: () => api.post('/api/v1/ai-accounting/auto-repair').then((r) => r.data),
+  applyRepair: (issueId, decision, notes) => api.post('/api/v1/ai-accounting/repair', { issueId, decision, notes }).then((r) => r.data),
+  getHistory: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return api.get(`/api/v1/ai-accounting/history${qs ? `?${qs}` : ''}`).then((r) => r.data);
+  },
+};
+
 export const ledgerService = {
   postToLedger: (module, recordId) =>
     api.post('/api/v1/ledger-post?action=post', { module, recordId }).then((r) => r.data),

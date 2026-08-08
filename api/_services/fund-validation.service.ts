@@ -147,8 +147,11 @@ export class FundValidationService {
     // 2. Fetch full account and calculate available balance
     const { account, availableBalance, isCash, isBank } = await FundValidationService.getAvailableBalance(tx, accountId);
 
-    // Only enforce non-negative fund validation for Cash or Bank accounts
-    if (!isCash && !isBank) {
+    const typeName = (account.accountType?.name || '').toUpperCase();
+    const isAsset = typeName === 'ASSET' || typeName === 'ASSETS' || isCash || isBank;
+
+    // Only enforce non-negative fund validation for Asset (Cash, Bank, Zakat, etc.) accounts
+    if (!isAsset) {
       return { availableBalance, account };
     }
 

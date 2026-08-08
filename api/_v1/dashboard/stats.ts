@@ -87,13 +87,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const totalLiabilities = summaryResult.totalLiabilities;
   const totalRevenue = summaryResult.totalRevenue;
   const totalExpense = summaryResult.totalExpense;
-  const cashBalance = Math.max(0, summaryResult.cashBalance);
-  const bankBalance = Math.max(0, summaryResult.bankBalance);
+  const cashBalance = summaryResult.cashBalance;
+  const bankBalance = summaryResult.bankBalance;
   // Opening balances (as of the fiscal year's start) — lets the Dashboard show
   // Cash in Hand as "Opening + this period's movement" instead of a single
   // cumulative figure with nothing to reconcile it against Net Surplus.
-  const openingCashBalance = Math.max(0, summaryResult.openingCashBalance ?? cashBalance);
-  const openingBankBalance = Math.max(0, summaryResult.openingBankBalance ?? bankBalance);
+  const openingCashBalance = summaryResult.openingCashBalance ?? cashBalance;
+  const openingBankBalance = summaryResult.openingBankBalance ?? bankBalance;
   const netAssets = summaryResult.netAssets ?? (totalAssets - totalLiabilities);
   const netIncome = summaryResult.netPeriodIncome;
   const baseEquity = summaryResult.totalEquity - netIncome;

@@ -14,6 +14,14 @@ export interface IntegrityIssue {
     name?: string;
     reference?: string;
   };
+  // Optional numeric detail, populated by checks that already compute an
+  // exact expected-vs-actual delta (e.g. trial balance, cached balance
+  // drift). Consumed by AiReconciliationService to persist AiRepairIssue
+  // rows without re-deriving numbers a check already has in hand.
+  currentValue?: number;
+  expectedValue?: number;
+  difference?: number;
+  affectedRecords?: { model: string; id: string; ref?: string }[];
 }
 
 export interface IntegrityCheckResult {
@@ -429,6 +437,9 @@ export class AccountingIntegrityService {
         type: 'trial_balance_mismatch',
         severity: 'critical',
         description: `Trial Balance mismatch! Total Debits: ${totalDebit.toFixed(2)}, Total Credits: ${totalCredit.toFixed(2)}, Difference: ${difference.toFixed(2)}`,
+        currentValue: totalDebit.toNumber(),
+        expectedValue: totalCredit.toNumber(),
+        difference: difference.toNumber(),
       });
     }
 
@@ -500,6 +511,10 @@ export class AccountingIntegrityService {
             glCode: account.glCode,
             name: account.accountName,
           },
+          currentValue: storedBalance.toNumber(),
+          expectedValue: expectedBalance.toNumber(),
+          difference: drift.toNumber(),
+          affectedRecords: [{ model: 'Account', id: account.id, ref: account.glCode }],
         });
       }
     }

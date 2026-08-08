@@ -51,6 +51,12 @@ import searchHandler from './_v1/search.js';
 import simpleExpenseHandler from './_v1/simple-expense.js';
 import simpleIncomeHandler from './_v1/simple-income.js';
 import accountingHealthHandler from './_v1/accounting-health.js';
+import aiAccountingIssuesHandler from './_v1/ai-accounting/issues.js';
+import aiAccountingAuditHandler from './_v1/ai-accounting/audit.js';
+import aiAccountingAnalyzeHandler from './_v1/ai-accounting/analyze.js';
+import aiAccountingAutoRepairHandler from './_v1/ai-accounting/auto-repair.js';
+import aiAccountingRepairHandler from './_v1/ai-accounting/repair.js';
+import aiAccountingHistoryHandler from './_v1/ai-accounting/history.js';
 import systemResetHandler from './_v1/system-reset.js';
 import zakatCardsHandler from './_v1/zakat-cards.js';
 import incomeCategoriesHandler from './_v1/income-categories.js';
@@ -304,6 +310,14 @@ app.delete('/api/v1/add-income', makeExpress(addIncomeHandler));
 app.get('/api/v1/accounting-health', makeExpress(accountingHealthHandler));
 // POST ?action=rebuild-balances — rebuild/repair cached account balances
 app.post('/api/v1/accounting-health', makeExpress(accountingHealthHandler));
+
+// AI Accounting Health & Auto-Repair
+app.get('/api/v1/ai-accounting/issues', makeExpress(aiAccountingIssuesHandler));
+app.post('/api/v1/ai-accounting/audit', makeExpress(aiAccountingAuditHandler));
+app.post('/api/v1/ai-accounting/analyze', makeExpress(aiAccountingAnalyzeHandler));
+app.post('/api/v1/ai-accounting/auto-repair', makeExpress(aiAccountingAutoRepairHandler));
+app.post('/api/v1/ai-accounting/repair', makeExpress(aiAccountingRepairHandler));
+app.get('/api/v1/ai-accounting/history', makeExpress(aiAccountingHistoryHandler));
 
 // System Reset Route
 app.post('/api/v1/system-reset', makeExpress(systemResetHandler));

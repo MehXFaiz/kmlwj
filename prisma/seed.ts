@@ -42,6 +42,9 @@ async function main() {
     { name: 'VIEW_REPORTS', description: 'View financial reports (dashboard, trial balance, IS, BS, cash flow, GL)' },
     { name: 'VIEW_AUDIT', description: 'View audit logs and accounting health checks' },
     { name: 'VIEW_JOURNALS', description: 'View journal entries' },
+    // AI Accounting Health & Auto-Repair
+    { name: 'RUN_AI_AUDIT', description: 'Trigger AI analysis of detected accounting issues' },
+    { name: 'APPLY_AI_REPAIR', description: 'Approve, apply, or auto-run AI-proposed accounting repairs' },
     // Journal / GL posting
     { name: 'POST_JOURNAL', description: 'Post, reverse, or restore journal entries and transactions' },
     // Income & Expense

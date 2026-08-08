@@ -13,6 +13,10 @@ export const PERMS = {
   VIEW_AUDIT:      'VIEW_AUDIT',      // audit log access
   VIEW_JOURNALS:   'VIEW_JOURNALS',   // read journal entries
 
+  // ── AI Accounting Health & Auto-Repair (Admin+, see isAdminOrAbove gate) ───
+  RUN_AI_AUDIT:      'RUN_AI_AUDIT',      // trigger AI analysis of detected issues
+  APPLY_AI_REPAIR:   'APPLY_AI_REPAIR',   // approve/apply or auto-run AI-proposed repairs
+
   // ── Journal / GL posting ───────────────────────────────────────────────────
   POST_JOURNAL:    'POST_JOURNAL',    // post, reverse, restore journal entries
 

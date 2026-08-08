@@ -64,10 +64,10 @@ var stats_default = makeHandler(async (req, res) => {
   const totalLiabilities = summaryResult.totalLiabilities;
   const totalRevenue = summaryResult.totalRevenue;
   const totalExpense = summaryResult.totalExpense;
-  const cashBalance = Math.max(0, summaryResult.cashBalance);
-  const bankBalance = Math.max(0, summaryResult.bankBalance);
-  const openingCashBalance = Math.max(0, summaryResult.openingCashBalance ?? cashBalance);
-  const openingBankBalance = Math.max(0, summaryResult.openingBankBalance ?? bankBalance);
+  const cashBalance = summaryResult.cashBalance;
+  const bankBalance = summaryResult.bankBalance;
+  const openingCashBalance = summaryResult.openingCashBalance ?? cashBalance;
+  const openingBankBalance = summaryResult.openingBankBalance ?? bankBalance;
   const netAssets = summaryResult.netAssets ?? totalAssets - totalLiabilities;
   const netIncome = summaryResult.netPeriodIncome;
   const baseEquity = summaryResult.totalEquity - netIncome;

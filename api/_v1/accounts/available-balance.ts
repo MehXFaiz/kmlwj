@@ -50,7 +50,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       accountId: account.id,
       glCode: account.glCode,
       accountName: account.accountName,
-      availableBalance: Math.max(0, availableBalance),
+      availableBalance,
       rawAvailableBalance: availableBalance,
       isCash,
       isBank

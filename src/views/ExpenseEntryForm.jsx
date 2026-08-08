@@ -234,7 +234,7 @@ export const ExpenseEntryForm = () => {
       const avail = localBalances[bankAcc.code] !== undefined ? localBalances[bankAcc.code] : (bankAcc.initialBalance || 0);
       if (val > avail) {
         const isCash = bankAcc.detailType === 'Cash' || (bankAcc.name || '').toLowerCase().includes('cash');
-        const availNum = Math.max(0, avail);
+        const availNum = Number(avail) || 0;
         const shortfall = val - availNum;
         const formattedAvailable = availNum.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
         const formattedRequired = val.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
