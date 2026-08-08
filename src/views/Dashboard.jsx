@@ -614,11 +614,6 @@ export const Dashboard = () => {
             trendLabel: (stats.cashBalance || 0) < 0 ? 'Overdraft' : t('dashboard.availableCash'),
             trendColor: (stats.cashBalance || 0) < 0 ? 'text-red-400' : 'text-slate-400',
             accentBar: (stats.cashBalance || 0) < 0 ? 'from-red-500 to-red-400' : 'from-blue-500 to-blue-400',
-            // Reconciles this figure against Net Surplus: Opening + this
-            // period's movement = the Cash in Hand shown above — otherwise a
-            // break-even year next to a large cumulative balance looks like a
-            // bug when it's actually prior-period cash carried forward.
-            subLabel: `Opening: Rs ${(stats.openingCashBalance || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
             delay: 160,
           },
           {
