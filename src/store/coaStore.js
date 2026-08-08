@@ -20,11 +20,10 @@ export const useCoaStore = create((set, get) => ({
     return fiscalYear;
   },
 
-  // Deprecated generic fetch, kept for backward compatibility if needed elsewhere
   fetchAccounts: async () => {
     set({ loading: true, error: null });
     try {
-      const data = await accountService.getAll();
+      const data = await accountService.getAll({ limit: 1000 });
       set({ accounts: data.data || data, loading: false });
     } catch (err) {
       set({ error: err.message || 'Failed to fetch accounts', loading: false });

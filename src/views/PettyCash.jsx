@@ -51,7 +51,7 @@ export const PettyCash = () => {
     revertTransaction
   } = usePettyCashStore();
 
-  const { accounts, fetchAccounts } = useCoaStore();
+  const { accounts, loading: loadingCoa, fetchAccounts } = useCoaStore();
 
   // Active View Tab: 'OPERATIONS' | 'PHYSICAL_COUNT' | 'AUDIT_REGISTER' | 'SETTINGS'
   const [activeTab, setActiveTab] = useState('OPERATIONS');
@@ -134,26 +134,42 @@ export const PettyCash = () => {
 
   // Cash & Bank Accounts (Asset)
   const cashBankAccounts = useMemo(() => {
-    return accounts.filter(a => 
-      !a.isDeleted && 
-      a.accountLevel === 'GL' &&
-      a.accountName.toLowerCase() !== 'petty cash' &&
-      (
-        (a.detailType || '').toLowerCase() === 'bank' ||
-        (a.detailType || '').toLowerCase() === 'cash' ||
-        a.accountName.toLowerCase().includes('bank') ||
-        a.accountName.toLowerCase().includes('cash')
-      )
-    );
+    return accounts.filter(a => {
+      if (a.isLocked || a.status === 'Inactive') return false;
+
+      const isGlLevel = (a.level || a.accountLevel) === 'GL';
+      if (!isGlLevel) return false;
+
+      const typeStr = (a.type || a.accountType?.name || '').toLowerCase();
+      if (typeStr !== 'asset') return false;
+
+      const nameStr = (a.name || a.accountName || '').toLowerCase();
+      if (nameStr.includes('petty cash')) return false;
+
+      const detailStr = (a.detailType || '').toLowerCase();
+      const isCashOrBank =
+        detailStr === 'cash' ||
+        detailStr === 'bank' ||
+        nameStr.includes('bank') ||
+        nameStr.includes('cash') ||
+        nameStr.includes('till') ||
+        nameStr.includes('hand');
+
+      return isCashOrBank;
+    });
   }, [accounts]);
 
   // Expense Accounts
   const expenseAccounts = useMemo(() => {
-    return accounts.filter(a => 
-      !a.isDeleted && 
-      a.accountLevel === 'GL' &&
-      a.accountType?.name?.toUpperCase() === 'EXPENSE'
-    );
+    return accounts.filter(a => {
+      if (a.isLocked || a.status === 'Inactive') return false;
+
+      const isGlLevel = (a.level || a.accountLevel) === 'GL';
+      if (!isGlLevel) return false;
+
+      const typeStr = (a.type || a.accountType?.name || '').toLowerCase();
+      return typeStr === 'expense';
+    });
   }, [accounts]);
 
   // Filtered Register Rows
@@ -486,10 +502,12 @@ export const PettyCash = () => {
                         onChange={(e) => setAddCashForm({ ...addCashForm, sourceAccountId: e.target.value })}
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-amber-500"
                       >
-                        <option value="">Select Source Account</option>
+                        <option value="">
+                          {loadingCoa ? 'Loading accounts...' : cashBankAccounts.length === 0 ? 'No eligible Cash/Bank accounts found' : 'Select Source Account'}
+                        </option>
                         {cashBankAccounts.map(a => (
                           <option key={a.id} value={a.id}>
-                            {a.glCode} - {a.accountName} (Available: PKR {Number(a.currentBalance || 0).toLocaleString()})
+                            {a.name || a.accountName} — {a.code || a.glCode} — Available: PKR {Number(a.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                           </option>
                         ))}
                       </select>
@@ -580,10 +598,12 @@ export const PettyCash = () => {
                         onChange={(e) => setReplenishForm({ ...replenishForm, sourceAccountId: e.target.value })}
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-amber-500"
                       >
-                        <option value="">Select Bank / Cash Account</option>
+                        <option value="">
+                          {loadingCoa ? 'Loading accounts...' : cashBankAccounts.length === 0 ? 'No eligible Cash/Bank accounts found' : 'Select Bank / Cash Account'}
+                        </option>
                         {cashBankAccounts.map(a => (
                           <option key={a.id} value={a.id}>
-                            {a.glCode} - {a.accountName} (Available: PKR {Number(a.currentBalance || 0).toLocaleString()})
+                            {a.name || a.accountName} — {a.code || a.glCode} — Available: PKR {Number(a.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                           </option>
                         ))}
                       </select>
@@ -685,10 +705,12 @@ export const PettyCash = () => {
                       onChange={(e) => setExpenseForm({ ...expenseForm, expenseAccountId: e.target.value })}
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-amber-500"
                     >
-                      <option value="">Select Expense Account</option>
+                      <option value="">
+                        {loadingCoa ? 'Loading accounts...' : expenseAccounts.length === 0 ? 'No eligible Expense accounts found' : 'Select Expense Category'}
+                      </option>
                       {expenseAccounts.map(a => (
                         <option key={a.id} value={a.id}>
-                          {a.glCode} - {a.accountName}
+                          {a.name || a.accountName} — {a.code || a.glCode}
                         </option>
                       ))}
                     </select>

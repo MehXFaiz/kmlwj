@@ -124,7 +124,7 @@ export class PettyCashService {
       }),
       prisma.pettyCashReconciliation.findFirst({
         orderBy: { createdAt: 'desc' },
-        include: { reconciledBy: { select: { name: true, email: true } } }
+        include: { reconciledBy: { select: { fullName: true, email: true } } }
       })
     ]);
 
@@ -151,7 +151,7 @@ export class PettyCashService {
       physicalCount,
       difference,
       lastAuditDate: latestReconcile ? latestReconcile.createdAt.toISOString().split('T')[0] : null,
-      lastAuditedBy: latestReconcile?.reconciledBy?.name || latestReconcile?.reconciledBy?.email || 'N/A',
+      lastAuditedBy: latestReconcile?.reconciledBy?.fullName || latestReconcile?.reconciledBy?.email || 'N/A',
       latestReconciliationStatus: latestReconcile ? (difference === 0 ? 'BALANCED' : difference < 0 ? 'SHORTAGE' : 'SURPLUS') : 'BALANCED'
     };
   }
