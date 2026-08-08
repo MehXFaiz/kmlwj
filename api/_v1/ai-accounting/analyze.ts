@@ -33,7 +33,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   if (!provider) {
     return res.status(200).json({
       status: 200,
-      message: 'AI provider not configured — set ANTHROPIC_API_KEY to enable AI analysis.',
+      message: 'AI provider not configured — set OPENROUTER_API_KEY to enable AI analysis.',
       data: { configured: false, analyzed: [], failed: [] },
     });
   }

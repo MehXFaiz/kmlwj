@@ -116,7 +116,7 @@ export const AccountingHealthCheck = () => {
     try {
       const res = await aiAccountingService.analyze();
       if (res?.data?.configured === false) {
-        showToast('AI provider not configured — add ANTHROPIC_API_KEY to enable AI Analyze.', 'warning');
+        showToast('AI provider not configured — add OPENROUTER_API_KEY to enable AI Analyze.', 'warning');
       } else {
         showToast(`AI analyzed ${res?.data?.analyzed?.length ?? 0} of ${res?.data?.totalCandidates ?? 0} issue(s).`, 'success');
       }
