@@ -580,7 +580,7 @@ export const Dashboard = () => {
         {[
           {
             // BUG FIX: Show gross revenue (Total Income), not net income
-            title: t('dashboard.totalIncome'),
+            title: t('dashboard.totalIncome', { year: fiscalYear || 2026 }),
             value: stats.revenue || 0,
             icon: TrendingUp,
             iconColor: 'text-emerald-400',
@@ -592,7 +592,7 @@ export const Dashboard = () => {
             delay: 0,
           },
           {
-            title: t('dashboard.totalSpent'),
+            title: t('dashboard.totalSpent', { year: fiscalYear || 2026 }),
             value: stats.expenses || 0,
             icon: TrendingDown,
             iconColor: 'text-red-400',
@@ -635,7 +635,7 @@ export const Dashboard = () => {
             delay: 240,
           },
           {
-            title: t('dashboard.netAfterExpenses'),
+            title: t('dashboard.netAfterExpenses', { year: fiscalYear || 2026 }),
             value: stats.netIncome || 0,
             icon: Wallet,
             iconColor: (stats.netIncome || 0) < 0 ? 'text-red-400' : 'text-emerald-400',
