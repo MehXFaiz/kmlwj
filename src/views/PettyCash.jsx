@@ -17,13 +17,16 @@ import {
   CheckCircle2, 
   X
 } from 'lucide-react';
-import { DashboardLayout } from '../components/layout/DashboardLayout';
+import { DashboardLayout } from '../layouts/DashboardLayout';
 import { usePettyCashStore } from '../store/pettyCashStore';
 import { useCoaStore } from '../store/coaStore';
 import { PettyCashVoucherModal } from '../components/common/PettyCashVoucherModal';
-import { showToast } from '../utils/toast';
-
 export const PettyCash = () => {
+  const [toast, setToast] = useState(null);
+  const showToast = (message, type = 'info') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
   const {
     config,
     register,
@@ -249,8 +252,23 @@ export const PettyCash = () => {
   };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout breadcrumbs={['Money Out', 'Petty Cash Module']}>
       <div className="space-y-6">
+        
+        {/* Toast Notification Banner */}
+        {toast && (
+          <div className={`p-4 rounded-xl border flex items-center justify-between shadow-lg text-xs font-bold ${
+            toast.type === 'error' ? 'bg-rose-950/90 border-rose-800 text-rose-200' :
+            toast.type === 'success' ? 'bg-emerald-950/90 border-emerald-800 text-emerald-200' :
+            'bg-blue-950/90 border-blue-800 text-blue-200'
+          }`}>
+            <div className="flex items-center gap-2">
+              {toast.type === 'error' ? <AlertCircle className="h-4 w-4 text-rose-400" /> : <CheckCircle2 className="h-4 w-4 text-emerald-400" />}
+              <span>{toast.message}</span>
+            </div>
+            <button onClick={() => setToast(null)} className="text-slate-400 hover:text-slate-200"><X className="h-4 w-4" /></button>
+          </div>
+        )}
         
         {/* Top Title & Actions */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

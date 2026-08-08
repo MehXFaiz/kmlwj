@@ -97,7 +97,12 @@ export class PettyCashService {
    * Get Petty Cash Fund Configuration & Live Stats
    */
   static async getConfig() {
-    const { account, config } = await this.getOrCreatePettyCashAccount();
+    const { account: initialAccount, config } = await this.getOrCreatePettyCashAccount();
+
+    const account = await prisma.account.findUnique({
+      where: { id: initialAccount.id },
+      include: { accountType: true }
+    }) || initialAccount;
 
     const currentBalance = new Prisma.Decimal(account.currentBalance || 0);
     const fundLimit = new Prisma.Decimal(config.fundLimit || 50000);
@@ -248,7 +253,8 @@ export class PettyCashService {
     createdById: string;
     isReplenishment?: boolean;
   }) {
-    const { account, config } = await this.getOrCreatePettyCashAccount();
+    const { account: initialAccount, config } = await this.getOrCreatePettyCashAccount();
+    const account = await prisma.account.findUnique({ where: { id: initialAccount.id } }) || initialAccount;
     const amountDec = new Prisma.Decimal(data.amount);
 
     if (amountDec.lte(0)) throw new Error('Transfer amount must be greater than zero.');
@@ -349,7 +355,8 @@ export class PettyCashService {
     attachmentUrl?: string;
     createdById: string;
   }) {
-    const { account } = await this.getOrCreatePettyCashAccount();
+    const { account: initialAccount } = await this.getOrCreatePettyCashAccount();
+    const account = await prisma.account.findUnique({ where: { id: initialAccount.id } }) || initialAccount;
     const amountDec = new Prisma.Decimal(data.amount);
 
     if (amountDec.lte(0)) throw new Error('Expense amount must be greater than zero.');
