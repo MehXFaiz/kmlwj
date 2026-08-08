@@ -121,6 +121,7 @@ class OpenRouterAiProvider implements AiProvider {
         },
         body: JSON.stringify({
           model: this.model,
+          max_tokens: 1024,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: `Diagnose this detected accounting reconciliation issue:\n\n${JSON.stringify(issuePayload, null, 2)}` },
