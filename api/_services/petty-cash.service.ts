@@ -108,20 +108,32 @@ export class PettyCashService {
     const fundLimit = new Prisma.Decimal(config.fundLimit || 50000);
     const availableCapacity = fundLimit.minus(currentBalance);
 
-    // Calculate total expenses paid via Petty Cash in current fiscal year
-    const currentYear = new Date().getFullYear();
-    const yearlyExpenses = await prisma.pettyCashTransaction.aggregate({
-      where: {
-        pettyCashAccountId: account.id,
-        transactionType: 'EXPENSE',
-        isDeleted: false,
-        date: {
-          gte: new Date(`${currentYear}-01-01T00:00:00Z`),
-          lte: new Date(`${currentYear}-12-31T23:59:59Z`)
-        }
-      },
-      _sum: { amount: true }
-    });
+    // Calculate aggregate totals from actual DB transactions
+    const [addedAgg, expenseAgg, replenishAgg, latestReconcile] = await Promise.all([
+      prisma.pettyCashTransaction.aggregate({
+        where: { pettyCashAccountId: account.id, transactionType: 'TRANSFER_IN', isDeleted: false },
+        _sum: { amount: true }
+      }),
+      prisma.pettyCashTransaction.aggregate({
+        where: { pettyCashAccountId: account.id, transactionType: 'EXPENSE', isDeleted: false },
+        _sum: { amount: true }
+      }),
+      prisma.pettyCashTransaction.aggregate({
+        where: { pettyCashAccountId: account.id, transactionType: 'REPLENISHMENT', isDeleted: false },
+        _sum: { amount: true }
+      }),
+      prisma.pettyCashReconciliation.findFirst({
+        orderBy: { createdAt: 'desc' },
+        include: { reconciledBy: { select: { name: true, email: true } } }
+      })
+    ]);
+
+    const totalAdded = Number(addedAgg._sum.amount || 0);
+    const totalExpenses = Number(expenseAgg._sum.amount || 0);
+    const totalReplenished = Number(replenishAgg._sum.amount || 0);
+
+    const physicalCount = latestReconcile ? Number(latestReconcile.physicalCount) : currentBalance.toNumber();
+    const difference = latestReconcile ? Number(latestReconcile.difference) : 0;
 
     return {
       accountId: account.id,
@@ -133,7 +145,14 @@ export class PettyCashService {
       custodianName: config.custodianName,
       status: config.status,
       remarks: config.remarks,
-      yearlySpent: Number(yearlyExpenses._sum.amount || 0)
+      totalAdded,
+      totalExpenses,
+      totalReplenished,
+      physicalCount,
+      difference,
+      lastAuditDate: latestReconcile ? latestReconcile.createdAt.toISOString().split('T')[0] : null,
+      lastAuditedBy: latestReconcile?.reconciledBy?.name || latestReconcile?.reconciledBy?.email || 'N/A',
+      latestReconciliationStatus: latestReconcile ? (difference === 0 ? 'BALANCED' : difference < 0 ? 'SHORTAGE' : 'SURPLUS') : 'BALANCED'
     };
   }
 
@@ -474,6 +493,12 @@ export class PettyCashService {
     const physicalCount = new Prisma.Decimal(data.physicalCount);
     const difference = physicalCount.minus(systemBalance);
 
+    let reconciledById = data.reconciledById;
+    if (!reconciledById || reconciledById === '00000000-0000-0000-0000-000000000000') {
+      const user = await prisma.user.findFirst({ where: { isDeleted: false } });
+      if (user) reconciledById = user.id;
+    }
+
     const rec = await prisma.pettyCashReconciliation.create({
       data: {
         pettyCashAccountId: account.id,
@@ -482,8 +507,8 @@ export class PettyCashService {
         physicalCount,
         difference,
         explanation: data.explanation || null,
-        status: 'PENDING_APPROVAL',
-        reconciledById: data.reconciledById
+        status: difference.isZero() ? 'APPROVED' : 'PENDING_APPROVAL',
+        reconciledById
       }
     });
 

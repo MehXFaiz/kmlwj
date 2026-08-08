@@ -15,18 +15,27 @@ import {
   Search, 
   Calendar, 
   CheckCircle2, 
-  X
+  X,
+  History,
+  Coins,
+  Building,
+  TrendingDown,
+  TrendingUp,
+  UserCheck,
+  HelpCircle
 } from 'lucide-react';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { usePettyCashStore } from '../store/pettyCashStore';
 import { useCoaStore } from '../store/coaStore';
 import { PettyCashVoucherModal } from '../components/common/PettyCashVoucherModal';
+
 export const PettyCash = () => {
   const [toast, setToast] = useState(null);
   const showToast = (message, type = 'info') => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
+    setTimeout(() => setToast(null), 5000);
   };
+
   const {
     config,
     register,
@@ -44,32 +53,58 @@ export const PettyCash = () => {
 
   const { accounts, fetchAccounts } = useCoaStore();
 
-  // Active Modals & Drawer State
-  const [activeModal, setActiveModal] = useState(null); // 'ADD_CASH' | 'EXPENSE' | 'REPLENISH' | 'RECONCILE' | 'CONFIG'
+  // Active View Tab: 'OPERATIONS' | 'PHYSICAL_COUNT' | 'AUDIT_REGISTER' | 'SETTINGS'
+  const [activeTab, setActiveTab] = useState('OPERATIONS');
+
+  // Selected Voucher for Slip Modal Printing
   const [selectedVoucher, setSelectedVoucher] = useState(null);
   const [isVoucherOpen, setIsVoucherOpen] = useState(false);
 
   // Form States
-  const [formData, setFormData] = useState({
-    amount: '',
+  const [addCashForm, setAddCashForm] = useState({
     sourceAccountId: '',
+    amount: '',
+    date: new Date().toISOString().split('T')[0],
+    referenceNo: '',
+    narration: ''
+  });
+
+  const [replenishForm, setReplenishForm] = useState({
+    sourceAccountId: '',
+    amount: '',
+    date: new Date().toISOString().split('T')[0],
+    referenceNo: '',
+    narration: ''
+  });
+
+  const [expenseForm, setExpenseForm] = useState({
     expenseAccountId: '',
+    amount: '',
     paidTo: '',
     date: new Date().toISOString().split('T')[0],
     referenceNo: '',
-    narration: '',
+    narration: ''
+  });
+
+  const [countForm, setCountForm] = useState({
     physicalCount: '',
-    explanation: '',
+    date: new Date().toISOString().split('T')[0],
+    explanation: ''
+  });
+
+  const [configForm, setConfigForm] = useState({
     fundLimit: '',
-    custodianName: '',
-    revertReason: ''
+    custodianName: ''
   });
 
   const [revertTxId, setRevertTxId] = useState(null);
+  const [revertReason, setRevertReason] = useState('');
 
-  // Filters
+  // Register Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
 
   useEffect(() => {
     fetchConfig();
@@ -77,18 +112,32 @@ export const PettyCash = () => {
     fetchAccounts();
   }, [fetchConfig, fetchRegister, fetchAccounts]);
 
+  useEffect(() => {
+    if (config) {
+      setConfigForm({
+        fundLimit: config.fundLimit || 50000,
+        custodianName: config.custodianName || 'Authorized Custodian'
+      });
+      setCountForm(prev => ({
+        ...prev,
+        physicalCount: config.physicalCount !== undefined ? config.physicalCount : config.currentBalance
+      }));
+    }
+  }, [config]);
+
   const handleRefresh = useCallback(() => {
     fetchConfig();
     fetchRegister();
     fetchAccounts();
+    showToast('Petty Cash records updated from database', 'info');
   }, [fetchConfig, fetchRegister, fetchAccounts]);
 
-  // Source Accounts (Cash & Bank)
+  // Cash & Bank Accounts (Asset)
   const cashBankAccounts = useMemo(() => {
     return accounts.filter(a => 
       !a.isDeleted && 
       a.accountLevel === 'GL' &&
-      a.accountName !== 'Petty Cash' &&
+      a.accountName.toLowerCase() !== 'petty cash' &&
       (
         (a.detailType || '').toLowerCase() === 'bank' ||
         (a.detailType || '').toLowerCase() === 'cash' ||
@@ -114,141 +163,132 @@ export const PettyCash = () => {
         row.voucherNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
         row.narration.toLowerCase().includes(searchTerm.toLowerCase()) ||
         row.paidTo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        row.expenseCategory.toLowerCase().includes(searchTerm.toLowerCase());
+        row.expenseCategory.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (row.createdBy && row.createdBy.toLowerCase().includes(searchTerm.toLowerCase()));
       
       const matchesType = !typeFilter || row.transactionType === typeFilter;
+      const matchesStart = !startDateFilter || row.date >= startDateFilter;
+      const matchesEnd = !endDateFilter || row.date <= endDateFilter;
 
-      return matchesSearch && matchesType;
+      return matchesSearch && matchesType && matchesStart && matchesEnd;
     });
-  }, [register, searchTerm, typeFilter]);
+  }, [register, searchTerm, typeFilter, startDateFilter, endDateFilter]);
 
-  // Form Submissions
-  const handleSubmitAddCash = async (e) => {
+  // Dynamic Physical Count Difference Calculation
+  const currentSysBalance = Number(config?.currentBalance || 0);
+  const physicalInputVal = countForm.physicalCount !== '' ? Number(countForm.physicalCount) : currentSysBalance;
+  const countDifference = physicalInputVal - currentSysBalance;
+
+  // Handlers for Inline Submissions
+  const handleAddCashSubmit = async (e) => {
     e.preventDefault();
     try {
       await addCash({
-        sourceAccountId: formData.sourceAccountId,
-        amount: parseFloat(formData.amount),
-        date: formData.date,
-        referenceNo: formData.referenceNo,
-        narration: formData.narration,
-        createdById: '00000000-0000-0000-0000-000000000000'
+        sourceAccountId: addCashForm.sourceAccountId,
+        amount: parseFloat(addCashForm.amount),
+        date: addCashForm.date,
+        referenceNo: addCashForm.referenceNo,
+        narration: addCashForm.narration || 'Add Cash to Petty Cash Fund'
       });
-      showToast('Cash added to Petty Cash successfully!', 'success');
-      setActiveModal(null);
-      resetForm();
+      showToast('Cash transferred to Petty Cash successfully!', 'success');
+      setAddCashForm({
+        sourceAccountId: '',
+        amount: '',
+        date: new Date().toISOString().split('T')[0],
+        referenceNo: '',
+        narration: ''
+      });
     } catch (err) {
-      showToast(err.message || 'Failed to add cash to Petty Cash', 'error');
+      showToast(err.message || 'Failed to transfer cash to Petty Cash', 'error');
     }
   };
 
-  const handleSubmitExpense = async (e) => {
-    e.preventDefault();
-    try {
-      await recordExpense({
-        expenseAccountId: formData.expenseAccountId,
-        amount: parseFloat(formData.amount),
-        paidTo: formData.paidTo,
-        date: formData.date,
-        referenceNo: formData.referenceNo,
-        narration: formData.narration,
-        createdById: '00000000-0000-0000-0000-000000000000'
-      });
-      showToast('Petty Cash Expense recorded successfully!', 'success');
-      setActiveModal(null);
-      resetForm();
-    } catch (err) {
-      showToast(err.message || 'Failed to record Petty Cash expense', 'error');
-    }
-  };
-
-  const handleSubmitReplenish = async (e) => {
+  const handleReplenishSubmit = async (e) => {
     e.preventDefault();
     try {
       await replenish({
-        sourceAccountId: formData.sourceAccountId,
-        amount: parseFloat(formData.amount),
-        date: formData.date,
-        referenceNo: formData.referenceNo,
-        narration: formData.narration || 'Petty Cash Fund Replenishment',
-        createdById: '00000000-0000-0000-0000-000000000000'
+        sourceAccountId: replenishForm.sourceAccountId,
+        amount: parseFloat(replenishForm.amount),
+        date: replenishForm.date,
+        referenceNo: replenishForm.referenceNo,
+        narration: replenishForm.narration || 'Petty Cash Fund Replenishment'
       });
       showToast('Petty Cash fund replenished successfully!', 'success');
-      setActiveModal(null);
-      resetForm();
+      setReplenishForm({
+        sourceAccountId: '',
+        amount: '',
+        date: new Date().toISOString().split('T')[0],
+        referenceNo: '',
+        narration: ''
+      });
     } catch (err) {
       showToast(err.message || 'Failed to replenish Petty Cash fund', 'error');
     }
   };
 
-  const handleSubmitConfig = async (e) => {
+  const handleExpenseSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await recordExpense({
+        expenseAccountId: expenseForm.expenseAccountId,
+        amount: parseFloat(expenseForm.amount),
+        paidTo: expenseForm.paidTo,
+        date: expenseForm.date,
+        referenceNo: expenseForm.referenceNo,
+        narration: expenseForm.narration
+      });
+      showToast('Petty Cash Expense recorded successfully!', 'success');
+      setExpenseForm({
+        expenseAccountId: '',
+        amount: '',
+        paidTo: '',
+        date: new Date().toISOString().split('T')[0],
+        referenceNo: '',
+        narration: ''
+      });
+    } catch (err) {
+      showToast(err.message || 'Failed to record Petty Cash expense', 'error');
+    }
+  };
+
+  const handleCountSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await reconcile({
+        physicalCount: parseFloat(countForm.physicalCount),
+        explanation: countForm.explanation
+      });
+      showToast('Physical count saved and audited successfully!', 'success');
+      fetchConfig();
+    } catch (err) {
+      showToast(err.message || 'Failed to save physical count', 'error');
+    }
+  };
+
+  const handleConfigSubmit = async (e) => {
     e.preventDefault();
     try {
       await updateConfig({
-        fundLimit: parseFloat(formData.fundLimit),
-        custodianName: formData.custodianName
+        fundLimit: parseFloat(configForm.fundLimit),
+        custodianName: configForm.custodianName
       });
       showToast('Petty Cash configuration updated!', 'success');
-      setActiveModal(null);
-      resetForm();
     } catch (err) {
       showToast(err.message || 'Failed to update configuration', 'error');
     }
   };
 
-  const handleSubmitReconcile = async (e) => {
-    e.preventDefault();
-    try {
-      await reconcile({
-        physicalCount: parseFloat(formData.physicalCount),
-        explanation: formData.explanation,
-        reconciledById: '00000000-0000-0000-0000-000000000000'
-      });
-      showToast('Reconciliation submitted for approval!', 'success');
-      setActiveModal(null);
-      resetForm();
-    } catch (err) {
-      showToast(err.message || 'Reconciliation submission failed', 'error');
-    }
-  };
-
-  const handleRevert = async (e) => {
+  const handleRevertSubmit = async (e) => {
     e.preventDefault();
     if (!revertTxId) return;
     try {
-      await revertTransaction(revertTxId, formData.revertReason || 'Admin Reversal');
+      await revertTransaction(revertTxId, revertReason || 'Admin Reversal');
       showToast('Transaction reverted successfully!', 'success');
       setRevertTxId(null);
-      resetForm();
+      setRevertReason('');
     } catch (err) {
       showToast(err.message || 'Failed to revert transaction', 'error');
     }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      amount: '',
-      sourceAccountId: '',
-      expenseAccountId: '',
-      paidTo: '',
-      date: new Date().toISOString().split('T')[0],
-      referenceNo: '',
-      narration: '',
-      physicalCount: '',
-      explanation: '',
-      fundLimit: config?.fundLimit || 50000,
-      custodianName: config?.custodianName || '',
-      revertReason: ''
-    });
-  };
-
-  const openConfigModal = () => {
-    setFormData(prev => ({
-      ...prev,
-      fundLimit: config?.fundLimit || 50000,
-      custodianName: config?.custodianName || 'Authorized Custodian'
-    }));
-    setActiveModal('CONFIG');
   };
 
   return (
@@ -263,14 +303,14 @@ export const PettyCash = () => {
             'bg-blue-950/90 border-blue-800 text-blue-200'
           }`}>
             <div className="flex items-center gap-2">
-              {toast.type === 'error' ? <AlertCircle className="h-4 w-4 text-rose-400" /> : <CheckCircle2 className="h-4 w-4 text-emerald-400" />}
+              {toast.type === 'error' ? <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" /> : <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />}
               <span>{toast.message}</span>
             </div>
             <button onClick={() => setToast(null)} className="text-slate-400 hover:text-slate-200"><X className="h-4 w-4" /></button>
           </div>
         )}
-        
-        {/* Top Title & Actions */}
+
+        {/* Header Title & Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-100 tracking-tight flex items-center gap-2">
@@ -284,560 +324,886 @@ export const PettyCash = () => {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={openConfigModal}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-800 bg-slate-900 text-xs font-bold text-slate-300 hover:bg-slate-800 transition"
-            >
-              <Sliders className="h-4 w-4 text-slate-400" />
-              <span>Configure Fund</span>
-            </button>
-
-            <button
               onClick={handleRefresh}
               disabled={loading}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-800 bg-slate-900 text-xs font-bold text-slate-300 hover:bg-slate-800 transition disabled:opacity-50"
             >
               <RefreshCw className={`h-4 w-4 text-slate-400 ${loading ? 'animate-spin' : ''}`} />
-              <span>Refresh</span>
+              <span>Refresh Data</span>
             </button>
           </div>
         </div>
 
-        {/* Summary KPI Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* SECTION 6: PETTY CASH SUMMARY CARDS (PERSISTED DATABASE VALUES) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
           
-          <div className="rounded-xl border border-amber-900/40 bg-amber-950/10 p-5 shadow-none space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Current Balance</span>
-            <p className="text-2xl font-black font-mono text-amber-400">
+          {/* PETTY CASH BALANCE */}
+          <div className="rounded-xl border border-amber-900/40 bg-amber-950/20 p-4 space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Petty Cash Balance</span>
+            <p className="text-xl font-black font-mono text-amber-400">
               PKR {(config?.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </p>
-            <p className="text-[11px] text-slate-500">GL Code: {config?.glCode || '1010104'}</p>
+            <p className="text-[10px] text-slate-500 font-mono">GL: {config?.glCode || '1010104'}</p>
           </div>
 
-          <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-5 shadow-none space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Authorized Fund Limit</span>
-            <p className="text-2xl font-black font-mono text-slate-100">
-              PKR {(config?.fundLimit || 50000).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+          {/* TOTAL CASH ADDED */}
+          <div className="rounded-xl border border-emerald-900/40 bg-emerald-950/20 p-4 space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Total Cash Added</span>
+            <p className="text-xl font-black font-mono text-emerald-400">
+              PKR {(config?.totalAdded || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </p>
-            <p className="text-[11px] text-slate-500">Imprest Capacity Ceiling</p>
+            <p className="text-[10px] text-slate-500">Asset Transfers In</p>
           </div>
 
-          <div className="rounded-xl border border-emerald-900/40 bg-emerald-950/10 p-5 shadow-none space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Available Capacity</span>
-            <p className="text-2xl font-black font-mono text-emerald-400">
-              PKR {(config?.availableCapacity || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+          {/* TOTAL EXPENSES */}
+          <div className="rounded-xl border border-rose-900/40 bg-rose-950/20 p-4 space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400">Total Expenses</span>
+            <p className="text-xl font-black font-mono text-rose-400">
+              PKR {(config?.totalExpenses || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </p>
-            <p className="text-[11px] text-slate-500">Maximum Deposit Space</p>
+            <p className="text-[10px] text-slate-500">Operational Outflow</p>
           </div>
 
-          <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-5 shadow-none space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Fund Custodian</span>
-            <p className="text-base font-bold text-slate-200 truncate mt-1">
-              {config?.custodianName || 'Authorized Custodian'}
+          {/* TOTAL REPLENISHED */}
+          <div className="rounded-xl border border-blue-900/40 bg-blue-950/20 p-4 space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400">Total Replenished</span>
+            <p className="text-xl font-black font-mono text-blue-400">
+              PKR {(config?.totalReplenished || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </p>
-            <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400">
-              Status: {config?.status || 'ACTIVE'}
+            <p className="text-[10px] text-slate-500">Bank Replenishments</p>
+          </div>
+
+          {/* PHYSICAL CASH */}
+          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Physical Cash</span>
+            <p className="text-xl font-black font-mono text-slate-100">
+              PKR {(config?.physicalCount !== undefined ? config.physicalCount : config?.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </p>
+            <p className="text-[10px] text-slate-500">Last Audit Count</p>
+          </div>
+
+          {/* DIFFERENCE */}
+          <div className={`rounded-xl border p-4 space-y-1 ${
+            (config?.difference || 0) < 0 ? 'bg-rose-950/30 border-rose-800/60' :
+            (config?.difference || 0) > 0 ? 'bg-blue-950/30 border-blue-800/60' :
+            'bg-slate-900/60 border-slate-800'
+          }`}>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Difference</span>
+            <p className={`text-xl font-black font-mono ${
+              (config?.difference || 0) < 0 ? 'text-rose-400' :
+              (config?.difference || 0) > 0 ? 'text-blue-400' :
+              'text-emerald-400'
+            }`}>
+              PKR {(config?.difference || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </p>
+            <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+              (config?.difference || 0) < 0 ? 'bg-rose-950 text-rose-300 border border-rose-900' :
+              (config?.difference || 0) > 0 ? 'bg-blue-950 text-blue-300 border border-blue-900' :
+              'bg-emerald-950 text-emerald-300 border border-emerald-900'
+            }`}>
+              {(config?.difference || 0) < 0 ? 'Cash Shortage' : (config?.difference || 0) > 0 ? 'Cash Surplus' : 'Balanced'}
             </span>
           </div>
 
         </div>
 
-        {/* Action Buttons Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {/* INLINE PAGE NAVIGATION TABS */}
+        <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
           <button
-            onClick={() => { resetForm(); setActiveModal('ADD_CASH'); }}
-            className="flex items-center justify-center gap-2 p-3 rounded-xl bg-emerald-950/60 border border-emerald-800/50 text-emerald-300 font-bold text-xs hover:bg-emerald-900/80 transition"
+            onClick={() => setActiveTab('OPERATIONS')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+              activeTab === 'OPERATIONS'
+                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+            }`}
           >
-            <PlusCircle className="h-4 w-4 text-emerald-400" />
-            <span>Add Cash</span>
+            <PlusCircle className="h-4 w-4" />
+            <span>Petty Cash Operations</span>
           </button>
 
           <button
-            onClick={() => { resetForm(); setActiveModal('EXPENSE'); }}
-            className="flex items-center justify-center gap-2 p-3 rounded-xl bg-rose-950/60 border border-rose-800/50 text-rose-300 font-bold text-xs hover:bg-rose-900/80 transition"
+            onClick={() => setActiveTab('PHYSICAL_COUNT')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+              activeTab === 'PHYSICAL_COUNT'
+                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+            }`}
           >
-            <MinusCircle className="h-4 w-4 text-rose-400" />
-            <span>Record Expense</span>
+            <Coins className="h-4 w-4" />
+            <span>Physical Cash Count</span>
           </button>
 
           <button
-            onClick={() => { resetForm(); setActiveModal('REPLENISH'); }}
-            className="flex items-center justify-center gap-2 p-3 rounded-xl bg-blue-950/60 border border-blue-800/50 text-blue-300 font-bold text-xs hover:bg-blue-900/80 transition"
+            onClick={() => setActiveTab('AUDIT_REGISTER')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+              activeTab === 'AUDIT_REGISTER'
+                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+            }`}
           >
-            <ArrowDownLeft className="h-4 w-4 text-blue-400" />
-            <span>Replenish Fund</span>
+            <History className="h-4 w-4" />
+            <span>Petty Cash Audit & Register</span>
           </button>
 
           <button
-            onClick={() => { resetForm(); setActiveModal('RECONCILE'); }}
-            className="flex items-center justify-center gap-2 p-3 rounded-xl bg-amber-950/60 border border-amber-800/50 text-amber-300 font-bold text-xs hover:bg-amber-900/80 transition"
+            onClick={() => setActiveTab('SETTINGS')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+              activeTab === 'SETTINGS'
+                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+            }`}
           >
-            <ShieldCheck className="h-4 w-4 text-amber-400" />
-            <span>Physical Audit</span>
+            <Sliders className="h-4 w-4" />
+            <span>Fund Settings</span>
           </button>
         </div>
 
-        {/* Filter & Register Section */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 sm:p-5 space-y-4">
-          
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-              <input
-                type="text"
-                placeholder="Search voucher, description, recipient, or category..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-amber-500"
-              />
-            </div>
+        {/* TAB 1: PETTY CASH OPERATIONS (INLINE FORMS 1, 2, 3) */}
+        {activeTab === 'OPERATIONS' && (
+          <div className="space-y-6">
+            
+            {/* GRID OF INLINE OPERATIONS */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              {/* SECTION 1: ADD CASH TO PETTY CASH (INLINE FORM CARD) */}
+              <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5 space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+                  <PlusCircle className="h-5 w-5 text-emerald-400" />
+                  <div>
+                    <h2 className="text-sm font-bold text-slate-100">Add Cash to Petty Cash</h2>
+                    <p className="text-[11px] text-slate-400">Transfer liquidity from Cash in Hand or Bank into Petty Cash</p>
+                  </div>
+                </div>
 
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-300 focus:outline-none"
-            >
-              <option value="">All Transaction Types</option>
-              <option value="TRANSFER_IN">Cash Added</option>
-              <option value="EXPENSE">Expense</option>
-              <option value="REPLENISHMENT">Replenishment</option>
-              <option value="ADMIN_ADJUSTMENT">Admin Adjustment</option>
-            </select>
-          </div>
+                <form onSubmit={handleAddCashSubmit} className="space-y-3 text-xs">
+                  {/* Row 1: Source Account & Amount */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-400 font-semibold mb-1">Source Account (Cash or Bank) *</label>
+                      <select
+                        required
+                        value={addCashForm.sourceAccountId}
+                        onChange={(e) => setAddCashForm({ ...addCashForm, sourceAccountId: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-amber-500"
+                      >
+                        <option value="">Select Source Account</option>
+                        {cashBankAccounts.map(a => (
+                          <option key={a.id} value={a.id}>
+                            {a.glCode} - {a.accountName} (Available: PKR {Number(a.currentBalance || 0).toLocaleString()})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-950/80 text-slate-400 font-bold border-b border-slate-800 uppercase tracking-wider">
-                <tr>
-                  <th className="py-3 px-3">Date</th>
-                  <th className="py-3 px-3">Voucher #</th>
-                  <th className="py-3 px-3">Type</th>
-                  <th className="py-3 px-3">Description</th>
-                  <th className="py-3 px-3">Category / Account</th>
-                  <th className="py-3 px-3">Paid To</th>
-                  <th className="py-3 px-3 text-right">Debit (PKR)</th>
-                  <th className="py-3 px-3 text-right">Credit (PKR)</th>
-                  <th className="py-3 px-3 text-right">Running Balance</th>
-                  <th className="py-3 px-3 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 text-slate-300">
-                {filteredRegister.map((row) => (
-                  <tr key={row.id} className="hover:bg-slate-800/30 transition">
-                    <td className="py-3 px-3 font-mono text-slate-400">{row.date}</td>
-                    <td className="py-3 px-3 font-mono font-bold text-amber-400">{row.voucherNo}</td>
-                    <td className="py-3 px-3">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        row.transactionType === 'EXPENSE' ? 'bg-rose-950 text-rose-300 border border-rose-900/50' :
-                        row.transactionType === 'TRANSFER_IN' ? 'bg-emerald-950 text-emerald-300 border border-emerald-900/50' :
-                        'bg-blue-950 text-blue-300 border border-blue-900/50'
-                      }`}>
-                        {row.transactionType}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 font-medium max-w-xs truncate">{row.narration}</td>
-                    <td className="py-3 px-3 text-slate-400">{row.expenseCategory}</td>
-                    <td className="py-3 px-3 text-slate-400">{row.paidTo}</td>
-                    <td className="py-3 px-3 text-right font-mono text-emerald-400 font-semibold">
-                      {row.debit > 0 ? row.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
-                    </td>
-                    <td className="py-3 px-3 text-right font-mono text-rose-400 font-semibold">
-                      {row.credit > 0 ? row.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
-                    </td>
-                    <td className="py-3 px-3 text-right font-mono font-bold text-slate-100">
-                      PKR {row.runningBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-3 px-3 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          onClick={() => { setSelectedVoucher(row); setIsVoucherOpen(true); }}
-                          title="Print Voucher"
-                          className="p-1.5 rounded-lg border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-amber-400 transition"
-                        >
-                          <Printer className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          onClick={() => setRevertTxId(row.id)}
-                          title="Revert Transaction"
-                          className="p-1.5 rounded-lg border border-slate-800 hover:bg-rose-950 hover:border-rose-800 text-slate-400 hover:text-rose-400 transition"
-                        >
-                          <RotateCcw className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filteredRegister.length === 0 && (
-                  <tr>
-                    <td colSpan={10} className="py-8 text-center text-slate-500 italic">
-                      No Petty Cash transactions recorded yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                    <div>
+                      <label className="block text-slate-400 font-semibold mb-1">Amount (PKR) *</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        required
+                        placeholder="e.g. 10000"
+                        value={addCashForm.amount}
+                        onChange={(e) => setAddCashForm({ ...addCashForm, amount: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 font-mono text-slate-200 focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                  </div>
 
-        </div>
+                  {/* Row 2: Date & Reference */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-400 font-semibold mb-1">Date *</label>
+                      <input
+                        type="date"
+                        required
+                        value={addCashForm.date}
+                        onChange={(e) => setAddCashForm({ ...addCashForm, date: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
+                      />
+                    </div>
 
-      </div>
+                    <div>
+                      <label className="block text-slate-400 font-semibold mb-1">Reference / Cheque Number</label>
+                      <input
+                        type="text"
+                        placeholder="Optional cheque / reference #"
+                        value={addCashForm.referenceNo}
+                        onChange={(e) => setAddCashForm({ ...addCashForm, referenceNo: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
+                      />
+                    </div>
+                  </div>
 
-      {/* ── MODALS ── */}
+                  {/* Row 3: Narration */}
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Narration / Remarks</label>
+                    <textarea
+                      rows={2}
+                      placeholder="Add Cash description for double-entry posting"
+                      value={addCashForm.narration}
+                      onChange={(e) => setAddCashForm({ ...addCashForm, narration: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
+                    />
+                  </div>
 
-      {/* Add Cash Modal */}
-      {activeModal === 'ADD_CASH' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                <PlusCircle className="h-4 w-4 text-emerald-400" />
-                <span>Add Cash to Petty Cash</span>
-              </h3>
-              <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-200"><X className="h-4 w-4" /></button>
-            </div>
-
-            <form onSubmit={handleSubmitAddCash} className="space-y-3 text-xs">
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">Source Account (Cash or Bank)</label>
-                <select
-                  required
-                  value={formData.sourceAccountId}
-                  onChange={(e) => setFormData({ ...formData, sourceAccountId: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-amber-500"
-                >
-                  <option value="">Select Source Account</option>
-                  {cashBankAccounts.map(a => (
-                    <option key={a.id} value={a.id}>{a.glCode} - {a.accountName} (Bal: PKR {Number(a.currentBalance || 0).toLocaleString()})</option>
-                  ))}
-                </select>
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition disabled:opacity-50 flex items-center gap-2"
+                    >
+                      <PlusCircle className="h-4 w-4" />
+                      <span>Transfer to Petty Cash</span>
+                    </button>
+                  </div>
+                </form>
               </div>
 
+              {/* SECTION 2: REPLENISH PETTY CASH FUND (INLINE FORM CARD) */}
+              <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5 space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+                  <ArrowDownLeft className="h-5 w-5 text-blue-400" />
+                  <div>
+                    <h2 className="text-sm font-bold text-slate-100">Replenish Petty Cash Fund</h2>
+                    <p className="text-[11px] text-slate-400">Replenish spent fund capacity back up to imprest ceiling</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleReplenishSubmit} className="space-y-3 text-xs">
+                  {/* Row 1: Replenishing Account & Amount */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-400 font-semibold mb-1">Replenishing Bank/Cash Account *</label>
+                      <select
+                        required
+                        value={replenishForm.sourceAccountId}
+                        onChange={(e) => setReplenishForm({ ...replenishForm, sourceAccountId: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-amber-500"
+                      >
+                        <option value="">Select Bank / Cash Account</option>
+                        {cashBankAccounts.map(a => (
+                          <option key={a.id} value={a.id}>
+                            {a.glCode} - {a.accountName} (Available: PKR {Number(a.currentBalance || 0).toLocaleString()})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-400 font-semibold mb-1">Amount (PKR) *</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        required
+                        placeholder={`Capacity space: PKR ${config?.availableCapacity || 0}`}
+                        value={replenishForm.amount}
+                        onChange={(e) => setReplenishForm({ ...replenishForm, amount: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 font-mono text-slate-200 focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 2: Date & Reference */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-400 font-semibold mb-1">Date *</label>
+                      <input
+                        type="date"
+                        required
+                        value={replenishForm.date}
+                        onChange={(e) => setReplenishForm({ ...replenishForm, date: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-400 font-semibold mb-1">Reference / Cheque Number</label>
+                      <input
+                        type="text"
+                        placeholder="Optional cheque #"
+                        value={replenishForm.referenceNo}
+                        onChange={(e) => setReplenishForm({ ...replenishForm, referenceNo: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 3: Narration */}
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Narration / Remarks</label>
+                    <textarea
+                      rows={2}
+                      placeholder="Fund Replenishment description"
+                      value={replenishForm.narration}
+                      onChange={(e) => setReplenishForm({ ...replenishForm, narration: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md transition disabled:opacity-50 flex items-center gap-2"
+                    >
+                      <ArrowDownLeft className="h-4 w-4" />
+                      <span>Post Replenishment</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+            </div>
+
+            {/* SECTION 3: RECORD PETTY CASH EXPENSE (DEDICATED FULL-WIDTH INLINE CARD) */}
+            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <MinusCircle className="h-5 w-5 text-rose-400" />
+                  <div>
+                    <h2 className="text-sm font-bold text-slate-100">Record Petty Cash Expense</h2>
+                    <p className="text-[11px] text-slate-400">Post operational expenses paid out of Petty Cash (DEBIT Expense, CREDIT Petty Cash)</p>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold">Petty Cash Available</span>
+                  <p className="text-sm font-bold font-mono text-amber-400">
+                    PKR {(config?.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleExpenseSubmit} className="space-y-4 text-xs">
+                {/* Row 1: Expense Category & Amount */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Expense Category *</label>
+                    <select
+                      required
+                      value={expenseForm.expenseAccountId}
+                      onChange={(e) => setExpenseForm({ ...expenseForm, expenseAccountId: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="">Select Expense Account</option>
+                      {expenseAccounts.map(a => (
+                        <option key={a.id} value={a.id}>
+                          {a.glCode} - {a.accountName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Amount (PKR) *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      placeholder="e.g. 1500"
+                      value={expenseForm.amount}
+                      onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 font-mono text-slate-200 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 2: Date & Reference */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Date *</label>
+                    <input
+                      type="date"
+                      required
+                      value={expenseForm.date}
+                      onChange={(e) => setExpenseForm({ ...expenseForm, date: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Reference / Voucher Number</label>
+                    <input
+                      type="text"
+                      placeholder="Optional receipt / ref #"
+                      value={expenseForm.referenceNo}
+                      onChange={(e) => setExpenseForm({ ...expenseForm, referenceNo: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 3: Paid To & Narration */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Paid To / Recipient</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Office Supply Mart / Driver"
+                      value={expenseForm.paidTo}
+                      onChange={(e) => setExpenseForm({ ...expenseForm, paidTo: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Narration / Remarks</label>
+                    <input
+                      type="text"
+                      placeholder="Operational expense details"
+                      value={expenseForm.narration}
+                      onChange={(e) => setExpenseForm({ ...expenseForm, narration: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md transition disabled:opacity-50 flex items-center gap-2"
+                  >
+                    <MinusCircle className="h-4 w-4" />
+                    <span>Record Expense</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+          </div>
+        )}
+
+        {/* TAB 2: PHYSICAL PETTY CASH COUNT (INLINE SECTION 4) */}
+        {activeTab === 'PHYSICAL_COUNT' && (
+          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 space-y-6 max-w-3xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <Coins className="h-6 w-6 text-amber-400" />
+                <div>
+                  <h2 className="text-base font-bold text-slate-100">Physical Petty Cash Count</h2>
+                  <p className="text-xs text-slate-400">Perform physical drawer count reconciliation against system GL balance</p>
+                </div>
+              </div>
+
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-800 text-slate-300">
+                Imprest Fund Audit
+              </span>
+            </div>
+
+            <form onSubmit={handleCountSubmit} className="space-y-6 text-xs">
+              
+              {/* Calculations Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                
+                <div className="p-4 rounded-xl border border-slate-800 bg-slate-950 space-y-1">
+                  <span className="text-[10px] font-bold uppercase text-slate-500">System Petty Cash Balance</span>
+                  <p className="text-lg font-mono font-bold text-amber-400">
+                    PKR {currentSysBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-[10px] text-slate-500">Authoritative GL Ledger Balance</p>
+                </div>
+
+                <div className="p-4 rounded-xl border border-slate-800 bg-slate-950 space-y-1">
+                  <label className="block text-[10px] font-bold uppercase text-slate-400">Physical Cash Count *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    placeholder="Enter physical cash"
+                    value={countForm.physicalCount}
+                    onChange={(e) => setCountForm({ ...countForm, physicalCount: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 font-mono text-base text-slate-100 focus:outline-none focus:border-amber-500"
+                  />
+                  <p className="text-[10px] text-slate-500">Actual counted cash in till</p>
+                </div>
+
+                <div className={`p-4 rounded-xl border space-y-1 ${
+                  countDifference < 0 ? 'bg-rose-950/40 border-rose-800 text-rose-300' :
+                  countDifference > 0 ? 'bg-blue-950/40 border-blue-800 text-blue-300' :
+                  'bg-emerald-950/40 border-emerald-800 text-emerald-300'
+                }`}>
+                  <span className="text-[10px] font-bold uppercase">Calculated Difference</span>
+                  <p className="text-lg font-mono font-bold">
+                    PKR {countDifference.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </p>
+                  <span className="inline-block text-[10px] font-bold">
+                    {countDifference < 0 ? 'Cash Shortage Detected' : countDifference > 0 ? 'Cash Surplus Detected' : 'All Cash Balanced'}
+                  </span>
+                </div>
+
+              </div>
+
+              {/* Status Banner Warning if Difference */}
+              {countDifference !== 0 && (
+                <div className={`p-4 rounded-xl border flex items-center gap-3 text-xs ${
+                  countDifference < 0 ? 'bg-rose-950/50 border-rose-800/80 text-rose-200' : 'bg-blue-950/50 border-blue-800/80 text-blue-200'
+                }`}>
+                  <AlertCircle className="h-5 w-5 shrink-0" />
+                  <div>
+                    <span className="font-bold">
+                      {countDifference < 0 ? 'WARNING: Cash Shortage Detected' : 'NOTICE: Cash Surplus Detected'}
+                    </span>
+                    <p className="text-[11px] opacity-90 mt-0.5">
+                      {countDifference < 0 
+                        ? `Physical cash in hand is PKR ${Math.abs(countDifference).toLocaleString()} LESS than system records. Please enter variance explanation before saving.`
+                        : `Physical cash in hand is PKR ${countDifference.toLocaleString()} MORE than system records.`}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Row 2: Date & Counted By */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={countForm.date}
+                    onChange={(e) => setCountForm({ ...countForm, date: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">Counted By</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={config?.custodianName || 'Authorized Custodian'}
+                    className="w-full bg-slate-950/60 border border-slate-800/60 text-slate-400 rounded-xl p-2.5"
+                  />
+                </div>
+              </div>
+
+              {/* Row 3: Remarks / Explanation */}
               <div>
-                <label className="block text-slate-400 font-semibold mb-1">Amount (PKR)</label>
+                <label className="block text-slate-400 font-semibold mb-1">Remarks / Variance Explanation</label>
+                <textarea
+                  rows={3}
+                  placeholder="Enter physical cash count notes or variance explanation..."
+                  value={countForm.explanation}
+                  onChange={(e) => setCountForm({ ...countForm, explanation: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-md transition disabled:opacity-50 flex items-center gap-2"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>Save Physical Count</span>
+                </button>
+              </div>
+
+            </form>
+          </div>
+        )}
+
+        {/* TAB 3: PETTY CASH AUDIT & REGISTER (INLINE SECTION 5) */}
+        {activeTab === 'AUDIT_REGISTER' && (
+          <div className="space-y-6">
+            
+            {/* AUDIT SUMMARY STATS CARD */}
+            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5 space-y-4">
+              <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+                <History className="h-5 w-5 text-amber-400" />
+                <h2 className="text-sm font-bold text-slate-100">Petty Cash Audit Overview</h2>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 text-xs">
+                <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-0.5">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">System Balance</span>
+                  <p className="font-mono font-bold text-amber-400 text-sm">
+                    PKR {(config?.currentBalance || 0).toLocaleString()}
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-0.5">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">Total Cash Added</span>
+                  <p className="font-mono font-bold text-emerald-400 text-sm">
+                    PKR {(config?.totalAdded || 0).toLocaleString()}
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-0.5">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">Total Expenses</span>
+                  <p className="font-mono font-bold text-rose-400 text-sm">
+                    PKR {(config?.totalExpenses || 0).toLocaleString()}
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-0.5">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">Total Replenished</span>
+                  <p className="font-mono font-bold text-blue-400 text-sm">
+                    PKR {(config?.totalReplenished || 0).toLocaleString()}
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-0.5">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">Physical Cash</span>
+                  <p className="font-mono font-bold text-slate-200 text-sm">
+                    PKR {(config?.physicalCount !== undefined ? config.physicalCount : config?.currentBalance || 0).toLocaleString()}
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-0.5">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">Difference</span>
+                  <p className={`font-mono font-bold text-sm ${
+                    (config?.difference || 0) < 0 ? 'text-rose-400' : 'text-emerald-400'
+                  }`}>
+                    PKR {(config?.difference || 0).toLocaleString()}
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-0.5">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">Last Audit Date</span>
+                  <p className="font-mono text-slate-300 truncate">
+                    {config?.lastAuditDate || 'Not Audited'}
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-0.5">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">Last Audited By</span>
+                  <p className="font-bold text-slate-300 truncate">
+                    {config?.lastAuditedBy || 'N/A'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* REGISTER TRANSACTION HISTORY TABLE & FILTERS */}
+            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5 space-y-4">
+              
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <input
+                    type="text"
+                    placeholder="Search by voucher #, description, recipient, category, or user..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 focus:outline-none"
+                  >
+                    <option value="">All Transaction Types</option>
+                    <option value="TRANSFER_IN">Cash Added</option>
+                    <option value="EXPENSE">Expense</option>
+                    <option value="REPLENISHMENT">Replenishment</option>
+                    <option value="ADMIN_ADJUSTMENT">Admin Adjustment</option>
+                  </select>
+
+                  <input
+                    type="date"
+                    value={startDateFilter}
+                    onChange={(e) => setStartDateFilter(e.target.value)}
+                    className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 focus:outline-none"
+                  />
+
+                  <span className="text-slate-500">to</span>
+
+                  <input
+                    type="date"
+                    value={endDateFilter}
+                    onChange={(e) => setEndDateFilter(e.target.value)}
+                    className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 focus:outline-none"
+                  />
+
+                  {(searchTerm || typeFilter || startDateFilter || endDateFilter) && (
+                    <button
+                      onClick={() => { setSearchTerm(''); setTypeFilter(''); setStartDateFilter(''); setEndDateFilter(''); }}
+                      className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* TABLE */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-950 text-slate-400 font-bold border-b border-slate-800 uppercase tracking-wider">
+                    <tr>
+                      <th className="py-3 px-3">Date</th>
+                      <th className="py-3 px-3">Voucher #</th>
+                      <th className="py-3 px-3">Type</th>
+                      <th className="py-3 px-3">Description</th>
+                      <th className="py-3 px-3">Category / Account</th>
+                      <th className="py-3 px-3">Paid To</th>
+                      <th className="py-3 px-3 text-right">Debit (PKR)</th>
+                      <th className="py-3 px-3 text-right">Credit (PKR)</th>
+                      <th className="py-3 px-3 text-right">Running Balance</th>
+                      <th className="py-3 px-3">Created By</th>
+                      <th className="py-3 px-3 text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                    {filteredRegister.map((row) => (
+                      <tr key={row.id} className="hover:bg-slate-800/40 transition">
+                        <td className="py-3 px-3 font-mono text-slate-400">{row.date}</td>
+                        <td className="py-3 px-3 font-mono font-bold text-amber-400">{row.voucherNo}</td>
+                        <td className="py-3 px-3">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            row.transactionType === 'EXPENSE' ? 'bg-rose-950 text-rose-300 border border-rose-900/50' :
+                            row.transactionType === 'TRANSFER_IN' ? 'bg-emerald-950 text-emerald-300 border border-emerald-900/50' :
+                            'bg-blue-950 text-blue-300 border border-blue-900/50'
+                          }`}>
+                            {row.transactionType}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 font-medium max-w-xs truncate">{row.narration}</td>
+                        <td className="py-3 px-3 text-slate-400">{row.expenseCategory}</td>
+                        <td className="py-3 px-3 text-slate-400">{row.paidTo}</td>
+                        <td className="py-3 px-3 text-right font-mono text-emerald-400 font-semibold">
+                          {row.debit > 0 ? row.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono text-rose-400 font-semibold">
+                          {row.credit > 0 ? row.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono font-bold text-slate-100">
+                          PKR {row.runningBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-3 px-3 text-slate-400 font-medium">{row.createdBy || 'System Admin'}</td>
+                        <td className="py-3 px-3 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => { setSelectedVoucher(row); setIsVoucherOpen(true); }}
+                              title="Print Official Voucher Slip"
+                              className="p-1.5 rounded-lg border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-amber-400 transition"
+                            >
+                              <Printer className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setRevertTxId(row.id)}
+                              title="Revert Transaction (Admin)"
+                              className="p-1.5 rounded-lg border border-slate-800 hover:bg-rose-950 hover:border-rose-800 text-slate-400 hover:text-rose-400 transition"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredRegister.length === 0 && (
+                      <tr>
+                        <td colSpan={11} className="py-8 text-center text-slate-500 italic">
+                          No Petty Cash transactions found matching the audit search filters.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+
+          </div>
+        )}
+
+        {/* TAB 4: FUND SETTINGS (INLINE CARD) */}
+        {activeTab === 'SETTINGS' && (
+          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 space-y-6 max-w-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <Sliders className="h-6 w-6 text-amber-400" />
+                <div>
+                  <h2 className="text-base font-bold text-slate-100">Petty Cash Fund Settings</h2>
+                  <p className="text-xs text-slate-400">Configure imprest fund capacity ceiling and custodian permissions</p>
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleConfigSubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-400 font-semibold mb-1">Authorized Imprest Fund Limit (PKR) *</label>
                 <input
                   type="number"
                   step="0.01"
                   required
-                  placeholder="e.g. 10000"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                  value={configForm.fundLimit}
+                  onChange={(e) => setConfigForm({ ...configForm, fundLimit: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 font-mono text-slate-200 focus:outline-none focus:border-amber-500"
                 />
+                <p className="text-[11px] text-slate-500 mt-1">Maximum cumulative deposit capacity allowed for Petty Cash</p>
               </div>
 
               <div>
-                <label className="block text-slate-400 font-semibold mb-1">Date</label>
-                <input
-                  type="date"
-                  required
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">Reference / Cheque Number</label>
+                <label className="block text-slate-400 font-semibold mb-1">Fund Custodian Name *</label>
                 <input
                   type="text"
-                  placeholder="Optional reference"
-                  value={formData.referenceNo}
-                  onChange={(e) => setFormData({ ...formData, referenceNo: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">Narration / Remarks</label>
-                <textarea
-                  rows={2}
-                  placeholder="Description for journal posting"
-                  value={formData.narration}
-                  onChange={(e) => setFormData({ ...formData, narration: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
-                />
-              </div>
-
-              <div className="pt-3 flex justify-end gap-2">
-                <button type="button" onClick={() => setActiveModal(null)} className="px-4 py-2 rounded-xl border border-slate-800 text-slate-400 hover:bg-slate-800">Cancel</button>
-                <button type="submit" className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Transfer to Petty Cash</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Record Expense Modal */}
-      {activeModal === 'EXPENSE' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                <MinusCircle className="h-4 w-4 text-rose-400" />
-                <span>Record Petty Cash Expense</span>
-              </h3>
-              <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-200"><X className="h-4 w-4" /></button>
-            </div>
-
-            <form onSubmit={handleSubmitExpense} className="space-y-3 text-xs">
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">Expense Account Category</label>
-                <select
                   required
-                  value={formData.expenseAccountId}
-                  onChange={(e) => setFormData({ ...formData, expenseAccountId: e.target.value })}
+                  value={configForm.custodianName}
+                  onChange={(e) => setConfigForm({ ...configForm, custodianName: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-amber-500"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">Person responsible for holding and disbursing petty cash funds</p>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-md transition disabled:opacity-50"
                 >
-                  <option value="">Select Expense Account</option>
-                  {expenseAccounts.map(a => (
-                    <option key={a.id} value={a.id}>{a.glCode} - {a.accountName}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">Amount (PKR)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  placeholder="e.g. 1000"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 font-mono text-slate-200 focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">Paid To / Recipient</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Stationary Shop / Driver"
-                  value={formData.paidTo}
-                  onChange={(e) => setFormData({ ...formData, paidTo: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">Date</label>
-                <input
-                  type="date"
-                  required
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">Narration / Purpose</label>
-                <textarea
-                  rows={2}
-                  placeholder="Description of small operational expense"
-                  value={formData.narration}
-                  onChange={(e) => setFormData({ ...formData, narration: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
-                />
-              </div>
-
-              <div className="pt-3 flex justify-end gap-2">
-                <button type="button" onClick={() => setActiveModal(null)} className="px-4 py-2 rounded-xl border border-slate-800 text-slate-400 hover:bg-slate-800">Cancel</button>
-                <button type="submit" className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold">Post Expense</button>
+                  Save Configuration
+                </button>
               </div>
             </form>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Replenish Modal */}
-      {activeModal === 'REPLENISH' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                <ArrowDownLeft className="h-4 w-4 text-blue-400" />
-                <span>Replenish Petty Cash Fund</span>
-              </h3>
-              <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-200"><X className="h-4 w-4" /></button>
-            </div>
-
-            <form onSubmit={handleSubmitReplenish} className="space-y-3 text-xs">
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">Replenishing Bank Account</label>
-                <select
-                  required
-                  value={formData.sourceAccountId}
-                  onChange={(e) => setFormData({ ...formData, sourceAccountId: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
-                >
-                  <option value="">Select Bank Account</option>
-                  {cashBankAccounts.map(a => (
-                    <option key={a.id} value={a.id}>{a.glCode} - {a.accountName}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">Replenishment Amount (PKR)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  placeholder={`Suggested: ${config?.availableCapacity || 0}`}
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 font-mono text-slate-200 focus:outline-none"
-                />
-              </div>
-
-              <div className="pt-3 flex justify-end gap-2">
-                <button type="button" onClick={() => setActiveModal(null)} className="px-4 py-2 rounded-xl border border-slate-800 text-slate-400 hover:bg-slate-800">Cancel</button>
-                <button type="submit" className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold">Post Replenishment</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Configure Modal */}
-      {activeModal === 'CONFIG' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                <Sliders className="h-4 w-4 text-amber-400" />
-                <span>Configure Petty Cash Fund</span>
-              </h3>
-              <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-200"><X className="h-4 w-4" /></button>
-            </div>
-
-            <form onSubmit={handleSubmitConfig} className="space-y-3 text-xs">
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">Authorized Fund Limit (PKR)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={formData.fundLimit}
-                  onChange={(e) => setFormData({ ...formData, fundLimit: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 font-mono text-slate-200 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">Custodian Name</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.custodianName}
-                  onChange={(e) => setFormData({ ...formData, custodianName: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
-                />
-              </div>
-
-              <div className="pt-3 flex justify-end gap-2">
-                <button type="button" onClick={() => setActiveModal(null)} className="px-4 py-2 rounded-xl border border-slate-800 text-slate-400 hover:bg-slate-800">Cancel</button>
-                <button type="submit" className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold">Save Configuration</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Reconcile Modal */}
-      {activeModal === 'RECONCILE' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-amber-400" />
-                <span>Physical Petty Cash Count Audit</span>
-              </h3>
-              <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-200"><X className="h-4 w-4" /></button>
-            </div>
-
-            <form onSubmit={handleSubmitReconcile} className="space-y-3 text-xs">
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
-                <span className="text-slate-500 text-[10px] font-bold uppercase">System Recorded Balance</span>
-                <p className="text-lg font-mono font-bold text-amber-400">
-                  PKR {(config?.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">Physical Cash Counted (PKR)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  placeholder="Actual physical cash in drawer"
-                  value={formData.physicalCount}
-                  onChange={(e) => setFormData({ ...formData, physicalCount: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 font-mono text-slate-200 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">Explanation / Variance Notes</label>
-                <textarea
-                  rows={2}
-                  placeholder="Explain any physical count variance"
-                  value={formData.explanation}
-                  onChange={(e) => setFormData({ ...formData, explanation: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
-                />
-              </div>
-
-              <div className="pt-3 flex justify-end gap-2">
-                <button type="button" onClick={() => setActiveModal(null)} className="px-4 py-2 rounded-xl border border-slate-800 text-slate-400 hover:bg-slate-800">Cancel</button>
-                <button type="submit" className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold">Submit Audit Count</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Revert Modal */}
-      {revertTxId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-slate-900 border border-rose-900/50 rounded-2xl p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-rose-900/40 pb-3">
-              <h3 className="text-sm font-bold text-rose-300 flex items-center gap-2">
+        {/* INLINE REVERT CONFIRMATION BANNER */}
+        {revertTxId && (
+          <div className="rounded-xl border border-rose-800/80 bg-rose-950/90 p-5 shadow-2xl space-y-3 max-w-xl">
+            <div className="flex items-center justify-between border-b border-rose-900/60 pb-2">
+              <h3 className="text-sm font-bold text-rose-200 flex items-center gap-2">
                 <RotateCcw className="h-4 w-4 text-rose-400" />
-                <span>Revert Posted Petty Cash Transaction</span>
+                <span>Confirm Transaction Reversal</span>
               </h3>
               <button onClick={() => setRevertTxId(null)} className="text-slate-400 hover:text-slate-200"><X className="h-4 w-4" /></button>
             </div>
 
-            <form onSubmit={handleRevert} className="space-y-3 text-xs">
-              <p className="text-slate-300">
-                Are you sure you want to revert this posted transaction? The corresponding accounting journal entry lines will be reversed automatically.
-              </p>
+            <p className="text-xs text-slate-300">
+              Are you sure you want to revert this posted transaction? The corresponding accounting journal entry lines will be reversed automatically and GL balances recalculated.
+            </p>
 
+            <form onSubmit={handleRevertSubmit} className="space-y-3 text-xs">
               <div>
-                <label className="block text-slate-400 font-semibold mb-1">Reason for Reversal</label>
-                <textarea
-                  rows={2}
+                <label className="block text-slate-400 font-semibold mb-1">Reason for Reversal *</label>
+                <input
+                  type="text"
                   required
                   placeholder="Enter reason for reverting this transaction..."
-                  value={formData.revertReason}
-                  onChange={(e) => setFormData({ ...formData, revertReason: e.target.value })}
+                  value={revertReason}
+                  onChange={(e) => setRevertReason(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
                 />
               </div>
 
-              <div className="pt-3 flex justify-end gap-2">
-                <button type="button" onClick={() => setRevertTxId(null)} className="px-4 py-2 rounded-xl border border-slate-800 text-slate-400 hover:bg-slate-800">Cancel</button>
-                <button type="submit" className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold">Confirm Reversal</button>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setRevertTxId(null)} className="px-4 py-2 rounded-xl border border-slate-800 text-slate-400 hover:bg-slate-900">Cancel</button>
+                <button type="submit" className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold">Confirm Reversal</button>
               </div>
             </form>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Voucher Slip Printable Modal */}
+      </div>
+
+      {/* Printable Voucher Slip Modal */}
       <PettyCashVoucherModal
         isOpen={isVoucherOpen}
         onClose={() => setIsVoucherOpen(false)}
