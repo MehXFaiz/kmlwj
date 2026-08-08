@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { Printer, X, Receipt } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
+import { VoucherLogo } from './VoucherLogo';
 import { paymentMethodLabel } from '../../constants/paymentMethods';
 
 const numberToWords = (num) => {
@@ -155,9 +155,7 @@ function CopySheet({
         <div className="flex items-center justify-between border-b-2 pb-3 pt-1" style={{ borderColor: `${theme.accentColor}40` }}>
           {/* Logo & Jamaat Header */}
           <div className="flex items-center gap-3.5">
-            <div className="flex h-18 w-18 shrink-0 items-center justify-center rounded-xl border-2 bg-[#0F172A] shadow-lg p-1.5" style={{ borderColor: theme.accentColor }}>
-              <img src={logoImg} alt="Logo" className="h-full w-full object-contain" />
-            </div>
+            <VoucherLogo className="h-16 w-16 sm:h-18 sm:w-18" />
             <div>
               <div className="text-xs sm:text-sm font-black uppercase tracking-[0.16em] text-[#0F172A] leading-tight">
                 KUTCHI MUSLIM LOHARWADA WELFARE JAMAT

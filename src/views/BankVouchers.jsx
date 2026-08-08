@@ -9,6 +9,7 @@ import { showToast } from '../components/ui/Toast';
 import { useTranslation } from 'react-i18next';
 import { useConfirm } from '../components/ui/ConfirmationModal';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
+import { VoucherLogo } from '../components/common/VoucherLogo';
 import logoImg from '../assets/logo.png';
 
 // Helper to render number to English words for standard printed receipt
@@ -111,16 +112,7 @@ function VoucherReceiptSlip({ voucher, amount, copyType, t }) {
       }}>
         {/* Top row: logo + org name + voucher title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* Logo */}
-          <div style={{
-            width: '52px', height: '52px', flexShrink: 0,
-            background: 'rgba(255,255,255,0.12)',
-            borderRadius: '10px', border: '1px solid rgba(255,255,255,0.2)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '4px',
-          }}>
-            <img src={logoImg} alt="KMLWJ" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-          </div>
+          <VoucherLogo className="w-[52px] h-[52px]" />
 
           {/* Org name (center) */}
           <div style={{ flex: 1 }}>

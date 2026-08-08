@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Printer, X, Receipt } from 'lucide-react';
-import logoImg from '../../assets/logo.png';
+import { VoucherLogo } from './VoucherLogo';
 
 const numberToWords = (num) => {
   if (!num || num === 0) return 'Zero';
@@ -85,9 +85,7 @@ export const PettyCashVoucherModal = ({ isOpen, onClose, voucher }) => {
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-800 pb-4 print:border-gray-300">
             <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-xl border border-slate-800 bg-slate-900/50 p-2 flex items-center justify-center print:border-gray-200">
-                <img src={logoImg} alt="Logo" className="h-full w-full object-contain" />
-              </div>
+              <VoucherLogo className="h-16 w-16" />
               <div>
                 <h2 className="text-lg font-black tracking-tight text-slate-100 print:text-black uppercase">KUTCHI MEMON LAXMIBAI TRUST</h2>
                 <p className="text-xs text-slate-400 print:text-gray-600 font-medium">Petty Cash Management & Fund Disbursement System</p>
