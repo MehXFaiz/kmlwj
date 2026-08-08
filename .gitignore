@@ -15,9 +15,3 @@ api/_middlewares/**/*.js
 api/_config/**/*.js
 api/_prisma.js
 
-# Playwright
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
-/playwright/.auth/
