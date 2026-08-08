@@ -383,21 +383,25 @@ export const Dashboard = () => {
     if (fetchJournals) fetchJournals(selectedSubsidiary);
   }, [fetchAccounts, fetchStats, fetchTbReport, fetchJournals, selectedSubsidiary, reportParams]);
 
-  // Consistency Check
+  // Consistency & Reconciliation Check across Posted Ledger
   useEffect(() => {
     if (import.meta.env.DEV && dbStats?.summary && tbReport?.entries) {
-      const tbRevenue = tbReport.entries.filter(e => e.accountType === 'REVENUE').reduce((sum, e) => sum + (e.credit - e.debit), 0);
-      const tbExpense = tbReport.entries.filter(e => e.accountType === 'EXPENSE').reduce((sum, e) => sum + (e.debit - e.credit), 0);
+      const tbRevenue = tbReport.entries
+        .filter(e => ['REVENUE', 'INCOME'].includes((e.accountType || '').toUpperCase()))
+        .reduce((sum, e) => sum + (Number(e.credit || 0) - Number(e.debit || 0)), 0);
+      const tbExpense = tbReport.entries
+        .filter(e => ['EXPENSE', 'EXPENSES'].includes((e.accountType || '').toUpperCase()))
+        .reduce((sum, e) => sum + (Number(e.debit || 0) - Number(e.credit || 0)), 0);
       
-      const dashRevenue = dbStats.summary.totalRevenue || 0;
-      const dashExpense = dbStats.summary.totalExpense || 0;
+      const dashRevenue = Number(dbStats.summary.totalRevenue || 0);
+      const dashExpense = Number(dbStats.summary.totalExpense || 0);
       
       const revDiff = Math.abs(tbRevenue - dashRevenue);
       const expDiff = Math.abs(tbExpense - dashExpense);
       
       if (revDiff > 1 || expDiff > 1) {
-        console.error(`[Consistency Error] Dashboard vs Trial Balance mismatch! Revenue Diff: ${revDiff}, Expense Diff: ${expDiff}`);
-        showToast('Development Warning: Dashboard and Trial Balance totals do not match!', 'error');
+        console.error(`[Accounting Mismatch] Dashboard vs Trial Balance discrepancy! Revenue Diff: PKR ${revDiff}, Expense Diff: PKR ${expDiff}`);
+        showToast(`Accounting Reconciliation Alert: Dashboard and Trial Balance mismatch! (Revenue diff: PKR ${revDiff.toLocaleString()}, Expense diff: PKR ${expDiff.toLocaleString()})`, 'error');
       }
     }
   }, [dbStats, tbReport]);
@@ -661,7 +665,7 @@ export const Dashboard = () => {
         </div>
         <div className="flex-1 min-w-0">
           <p className={`text-sm font-bold ${stats.isEquationBalanced ? 'text-slate-200' : 'text-red-300'}`}>
-            {stats.isEquationBalanced ? t('dashboard.accountsBalanced') : t('dashboard.accountsError')}
+            {stats.isEquationBalanced ? t('dashboard.accountsBalanced') : 'Accounting Reconciliation Required'}
           </p>
           <p className="text-[11px] text-slate-500 mt-0.5">
             {t('dashboard.assets')}: Rs {stats.assets.toLocaleString(undefined, { maximumFractionDigits: 0 })} &nbsp;·&nbsp;

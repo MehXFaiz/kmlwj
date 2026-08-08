@@ -125,6 +125,8 @@ function CopySheet({
   fileNo,
   formattedDate,
   paidTo,
+  fatherName,
+  gham,
   paymentMethod,
   amount,
   words,
@@ -153,8 +155,8 @@ function CopySheet({
         <div className="flex items-center justify-between border-b-2 pb-3 pt-1" style={{ borderColor: `${theme.accentColor}40` }}>
           {/* Logo & Jamaat Header */}
           <div className="flex items-center gap-3.5">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border-2 bg-[#0F172A] shadow-lg p-1" style={{ borderColor: theme.accentColor }}>
-              <img src={logoImg} alt="Logo" className="h-10 w-10 object-contain" />
+            <div className="flex h-18 w-18 shrink-0 items-center justify-center rounded-xl border-2 bg-[#0F172A] shadow-lg p-1.5" style={{ borderColor: theme.accentColor }}>
+              <img src={logoImg} alt="Logo" className="h-full w-full object-contain" />
             </div>
             <div>
               <div className="text-xs sm:text-sm font-black uppercase tracking-[0.16em] text-[#0F172A] leading-tight">
@@ -181,7 +183,7 @@ function CopySheet({
         </div>
 
         {/* ── VOUCHER META GRID ── */}
-        <div className="my-3 grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#F8FAFC] p-2.5 rounded-xl border border-slate-200">
+        <div className="my-3 grid grid-cols-2 sm:grid-cols-6 gap-2 bg-[#F8FAFC] p-2.5 rounded-xl border border-slate-200">
           <div className="border-r border-slate-200 pr-2">
             <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Voucher No</div>
             <div className="text-xs font-black text-[#0F172A] font-mono mt-0.5">{voucherNo || '—'}</div>
@@ -193,6 +195,14 @@ function CopySheet({
           <div className="border-r border-slate-200 pr-2 pl-1">
             <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{displayPartyLabel}</div>
             <div className="text-xs font-black text-[#0F172A] truncate mt-0.5">{paidTo || '—'}</div>
+          </div>
+          <div className="border-r border-slate-200 pr-2 pl-1">
+            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Father Name</div>
+            <div className="text-xs font-bold text-slate-800 truncate mt-0.5">{fatherName || '—'}</div>
+          </div>
+          <div className="border-r border-slate-200 pr-2 pl-1">
+            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Gham Details</div>
+            <div className="text-xs font-bold text-slate-800 truncate mt-0.5">{gham || '—'}</div>
           </div>
           <div className="pl-1">
             <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Payment Mode</div>
@@ -326,6 +336,8 @@ export const VoucherSlipModal = ({
   fileNo = '',
   date = '',
   name = '',
+  fatherName = '',
+  gham = '',
   address = '',
   paymentMethod: paymentMethodProp,
   debitCredit = '',
@@ -448,6 +460,8 @@ export const VoucherSlipModal = ({
                   fileNo={fileNo}
                   formattedDate={formattedDate}
                   paidTo={name}
+                  fatherName={fatherName}
+                  gham={gham}
                   paymentMethod={paymentMethod}
                   amount={amount}
                   words={words}
@@ -466,6 +480,8 @@ export const VoucherSlipModal = ({
                   fileNo={fileNo}
                   formattedDate={formattedDate}
                   paidTo={name}
+                  fatherName={fatherName}
+                  gham={gham}
                   paymentMethod={paymentMethod}
                   amount={amount}
                   words={words}

@@ -530,6 +530,8 @@ export const Expenses = () => {
           fileNo={printExpense.reference || 'EXPENSE'}
           date={printExpense.date}
           name={printExpense.paidTo || 'Paid To Recipient'}
+          fatherName={printExpense.fatherName || printExpense.payeeFatherName || ''}
+          gham={printExpense.gham || printExpense.payeeGham || ''}
           paymentMethod={printExpense.paymentMethod}
           accountName={printExpense.expenseHead?.name || 'Expense Account'}
           particulars={printExpense.description || 'Expense payment disbursement'}

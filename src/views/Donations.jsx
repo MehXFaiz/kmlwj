@@ -308,7 +308,9 @@ function DonationInvoiceModal({ donation, onClose }) {
       voucherNo={donation.id?.slice(0, 8)?.toUpperCase()}
       fileNo={donationTypeDisplay(donation.donationType, donation.customDonationType)}
       date={donation.createdAt}
-      name={donation.donorName}
+      name={donation.donorName || donation.beneficiary?.name || ''}
+      fatherName={donation.beneficiary?.fatherHusbandName || donation.beneficiary?.fatherGham || donation.donor?.fatherName || ''}
+      gham={donation.beneficiary?.fatherGham || donation.donor?.gham || ''}
       address={donation.donorMobile || donation.donorBankName || ''}
       paymentMethod={donation.paymentMethod}
       accountName="Donation Disbursement A/c"

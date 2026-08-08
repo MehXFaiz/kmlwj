@@ -411,6 +411,8 @@ function BankVoucherPrintModal({ voucher, onClose }) {
       fileNo={voucher.chequeNo ? `Cheque #${voucher.chequeNo}` : 'BANK'}
       date={voucher.date}
       name={voucher.paidTo || voucher.payee || 'Recipient / Bank Account'}
+      fatherName={voucher.fatherName || voucher.member?.fatherName || voucher.beneficiary?.fatherHusbandName || voucher.donor?.fatherName || ''}
+      gham={voucher.gham || voucher.member?.gham || voucher.beneficiary?.fatherGham || voucher.donor?.gham || ''}
       paymentMethod={voucher.paymentMethod || 'BANK'}
       accountName={firstLine?.accountName || 'Bank Account'}
       particulars={voucher.narration || firstLine?.narration || 'Bank transaction entry'}
