@@ -28,9 +28,29 @@ function PrintReceiptModal({ donation, onClose }) {
     ? (donation.customDonationType || 'Custom Donation')
     : (donationTypeDisplay(donation.donationType) || 'Donation');
 
+  const meta = (() => {
+    if (!donation.narration) return {};
+    const res = {};
+    const fMatch = donation.narration.match(/Father:\s*([^|]+)/i);
+    if (fMatch) res.fatherName = fMatch[1].trim();
+    const gMatch = donation.narration.match(/Gham:\s*([^|]+)/i);
+    if (gMatch) res.gham = gMatch[1].trim();
+    const aMatch = donation.narration.match(/Address:\s*([^|]+)/i);
+    if (aMatch) res.address = aMatch[1].trim();
+    return res;
+  })();
+
   const cnicVal = donation.donor?.cnic || donation.member?.cnic || donation.beneficiary?.cnic || '';
   const mobileVal = donation.donor?.mobile || donation.member?.mobile || donation.beneficiary?.mobile || '';
-  const addressVal = donation.donor?.address || donation.member?.address || donation.beneficiary?.address || '';
+  const fatherVal = donation.fatherName || meta.fatherName || donation.donor?.fatherName || donation.member?.fatherName || donation.beneficiary?.fatherName || donation.beneficiary?.husbandName || '';
+  const ghamVal = donation.gham || meta.gham || donation.donor?.gham || donation.member?.gham || donation.beneficiary?.gham || donation.beneficiary?.fatherGham || '';
+  const addressVal = donation.address || meta.address || donation.donor?.address || donation.member?.address || donation.beneficiary?.address || '';
+
+  const cleanNarration = (donation.narration || '')
+    .replace(/Father:\s*[^|]+\s*\|?/gi, '')
+    .replace(/Gham:\s*[^|]+\s*\|?/gi, '')
+    .replace(/Address:\s*[^|]+\s*\|?/gi, '')
+    .trim();
 
   return (
     <VoucherSlipModal
@@ -41,14 +61,14 @@ function PrintReceiptModal({ donation, onClose }) {
       fileNo={donation.donor?.donorCode || donation.donor?.cnic || ''}
       date={donation.receiptDate || donation.createdAt}
       name={donation.donor?.fullName}
-      fatherName={donation.fatherName || donation.donor?.fatherName || donation.member?.fatherName || donation.beneficiary?.fatherName || donation.beneficiary?.husbandName || ''}
+      fatherName={fatherVal}
       cnic={cnicVal}
       mobile={mobileVal}
       address={addressVal}
-      gham={donation.gham || donation.donor?.gham || donation.member?.gham || donation.beneficiary?.gham || donation.beneficiary?.fatherGham || ''}
+      gham={ghamVal}
       paymentMethod={donation.paymentMethod}
       accountName={`${categoryLabel} A/c`}
-      particulars={`Donation Received - ${categoryLabel}${donation.narration ? ` (${donation.narration})` : ''}${donation.chequeNo ? ` [Cheque #${donation.chequeNo}]` : ''}`}
+      particulars={`Donation Received - ${categoryLabel}${cleanNarration ? ` (${cleanNarration})` : ''}${donation.chequeNo ? ` [Cheque #${donation.chequeNo}]` : ''}`}
       amount={donation.amount}
       preparedBy={donation.createdBy?.fullName || 'Operator'}
       payeeLabel="Receiver's Sign"

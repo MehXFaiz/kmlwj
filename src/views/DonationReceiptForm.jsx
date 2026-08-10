@@ -19,8 +19,11 @@ const nullsToEmpty = (obj) =>
 function QuickDonorModal({ isOpen, onClose, onCreated }) {
   const { addDonor } = useDonorStore();
   const [name, setName] = useState('');
+  const [fatherName, setFatherName] = useState('');
   const [phone, setPhone] = useState('');
   const [cnic, setCnic] = useState('');
+  const [gham, setGham] = useState('');
+  const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
@@ -32,7 +35,15 @@ function QuickDonorModal({ isOpen, onClose, onCreated }) {
     }
     setLoading(true);
     try {
-      const res = await addDonor({ fullName: name, mobile: phone || null, cnic: cnic || null, isActive: true });
+      const res = await addDonor({
+        fullName: name,
+        fatherName: fatherName || null,
+        mobile: phone || null,
+        cnic: cnic || null,
+        gham: gham || null,
+        address: address || null,
+        isActive: true
+      });
       showToast('Donor registered successfully', 'success');
       onCreated(res.data || res);
       onClose();
@@ -45,7 +56,7 @@ function QuickDonorModal({ isOpen, onClose, onCreated }) {
 
   return (
     <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
         <h3 className="text-lg font-bold text-slate-100 mb-4 flex items-center gap-2">
           <UserPlus className="h-5 w-5 text-emerald-400" /> Quick Add Donor
         </h3>
@@ -57,6 +68,16 @@ function QuickDonorModal({ isOpen, onClose, onCreated }) {
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Muhammad Ali"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500/60 transition-all font-medium"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Father Name</label>
+            <input
+              type="text"
+              value={fatherName}
+              onChange={e => setFatherName(e.target.value)}
+              placeholder="e.g. Abdul Rehman"
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500/60 transition-all font-medium"
             />
           </div>
@@ -73,6 +94,26 @@ function QuickDonorModal({ isOpen, onClose, onCreated }) {
             <CNICInput
               value={cnic}
               onChange={e => setCnic(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500/60 transition-all font-medium"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Gham Details</label>
+            <input
+              type="text"
+              value={gham}
+              onChange={e => setGham(e.target.value)}
+              placeholder="e.g. Kukma / Nagalpur"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500/60 transition-all font-medium"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Address / Location</label>
+            <input
+              type="text"
+              value={address}
+              onChange={e => setAddress(e.target.value)}
+              placeholder="e.g. Baldia Town, Karachi"
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500/60 transition-all font-medium"
             />
           </div>
@@ -103,6 +144,9 @@ export const DonationReceiptForm = () => {
   const [form, setForm] = useState({
     receiptDate: new Date().toISOString().slice(0, 10),
     donorId: '',
+    fatherName: '',
+    gham: '',
+    address: '',
     donationType: 'GENERAL_DONATION',
     customDonationType: '',
     amount: '',
@@ -140,7 +184,14 @@ export const DonationReceiptForm = () => {
   // Set defaults once dependencies load if it's a new form
   useEffect(() => {
     if (!id && !form.donorId && donors.length > 0) {
-      setForm(prev => ({ ...prev, donorId: donors[0].id }));
+      const d = donors[0];
+      setForm(prev => ({
+        ...prev,
+        donorId: d.id,
+        fatherName: d.fatherName || prev.fatherName || '',
+        gham: d.gham || prev.gham || '',
+        address: d.address || prev.address || ''
+      }));
     }
     if (!id && !form.cashAccountId && cashAccounts.length > 0) {
       setForm(prev => ({ ...prev, cashAccountId: cashAccounts[0].id }));
@@ -150,13 +201,46 @@ export const DonationReceiptForm = () => {
     }
   }, [id, donors, cashAccounts, bankAccounts]);
 
+  const handleDonorSelect = (donorId) => {
+    const selected = donors.find(d => d.id === donorId);
+    setForm(prev => ({
+      ...prev,
+      donorId,
+      fatherName: selected?.fatherName || prev.fatherName || '',
+      gham: selected?.gham || prev.gham || '',
+      address: selected?.address || prev.address || ''
+    }));
+  };
+
   // Load existing data if editing
   useEffect(() => {
     if (id && donations.length > 0) {
       const existing = donations.find(d => d.id === id);
       if (existing) {
+        let extFather = existing.fatherName || '';
+        let extGham = existing.gham || '';
+        let extAddress = existing.address || '';
+        let extNarration = existing.narration || '';
+        if (existing.narration) {
+          const fMatch = existing.narration.match(/Father:\s*([^|]+)/i);
+          if (fMatch) extFather = fMatch[1].trim();
+          const gMatch = existing.narration.match(/Gham:\s*([^|]+)/i);
+          if (gMatch) extGham = gMatch[1].trim();
+          const aMatch = existing.narration.match(/Address:\s*([^|]+)/i);
+          if (aMatch) extAddress = aMatch[1].trim();
+          extNarration = existing.narration
+            .replace(/Father:\s*[^|]+\s*\|?/gi, '')
+            .replace(/Gham:\s*[^|]+\s*\|?/gi, '')
+            .replace(/Address:\s*[^|]+\s*\|?/gi, '')
+            .trim();
+        }
+
         setForm({
           ...nullsToEmpty(existing),
+          fatherName: extFather,
+          gham: extGham,
+          address: extAddress,
+          narration: extNarration,
           receiptDate: existing.receiptDate ? new Date(existing.receiptDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
           chequeDate: existing.chequeDate ? new Date(existing.chequeDate).toISOString().slice(0, 10) : '',
           customDonationType: existing.customDonationType || '',
@@ -194,7 +278,19 @@ export const DonationReceiptForm = () => {
 
     setLoading(true);
     try {
-      const payload = { ...form, amount: Math.round(Number(form.amount)) };
+      const metaParts = [
+        form.fatherName && `Father: ${form.fatherName}`,
+        form.gham && `Gham: ${form.gham}`,
+        form.address && `Address: ${form.address}`,
+        form.narration
+      ].filter(Boolean);
+
+      const payload = {
+        ...form,
+        amount: Math.round(Number(form.amount)),
+        narration: metaParts.join(' | ')
+      };
+
       if (id) {
         await updateDonationStatus(id, form.status, payload);
         setToast({ type: 'success', message: 'Donation receipt updated successfully!' });
@@ -229,7 +325,7 @@ export const DonationReceiptForm = () => {
         onClose={() => setQuickDonorOpen(false)}
         onCreated={(newDonor) => {
           fetchDonors();
-          setForm(prev => ({ ...prev, donorId: newDonor.id }));
+          handleDonorSelect(newDonor.id);
         }}
       />
 
@@ -323,7 +419,7 @@ export const DonationReceiptForm = () => {
                   <select
                     required
                     value={form.donorId}
-                    onChange={e => setForm({ ...form, donorId: e.target.value })}
+                    onChange={e => handleDonorSelect(e.target.value)}
                     className={inputClass}
                   >
                     <option value="">-- Select Donor --</option>
@@ -333,6 +429,42 @@ export const DonationReceiptForm = () => {
                       </option>
                     ))}
                   </select>
+                </div>
+
+                {/* Father Name */}
+                <div>
+                  <label className={labelClass}>Father Name</label>
+                  <input
+                    type="text"
+                    value={form.fatherName}
+                    onChange={e => setForm({ ...form, fatherName: e.target.value })}
+                    placeholder="e.g. Abdul Rehman"
+                    className={inputClass}
+                  />
+                </div>
+
+                {/* Gham Details */}
+                <div>
+                  <label className={labelClass}>Gham Details</label>
+                  <input
+                    type="text"
+                    value={form.gham}
+                    onChange={e => setForm({ ...form, gham: e.target.value })}
+                    placeholder="e.g. Kukma / Nagalpur"
+                    className={inputClass}
+                  />
+                </div>
+
+                {/* Address / Location */}
+                <div className="sm:col-span-2">
+                  <label className={labelClass}>Address / Location</label>
+                  <input
+                    type="text"
+                    value={form.address}
+                    onChange={e => setForm({ ...form, address: e.target.value })}
+                    placeholder="e.g. House # 45, Street 2, Baldia Town, Karachi"
+                    className={inputClass}
+                  />
                 </div>
 
                 <div>

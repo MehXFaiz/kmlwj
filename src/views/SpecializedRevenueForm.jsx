@@ -60,12 +60,15 @@ export const SpecializedRevenueForm = ({
 
   const [form, setForm] = useState({
     title: '',
+    fatherName: '',
+    husbandName: '',
     subTitle: '',
     mobile: '',
+    gham: '',
+    destination: '',
     eventDate: new Date().toISOString().split('T')[0],
     quantity: activeShowQty ? 1 : '',
     rate: activeShowRate ? (isMembershipFee ? 500 : 300) : '',
-    destination: '',
     amount: '',
     paymentMethod: 'CASH',
     bankAccountId: '',
@@ -94,19 +97,40 @@ export const SpecializedRevenueForm = ({
     if (id && collections.length > 0) {
       const existing = collections.find(c => c.id === id);
       if (existing) {
+        let extFather = existing.fatherName || '';
+        let extHusband = existing.husbandName || '';
+        let extGham = existing.gham || '';
+        let extRemarks = existing.remarks || '';
+        if (existing.remarks) {
+          const fMatch = existing.remarks.match(/Father:\s*([^|]+)/i);
+          if (fMatch) extFather = fMatch[1].trim();
+          const hMatch = existing.remarks.match(/Husband:\s*([^|]+)/i);
+          if (hMatch) extHusband = hMatch[1].trim();
+          const gMatch = existing.remarks.match(/Gham:\s*([^|]+)/i);
+          if (gMatch) extGham = gMatch[1].trim();
+          extRemarks = existing.remarks
+            .replace(/Father:\s*[^|]+\s*\|?/gi, '')
+            .replace(/Husband:\s*[^|]+\s*\|?/gi, '')
+            .replace(/Gham:\s*[^|]+\s*\|?/gi, '')
+            .trim();
+        }
+
         setForm({
           title: existing.title || '',
+          fatherName: extFather,
+          husbandName: extHusband,
           subTitle: existing.subTitle || '',
           mobile: existing.mobile || '',
+          gham: extGham,
+          destination: existing.destination || '',
           eventDate: existing.eventDate ? new Date(existing.eventDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
           quantity: existing.quantity || '',
           rate: existing.rate || '',
-          destination: existing.destination || '',
           amount: existing.amount || '',
           paymentMethod: existing.paymentMethod || 'CASH',
           bankAccountId: existing.bankAccountId || '',
           chequeNumber: existing.chequeNumber || '',
-          remarks: existing.remarks || '',
+          remarks: extRemarks,
           postImmediately: existing.status === 'POSTED'
         });
         if (isMembershipFee && existing.title) {
@@ -129,6 +153,7 @@ export const SpecializedRevenueForm = ({
     const q = memberSearch.toLowerCase();
     return members.filter(m =>
       (m.fullName && m.fullName.toLowerCase().includes(q)) ||
+      (m.fatherName && m.fatherName.toLowerCase().includes(q)) ||
       (m.cnic && m.cnic.includes(q)) ||
       (m.mobile && m.mobile.includes(q))
     ).slice(0, 20);
@@ -138,8 +163,12 @@ export const SpecializedRevenueForm = ({
     setForm(prev => ({
       ...prev,
       title: member.fullName || '',
+      fatherName: member.fatherName || '',
+      husbandName: member.husbandName || '',
       subTitle: member.cnic || '',
-      mobile: member.mobile || ''
+      mobile: member.mobile || '',
+      gham: member.ghamName || member.gham || member.fatherGham || '',
+      destination: member.address || [member.area, member.city].filter(Boolean).join(', ') || ''
     }));
     setMemberSearch(member.fullName || '');
     setMemberDropdownOpen(false);
@@ -175,12 +204,20 @@ export const SpecializedRevenueForm = ({
 
     setLoading(true);
     try {
+      const metaParts = [
+        form.fatherName && `Father: ${form.fatherName}`,
+        form.husbandName && `Husband: ${form.husbandName}`,
+        form.gham && `Gham: ${form.gham}`,
+        form.remarks
+      ].filter(Boolean);
+
       const payload = {
         ...form,
         category: activeCategory,
         amount: Number(form.amount),
         quantity: form.quantity ? Number(form.quantity) : null,
-        rate: form.rate ? Number(form.rate) : null
+        rate: form.rate ? Number(form.rate) : null,
+        remarks: metaParts.join(' | ')
       };
 
       let res;
@@ -318,9 +355,20 @@ export const SpecializedRevenueForm = ({
                             >
                               <div>
                                 <div className="text-sm font-bold text-slate-200">{m.fullName}</div>
-                                <div className="text-xs text-slate-500">{m.cnic ? `CNIC: ${m.cnic}` : ''} {m.mobile ? `| Ph: ${m.mobile}` : ''}</div>
+                                <div className="text-xs text-slate-400">
+                                  {m.fatherName ? `F/N: ${m.fatherName} ` : ''}
+                                  {m.husbandName ? `H/N: ${m.husbandName} ` : ''}
+                                  {m.cnic ? `| CNIC: ${m.cnic} ` : ''}
+                                  {m.mobile ? `| Ph: ${m.mobile}` : ''}
+                                </div>
+                                {(m.address || m.ghamName) && (
+                                  <div className="text-[11px] text-slate-500">
+                                    {m.ghamName ? `Gham: ${m.ghamName} ` : ''}
+                                    {m.address ? `| Addr: ${m.address}` : ''}
+                                  </div>
+                                )}
                               </div>
-                              <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20">Select</span>
+                              <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20 shrink-0">Select</span>
                             </div>
                           ))
                         )}
@@ -341,6 +389,30 @@ export const SpecializedRevenueForm = ({
                   </div>
                 )}
 
+                {/* Father Name */}
+                <div>
+                  <label className={labelClass}>Father Name</label>
+                  <input
+                    type="text"
+                    value={form.fatherName}
+                    onChange={e => setForm({ ...form, fatherName: e.target.value })}
+                    placeholder="e.g. Abdul Rehman"
+                    className={inputClass}
+                  />
+                </div>
+
+                {/* Husband Name */}
+                <div>
+                  <label className={labelClass}>Husband Name (If Applicable)</label>
+                  <input
+                    type="text"
+                    value={form.husbandName}
+                    onChange={e => setForm({ ...form, husbandName: e.target.value })}
+                    placeholder="e.g. Muhammad Farooq"
+                    className={inputClass}
+                  />
+                </div>
+
                 {activeSubTitleLabel && (
                   <div>
                     <label className={labelClass}>{activeSubTitleLabel}</label>
@@ -359,6 +431,30 @@ export const SpecializedRevenueForm = ({
                   <PhoneInput
                     value={form.mobile}
                     onChange={e => setForm({ ...form, mobile: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+
+                {/* Gham Details */}
+                <div>
+                  <label className={labelClass}>Gham Details</label>
+                  <input
+                    type="text"
+                    value={form.gham}
+                    onChange={e => setForm({ ...form, gham: e.target.value })}
+                    placeholder="e.g. Kukma / Nagalpur / Mandvi"
+                    className={inputClass}
+                  />
+                </div>
+
+                {/* Address / Location */}
+                <div>
+                  <label className={labelClass}>Address / Location</label>
+                  <input
+                    type="text"
+                    value={form.destination}
+                    onChange={e => setForm({ ...form, destination: e.target.value })}
+                    placeholder="e.g. House # 12, Street 3, Baldia Town, Karachi"
                     className={inputClass}
                   />
                 </div>

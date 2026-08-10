@@ -596,29 +596,55 @@ export const SpecializedRevenueSection = ({
       )}
 
       {/* Print Modal using classic slip design */}
-      {printItem && (
-        <VoucherSlipModal
-          isOpen={true}
-          onClose={() => setPrintItem(null)}
-          title={`${printItem.category} VOUCHER`}
-          voucherNo={printItem.receiptNo || printItem.id?.slice(0, 8)?.toUpperCase()}
-          fileNo={printItem.subTitle || ''}
-          date={printItem.eventDate || printItem.createdAt}
-          name={printItem.title}
-          fatherName={printItem.fatherName || printItem.member?.fatherName || printItem.beneficiary?.fatherName || printItem.beneficiary?.husbandName || printItem.donor?.fatherName || ''}
-          cnic={printItem.cnic || printItem.member?.cnic || printItem.beneficiary?.cnic || printItem.donor?.cnic || ''}
-          mobile={printItem.mobile || printItem.member?.mobile || printItem.beneficiary?.mobile || printItem.donor?.mobile || ''}
-          address={printItem.address || printItem.destination || printItem.remarks || ''}
-          gham={printItem.gham || printItem.member?.gham || printItem.beneficiary?.gham || printItem.beneficiary?.fatherGham || printItem.donor?.gham || ''}
-          paymentMethod={printItem.paymentMethod}
-          accountName={`${printItem.category} Collection`}
-          particulars={showQty ? `${printItem.category} — ${printItem.quantity} ${qtyLabel} @ Rs. ${printItem.rate?.toLocaleString()}` : `${printItem.category} Collection${printItem.remarks ? ` - ${printItem.remarks}` : ''}`}
-          amount={printItem.amount}
-          preparedBy={printItem.createdBy?.fullName || 'Operator'}
-          payeeLabel="Donor / Payer Sign"
-          partyLabel="Paid By"
-        />
-      )}
+      {printItem && (() => {
+        const meta = (() => {
+          if (!printItem.remarks) return {};
+          const res = {};
+          const fMatch = printItem.remarks.match(/Father:\s*([^|]+)/i);
+          if (fMatch) res.fatherName = fMatch[1].trim();
+          const hMatch = printItem.remarks.match(/Husband:\s*([^|]+)/i);
+          if (hMatch) res.husbandName = hMatch[1].trim();
+          const gMatch = printItem.remarks.match(/Gham:\s*([^|]+)/i);
+          if (gMatch) res.gham = gMatch[1].trim();
+          return res;
+        })();
+
+        const fatherVal = printItem.fatherName || meta.fatherName || printItem.member?.fatherName || printItem.beneficiary?.fatherName || printItem.donor?.fatherName || '';
+        const husbandVal = printItem.husbandName || meta.husbandName || printItem.member?.husbandName || printItem.beneficiary?.husbandName || '';
+        const fatherHusbandVal = fatherVal || husbandVal || '';
+        const ghamVal = printItem.gham || meta.gham || printItem.member?.ghamName || printItem.member?.gham || printItem.beneficiary?.gham || printItem.donor?.gham || '';
+        const addressVal = printItem.address || printItem.destination || printItem.member?.address || '';
+
+        const cleanRemarks = (printItem.remarks || '')
+          .replace(/Father:\s*[^|]+\s*\|?/gi, '')
+          .replace(/Husband:\s*[^|]+\s*\|?/gi, '')
+          .replace(/Gham:\s*[^|]+\s*\|?/gi, '')
+          .trim();
+
+        return (
+          <VoucherSlipModal
+            isOpen={true}
+            onClose={() => setPrintItem(null)}
+            title={`${printItem.category} VOUCHER`}
+            voucherNo={printItem.receiptNo || printItem.id?.slice(0, 8)?.toUpperCase()}
+            fileNo={printItem.subTitle || ''}
+            date={printItem.eventDate || printItem.createdAt}
+            name={printItem.title}
+            fatherName={fatherHusbandVal}
+            cnic={printItem.cnic || printItem.subTitle || printItem.member?.cnic || ''}
+            mobile={printItem.mobile || printItem.member?.mobile || ''}
+            address={addressVal}
+            gham={ghamVal}
+            paymentMethod={printItem.paymentMethod}
+            accountName={`${printItem.category} Collection`}
+            particulars={showQty ? `${printItem.category} — ${printItem.quantity} ${qtyLabel} @ Rs. ${printItem.rate?.toLocaleString()}` : `${printItem.category} Collection${cleanRemarks ? ` - ${cleanRemarks}` : ''}`}
+            amount={printItem.amount}
+            preparedBy={printItem.createdBy?.fullName || 'Operator'}
+            payeeLabel="Donor / Payer Sign"
+            partyLabel="Paid By"
+          />
+        );
+      })()}
     </DashboardLayout>
   );
 };
