@@ -39,15 +39,18 @@ export const PettyCash = () => {
   const {
     config,
     register,
+    reconciliations,
     loading,
     error,
     fetchConfig,
     fetchRegister,
+    fetchReconciliations,
     addCash,
     recordExpense,
     replenish,
     updateConfig,
     reconcile,
+    approveReconciliation,
     revertTransaction
   } = usePettyCashStore();
 
@@ -109,8 +112,9 @@ export const PettyCash = () => {
   useEffect(() => {
     fetchConfig();
     fetchRegister();
+    fetchReconciliations();
     fetchAccounts();
-  }, [fetchConfig, fetchRegister, fetchAccounts]);
+  }, [fetchConfig, fetchRegister, fetchReconciliations, fetchAccounts]);
 
   useEffect(() => {
     if (config) {
@@ -128,9 +132,10 @@ export const PettyCash = () => {
   const handleRefresh = useCallback(() => {
     fetchConfig();
     fetchRegister();
+    fetchReconciliations();
     fetchAccounts();
     showToast('Petty Cash records updated from database', 'info');
-  }, [fetchConfig, fetchRegister, fetchAccounts]);
+  }, [fetchConfig, fetchRegister, fetchReconciliations, fetchAccounts]);
 
   // Cash & Bank Accounts (Asset) - excluding Petty Cash itself to prevent self-transfers
   const cashBankAccounts = useMemo(() => {
@@ -302,7 +307,8 @@ export const PettyCash = () => {
 
     const currentBal = Number(config?.currentBalance || 0);
     if (amt > currentBal) {
-      showToast(`Insufficient Petty Cash balance. Available: PKR ${currentBal.toLocaleString()}, Requested Expense: PKR ${amt.toLocaleString()}`, 'error');
+      const shortfall = amt - currentBal;
+      showToast(`Insufficient Petty Cash Balance.\nAvailable: PKR ${currentBal.toLocaleString()}\nRequested: PKR ${amt.toLocaleString()}\nShortfall: PKR ${shortfall.toLocaleString()}`, 'error');
       return;
     }
 
@@ -360,8 +366,21 @@ export const PettyCash = () => {
       });
       showToast('Physical count saved and audited successfully!', 'success');
       fetchConfig();
+      fetchReconciliations();
     } catch (err) {
       showToast(err.message || 'Failed to save physical count', 'error');
+    }
+  };
+
+  const handleApproveReconciliation = async (reconciliationId) => {
+    try {
+      await approveReconciliation({ reconciliationId });
+      showToast('Reconciliation adjustment approved and posted to General Ledger!', 'success');
+      fetchConfig();
+      fetchRegister();
+      fetchReconciliations();
+    } catch (err) {
+      showToast(err.message || 'Failed to approve reconciliation', 'error');
     }
   };
 
@@ -426,8 +445,8 @@ export const PettyCash = () => {
             toast.type === 'success' ? 'bg-emerald-950/90 border-emerald-800 text-emerald-200' :
             'bg-blue-950/90 border-blue-800 text-blue-200'
           }`}>
-            <div className="flex items-center gap-2">
-              {toast.type === 'error' ? <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" /> : <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />}
+            <div className="flex items-start gap-2 whitespace-pre-line">
+              {toast.type === 'error' ? <AlertCircle className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" /> : <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />}
               <span>{toast.message}</span>
             </div>
             <button onClick={() => setToast(null)} className="text-slate-400 hover:text-slate-200"><X className="h-4 w-4" /></button>
@@ -1032,6 +1051,88 @@ export const PettyCash = () => {
               </div>
 
             </form>
+
+            {/* PHYSICAL CASH COUNT AUDIT & ADMIN ADJUSTMENT APPROVAL TABLE */}
+            <div className="border-t border-slate-800 pt-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-100">Physical Audit History & Admin Approvals</h3>
+                  <p className="text-[11px] text-slate-400">Physical count audit records and pending variance adjustment postings</p>
+                </div>
+                <span className="text-[10px] font-bold px-2.5 py-1 rounded bg-slate-800 text-slate-300">
+                  {reconciliations.filter(r => r.status === 'PENDING_APPROVAL').length} Pending Approvals
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-950 text-slate-400 font-bold border-b border-slate-800 uppercase tracking-wider">
+                    <tr>
+                      <th className="py-2.5 px-3">Audit Date</th>
+                      <th className="py-2.5 px-3 text-right">System Balance</th>
+                      <th className="py-2.5 px-3 text-right">Physical Count</th>
+                      <th className="py-2.5 px-3 text-right">Difference</th>
+                      <th className="py-2.5 px-3">Explanation</th>
+                      <th className="py-2.5 px-3">Status</th>
+                      <th className="py-2.5 px-3">Audited By</th>
+                      <th className="py-2.5 px-3 text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                    {reconciliations.map((rec) => (
+                      <tr key={rec.id} className="hover:bg-slate-800/40 transition">
+                        <td className="py-2.5 px-3 font-mono text-slate-400">{rec.reconciliationDate}</td>
+                        <td className="py-2.5 px-3 text-right font-mono text-amber-400 font-semibold">
+                          PKR {rec.systemBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-mono font-semibold text-slate-100">
+                          PKR {rec.physicalCount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className={`py-2.5 px-3 text-right font-mono font-bold ${
+                          rec.difference < 0 ? 'text-rose-400' : rec.difference > 0 ? 'text-blue-400' : 'text-emerald-400'
+                        }`}>
+                          PKR {rec.difference.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-400 max-w-xs truncate">{rec.explanation}</td>
+                        <td className="py-2.5 px-3">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            rec.status === 'APPROVED' ? 'bg-emerald-950 text-emerald-300 border border-emerald-900' :
+                            rec.status === 'REJECTED' ? 'bg-rose-950 text-rose-300 border border-rose-900' :
+                            'bg-amber-950 text-amber-300 border border-amber-900'
+                          }`}>
+                            {rec.status === 'PENDING_APPROVAL' ? 'PENDING ADMIN APPROVAL' : rec.status}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-400 font-medium">{rec.reconciledBy}</td>
+                        <td className="py-2.5 px-3 text-center">
+                          {rec.status === 'PENDING_APPROVAL' && rec.difference !== 0 ? (
+                            <button
+                              onClick={() => handleApproveReconciliation(rec.id)}
+                              disabled={loading}
+                              className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] shadow transition disabled:opacity-50"
+                            >
+                              Approve Adjustment
+                            </button>
+                          ) : rec.status === 'APPROVED' ? (
+                            <span className="text-[10px] text-slate-500 font-mono">Posted</span>
+                          ) : (
+                            <span className="text-[10px] text-slate-500 font-mono">Balanced</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {reconciliations.length === 0 && (
+                      <tr>
+                        <td colSpan={8} className="py-6 text-center text-slate-500 italic">
+                          No physical cash audit reconciliations recorded yet.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
         )}
 

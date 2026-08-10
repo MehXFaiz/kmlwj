@@ -3,6 +3,7 @@ import { FundValidationService } from './fund-validation.service.js';
 import { validateAmount } from '../_utils/amount.js';
 import { isValidTransactionDate } from '../_utils/date-range.js';
 import { isWithinMaxLength } from '../_utils/text-length.js';
+import { BalanceRebuildService } from './balance-rebuild.service.js';
 
 const prisma = new PrismaClient();
 
@@ -421,6 +422,8 @@ export class PettyCashService {
         }
       });
 
+      await BalanceRebuildService.forJournalEntry(tx, je.id);
+
       return pcTx;
     });
   }
@@ -464,14 +467,13 @@ export class PettyCashService {
       throw new Error('Narration cannot exceed 1000 characters.');
     }
 
-    const { account: initialAccount } = await this.getOrCreatePettyCashAccount();
-    const account = await prisma.account.findUnique({ where: { id: initialAccount.id } }) || initialAccount;
+    const { account } = await this.getOrCreatePettyCashAccount();
 
     // 5. INSUFFICIENT PETTY CASH BALANCE CHECK
     const currentBalance = new Prisma.Decimal(account.currentBalance || 0);
     if (amountDec.gt(currentBalance)) {
       const shortfall = amountDec.minus(currentBalance);
-      throw new Error(`Insufficient Petty Cash balance. Available: PKR ${currentBalance.toNumber().toLocaleString()}. Required: PKR ${validAmount.toLocaleString()}. Shortfall: PKR ${shortfall.toNumber().toLocaleString()}.`);
+      throw new Error(`Insufficient Petty Cash Balance.\nAvailable: PKR ${currentBalance.toNumber().toLocaleString()}\nRequested: PKR ${validAmount.toLocaleString()}\nShortfall: PKR ${shortfall.toNumber().toLocaleString()}`);
     }
 
     // 6. EXPENSE ACCOUNT VALIDATION
@@ -512,6 +514,14 @@ export class PettyCashService {
     const voucherNo = `PCV-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}-${Math.floor(100000 + Math.random() * 900000)}`;
 
     return await prisma.$transaction(async (tx) => {
+      // Re-verify Petty Cash Balance inside atomic transaction with database read
+      const liveAccount = await tx.account.findUnique({ where: { id: account.id } });
+      const liveBalance = new Prisma.Decimal(liveAccount?.currentBalance || 0);
+      if (amountDec.gt(liveBalance)) {
+        const shortfall = amountDec.minus(liveBalance);
+        throw new Error(`Insufficient Petty Cash Balance.\nAvailable: PKR ${liveBalance.toNumber().toLocaleString()}\nRequested: PKR ${validAmount.toLocaleString()}\nShortfall: PKR ${shortfall.toNumber().toLocaleString()}`);
+      }
+
       // Create Journal Entry
       const je = await tx.journalEntry.create({
         data: {
@@ -573,6 +583,8 @@ export class PettyCashService {
           postedById: data.createdById
         }
       });
+
+      await BalanceRebuildService.forJournalEntry(tx, je.id);
 
       return pcTx;
     });
@@ -650,18 +662,54 @@ export class PettyCashService {
       });
     }
 
-    // Find adjustment expense or income account
-    const adjAccount = await prisma.account.findFirst({
-      where: {
-        isDeleted: false,
-        accountName: { contains: 'Adjustment', mode: 'insensitive' }
-      }
-    }) || await prisma.account.findFirst({
-      where: {
-        isDeleted: false,
-        accountType: { name: diffDec.lt(0) ? 'EXPENSE' : 'REVENUE' }
-      }
-    });
+    // Find or create appropriate adjustment account
+    const isShortage = diffDec.lt(0);
+    let adjAccount = null;
+
+    if (isShortage) {
+      // Shortage Expense Account
+      adjAccount = await prisma.account.findFirst({
+        where: {
+          isDeleted: false,
+          accountName: { contains: 'Shortage', mode: 'insensitive' }
+        }
+      }) || await prisma.account.findFirst({
+        where: {
+          isDeleted: false,
+          accountName: { contains: 'Adjustment', mode: 'insensitive' },
+          accountType: { name: { equals: 'EXPENSE', mode: 'insensitive' } }
+        }
+      }) || await prisma.account.findFirst({
+        where: {
+          isDeleted: false,
+          accountType: { name: { equals: 'EXPENSE', mode: 'insensitive' } }
+        }
+      });
+    } else {
+      // Overage / Surplus Revenue/Income Account
+      adjAccount = await prisma.account.findFirst({
+        where: {
+          isDeleted: false,
+          accountName: { contains: 'Overage', mode: 'insensitive' }
+        }
+      }) || await prisma.account.findFirst({
+        where: {
+          isDeleted: false,
+          accountName: { contains: 'Surplus', mode: 'insensitive' }
+        }
+      }) || await prisma.account.findFirst({
+        where: {
+          isDeleted: false,
+          accountName: { contains: 'Adjustment', mode: 'insensitive' },
+          accountType: { name: { in: ['REVENUE', 'INCOME'], mode: 'insensitive' } }
+        }
+      }) || await prisma.account.findFirst({
+        where: {
+          isDeleted: false,
+          accountType: { name: { in: ['REVENUE', 'INCOME'], mode: 'insensitive' } }
+        }
+      });
+    }
 
     if (!adjAccount) throw new Error('Adjustment account not found.');
 
@@ -718,6 +766,8 @@ export class PettyCashService {
           postedById: approvedById
         }
       });
+
+      await BalanceRebuildService.forJournalEntry(tx, je.id);
 
       return await tx.pettyCashReconciliation.update({
         where: { id: reconciliationId },
@@ -777,7 +827,7 @@ export class PettyCashService {
       }
 
       // Mark Petty Cash Transaction as deleted / reverted
-      return await tx.pettyCashTransaction.update({
+      const updatedPcTx = await tx.pettyCashTransaction.update({
         where: { id: transactionId },
         data: {
           isDeleted: true,
@@ -788,6 +838,12 @@ export class PettyCashService {
           revertReason
         }
       });
+
+      if (pcTx.journalEntryId) {
+        await BalanceRebuildService.forJournalEntry(tx, pcTx.journalEntryId);
+      }
+
+      return updatedPcTx;
     });
   }
 
@@ -813,4 +869,35 @@ export class PettyCashService {
 
     return pcTx;
   }
+
+  /**
+   * Get Physical Count Reconciliations History & Pending Approvals
+   */
+  static async getReconciliations() {
+    const { account } = await this.getOrCreatePettyCashAccount();
+
+    const reconciliations = await prisma.pettyCashReconciliation.findMany({
+      where: { pettyCashAccountId: account.id },
+      include: {
+        reconciledBy: { select: { id: true, fullName: true, email: true } },
+        approvedBy: { select: { id: true, fullName: true, email: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return reconciliations.map(rec => ({
+      id: rec.id,
+      reconciliationDate: rec.reconciliationDate.toISOString().split('T')[0],
+      systemBalance: Number(rec.systemBalance),
+      physicalCount: Number(rec.physicalCount),
+      difference: Number(rec.difference),
+      explanation: rec.explanation || '-',
+      status: rec.status,
+      reconciledBy: rec.reconciledBy?.fullName || rec.reconciledBy?.email || 'System',
+      approvedBy: rec.approvedBy?.fullName || rec.approvedBy?.email || null,
+      approvedAt: rec.approvedAt ? rec.approvedAt.toISOString() : null,
+      createdAt: rec.createdAt.toISOString()
+    }));
+  }
 }
+

@@ -31,6 +31,11 @@ export default async function handler(req: any, res: any) {
         return res.status(200).json(voucher);
       }
 
+      if (action === 'reconciliations') {
+        const reconciliations = await PettyCashService.getReconciliations();
+        return res.status(200).json(reconciliations);
+      }
+
       // Default GET: return config + recent register
       const [config, register] = await Promise.all([
         PettyCashService.getConfig(),

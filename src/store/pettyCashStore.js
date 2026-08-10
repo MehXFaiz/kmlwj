@@ -5,6 +5,7 @@ import { useDashboardStore } from './dashboardStore';
 export const usePettyCashStore = create((set, get) => ({
   config: null,
   register: [],
+  reconciliations: [],
   totalCount: 0,
   loading: false,
   error: null,
@@ -16,6 +17,15 @@ export const usePettyCashStore = create((set, get) => ({
       set({ config: data });
     } catch (err) {
       console.error('Failed to fetch Petty Cash config:', err);
+    }
+  },
+
+  fetchReconciliations: async () => {
+    try {
+      const data = await pettyCashService.getReconciliations();
+      set({ reconciliations: data || [] });
+    } catch (err) {
+      console.error('Failed to fetch reconciliations:', err);
     }
   },
 
@@ -93,9 +103,24 @@ export const usePettyCashStore = create((set, get) => ({
   reconcile: async (data) => {
     try {
       const res = await pettyCashService.reconcile(data);
+      await get().fetchReconciliations();
       return res;
     } catch (err) {
       const msg = err.response?.data?.error || err.message || 'Failed to reconcile physical count';
+      throw new Error(msg);
+    }
+  },
+
+  approveReconciliation: async (data) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await pettyCashService.approveReconciliation(data);
+      await Promise.all([get().fetchConfig(), get().fetchRegister(), get().fetchReconciliations()]);
+      useDashboardStore.getState().invalidateAll();
+      return res;
+    } catch (err) {
+      set({ loading: false });
+      const msg = err.response?.data?.error || err.message || 'Failed to approve reconciliation';
       throw new Error(msg);
     }
   },

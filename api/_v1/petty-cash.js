@@ -25,6 +25,10 @@ async function handler(req, res) {
         const voucher = await PettyCashService.getVoucher(voucherId);
         return res.status(200).json(voucher);
       }
+      if (action === "reconciliations") {
+        const reconciliations = await PettyCashService.getReconciliations();
+        return res.status(200).json(reconciliations);
+      }
       const [config, register] = await Promise.all([
         PettyCashService.getConfig(),
         PettyCashService.getRegister({ limit: 50 })
