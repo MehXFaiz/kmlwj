@@ -6,9 +6,50 @@ import { reportsService } from '../services/apiServices';
 import { useCoaStore } from '../store/coaStore';
 import { useDashboardStore } from '../store/dashboardStore';
 import { showToast } from '../components/ui/Toast';
-import { FileText, Banknote, PieChart, Activity, RefreshCw, BookOpen } from 'lucide-react';
+import { FileText, Banknote, PieChart, Activity, RefreshCw, BookOpen, Calendar, Filter, RotateCcw } from 'lucide-react';
 import { DesktopOnly, MobileOnly } from '../components/common/responsive';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+
+const calculatePresetDates = (presetKey, fy) => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  const formatDateStr = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  switch (presetKey) {
+    case 'this-fiscal-year':
+      return { startDate: `${fy}-01-01`, endDate: `${fy}-12-31` };
+    case 'this-month': {
+      const start = new Date(year, month, 1);
+      const end = new Date(year, month + 1, 0);
+      return { startDate: formatDateStr(start), endDate: formatDateStr(end) };
+    }
+    case 'last-month': {
+      const start = new Date(year, month - 1, 1);
+      const end = new Date(year, month, 0);
+      return { startDate: formatDateStr(start), endDate: formatDateStr(end) };
+    }
+    case 'this-quarter': {
+      const quarterStartMonth = Math.floor(month / 3) * 3;
+      const start = new Date(year, quarterStartMonth, 1);
+      const end = new Date(year, quarterStartMonth + 3, 0);
+      return { startDate: formatDateStr(start), endDate: formatDateStr(end) };
+    }
+    case 'ytd': {
+      return { startDate: `${fy}-01-01`, endDate: formatDateStr(now) };
+    }
+    case 'all-time':
+      return { startDate: '', endDate: '' };
+    default:
+      return null;
+  }
+};
 
 export const Reports = () => {
   const navigate = useNavigate();
@@ -23,14 +64,21 @@ export const Reports = () => {
   const [balanceSheetData, setBalanceSheetData] = useState(null);
   const [cashFlowData, setCashFlowData] = useState(null);
   const { fiscalYear } = useCoaStore();
-  // Watch the global mutation version — any Create/Update/Delete/Post in any
-  // module bumps this counter via invalidateAll(), causing Reports to re-fetch.
+
+  const [startDate, setStartDate] = useState(() => searchParams.get('startDate') ?? `${fiscalYear}-01-01`);
+  const [endDate, setEndDate] = useState(() => searchParams.get('endDate') ?? `${fiscalYear}-12-31`);
+  const [preset, setPreset] = useState(() => searchParams.get('preset') ?? 'this-fiscal-year');
+
+  // Watch global mutation version
   const { version } = useDashboardStore();
   const isFirstRender = useRef(true);
-  const reportParams = useMemo(() => ({
-    startDate: `${fiscalYear}-01-01`,
-    endDate: `${fiscalYear}-12-31`,
-  }), [fiscalYear]);
+
+  const reportParams = useMemo(() => {
+    const p = {};
+    if (startDate) p.startDate = startDate;
+    if (endDate) p.endDate = endDate;
+    return p;
+  }, [startDate, endDate]);
 
   useEffect(() => {
     const tabParam = searchParams.get('tab');
@@ -39,9 +87,57 @@ export const Reports = () => {
     }
   }, [searchParams, activeTab]);
 
+  const updateSearchParams = (pPreset, pStart, pEnd, pTab) => {
+    const newParams = { tab: pTab };
+    if (pStart) newParams.startDate = pStart;
+    if (pEnd) newParams.endDate = pEnd;
+    if (pPreset && pPreset !== 'custom') newParams.preset = pPreset;
+    setSearchParams(newParams);
+  };
+
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-    setSearchParams({ tab });
+    updateSearchParams(preset, startDate, endDate, tab);
+  };
+
+  const handlePresetChange = (newPreset) => {
+    setPreset(newPreset);
+    if (newPreset === 'custom') return;
+    const computed = calculatePresetDates(newPreset, fiscalYear);
+    if (computed) {
+      setStartDate(computed.startDate);
+      setEndDate(computed.endDate);
+      updateSearchParams(newPreset, computed.startDate, computed.endDate, activeTab);
+    }
+  };
+
+  const handleStartDateChange = (val) => {
+    setStartDate(val);
+    setPreset('custom');
+    updateSearchParams('custom', val, endDate, activeTab);
+  };
+
+  const handleEndDateChange = (val) => {
+    setEndDate(val);
+    setPreset('custom');
+    updateSearchParams('custom', startDate, val, activeTab);
+  };
+
+  const handleResetDates = () => {
+    const defaultStart = `${fiscalYear}-01-01`;
+    const defaultEnd = `${fiscalYear}-12-31`;
+    setStartDate(defaultStart);
+    setEndDate(defaultEnd);
+    setPreset('this-fiscal-year');
+    updateSearchParams('this-fiscal-year', defaultStart, defaultEnd, activeTab);
+  };
+
+  const handleGLClick = () => {
+    const params = new URLSearchParams();
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
+    const qs = params.toString();
+    navigate(`/ledger${qs ? `?${qs}` : ''}`);
   };
 
   const fetchReport = async (tab) => {
@@ -103,6 +199,81 @@ export const Reports = () => {
         </Button>
       </div>
 
+      {/* Date Filter Toolbar */}
+      <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 mb-6 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Date Range Preset Selector */}
+            <div className="flex flex-col gap-1 min-w-[170px]">
+              <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Date Preset</label>
+              <select
+                value={preset}
+                onChange={(e) => handlePresetChange(e.target.value)}
+                className="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500 font-medium cursor-pointer"
+              >
+                <option value="this-fiscal-year">This Fiscal Year ({fiscalYear})</option>
+                <option value="this-month">This Month</option>
+                <option value="last-month">Last Month</option>
+                <option value="this-quarter">This Quarter</option>
+                <option value="ytd">Year To Date (YTD)</option>
+                <option value="all-time">All Time</option>
+                <option value="custom">Custom Date Range</option>
+              </select>
+            </div>
+
+            {/* Start Date input */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Start Date</label>
+              <div className="relative">
+                <Calendar className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-500 pointer-events-none" />
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
+                  className="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-lg pl-8 pr-2 py-2 focus:outline-none focus:border-amber-500 font-mono"
+                />
+              </div>
+            </div>
+
+            <span className="self-end pb-2 text-slate-500 font-bold hidden sm:inline">–</span>
+
+            {/* End Date input */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">End Date</label>
+              <div className="relative">
+                <Calendar className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-500 pointer-events-none" />
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => handleEndDateChange(e.target.value)}
+                  className="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-lg pl-8 pr-2 py-2 focus:outline-none focus:border-amber-500 font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Reset Button */}
+            {(startDate !== `${fiscalYear}-01-01` || endDate !== `${fiscalYear}-12-31` || preset !== 'this-fiscal-year') && (
+              <button
+                onClick={handleResetDates}
+                title="Reset to default fiscal year"
+                className="self-end pb-2 px-2 text-xs text-slate-400 hover:text-amber-400 transition-colors flex items-center gap-1 font-semibold"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> Reset
+              </button>
+            )}
+          </div>
+
+          {/* Active Period Summary Badge */}
+          <div className="flex items-center gap-2 text-xs bg-slate-950/80 px-3 py-2 rounded-lg border border-slate-800/80 text-slate-300 self-start lg:self-auto">
+            <Filter className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+            <span className="font-semibold text-slate-400">Period:</span>
+            <span className="font-mono text-amber-400 font-medium">
+              {startDate && endDate ? `${startDate} to ${endDate}` : startDate ? `From ${startDate}` : endDate ? `Up to ${endDate}` : 'All Time'}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Tabs */}
       <div className="flex border-b border-slate-800 gap-4 mb-6 overflow-x-auto pb-1 hide-scrollbar">
         <button
@@ -146,7 +317,7 @@ export const Reports = () => {
           <RefreshCw className="h-4 w-4" /> Cash Flow
         </button>
         <button
-          onClick={() => navigate('/ledger')}
+          onClick={handleGLClick}
           className="pb-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap flex items-center gap-2 ml-4"
         >
           <BookOpen className="h-4 w-4" /> General Ledger
