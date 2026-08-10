@@ -16,6 +16,7 @@
     "addIncomeHint": "Record money received",
     "addExpense": "Add Expense",
     "addExpenseHint": "Record money spent",
+    "pettyCash": "Petty Cash",
     "transferMoney": "Transfer Money",
     "transferMoneyHint": "Move between accounts",
     "allTransactions": "All Transactions",

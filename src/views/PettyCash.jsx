@@ -435,7 +435,7 @@ export const PettyCash = () => {
   };
 
   return (
-    <DashboardLayout breadcrumbs={['Money Out', 'Petty Cash Module']}>
+    <DashboardLayout breadcrumbs={['Money Out', 'Petty Cash']}>
       <div className="space-y-6">
         
         {/* Toast Notification Banner */}
@@ -458,7 +458,7 @@ export const PettyCash = () => {
           <div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-100 tracking-tight flex items-center gap-2">
               <Wallet className="h-6 w-6 text-amber-400" />
-              <span>Petty Cash Module</span>
+              <span>Petty Cash</span>
             </h1>
             <p className="text-xs text-slate-400 mt-1">
               Imprest Petty Cash Fund & Operational Disbursement Management
