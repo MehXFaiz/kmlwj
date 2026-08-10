@@ -1,5 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
+import { Receipt, Printer, X } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 import { VoucherLogo } from './VoucherLogo';
 import { paymentMethodLabel } from '../../constants/paymentMethods';
