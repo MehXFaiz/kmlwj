@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate, Link } from 'react-router-dom';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
 import { useAuthStore } from '../store/authStore';
-import { FileSpreadsheet, Search, Plus, Printer, CheckCircle, XCircle, Trash2, AlertTriangle, Edit, X, Banknote, Building2, Calendar, ArrowUpRight, FileText, ChevronDown, ChevronUp, Layers } from 'lucide-react';
+import { FileSpreadsheet, Search, Plus, Printer, CheckCircle, XCircle, Trash2, AlertTriangle, Edit, X, Banknote, Building2, Calendar, ArrowUpRight, ArrowDownLeft, FileText, ChevronDown, ChevronUp, Layers } from 'lucide-react';
 import { pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 import { useTranslation } from 'react-i18next';
