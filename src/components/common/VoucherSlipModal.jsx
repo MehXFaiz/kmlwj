@@ -330,12 +330,14 @@ function CopySheet({
           </div>
         </div>
 
-        {/* ── THANK YOU APPRECIATION BANNER ── */}
-        <div className="mb-2.5 px-3 py-1.5 rounded-xl bg-amber-50/90 border border-amber-300 text-center shadow-xs">
-          <p className="text-[9.5px] sm:text-[10px] font-black text-slate-900 italic leading-snug">
-            "Thank you for your generous donation to support the deserving members of Jamat. We sincerely appreciate your kindness and support."
-          </p>
-        </div>
+        {/* ── THANK YOU APPRECIATION BANNER (ONLY FOR DONATION RECEIVED VOUCHERS) ── */}
+        {/DONATION/i.test(title) && (
+          <div className="mb-2.5 px-3 py-1.5 rounded-xl bg-amber-50/90 border border-amber-300 text-center shadow-xs">
+            <p className="text-[9.5px] sm:text-[10px] font-black text-slate-900 italic leading-snug">
+              "Thank you for your generous donation to support the deserving members of Jamat. We sincerely appreciate your kindness and support."
+            </p>
+          </div>
+        )}
       </div>
 
       {/* ── AUTHORIZATIONS & SIGNATURE STAMPS ── */}
