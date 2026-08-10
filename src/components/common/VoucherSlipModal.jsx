@@ -304,7 +304,7 @@ function CopySheet({
         </div>
 
         {/* ── REMARKS & AMOUNT IN WORDS BANNER ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 mb-3">
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 mb-2.5">
           <div className="sm:col-span-7 bg-[#F8FAFC] p-2.5 rounded-xl border border-slate-200 flex flex-col justify-between">
             <div>
               <span className="text-[9.5px] font-black uppercase tracking-wider" style={{ color: theme.accentColor }}>Amount in Words:</span>
@@ -328,6 +328,13 @@ function CopySheet({
               Rs {Number(amount || 0).toLocaleString('en-PK')}/-
             </span>
           </div>
+        </div>
+
+        {/* ── THANK YOU APPRECIATION BANNER ── */}
+        <div className="mb-2.5 px-3 py-1.5 rounded-xl bg-amber-50/90 border border-amber-300 text-center shadow-xs">
+          <p className="text-[9.5px] sm:text-[10px] font-black text-slate-900 italic leading-snug">
+            "Thank you for your generous donation to support the deserving members of Jamat. We sincerely appreciate your kindness and support."
+          </p>
         </div>
       </div>
 
