@@ -132,10 +132,11 @@ export const PettyCash = () => {
     showToast('Petty Cash records updated from database', 'info');
   }, [fetchConfig, fetchRegister, fetchAccounts]);
 
-  // Cash & Bank Accounts (Asset)
+  // Cash & Bank Accounts (Asset) - excluding Petty Cash itself to prevent self-transfers
   const cashBankAccounts = useMemo(() => {
     return accounts.filter(a => {
       if (a.isLocked || a.status === 'Inactive') return false;
+      if (config?.accountId && a.id === config.accountId) return false;
 
       const isGlLevel = (a.level || a.accountLevel) === 'GL';
       if (!isGlLevel) return false;
@@ -157,7 +158,7 @@ export const PettyCash = () => {
 
       return isCashOrBank;
     });
-  }, [accounts]);
+  }, [accounts, config?.accountId]);
 
   // Expense Accounts
   const expenseAccounts = useMemo(() => {
@@ -198,10 +199,34 @@ export const PettyCash = () => {
   // Handlers for Inline Submissions
   const handleAddCashSubmit = async (e) => {
     e.preventDefault();
+
+    const amt = parseFloat(addCashForm.amount);
+    if (isNaN(amt) || amt <= 0) {
+      showToast('Transfer amount must be a positive number greater than 0.', 'error');
+      return;
+    }
+
+    if (!addCashForm.sourceAccountId) {
+      showToast('Please select a valid source Cash or Bank account.', 'error');
+      return;
+    }
+
+    const sourceAcc = cashBankAccounts.find(a => a.id === addCashForm.sourceAccountId);
+    if (sourceAcc && amt > Number(sourceAcc.currentBalance || 0)) {
+      showToast(`Insufficient balance in selected account (${sourceAcc.name || sourceAcc.accountName}). Available: PKR ${Number(sourceAcc.currentBalance || 0).toLocaleString()}, Requested: PKR ${amt.toLocaleString()}`, 'error');
+      return;
+    }
+
+    const availableCapacity = (config?.fundLimit || 50000) - (config?.currentBalance || 0);
+    if (amt > availableCapacity) {
+      showToast(`Transfer amount (PKR ${amt.toLocaleString()}) exceeds available Petty Cash fund capacity (PKR ${Math.max(0, availableCapacity).toLocaleString()}).`, 'error');
+      return;
+    }
+
     try {
       await addCash({
         sourceAccountId: addCashForm.sourceAccountId,
-        amount: parseFloat(addCashForm.amount),
+        amount: amt,
         date: addCashForm.date,
         referenceNo: addCashForm.referenceNo,
         narration: addCashForm.narration || 'Add Cash to Petty Cash Fund'
@@ -221,10 +246,34 @@ export const PettyCash = () => {
 
   const handleReplenishSubmit = async (e) => {
     e.preventDefault();
+
+    const amt = parseFloat(replenishForm.amount);
+    if (isNaN(amt) || amt <= 0) {
+      showToast('Replenishment amount must be a positive number greater than 0.', 'error');
+      return;
+    }
+
+    if (!replenishForm.sourceAccountId) {
+      showToast('Please select a valid replenishing Bank or Cash account.', 'error');
+      return;
+    }
+
+    const sourceAcc = cashBankAccounts.find(a => a.id === replenishForm.sourceAccountId);
+    if (sourceAcc && amt > Number(sourceAcc.currentBalance || 0)) {
+      showToast(`Insufficient balance in selected account (${sourceAcc.name || sourceAcc.accountName}). Available: PKR ${Number(sourceAcc.currentBalance || 0).toLocaleString()}, Requested: PKR ${amt.toLocaleString()}`, 'error');
+      return;
+    }
+
+    const availableCapacity = (config?.fundLimit || 50000) - (config?.currentBalance || 0);
+    if (amt > availableCapacity) {
+      showToast(`Replenishment amount (PKR ${amt.toLocaleString()}) exceeds available Petty Cash fund capacity (PKR ${Math.max(0, availableCapacity).toLocaleString()}).`, 'error');
+      return;
+    }
+
     try {
       await replenish({
         sourceAccountId: replenishForm.sourceAccountId,
-        amount: parseFloat(replenishForm.amount),
+        amount: amt,
         date: replenishForm.date,
         referenceNo: replenishForm.referenceNo,
         narration: replenishForm.narration || 'Petty Cash Fund Replenishment'
@@ -244,11 +293,34 @@ export const PettyCash = () => {
 
   const handleExpenseSubmit = async (e) => {
     e.preventDefault();
+
+    const amt = parseFloat(expenseForm.amount);
+    if (isNaN(amt) || amt <= 0) {
+      showToast('Expense amount must be a positive number greater than 0.', 'error');
+      return;
+    }
+
+    const currentBal = Number(config?.currentBalance || 0);
+    if (amt > currentBal) {
+      showToast(`Insufficient Petty Cash balance. Available: PKR ${currentBal.toLocaleString()}, Requested Expense: PKR ${amt.toLocaleString()}`, 'error');
+      return;
+    }
+
+    if (!expenseForm.expenseAccountId) {
+      showToast('Please select an Expense category.', 'error');
+      return;
+    }
+
+    if (!expenseForm.paidTo || !expenseForm.paidTo.trim()) {
+      showToast('Recipient (Paid To) is required.', 'error');
+      return;
+    }
+
     try {
       await recordExpense({
         expenseAccountId: expenseForm.expenseAccountId,
-        amount: parseFloat(expenseForm.amount),
-        paidTo: expenseForm.paidTo,
+        amount: amt,
+        paidTo: expenseForm.paidTo.trim(),
         date: expenseForm.date,
         referenceNo: expenseForm.referenceNo,
         narration: expenseForm.narration
@@ -269,10 +341,22 @@ export const PettyCash = () => {
 
   const handleCountSubmit = async (e) => {
     e.preventDefault();
+
+    const countVal = parseFloat(countForm.physicalCount);
+    if (isNaN(countVal) || countVal < 0) {
+      showToast('Physical count must be a non-negative number.', 'error');
+      return;
+    }
+
+    if (countDifference !== 0 && (!countForm.explanation || countForm.explanation.trim().length < 5)) {
+      showToast('Variance explanation (minimum 5 characters) is required when physical count differs from system balance.', 'error');
+      return;
+    }
+
     try {
       await reconcile({
-        physicalCount: parseFloat(countForm.physicalCount),
-        explanation: countForm.explanation
+        physicalCount: countVal,
+        explanation: countForm.explanation ? countForm.explanation.trim() : ''
       });
       showToast('Physical count saved and audited successfully!', 'success');
       fetchConfig();
@@ -283,10 +367,28 @@ export const PettyCash = () => {
 
   const handleConfigSubmit = async (e) => {
     e.preventDefault();
+
+    const limitVal = parseFloat(configForm.fundLimit);
+    if (isNaN(limitVal) || limitVal <= 0) {
+      showToast('Fund limit must be a positive number greater than 0.', 'error');
+      return;
+    }
+
+    const curBal = Number(config?.currentBalance || 0);
+    if (limitVal < curBal) {
+      showToast(`Fund limit (PKR ${limitVal.toLocaleString()}) cannot be set lower than current active Petty Cash balance (PKR ${curBal.toLocaleString()}).`, 'error');
+      return;
+    }
+
+    if (!configForm.custodianName || !configForm.custodianName.trim()) {
+      showToast('Custodian name cannot be empty.', 'error');
+      return;
+    }
+
     try {
       await updateConfig({
-        fundLimit: parseFloat(configForm.fundLimit),
-        custodianName: configForm.custodianName
+        fundLimit: limitVal,
+        custodianName: configForm.custodianName.trim()
       });
       showToast('Petty Cash configuration updated!', 'success');
     } catch (err) {
@@ -297,8 +399,14 @@ export const PettyCash = () => {
   const handleRevertSubmit = async (e) => {
     e.preventDefault();
     if (!revertTxId) return;
+
+    if (!revertReason || !revertReason.trim()) {
+      showToast('Reason for transaction reversal is required.', 'error');
+      return;
+    }
+
     try {
-      await revertTransaction(revertTxId, revertReason || 'Admin Reversal');
+      await revertTransaction(revertTxId, revertReason.trim());
       showToast('Transaction reverted successfully!', 'success');
       setRevertTxId(null);
       setRevertReason('');

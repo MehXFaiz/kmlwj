@@ -50,7 +50,7 @@ async function handler(req, res) {
       if (action === "add-cash" || action === "transfer-in") {
         const result = await PettyCashService.addCash({
           sourceAccountId: body.sourceAccountId,
-          amount: parseFloat(body.amount),
+          amount: body.amount,
           date: body.date,
           referenceNo: body.referenceNo,
           narration: body.narration,
@@ -63,7 +63,7 @@ async function handler(req, res) {
         const result = await PettyCashService.recordExpense({
           expenseHeadId: body.expenseHeadId,
           expenseAccountId: body.expenseAccountId,
-          amount: parseFloat(body.amount),
+          amount: body.amount,
           paidTo: body.paidTo,
           date: body.date,
           referenceNo: body.referenceNo,
@@ -76,7 +76,7 @@ async function handler(req, res) {
       if (action === "replenish") {
         const result = await PettyCashService.addCash({
           sourceAccountId: body.sourceAccountId,
-          amount: parseFloat(body.amount),
+          amount: body.amount,
           date: body.date,
           referenceNo: body.referenceNo,
           narration: body.narration || "Petty Cash Fund Replenishment",
@@ -87,7 +87,7 @@ async function handler(req, res) {
       }
       if (action === "reconcile") {
         const result = await PettyCashService.reconcile({
-          physicalCount: parseFloat(body.physicalCount),
+          physicalCount: body.physicalCount,
           explanation: body.explanation,
           reconciledById: createdById
         });

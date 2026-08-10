@@ -44,7 +44,8 @@ export const usePettyCashStore = create((set, get) => ({
       return res;
     } catch (err) {
       set({ loading: false });
-      throw err;
+      const msg = err.response?.data?.error || err.message || 'Failed to add cash';
+      throw new Error(msg);
     }
   },
 
@@ -57,7 +58,8 @@ export const usePettyCashStore = create((set, get) => ({
       return res;
     } catch (err) {
       set({ loading: false });
-      throw err;
+      const msg = err.response?.data?.error || err.message || 'Failed to record expense';
+      throw new Error(msg);
     }
   },
 
@@ -70,7 +72,8 @@ export const usePettyCashStore = create((set, get) => ({
       return res;
     } catch (err) {
       set({ loading: false });
-      throw err;
+      const msg = err.response?.data?.error || err.message || 'Failed to replenish fund';
+      throw new Error(msg);
     }
   },
 
@@ -82,7 +85,8 @@ export const usePettyCashStore = create((set, get) => ({
       return res;
     } catch (err) {
       set({ loading: false });
-      throw err;
+      const msg = err.response?.data?.error || err.message || 'Failed to update config';
+      throw new Error(msg);
     }
   },
 
@@ -91,7 +95,8 @@ export const usePettyCashStore = create((set, get) => ({
       const res = await pettyCashService.reconcile(data);
       return res;
     } catch (err) {
-      throw err;
+      const msg = err.response?.data?.error || err.message || 'Failed to reconcile physical count';
+      throw new Error(msg);
     }
   },
 
@@ -104,7 +109,8 @@ export const usePettyCashStore = create((set, get) => ({
       return res;
     } catch (err) {
       set({ loading: false });
-      throw err;
+      const msg = err.response?.data?.error || err.message || 'Failed to revert transaction';
+      throw new Error(msg);
     }
   }
 }));

@@ -1,5 +1,8 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import { FundValidationService } from './fund-validation.service.js';
+import { validateAmount } from '../_utils/amount.js';
+import { isValidTransactionDate } from '../_utils/date-range.js';
+import { isWithinMaxLength } from '../_utils/text-length.js';
 
 const prisma = new PrismaClient();
 
@@ -159,14 +162,33 @@ export class PettyCashService {
   /**
    * Update Petty Cash Config (Admin only)
    */
-  static async updateConfig(data: { fundLimit?: number; custodianName?: string; status?: string; remarks?: string }) {
+  static async updateConfig(data: { fundLimit?: number | string; custodianName?: string; status?: string; remarks?: string }) {
     const { account } = await this.getOrCreatePettyCashAccount();
 
     const updateData: any = {};
-    if (data.fundLimit !== undefined) updateData.fundLimit = new Prisma.Decimal(data.fundLimit);
-    if (data.custodianName !== undefined) updateData.custodianName = data.custodianName;
+    if (data.fundLimit !== undefined) {
+      const amtRes = validateAmount(data.fundLimit);
+      if (!amtRes.valid) throw new Error(`Fund limit validation failed: ${amtRes.message}`);
+      const currentBalance = new Prisma.Decimal(account.currentBalance || 0);
+      if (new Prisma.Decimal(amtRes.amount).lt(currentBalance)) {
+        throw new Error(`Fund limit cannot be set lower than current Petty Cash balance of PKR ${currentBalance.toNumber().toLocaleString()}.`);
+      }
+      updateData.fundLimit = new Prisma.Decimal(amtRes.amount);
+    }
+
+    if (data.custodianName !== undefined) {
+      const nameStr = String(data.custodianName || '').trim();
+      if (!nameStr) throw new Error('Custodian name cannot be empty.');
+      if (!isWithinMaxLength(nameStr, 255)) throw new Error('Custodian name cannot exceed 255 characters.');
+      updateData.custodianName = nameStr;
+    }
+
     if (data.status !== undefined) updateData.status = data.status;
-    if (data.remarks !== undefined) updateData.remarks = data.remarks;
+
+    if (data.remarks !== undefined) {
+      if (!isWithinMaxLength(data.remarks, 500)) throw new Error('Remarks cannot exceed 500 characters.');
+      updateData.remarks = data.remarks;
+    }
 
     const updated = await prisma.pettyCashConfig.update({
       where: { accountId: account.id },
@@ -265,20 +287,48 @@ export class PettyCashService {
    */
   static async addCash(data: {
     sourceAccountId: string;
-    amount: number;
+    amount: number | string;
     date?: string;
     referenceNo?: string;
     narration?: string;
     createdById: string;
     isReplenishment?: boolean;
   }) {
+    // 1. AMOUNT VALIDATION
+    const amtRes = validateAmount(data.amount);
+    if (!amtRes.valid) throw new Error(amtRes.message);
+    const validAmount = amtRes.amount;
+    const amountDec = new Prisma.Decimal(validAmount);
+
+    // 2. SOURCE ACCOUNT ID PRESENCE
+    if (!data.sourceAccountId || typeof data.sourceAccountId !== 'string') {
+      throw new Error('Source account is required.');
+    }
+
+    // 3. DATE VALIDATION
+    const date = data.date ? new Date(data.date) : new Date();
+    if (!isValidTransactionDate(date)) {
+      throw new Error('Invalid transaction date. Date must be between 1980 and 1 year in the future.');
+    }
+
+    // 4. TEXT LENGTH VALIDATION
+    if (data.referenceNo && !isWithinMaxLength(data.referenceNo, 255)) {
+      throw new Error('Reference number cannot exceed 255 characters.');
+    }
+    if (data.narration && !isWithinMaxLength(data.narration, 1000)) {
+      throw new Error('Narration cannot exceed 1000 characters.');
+    }
+
+    // GET PETTY CASH ACCOUNT & CONFIG
     const { account: initialAccount, config } = await this.getOrCreatePettyCashAccount();
     const account = await prisma.account.findUnique({ where: { id: initialAccount.id } }) || initialAccount;
-    const amountDec = new Prisma.Decimal(data.amount);
 
-    if (amountDec.lte(0)) throw new Error('Transfer amount must be greater than zero.');
+    // 5. SELF-TRANSFER RESTRICTION
+    if (data.sourceAccountId === account.id) {
+      throw new Error('Self-transfer not allowed: cannot transfer funds from Petty Cash to Petty Cash itself.');
+    }
 
-    // 1. FUND LIMIT CHECK
+    // 5. FUND LIMIT CHECK
     const currentBalance = new Prisma.Decimal(account.currentBalance || 0);
     const fundLimit = new Prisma.Decimal(config.fundLimit || 50000);
     const maxCapacity = fundLimit.minus(currentBalance);
@@ -287,14 +337,29 @@ export class PettyCashService {
       throw new Error(`Petty Cash fund limit exceeded. Maximum available fund capacity is PKR ${Math.max(0, maxCapacity.toNumber()).toLocaleString()}.`);
     }
 
-    const date = data.date ? new Date(data.date) : new Date();
     const voucherNo = `PCV-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}-${Math.floor(100000 + Math.random() * 900000)}`;
 
     return await prisma.$transaction(async (tx) => {
+      // Validate source account exists and is a Cash or Bank Asset account
+      const targetSourceAcc = await tx.account.findUnique({
+        where: { id: data.sourceAccountId },
+        include: { accountType: true }
+      });
+      if (!targetSourceAcc || targetSourceAcc.isDeleted) {
+        throw new Error('Source account not found or deactivated.');
+      }
+
+      const { isCash, isBank } = FundValidationService.isCashOrBankAccount(targetSourceAcc.accountName, targetSourceAcc.detailType);
+      const isAsset = (targetSourceAcc.accountType?.name || '').toUpperCase() === 'ASSET' || isCash || isBank;
+      if (!isAsset) {
+        throw new Error('Source account must be a valid Cash or Bank Asset account.');
+      }
+
       // Validate available balance on source account with row lock
       const { account: sourceAccount } = await FundValidationService.validateAndLockFunds(tx, {
         accountId: data.sourceAccountId,
-        requestedAmount: data.amount
+        requiredAmount: validAmount,
+        module: 'Petty Cash'
       });
 
       // Create Journal Entry
@@ -366,7 +431,7 @@ export class PettyCashService {
   static async recordExpense(data: {
     expenseHeadId?: string;
     expenseAccountId?: string;
-    amount: number;
+    amount: number | string;
     paidTo: string;
     date?: string;
     referenceNo?: string;
@@ -374,19 +439,42 @@ export class PettyCashService {
     attachmentUrl?: string;
     createdById: string;
   }) {
-    const { account: initialAccount } = await this.getOrCreatePettyCashAccount();
-    const account = await prisma.account.findUnique({ where: { id: initialAccount.id } }) || initialAccount;
-    const amountDec = new Prisma.Decimal(data.amount);
+    // 1. AMOUNT VALIDATION
+    const amtRes = validateAmount(data.amount);
+    if (!amtRes.valid) throw new Error(amtRes.message);
+    const validAmount = amtRes.amount;
+    const amountDec = new Prisma.Decimal(validAmount);
 
-    if (amountDec.lte(0)) throw new Error('Expense amount must be greater than zero.');
+    // 2. PAID TO VALIDATION
+    const paidToTrimmed = String(data.paidTo || '').trim();
+    if (!paidToTrimmed) throw new Error('Recipient (Paid To) is required for Petty Cash expenses.');
+    if (!isWithinMaxLength(paidToTrimmed, 255)) throw new Error('Paid To recipient cannot exceed 255 characters.');
 
-    // 1. INSUFFICIENT PETTY CASH BALANCE CHECK
-    const currentBalance = new Prisma.Decimal(account.currentBalance || 0);
-    if (amountDec.gt(currentBalance)) {
-      throw new Error(`Insufficient Petty Cash balance. Available: PKR ${currentBalance.toNumber().toLocaleString()}.`);
+    // 3. DATE VALIDATION
+    const date = data.date ? new Date(data.date) : new Date();
+    if (!isValidTransactionDate(date)) {
+      throw new Error('Invalid transaction date. Date must be between 1980 and 1 year in the future.');
     }
 
-    // Resolve Expense Account
+    // 4. TEXT LENGTH VALIDATION
+    if (data.referenceNo && !isWithinMaxLength(data.referenceNo, 255)) {
+      throw new Error('Reference number cannot exceed 255 characters.');
+    }
+    if (data.narration && !isWithinMaxLength(data.narration, 1000)) {
+      throw new Error('Narration cannot exceed 1000 characters.');
+    }
+
+    const { account: initialAccount } = await this.getOrCreatePettyCashAccount();
+    const account = await prisma.account.findUnique({ where: { id: initialAccount.id } }) || initialAccount;
+
+    // 5. INSUFFICIENT PETTY CASH BALANCE CHECK
+    const currentBalance = new Prisma.Decimal(account.currentBalance || 0);
+    if (amountDec.gt(currentBalance)) {
+      const shortfall = amountDec.minus(currentBalance);
+      throw new Error(`Insufficient Petty Cash balance. Available: PKR ${currentBalance.toNumber().toLocaleString()}. Required: PKR ${validAmount.toLocaleString()}. Shortfall: PKR ${shortfall.toNumber().toLocaleString()}.`);
+    }
+
+    // 6. EXPENSE ACCOUNT VALIDATION
     let expenseAccountId = data.expenseAccountId;
     let expenseHead = null;
 
@@ -399,7 +487,6 @@ export class PettyCashService {
     }
 
     if (!expenseAccountId) {
-      // Find a fallback general expense account
       const defaultExp = await prisma.account.findFirst({
         where: {
           isDeleted: false,
@@ -411,10 +498,17 @@ export class PettyCashService {
 
     if (!expenseAccountId) throw new Error('Expense account not found.');
 
-    const expenseAccount = await prisma.account.findUnique({ where: { id: expenseAccountId } });
-    if (!expenseAccount) throw new Error('Expense account not found.');
+    const expenseAccount = await prisma.account.findUnique({
+      where: { id: expenseAccountId },
+      include: { accountType: true }
+    });
+    if (!expenseAccount || expenseAccount.isDeleted) throw new Error('Expense account not found or deactivated.');
 
-    const date = data.date ? new Date(data.date) : new Date();
+    const expTypeName = (expenseAccount.accountType?.name || '').toUpperCase();
+    if (expTypeName !== 'EXPENSE' && expTypeName !== 'EXPENSES') {
+      throw new Error(`Account '${expenseAccount.accountName}' is a ${expenseAccount.accountType?.name || 'non-expense'} account. Petty Cash expenses must be recorded against Expense type accounts.`);
+    }
+
     const voucherNo = `PCV-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}-${Math.floor(100000 + Math.random() * 900000)}`;
 
     return await prisma.$transaction(async (tx) => {
@@ -487,11 +581,31 @@ export class PettyCashService {
   /**
    * Reconcile Petty Cash (Physical Count vs System Balance)
    */
-  static async reconcile(data: { physicalCount: number; explanation?: string; reconciledById: string }) {
+  static async reconcile(data: { physicalCount: number | string; explanation?: string; reconciledById: string }) {
     const { account } = await this.getOrCreatePettyCashAccount();
+
+    if (data.physicalCount === undefined || data.physicalCount === null || isNaN(Number(data.physicalCount))) {
+      throw new Error('Physical count must be a valid number.');
+    }
+    const physicalCountNum = Number(data.physicalCount);
+    if (physicalCountNum < 0) {
+      throw new Error('Physical cash count cannot be negative.');
+    }
+
     const systemBalance = new Prisma.Decimal(account.currentBalance || 0);
-    const physicalCount = new Prisma.Decimal(data.physicalCount);
+    const physicalCount = new Prisma.Decimal(physicalCountNum);
     const difference = physicalCount.minus(systemBalance);
+
+    const explanationTrimmed = String(data.explanation || '').trim();
+
+    // Require explanation for non-zero variance
+    if (!difference.isZero() && (!explanationTrimmed || explanationTrimmed.length < 5)) {
+      throw new Error(`Variance explanation (minimum 5 characters) is required when physical count (PKR ${physicalCountNum.toLocaleString()}) differs from system balance (PKR ${systemBalance.toNumber().toLocaleString()}).`);
+    }
+
+    if (explanationTrimmed && !isWithinMaxLength(explanationTrimmed, 1000)) {
+      throw new Error('Explanation cannot exceed 1000 characters.');
+    }
 
     let reconciledById = data.reconciledById;
     if (!reconciledById || reconciledById === '00000000-0000-0000-0000-000000000000') {
@@ -621,6 +735,13 @@ export class PettyCashService {
    * Revert / Delete Petty Cash Transaction (Admin only)
    */
   static async revertTransaction(transactionId: string, revertedById: string, revertReason: string) {
+    if (!revertReason || !String(revertReason).trim()) {
+      throw new Error('Reason for transaction reversal is required.');
+    }
+    if (!isWithinMaxLength(revertReason, 500)) {
+      throw new Error('Reversal reason cannot exceed 500 characters.');
+    }
+
     const pcTx = await prisma.pettyCashTransaction.findUnique({
       where: { id: transactionId },
       include: { journalEntry: { include: { lines: true } } }
