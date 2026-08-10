@@ -28,6 +28,10 @@ function PrintReceiptModal({ donation, onClose }) {
     ? (donation.customDonationType || 'Custom Donation')
     : (donationTypeDisplay(donation.donationType) || 'Donation');
 
+  const cnicVal = donation.donor?.cnic || donation.member?.cnic || donation.beneficiary?.cnic || '';
+  const mobileVal = donation.donor?.mobile || donation.member?.mobile || donation.beneficiary?.mobile || '';
+  const addressVal = donation.donor?.address || donation.member?.address || donation.beneficiary?.address || '';
+
   return (
     <VoucherSlipModal
       isOpen={true}
@@ -38,8 +42,10 @@ function PrintReceiptModal({ donation, onClose }) {
       date={donation.receiptDate || donation.createdAt}
       name={donation.donor?.fullName}
       fatherName={donation.fatherName || donation.donor?.fatherName || donation.member?.fatherName || donation.beneficiary?.fatherName || donation.beneficiary?.husbandName || ''}
+      cnic={cnicVal}
+      mobile={mobileVal}
+      address={addressVal}
       gham={donation.gham || donation.donor?.gham || donation.member?.gham || donation.beneficiary?.gham || donation.beneficiary?.fatherGham || ''}
-      address={donation.donor?.mobile || donation.donor?.address || ''}
       paymentMethod={donation.paymentMethod}
       accountName={`${categoryLabel} A/c`}
       particulars={`Donation Received - ${categoryLabel}${donation.narration ? ` (${donation.narration})` : ''}${donation.chequeNo ? ` [Cheque #${donation.chequeNo}]` : ''}`}

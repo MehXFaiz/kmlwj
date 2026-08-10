@@ -244,6 +244,9 @@ export const Income = () => {
           date={printIncome.date}
           name={printIncome.revenueHead?.name || 'Income Depositor'}
           fatherName={printIncome.fatherName || printIncome.member?.fatherName || printIncome.donor?.fatherName || ''}
+          cnic={printIncome.cnic || printIncome.member?.cnic || printIncome.donor?.cnic || ''}
+          mobile={printIncome.mobile || printIncome.member?.mobile || printIncome.donor?.mobile || ''}
+          address={printIncome.address || printIncome.member?.address || printIncome.donor?.address || ''}
           gham={printIncome.gham || printIncome.member?.gham || printIncome.donor?.gham || ''}
           paymentMethod={printIncome.paymentMethod}
           accountName={printIncome.revenueHead?.name || 'Revenue Account'}

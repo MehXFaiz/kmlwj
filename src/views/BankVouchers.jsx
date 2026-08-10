@@ -394,6 +394,10 @@ function BankVoucherPrintModal({ voucher, onClose }) {
   const amount = voucher.lines ? voucher.lines.reduce((sum, line) => sum + (Number(line.debit) || 0), 0) : 0;
   const firstLine = voucher.lines?.[0];
 
+  const cnicVal = voucher.cnic || voucher.beneficiary?.cnic || voucher.member?.cnic || voucher.donor?.cnic || '';
+  const mobileVal = voucher.mobile || voucher.beneficiary?.mobile || voucher.member?.mobile || voucher.donor?.mobile || '';
+  const addressVal = voucher.address || voucher.beneficiary?.address || voucher.member?.address || voucher.donor?.address || '';
+
   return (
     <VoucherSlipModal
       isOpen={true}
@@ -404,6 +408,9 @@ function BankVoucherPrintModal({ voucher, onClose }) {
       date={voucher.date}
       name={voucher.paidTo || voucher.payee || 'Recipient / Bank Account'}
       fatherName={voucher.fatherName || voucher.member?.fatherName || voucher.beneficiary?.fatherName || voucher.beneficiary?.husbandName || voucher.donor?.fatherName || ''}
+      cnic={cnicVal}
+      mobile={mobileVal}
+      address={addressVal}
       gham={voucher.gham || voucher.member?.gham || voucher.beneficiary?.gham || voucher.beneficiary?.fatherGham || voucher.beneficiary?.husbandGham || voucher.donor?.gham || ''}
       paymentMethod={voucher.paymentMethod || 'BANK'}
       accountName={firstLine?.accountName || 'Bank Account'}

@@ -531,6 +531,9 @@ export const Expenses = () => {
           date={printExpense.date}
           name={printExpense.paidTo || 'Paid To Recipient'}
           fatherName={printExpense.fatherName || printExpense.payeeFatherName || printExpense.beneficiary?.fatherName || printExpense.beneficiary?.husbandName || printExpense.member?.fatherName || ''}
+          cnic={printExpense.cnic || printExpense.payeeCnic || printExpense.beneficiary?.cnic || printExpense.member?.cnic || ''}
+          mobile={printExpense.mobile || printExpense.payeeMobile || printExpense.beneficiary?.mobile || printExpense.member?.mobile || ''}
+          address={printExpense.address || printExpense.payeeAddress || printExpense.beneficiary?.address || printExpense.member?.address || ''}
           gham={printExpense.gham || printExpense.payeeGham || printExpense.beneficiary?.gham || printExpense.beneficiary?.fatherGham || printExpense.member?.gham || ''}
           paymentMethod={printExpense.paymentMethod}
           accountName={printExpense.expenseHead?.name || 'Expense Account'}

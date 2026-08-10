@@ -127,6 +127,9 @@ function CopySheet({
   formattedDate,
   paidTo,
   fatherName,
+  cnic,
+  mobile,
+  address,
   gham,
   paymentMethod,
   amount,
@@ -181,31 +184,54 @@ function CopySheet({
           </div>
         </div>
 
-        {/* ── VOUCHER META GRID ── */}
-        <div className="my-3 grid grid-cols-2 sm:grid-cols-6 gap-2 bg-[#F8FAFC] p-2.5 rounded-xl border border-slate-200">
-          <div className="border-r border-slate-200 pr-2">
-            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Voucher No</div>
-            <div className="text-xs font-black text-[#0F172A] font-mono mt-0.5">{voucherNo || '—'}</div>
+        {/* ── VOUCHER META & PARTY DETAILS GRID ── */}
+        <div className="my-2.5 space-y-2">
+          {/* Row 1: Key Financial Info */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#F8FAFC] p-2.5 rounded-xl border border-slate-300">
+            <div className="border-r border-slate-300 pr-2">
+              <div className="text-[9.5px] font-black uppercase tracking-wider text-[#0F172A]">Voucher No</div>
+              <div className="text-xs font-black text-slate-950 font-mono mt-0.5">{voucherNo || '—'}</div>
+            </div>
+            <div className="border-r border-slate-300 pr-2 pl-1">
+              <div className="text-[9.5px] font-black uppercase tracking-wider text-[#0F172A]">Date</div>
+              <div className="text-xs font-black text-slate-950 mt-0.5">{formattedDate}</div>
+            </div>
+            <div className="border-r border-slate-300 pr-2 pl-1">
+              <div className="text-[9.5px] font-black uppercase tracking-wider text-[#0F172A]">Payment Mode</div>
+              <div className="text-xs font-black mt-0.5" style={{ color: theme.accentColor }}>{paymentMethod}</div>
+            </div>
+            <div className="pl-1">
+              <div className="text-[9.5px] font-black uppercase tracking-wider text-[#0F172A]">Ref / Category</div>
+              <div className="text-xs font-black text-slate-950 truncate mt-0.5">{fileNo || '—'}</div>
+            </div>
           </div>
-          <div className="border-r border-slate-200 pr-2 pl-1">
-            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Date</div>
-            <div className="text-xs font-bold text-slate-800 mt-0.5">{formattedDate}</div>
-          </div>
-          <div className="border-r border-slate-200 pr-2 pl-1">
-            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{displayPartyLabel}</div>
-            <div className="text-xs font-black text-[#0F172A] truncate mt-0.5">{paidTo || '—'}</div>
-          </div>
-          <div className="border-r border-slate-200 pr-2 pl-1">
-            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Father Name</div>
-            <div className="text-xs font-bold text-slate-800 truncate mt-0.5">{(fatherName && fatherName !== gham) ? fatherName : (fatherName && !gham ? fatherName : '—')}</div>
-          </div>
-          <div className="border-r border-slate-200 pr-2 pl-1">
-            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Gham Details</div>
-            <div className="text-xs font-bold text-slate-800 truncate mt-0.5">{gham || '—'}</div>
-          </div>
-          <div className="pl-1">
-            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Payment Mode</div>
-            <div className="text-xs font-bold mt-0.5" style={{ color: theme.accentColor }}>{paymentMethod}</div>
+
+          {/* Row 2: Comprehensive Person Info (Name, Father Name, CNIC, Phone, Gham, Address) */}
+          <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 bg-[#F1F5F9] p-2.5 rounded-xl border border-slate-300">
+            <div className="border-r border-slate-300 pr-2">
+              <div className="text-[9.5px] font-black uppercase tracking-wider text-[#0F172A]">{displayPartyLabel}</div>
+              <div className="text-xs font-black text-slate-950 truncate mt-0.5">{paidTo || '—'}</div>
+            </div>
+            <div className="border-r border-slate-300 pr-2 pl-1">
+              <div className="text-[9.5px] font-black uppercase tracking-wider text-[#0F172A]">Father / Husband</div>
+              <div className="text-xs font-black text-slate-950 truncate mt-0.5">{(fatherName && fatherName !== gham) ? fatherName : (fatherName && !gham ? fatherName : '—')}</div>
+            </div>
+            <div className="border-r border-slate-300 pr-2 pl-1">
+              <div className="text-[9.5px] font-black uppercase tracking-wider text-[#0F172A]">CNIC Number</div>
+              <div className="text-xs font-black font-mono text-slate-950 truncate mt-0.5">{cnic || '—'}</div>
+            </div>
+            <div className="border-r border-slate-300 pr-2 pl-1">
+              <div className="text-[9.5px] font-black uppercase tracking-wider text-[#0F172A]">Phone / Mobile</div>
+              <div className="text-xs font-black font-mono text-slate-950 truncate mt-0.5">{mobile || '—'}</div>
+            </div>
+            <div className="border-r border-slate-300 pr-2 pl-1">
+              <div className="text-[9.5px] font-black uppercase tracking-wider text-[#0F172A]">Gham Details</div>
+              <div className="text-xs font-black text-slate-950 truncate mt-0.5">{gham || '—'}</div>
+            </div>
+            <div className="pl-1">
+              <div className="text-[9.5px] font-black uppercase tracking-wider text-[#0F172A]">Address</div>
+              <div className="text-xs font-extrabold text-slate-950 truncate mt-0.5" title={address || ''}>{address || '—'}</div>
+            </div>
           </div>
         </div>
 
@@ -214,8 +240,8 @@ function CopySheet({
           <span className="shrink-0 px-2 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider text-white" style={{ backgroundColor: theme.accentColor }}>
             VOUCHER ITEM
           </span>
-          <span className="text-[11px] text-slate-900 font-bold truncate">
-            This is the official voucher for <u className="underline decoration-2 font-extrabold" style={{ textDecorationColor: theme.accentColor }}>{ledgerRows[0]?.account || title}</u>.
+          <span className="text-[11px] text-slate-950 font-black truncate">
+            This is the official voucher for <u className="underline decoration-2 font-black" style={{ textDecorationColor: theme.accentColor }}>{ledgerRows[0]?.account || title}</u>.
           </span>
         </div>
 
@@ -232,10 +258,10 @@ function CopySheet({
               {ledgerRows.map((row, idx) => (
                 <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
                   <td className="py-2 px-3 border-r border-slate-200">
-                    <div className="font-bold text-slate-900">{row.account}</div>
-                    <div className="text-[10.5px] font-medium text-slate-500 mt-0.5 italic">{row.narration}</div>
+                    <div className="font-black text-slate-950">{row.account}</div>
+                    <div className="text-[10.5px] font-bold text-slate-800 mt-0.5 italic">{row.narration}</div>
                   </td>
-                  <td className="py-2 px-3 text-right font-black text-slate-900 align-top">
+                  <td className="py-2 px-3 text-right font-black text-slate-950 align-top">
                     Rs {Number(row.amount || 0).toLocaleString('en-PK')}
                   </td>
                 </tr>
@@ -246,7 +272,7 @@ function CopySheet({
                 <td className="py-1.5 px-3 uppercase tracking-wider text-[10px] text-[#0F172A] border-r border-slate-300">
                   Total Financial Outflow / Inflow
                 </td>
-                <td className="py-1.5 px-3 text-right text-slate-900 font-extrabold">
+                <td className="py-1.5 px-3 text-right text-slate-950 font-black">
                   Rs {Number(amount || 0).toLocaleString('en-PK')}
                 </td>
               </tr>
@@ -258,14 +284,14 @@ function CopySheet({
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 mb-3">
           <div className="sm:col-span-7 bg-[#F8FAFC] p-2.5 rounded-xl border border-slate-200 flex flex-col justify-between">
             <div>
-              <span className="text-[9px] font-black uppercase tracking-wider" style={{ color: theme.accentColor }}>Amount in Words:</span>
-              <div className="text-xs font-bold italic text-slate-900 mt-0.5">
+              <span className="text-[9.5px] font-black uppercase tracking-wider" style={{ color: theme.accentColor }}>Amount in Words:</span>
+              <div className="text-xs font-black italic text-slate-950 mt-0.5">
                 "{words} Only"
               </div>
             </div>
             {remarks && (
-              <div className="mt-1.5 pt-1 border-t border-slate-200 text-[10.5px] text-slate-600 truncate">
-                <strong className="text-slate-800">Remarks:</strong> {remarks}
+              <div className="mt-1.5 pt-1 border-t border-slate-200 text-[10.5px] text-slate-800 truncate">
+                <strong className="text-slate-950 font-black">Remarks:</strong> {remarks}
               </div>
             )}
           </div>
@@ -287,37 +313,37 @@ function CopySheet({
         <div className="grid grid-cols-4 gap-2 pt-2 border-t border-slate-200">
           <div className="text-center bg-[#F8FAFC] p-1.5 rounded-lg border border-slate-200">
             <div className="h-6 flex items-end justify-center pb-1">
-              <span className="text-[10.5px] font-bold text-slate-800">{preparedBy || 'System Admin'}</span>
+              <span className="text-[10.5px] font-black text-slate-950">{preparedBy || 'System Admin'}</span>
             </div>
-            <div className="border-t border-slate-300 pt-1 text-[8.5px] font-black uppercase tracking-wider text-slate-500">
+            <div className="border-t border-slate-300 pt-1 text-[8.5px] font-black uppercase tracking-wider text-slate-800">
               Prepared By
             </div>
           </div>
 
           <div className="text-center bg-[#F8FAFC] p-1.5 rounded-lg border border-slate-200">
             <div className="h-6" />
-            <div className="border-t border-slate-300 pt-1 text-[8.5px] font-black uppercase tracking-wider text-slate-500">
+            <div className="border-t border-slate-300 pt-1 text-[8.5px] font-black uppercase tracking-wider text-slate-800">
               Checked By
             </div>
           </div>
 
           <div className="text-center bg-[#F8FAFC] p-1.5 rounded-lg border border-slate-200">
             <div className="h-6" />
-            <div className="border-t border-slate-300 pt-1 text-[8.5px] font-black uppercase tracking-wider text-slate-500">
+            <div className="border-t border-slate-300 pt-1 text-[8.5px] font-black uppercase tracking-wider text-slate-800">
               Authorized Sign
             </div>
           </div>
 
           <div className="text-center bg-[#F8FAFC] p-1.5 rounded-lg border border-slate-200">
             <div className="h-6" />
-            <div className="border-t border-slate-300 pt-1 text-[8.5px] font-black uppercase tracking-wider text-slate-500 truncate">
+            <div className="border-t border-slate-300 pt-1 text-[8.5px] font-black uppercase tracking-wider text-slate-800 truncate">
               {payeeLabel || 'Receiver Signature'}
             </div>
           </div>
         </div>
 
         {/* Bottom Official Footer Bar */}
-        <div className="mt-2 flex items-center justify-between text-[8px] font-bold uppercase tracking-wider text-slate-400 pt-1 border-t border-slate-100">
+        <div className="mt-2 flex items-center justify-between text-[8.5px] font-black uppercase tracking-wider text-slate-700 pt-1 border-t border-slate-200">
           <span>Ref: {fileNo || 'KMLWJ-VOUCHER'}</span>
           <span>Official Financial Document • Commercial Print Ready</span>
         </div>
@@ -336,6 +362,9 @@ export const VoucherSlipModal = ({
   date = '',
   name = '',
   fatherName = '',
+  cnic = '',
+  mobile = '',
+  phone = '',
   gham = '',
   address = '',
   paymentMethod: paymentMethodProp,
@@ -348,6 +377,8 @@ export const VoucherSlipModal = ({
   partyLabel,
 }) => {
   if (!isOpen) return null;
+
+  const contactMobile = mobile || phone || '';
 
   const handlePrint = () => {
     window.print();
@@ -460,6 +491,9 @@ export const VoucherSlipModal = ({
                   formattedDate={formattedDate}
                   paidTo={name}
                   fatherName={fatherName}
+                  cnic={cnic}
+                  mobile={contactMobile}
+                  address={address}
                   gham={gham}
                   paymentMethod={paymentMethod}
                   amount={amount}
@@ -480,6 +514,9 @@ export const VoucherSlipModal = ({
                   formattedDate={formattedDate}
                   paidTo={name}
                   fatherName={fatherName}
+                  cnic={cnic}
+                  mobile={contactMobile}
+                  address={address}
                   gham={gham}
                   paymentMethod={paymentMethod}
                   amount={amount}

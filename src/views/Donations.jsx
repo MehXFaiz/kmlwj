@@ -300,6 +300,14 @@ const numberToWords = (num) => {
 function DonationInvoiceModal({ donation, onClose }) {
   if (!donation) return null;
 
+  const ben = donation.beneficiary;
+  const donor = donation.donor;
+  const cnicVal = ben?.cnic || donor?.cnic || '';
+  const mobileVal = ben?.mobile || donation.donorMobile || donor?.mobile || '';
+  const fullAddress = ben?.address
+    ? [ben.address, ben.area, ben.town].filter(Boolean).join(', ')
+    : (donor?.address || '');
+
   return (
     <VoucherSlipModal
       isOpen={true}
@@ -308,10 +316,12 @@ function DonationInvoiceModal({ donation, onClose }) {
       voucherNo={donation.id?.slice(0, 8)?.toUpperCase()}
       fileNo={donationTypeDisplay(donation.donationType, donation.customDonationType)}
       date={donation.createdAt}
-      name={donation.donorName || donation.beneficiary?.name || ''}
-      fatherName={donation.beneficiary?.fatherName || donation.beneficiary?.husbandName || donation.donor?.fatherName || ''}
-      gham={donation.beneficiary?.gham || donation.beneficiary?.fatherGham || donation.beneficiary?.husbandGham || donation.donor?.gham || ''}
-      address={donation.donorMobile || donation.donorBankName || ''}
+      name={donation.donorName || ben?.name || ''}
+      fatherName={ben?.fatherName || ben?.husbandName || donor?.fatherName || ''}
+      cnic={cnicVal}
+      mobile={mobileVal}
+      address={fullAddress}
+      gham={ben?.gham || ben?.fatherGham || ben?.husbandGham || donor?.gham || ''}
       paymentMethod={donation.paymentMethod}
       accountName="Donation Disbursement A/c"
       particulars={`Donation Given / Disbursement - ${donationTypeDisplay(donation.donationType, donation.customDonationType)}${donation.remarks ? ` (${donation.remarks})` : ''}${donation.chequeNumber ? ` [Cheque #${donation.chequeNumber}]` : ''}`}
