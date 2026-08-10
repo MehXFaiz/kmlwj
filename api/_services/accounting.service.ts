@@ -147,6 +147,15 @@ export class AccountingService {
   static async ensureCashInHandAccount(tx: any) {
     let cashAccount = await tx.account.findFirst({
       where: {
+        glCode: '1010103',
+        isLocked: false
+      }
+    });
+
+    if (cashAccount) return cashAccount;
+
+    cashAccount = await tx.account.findFirst({
+      where: {
         AND: [
           {
             OR: [

@@ -170,6 +170,25 @@ export class FundValidationService {
 
     // 3. Check for Insufficient Funds
     if (requiredAmount > availableBalance) {
+      // Fallback: If Cash payment and primary operational Cash in Hand (1010103) has sufficient balance, allow payment
+      if (isCashPayment) {
+        const primaryCash = await tx.account.findFirst({
+          where: {
+            OR: [
+              { glCode: '1010103' },
+              { accountName: { equals: 'Cash in Hand', mode: 'insensitive' } }
+            ],
+            isLocked: false
+          }
+        });
+        if (primaryCash && primaryCash.id !== accountId) {
+          const cashRes = await FundValidationService.getAvailableBalance(tx, primaryCash.id);
+          if (cashRes.availableBalance >= requiredAmount) {
+            return { availableBalance: cashRes.availableBalance, account: cashRes.account };
+          }
+        }
+      }
+
       const safeAvailable = Math.max(0, availableBalance);
       const shortfall = Math.max(0, requiredAmount - safeAvailable);
 
