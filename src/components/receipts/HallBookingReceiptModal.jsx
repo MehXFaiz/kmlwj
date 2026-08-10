@@ -201,9 +201,9 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
         printColorAdjust: 'exact'
       }}
     >
-      {/* Outer Executive Light Frame (Border Removed) */}
+      {/* Outer Executive Light Frame */}
       <div
-        className="relative bg-white border-0 print:border-none rounded-none shadow-none overflow-hidden p-2 print:p-1"
+        className="relative bg-white border-0 print:border-none rounded-none shadow-none overflow-hidden p-2.5 print:p-1.5 box-border"
       >
         {/* Subtle Watermark Emblem */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.035] select-none z-0">
@@ -213,7 +213,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
         {/* ══════════════════════════════════════════════════════════
            1. COMPACT VOUCHER HEADER
            ══════════════════════════════════════════════════════════ */}
-        <div className="relative z-10 border-b border-emerald-800/40 pb-1 mb-1 print:pb-0.5 print:mb-0.5 flex items-center justify-between gap-2">
+        <div className="relative z-10 border-b border-emerald-800/40 pb-1.5 mb-1.5 print:pb-1 print:mb-1 flex items-center justify-between gap-2">
           {/* Left Block: Logo + Organization Name */}
           <div className="flex items-center gap-2.5">
             <div className="w-12 h-12 sm:w-14 sm:h-14 shrink-0 flex items-center justify-center p-0.5 border border-emerald-700/30 rounded-lg bg-white">
@@ -229,7 +229,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
                     fontSize: '13px',
                     lineHeight: 1.6,
                     paddingTop: '0.1em',
-                    paddingBottom: '0em',
+                    paddingBottom: '0.1em',
                     wordSpacing: '0.1em',
                     fontWeight: 600,
                   }}
@@ -237,7 +237,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
                   کچھی مسلم لوہارواڈھا ویلفیئر جماعت
                 </h1>
                 <span
-                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border"
+                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border shrink-0"
                   style={{
                     backgroundColor: '#ecfdf5',
                     borderColor: '#10b981',
@@ -248,7 +248,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
                 </span>
               </div>
               <h2
-                className="text-[10px] sm:text-[11px] font-black tracking-wide uppercase mt-0"
+                className="text-[10px] sm:text-[11px] font-black tracking-wide uppercase mt-0.5"
                 style={{ color: '#065f46' }}
               >
                 KUTCHI MUSLIM LOHARWADA WELFARE JAMAAT (REGD.)
@@ -260,7 +260,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
           <div className="flex items-center gap-2 shrink-0">
             {/* Copy Badge */}
             <div
-              className="px-2 py-0.5 rounded border text-right"
+              className="px-2.5 py-1 rounded border text-right"
               style={{
                 backgroundColor: isCustomer ? '#ecfdf5' : '#fffbeb',
                 borderColor: isCustomer ? '#059669' : '#d97706',
@@ -271,7 +271,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
                 {copyEnglishTitle}
               </span>
               <span
-                className="text-[11px] font-bold block leading-tight"
+                className="text-[11px] font-bold block leading-relaxed"
                 style={{ fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
               >
                 {copyUrduTitle}
@@ -280,13 +280,13 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
 
             {/* Receipt No & Issue Date */}
             <div
-              className="flex flex-col items-end justify-center bg-slate-50 border border-slate-300 rounded px-2 py-0.5 text-right"
+              className="flex flex-col items-end justify-center bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-right"
               style={{ color: '#0f172a' }}
             >
               <div className="text-[10px] font-black font-mono">
                 #{String(booking.receiptNo || '0001').padStart(4, '0')}
               </div>
-              <div className="text-[8px] font-bold text-slate-600">
+              <div className="text-[8px] font-bold text-slate-600 mt-0.5">
                 {bookingDateStr}
               </div>
             </div>
@@ -296,14 +296,14 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
         {/* ══════════════════════════════════════════════════════════
            2. CLIENT & PROGRAM SPECIFICATION GRID
            ══════════════════════════════════════════════════════════ */}
-        <div className="relative z-10 border border-slate-300 rounded overflow-hidden mb-1 print:mb-0.5 bg-white">
+        <div className="relative z-10 border border-slate-300 rounded overflow-hidden mb-1.5 print:mb-1 bg-white box-border">
           <div
-            className="px-2 py-0.5 border-b border-slate-300 text-[9px] font-bold uppercase tracking-wider flex items-center justify-between"
+            className="px-3 py-1 border-b border-slate-300 text-[9px] font-bold uppercase tracking-wider flex items-center justify-between"
             style={{ backgroundColor: '#f8fafc', color: '#1e293b' }}
           >
             <span>1. BOOKING SPECIFICATIONS & EVENT SCHEDULE</span>
             <span
-              className="text-[11px] font-bold leading-normal"
+              className="text-[11px] font-bold leading-relaxed"
               style={{ fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
             >
               تفصیلاتِ بکنگ کنندہ و تقریب
@@ -312,12 +312,12 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
 
           <div className="grid grid-cols-4 divide-x divide-slate-300">
             {/* Column 1: Booker Name */}
-            <div className="p-1.5 print:p-1">
-              <span className="text-[7.5px] font-bold text-slate-500 uppercase block">
+            <div className="p-2 print:p-1.5 flex flex-col justify-center box-border">
+              <span className="text-[7.5px] font-bold text-slate-500 uppercase block tracking-wider mb-0.5">
                 BOOKER NAME / نام بکنگ کنندہ
               </span>
               <div
-                className="text-xs font-black mt-0.5 truncate"
+                className="text-xs font-black leading-tight break-words"
                 style={{ color: '#0f172a' }}
               >
                 {booking.bookerName || '—'}
@@ -325,11 +325,11 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
             </div>
 
             {/* Column 2: Contact & Membership */}
-            <div className="p-1.5 print:p-1">
-              <span className="text-[7.5px] font-bold text-slate-500 uppercase block">
+            <div className="p-2 print:p-1.5 flex flex-col justify-center box-border">
+              <span className="text-[7.5px] font-bold text-slate-500 uppercase block tracking-wider mb-0.5">
                 CONTACT / رابطہ و حیثیت
               </span>
-              <div className="flex items-center justify-between gap-1 mt-0.5">
+              <div className="flex items-center justify-between gap-1.5 mt-0.5">
                 <span
                   className="text-xs font-black font-mono"
                   style={{ color: '#0f172a' }}
@@ -338,7 +338,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
                   {booking.mobile || '—'}
                 </span>
                 <span
-                  className="text-[8px] font-bold px-1 py-0.2 rounded border"
+                  className="text-[8px] font-bold px-1.5 py-0.5 rounded border shrink-0"
                   style={{
                     backgroundColor: booking.isForJamaat ? '#ecfdf5' : '#f1f5f9',
                     borderColor: booking.isForJamaat ? '#10b981' : '#cbd5e1',
@@ -351,45 +351,41 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
             </div>
 
             {/* Column 3: Event Date & Day */}
-            <div className="p-1.5 print:p-1">
-              <span className="text-[7.5px] font-bold text-slate-500 uppercase block">
+            <div className="p-2 print:p-1.5 flex flex-col justify-center box-border">
+              <span className="text-[7.5px] font-bold text-slate-500 uppercase block tracking-wider mb-0.5">
                 EVENT DATE / تاریخِ تقریب
               </span>
               <div
-                className="text-xs font-black mt-0.5"
+                className="text-xs font-black"
                 style={{ color: '#0f172a' }}
               >
                 {programDateStr}
               </div>
-              <div className="text-[8.5px] font-semibold text-slate-600">
+              <div className="text-[8.5px] font-semibold text-slate-600 mt-0.5">
                 {programDayEnglish} {programDayUrdu ? `(${programDayUrdu})` : ''}
               </div>
             </div>
 
-            {/* Column 4: Program & Venue Address */}
-            <div className="p-1.5 print:p-1">
-              <span className="text-[7.5px] font-bold text-slate-500 uppercase block">
+            {/* Column 4: Program & Timing */}
+            <div className="p-2 print:p-1.5 flex flex-col justify-center box-border">
+              <span className="text-[7.5px] font-bold text-slate-500 uppercase block tracking-wider mb-0.5">
                 PROGRAM & TIMING / تقریب
               </span>
-              <div className="mt-0.5 space-y-0.5">
-                <div>
-                  <div
-                    className="text-[9.5px] font-black truncate"
-                    style={{ color: '#0f172a' }}
-                  >
-                    {eventName}
-                  </div>
+              <div className="space-y-0.5">
+                <div
+                  className="text-[9.5px] font-black leading-tight break-words"
+                  style={{ color: '#0f172a' }}
+                >
+                  {eventName}
                 </div>
-                <div>
-                  <div
-                    className="text-[9.5px] font-black truncate"
-                    style={{ color: '#0f172a' }}
-                  >
-                    {eventTiming}
-                  </div>
+                <div
+                  className="text-[9.5px] font-black leading-tight break-words"
+                  style={{ color: '#0f172a' }}
+                >
+                  {eventTiming}
                 </div>
               </div>
-              <div className="text-[8.5px] text-slate-500 truncate mt-0.5">
+              <div className="text-[8.5px] text-slate-500 break-words leading-tight mt-0.5">
                 {booking.address || 'KMLWJ Complex, Lyari'}
               </div>
             </div>
@@ -399,14 +395,14 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
         {/* ══════════════════════════════════════════════════════════
            3. ASSIGNED VENUE MATRIX
            ══════════════════════════════════════════════════════════ */}
-        <div className="relative z-10 border border-slate-300 rounded overflow-hidden mb-1 print:mb-0.5 bg-white">
+        <div className="relative z-10 border border-slate-300 rounded overflow-hidden mb-1.5 print:mb-1 bg-white box-border">
           <div
-            className="px-2 py-0.5 border-b border-slate-300 text-[9px] font-bold uppercase tracking-wider flex items-center justify-between"
+            className="px-3 py-1 border-b border-slate-300 text-[9px] font-bold uppercase tracking-wider flex items-center justify-between"
             style={{ backgroundColor: '#f8fafc', color: '#1e293b' }}
           >
             <span>2. ASSIGNED VENUE VERIFICATION MATRIX</span>
             <span
-              className="text-[11px] font-bold leading-normal"
+              className="text-[11px] font-bold leading-relaxed"
               style={{ fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif" }}
             >
               منتخب کردہ ہال / تقریب کا مقام
@@ -419,12 +415,12 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
               return (
                 <div
                   key={hall.id}
-                  className="p-1.5 print:p-1 flex flex-col justify-between min-h-[38px] print:min-h-[36px] relative"
+                  className="p-2 print:p-1.5 flex flex-col justify-between min-h-[42px] print:min-h-[38px] relative box-border"
                   style={
                     selected
                       ? {
                           backgroundColor: '#ecfdf5',
-                          border: '1.5px solid #059669',
+                          boxShadow: 'inset 0 0 0 1.5px #059669',
                           color: '#064e3b'
                         }
                       : {
@@ -433,9 +429,9 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
                         }
                   }
                 >
-                  <div className="flex items-center justify-between gap-1">
+                  <div className="flex items-center justify-between gap-1 mb-1">
                     <span
-                      className="text-[11px] font-bold leading-tight"
+                      className="text-[11px] font-bold leading-relaxed"
                       style={{
                         fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
                         color: selected ? '#064e3b' : '#334155'
@@ -445,21 +441,21 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
                     </span>
                     {selected ? (
                       <span
-                        className="shrink-0 inline-flex items-center gap-0.5 px-1 py-0.2 rounded text-[7.5px] font-black uppercase tracking-wider border"
+                        className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[7.5px] font-black uppercase tracking-wider border"
                         style={{
                           backgroundColor: '#10b981',
                           borderColor: '#059669',
                           color: '#ffffff'
                         }}
                       >
-                        <Check className="h-2 w-2 stroke-[3]" /> ASSIGNED
+                        <Check className="h-2.5 w-2.5 stroke-[3]" /> ASSIGNED
                       </span>
                     ) : (
-                      <span className="shrink-0 w-2.5 h-2.5 rounded-xs border border-slate-300 inline-block" />
+                      <span className="shrink-0 w-3 h-3 rounded-xs border border-slate-300 inline-block" />
                     )}
                   </div>
                   <span
-                    className="text-[8px] font-bold uppercase tracking-wider mt-0.5 block"
+                    className="text-[8px] font-bold uppercase tracking-wider block"
                     style={{ color: selected ? '#065f46' : '#64748b' }}
                   >
                     {hall.englishName}
@@ -473,49 +469,49 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
         {/* ══════════════════════════════════════════════════════════
            4. FINANCIAL ASSESSMENT & SETTLEMENT BOX
            ══════════════════════════════════════════════════════════ */}
-        <div className="relative z-10 border border-slate-300 rounded overflow-hidden mb-1 print:mb-0.5 bg-white">
+        <div className="relative z-10 border border-slate-300 rounded overflow-hidden mb-1.5 print:mb-1 bg-white box-border">
           <div className="grid grid-cols-4 divide-x divide-slate-300 border-b border-slate-300">
-            <div className="p-1 print:p-0.5 text-center">
-              <span className="text-[7px] font-bold text-slate-500 uppercase tracking-wider block">
+            <div className="p-2 print:p-1.5 text-center flex flex-col justify-center box-border">
+              <span className="text-[7.5px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">
                 Hall Charges
               </span>
-              <div className="text-xs font-black mt-0.5" style={{ color: '#0f172a' }}>
+              <div className="text-xs font-black" style={{ color: '#0f172a' }}>
                 Rs. {Math.round(hallCharges).toLocaleString()}
               </div>
             </div>
-            <div className="p-1 print:p-0.5 text-center">
-              <span className="text-[7px] font-bold text-slate-500 uppercase tracking-wider block">
+            <div className="p-2 print:p-1.5 text-center flex flex-col justify-center box-border">
+              <span className="text-[7.5px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">
                 Discount
               </span>
-              <div className="text-xs font-black mt-0.5" style={{ color: '#c2410c' }}>
+              <div className="text-xs font-black" style={{ color: '#c2410c' }}>
                 - Rs. {Math.round(discountAmt).toLocaleString()}
               </div>
             </div>
-            <div className="p-1 print:p-0.5 text-center" style={{ backgroundColor: '#f8fafc' }}>
-              <span className="text-[7px] font-bold text-slate-500 uppercase tracking-wider block">
+            <div className="p-2 print:p-1.5 text-center flex flex-col justify-center box-border" style={{ backgroundColor: '#f8fafc' }}>
+              <span className="text-[7.5px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">
                 Net Amount
               </span>
-              <div className="text-xs font-black mt-0.5" style={{ color: '#0f172a' }}>
+              <div className="text-xs font-black" style={{ color: '#0f172a' }}>
                 Rs. {Math.round(netAmount).toLocaleString()}
               </div>
             </div>
-            <div className="p-1 print:p-0.5 text-center">
-              <span className="text-[7px] font-bold text-slate-500 uppercase tracking-wider block">
+            <div className="p-2 print:p-1.5 text-center flex flex-col justify-center box-border">
+              <span className="text-[7.5px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">
                 Received
               </span>
-              <div className="text-xs font-black mt-0.5" style={{ color: '#0369a1' }}>
+              <div className="text-xs font-black" style={{ color: '#0369a1' }}>
                 Rs. {Math.round(receivedAmount).toLocaleString()}
               </div>
             </div>
           </div>
           <div className="grid grid-cols-3 divide-x divide-slate-300">
             {/* Amount in Words */}
-            <div className="p-1.5 print:p-1 col-span-2 bg-slate-50 flex flex-col justify-center">
-              <span className="text-[7.5px] font-bold text-slate-500 uppercase tracking-wider block">
+            <div className="p-2 print:p-1.5 col-span-2 bg-slate-50 flex flex-col justify-center box-border">
+              <span className="text-[7.5px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">
                 AMOUNT RECEIVED IN WORDS / رقم حرفی
               </span>
               <p
-                className="text-[11px] font-bold italic mt-0.5 capitalize border-l-2 border-emerald-600 pl-1.5 leading-tight"
+                className="text-[10.5px] font-bold italic capitalize border-l-2 border-emerald-600 pl-2 leading-snug break-words"
                 style={{ color: '#0f172a' }}
               >
                 "{amountWords}"
@@ -524,7 +520,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
 
             {/* Balance / Settled Currency Card */}
             <div
-              className="p-1.5 print:p-1 flex flex-col justify-center items-end text-right"
+              className="p-2 print:p-1.5 flex flex-col justify-center items-end text-right box-border"
               style={
                 isRefundish
                   ? { backgroundColor: '#fff1f2', borderLeft: '2px solid #e11d48', color: '#881337' }
@@ -534,7 +530,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
               }
             >
               <span
-                className="text-[7.5px] font-bold uppercase tracking-widest block"
+                className="text-[7.5px] font-bold uppercase tracking-widest block mb-0.5"
                 style={{ color: isRefundish ? '#9f1239' : remainingAmount > 0 ? '#92400e' : '#065f46' }}
               >
                 {isRefundish
@@ -544,21 +540,24 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
                     : 'SETTLED AMOUNT / کل رقم'}
               </span>
               <div
-                className="text-sm sm:text-base font-black font-mono mt-0.5 tracking-tight"
+                className="text-sm sm:text-base font-black font-mono tracking-tight my-0.5"
                 style={{ color: isRefundish ? '#be123c' : remainingAmount > 0 ? '#b45309' : '#064e3b' }}
               >
                 Rs. {Math.round(isRefundish ? netAmount : (remainingAmount > 0 ? remainingAmount : netAmount)).toLocaleString()}/-
               </div>
               {Number(booking.refundAmount || 0) > 0 && (
-                <div className="text-[9px] font-bold text-rose-600">
+                <div className="text-[9px] font-bold text-rose-600 mb-0.5">
                   Refunded: -Rs. {Number(booking.refundAmount).toLocaleString()}/-
                 </div>
               )}
               <span
-                className="inline-flex items-center gap-0.5 text-[7.5px] font-bold uppercase tracking-wider mt-0.5"
-                style={{ color: isRefundish ? '#e11d48' : remainingAmount > 0 ? '#d97706' : '#059669' }}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[7.5px] font-bold uppercase tracking-wider mt-0.5"
+                style={{
+                  backgroundColor: isRefundish ? '#ffe4e6' : remainingAmount > 0 ? '#fef3c7' : '#d1fae5',
+                  color: isRefundish ? '#e11d48' : remainingAmount > 0 ? '#d97706' : '#059669'
+                }}
               >
-                <CheckCircle2 className="h-2 w-2" />{' '}
+                <CheckCircle2 className="h-2.5 w-2.5" />{' '}
                 {isRefundish
                   ? (booking.status ? booking.status.toUpperCase() : 'REFUNDED')
                   : remainingAmount > 0 ? 'PARTIALLY PAID' : 'SETTLED'}
@@ -570,14 +569,14 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
         {/* ══════════════════════════════════════════════════════════
            5. THREE EXECUTIVE SIGNATURE BLOCKS & FOOTER
            ══════════════════════════════════════════════════════════ */}
-        <div className="relative z-10 grid grid-cols-3 items-end gap-2 text-center pt-1.5 print:pt-1 pb-0.5">
+        <div className="relative z-10 grid grid-cols-3 items-end gap-2 text-center pt-2.5 print:pt-2 pb-1.5">
           {/* Sign 1: Received By */}
           <div className="flex flex-col items-center">
-            <div className="h-7 sm:h-8 w-full flex items-end justify-center pb-0.5">
+            <div className="h-6 sm:h-7 w-full flex items-end justify-center pb-1">
               <div className="w-20 sm:w-24 border-b border-slate-800" />
             </div>
             <span
-              className="text-xs font-bold block leading-tight"
+              className="text-xs font-bold block leading-relaxed my-0.5"
               style={{
                 fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
                 color: '#0f172a'
@@ -585,18 +584,18 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
             >
               وصول کنندہ
             </span>
-            <span className="text-[7.5px] font-extrabold text-slate-600 uppercase tracking-wider">
+            <span className="text-[7.5px] font-extrabold text-slate-600 uppercase tracking-wider block">
               Received By
             </span>
           </div>
 
           {/* Sign 2: Discount Approval */}
           <div className="flex flex-col items-center">
-            <div className="h-7 sm:h-8 w-full flex items-end justify-center pb-0.5">
+            <div className="h-6 sm:h-7 w-full flex items-end justify-center pb-1">
               <div className="w-20 sm:w-24 border-b border-slate-800" />
             </div>
             <span
-              className="text-xs font-bold block leading-tight"
+              className="text-xs font-bold block leading-relaxed my-0.5"
               style={{
                 fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
                 color: '#0f172a'
@@ -604,18 +603,18 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
             >
               رعایت کی منظوری
             </span>
-            <span className="text-[7.5px] font-extrabold text-slate-600 uppercase tracking-wider">
+            <span className="text-[7.5px] font-extrabold text-slate-600 uppercase tracking-wider block">
               Discount Approval
             </span>
           </div>
 
           {/* Sign 3: General Secretary */}
           <div className="flex flex-col items-center relative">
-            <div className="h-7 sm:h-8 w-full flex items-end justify-center pb-0.5">
+            <div className="h-6 sm:h-7 w-full flex items-end justify-center pb-1">
               <div className="w-20 sm:w-24 border-b border-slate-800" />
             </div>
             <span
-              className="text-xs font-bold block leading-tight"
+              className="text-xs font-bold block leading-relaxed my-0.5"
               style={{
                 fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
                 color: '#0f172a'
@@ -623,16 +622,16 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
             >
               جنرل سیکریٹری
             </span>
-            <span className="text-[7.5px] font-extrabold text-slate-600 uppercase tracking-wider">
+            <span className="text-[7.5px] font-extrabold text-slate-600 uppercase tracking-wider block">
               General Secretary
             </span>
           </div>
         </div>
 
         {/* Footer Note */}
-        <div className="relative z-10 mt-0.5 pt-0.5 border-t border-slate-200 text-center">
+        <div className="relative z-10 mt-1 pt-1.5 border-t border-slate-200 text-center px-2">
           <p
-            className="text-[9px] font-bold leading-tight"
+            className="text-[9px] font-bold leading-relaxed"
             style={{
               fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
               color: '#334155'
