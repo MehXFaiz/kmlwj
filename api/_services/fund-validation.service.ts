@@ -33,8 +33,14 @@ export class FundValidationService {
   /**
    * Helper to format numbers cleanly with comma separators and up to 2 decimal places.
    */
+  /**
+   * Helper to format numbers cleanly with comma separators and up to 2 decimal places.
+   */
   public static formatAmount(val: number): string {
     const num = Number(val) || 0;
+    if (isNaN(num) || !isFinite(num) || Math.abs(num) > 1e14) {
+      return '0';
+    }
     return num.toLocaleString('en-US', {
       minimumFractionDigits: num % 1 === 0 ? 0 : 2,
       maximumFractionDigits: 2
@@ -71,10 +77,19 @@ export class FundValidationService {
       throw new Error(`FundValidationService: Account with ID '${accountId}' not found.`);
     }
 
+    // Descend to children if parent account is passed
+    const childAccounts = await tx.account.findMany({
+      where: { parentId: accountId },
+      select: { id: true }
+    });
+    const targetAccountIds = childAccounts.length > 0
+      ? [accountId, ...childAccounts.map((c: any) => c.id)]
+      : [accountId];
+
     // 2. Aggregate posted journal entry lines
     const aggregations = await tx.journalEntryLine.aggregate({
       where: {
-        accountId,
+        accountId: { in: targetAccountIds },
         journalEntry: {
           status: 'Posted',
           isDeleted: false
@@ -90,21 +105,16 @@ export class FundValidationService {
     const totalCredit = new Prisma.Decimal(aggregations._sum.credit ?? 0);
     const initialBalance = new Prisma.Decimal(account.initialBalance ?? 0);
 
-    // SQA fix: the previous implementation always applied the debit-normal
-    // formula (initial + debit − credit) regardless of account type.  That
-    // is correct for ASSET accounts (the only accounts currently passed to
-    // this method) but would silently produce a wrong balance for any
-    // LIABILITY, EQUITY, or REVENUE account whose credits represent an
-    // increase rather than a decrease.  Applying the same type-aware
-    // branching used by AccountingService.naturalBalance / recalculateAccountBalance
-    // makes this method correct for every account type and eliminates the
-    // latent risk of a future caller passing a non-asset account.
     const typeName = (account.accountType?.name || 'ASSET').toUpperCase();
     const isDebitNormal = ['ASSET', 'ASSETS', 'EXPENSE', 'EXPENSES'].includes(typeName);
     const availableBalanceDecimal = isDebitNormal
       ? initialBalance.plus(totalDebit).minus(totalCredit)   // debit-normal: ASSET / EXPENSE
       : initialBalance.plus(totalCredit).minus(totalDebit);  // credit-normal: LIABILITY / EQUITY / REVENUE
-    const availableBalance = availableBalanceDecimal.toNumber();
+    
+    let availableBalance = availableBalanceDecimal.toNumber();
+    if (isNaN(availableBalance) || !isFinite(availableBalance) || Math.abs(availableBalance) > 1e14) {
+      availableBalance = Number(account.currentBalance) || 0;
+    }
 
     const { isCash, isBank } = FundValidationService.isCashOrBankAccount(account.accountName, account.detailType);
 
@@ -160,7 +170,8 @@ export class FundValidationService {
 
     // 3. Check for Insufficient Funds
     if (requiredAmount > availableBalance) {
-      const shortfall = requiredAmount - availableBalance;
+      const safeAvailable = Math.max(0, availableBalance);
+      const shortfall = Math.max(0, requiredAmount - safeAvailable);
 
       const formattedAvailable = FundValidationService.formatAmount(availableBalance);
       const formattedRequired = FundValidationService.formatAmount(requiredAmount);

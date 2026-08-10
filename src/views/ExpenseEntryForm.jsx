@@ -85,10 +85,14 @@ export const ExpenseEntryForm = () => {
     );
   }, [flatAccounts]);
 
-  // Set default bank account
+  // Set default bank account (prefer Cash in Hand or account with positive balance)
   useEffect(() => {
     if (bankAccounts.length > 0 && !bankAccountId) {
-      setBankAccountId(bankAccounts[0].id);
+      const cashInHand = bankAccounts.find(a => (a.name || '').toLowerCase().includes('cash in hand') || a.code === '1010103');
+      const bestAccount = cashInHand || bankAccounts.find(a => Number(a.currentBalance || 0) > 0) || bankAccounts[0];
+      if (bestAccount) {
+        setBankAccountId(bestAccount.id);
+      }
     }
   }, [bankAccounts, bankAccountId]);
 
@@ -685,7 +689,9 @@ export const ExpenseEntryForm = () => {
                       <option value="">{t('forms.noBankAccountsFound')}</option>
                     ) : (
                       bankAccounts.map(acc => (
-                        <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
+                        <option key={acc.id} value={acc.id}>
+                          {acc.code} - {acc.name} (Avail: Rs {Number(acc.currentBalance || 0).toLocaleString('en-PK')})
+                        </option>
                       ))
                     )}
                   </select>
