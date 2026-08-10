@@ -132,6 +132,8 @@ function CopySheet({
   address,
   gham,
   paymentMethod,
+  bankName,
+  chequeNumber,
   amount,
   words,
   remarks,
@@ -233,6 +235,20 @@ function CopySheet({
               <div className="text-xs font-extrabold text-slate-950 truncate mt-0.5" title={address || ''}>{address || '—'}</div>
             </div>
           </div>
+
+          {/* Row 3: Bank & Cheque Details (if applicable) */}
+          {(bankName || chequeNumber) && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#F8FAFC] p-2 rounded-xl border border-slate-300">
+              <div className="border-r border-slate-300 pr-2">
+                <div className="text-[9.5px] font-black uppercase tracking-wider text-[#0F172A]">Bank Name</div>
+                <div className="text-xs font-black text-slate-950 truncate mt-0.5">{bankName || '—'}</div>
+              </div>
+              <div className="pl-1">
+                <div className="text-[9.5px] font-black uppercase tracking-wider text-[#0F172A]">Cheque / Instrument No</div>
+                <div className="text-xs font-black font-mono text-slate-950 truncate mt-0.5">{chequeNumber || '—'}</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── EXPLICIT ITEM VOUCHER DECLARATION BANNER ── */}
@@ -367,10 +383,14 @@ export const VoucherSlipModal = ({
   phone = '',
   gham = '',
   address = '',
+  bankName = '',
+  chequeNumber = '',
   paymentMethod: paymentMethodProp,
   debitCredit = '',
   accountName = '',
   particulars = '',
+  remarks: remarksProp = '',
+  ledgerRows: ledgerRowsProp,
   amount = 0,
   preparedBy = 'System Admin',
   payeeLabel = "Payee Signature",
@@ -390,13 +410,15 @@ export const VoucherSlipModal = ({
   const formattedDate = date ? new Date(date).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
   const words = numberToWords(amount || 0);
   const paymentMethod = paymentMethodLabel(paymentMethodProp ?? debitCredit);
-  const ledgerRows = [
-    {
-      account: accountName || 'Primary Ledger Account',
-      narration: particulars || 'Financial entry particulars',
-      amount: amount || 0
-    }
-  ];
+  const ledgerRows = (ledgerRowsProp && ledgerRowsProp.length > 0)
+    ? ledgerRowsProp
+    : [
+        {
+          account: accountName || 'Primary Ledger Account',
+          narration: particulars || 'Financial entry particulars',
+          amount: amount || 0
+        }
+      ];
 
   const modalContent = (
     <div id="print-slip-portal-root" className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-2 sm:p-4 backdrop-blur-sm print:static print:p-0 print:bg-white print:block">
@@ -496,9 +518,11 @@ export const VoucherSlipModal = ({
                   address={address}
                   gham={gham}
                   paymentMethod={paymentMethod}
+                  bankName={bankName}
+                  chequeNumber={chequeNumber}
                   amount={amount}
                   words={words}
-                  remarks={particulars}
+                  remarks={remarksProp || particulars}
                   ledgerRows={ledgerRows}
                   preparedBy={preparedBy}
                   verifiedBy="Director"
@@ -519,9 +543,11 @@ export const VoucherSlipModal = ({
                   address={address}
                   gham={gham}
                   paymentMethod={paymentMethod}
+                  bankName={bankName}
+                  chequeNumber={chequeNumber}
                   amount={amount}
                   words={words}
-                  remarks={particulars}
+                  remarks={remarksProp || particulars}
                   ledgerRows={ledgerRows}
                   preparedBy={preparedBy}
                   verifiedBy="Director"

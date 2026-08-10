@@ -322,6 +322,11 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
               >
                 {booking.bookerName || '—'}
               </div>
+              {booking.fatherHusbandName && (
+                <div className="text-[9.5px] font-bold text-slate-800 break-words mt-0.5">
+                  s/o {booking.fatherHusbandName}
+                </div>
+              )}
             </div>
 
             {/* Column 2: Contact & Membership */}
