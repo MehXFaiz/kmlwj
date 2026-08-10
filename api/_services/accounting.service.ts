@@ -1920,7 +1920,16 @@ export class AccountingService {
     // with the existing isCashAccount/isBankAccount name-fallback for any older
     // account whose detailType predates that convention.
     type CategoryKey = 'cashInHand' | 'banks' | 'advanceAndLoan' | 'receivable' | 'otherAssets';
-    const emptyCategory = () => ({ total: new Prisma.Decimal(0), accounts: [] as { glCode: string; name: string; balance: number }[] });
+    interface BalanceAccount {
+      id: string;
+      glCode: string;
+      name: string;
+      balance: number;
+      debit: number;
+      credit: number;
+      accountType: string;
+    }
+    const emptyCategory = () => ({ total: new Prisma.Decimal(0), accounts: [] as BalanceAccount[] });
     const openingCats: Record<CategoryKey, ReturnType<typeof emptyCategory>> = {
       cashInHand: emptyCategory(), banks: emptyCategory(), advanceAndLoan: emptyCategory(), receivable: emptyCategory(), otherAssets: emptyCategory(),
     };
@@ -1970,10 +1979,16 @@ export class AccountingService {
         else if ((acc.detailType || '').toLowerCase() === 'advance') key = 'advanceAndLoan';
         else key = 'otherAssets';
 
+        const opDeb = isDebitNormal ? (openingBal.gt(0) ? openingBal.toNumber() : 0) : (openingBal.lt(0) ? openingBal.abs().toNumber() : 0);
+        const opCrd = isDebitNormal ? (openingBal.lt(0) ? openingBal.abs().toNumber() : 0) : (openingBal.gt(0) ? openingBal.toNumber() : 0);
+
+        const clDeb = isDebitNormal ? (closingBal.gt(0) ? closingBal.toNumber() : 0) : (closingBal.lt(0) ? closingBal.abs().toNumber() : 0);
+        const clCrd = isDebitNormal ? (closingBal.lt(0) ? closingBal.abs().toNumber() : 0) : (closingBal.gt(0) ? closingBal.toNumber() : 0);
+
         openingCats[key].total = openingCats[key].total.plus(openingBal);
-        openingCats[key].accounts.push({ glCode: acc.glCode, name: acc.accountName, balance: openingBal.toNumber() });
+        openingCats[key].accounts.push({ id: acc.id, glCode: acc.glCode, name: acc.accountName, balance: openingBal.toNumber(), debit: opDeb, credit: opCrd, accountType: typeName });
         closingCats[key].total = closingCats[key].total.plus(closingBal);
-        closingCats[key].accounts.push({ glCode: acc.glCode, name: acc.accountName, balance: closingBal.toNumber() });
+        closingCats[key].accounts.push({ id: acc.id, glCode: acc.glCode, name: acc.accountName, balance: closingBal.toNumber(), debit: clDeb, credit: clCrd, accountType: typeName });
       }
 
       // Skip accounts with zero balance unless it's a primary Cash or Bank account or has an initial balance

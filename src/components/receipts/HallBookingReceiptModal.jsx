@@ -194,7 +194,11 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
 
   return (
     <div
+<<<<<<< Updated upstream
       className="receipt-slip-card w-full max-w-[780px] print:max-w-full bg-white text-slate-900 mx-auto box-border border-0 print:border-none"
+=======
+      className="receipt-slip-card w-full max-w-[780px] print:max-w-full bg-white text-slate-900 mx-auto box-border border border-slate-400 print:border-none rounded-md print:rounded-none"
+>>>>>>> Stashed changes
       style={{
         fontFamily: "'Inter', 'Plus Jakarta Sans', system-ui, sans-serif",
         WebkitPrintColorAdjust: 'exact',
@@ -203,7 +207,11 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
     >
       {/* Outer Executive Light Frame */}
       <div
+<<<<<<< Updated upstream
         className="relative bg-white border border-slate-300 print:border-slate-300 rounded-none overflow-hidden p-2.5 print:p-2 box-border"
+=======
+        className="relative bg-white border border-slate-300 print:border-none rounded-sm print:rounded-none overflow-hidden p-2.5 print:p-2 box-border"
+>>>>>>> Stashed changes
       >
         {/* Subtle Watermark Emblem */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.035] select-none z-0">
@@ -810,7 +818,8 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
                 background: #ffffff !important;
                 box-sizing: border-box !important;
               }
-              .receipt-slip-card {
+              .receipt-slip-card,
+              .receipt-slip-card > div {
                 width: 100% !important;
                 max-width: 100% !important;
                 box-sizing: border-box !important;
@@ -818,6 +827,8 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
                 margin: 0 !important;
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
+                border: none !important;
+                box-shadow: none !important;
               }
               #print-receipt-modal img, #print-receipt-modal svg {
                 filter: none !important;

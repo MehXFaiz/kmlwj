@@ -150,7 +150,7 @@ function CopySheet({
 
   return (
     <div
-      className="voucher-copy-sheet relative flex flex-col justify-between rounded-2xl border-2 bg-[#FFFFFF] p-3.5 sm:p-4 shadow-xl print:rounded-none print:shadow-none print:border-slate-800 print:p-3 overflow-hidden text-slate-800"
+      className="voucher-copy-sheet relative flex flex-col justify-between rounded-2xl border-2 bg-[#FFFFFF] p-3.5 sm:p-4 shadow-xl print:rounded-none print:shadow-none print:border-none print:p-3 overflow-hidden text-slate-800"
       style={{ borderColor: theme.borderColor }}
     >
       {/* Dynamic Top Theme Accent Bar */}

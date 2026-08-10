@@ -378,13 +378,13 @@ export const TrialBalanceSheet = () => {
     let totalDebitSum = 0;
     let totalCreditSum = 0;
 
-    const collectCategoryAccounts = (catsObj) => {
+    const collectCategoryAccounts = (catsObj, includeZero = false) => {
       const list = [];
-      const keys = ['cashInHand', 'banks', 'advanceAndLoan', 'receivable', 'otherAssets'];
+      const keys = ['banks', 'cashInHand', 'advanceAndLoan', 'receivable', 'otherAssets'];
       keys.forEach(k => {
         if (catsObj[k] && Array.isArray(catsObj[k].accounts)) {
           catsObj[k].accounts.forEach(acc => {
-            if (acc.balance && Math.abs(acc.balance) > 0.001) {
+            if (includeZero || (acc.balance && Math.abs(acc.balance) > 0.001)) {
               list.push({ ...acc, categoryKey: k });
             }
           });
@@ -393,19 +393,50 @@ export const TrialBalanceSheet = () => {
       return list;
     };
 
-    // 1. OPENING BALANCES (Credit Column)
-    const openingAccounts = collectCategoryAccounts(opening);
+    const formatOpDesc = (acc) => {
+      const name = acc.name || '';
+      if (name.toLowerCase().includes('opening balance') || name.toLowerCase().includes('receivable bal')) {
+        return `${name} ${startStr}`;
+      }
+      if (name.toLowerCase().endsWith('bal') || name.toLowerCase().endsWith('balance')) {
+        return `${name} ${startStr}`;
+      }
+      return `${name} Opening Balance ${startStr}`;
+    };
+
+    const formatClDesc = (acc) => {
+      const name = acc.name || '';
+      if (name.toLowerCase().includes('closing balance')) {
+        return `${name} ${endStr}`;
+      }
+      return `${name} Closing Balance ${endStr}`;
+    };
+
+    // 1. OPENING BALANCES (Dynamic DEBIT/CREDIT placement)
+    const openingAccounts = collectCategoryAccounts(opening, true);
     openingAccounts.forEach(acc => {
-      const creditVal = Math.abs(acc.balance);
-      totalCreditSum += creditVal;
+      const bal = acc.balance || 0;
+      let deb = 0;
+      let crd = 0;
+
+      if (Math.abs(bal) > 0.001) {
+        if (bal > 0) {
+          crd = bal;
+          totalCreditSum += crd;
+        } else {
+          deb = Math.abs(bal);
+          totalDebitSum += deb;
+        }
+      }
+
       rows.push({
         id: `opening-${acc.glCode}`,
         section: 'OPENING',
         sectionLabel: 'Opening Balances',
-        description: `${acc.name} Opening Balance ${startStr}`,
+        description: formatOpDesc(acc),
         note: '',
-        debit: 0,
-        credit: creditVal
+        debit: deb,
+        credit: crd
       });
     });
 
@@ -467,20 +498,32 @@ export const TrialBalanceSheet = () => {
       }
     });
 
-    // 4. CLOSING BALANCES (Debit Column)
-    const closingAccounts = collectCategoryAccounts(closing);
+    // 4. CLOSING BALANCES (Dynamic DEBIT/CREDIT placement)
+    const closingAccounts = collectCategoryAccounts(closing, true);
     closingAccounts.forEach(acc => {
-      const debitVal = Math.abs(acc.balance);
-      totalDebitSum += debitVal;
-      const isZakat = acc.name.toLowerCase().includes('zakat');
+      const bal = acc.balance || 0;
+      let deb = 0;
+      let crd = 0;
+
+      if (Math.abs(bal) > 0.001) {
+        if (bal > 0) {
+          deb = bal;
+          totalDebitSum += deb;
+        } else {
+          crd = Math.abs(bal);
+          totalCreditSum += crd;
+        }
+      }
+
+      const isZakat = (acc.name || '').toLowerCase().includes('zakat');
       rows.push({
         id: `closing-${acc.glCode}`,
         section: 'CLOSING',
         sectionLabel: 'Closing Balances',
-        description: `${acc.name} Closing Balance ${endStr}`,
+        description: formatClDesc(acc),
         note: isZakat ? '(Include Zakat)' : '',
-        debit: debitVal,
-        credit: 0
+        debit: deb,
+        credit: crd
       });
     });
 
@@ -840,12 +883,12 @@ export const TrialBalanceSheet = () => {
 
                     {/* Debit Column */}
                     <td className="py-2.5 px-4 text-right font-mono font-semibold text-emerald-400 print:text-black print:py-1.5 border-r border-slate-800/40 print:border-r print:border-gray-300">
-                      {row.debit > 0 ? row.debit.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : ''}
+                      {row.debit > 0 ? row.debit.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : (row.credit > 0 ? '' : '—')}
                     </td>
 
                     {/* Credit Column */}
                     <td className="py-2.5 px-4 text-right font-mono font-semibold text-blue-400 print:text-black print:py-1.5">
-                      {row.credit > 0 ? row.credit.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : ''}
+                      {row.credit > 0 ? row.credit.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : (row.debit > 0 ? '' : '—')}
                     </td>
 
                   </tr>
