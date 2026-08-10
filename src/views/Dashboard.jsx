@@ -367,7 +367,7 @@ export const Dashboard = () => {
   const navigate = useNavigate();
   const { accounts, fetchAccounts, selectedSubsidiary, fiscalYear, loading: coaLoading } = useCoaStore();
   const { journals, auditLogs, fetchJournals, isLoading: journalsLoading } = useJournalStore();
-  const { stats: dbStats, tbReport, fetchStats, fetchTbReport, loading: statsLoading } = useDashboardStore();
+  const { stats: dbStats, tbReport, statsParams, tbParams, fetchStats, fetchTbReport, loading: statsLoading } = useDashboardStore();
   const [refreshKey, setRefreshKey] = useState(0);
 
   const isRefreshing = statsLoading || coaLoading || journalsLoading;
@@ -383,9 +383,17 @@ export const Dashboard = () => {
     if (fetchJournals) fetchJournals(selectedSubsidiary);
   }, [fetchAccounts, fetchStats, fetchTbReport, fetchJournals, selectedSubsidiary, reportParams]);
 
-  // Consistency & Reconciliation Check across Posted Ledger
+  // Consistency & Reconciliation Check across Posted Ledger.
+  // Only meaningful when both datasets cover the SAME period: `stats` and
+  // `tbReport` live in a store shared with TrialBalanceSheet, which loads an
+  // all-time trial balance by default. Comparing that against this view's
+  // fiscal-year summary reports the excluded years as a discrepancy even
+  // though the underlying ledger agrees exactly.
   useEffect(() => {
-    if (import.meta.env.DEV && dbStats?.summary && tbReport?.entries) {
+    const periodOf = (p) => `${p?.startDate || ''}..${p?.endDate || ''}`;
+    const samePeriod = periodOf(statsParams) === periodOf(tbParams);
+
+    if (import.meta.env.DEV && samePeriod && dbStats?.summary && tbReport?.entries) {
       const tbRevenue = tbReport.entries
         .filter(e => ['REVENUE', 'INCOME'].includes((e.accountType || '').toUpperCase()))
         .reduce((sum, e) => sum + (Number(e.credit || 0) - Number(e.debit || 0)), 0);
@@ -404,14 +412,18 @@ export const Dashboard = () => {
         showToast(`Accounting Reconciliation Alert: Dashboard and Trial Balance mismatch! (Revenue diff: PKR ${revDiff.toLocaleString()}, Expense diff: PKR ${expDiff.toLocaleString()})`, 'error');
       }
     }
-  }, [dbStats, tbReport]);
+  }, [dbStats, tbReport, statsParams, tbParams]);
 
   const handleRefresh = useCallback(() => {
     fetchAccounts();
     fetchStats(reportParams);
+    // Refresh the trial balance alongside the stats so both stay scoped to
+    // this view's fiscal year — otherwise a refresh leaves tbReport on
+    // whatever period another view (e.g. TrialBalanceSheet) last loaded.
+    fetchTbReport(reportParams);
     if (fetchJournals) fetchJournals(selectedSubsidiary);
     setRefreshKey(k => k + 1);
-  }, [fetchAccounts, fetchStats, fetchJournals, selectedSubsidiary, reportParams]);
+  }, [fetchAccounts, fetchStats, fetchTbReport, fetchJournals, selectedSubsidiary, reportParams]);
 
   // Live balances
   const { rollupBalances, localBalances } = useMemo(

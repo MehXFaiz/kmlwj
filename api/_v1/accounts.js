@@ -39,7 +39,7 @@ var accounts_default = makeHandler(async (req, res) => {
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
     const skip = (pageNum - 1) * limitNum;
-    const [dbAccounts, total] = await Promise.all([
+    const [dbAccounts, total, aggregates] = await Promise.all([
       prisma.account.findMany({
         where: whereClause,
         include: {
@@ -50,21 +50,36 @@ var accounts_default = makeHandler(async (req, res) => {
         skip,
         take: limitNum
       }),
-      prisma.account.count({ where: whereClause })
+      prisma.account.count({ where: whereClause }),
+      // Single source of truth: live balances from posted journal entry lines,
+      // same source as tree.ts, trial balance, and every other financial report.
+      AccountingService.getPostedAggregates()
     ]);
     const formatted = dbAccounts.map((acc) => ({
       id: acc.id,
       code: acc.glCode,
       name: acc.accountName,
+      accountName: acc.accountName,
+      accountLevel: acc.accountLevel,
       type: acc.accountType ? acc.accountType.name.charAt(0) + acc.accountType.name.slice(1).toLowerCase() : "Asset",
+      accountType: acc.accountType,
       level: acc.accountLevel,
       detailType: acc.detailType,
       parentCode: acc.parent ? acc.parent.glCode : null,
+      parentId: acc.parentId,
       currency: acc.currency,
       status: acc.isLocked ? "Inactive" : "Active",
+      isLocked: acc.isLocked,
       description: acc.description,
       subsidiary: acc.subsidiary,
       initialBalance: acc.initialBalance,
+      // Live currentBalance derived from posted journal entry lines (same formula
+      // as tree.ts and FundValidationService). This replaces the stale DB cache.
+      currentBalance: AccountingService.naturalBalance(
+        acc.accountType?.name || "ASSET",
+        acc.initialBalance,
+        aggregates.get(acc.id)
+      ),
       isSystemDefined: acc.isSystemDefined,
       isReserved: acc.isReserved
     }));
