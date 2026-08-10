@@ -309,8 +309,8 @@ function DonationInvoiceModal({ donation, onClose }) {
       fileNo={donationTypeDisplay(donation.donationType, donation.customDonationType)}
       date={donation.createdAt}
       name={donation.donorName || donation.beneficiary?.name || ''}
-      fatherName={donation.beneficiary?.fatherHusbandName || donation.beneficiary?.fatherGham || donation.donor?.fatherName || ''}
-      gham={donation.beneficiary?.fatherGham || donation.donor?.gham || ''}
+      fatherName={donation.beneficiary?.fatherName || donation.beneficiary?.husbandName || donation.donor?.fatherName || ''}
+      gham={donation.beneficiary?.gham || donation.beneficiary?.fatherGham || donation.beneficiary?.husbandGham || donation.donor?.gham || ''}
       address={donation.donorMobile || donation.donorBankName || ''}
       paymentMethod={donation.paymentMethod}
       accountName="Donation Disbursement A/c"

@@ -197,7 +197,7 @@ function CopySheet({
           </div>
           <div className="border-r border-slate-200 pr-2 pl-1">
             <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Father Name</div>
-            <div className="text-xs font-bold text-slate-800 truncate mt-0.5">{fatherName || '—'}</div>
+            <div className="text-xs font-bold text-slate-800 truncate mt-0.5">{(fatherName && fatherName !== gham) ? fatherName : (fatherName && !gham ? fatherName : '—')}</div>
           </div>
           <div className="border-r border-slate-200 pr-2 pl-1">
             <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Gham Details</div>

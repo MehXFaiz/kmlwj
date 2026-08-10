@@ -243,8 +243,8 @@ export const Income = () => {
           fileNo={printIncome.reference || 'INCOME'}
           date={printIncome.date}
           name={printIncome.revenueHead?.name || 'Income Depositor'}
-          fatherName={printIncome.fatherName || ''}
-          gham={printIncome.gham || ''}
+          fatherName={printIncome.fatherName || printIncome.member?.fatherName || printIncome.donor?.fatherName || ''}
+          gham={printIncome.gham || printIncome.member?.gham || printIncome.donor?.gham || ''}
           paymentMethod={printIncome.paymentMethod}
           accountName={printIncome.revenueHead?.name || 'Revenue Account'}
           particulars={printIncome.description || 'Income receipt entry'}

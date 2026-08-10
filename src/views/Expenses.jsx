@@ -530,8 +530,8 @@ export const Expenses = () => {
           fileNo={printExpense.reference || 'EXPENSE'}
           date={printExpense.date}
           name={printExpense.paidTo || 'Paid To Recipient'}
-          fatherName={printExpense.fatherName || printExpense.payeeFatherName || ''}
-          gham={printExpense.gham || printExpense.payeeGham || ''}
+          fatherName={printExpense.fatherName || printExpense.payeeFatherName || printExpense.beneficiary?.fatherName || printExpense.beneficiary?.husbandName || printExpense.member?.fatherName || ''}
+          gham={printExpense.gham || printExpense.payeeGham || printExpense.beneficiary?.gham || printExpense.beneficiary?.fatherGham || printExpense.member?.gham || ''}
           paymentMethod={printExpense.paymentMethod}
           accountName={printExpense.expenseHead?.name || 'Expense Account'}
           particulars={printExpense.description || 'Expense payment disbursement'}

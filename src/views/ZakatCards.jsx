@@ -732,7 +732,11 @@ export const ZakatCards = () => {
                 </div>
                 <div style={{ fontSize: '11px', color: '#64748b' }}>
                   {card.beneficiary
-                    ? [card.beneficiary.cnic && `CNIC: ${card.beneficiary.cnic}`, card.beneficiary.mobile].filter(Boolean).join(' • ')
+                    ? [
+                        (card.beneficiary.fatherName || card.beneficiary.husbandName) && `s/o ${card.beneficiary.fatherName || card.beneficiary.husbandName}`,
+                        card.beneficiary.cnic && `CNIC: ${card.beneficiary.cnic}`,
+                        card.beneficiary.mobile
+                      ].filter(Boolean).join(' • ')
                     : [card.member?.fatherName && `s/o ${card.member.fatherName}`, card.member?.area].filter(Boolean).join(' • ')
                   }
                 </div>

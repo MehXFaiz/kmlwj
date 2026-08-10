@@ -37,8 +37,8 @@ function PrintReceiptModal({ donation, onClose }) {
       fileNo={donation.donor?.donorCode || donation.donor?.cnic || ''}
       date={donation.receiptDate || donation.createdAt}
       name={donation.donor?.fullName}
-      fatherName={donation.donor?.fatherName || ''}
-      gham={donation.donor?.gham || ''}
+      fatherName={donation.fatherName || donation.donor?.fatherName || donation.member?.fatherName || donation.beneficiary?.fatherName || donation.beneficiary?.husbandName || ''}
+      gham={donation.gham || donation.donor?.gham || donation.member?.gham || donation.beneficiary?.gham || donation.beneficiary?.fatherGham || ''}
       address={donation.donor?.mobile || donation.donor?.address || ''}
       paymentMethod={donation.paymentMethod}
       accountName={`${categoryLabel} A/c`}
