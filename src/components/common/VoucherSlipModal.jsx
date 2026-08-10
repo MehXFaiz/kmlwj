@@ -470,12 +470,15 @@ export const VoucherSlipModal = ({
             @media print {
               @page {
                 size: A4 landscape;
-                margin: 2mm 3mm !important;
+                margin: 0mm !important;
               }
               html, body {
                 margin: 0 !important;
                 padding: 0 !important;
                 background: #ffffff !important;
+                border: none !important;
+                outline: none !important;
+                box-shadow: none !important;
                 width: 100% !important;
                 height: 100% !important;
               }
@@ -483,12 +486,20 @@ export const VoucherSlipModal = ({
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
                 color-adjust: exact !important;
+                box-shadow: none !important;
+                text-shadow: none !important;
               }
               body > *:not(#print-slip-portal-root) {
                 display: none !important;
               }
               .print-hide-elem {
                 display: none !important;
+              }
+              #print-slip-portal-root,
+              #print-slip-portal-root * {
+                box-shadow: none !important;
+                outline: none !important;
+                border: none !important;
               }
               #print-slip-portal-root {
                 display: block !important;
@@ -500,6 +511,9 @@ export const VoucherSlipModal = ({
                 margin: 0 !important;
                 padding: 0 !important;
                 background: #ffffff !important;
+                border: none !important;
+                outline: none !important;
+                box-shadow: none !important;
                 z-index: 99999999 !important;
               }
               #print-voucher-sheet-container {
@@ -507,11 +521,14 @@ export const VoucherSlipModal = ({
                 margin: 0 !important;
                 padding: 0 !important;
                 background: #ffffff !important;
+                border: none !important;
+                box-shadow: none !important;
               }
               .voucher-copy-sheet {
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
                 box-shadow: none !important;
+                border: none !important;
               }
             }
           `}</style>

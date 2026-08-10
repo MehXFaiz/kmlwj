@@ -751,12 +751,15 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
             @media print {
               @page {
                 size: A4 portrait;
-                margin: 3mm 4mm !important;
+                margin: 0mm !important;
               }
               html, body {
                 margin: 0 !important;
                 padding: 0 !important;
                 background: #ffffff !important;
+                border: none !important;
+                outline: none !important;
+                box-shadow: none !important;
                 width: 100% !important;
                 height: 100% !important;
               }
@@ -764,6 +767,8 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
                 color-adjust: exact !important;
+                box-shadow: none !important;
+                text-shadow: none !important;
               }
               body > *:not(#print-receipt-modal) {
                 display: none !important;
@@ -771,6 +776,11 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
               .print-hide-bar,
               .print-hide-bar * {
                 display: none !important;
+              }
+              #print-receipt-modal,
+              #print-receipt-modal * {
+                box-shadow: none !important;
+                outline: none !important;
               }
               #print-receipt-modal {
                 display: block !important;
@@ -786,6 +796,15 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
                 border: none !important;
                 outline: none !important;
                 z-index: 99999999 !important;
+              }
+              #print-receipt-wrapper {
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                background: #ffffff !important;
               }
               #print-receipt-modal img, #print-receipt-modal svg {
                 filter: none !important;
