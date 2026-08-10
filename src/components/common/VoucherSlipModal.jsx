@@ -465,7 +465,7 @@ export const VoucherSlipModal = ({
         </div>
 
         {/* Modal Scrollable Container */}
-        <div className="flex-1 overflow-y-auto bg-slate-950 p-3 sm:p-5 print:p-0 print:overflow-visible print:bg-white">
+        <div className="flex-1 overflow-y-auto bg-slate-200/90 p-3 sm:p-5 print:p-0 print:overflow-visible print:bg-white">
           <style>{`
             @media print {
               @page {
