@@ -9,10 +9,12 @@ import { MinusCircle, Search, X, CheckCircle2, TrendingDown, Building2, Banknote
 import { useConfirm } from '../components/ui/ConfirmationModal';
 import { paymentMethodLabel } from '../constants/paymentMethods';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
+import { PhoneInput } from '../components/ui/PhoneInput';
+import { CNICInput } from '../components/ui/CNICInput';
 
 function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editingExpense }) {
   const { journals } = useJournalStore();
-  const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], expenseHeadId: '', paidTo: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
+  const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], expenseHeadId: '', paidTo: '', fatherName: '', cnic: '', mobile: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
   const [subType, setSubType] = useState('Repair');
   const [customSubType, setCustomSubType] = useState('');
   const [selectedHallName, setSelectedHallName] = useState('Bagh-e-Hajiani Garden');
@@ -48,53 +50,47 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
               let customVal = '';
               if (colonIndex !== -1) {
                 typeVal = rest.substring(0, colonIndex);
-                customVal = rest.substring(colonIndex + 2);
+                extraDesc = rest.substring(colonIndex + 2);
+              } else {
+                extraDesc = '';
               }
               
-              const standardTypes = ['Repair', 'Maintenance', 'Fuel'];
-              if (standardTypes.includes(typeVal)) {
+              if (['Repair', 'Maintenance', 'Fuel'].includes(typeVal)) {
                 initialSubType = typeVal;
-                extraDesc = customVal;
               } else {
                 initialSubType = 'Other';
                 initialCustomSubType = typeVal;
-                extraDesc = customVal;
               }
               prefixFound = true;
               break;
             }
           }
-          if (!prefixFound) {
-            extraDesc = editingExpense.description;
-          }
         } else if (isHall && editingExpense.description) {
-          const parts = editingExpense.description.split(' - ');
-          if (parts.length >= 3) {
-            let hall = parts[1];
-            let subAndDesc = parts.slice(2).join(' - ');
-            
-            const colonIndex = subAndDesc.indexOf(': ');
-            let typeVal = subAndDesc;
-            let customVal = '';
-            if (colonIndex !== -1) {
-              typeVal = subAndDesc.substring(0, colonIndex);
-              customVal = subAndDesc.substring(colonIndex + 2);
+          if (editingExpense.description.startsWith('Hall Expense - ')) {
+            const rest = editingExpense.description.slice('Hall Expense - '.length);
+            const parts = rest.split(' - ');
+            if (parts.length >= 2) {
+              initialHallName = parts[0];
+              const remaining = parts.slice(1).join(' - ');
+              const colonIndex = remaining.indexOf(': ');
+              let typeVal = remaining;
+              if (colonIndex !== -1) {
+                typeVal = remaining.substring(0, colonIndex);
+                extraDesc = remaining.substring(colonIndex + 2);
+              } else {
+                extraDesc = '';
+              }
+
+              if (typeVal.startsWith('Other (') && typeVal.endsWith(')')) {
+                initialSubType = 'Other';
+                initialCustomSubType = typeVal.slice(7, -1);
+              } else if (['Repair', 'Maintenance', 'Catering', 'Lighting', 'Decoration', 'Sound System', 'Cleaning', 'Security'].includes(typeVal)) {
+                initialSubType = typeVal;
+              } else {
+                initialSubType = 'Other';
+                initialCustomSubType = typeVal;
+              }
             }
-            
-            let finalSubType = typeVal;
-            let finalCustomSubType = '';
-            
-            if (typeVal.startsWith('Other (') && typeVal.endsWith(')')) {
-              finalSubType = 'Other';
-              finalCustomSubType = typeVal.slice(7, -1);
-            }
-            
-            initialSubType = finalSubType;
-            initialCustomSubType = finalCustomSubType;
-            extraDesc = customVal;
-            initialHallName = hall;
-          } else {
-            extraDesc = editingExpense.description;
           }
         }
         
@@ -102,6 +98,9 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
           date: editingExpense.date ? new Date(editingExpense.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
           expenseHeadId: editingExpense.expenseHeadId || '',
           paidTo: editingExpense.paidTo || '',
+          fatherName: editingExpense.fatherName || '',
+          cnic: editingExpense.cnic || '',
+          mobile: editingExpense.mobile || '',
           description: extraDesc,
           amount: editingExpense.amount !== undefined ? editingExpense.amount.toString() : '',
           paymentMethod: editingExpense.paymentMethod || 'CASH',
@@ -112,7 +111,7 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
         setCustomSubType(initialCustomSubType);
         setSelectedHallName(initialHallName);
       } else {
-        setForm({ date: new Date().toISOString().split('T')[0], expenseHeadId: '', paidTo: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
+        setForm({ date: new Date().toISOString().split('T')[0], expenseHeadId: '', paidTo: '', fatherName: '', cnic: '', mobile: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
         setSubType('Repair');
         setCustomSubType('');
         setSelectedHallName('Bagh-e-Hajiani Garden');
@@ -226,9 +225,27 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
               </select>
             </div>
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Paid To (Vendor/Person)</label>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Paid To (Payee Name) *</label>
               <input type="text" value={form.paidTo} onChange={e => setForm(f => ({ ...f, paidTo: e.target.value }))}
-                placeholder="K-Electric, Ali, etc." className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all" />
+                placeholder="e.g. Muhammad Faizan" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Father / Husband Name</label>
+              <input type="text" value={form.fatherName} onChange={e => setForm(f => ({ ...f, fatherName: e.target.value }))}
+                placeholder="e.g. Abdul Ghafoor" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all" />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">CNIC Number</label>
+              <CNICInput value={form.cnic} onChange={e => setForm(f => ({ ...f, cnic: e.target.value }))}
+                className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all" />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Mobile Phone</label>
+              <PhoneInput value={form.mobile} onChange={e => setForm(f => ({ ...f, mobile: e.target.value }))}
+                className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all" />
             </div>
           </div>
 

@@ -3,9 +3,11 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useCoaStore } from '../store/coaStore';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
 import { useJournalStore, calculateAccountBalances } from '../store/journalStore';
-import { ChevronLeft, Save, Sparkles, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { ChevronLeft, Save, Sparkles, AlertCircle, CheckCircle, Info, UserCheck } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
 import { useTranslation } from 'react-i18next';
+import { PhoneInput } from '../components/ui/PhoneInput';
+import { CNICInput } from '../components/ui/CNICInput';
 
 export const ExpenseEntryForm = () => {
   const { t } = useTranslation();
@@ -18,6 +20,12 @@ export const ExpenseEntryForm = () => {
   const [reference, setReference] = useState('');
   const [description, setDescription] = useState('');
   const [bankAccountId, setBankAccountId] = useState('');
+
+  // Payee / Recipient Bio-Data
+  const [paidTo, setPaidTo] = useState('');
+  const [fatherName, setFatherName] = useState('');
+  const [mobile, setMobile] = useState('');
+  const [cnic, setCnic] = useState('');
 
   const [searchParams] = useSearchParams();
   const typeParam = searchParams.get('type');
@@ -208,6 +216,11 @@ export const ExpenseEntryForm = () => {
       return;
     }
 
+    if (!paidTo.trim()) {
+      showToast('Recipient / Payee Name is required.', 'warning');
+      return;
+    }
+
     if (!bankAccountId) {
       showToast('Please select a cash or bank account first.', 'warning');
       return;
@@ -305,8 +318,6 @@ export const ExpenseEntryForm = () => {
       setCreationStatus("Posting voucher to ledger...");
 
       // Build double-entry lines for Payout (BP)
-      // Debit: Offset Account (Expense Subsidiary)
-      // Credit: Bank Account (Asset)
       const resolvedExpenseName = expenseType === 'Other' && customExpenseName.trim() ? customExpenseName.trim() : expenseType;
       
       let displayExpenseName = resolvedExpenseName;
@@ -318,7 +329,15 @@ export const ExpenseEntryForm = () => {
         displayExpenseName = `${expenseType} - ${selectedHallName} - ${subName}`;
       }
 
-      const memo = description ? `${displayExpenseName}: ${description}` : displayExpenseName;
+      const payeeBioParts = [
+        paidTo && `Paid To: ${paidTo}`,
+        fatherName && `Father: ${fatherName}`,
+        cnic && `CNIC: ${cnic}`,
+        mobile && `Ph: ${mobile}`,
+        description
+      ].filter(Boolean);
+
+      const memo = payeeBioParts.join(' | ');
       const lines = [
         { accountCode: offsetAcc.code, debit: val, credit: 0, description: `Bank Payout (${displayExpenseName}): ${memo}` },
         { accountCode: bankAcc.code, debit: 0, credit: val, description: `Bank Payout (${displayExpenseName}): ${memo}` }
@@ -334,6 +353,10 @@ export const ExpenseEntryForm = () => {
         subsidiary: 'Global',
         reference: reference || `${displayExpenseName} Payout`,
         description: memo,
+        paidTo,
+        fatherName,
+        cnic,
+        mobile,
         status: 'Posted',
         voucherType: 'BP',
         lines
@@ -580,11 +603,63 @@ export const ExpenseEntryForm = () => {
               </div>
             </div>
 
-            {/* Card 03: Transaction Details */}
+            {/* Card 03: Payee / Recipient Bio-Data */}
             <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
               <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
                 <span className="w-6 h-6 rounded-full bg-brand-500/15 border border-brand-500/30 text-brand-400 font-bold text-xs flex items-center justify-center shrink-0">
                   03
+                </span>
+                <h3 className="text-sm font-semibold text-slate-200">Payee / Recipient Bio-Data (جس کو رقم دی جا رہی ہے)</h3>
+              </div>
+              <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClass}>Payee / Recipient Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={paidTo}
+                    onChange={e => setPaidTo(e.target.value)}
+                    placeholder="e.g. Muhammad Faizan"
+                    className={inputClass}
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>Father / Husband Name</label>
+                  <input
+                    type="text"
+                    value={fatherName}
+                    onChange={e => setFatherName(e.target.value)}
+                    placeholder="e.g. Abdul Ghafoor"
+                    className={inputClass}
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>CNIC Number</label>
+                  <CNICInput
+                    value={cnic}
+                    onChange={e => setCnic(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>Phone / Mobile Number</label>
+                  <PhoneInput
+                    value={mobile}
+                    onChange={e => setMobile(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Card 04: Transaction Details */}
+            <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
+                <span className="w-6 h-6 rounded-full bg-brand-500/15 border border-brand-500/30 text-brand-400 font-bold text-xs flex items-center justify-center shrink-0">
+                  04
                 </span>
                 <h3 className="text-sm font-semibold text-slate-200">Transaction Details</h3>
               </div>

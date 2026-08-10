@@ -31,6 +31,9 @@ import {
 } from 'lucide-react';
 import { pageActionsClass } from '../components/common/responsive';
 
+import { PhoneInput } from '../components/ui/PhoneInput';
+import { CNICInput } from '../components/ui/CNICInput';
+
 const OTHER_INCOME_TYPES = [
   'Coconuts',
   'Oil',
@@ -73,6 +76,12 @@ export const AddIncomeForm = () => {
     otherIncomeType: '',
     customOtherIncome: '',
     customCategoryName: '',
+    payerName: '',
+    fatherName: '',
+    cnic: '',
+    mobile: '',
+    address: '',
+    gham: '',
     amount: '',
     date: new Date().toISOString().split('T')[0],
     paymentMethod: 'CASH',
@@ -342,6 +351,16 @@ export const AddIncomeForm = () => {
       return;
     }
 
+    const metaParts = [
+      form.payerName && `Payer: ${form.payerName}`,
+      form.fatherName && `Father: ${form.fatherName}`,
+      form.cnic && `CNIC: ${form.cnic}`,
+      form.mobile && `Ph: ${form.mobile}`,
+      form.gham && `Gham: ${form.gham}`,
+      form.address && `Address: ${form.address}`,
+      form.remarks
+    ].filter(Boolean);
+
     const payload = {
       categoryId: form.categoryId,
       customCategoryName: finalCustomCategoryName,
@@ -351,7 +370,7 @@ export const AddIncomeForm = () => {
       paymentMethod: form.paymentMethod,
       bankAccountId: form.bankAccountId,
       referenceNumber: form.referenceNumber,
-      remarks: form.remarks,
+      remarks: metaParts.join(' | '),
       attachmentUrl: form.attachmentUrl
     };
 
@@ -691,6 +710,77 @@ export const AddIncomeForm = () => {
                   onChange={(e) => handleInputChange('referenceNumber', e.target.value)}
                   className={inputStyle}
                 />
+              </div>
+
+              {/* Payer Bio-Data Section */}
+              <div className="pt-4 border-t border-slate-800/80 space-y-4">
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-emerald-400" /> Payer Bio-Data (رقم جمع کروانے والے کی معلومات)
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelStyle}>Payer / Received From Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Muhammad Ali"
+                      value={form.payerName}
+                      onChange={(e) => handleInputChange('payerName', e.target.value)}
+                      className={inputStyle}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelStyle}>Father / Husband Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Abdul Rehman"
+                      value={form.fatherName}
+                      onChange={(e) => handleInputChange('fatherName', e.target.value)}
+                      className={inputStyle}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelStyle}>CNIC Number</label>
+                    <CNICInput
+                      value={form.cnic}
+                      onChange={(e) => handleInputChange('cnic', e.target.value)}
+                      className={inputStyle}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelStyle}>Mobile Phone Number</label>
+                    <PhoneInput
+                      value={form.mobile}
+                      onChange={(e) => handleInputChange('mobile', e.target.value)}
+                      className={inputStyle}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelStyle}>Gham Details</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Kukma / Nagalpur"
+                      value={form.gham}
+                      onChange={(e) => handleInputChange('gham', e.target.value)}
+                      className={inputStyle}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelStyle}>Address / Location</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Baldia Town, Karachi"
+                      value={form.address}
+                      onChange={(e) => handleInputChange('address', e.target.value)}
+                      className={inputStyle}
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Remarks */}

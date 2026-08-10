@@ -23,12 +23,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Lock,
-  Tag
+  Tag,
+  Printer
 } from 'lucide-react';
 import { pageActionsClass } from '../components/common/responsive';
 import * as XLSX from 'xlsx';
 
 import { ledgerService } from '../services/apiServices';
+import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 
 export const AddIncomeRecords = () => {
   const navigate = useNavigate();
@@ -59,6 +61,7 @@ export const AddIncomeRecords = () => {
   const [revertingRecord, setRevertingRecord] = useState(null);
   const [revertReason, setRevertReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [printRecord, setPrintRecord] = useState(null);
 
   useEffect(() => {
     fetchCategories();
@@ -534,6 +537,14 @@ export const AddIncomeRecords = () => {
                             </button>
                           )}
 
+                          <button
+                            onClick={() => setPrintRecord(rec)}
+                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-emerald-400 border border-slate-700 transition-colors cursor-pointer"
+                            title="Print Executive Income Voucher"
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                          </button>
+
                           {isPending && (
                             <Link
                               to={`/add-income/edit/${rec.id}`}
@@ -704,6 +715,31 @@ export const AddIncomeRecords = () => {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Voucher Slip Modal */}
+      {printRecord && (
+        <VoucherSlipModal
+          isOpen={!!printRecord}
+          onClose={() => setPrintRecord(null)}
+          title={`${(printRecord.category?.name || 'INCOME').toUpperCase()} RECEIPT VOUCHER`}
+          voucherNo={printRecord.journalEntry?.voucherNo || printRecord.referenceNumber || `INC-${printRecord.id?.slice(0, 8)?.toUpperCase()}`}
+          fileNo={printRecord.referenceNumber || 'ADD-INCOME'}
+          date={printRecord.date || printRecord.createdAt}
+          name={printRecord.payerName || printRecord.remarks?.match(/Payer:\s*([^|]+)/i)?.[1] || printRecord.category?.name || 'Received From Payer'}
+          fatherName={printRecord.fatherName || printRecord.remarks?.match(/Father:\s*([^|]+)/i)?.[1] || ''}
+          cnic={printRecord.cnic || printRecord.remarks?.match(/CNIC:\s*([^|]+)/i)?.[1] || ''}
+          mobile={printRecord.mobile || printRecord.remarks?.match(/Ph:\s*([^|]+)/i)?.[1] || ''}
+          address={printRecord.address || printRecord.remarks?.match(/Address:\s*([^|]+)/i)?.[1] || ''}
+          gham={printRecord.gham || printRecord.remarks?.match(/Gham:\s*([^|]+)/i)?.[1] || ''}
+          paymentMethod={printRecord.paymentMethod || 'CASH'}
+          accountName={printRecord.category?.name ? (printRecord.subCategory ? `${printRecord.category.name} - ${printRecord.subCategory}` : printRecord.category.name) : 'Income Account'}
+          particulars={`Income Received - ${printRecord.category?.name || 'Income'}${printRecord.subCategory ? ` (${printRecord.subCategory})` : ''}${printRecord.remarks ? `: ${printRecord.remarks}` : ''}`}
+          amount={printRecord.amount}
+          preparedBy="System Admin"
+          payeeLabel="Collector Signature"
+          partyLabel="Received From"
+        />
       )}
     </div>
   );
