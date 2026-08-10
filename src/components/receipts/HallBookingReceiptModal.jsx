@@ -194,7 +194,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
 
   return (
     <div
-      className="w-full max-w-[780px] print:max-w-full bg-white text-slate-900 mx-auto box-border"
+      className="receipt-slip-card w-full max-w-[780px] print:max-w-full bg-white text-slate-900 mx-auto box-border border border-slate-400 print:border-slate-400 rounded-md"
       style={{
         fontFamily: "'Inter', 'Plus Jakarta Sans', system-ui, sans-serif",
         WebkitPrintColorAdjust: 'exact',
@@ -203,7 +203,7 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
     >
       {/* Outer Executive Light Frame */}
       <div
-        className="relative bg-white border-0 print:border-none rounded-none shadow-none overflow-hidden p-2.5 print:p-1.5 box-border"
+        className="relative bg-white border border-slate-300 print:border-slate-300 rounded-sm overflow-hidden p-2.5 print:p-2 box-border"
       >
         {/* Subtle Watermark Emblem */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.035] select-none z-0">
@@ -671,9 +671,9 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
   return createPortal(
     <div
       id="print-receipt-modal"
-      className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto print:p-0 print:bg-white print:backdrop-blur-none print:static print:inset-auto print:block"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-1 sm:p-3 bg-slate-950/80 backdrop-blur-sm overflow-y-auto print:p-0 print:bg-white print:backdrop-blur-none print:static print:inset-auto print:block"
     >
-      <div className="w-full max-w-4xl bg-slate-100 rounded-2xl shadow-2xl flex flex-col max-h-[96vh] print:max-h-none print:shadow-none print:rounded-none overflow-hidden print:overflow-visible border-0 print:border-none print:static print:block print:w-full print:bg-white">
+      <div className="w-full max-w-4xl bg-slate-900 rounded-xl shadow-2xl flex flex-col max-h-[98vh] print:max-h-none print:shadow-none print:rounded-none overflow-hidden print:overflow-visible border border-slate-700/60 print:border-none print:static print:block print:w-full print:bg-white">
         {/* ══════════════════════════════════════════════════════════
            TOP ACTION BAR (HIDDEN IN PRINT)
            ══════════════════════════════════════════════════════════ */}
@@ -746,7 +746,7 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
         {/* ══════════════════════════════════════════════════════════
            RECEIPT PREVIEW CONTAINER (EXACTLY 2 SLIPS ON 1 A4 PORTRAIT PAGE)
            ══════════════════════════════════════════════════════════ */}
-        <div className="overflow-y-auto print:overflow-visible bg-slate-200/80 print:bg-white flex flex-col items-center p-3 sm:p-4 print:p-0 print:static print:block">
+        <div className="overflow-y-auto print:overflow-visible bg-slate-900 print:bg-white flex flex-col items-center p-2 sm:p-3 print:p-0 print:static print:block">
           <style>{`
             @media print {
               @page {
