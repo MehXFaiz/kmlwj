@@ -5,6 +5,7 @@ import { useMemberStore } from '../store/memberStore';
 import { memberService } from '../services/memberService';
 import { PhoneInput, validatePhoneNumber } from '../components/ui/PhoneInput';
 import { CNICInput, validateCNIC } from '../components/ui/CNICInput';
+import { sanitizeInputValue } from '../utils/validation';
 import {
   Camera, Image as ImageIcon, ShieldCheck, QrCode,
   ChevronLeft, CheckCircle, AlertCircle, Save, X,
