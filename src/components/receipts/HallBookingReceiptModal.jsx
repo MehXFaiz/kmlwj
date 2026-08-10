@@ -751,7 +751,7 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
             @media print {
               @page {
                 size: A4 portrait;
-                margin: 0mm !important;
+                margin: 4mm 5mm !important;
               }
               html, body {
                 margin: 0 !important;
@@ -762,6 +762,7 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
                 box-shadow: none !important;
                 width: 100% !important;
                 height: 100% !important;
+                box-sizing: border-box !important;
               }
               *, *::before, *::after {
                 -webkit-print-color-adjust: exact !important;
@@ -769,6 +770,7 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
                 color-adjust: exact !important;
                 box-shadow: none !important;
                 text-shadow: none !important;
+                box-sizing: border-box !important;
               }
               body > *:not(#print-receipt-modal) {
                 display: none !important;
@@ -796,15 +798,26 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
                 border: none !important;
                 outline: none !important;
                 z-index: 99999999 !important;
+                box-sizing: border-box !important;
               }
               #print-receipt-wrapper {
                 width: 100% !important;
                 max-width: 100% !important;
-                margin: 0 !important;
+                margin: 0 auto !important;
                 padding: 0 !important;
                 border: none !important;
                 box-shadow: none !important;
                 background: #ffffff !important;
+                box-sizing: border-box !important;
+              }
+              .receipt-slip-card {
+                width: 100% !important;
+                max-width: 100% !important;
+                box-sizing: border-box !important;
+                padding: 2px 4px !important;
+                margin: 0 !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
               }
               #print-receipt-modal img, #print-receipt-modal svg {
                 filter: none !important;
@@ -814,11 +827,11 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
 
           <div
             id="print-receipt-wrapper"
-            className="w-full max-w-[780px] print:max-w-full flex flex-col items-center"
+            className="w-full max-w-[780px] print:max-w-full flex flex-col items-center box-border"
           >
             {/* Customer Copy */}
             {(printMode === 'both-1page' || printMode === 'customer') && (
-              <div className="w-full">
+              <div className="w-full box-border">
                 <ReceiptSlip
                   key="customer-copy"
                   booking={booking}
@@ -831,7 +844,7 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
 
             {/* Scissor Cut Line Separator (Fits comfortably between both slips on 1 A4 page) */}
             {printMode === 'both-1page' && (
-              <div className="w-full my-1 print:my-0.5 flex items-center gap-2 text-slate-500 select-none px-4">
+              <div className="w-full my-1 print:my-1 flex items-center gap-2 text-slate-500 select-none px-4 box-border">
                 <div className="flex-1 border-b border-dashed border-slate-400" />
                 <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
                   <span>✂</span> CUT HERE / یہاں سے علیحدہ کریں <span>✂</span>
@@ -842,7 +855,7 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
 
             {/* Office Copy */}
             {(printMode === 'both-1page' || printMode === 'office') && (
-              <div className="w-full">
+              <div className="w-full box-border">
                 <ReceiptSlip
                   key="office-copy"
                   booking={booking}

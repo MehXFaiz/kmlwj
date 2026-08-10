@@ -537,6 +537,7 @@ export const AddIncomeRecords = () => {
                             </button>
                           )}
 
+                          {/* Print Voucher */}
                           <button
                             onClick={() => setPrintRecord(rec)}
                             className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-emerald-400 border border-slate-700 transition-colors cursor-pointer"
@@ -545,34 +546,32 @@ export const AddIncomeRecords = () => {
                             <Printer className="h-3.5 w-3.5" />
                           </button>
 
-                          {isPending && (
-                            <Link
-                              to={`/add-income/edit/${rec.id}`}
-                              className={`p-1.5 rounded-lg border transition-colors ${
-                                isAdminOrSuperAdmin
-                                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-brand-400 border-slate-700 cursor-pointer'
-                                  : 'bg-slate-900 text-slate-600 border-slate-800 pointer-events-none'
-                              }`}
-                              title={isAdminOrSuperAdmin ? 'Edit Record' : 'Admin only'}
-                            >
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </Link>
-                          )}
+                          {/* Edit Record */}
+                          <Link
+                            to={`/add-income/edit/${rec.id}`}
+                            className={`p-1.5 rounded-lg border transition-colors ${
+                              isAdminOrSuperAdmin
+                                ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-brand-400 border-slate-700 cursor-pointer'
+                                : 'bg-slate-900 text-slate-600 border-slate-800 pointer-events-none'
+                            }`}
+                            title={isAdminOrSuperAdmin ? 'Edit Record' : 'Admin only'}
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </Link>
 
-                          {(isPending || isReverted) && (
-                            <button
-                              onClick={() => setDeletingRecordId(rec.id)}
-                              disabled={!isAdminOrSuperAdmin}
-                              className={`p-1.5 rounded-lg border transition-colors ${
-                                isAdminOrSuperAdmin
-                                  ? 'bg-red-950/40 hover:bg-red-900/60 text-red-400 border-red-900/40 cursor-pointer'
-                                  : 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed'
-                              }`}
-                              title={isAdminOrSuperAdmin ? 'Delete Record' : 'Admin only'}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          )}
+                          {/* Delete Record */}
+                          <button
+                            onClick={() => setDeletingRecordId(rec.id)}
+                            disabled={!isAdminOrSuperAdmin}
+                            className={`p-1.5 rounded-lg border transition-colors ${
+                              isAdminOrSuperAdmin
+                                ? 'bg-red-950/40 hover:bg-red-900/60 text-red-400 border-red-900/40 cursor-pointer'
+                                : 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed'
+                            }`}
+                            title={isAdminOrSuperAdmin ? 'Delete Record' : 'Admin only'}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                         </div>
                       </td>
                     </tr>
