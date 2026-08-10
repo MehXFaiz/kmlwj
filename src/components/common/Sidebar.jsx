@@ -222,13 +222,6 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
       title: t('sidebar.manualRecords'),
       items: [
         { name: t('sidebar.journalEntries'), hint: t('sidebar.journalEntriesHint'), icon: FileSpreadsheet, path: '/journals' },
-      ],
-    },
-    {
-      // Admin-only section
-      title: t('sidebar.settingsAdmin'),
-      adminOnly: true,
-      items: [
         {
           name: t('sidebar.accountStructure'),
           hint: t('sidebar.accountStructureHint'),
@@ -245,6 +238,13 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
         { name: t('sidebar.incomeCategories'), hint: t('sidebar.incomeCategoriesHint'), icon: TrendingUp, path: '/revenue-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
         { name: t('sidebar.incomeCategoryMapping'), hint: t('sidebar.incomeCategoryMappingHint'), icon: Link2, path: '/income-category-mapping', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
         { name: t('sidebar.expenseCategories'), hint: t('sidebar.expenseCategoriesHint'), icon: TrendingDown, path: '/expense-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
+      ],
+    },
+    {
+      // Admin-only section
+      title: t('sidebar.settingsAdmin'),
+      adminOnly: true,
+      items: [
         { name: t('sidebar.systemAccounts'), hint: t('sidebar.systemAccountsHint'), icon: ShieldCheck, path: '/reserved', perms: ['MANAGE_RESERVED_CODES'] },
         { name: t('sidebar.usersAccess'), hint: t('sidebar.usersAccessHint'), icon: BadgeCheck, path: '/users-roles', perms: ['MANAGE_USERS', 'MANAGE_ROLES'] },
         { name: t('sidebar.auditTrail'), hint: t('sidebar.auditTrailHint'), icon: History, path: '/audit', perms: ['VIEW_REPORTS', 'MANAGE_USERS'] },
