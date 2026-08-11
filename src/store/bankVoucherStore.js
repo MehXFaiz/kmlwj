@@ -21,6 +21,8 @@ export const useBankVoucherStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const res = await api.post('/api/v1/journal-entries', voucherData);
+      const type = voucherData.voucherType || 'BP';
+      await get().fetchVouchers(type);
       set({ loading: false });
       useDashboardStore.getState().invalidateAll();
       return res.data;

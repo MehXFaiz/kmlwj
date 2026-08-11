@@ -159,13 +159,17 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
     if (form.paymentMethod === 'BANK' && form.bankAccountId) {
       const bankAcc = accounts.find(a => a.id === form.bankAccountId);
       if (bankAcc) {
-        avail = localBalances[bankAcc.code] !== undefined ? localBalances[bankAcc.code] : (bankAcc.initialBalance || 0);
+        avail = bankAcc.currentBalance !== undefined && bankAcc.currentBalance !== null && !isNaN(Number(bankAcc.currentBalance))
+          ? Number(bankAcc.currentBalance)
+          : (localBalances[bankAcc.code] !== undefined ? localBalances[bankAcc.code] : (bankAcc.initialBalance || 0));
         accName = bankAcc.name;
       }
     } else {
-      const cashAcc = accounts.find(a => a.type === 'Asset' && (a.detailType === 'Cash' || a.name.toLowerCase().includes('cash')));
+      const cashAcc = accounts.find(a => a.type === 'Asset' && (a.detailType === 'Cash' || (a.name || '').toLowerCase().includes('cash')));
       if (cashAcc) {
-        avail = localBalances[cashAcc.code] !== undefined ? localBalances[cashAcc.code] : (cashAcc.initialBalance || 0);
+        avail = cashAcc.currentBalance !== undefined && cashAcc.currentBalance !== null && !isNaN(Number(cashAcc.currentBalance))
+          ? Number(cashAcc.currentBalance)
+          : (localBalances[cashAcc.code] !== undefined ? localBalances[cashAcc.code] : (cashAcc.initialBalance || 0));
         accName = cashAcc.name;
       }
     }
