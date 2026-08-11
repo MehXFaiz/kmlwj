@@ -47,6 +47,19 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         include: {
           lines: {
             include: { account: true }
+          },
+          donationReceived: {
+            include: { donor: true }
+          },
+          zakatCard: {
+            include: { member: true, beneficiary: true }
+          },
+          revenueCollection: true,
+          addIncomeRecord: {
+            include: { category: true }
+          },
+          pettyCashTransaction: {
+            include: { account: true, expenseHead: true }
           }
         },
         orderBy: { createdAt: 'desc' },
@@ -67,9 +80,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       postedBy: je.postedBy,
       status: je.status,
       voucherType: je.voucherType,
+      donationReceived: (je as any).donationReceived,
+      zakatCard: (je as any).zakatCard,
+      revenueCollection: (je as any).revenueCollection,
+      addIncomeRecord: (je as any).addIncomeRecord,
+      pettyCashTransaction: (je as any).pettyCashTransaction,
       lines: je.lines.map(line => ({
         id: line.id,
         accountCode: line.account.glCode,
+        accountName: line.account.accountName,
         description: line.description,
         debit: line.debit,
         credit: line.credit

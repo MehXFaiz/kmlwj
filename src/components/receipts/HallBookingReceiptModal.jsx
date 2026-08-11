@@ -810,7 +810,8 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
                 background: #ffffff !important;
                 box-sizing: border-box !important;
               }
-              .receipt-slip-card {
+              .receipt-slip-card,
+              .receipt-slip-card > div {
                 width: 100% !important;
                 max-width: 100% !important;
                 box-sizing: border-box !important;
@@ -818,6 +819,8 @@ export const HallBookingReceiptModal = ({ booking, onClose }) => {
                 margin: 0 !important;
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
+                border: none !important;
+                box-shadow: none !important;
               }
               #print-receipt-modal img, #print-receipt-modal svg {
                 filter: none !important;

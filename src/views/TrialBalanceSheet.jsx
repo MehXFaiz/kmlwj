@@ -11,6 +11,23 @@ import { useDashboardStore } from '../store/dashboardStore';
 // Cash in Hand / each Bank (dynamic count) / Advance & Loan / Receivable /
 // Other Assets — one tile per category, fully driven by whatever the backend
 // returns. No account name or count is hardcoded here.
+/**
+ * The Jammat financial year runs 01-July → 30-June, so FY N spans
+ * 01-07-(N−1) .. 30-06-N. Derived arithmetically — no date is hardcoded.
+ *
+ * NOTE: this is deliberately NOT coaStore's getCurrentFiscalYear(), which
+ * returns the CALENDAR year and which the Dashboard and Reports views use to
+ * build 01-01 → 31-12 ranges. Those two definitions disagree; this statement has
+ * always been captioned "01-07 → 30-06", so it follows the July–June convention.
+ */
+export const fiscalYearRange = (fy) => ({
+  startDate: `${Number(fy) - 1}-07-01`,
+  endDate: `${Number(fy)}-06-30`,
+});
+
+/** Financial year the report opens on. */
+const DEFAULT_FISCAL_YEAR = 2026;
+
 const BalanceCategoryGrid = ({ categories, formatMoney }) => {
   const tiles = [
     { key: 'cash', label: 'Cash in Hand', value: categories.cashInHand.total },
@@ -39,9 +56,21 @@ export const TrialBalanceSheet = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('sheet'); // 'sheet' (Official Jammat 4-Column Statement), 'matrix' (Dual-Column), 'ledger' (Standard)
   
-  // Date filter states
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  // Date filter states.
+  //
+  // These default to a full FINANCIAL YEAR rather than being empty. An empty
+  // range means "all time", and an all-time report has no period *before* it to
+  // open from — every opening balance collapses to the account's initialBalance
+  // (0 for every account here), which is why the opening rows rendered as "—".
+  // The backend only computes a real opening position when it is given a
+  // startDate to look back from (getTrialBalance's `priorAggregates`).
+  //
+  // The financial year runs 01-07 → 30-06, so FY N = 01-07-(N−1) .. 30-06-N.
+  // Changing either input re-scopes the whole report, so any FY (or any custom
+  // range) works dynamically — nothing about the period is hardcoded beyond the
+  // initial default below.
+  const [fromDate, setFromDate] = useState(() => fiscalYearRange(DEFAULT_FISCAL_YEAR).startDate);
+  const [toDate, setToDate] = useState(() => fiscalYearRange(DEFAULT_FISCAL_YEAR).endDate);
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
@@ -357,18 +386,15 @@ export const TrialBalanceSheet = () => {
     const closing = tbReport.closingBalances || {};
     const entries = Array.isArray(tbReport.entries) ? tbReport.entries : [];
 
+    // DD-MM-YYYY, matching the printed Jammat statement ("01-07-2025").
+    // The YYYY-MM-DD input is split textually rather than parsed through Date:
+    // `new Date('2025-07-01')` is UTC midnight, so reading it back with local
+    // getters shifts the label to the previous day in any timezone west of UTC.
     const formatShortDate = (dStr, fallback) => {
       if (!dStr) return fallback;
-      try {
-        const d = new Date(dStr);
-        const day = String(d.getDate()).padStart(2, '0');
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const month = monthNames[d.getMonth()];
-        const year = d.getFullYear();
-        return `${day}-${month}-${year}`;
-      } catch (e) {
-        return fallback;
-      }
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dStr);
+      if (!m) return fallback;
+      return `${m[3]}-${m[2]}-${m[1]}`;
     };
 
     const startStr = formatShortDate(fromDate, '01-07-2025');
@@ -378,13 +404,13 @@ export const TrialBalanceSheet = () => {
     let totalDebitSum = 0;
     let totalCreditSum = 0;
 
-    const collectCategoryAccounts = (catsObj) => {
+    const collectCategoryAccounts = (catsObj, includeZero = false) => {
       const list = [];
-      const keys = ['cashInHand', 'banks', 'advanceAndLoan', 'receivable', 'otherAssets'];
+      const keys = ['banks', 'cashInHand', 'advanceAndLoan', 'receivable', 'otherAssets'];
       keys.forEach(k => {
         if (catsObj[k] && Array.isArray(catsObj[k].accounts)) {
           catsObj[k].accounts.forEach(acc => {
-            if (acc.balance && Math.abs(acc.balance) > 0.001) {
+            if (includeZero || (acc.balance && Math.abs(acc.balance) > 0.001)) {
               list.push({ ...acc, categoryKey: k });
             }
           });
@@ -393,19 +419,74 @@ export const TrialBalanceSheet = () => {
       return list;
     };
 
-    // 1. OPENING BALANCES (Credit Column)
-    const openingAccounts = collectCategoryAccounts(opening);
+    const formatOpDesc = (acc) => {
+      const name = acc.name || '';
+      if (name.toLowerCase().includes('opening balance') || name.toLowerCase().includes('receivable bal')) {
+        return `${name} ${startStr}`;
+      }
+      if (name.toLowerCase().endsWith('bal') || name.toLowerCase().endsWith('balance')) {
+        return `${name} ${startStr}`;
+      }
+      return `${name} Opening Balance ${startStr}`;
+    };
+
+    const formatClDesc = (acc) => {
+      const name = acc.name || '';
+      if (name.toLowerCase().includes('closing balance')) {
+        return `${name} ${endStr}`;
+      }
+      return `${name} Closing Balance ${endStr}`;
+    };
+
+    // 1. OPENING BALANCES (Dynamic DEBIT/CREDIT placement)
+    //
+    // Each `acc.balance` is the account's real position as of the FY start,
+    // computed server-side from posted JournalEntryLine rows only
+    // (AccountingService.getTrialBalance → priorAggregates → naturalBalance).
+    // Nothing here derives an opening figure from the closing balance.
+    //
+    // PLACEMENT: this statement is a Receipts & Payments account, and its
+    // balancing identity is
+    //     Opening + Revenue = Expense + Closing
+    // With Revenue in CREDIT and Expense in DEBIT (sections 2 and 3 below), that
+    // identity only closes when Opening contributes to the CREDIT side and
+    // Closing to the DEBIT side, each as a SIGNED amount — a negative balance
+    // simply crosses to the opposite column. Moving positive opening balances
+    // into DEBIT would leave the sheet out by 2 × (net opening balance).
+    const openingAccounts = collectCategoryAccounts(opening, true);
     openingAccounts.forEach(acc => {
-      const creditVal = Math.abs(acc.balance);
-      totalCreditSum += creditVal;
+      const bal = acc.balance || 0;
+      let deb = 0;
+      let crd = 0;
+
+      if (Math.abs(bal) > 0.001) {
+        if (bal > 0) {
+          crd = bal;
+          totalCreditSum += crd;
+        } else {
+          deb = Math.abs(bal);
+          totalDebitSum += deb;
+        }
+      }
+
       rows.push({
         id: `opening-${acc.glCode}`,
         section: 'OPENING',
         sectionLabel: 'Opening Balances',
-        description: `${acc.name} Opening Balance ${startStr}`,
+        description: formatOpDesc(acc),
         note: '',
-        debit: 0,
-        credit: creditVal
+        debit: deb,
+        credit: crd,
+        // An account that genuinely opened the year at nil must read as an
+        // explicit zero, not as the "—" placeholder used for "not applicable".
+        showZero: Math.abs(bal) <= 0.001,
+        // A debit-normal asset sitting on a credit balance is an accounting
+        // anomaly (you cannot hold negative cash). Surfaced, never silently
+        // normalised — see openingAnomalies below.
+        isCreditBalanceAsset: bal < -0.001,
+        glCode: acc.glCode,
+        accountName: acc.name,
+        balance: bal
       });
     });
 
@@ -467,30 +548,50 @@ export const TrialBalanceSheet = () => {
       }
     });
 
-    // 4. CLOSING BALANCES (Debit Column)
-    const closingAccounts = collectCategoryAccounts(closing);
+    // 4. CLOSING BALANCES (Dynamic DEBIT/CREDIT placement)
+    const closingAccounts = collectCategoryAccounts(closing, true);
     closingAccounts.forEach(acc => {
-      const debitVal = Math.abs(acc.balance);
-      totalDebitSum += debitVal;
-      const isZakat = acc.name.toLowerCase().includes('zakat');
+      const bal = acc.balance || 0;
+      let deb = 0;
+      let crd = 0;
+
+      if (Math.abs(bal) > 0.001) {
+        if (bal > 0) {
+          deb = bal;
+          totalDebitSum += deb;
+        } else {
+          crd = Math.abs(bal);
+          totalCreditSum += crd;
+        }
+      }
+
+      const isZakat = (acc.name || '').toLowerCase().includes('zakat');
       rows.push({
         id: `closing-${acc.glCode}`,
         section: 'CLOSING',
         sectionLabel: 'Closing Balances',
-        description: `${acc.name} Closing Balance ${endStr}`,
+        description: formatClDesc(acc),
         note: isZakat ? '(Include Zakat)' : '',
-        debit: debitVal,
-        credit: 0
+        debit: deb,
+        credit: crd
       });
     });
 
     const isBalanced = Math.abs(totalDebitSum - totalCreditSum) < 0.01;
+
+    // Debit-normal assets that opened the year on a CREDIT balance. Reported as
+    // a visible accounting warning rather than being silently sign-flipped or
+    // zeroed — the figures below are exactly what the posted ledger says.
+    const openingAnomalies = rows
+      .filter(r => r.section === 'OPENING' && r.isCreditBalanceAsset)
+      .map(r => ({ glCode: r.glCode, accountName: r.accountName, balance: r.balance }));
 
     return {
       rows,
       totalDebit: totalDebitSum,
       totalCredit: totalCreditSum,
       isBalanced,
+      openingAnomalies,
       startStr,
       endStr
     };
@@ -788,10 +889,39 @@ export const TrialBalanceSheet = () => {
         </Card>
       </div>
 
+      {/* Accounting warning — a debit-normal asset that opened the period on a
+          CREDIT balance. Rendered ONLY when the posted ledger actually contains
+          one, so the statement is visually unchanged in the normal case. The
+          numbers are never adjusted to hide it. */}
+      {viewMode === 'sheet' && officialJammatSheetData.openingAnomalies?.length > 0 && (
+        <Card className="bg-slate-900/60 border-amber-800/60 print:hidden">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="h-4 w-4 text-amber-400 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-amber-300 uppercase tracking-wider">Opening Balance Warning</p>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  These asset accounts opened {officialJammatSheetData.startStr} on a <strong>credit</strong> balance,
+                  which a debit-normal asset should not hold. The figures below are exactly what the posted ledger
+                  contains and have not been adjusted — the underlying entries need review.
+                </p>
+                <ul className="mt-2 space-y-0.5">
+                  {officialJammatSheetData.openingAnomalies.map(a => (
+                    <li key={a.glCode} className="text-[11px] font-mono text-slate-300">
+                      {a.glCode} · {a.accountName}: {formatMoney(a.balance)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* MODE 1: OFFICIAL JAMMAT TRIAL BALANCE SHEET (EXACT PAPER REPLICA, DYNAMIC DATA) */}
       {viewMode === 'sheet' && (
         <Card className="overflow-hidden border border-slate-800 bg-slate-900/80 print:border-slate-900 print:bg-white print:shadow-none">
-          
+
           {/* Document Header Banner */}
           <div className="bg-slate-950 p-6 border-b border-slate-800 text-center space-y-1.5 print:bg-white print:border-b-2 print:border-black print:p-4">
             <h1 className="text-lg sm:text-2xl font-black uppercase tracking-wider text-amber-400 print:text-black font-serif">
@@ -838,14 +968,17 @@ export const TrialBalanceSheet = () => {
                       )}
                     </td>
 
-                    {/* Debit Column */}
+                    {/* Debit Column — an opening/closing row that is genuinely
+                        nil shows an explicit 0.00 rather than the "—"
+                        placeholder, so a real zero is distinguishable from
+                        "no value". */}
                     <td className="py-2.5 px-4 text-right font-mono font-semibold text-emerald-400 print:text-black print:py-1.5 border-r border-slate-800/40 print:border-r print:border-gray-300">
-                      {row.debit > 0 ? row.debit.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : ''}
+                      {row.debit > 0 ? row.debit.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : (row.credit > 0 ? '' : (row.showZero ? '0.00' : '—'))}
                     </td>
 
                     {/* Credit Column */}
                     <td className="py-2.5 px-4 text-right font-mono font-semibold text-blue-400 print:text-black print:py-1.5">
-                      {row.credit > 0 ? row.credit.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : ''}
+                      {row.credit > 0 ? row.credit.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : (row.debit > 0 ? '' : '—')}
                     </td>
 
                   </tr>

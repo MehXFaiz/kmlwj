@@ -5,6 +5,7 @@ import { useCoaStore } from '../store/coaStore';
 import { PlusCircle, Search, X, CheckCircle2, TrendingUp, Building2, Banknote, Printer } from 'lucide-react';
 import { paymentMethodLabel } from '../constants/paymentMethods';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
+import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolver';
 
 function IncomeModal({ isOpen, onClose, onSave, revenueHeads, accounts }) {
   const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], revenueHeadId: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
@@ -234,29 +235,32 @@ export const Income = () => {
         accounts={accounts}
       />
 
-      {printIncome && (
-        <VoucherSlipModal
-          isOpen={true}
-          onClose={() => setPrintIncome(null)}
-          title="INCOME RECEIPT VOUCHER"
-          voucherNo={printIncome.id?.slice(0, 8)?.toUpperCase() || 'INC-VOUCHER'}
-          fileNo={printIncome.reference || 'INCOME'}
-          date={printIncome.date}
-          name={printIncome.revenueHead?.name || 'Income Depositor'}
-          fatherName={printIncome.fatherName || printIncome.member?.fatherName || printIncome.donor?.fatherName || ''}
-          cnic={printIncome.cnic || printIncome.member?.cnic || printIncome.donor?.cnic || ''}
-          mobile={printIncome.mobile || printIncome.member?.mobile || printIncome.donor?.mobile || ''}
-          address={printIncome.address || printIncome.member?.address || printIncome.donor?.address || ''}
-          gham={printIncome.gham || printIncome.member?.gham || printIncome.donor?.gham || ''}
-          paymentMethod={printIncome.paymentMethod}
-          accountName={printIncome.revenueHead?.name || 'Revenue Account'}
-          particulars={printIncome.description || 'Income receipt entry'}
-          amount={printIncome.amount}
-          preparedBy="System Admin"
-          payeeLabel="Collector Signature"
-          partyLabel="Paid By"
-        />
-      )}
+      {printIncome && (() => {
+        const rec = resolveVoucherRecipientDetails(printIncome);
+        return (
+          <VoucherSlipModal
+            isOpen={true}
+            onClose={() => setPrintIncome(null)}
+            title="INCOME RECEIPT VOUCHER"
+            voucherNo={printIncome.id?.slice(0, 8)?.toUpperCase() || 'INC-VOUCHER'}
+            fileNo={printIncome.reference || 'INCOME'}
+            date={printIncome.date}
+            name={rec.name !== '-' ? rec.name : ''}
+            fatherName={rec.fatherName !== '-' ? rec.fatherName : ''}
+            cnic={rec.cnic !== '-' ? rec.cnic : ''}
+            mobile={rec.mobile !== '-' ? rec.mobile : ''}
+            address={rec.address !== '-' ? rec.address : ''}
+            gham={rec.gham !== '-' ? rec.gham : ''}
+            paymentMethod={printIncome.paymentMethod}
+            accountName={printIncome.revenueHead?.name || 'Income Account'}
+            particulars={printIncome.description || 'Income collection deposit'}
+            amount={printIncome.amount}
+            preparedBy="System Admin"
+            payeeLabel="Collector Signature"
+            partyLabel="Received From"
+          />
+        );
+      })()}
     </div>
   );
 };

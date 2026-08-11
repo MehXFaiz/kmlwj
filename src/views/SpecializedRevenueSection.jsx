@@ -10,6 +10,7 @@ import { useMemberStore } from '../store/memberStore';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { showToast } from '../components/ui/Toast';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
+import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolver';
 import { paymentMethodLabel } from '../constants/paymentMethods';
 
 export const SpecializedRevenueSection = ({
@@ -609,11 +610,7 @@ export const SpecializedRevenueSection = ({
           return res;
         })();
 
-        const fatherVal = printItem.fatherName || meta.fatherName || printItem.member?.fatherName || printItem.beneficiary?.fatherName || printItem.donor?.fatherName || '';
-        const husbandVal = printItem.husbandName || meta.husbandName || printItem.member?.husbandName || printItem.beneficiary?.husbandName || '';
-        const fatherHusbandVal = fatherVal || husbandVal || '';
-        const ghamVal = printItem.gham || meta.gham || printItem.member?.ghamName || printItem.member?.gham || printItem.beneficiary?.gham || printItem.donor?.gham || '';
-        const addressVal = printItem.address || printItem.destination || printItem.member?.address || '';
+        const rec = resolveVoucherRecipientDetails(printItem);
 
         const cleanRemarks = (printItem.remarks || '')
           .replace(/Father:\s*[^|]+\s*\|?/gi, '')
@@ -629,12 +626,12 @@ export const SpecializedRevenueSection = ({
             voucherNo={printItem.receiptNo || printItem.id?.slice(0, 8)?.toUpperCase()}
             fileNo={printItem.subTitle || ''}
             date={printItem.eventDate || printItem.createdAt}
-            name={printItem.title}
-            fatherName={fatherHusbandVal}
-            cnic={printItem.cnic || printItem.subTitle || printItem.member?.cnic || ''}
-            mobile={printItem.mobile || printItem.member?.mobile || ''}
-            address={addressVal}
-            gham={ghamVal}
+            name={rec.name !== '-' ? rec.name : ''}
+            fatherName={rec.fatherName !== '-' ? rec.fatherName : ''}
+            cnic={rec.cnic !== '-' ? rec.cnic : ''}
+            mobile={rec.mobile !== '-' ? rec.mobile : ''}
+            address={rec.address !== '-' ? rec.address : ''}
+            gham={rec.gham !== '-' ? rec.gham : ''}
             paymentMethod={printItem.paymentMethod}
             accountName={`${printItem.category} Collection`}
             particulars={showQty ? `${printItem.category} — ${printItem.quantity} ${qtyLabel} @ Rs. ${printItem.rate?.toLocaleString()}` : `${printItem.category} Collection${cleanRemarks ? ` - ${cleanRemarks}` : ''}`}

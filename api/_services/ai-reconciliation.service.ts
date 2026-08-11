@@ -467,26 +467,42 @@ export class AiReconciliationService {
   private static async checkCrossEndpointConsistency(summary: FinancialSummaryTotals): Promise<IntegrityIssue[]> {
     const issues: IntegrityIssue[] = [];
     try {
-      const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
-      const viaFundValidation = await FundValidationService.getAvailableBalance(prisma, cashAccount.id);
-      const agg = await AccountingService.getPostedAggregates({ accountIds: [cashAccount.id] });
-      const naturalBal = AccountingService.naturalBalance('ASSET', cashAccount.initialBalance, agg.get(cashAccount.id));
+      const allAccounts = await prisma.account.findMany({
+        where: { isDeleted: false },
+        include: { accountType: true }
+      });
+      const cashAccounts = allAccounts.filter(a => AccountingService.isCashAccount(a.accountName, a.detailType));
+      const cashAccountIds = cashAccounts.map(a => a.id);
 
-      const a = new Prisma.Decimal(viaFundValidation.availableBalance);
+      let viaFundValidation = new Prisma.Decimal(0);
+      for (const acc of cashAccounts) {
+        const fv = await FundValidationService.getAvailableBalance(prisma, acc.id);
+        viaFundValidation = viaFundValidation.plus(fv.availableBalance);
+      }
+
+      const agg = await AccountingService.getPostedAggregates({ accountIds: cashAccountIds });
+      let naturalBal = new Prisma.Decimal(0);
+      for (const acc of cashAccounts) {
+        const nat = AccountingService.naturalBalance('ASSET', acc.initialBalance, agg.get(acc.id));
+        naturalBal = naturalBal.plus(nat);
+      }
+
+      const a = viaFundValidation;
       const b = naturalBal;
       const c = new Prisma.Decimal(summary.cashBalance);
       const maxDiff = Prisma.Decimal.max(a.minus(b).abs(), a.minus(c).abs(), b.minus(c).abs());
 
       if (maxDiff.greaterThan(0.01)) {
+        const primaryCash = cashAccounts.find(acc => acc.glCode === '1010103') || cashAccounts[0];
         issues.push({
           type: 'cross_endpoint_cash_mismatch',
           severity: 'critical',
           description: `Cash balance disagrees across independent calculation paths: fund validation=${a.toFixed(2)}, direct ledger aggregate=${b.toFixed(2)}, financial summary=${c.toFixed(2)} (max difference ${maxDiff.toFixed(2)}).`,
-          item: { id: cashAccount.id, glCode: cashAccount.glCode, name: cashAccount.accountName },
+          item: primaryCash ? { id: primaryCash.id, glCode: primaryCash.glCode, name: primaryCash.accountName } : undefined,
           currentValue: a.toNumber(),
           expectedValue: b.toNumber(),
           difference: maxDiff.toNumber(),
-          affectedRecords: [{ model: 'Account', id: cashAccount.id, ref: cashAccount.glCode }],
+          affectedRecords: cashAccounts.map(acc => ({ model: 'Account', id: acc.id, ref: acc.glCode })),
         });
       }
     } catch (err) {

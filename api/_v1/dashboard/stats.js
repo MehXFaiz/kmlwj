@@ -56,10 +56,12 @@ var stats_default = makeHandler(async (req, res) => {
       monthlyData[monthIndex].Expenses += (Number(entry.debit) || 0) - (Number(entry.credit) || 0);
     }
   }
-  AccountingService.ensureLeafPostingsAndBalances(prisma).catch((err) => {
-    console.error("Error in background ensureLeafPostingsAndBalances:", err);
+  await AccountingService.ensureLeafPostingsAndBalances(prisma).catch((err) => {
+    console.error("Error in ensureLeafPostingsAndBalances:", err);
   });
-  const summaryResult = await AccountingService.getFinancialSummary(startDate, endDate);
+  const { result: summaryResult, ledgerVersion } = await AccountingService.computeWithLedgerVersion(
+    () => AccountingService.getFinancialSummary(startDate, endDate)
+  );
   const totalAssets = summaryResult.totalAssets;
   const totalLiabilities = summaryResult.totalLiabilities;
   const totalRevenue = summaryResult.totalRevenue;
@@ -144,6 +146,8 @@ var stats_default = makeHandler(async (req, res) => {
   return res.status(200).json({
     status: 200,
     data: {
+      ledgerVersion,
+      reportPeriod: { startDate: startDate ?? null, endDate: endDate ?? null },
       totalAccounts,
       totalJournalEntries,
       revenueHeads,

@@ -3,13 +3,14 @@ import { createPortal } from 'react-dom';
 import { useNavigate, Link } from 'react-router-dom';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
 import { useAuthStore } from '../store/authStore';
-import { FileSpreadsheet, Search, Plus, Printer, CheckCircle, XCircle, Trash2, AlertTriangle, Edit, X, Banknote, Building2, Calendar, ArrowUpRight, FileText, ChevronDown, ChevronUp, Layers } from 'lucide-react';
+import { FileSpreadsheet, Search, Plus, Printer, CheckCircle, XCircle, Trash2, AlertTriangle, Edit, X, Banknote, Building2, Calendar, ArrowUpRight, ArrowDownLeft, FileText, ChevronDown, ChevronUp, Layers } from 'lucide-react';
 import { pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 import { useTranslation } from 'react-i18next';
 import { useConfirm } from '../components/ui/ConfirmationModal';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 import { VoucherLogo } from '../components/common/VoucherLogo';
+import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolver';
 import logoImg from '../assets/logo.png';
 
 // Helper to render number to English words for standard printed receipt
@@ -76,8 +77,7 @@ function VoucherReceiptSlip({ voucher, amount, copyType, t }) {
 
   const totalDebit  = voucher.lines?.reduce((s, l) => s + (Number(l.debit)  || 0), 0) ?? 0;
   const totalCredit = voucher.lines?.reduce((s, l) => s + (Number(l.credit) || 0), 0) ?? 0;
-  const dateStr = new Date(voucher.postingDate || voucher.date).toLocaleDateString('en-GB');
-  const isOffice = copyType === 'office';
+  const rec = resolveVoucherRecipientDetails(voucher);
 
   return (
     <div className="voucher-receipt-slip" style={{
@@ -209,7 +209,7 @@ function VoucherReceiptSlip({ voucher, amount, copyType, t }) {
                   borderBottom: `1.5px solid ${C.creamDeep}`, paddingBottom: '3px',
                   fontSize: '10px', fontWeight: 700, color: C.ink, minHeight: '16px',
                 }}>
-                  {voucher.reference || <span style={{ color: C.mutedLight }}>—</span>}
+                  {rec.name !== '-' ? rec.name : (voucher.reference || <span style={{ color: C.mutedLight }}>—</span>)}
                 </div>
               </div>
               <div>
@@ -394,9 +394,7 @@ function BankVoucherPrintModal({ voucher, onClose }) {
   const amount = voucher.lines ? voucher.lines.reduce((sum, line) => sum + (Number(line.debit) || 0), 0) : 0;
   const firstLine = voucher.lines?.[0];
 
-  const cnicVal = voucher.cnic || voucher.beneficiary?.cnic || voucher.member?.cnic || voucher.donor?.cnic || '';
-  const mobileVal = voucher.mobile || voucher.beneficiary?.mobile || voucher.member?.mobile || voucher.donor?.mobile || '';
-  const addressVal = voucher.address || voucher.beneficiary?.address || voucher.member?.address || voucher.donor?.address || '';
+  const rec = resolveVoucherRecipientDetails(voucher);
 
   return (
     <VoucherSlipModal
@@ -405,16 +403,16 @@ function BankVoucherPrintModal({ voucher, onClose }) {
       title={isPayment ? 'BANK PAYMENT VOUCHER' : 'BANK RECEIPT VOUCHER'}
       voucherNo={voucher.voucherNo || voucher.id?.slice(0, 8)?.toUpperCase()}
       fileNo={voucher.chequeNo ? `Cheque #${voucher.chequeNo}` : 'BANK'}
-      date={voucher.date}
-      name={voucher.paidTo || voucher.payee || 'Recipient / Bank Account'}
-      fatherName={voucher.fatherName || voucher.member?.fatherName || voucher.beneficiary?.fatherName || voucher.beneficiary?.husbandName || voucher.donor?.fatherName || ''}
-      cnic={cnicVal}
-      mobile={mobileVal}
-      address={addressVal}
-      gham={voucher.gham || voucher.member?.gham || voucher.beneficiary?.gham || voucher.beneficiary?.fatherGham || voucher.beneficiary?.husbandGham || voucher.donor?.gham || ''}
+      date={voucher.date || voucher.postingDate}
+      name={rec.name !== '-' ? rec.name : ''}
+      fatherName={rec.fatherName !== '-' ? rec.fatherName : ''}
+      cnic={rec.cnic !== '-' ? rec.cnic : ''}
+      mobile={rec.mobile !== '-' ? rec.mobile : ''}
+      address={rec.address !== '-' ? rec.address : ''}
+      gham={rec.gham !== '-' ? rec.gham : ''}
       paymentMethod={voucher.paymentMethod || 'BANK'}
       accountName={firstLine?.accountName || 'Bank Account'}
-      particulars={voucher.narration || firstLine?.narration || 'Bank transaction entry'}
+      particulars={voucher.narration || firstLine?.narration || voucher.description || 'Bank transaction entry'}
       amount={amount}
       preparedBy="System Admin"
       payeeLabel={isPayment ? "Payee Signature" : "Depositor Signature"}

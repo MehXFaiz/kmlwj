@@ -333,9 +333,24 @@ export const Reports = () => {
           {/* TRIAL BALANCE */}
           {!isLoading && activeTab === 'trial-balance' && trialBalanceData && (
             <div className="overflow-x-auto">
-              <div className="px-4 pt-4 text-xs font-semibold text-slate-500">
-                Period: {trialBalanceData.summary?.periodLabel || `FY ${fiscalYear}`}
+              <div className="px-4 pt-4 text-xs font-semibold text-slate-500 flex justify-between items-center">
+                <span>Period: {trialBalanceData.summary?.periodLabel || `FY ${fiscalYear}`}</span>
               </div>
+              {trialBalanceData.openingBalances && (
+                <div className="p-4 bg-slate-950/40 border-b border-slate-800">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Opening Balances</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {['banks', 'cashInHand', 'advanceAndLoan', 'receivable', 'otherAssets'].flatMap(k => (
+                      (trialBalanceData.openingBalances[k]?.accounts || []).map(acc => (
+                        <div key={acc.glCode} className="rounded-lg bg-slate-900 border border-slate-800 px-3 py-1.5 text-xs">
+                          <span className="text-slate-400 font-medium">{acc.name} Opening Bal: </span>
+                          <span className="font-mono font-bold text-slate-200 ml-1">{acc.balance ? formatMoney(acc.balance) : '—'}</span>
+                        </div>
+                      ))
+                    ))}
+                  </div>
+                </div>
+              )}
               <table className="w-full text-left border-collapse min-w-[600px]">
                 <thead>
                   <tr className="border-b border-slate-800 text-xs font-semibold text-slate-400 uppercase bg-slate-900/10">

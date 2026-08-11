@@ -112,8 +112,11 @@ export class FundValidationService {
       : initialBalance.plus(totalCredit).minus(totalDebit);  // credit-normal: LIABILITY / EQUITY / REVENUE
     
     let availableBalance = availableBalanceDecimal.toNumber();
-    if (isNaN(availableBalance) || !isFinite(availableBalance) || Math.abs(availableBalance) > 1e14) {
-      availableBalance = Number(account.currentBalance) || 0;
+    // Never fall back to the stale DB currentBalance cache — it can be wildly wrong
+    // if a prior bug wrote a corrupt value. The live journal aggregation is always
+    // the single source of truth. Clamp to 0 if the Decimal somehow overflows.
+    if (isNaN(availableBalance) || !isFinite(availableBalance)) {
+      availableBalance = 0;
     }
 
     const { isCash, isBank } = FundValidationService.isCashOrBankAccount(account.accountName, account.detailType);
