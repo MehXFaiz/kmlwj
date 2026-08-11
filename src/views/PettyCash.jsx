@@ -22,7 +22,12 @@ import {
   TrendingDown,
   TrendingUp,
   UserCheck,
-  HelpCircle
+  HelpCircle,
+  Pencil,
+  Trash2,
+  CheckSquare,
+  Square,
+  Edit
 } from 'lucide-react';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { usePettyCashStore } from '../store/pettyCashStore';
@@ -51,7 +56,9 @@ export const PettyCash = () => {
     updateConfig,
     reconcile,
     approveReconciliation,
-    revertTransaction
+    revertTransaction,
+    bulkRevertTransactions,
+    updateTransaction
   } = usePettyCashStore();
 
   const { accounts, loading: loadingCoa, fetchAccounts } = useCoaStore();
@@ -102,6 +109,75 @@ export const PettyCash = () => {
 
   const [revertTxId, setRevertTxId] = useState(null);
   const [revertReason, setRevertReason] = useState('');
+
+  // Bulk Selection & Edit States
+  const [selectedTxIds, setSelectedTxIds] = useState([]);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [bulkRevertReason, setBulkRevertReason] = useState('');
+
+  const [editingTx, setEditingTx] = useState(null);
+  const [editForm, setEditForm] = useState({
+    amount: '',
+    paidTo: '',
+    date: '',
+    referenceNo: '',
+    narration: '',
+    expenseAccountId: '',
+    sourceAccountId: ''
+  });
+
+  const toggleSelectAll = (filteredItems) => {
+    if (selectedTxIds.length === filteredItems.length && filteredItems.length > 0) {
+      setSelectedTxIds([]);
+    } else {
+      setSelectedTxIds(filteredItems.map(r => r.id));
+    }
+  };
+
+  const toggleSelectRow = (id) => {
+    setSelectedTxIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleOpenEdit = (row) => {
+    setEditingTx(row);
+    setEditForm({
+      amount: row.credit > 0 ? row.credit : row.debit,
+      paidTo: row.paidTo !== '-' ? row.paidTo : '',
+      date: row.date,
+      referenceNo: row.referenceNo || '',
+      narration: row.narration || '',
+      expenseAccountId: '',
+      sourceAccountId: ''
+    });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingTx) return;
+    try {
+      await updateTransaction(editingTx.id, editForm);
+      setEditingTx(null);
+      showToast('Petty Cash transaction updated successfully!', 'success');
+    } catch (err) {
+      showToast(err.message || 'Failed to update transaction', 'error');
+    }
+  };
+
+  const handleBulkDeleteSubmit = async (e) => {
+    e.preventDefault();
+    if (selectedTxIds.length === 0) return;
+    try {
+      await bulkRevertTransactions(selectedTxIds, bulkRevertReason || 'Bulk Admin Deletion');
+      setSelectedTxIds([]);
+      setIsBulkDeleteModalOpen(false);
+      setBulkRevertReason('');
+      showToast('Selected transactions reverted successfully!', 'success');
+    } catch (err) {
+      showToast(err.message || 'Failed to revert selected transactions', 'error');
+    }
+  };
 
   // Register Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -1263,11 +1339,46 @@ export const PettyCash = () => {
                 </div>
               </div>
 
+              {/* BULK ACTION BAR */}
+              {selectedTxIds.length > 0 && (
+                <div className="p-3 rounded-xl bg-amber-950/60 border border-amber-800/80 flex items-center justify-between text-xs text-amber-200">
+                  <div className="flex items-center gap-2 font-bold">
+                    <CheckSquare className="h-4 w-4 text-amber-400" />
+                    <span>{selectedTxIds.length} transaction(s) selected for bulk operations</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsBulkDeleteModalOpen(true)}
+                      className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold flex items-center gap-1.5 shadow transition"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Bulk Delete Selected ({selectedTxIds.length})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTxIds([])}
+                      className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold"
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* TABLE */}
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-950 text-slate-400 font-bold border-b border-slate-800 uppercase tracking-wider">
                     <tr>
+                      <th className="py-3 px-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedTxIds.length === filteredRegister.length && filteredRegister.length > 0}
+                          onChange={() => toggleSelectAll(filteredRegister)}
+                          className="rounded border-slate-700 bg-slate-950 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                        />
+                      </th>
                       <th className="py-3 px-3">Date</th>
                       <th className="py-3 px-3">Voucher #</th>
                       <th className="py-3 px-3">Type</th>
@@ -1284,6 +1395,14 @@ export const PettyCash = () => {
                   <tbody className="divide-y divide-slate-800/60 text-slate-300">
                     {filteredRegister.map((row) => (
                       <tr key={row.id} className="hover:bg-slate-800/40 transition">
+                        <td className="py-3 px-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedTxIds.includes(row.id)}
+                            onChange={() => toggleSelectRow(row.id)}
+                            className="rounded border-slate-700 bg-slate-950 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                          />
+                        </td>
                         <td className="py-3 px-3 font-mono text-slate-400">{row.date}</td>
                         <td className="py-3 px-3 font-mono font-bold text-amber-400">{row.voucherNo}</td>
                         <td className="py-3 px-3">
@@ -1318,11 +1437,18 @@ export const PettyCash = () => {
                               <Printer className="h-3.5 w-3.5" />
                             </button>
                             <button
+                              onClick={() => handleOpenEdit(row)}
+                              title="Edit Transaction"
+                              className="p-1.5 rounded-lg border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-blue-400 transition"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
                               onClick={() => setRevertTxId(row.id)}
-                              title="Revert Transaction (Admin)"
+                              title="Revert / Delete Transaction (Admin)"
                               className="p-1.5 rounded-lg border border-slate-800 hover:bg-rose-950 hover:border-rose-800 text-slate-400 hover:text-rose-400 transition"
                             >
-                              <RotateCcw className="h-3.5 w-3.5" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             </button>
                           </div>
                         </td>
@@ -1330,7 +1456,7 @@ export const PettyCash = () => {
                     ))}
                     {filteredRegister.length === 0 && (
                       <tr>
-                        <td colSpan={11} className="py-8 text-center text-slate-500 italic">
+                        <td colSpan={12} className="py-8 text-center text-slate-500 italic">
                           No Petty Cash transactions found matching the audit search filters.
                         </td>
                       </tr>
@@ -1429,6 +1555,157 @@ export const PettyCash = () => {
                 <button type="submit" className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold">Confirm Reversal</button>
               </div>
             </form>
+          </div>
+        )}
+
+        {/* EDIT TRANSACTION MODAL */}
+        {editingTx && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <Pencil className="h-5 w-5 text-blue-400" />
+                  <h3 className="text-base font-bold text-white">Edit Petty Cash Transaction</h3>
+                  <span className="font-mono text-xs px-2 py-0.5 rounded bg-slate-800 text-amber-400">
+                    {editingTx.voucherNo}
+                  </span>
+                </div>
+                <button onClick={() => setEditingTx(null)} className="text-slate-400 hover:text-white">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleEditSubmit} className="space-y-4 text-xs">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Date *</label>
+                    <input
+                      type="date"
+                      required
+                      value={editForm.date}
+                      onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Amount (PKR) *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      value={editForm.amount}
+                      onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 font-mono text-white focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                {editingTx.transactionType === 'EXPENSE' && (
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Paid To / Recipient *</label>
+                    <input
+                      type="text"
+                      required
+                      value={editForm.paidTo}
+                      onChange={(e) => setEditForm({ ...editForm, paidTo: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">Narration / Description</label>
+                  <input
+                    type="text"
+                    value={editForm.narration}
+                    onChange={(e) => setEditForm({ ...editForm, narration: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">Reference No</label>
+                  <input
+                    type="text"
+                    value={editForm.referenceNo}
+                    onChange={(e) => setEditForm({ ...editForm, referenceNo: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setEditingTx(null)}
+                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold flex items-center gap-2"
+                  >
+                    {loading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Pencil className="h-3.5 w-3.5" />}
+                    <span>Save Changes</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* BULK DELETE CONFIRMATION MODAL */}
+        {isBulkDeleteModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+            <div className="bg-slate-900 border border-rose-900/60 rounded-2xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2 text-rose-400">
+                  <Trash2 className="h-5 w-5" />
+                  <h3 className="text-base font-bold text-white">Confirm Bulk Deletion</h3>
+                </div>
+                <button onClick={() => setIsBulkDeleteModalOpen(false)} className="text-slate-400 hover:text-white">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Are you sure you want to revert/delete <strong className="text-rose-400">{selectedTxIds.length}</strong> selected Petty Cash transactions? The underlying general ledger accounting entries will be reversed automatically and running balances recalculated.
+              </p>
+
+              <form onSubmit={handleBulkDeleteSubmit} className="space-y-4 text-xs">
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">Reason for Reversal *</label>
+                  <textarea
+                    required
+                    rows={2}
+                    placeholder="Enter reason for bulk transaction reversal..."
+                    value={bulkRevertReason}
+                    onChange={(e) => setBulkRevertReason(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-rose-500"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setIsBulkDeleteModalOpen(false)}
+                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold flex items-center gap-2"
+                  >
+                    {loading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                    <span>Confirm Bulk Delete ({selectedTxIds.length})</span>
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
 

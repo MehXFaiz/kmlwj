@@ -137,5 +137,33 @@ export const usePettyCashStore = create((set, get) => ({
       const msg = err.response?.data?.error || err.message || 'Failed to revert transaction';
       throw new Error(msg);
     }
+  },
+
+  bulkRevertTransactions: async (transactionIds, revertReason) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await pettyCashService.bulkRevert({ transactionIds, revertReason });
+      await Promise.all([get().fetchConfig(), get().fetchRegister()]);
+      useDashboardStore.getState().invalidateAll();
+      return res;
+    } catch (err) {
+      set({ loading: false });
+      const msg = err.response?.data?.error || err.message || 'Failed to bulk delete transactions';
+      throw new Error(msg);
+    }
+  },
+
+  updateTransaction: async (transactionId, data) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await pettyCashService.update(transactionId, data);
+      await Promise.all([get().fetchConfig(), get().fetchRegister()]);
+      useDashboardStore.getState().invalidateAll();
+      return res;
+    } catch (err) {
+      set({ loading: false });
+      const msg = err.response?.data?.error || err.message || 'Failed to update transaction';
+      throw new Error(msg);
+    }
   }
 }));

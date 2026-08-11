@@ -156,6 +156,8 @@ export const pettyCashService = {
   reconcile: (data) => api.post('/api/v1/petty-cash?action=reconcile', data).then((r) => r.data),
   approveReconciliation: (data) => api.post('/api/v1/petty-cash?action=approve-reconciliation', data).then((r) => r.data),
   revert: (data) => api.post('/api/v1/petty-cash?action=revert', data).then((r) => r.data),
+  bulkRevert: (data) => api.post('/api/v1/petty-cash?action=bulk-delete', data).then((r) => r.data),
+  update: (id, data) => api.put(`/api/v1/petty-cash?id=${id}`, data).then((r) => r.data),
   getVoucher: (id) => api.get(`/api/v1/petty-cash?action=voucher&id=${id}`).then((r) => r.data),
   getReconciliations: () => api.get('/api/v1/petty-cash?action=reconciliations').then((r) => r.data),
 };

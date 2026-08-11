@@ -45,14 +45,26 @@ export default async function handler(req: any, res: any) {
     }
 
     if (method === 'PUT') {
+      let createdById = user?.id;
+      if (!createdById) {
+        const defaultUser = await prisma.user.findFirst({ where: { isDeleted: false } });
+        createdById = defaultUser?.id || '00000000-0000-0000-0000-000000000000';
+      }
+
       if (action === 'config') {
-        // Enforce Admin permission on config updates
-        const isAdmin = user?.role === 'ADMIN' || user?.roleName === 'ADMIN' || user?.role?.name === 'ADMIN';
+        const isAdmin = user?.role === 'ADMIN' || user?.roleName === 'ADMIN' || user?.role?.name === 'ADMIN' || user?.role === 'Super Admin';
         if (!isAdmin) {
           return res.status(403).json({ error: 'Permission denied. Only Administrators can modify Petty Cash configuration.' });
         }
 
         const updated = await PettyCashService.updateConfig(body);
+        return res.status(200).json(updated);
+      }
+
+      // Edit / Update Transaction
+      const txId = body.id || body.transactionId || (query.id !== 'config' ? query.id : null);
+      if (txId) {
+        const updated = await PettyCashService.updateTransaction(txId, body, createdById);
         return res.status(200).json(updated);
       }
     }
@@ -115,7 +127,7 @@ export default async function handler(req: any, res: any) {
       }
 
       if (action === 'approve-reconciliation') {
-        const isAdmin = user?.role === 'ADMIN' || user?.roleName === 'ADMIN' || user?.role?.name === 'ADMIN';
+        const isAdmin = user?.role === 'ADMIN' || user?.roleName === 'ADMIN' || user?.role?.name === 'ADMIN' || user?.role === 'Super Admin';
         if (!isAdmin) {
           return res.status(403).json({ error: 'Permission denied. Only Administrators can approve reconciliation adjustments.' });
         }
@@ -124,12 +136,12 @@ export default async function handler(req: any, res: any) {
         return res.status(200).json(result);
       }
 
-      if (action === 'revert' || action === 'delete') {
-        const isAdmin = user?.role === 'ADMIN' || user?.roleName === 'ADMIN' || user?.role?.name === 'ADMIN';
-        if (!isAdmin) {
-          return res.status(403).json({ error: 'Permission denied. Only Administrators can revert posted Petty Cash transactions.' });
-        }
+      if (action === 'bulk-delete' || action === 'bulk-revert') {
+        const result = await PettyCashService.bulkRevertTransactions(body.transactionIds, createdById, body.revertReason || 'Bulk Admin Reversal');
+        return res.status(200).json({ success: true, results: result });
+      }
 
+      if (action === 'revert' || action === 'delete') {
         const result = await PettyCashService.revertTransaction(body.transactionId, createdById, body.revertReason || 'Admin Reversal');
         return res.status(200).json(result);
       }

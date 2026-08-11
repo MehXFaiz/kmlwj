@@ -848,6 +848,132 @@ export class PettyCashService {
   }
 
   /**
+   * Bulk Revert / Delete Petty Cash Transactions (Admin only)
+   */
+  static async bulkRevertTransactions(transactionIds: string[], revertedById: string, revertReason: string) {
+    if (!Array.isArray(transactionIds) || transactionIds.length === 0) {
+      throw new Error('No transaction IDs provided for bulk deletion.');
+    }
+    if (!revertReason || !String(revertReason).trim()) {
+      throw new Error('Reason for bulk transaction reversal is required.');
+    }
+
+    const results = [];
+    for (const txId of transactionIds) {
+      try {
+        const res = await this.revertTransaction(txId, revertedById, revertReason);
+        results.push({ id: txId, status: 'SUCCESS', record: res });
+      } catch (err: any) {
+        results.push({ id: txId, status: 'FAILED', error: err.message });
+      }
+    }
+    return results;
+  }
+
+  /**
+   * Update Petty Cash Transaction (Admin / Custodian edit)
+   */
+  static async updateTransaction(transactionId: string, data: {
+    amount?: number | string;
+    paidTo?: string;
+    date?: string;
+    referenceNo?: string;
+    narration?: string;
+    expenseAccountId?: string;
+    sourceAccountId?: string;
+  }, updatedById: string) {
+    const pcTx = await prisma.pettyCashTransaction.findUnique({
+      where: { id: transactionId },
+      include: { journalEntry: { include: { lines: true } } }
+    });
+
+    if (!pcTx) throw new Error('Petty Cash transaction not found.');
+    if (pcTx.isDeleted) throw new Error('Cannot edit a deleted/reverted transaction.');
+
+    const newAmount = data.amount !== undefined ? validateAmount(data.amount).amount : Number(pcTx.amount);
+    const newAmountDec = new Prisma.Decimal(newAmount);
+    const newDate = data.date ? new Date(data.date) : pcTx.date;
+    const newPaidTo = data.paidTo !== undefined ? String(data.paidTo).trim() : pcTx.paidTo;
+    const newNarration = data.narration !== undefined ? String(data.narration).trim() : pcTx.narration;
+    const newReferenceNo = data.referenceNo !== undefined ? String(data.referenceNo).trim() : pcTx.referenceNo;
+    const newExpenseAccountId = data.expenseAccountId || pcTx.expenseAccountId;
+    const newSourceAccountId = data.sourceAccountId || pcTx.sourceAccountId;
+
+    return await prisma.$transaction(async (tx) => {
+      // 1. Revert previous JE impact from Account balances
+      if (pcTx.journalEntry) {
+        for (const line of pcTx.journalEntry.lines) {
+          const debit = new Prisma.Decimal(line.debit);
+          const credit = new Prisma.Decimal(line.credit);
+          const netEffect = debit.minus(credit);
+
+          await tx.account.update({
+            where: { id: line.accountId },
+            data: { currentBalance: { decrement: netEffect } }
+          });
+        }
+      }
+
+      // 2. Build updated JE lines
+      let newJeLines: any[] = [];
+      if (pcTx.transactionType === 'EXPENSE') {
+        const expAccId = newExpenseAccountId || pcTx.expenseAccountId;
+        if (!expAccId) throw new Error('Expense account is required.');
+        newJeLines = [
+          { accountId: expAccId, debit: newAmountDec, credit: 0, description: `Paid to ${newPaidTo || 'Recipient'}: ${newNarration || ''}` },
+          { accountId: pcTx.pettyCashAccountId, debit: 0, credit: newAmountDec, description: `Petty Cash Payment` }
+        ];
+        await tx.account.update({ where: { id: expAccId }, data: { currentBalance: { increment: newAmountDec } } });
+        await tx.account.update({ where: { id: pcTx.pettyCashAccountId }, data: { currentBalance: { decrement: newAmountDec } } });
+
+      } else if (['TRANSFER_IN', 'REPLENISHMENT'].includes(pcTx.transactionType)) {
+        const srcAccId = newSourceAccountId || pcTx.sourceAccountId;
+        if (!srcAccId) throw new Error('Source account is required.');
+        newJeLines = [
+          { accountId: pcTx.pettyCashAccountId, debit: newAmountDec, credit: 0, description: `Petty Cash Deposit` },
+          { accountId: srcAccId, debit: 0, credit: newAmountDec, description: `Transfer to Petty Cash` }
+        ];
+        await tx.account.update({ where: { id: pcTx.pettyCashAccountId }, data: { currentBalance: { increment: newAmountDec } } });
+        await tx.account.update({ where: { id: srcAccId }, data: { currentBalance: { decrement: newAmountDec } } });
+      }
+
+      // 3. Update Journal Entry if linked
+      if (pcTx.journalEntryId && newJeLines.length > 0) {
+        await tx.journalEntryLine.deleteMany({ where: { journalEntryId: pcTx.journalEntryId } });
+        await tx.journalEntry.update({
+          where: { id: pcTx.journalEntryId },
+          data: {
+            postingDate: newDate,
+            reference: newReferenceNo || pcTx.voucherNo,
+            description: newNarration || pcTx.narration || 'Petty Cash Transaction',
+            lines: { create: newJeLines }
+          }
+        });
+      }
+
+      // 4. Update Petty Cash Transaction
+      const updatedPcTx = await tx.pettyCashTransaction.update({
+        where: { id: transactionId },
+        data: {
+          amount: newAmountDec,
+          date: newDate,
+          paidTo: newPaidTo,
+          narration: newNarration,
+          referenceNo: newReferenceNo,
+          expenseAccountId: newExpenseAccountId || pcTx.expenseAccountId,
+          sourceAccountId: newSourceAccountId || pcTx.sourceAccountId
+        }
+      });
+
+      if (pcTx.journalEntryId) {
+        await BalanceRebuildService.forJournalEntry(tx, pcTx.journalEntryId);
+      }
+
+      return updatedPcTx;
+    });
+  }
+
+  /**
    * Get Voucher Details for Voucher Print Layout
    */
   static async getVoucher(voucherNoOrId: string) {
