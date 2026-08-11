@@ -386,18 +386,15 @@ export const TrialBalanceSheet = () => {
     const closing = tbReport.closingBalances || {};
     const entries = Array.isArray(tbReport.entries) ? tbReport.entries : [];
 
+    // DD-MM-YYYY, matching the printed Jammat statement ("01-07-2025").
+    // The YYYY-MM-DD input is split textually rather than parsed through Date:
+    // `new Date('2025-07-01')` is UTC midnight, so reading it back with local
+    // getters shifts the label to the previous day in any timezone west of UTC.
     const formatShortDate = (dStr, fallback) => {
       if (!dStr) return fallback;
-      try {
-        const d = new Date(dStr);
-        const day = String(d.getDate()).padStart(2, '0');
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const month = monthNames[d.getMonth()];
-        const year = d.getFullYear();
-        return `${day}-${month}-${year}`;
-      } catch (e) {
-        return fallback;
-      }
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dStr);
+      if (!m) return fallback;
+      return `${m[3]}-${m[2]}-${m[1]}`;
     };
 
     const startStr = formatShortDate(fromDate, '01-07-2025');
