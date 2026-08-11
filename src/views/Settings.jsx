@@ -6,10 +6,11 @@ import { useConfirmStore } from '../store/confirmStore';
 import { showToast } from '../components/ui/Toast';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Settings as SettingsIcon, RotateCcw, ShieldCheck, Database, HardDrive, RefreshCw, Lock, Loader2, Monitor, CheckCircle2, DownloadCloud } from 'lucide-react';
+import { Settings as SettingsIcon, RotateCcw, ShieldCheck, Database, HardDrive, RefreshCw, Lock, Loader2, Monitor, CheckCircle2, DownloadCloud, ShieldAlert } from 'lucide-react';
 import api from '../services/api';
 import { syncEngine } from '../services/syncEngine';
 import { useUpdaterStore } from '../store/updaterStore';
+import { ResetErpDataModal } from '../components/admin/ResetErpDataModal';
 
 const DesktopUpdateCard = () => {
   const { isElectron, version, status, latestVersion, releaseNotes, progress, errorMessage, lastChecked } = useUpdaterStore();
@@ -113,6 +114,9 @@ const DesktopUpdateCard = () => {
 export const Settings = () => {
   const { resetAccounts } = useCoaStore();
   const { resetJournals, logActivity } = useJournalStore();
+  const user = useAuthStore((s) => s.user);
+  const isSuperAdmin = user?.role === 'Super Admin';
+  const [showResetModal, setShowResetModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -309,32 +313,30 @@ export const Settings = () => {
             </CardHeader>
             
             <CardContent className="space-y-6">
-              {/* Reset Control */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-950 border border-slate-850">
-                <div className="space-y-1 max-w-lg">
-                  <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-                    Reset Trial Sandbox
-                  </h4>
-                  <p className="text-xs text-slate-400 leading-normal">
-                    Revert all database records to seed accounts (founder capital contribution, pre-configured parent-child current assets, cost templates).
-                  </p>
-                </div>
-                
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={handleResetSandbox}
-                  disabled={loading}
-                  className="gap-1.5 cursor-pointer whitespace-nowrap"
-                >
-                  {loading ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
+              {/* System Data Reset Control (Super Admin Only) */}
+              {isSuperAdmin && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-red-950/20 border border-red-900/40">
+                  <div className="space-y-1 max-w-lg">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-red-400 uppercase tracking-wider">
+                      <ShieldAlert className="h-4 w-4" />
+                      <span>ERP System Data Reset</span>
+                    </div>
+                    <p className="text-xs text-slate-400 leading-normal">
+                      Completely remove operational transactional data (Journal Entries, GL, Income/Expenses, Hall Bookings, Petty Cash) while keeping Chart of Accounts and master definitions intact.
+                    </p>
+                  </div>
+
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => setShowResetModal(true)}
+                    className="gap-1.5 cursor-pointer whitespace-nowrap bg-red-600 hover:bg-red-500 text-white font-bold"
+                  >
                     <RotateCcw className="h-4 w-4" />
-                  )}
-                  <span>{success ? 'Ledger Reset Complete' : 'Reset Sandbox'}</span>
-                </Button>
-              </div>
+                    <span>Reset ERP Data</span>
+                  </Button>
+                </div>
+              )}
 
               {/* Cache Stats */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -388,6 +390,13 @@ export const Settings = () => {
           </Card>
         </div>
       </div>
+
+      {showResetModal && (
+        <ResetErpDataModal
+          isOpen={showResetModal}
+          onClose={() => setShowResetModal(false)}
+        />
+      )}
     </div>
   );
 };
