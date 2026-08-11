@@ -209,7 +209,7 @@ export const Reports = () => {
       </div>
 
       {/* Date Filter Toolbar */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 mb-6 shadow-sm">
+      <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 mb-6 shadow-sm print:hidden">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
             {/* Date Range Preset Selector */}
@@ -284,7 +284,7 @@ export const Reports = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-800 gap-4 mb-6 overflow-x-auto pb-1 hide-scrollbar">
+      <div className="flex border-b border-slate-800 gap-4 mb-6 overflow-x-auto pb-1 hide-scrollbar print:hidden">
         <button
           onClick={() => handleTabChange('trial-balance')}
           className={`pb-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 whitespace-nowrap flex items-center gap-2 ${
@@ -346,12 +346,12 @@ export const Reports = () => {
                 <span>Period: {trialBalanceData.summary?.periodLabel || `FY ${fiscalYear}`}</span>
               </div>
               {trialBalanceData.openingBalances && (
-                <div className="p-4 bg-slate-950/40 border-b border-slate-800">
+                <div className="p-4 bg-slate-950/40 print:bg-transparent border-b border-slate-800 print:border-b-0 print:p-0 print:mb-4">
                   <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Opening Balances</h4>
                   <div className="flex flex-wrap gap-2">
                     {['banks', 'cashInHand', 'advanceAndLoan', 'receivable', 'otherAssets'].flatMap(k => (
                       (trialBalanceData.openingBalances[k]?.accounts || []).map(acc => (
-                        <div key={acc.glCode} className="rounded-lg bg-slate-900 border border-slate-800 px-3 py-1.5 text-xs">
+                        <div key={acc.glCode} className="rounded-lg bg-slate-900 print:bg-transparent border border-slate-800 print:border-slate-300 px-3 py-1.5 text-xs">
                           <span className="text-slate-400 font-medium">{acc.name} Opening Bal: </span>
                           <span className="font-mono font-bold text-slate-200 ml-1">{acc.balance ? formatMoney(acc.balance) : '—'}</span>
                         </div>
@@ -361,8 +361,8 @@ export const Reports = () => {
                 </div>
               )}
               <table className="w-full text-left border-collapse min-w-[700px]">
-                <thead>
-                  <tr className="border-b border-slate-800 text-xs font-semibold text-slate-400 uppercase bg-slate-900/10">
+                <thead className="print:border-b print:border-slate-300">
+                  <tr className="border-b border-slate-800 text-xs font-semibold text-slate-400 uppercase bg-slate-900/10 print:bg-transparent print:text-black">
                     <th className="py-3 px-4 w-28">GL Code</th>
                     <th className="py-3 px-4">Account Name</th>
                     <th className="py-3 px-4 w-36 text-right">Opening Bal</th>
@@ -383,7 +383,7 @@ export const Reports = () => {
                     </tr>
                   ))}
                   {/* Totals */}
-                  <tr className="bg-slate-900/40 font-bold border-t-2 border-slate-700">
+                  <tr className="bg-slate-900/40 print:bg-transparent font-bold border-t-2 border-slate-700">
                     <td colSpan={3} className="py-4 px-4 text-right text-slate-300 uppercase tracking-wider">Report Totals</td>
                     <td className={`py-4 px-4 text-right font-mono ${trialBalanceData.summary.isBalanced ? 'text-brand-400' : 'text-red-400'}`}>
                       {formatMoney(trialBalanceData.summary.totalDebit)}
