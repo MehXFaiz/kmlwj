@@ -19,11 +19,29 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const action = (req.query.action || req.body?.action) as string;
 
   if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
-    if (!await verifyPermission(req, res, PERMS.POST_JOURNAL)) return;
+    const hasMutatePerm =
+      await isSuperAdmin(req) ||
+      await checkPermission(req, PERMS.POST_JOURNAL) ||
+      await checkPermission(req, PERMS.RECORD_EXPENSE) ||
+      await checkPermission(req, PERMS.RECORD_INCOME);
+
+    if (!hasMutatePerm) {
+      return res.status(403).json({ error: { message: "Forbidden: Permission required to create or modify journal entries", status: 403 } });
+    }
   }
 
   if (method === 'GET') {
-    if (!await verifyPermission(req, res, PERMS.VIEW_JOURNALS)) return;
+    const hasViewPerm =
+      await isSuperAdmin(req) ||
+      await checkPermission(req, PERMS.VIEW_JOURNALS) ||
+      await checkPermission(req, PERMS.POST_JOURNAL) ||
+      await checkPermission(req, PERMS.RECORD_EXPENSE) ||
+      await checkPermission(req, PERMS.RECORD_INCOME) ||
+      await checkPermission(req, PERMS.VIEW_REPORTS);
+
+    if (!hasViewPerm) {
+      return res.status(403).json({ error: { message: "Forbidden: Permission required to view journal entries", status: 403 } });
+    }
   }
 
   if (method === 'GET') {
@@ -59,7 +77,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             include: { category: true }
           },
           pettyCashTransaction: {
-            include: { account: true, expenseHead: true }
+            include: { pettyCashAccount: true, expenseHead: true }
           }
         },
         orderBy: { createdAt: 'desc' },

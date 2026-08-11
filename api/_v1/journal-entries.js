@@ -1,5 +1,5 @@
 import { makeHandler } from "../_utils/handler.js";
-import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
+import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
@@ -14,10 +14,16 @@ var journal_entries_default = makeHandler(async (req, res) => {
   const { method } = req;
   const action = req.query.action || req.body?.action;
   if (method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE") {
-    if (!await verifyPermission(req, res, PERMS.POST_JOURNAL)) return;
+    const hasMutatePerm = await isSuperAdmin(req) || await checkPermission(req, PERMS.POST_JOURNAL) || await checkPermission(req, PERMS.RECORD_EXPENSE) || await checkPermission(req, PERMS.RECORD_INCOME);
+    if (!hasMutatePerm) {
+      return res.status(403).json({ error: { message: "Forbidden: Permission required to create or modify journal entries", status: 403 } });
+    }
   }
   if (method === "GET") {
-    if (!await verifyPermission(req, res, PERMS.VIEW_JOURNALS)) return;
+    const hasViewPerm = await isSuperAdmin(req) || await checkPermission(req, PERMS.VIEW_JOURNALS) || await checkPermission(req, PERMS.POST_JOURNAL) || await checkPermission(req, PERMS.RECORD_EXPENSE) || await checkPermission(req, PERMS.RECORD_INCOME) || await checkPermission(req, PERMS.VIEW_REPORTS);
+    if (!hasViewPerm) {
+      return res.status(403).json({ error: { message: "Forbidden: Permission required to view journal entries", status: 403 } });
+    }
   }
   if (method === "GET") {
     const { subsidiary, limit = "100", page = "1", type } = req.query;
@@ -49,7 +55,7 @@ var journal_entries_default = makeHandler(async (req, res) => {
             include: { category: true }
           },
           pettyCashTransaction: {
-            include: { account: true, expenseHead: true }
+            include: { pettyCashAccount: true, expenseHead: true }
           }
         },
         orderBy: { createdAt: "desc" },
