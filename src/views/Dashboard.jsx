@@ -367,7 +367,7 @@ export const Dashboard = () => {
   const navigate = useNavigate();
   const { accounts, fetchAccounts, selectedSubsidiary, fiscalYear, loading: coaLoading } = useCoaStore();
   const { journals, auditLogs, fetchJournals, isLoading: journalsLoading } = useJournalStore();
-  const { stats: dbStats, tbReport, statsParams, tbParams, fetchStats, fetchTbReport, loading: globalLoading, statsLoading, tbLoading } = useDashboardStore();
+  const { stats: dbStats, tbReport, statsParams, tbParams, fetchStats, fetchTbReport, statsLoading, tbLoading } = useDashboardStore();
   const [refreshKey, setRefreshKey] = useState(0);
 
   const statsBusy = statsLoading || tbLoading;
