@@ -367,10 +367,11 @@ export const Dashboard = () => {
   const navigate = useNavigate();
   const { accounts, fetchAccounts, selectedSubsidiary, fiscalYear, loading: coaLoading } = useCoaStore();
   const { journals, auditLogs, fetchJournals, isLoading: journalsLoading } = useJournalStore();
-  const { stats: dbStats, tbReport, statsParams, tbParams, fetchStats, fetchTbReport, loading: statsLoading } = useDashboardStore();
+  const { stats: dbStats, tbReport, statsParams, tbParams, fetchStats, fetchTbReport, loading: globalLoading, statsLoading, tbLoading } = useDashboardStore();
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const isRefreshing = statsLoading || coaLoading || journalsLoading;
+  const statsBusy = statsLoading || tbLoading;
+  const isRefreshing = statsBusy || coaLoading || journalsLoading;
   const reportParams = useMemo(() => ({
     startDate: `${fiscalYear}-01-01`,
     endDate: `${fiscalYear}-12-31`,
@@ -384,35 +385,82 @@ export const Dashboard = () => {
   }, [fetchAccounts, fetchStats, fetchTbReport, fetchJournals, selectedSubsidiary, reportParams]);
 
   // Consistency & Reconciliation Check across Posted Ledger.
-  // Only meaningful when both datasets cover the SAME period: `stats` and
-  // `tbReport` live in a store shared with TrialBalanceSheet, which loads an
-  // all-time trial balance by default. Comparing that against this view's
-  // fiscal-year summary reports the excluded years as a discrepancy even
-  // though the underlying ledger agrees exactly.
+  //
+  // The two totals come from two SEPARATE HTTP requests, so comparing them is
+  // only valid when both describe the same ledger at the same instant. Three
+  // conditions must hold, and all three are load-bearing:
+  //
+  //   1. Neither request is still in flight.
+  //   2. Both cover the same reporting period, and that period is this view's
+  //      (`stats`/`tbReport` live in a store shared with TrialBalanceSheet,
+  //      which loads an all-time trial balance by default).
+  //   3. Both responses carry the SAME `ledgerVersion` — the fingerprint of the
+  //      posted ledger they were each computed from (AccountingService
+  //      .computeWithLedgerVersion). Conditions 1 and 2 are NOT sufficient on
+  //      their own: two requests that both completed, for the same period, can
+  //      still straddle a write that landed between them, and the resulting
+  //      skew is indistinguishable from a real discrepancy without this stamp.
+  //      A response whose ledger changed mid-computation reports `null`, which
+  //      never compares equal — that cycle is skipped and the next clean pair
+  //      is reconciled instead.
+  //
+  // A genuine mismatch — both halves fresh, same period, same ledger version,
+  // different totals — still raises the alert exactly as before.
   useEffect(() => {
-    const periodOf = (p) => `${p?.startDate || ''}..${p?.endDate || ''}`;
-    const samePeriod = periodOf(statsParams) === periodOf(tbParams);
+    if (statsLoading || tbLoading) return; // Do not compare while network requests are in flight
+    if (!dbStats?.summary || !tbReport?.entries) return;
 
-    if (import.meta.env.DEV && samePeriod && dbStats?.summary && tbReport?.entries) {
-      const tbRevenue = tbReport.entries
-        .filter(e => ['REVENUE', 'INCOME'].includes((e.accountType || '').toUpperCase()))
-        .reduce((sum, e) => sum + (Number(e.credit || 0) - Number(e.debit || 0)), 0);
-      const tbExpense = tbReport.entries
-        .filter(e => ['EXPENSE', 'EXPENSES'].includes((e.accountType || '').toUpperCase()))
-        .reduce((sum, e) => sum + (Number(e.debit || 0) - Number(e.credit || 0)), 0);
-      
-      const dashRevenue = Number(dbStats.summary.totalRevenue || 0);
-      const dashExpense = Number(dbStats.summary.totalExpense || 0);
-      
-      const revDiff = Math.abs(tbRevenue - dashRevenue);
-      const expDiff = Math.abs(tbExpense - dashExpense);
-      
-      if (revDiff > 1 || expDiff > 1) {
-        console.error(`[Accounting Mismatch] Dashboard vs Trial Balance discrepancy! Revenue Diff: PKR ${revDiff}, Expense Diff: PKR ${expDiff}`);
-        showToast(`Accounting Reconciliation Alert: Dashboard and Trial Balance mismatch! (Revenue diff: PKR ${revDiff.toLocaleString()}, Expense diff: PKR ${expDiff.toLocaleString()})`, 'error');
-      }
+    const periodOf = (p) => `${p?.startDate || ''}..${p?.endDate || ''}`;
+    const samePeriod = periodOf(statsParams) === periodOf(tbParams) && periodOf(statsParams) === periodOf(reportParams);
+    const sameLedger = dbStats.ledgerVersion != null && dbStats.ledgerVersion === tbReport.ledgerVersion;
+
+    if (!import.meta.env.DEV || !samePeriod) return;
+
+    const revenueEntries = tbReport.entries.filter(e => ['REVENUE', 'INCOME'].includes((e.accountType || '').toUpperCase()));
+    const expenseEntries = tbReport.entries.filter(e => ['EXPENSE', 'EXPENSES'].includes((e.accountType || '').toUpperCase()));
+
+    const tbRevenue = revenueEntries.reduce((sum, e) => sum + (Number(e.credit || 0) - Number(e.debit || 0)), 0);
+    const tbExpense = expenseEntries.reduce((sum, e) => sum + (Number(e.debit || 0) - Number(e.credit || 0)), 0);
+
+    const dashRevenue = Number(dbStats.summary.totalRevenue || 0);
+    const dashExpense = Number(dbStats.summary.totalExpense || 0);
+
+    const revDiff = Math.abs(tbRevenue - dashRevenue);
+    const expDiff = Math.abs(tbExpense - dashExpense);
+
+    if (!sameLedger) {
+      // Not a discrepancy — the two responses simply observed different ledger
+      // states. Logged, not alerted, so the skew stays visible while debugging.
+      console.info(
+        `[Reconciliation] Skipped: responses describe different ledger states `
+        + `(stats=${dbStats.ledgerVersion ?? 'straddled-a-write'}, trialBalance=${tbReport.ledgerVersion ?? 'straddled-a-write'}). `
+        + `Uncomparable revenue delta would have been PKR ${revDiff}, expense PKR ${expDiff}.`
+      );
+      return;
     }
-  }, [dbStats, tbReport, statsParams, tbParams]);
+
+    if (revDiff > 1 || expDiff > 1) {
+      console.error(`[Accounting Mismatch] Dashboard vs Trial Balance discrepancy! Revenue Diff: PKR ${revDiff}, Expense Diff: PKR ${expDiff}`);
+      console.error('[Accounting Mismatch] Reconciliation inputs', {
+        reportPeriod: periodOf(reportParams),
+        startDate: reportParams.startDate,
+        endDate: reportParams.endDate,
+        financialYear: fiscalYear,
+        ledgerVersion: dbStats.ledgerVersion,
+        dashboard: { totalRevenue: dashRevenue, totalExpense: dashExpense, period: dbStats.reportPeriod },
+        trialBalance: { totalRevenue: tbRevenue, totalExpense: tbExpense, period: tbReport.reportPeriod },
+        revenueAccounts: revenueEntries.map(e => ({
+          id: e.id, glCode: e.glCode, accountName: e.accountName, accountType: e.accountType,
+          debit: Number(e.debit || 0), credit: Number(e.credit || 0), net: Number(e.credit || 0) - Number(e.debit || 0),
+        })),
+        expenseAccounts: expenseEntries.map(e => ({
+          id: e.id, glCode: e.glCode, accountName: e.accountName, accountType: e.accountType,
+          debit: Number(e.debit || 0), credit: Number(e.credit || 0), net: Number(e.debit || 0) - Number(e.credit || 0),
+        })),
+      });
+      showToast(`Accounting Reconciliation Alert: Dashboard and Trial Balance mismatch! (Revenue diff: PKR ${revDiff.toLocaleString()}, Expense diff: PKR ${expDiff.toLocaleString()})`, 'error');
+    }
+  }, [dbStats, tbReport, statsParams, tbParams, statsLoading, tbLoading, reportParams, fiscalYear]);
 
   const handleRefresh = useCallback(() => {
     fetchAccounts();

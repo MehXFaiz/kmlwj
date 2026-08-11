@@ -9,7 +9,9 @@ var trial_balance_default = makeHandler(async (req, res) => {
     if (!await verifyPermission(req, res, PERMS.VIEW_REPORTS)) return;
     const { startDate, endDate } = req.query || {};
     try {
-      const tb = await AccountingService.getTrialBalance(startDate, endDate);
+      const { result: tb, ledgerVersion } = await AccountingService.computeWithLedgerVersion(
+        () => AccountingService.getTrialBalance(startDate, endDate)
+      );
       const entriesMapped = tb.accounts.map((acc) => {
         if (acc.id === "retained-earnings-opening-diff") {
           return {
@@ -34,6 +36,8 @@ var trial_balance_default = makeHandler(async (req, res) => {
       return res.status(200).json({
         status: 200,
         data: {
+          ledgerVersion,
+          reportPeriod: { startDate: startDate ?? null, endDate: endDate ?? null },
           entries: entriesMapped,
           summary: {
             totalDebit: tb.totalDebit,

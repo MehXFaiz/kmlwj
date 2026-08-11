@@ -15,7 +15,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const { startDate, endDate } = (req.query || {}) as { startDate?: string; endDate?: string };
 
     try {
-      const tb = await AccountingService.getTrialBalance(startDate, endDate);
+      // Stamped with the ledger version it was computed from — see
+      // AccountingService.computeWithLedgerVersion. The Dashboard reconciles its
+      // summary against this report only when both carry the same version, so a
+      // write landing between the two requests can no longer masquerade as an
+      // accounting discrepancy.
+      const { result: tb, ledgerVersion } = await AccountingService.computeWithLedgerVersion(
+        () => AccountingService.getTrialBalance(startDate, endDate)
+      );
 
       const entriesMapped = tb.accounts.map(acc => {
         if (acc.id === 'retained-earnings-opening-diff') {
@@ -42,6 +49,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(200).json({
         status: 200,
         data: {
+          ledgerVersion,
+          reportPeriod: { startDate: startDate ?? null, endDate: endDate ?? null },
           entries: entriesMapped,
           summary: {
             totalDebit: tb.totalDebit,

@@ -1678,6 +1678,60 @@ export class AccountingService {
   // ──────────────────────────────────────────────────────────────────────────
 
   /**
+   * Fingerprint of the posted ledger at this instant.
+   *
+   * Two report responses that carry the SAME fingerprint were computed from the
+   * same underlying ledger state, so their totals are directly comparable. Two
+   * responses carrying different fingerprints had a write land between them, so
+   * any difference between their totals is snapshot skew, not a real accounting
+   * mismatch — the Dashboard's reconciliation check uses this to tell the two
+   * situations apart instead of guessing from the date range alone.
+   *
+   * Covers both tables: posting, soft-deleting, restoring and reversing an
+   * entry all change JournalEntry's row count or updatedAt, while the auto-
+   * healers (healJournalEntryAccounts / ensureLeafPostingsAndBalances) re-point
+   * a line's accountId without ever touching its parent entry.
+   */
+  static async getLedgerVersion(): Promise<string> {
+    const [entries, lines] = await Promise.all([
+      prisma.journalEntry.aggregate({
+        where: POSTED_JOURNAL_FILTER,
+        _count: { _all: true },
+        _max: { updatedAt: true }
+      }),
+      prisma.journalEntryLine.aggregate({
+        where: { journalEntry: POSTED_JOURNAL_FILTER },
+        _count: { _all: true },
+        _max: { updatedAt: true }
+      })
+    ]);
+
+    return [
+      entries._count._all,
+      entries._max.updatedAt?.getTime() ?? 0,
+      lines._count._all,
+      lines._max.updatedAt?.getTime() ?? 0
+    ].join(':');
+  }
+
+  /**
+   * Runs a report computation and stamps it with the ledger version it was
+   * computed from.
+   *
+   * Returns `ledgerVersion: null` when the ledger changed WHILE the report was
+   * being computed — that response straddled a write and must not be reconciled
+   * against any other response. A null can never compare equal to another
+   * response's version, so the reconciliation simply waits for a clean pair
+   * rather than reporting a phantom discrepancy.
+   */
+  static async computeWithLedgerVersion<T>(fn: () => Promise<T>): Promise<{ result: T; ledgerVersion: string | null }> {
+    const before = await AccountingService.getLedgerVersion();
+    const result = await fn();
+    const after = await AccountingService.getLedgerVersion();
+    return { result, ledgerVersion: before === after ? before : null };
+  }
+
+  /**
    * Aggregates posted journal entry lines per account, optionally restricted
    * to a posting-date window. One groupBy query — no per-account N+1.
    */

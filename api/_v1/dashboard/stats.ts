@@ -75,13 +75,24 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
   }
 
-  // Ensure any accidentally posted header lines are migrated to leaf accounts and balances recalculated in the background
-  AccountingService.ensureLeafPostingsAndBalances(prisma).catch((err) => {
-    console.error("Error in background ensureLeafPostingsAndBalances:", err);
+  // Migrate any accidentally posted header lines to leaf accounts and recalculate
+  // balances. This is a WRITER, so it must finish before the summary is read —
+  // firing it un-awaited let it re-point journal lines and rewrite balances
+  // *while* this very response was being computed, so the totals returned here
+  // could describe a ledger state that no longer existed by the time the client
+  // received them (and never matched what /reports/trial-balance, which awaits
+  // its own healer, computed for the same period).
+  await AccountingService.ensureLeafPostingsAndBalances(prisma).catch((err) => {
+    console.error("Error in ensureLeafPostingsAndBalances:", err);
   });
 
-  // Calculate live financial summary using AccountingService
-  const summaryResult = await AccountingService.getFinancialSummary(startDate, endDate);
+  // Calculate live financial summary using AccountingService, stamped with the
+  // ledger version it was computed from so the client can tell a genuine
+  // Dashboard-vs-Trial-Balance discrepancy apart from two responses that simply
+  // observed the ledger at different instants.
+  const { result: summaryResult, ledgerVersion } = await AccountingService.computeWithLedgerVersion(
+    () => AccountingService.getFinancialSummary(startDate, endDate)
+  );
 
   const totalAssets = summaryResult.totalAssets;
   const totalLiabilities = summaryResult.totalLiabilities;
@@ -186,6 +197,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   return res.status(200).json({
     status: 200,
     data: {
+      ledgerVersion,
+      reportPeriod: { startDate: startDate ?? null, endDate: endDate ?? null },
       totalAccounts,
       totalJournalEntries,
       revenueHeads,
