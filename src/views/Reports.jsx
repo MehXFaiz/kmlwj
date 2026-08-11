@@ -6,7 +6,7 @@ import { reportsService } from '../services/apiServices';
 import { useCoaStore } from '../store/coaStore';
 import { useDashboardStore } from '../store/dashboardStore';
 import { showToast } from '../components/ui/Toast';
-import { FileText, Banknote, PieChart, Activity, RefreshCw, BookOpen, Calendar, Filter, RotateCcw } from 'lucide-react';
+import { FileText, Banknote, PieChart, Activity, RefreshCw, BookOpen, Calendar, Filter, RotateCcw, Printer } from 'lucide-react';
 import { DesktopOnly, MobileOnly } from '../components/common/responsive';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -182,6 +182,10 @@ export const Reports = () => {
     showToast('Report refreshed');
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   const formatMoney = (val) => {
     if (val === undefined || val === null) return '—';
     return `Rs ${val.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -194,9 +198,14 @@ export const Reports = () => {
           <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">Financial Reports</h2>
           <p className="text-xs text-slate-500">Real-time aggregate financial statements based on posted ledger entries.</p>
         </div>
-        <Button onClick={handleRefresh} disabled={isLoading} className="gap-2 shrink-0">
-          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> Refresh Data
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handlePrint} variant="outline" className="gap-2 shrink-0 border-slate-700 hover:bg-slate-800 print:hidden">
+            <Printer className="h-4 w-4" /> Print
+          </Button>
+          <Button onClick={handleRefresh} disabled={isLoading} className="gap-2 shrink-0 print:hidden">
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> Refresh Data
+          </Button>
+        </div>
       </div>
 
       {/* Date Filter Toolbar */}
