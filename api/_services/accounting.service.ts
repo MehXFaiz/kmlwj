@@ -1949,20 +1949,10 @@ export class AccountingService {
       }
     }
 
-    // Filter out opening balance JV from period transactions if batch exists for this period
+    // Filter out OP opening vouchers from period transactions if startDate is provided
     let filteredEntries = entries;
-    if (targetAccount && startDate) {
-      const batchForPeriod = await prisma.openingBalanceBatch.findFirst({
-        where: {
-          OR: [
-            { openingDate: new Date(startDate) },
-            { financialYear: { contains: startDate.slice(0, 4) } }
-          ]
-        }
-      });
-      if (batchForPeriod?.journalEntryId) {
-        filteredEntries = entries.filter(e => e.journalEntryId !== batchForPeriod.journalEntryId);
-      }
+    if (startDate) {
+      filteredEntries = entries.filter(e => (e as any).journalEntry?.voucherType !== 'OP');
     }
 
     // Calculate Debit and Credit totals within range
@@ -2342,7 +2332,7 @@ export class AccountingService {
       where: {
         isDeleted: false,
         accountType: {
-          name: { in: ['REVENUE', 'EXPENSE'] }
+          name: { in: ['REVENUE', 'Revenue', 'INCOME', 'Income', 'EXPENSE', 'Expense', 'EXPENSES', 'Expenses'] }
         }
       },
       include: {
@@ -2366,7 +2356,7 @@ export class AccountingService {
     const pnlInitialApplies = !(startDate || endDate);
 
     for (const acc of pnlAccounts) {
-      const type = acc.accountType?.name;
+      const type = (acc.accountType?.name || '').toUpperCase();
       const balance = AccountingService.naturalBalance(
         type || 'REVENUE',
         pnlInitialApplies ? acc.initialBalance : 0,
@@ -2382,10 +2372,10 @@ export class AccountingService {
         balance: balance.toNumber()
       };
 
-      if (type === 'REVENUE') {
+      if (['REVENUE', 'INCOME'].includes(type)) {
         revenues.push(formatted);
         totalRevenue = totalRevenue.plus(balance);
-      } else if (type === 'EXPENSE') {
+      } else if (['EXPENSE', 'EXPENSES'].includes(type)) {
         expenses.push(formatted);
         totalExpense = totalExpense.plus(balance);
       }
