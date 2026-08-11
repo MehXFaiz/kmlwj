@@ -133,6 +133,7 @@ model Account {
   pettyCashSourceAccounts PettyCashTransaction[] @relation("PettyCashSourceAccount")
   pettyCashExpenseAccounts PettyCashTransaction[] @relation("PettyCashExpenseAccount")
   pettyCashReconciliations PettyCashReconciliation[]
+  openingBalanceLines     OpeningBalanceLine[]
 
   // Tree-building (parent lookups) and level-scoped scans hit these constantly.
   @@index([parentId])
@@ -236,6 +237,7 @@ model JournalEntry {
   zakatCard         ZakatCard?         @relation("ZakatCardJournalEntry")
   addIncomeRecord   AddIncomeRecord?   @relation("AddIncomeJournalEntry")
   pettyCashTransaction PettyCashTransaction? @relation("PettyCashJournalEntry")
+  openingBalanceBatch  OpeningBalanceBatch?  @relation("OpeningBalanceBatchJournalEntry")
 
   // Every financial report filters posted lines by their parent JournalEntry's
   // status (+ posting-date window) via getPostedAggregates — this is the single
@@ -947,4 +949,34 @@ model PettyCashReconciliation {
 
   @@index([pettyCashAccountId])
   @@index([reconciliationDate])
+}
+
+model OpeningBalanceBatch {
+  id             String               @id @default(uuid()) @db.Uuid
+  openingDate    DateTime
+  financialYear  String               @unique
+  status         String               @default("Posted")
+  journalEntryId String               @unique @db.Uuid
+  journalEntry   JournalEntry         @relation("OpeningBalanceBatchJournalEntry", fields: [journalEntryId], references: [id])
+  createdBy      String               @db.Uuid
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  lines          OpeningBalanceLine[]
+
+  @@index([openingDate])
+  @@index([financialYear])
+}
+
+model OpeningBalanceLine {
+  id        String              @id @default(uuid()) @db.Uuid
+  batchId   String              @db.Uuid
+  batch     OpeningBalanceBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  accountId String              @db.Uuid
+  account   Account             @relation(fields: [accountId], references: [id])
+  amount    Decimal             @db.Decimal(18, 2)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@index([batchId])
+  @@index([accountId])
 }

@@ -77,6 +77,7 @@ const RevenueEntryForm = lazy(() => import('./views/RevenueEntryForm').then(m =>
 const ExpenseEntryForm = lazy(() => import('./views/ExpenseEntryForm').then(m => ({ default: m.ExpenseEntryForm })));
 const TransferForm = lazy(() => import('./views/TransferForm').then(m => ({ default: m.TransferForm })));
 const PettyCash = lazy(() => import('./views/PettyCash').then(m => ({ default: m.PettyCash })));
+const OpeningBalances = lazy(() => import('./views/OpeningBalances').then(m => ({ default: m.OpeningBalances })));
 
 // Auth Views (also lazy-loaded)
 const Login = lazy(() => import('./views/Login').then(m => ({ default: m.Login })));
@@ -371,6 +372,11 @@ function App() {
             <Route path="/invoices/edit/:id" element={<InvoiceForm />} />
             <Route path="/invoices/:id" element={<InvoiceDetail />} />
             <Route path="/bank-vouchers" element={<BankVouchers />} />
+            <Route path="/opening-balances" element={
+              <PermissionGuard requiredPerms={['POST_JOURNAL']}>
+                <OpeningBalances />
+              </PermissionGuard>
+            } />
             <Route path="/bank-vouchers/new" element={<BankVoucherForm />} />
             <Route path="/bank-vouchers/revenue/new" element={<RevenueEntryForm />} />
             <Route path="/bank-vouchers/expense/new" element={<ExpenseEntryForm />} />
