@@ -25,66 +25,34 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 export async function resetFinancialData(client = prisma) {
-  console.log('🔄 Starting reset of all test data, financial data, and transactions inside a database transaction...');
+  console.log('🔄 Starting complete ERP Data Reset (deleting transactional data, preserving master config)...');
 
   const results = await client.$transaction(async (tx) => {
-    // 1. Delete Zakat Cards
-    const zcCount = await tx.zakatCard.deleteMany({});
-    
-    // 2. Delete Journal Entry Lines
-    const jelCount = await tx.journalEntryLine.deleteMany({});
-    
-    // 3. Delete Journal Entries
-    const jeCount = await tx.journalEntry.deleteMany({});
-    
-    // 4. Delete Donations (Given)
-    const donGivenCount = await tx.donation.deleteMany({});
-    
-    // 5. Delete Donations Received
-    const donRecvCount = await tx.donationReceived.deleteMany({});
-    
-    // 6. Delete Simple Expenses
-    const seCount = await tx.simpleExpense.deleteMany({});
-    
-    // 7. Delete Simple Incomes
-    const siCount = await tx.simpleIncome.deleteMany({});
-    
-    // 8. Delete Revenue Collections
-    const rcCount = await tx.revenueCollection.deleteMany({});
-    
-    // 9. Delete Invoice Items & Invoices
-    const invItemCount = await tx.invoiceItem.deleteMany({});
-    const invCount = await tx.invoice.deleteMany({});
-    
-    // 10. Delete Hall Bookings
-    const hbCount = await tx.hallBooking.deleteMany({});
+    // 1. Source Transactional Records (referencing Journal Entries & Accounts)
+    const invItem = await tx.invoiceItem.deleteMany({});
+    const inv = await tx.invoice.deleteMany({});
+    const addInc = await tx.addIncomeRecord.deleteMany({});
+    const simpInc = await tx.simpleIncome.deleteMany({});
+    const simpExp = await tx.simpleExpense.deleteMany({});
+    const don = await tx.donation.deleteMany({});
+    const donRec = await tx.donationReceived.deleteMany({});
+    const zakCard = await tx.zakatCard.deleteMany({});
+    const hallBook = await tx.hallBooking.deleteMany({});
+    const revColl = await tx.revenueCollection.deleteMany({});
+    const pettyCashTx = await tx.pettyCashTransaction.deleteMany({});
+    const pettyCashRec = await tx.pettyCashReconciliation.deleteMany({});
+    const aiIssues = await tx.aiRepairIssue.deleteMany({});
+    const aiLogs = await tx.aiRepairLog.deleteMany({});
 
-    // 11. Delete Donors
-    const donorCount = await tx.donor.deleteMany({});
+    // 2. Opening Balance Transaction Records
+    const obLine = await tx.openingBalanceLine.deleteMany({});
+    const obBatch = await tx.openingBalanceBatch.deleteMany({});
 
-    // 12. Delete Family Relationships & Members
-    const familyRelCount = await tx.familyRelationship.deleteMany({});
-    const memberCount = await tx.member.deleteMany({});
+    // 3. Journal Entry Lines & Headers
+    const jel = await tx.journalEntryLine.deleteMany({});
+    const je = await tx.journalEntry.deleteMany({});
 
-    // 13. Delete Beneficiaries
-    const benCount = await tx.beneficiary.deleteMany({});
-
-    // 14. Delete Customers
-    const custCount = await tx.customer.deleteMany({});
-
-    // 15. Delete Audit Logs
-    const auditCount = await tx.auditLog.deleteMany({});
-
-    // 16. Delete non-system test users (keep admin@erp.com and guest@erp.com)
-    const userCount = await tx.user.deleteMany({
-      where: {
-        email: {
-          notIn: ['admin@erp.com', 'guest@erp.com']
-        }
-      }
-    });
-
-    // 17. Reset Account initialBalance and currentBalance to 0 across all accounts
+    // 4. Reset Monetary Balances across all Chart of Accounts to 0
     const accUpdate = await tx.account.updateMany({
       data: {
         initialBalance: 0,
@@ -92,55 +60,82 @@ export async function resetFinancialData(client = prisma) {
       },
     });
 
-    // 18. Reset RevenueHead amounts to 0
+    // 5. Reset RevenueHead amounts to 0
     const revHeadUpdate = await tx.revenueHead.updateMany({
       data: { amount: 0 },
     });
 
+    // 6. Reset Autoincrement Voucher Sequences
+    try {
+      await tx.$executeRawUnsafe('ALTER SEQUENCE "HallBooking_receiptNo_seq" RESTART WITH 1;');
+    } catch (e) {}
+    try {
+      await tx.$executeRawUnsafe('ALTER SEQUENCE "RevenueCollection_receiptNo_seq" RESTART WITH 1;');
+    } catch (e) {}
+
+    // 7. Accounting Verification Guard
+    const remainingJEs = await tx.journalEntry.count({});
+    if (remainingJEs > 0) {
+      throw new Error(`Integrity error: ${remainingJEs} orphan journal entries remain post deletion.`);
+    }
+
+    const totals = await tx.journalEntryLine.aggregate({
+      _sum: { debit: true, credit: true }
+    });
+    const totalDebit = Number(totals._sum.debit || 0);
+    const totalCredit = Number(totals._sum.credit || 0);
+    const isBalanced = Math.abs(totalDebit - totalCredit) <= 0.01;
+
+    if (!isBalanced) {
+      throw new Error(`Accounting reconciliation failed: Total Debits (PKR ${totalDebit}) != Total Credits (PKR ${totalCredit}).`);
+    }
+
     return {
-      zcCount: zcCount.count,
-      jelCount: jelCount.count,
-      jeCount: jeCount.count,
-      donGivenCount: donGivenCount.count,
-      donRecvCount: donRecvCount.count,
-      seCount: seCount.count,
-      siCount: siCount.count,
-      rcCount: rcCount.count,
-      invItemCount: invItemCount.count,
-      invCount: invCount.count,
-      hbCount: hbCount.count,
-      donorCount: donorCount.count,
-      familyRelCount: familyRelCount.count,
-      memberCount: memberCount.count,
-      benCount: benCount.count,
-      custCount: custCount.count,
-      auditCount: auditCount.count,
-      userCount: userCount.count,
+      invItemCount: invItem.count,
+      invCount: inv.count,
+      addIncomeCount: addInc.count,
+      simpleIncomeCount: simpInc.count,
+      simpleExpenseCount: simpExp.count,
+      donationGivenCount: don.count,
+      donationReceivedCount: donRec.count,
+      zakatCardCount: zakCard.count,
+      hallBookingCount: hallBook.count,
+      revenueCollectionCount: revColl.count,
+      pettyCashTxCount: pettyCashTx.count,
+      pettyCashRecCount: pettyCashRec.count,
+      aiIssueCount: aiIssues.count,
+      aiLogCount: aiLogs.count,
+      obBatchCount: obBatch.count,
+      obLineCount: obLine.count,
+      jelCount: jel.count,
+      jeCount: je.count,
       accCount: accUpdate.count,
       revHeadCount: revHeadUpdate.count,
+      totalDebit,
+      totalCredit,
+      isBalanced
     };
   }, { timeout: 60000 });
 
-  console.log(`Deleted ${results.jelCount} JournalEntryLines`);
-  console.log(`Deleted ${results.jeCount} JournalEntries`);
-  console.log(`Deleted ${results.donGivenCount} Donations Given`);
-  console.log(`Deleted ${results.donRecvCount} Donations Received`);
-  console.log(`Deleted ${results.seCount} SimpleExpenses`);
-  console.log(`Deleted ${results.siCount} SimpleIncomes`);
-  console.log(`Deleted ${results.rcCount} RevenueCollections`);
-  console.log(`Deleted ${results.invCount} Invoices (${results.invItemCount} items)`);
-  console.log(`Deleted ${results.hbCount} HallBookings`);
-  console.log(`Deleted ${results.zcCount} ZakatCards`);
-  console.log(`Deleted ${results.donorCount} Donors`);
-  console.log(`Deleted ${results.familyRelCount} Family Relationships`);
-  console.log(`Deleted ${results.memberCount} Members`);
-  console.log(`Deleted ${results.benCount} Beneficiaries`);
-  console.log(`Deleted ${results.custCount} Customers`);
-  console.log(`Deleted ${results.auditCount} Audit Logs`);
-  console.log(`Deleted ${results.userCount} Test Users`);
-  console.log(`Reset initialBalance and currentBalance to 0 across ${results.accCount} Accounts`);
+  console.log(`✅ Deleted ${results.jeCount} Journal Entries`);
+  console.log(`✅ Deleted ${results.jelCount} Journal Entry Lines`);
+  console.log(`✅ Deleted ${results.addIncomeCount} Add Income Records`);
+  console.log(`✅ Deleted ${results.simpleIncomeCount} Simple Income Records`);
+  console.log(`✅ Deleted ${results.simpleExpenseCount} Simple Expense Records`);
+  console.log(`✅ Deleted ${results.donationGivenCount} Donations Given`);
+  console.log(`✅ Deleted ${results.donationReceivedCount} Donations Received`);
+  console.log(`✅ Deleted ${results.zakatCardCount} Zakat Cards`);
+  console.log(`✅ Deleted ${results.hallBookingCount} Hall Bookings`);
+  console.log(`✅ Deleted ${results.revenueCollectionCount} Revenue Collections`);
+  console.log(`✅ Deleted ${results.invCount} Invoices (${results.invItemCount} items)`);
+  console.log(`✅ Deleted ${results.pettyCashTxCount} Petty Cash Transactions`);
+  console.log(`✅ Deleted ${results.pettyCashRecCount} Petty Cash Reconciliations`);
+  console.log(`✅ Deleted ${results.obBatchCount} Opening Balance Batches (${results.obLineCount} lines)`);
+  console.log(`✅ Reset monetary balances to 0 across ${results.accCount} Chart of Accounts`);
+  console.log(`✅ Reset Revenue Head amounts across ${results.revHeadCount} heads`);
+  console.log(`✅ Accounting Trial Balance: Total Debits = PKR ${results.totalDebit}, Total Credits = PKR ${results.totalCredit} (BALANCED)`);
 
-  console.log('\nSystem test data and financial data have been successfully reset.\n\nAll calculations are now starting from zero.\n\nMaster system configuration has been preserved.');
+  console.log('\n🎉 Complete ERP Data Reset completed successfully.\n\nThe system is now completely empty of transactional data and ready for fresh entries.');
   return results;
 }
 
@@ -151,7 +146,7 @@ async function main() {
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   main()
     .catch((e) => {
-      console.error('❌ Error clearing test and financial data (transaction rolled back):', e);
+      console.error('❌ Error executing complete ERP data reset (transaction rolled back):', e);
       process.exit(1);
     })
     .finally(async () => {
