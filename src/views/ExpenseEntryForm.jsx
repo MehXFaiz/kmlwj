@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useCoaStore } from '../store/coaStore';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
-import { useJournalStore, calculateAccountBalances } from '../store/journalStore';
+import { useJournalStore, validateSufficientFunds } from '../store/journalStore';
 import { ChevronLeft, Save, Sparkles, AlertCircle, CheckCircle, Info, UserCheck } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
 import { useTranslation } from 'react-i18next';
@@ -247,21 +247,17 @@ export const ExpenseEntryForm = () => {
 
     let bankAcc = bankAccounts.find(a => a.id === bankAccountId);
     if (bankAcc) {
-      const { localBalances } = calculateAccountBalances(flatAccounts, journals, 'Global');
-      const avail = localBalances[bankAcc.code] !== undefined ? localBalances[bankAcc.code] : (bankAcc.initialBalance || 0);
-      if (val > avail) {
-        const isCash = bankAcc.detailType === 'Cash' || (bankAcc.name || '').toLowerCase().includes('cash');
-        const availNum = Number(avail) || 0;
-        const shortfall = val - availNum;
-        const formattedAvailable = availNum.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-        const formattedRequired = val.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-        const formattedShortfall = shortfall.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-
-        const msg = isCash
-          ? `Insufficient Cash Balance.\nAvailable Cash: Rs ${formattedAvailable}\nRequired Amount: Rs ${formattedRequired}\nShortfall: Rs ${formattedShortfall}`
-          : `Insufficient Bank Balance.\nAvailable Balance: Rs ${formattedAvailable}\nRequired Amount: Rs ${formattedRequired}\nShortfall: Rs ${formattedShortfall}`;
-
-        showToast(msg, 'error');
+      // Read-only pre-check against the live ledger. Shares one formula with
+      // BankVoucherForm and the server's FundValidationService; it never
+      // mutates a balance, which happens only when the voucher is posted.
+      const funds = validateSufficientFunds({
+        accounts: flatAccounts,
+        journals,
+        account: bankAcc,
+        amount: val,
+      });
+      if (!funds.ok) {
+        showToast(funds.message, 'error');
         return;
       }
     }
