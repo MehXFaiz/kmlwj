@@ -211,8 +211,8 @@ export const JournalEntries = () => {
           {filteredJournals.length === 0 ? (
             <p className="py-8 text-center text-slate-500 italic text-sm">No journals found.</p>
           ) : filteredJournals.map((je) => {
-            const debitTotal = je.lines.reduce((s, r) => s + r.debit, 0);
-            const creditTotal = je.lines.reduce((s, r) => s + r.credit, 0);
+            const debitTotal = sumMoney(je.lines, (r) => r.debit);
+            const creditTotal = sumMoney(je.lines, (r) => r.credit);
             const isExpanded = expandedJeId === je.id;
             return (
               <div key={je.id} className="rounded-lg border border-slate-800/60 bg-slate-950/40 overflow-hidden">
@@ -302,8 +302,8 @@ export const JournalEntries = () => {
                 filteredJournals.map((je) => {
                   const isExpanded = expandedJeId === je.id;
                   
-                  const debitTotal = je.lines.reduce((s, r) => s + r.debit, 0);
-                  const creditTotal = je.lines.reduce((s, r) => s + r.credit, 0);
+                  const debitTotal = sumMoney(je.lines, (r) => r.debit);
+                  const creditTotal = sumMoney(je.lines, (r) => r.credit);
 
                   return (
                     <Fragment key={je.id}>
