@@ -1922,14 +1922,18 @@ export class AccountingService {
 
       let batchLine: any = null;
       if (startDate) {
+        const dateParts = startDate.split('-');
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1;
+        const day = parseInt(dateParts[2], 10);
+        const startUtc = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+        const endUtc = new Date(Date.UTC(year, month, day, 23, 59, 59, 999));
+
         batchLine = await prisma.openingBalanceLine.findFirst({
           where: {
             accountId: targetAccount.id,
             batch: {
-              OR: [
-                { openingDate: new Date(startDate) },
-                { financialYear: { contains: startDate.slice(0, 4) } }
-              ]
+              openingDate: { gte: startUtc, lte: endUtc }
             }
           },
           include: { batch: true }
