@@ -1919,20 +1919,57 @@ export class AccountingService {
 
     if (targetAccount) {
       const typeName = targetAccount.accountType?.name?.toUpperCase() || 'ASSET';
-      const priorAgg = startDate
-        ? (await AccountingService.getPostedAggregates({
-            to: new Date(new Date(startDate).getTime() - 1),
-            accountIds: [targetAccount.id]
-          })).get(targetAccount.id)
-        : undefined;
-      openingBalance = AccountingService.naturalBalance(typeName, targetAccount.initialBalance ?? 0, priorAgg);
+
+      let batchLine: any = null;
+      if (startDate) {
+        batchLine = await prisma.openingBalanceLine.findFirst({
+          where: {
+            accountId: targetAccount.id,
+            batch: {
+              OR: [
+                { openingDate: new Date(startDate) },
+                { financialYear: { contains: startDate.slice(0, 4) } }
+              ]
+            }
+          },
+          include: { batch: true }
+        });
+      }
+
+      if (batchLine) {
+        openingBalance = new Prisma.Decimal(batchLine.amount || 0);
+      } else {
+        const priorAgg = startDate
+          ? (await AccountingService.getPostedAggregates({
+              to: new Date(new Date(startDate).getTime() - 1),
+              accountIds: [targetAccount.id]
+            })).get(targetAccount.id)
+          : undefined;
+        openingBalance = AccountingService.naturalBalance(typeName, targetAccount.initialBalance ?? 0, priorAgg);
+      }
+    }
+
+    // Filter out opening balance JV from period transactions if batch exists for this period
+    let filteredEntries = entries;
+    if (targetAccount && startDate) {
+      const batchForPeriod = await prisma.openingBalanceBatch.findFirst({
+        where: {
+          OR: [
+            { openingDate: new Date(startDate) },
+            { financialYear: { contains: startDate.slice(0, 4) } }
+          ]
+        }
+      });
+      if (batchForPeriod?.journalEntryId) {
+        filteredEntries = entries.filter(e => e.journalEntryId !== batchForPeriod.journalEntryId);
+      }
     }
 
     // Calculate Debit and Credit totals within range
     let totalDebit = new Prisma.Decimal(0);
     let totalCredit = new Prisma.Decimal(0);
 
-    const formattedEntries = entries.map(entry => {
+    const formattedEntries = filteredEntries.map(entry => {
       const lineDebit = new Prisma.Decimal(entry.debit);
       const lineCredit = new Prisma.Decimal(entry.credit);
       totalDebit = totalDebit.plus(lineDebit);
