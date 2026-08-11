@@ -266,21 +266,31 @@ export const calculateAccountBalances = (accounts, journals, subsidiary = 'Globa
  * @returns {{ ok: boolean, available: number, message?: string }}
  */
 export const validateSufficientFunds = ({ accounts, journals, account, amount, subsidiary = 'Global' }) => {
-  const { localBalances, invalidCodes } = calculateAccountBalances(accounts, journals, subsidiary);
-
   const required = toMoney(amount);
   if (!isSaneMoney(required) || required <= 0) {
     return { ok: false, available: NaN, message: 'Amount must be a positive number.' };
   }
 
-  const raw = localBalances[account.code] !== undefined
-    ? localBalances[account.code]
-    : account.initialBalance;
-  const available = toMoney(raw);
+  let available;
 
-  // A balance that could not be computed is an error to report, never a number
-  // to display and never grounds to silently allow or block the transaction.
-  if (invalidCodes.includes(account.code) || !isSaneMoney(available)) {
+  // Use account.currentBalance (derived from full DB ledger via AccountingService) if present and valid
+  if (account && account.currentBalance !== undefined && account.currentBalance !== null && !isNaN(Number(account.currentBalance))) {
+    available = toMoney(account.currentBalance);
+  } else {
+    const { localBalances, invalidCodes } = calculateAccountBalances(accounts, journals, subsidiary);
+    const raw = localBalances[account.code] !== undefined
+      ? localBalances[account.code]
+      : account.initialBalance;
+    available = toMoney(raw);
+
+    // A balance that could not be computed is an error to report, never a number
+    // to display and never grounds to silently allow or block the transaction.
+    if (invalidCodes.includes(account.code) || !isSaneMoney(available)) {
+      return { ok: false, available: NaN, message: BALANCE_ERROR_MESSAGE };
+    }
+  }
+
+  if (!isSaneMoney(available)) {
     return { ok: false, available: NaN, message: BALANCE_ERROR_MESSAGE };
   }
 

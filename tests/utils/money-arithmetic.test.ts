@@ -284,4 +284,11 @@ describe('validateSufficientFunds — the reported scenario', () => {
     expect(check(1000).available).toBe(7444213);
     expect(check(1000).available).toBe(7444213);
   });
+
+  it('uses account.currentBalance from API when journals list is empty or paginated', () => {
+    const accWithBalance = { ...CASH, currentBalance: 100000 };
+    const res = validateSufficientFunds({ accounts: [accWithBalance], journals: [], account: accWithBalance, amount: 40000 });
+    expect(res.ok).toBe(true);
+    expect(res.available).toBe(100000);
+  });
 });
