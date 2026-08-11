@@ -31,6 +31,7 @@ import * as XLSX from 'xlsx';
 
 import { ledgerService } from '../services/apiServices';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
+import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolver';
 
 export const AddIncomeRecords = () => {
   const navigate = useNavigate();
@@ -717,29 +718,32 @@ export const AddIncomeRecords = () => {
       )}
 
       {/* Voucher Slip Modal */}
-      {printRecord && (
-        <VoucherSlipModal
-          isOpen={!!printRecord}
-          onClose={() => setPrintRecord(null)}
-          title={`${(printRecord.category?.name || 'INCOME').toUpperCase()} RECEIPT VOUCHER`}
-          voucherNo={printRecord.journalEntry?.voucherNo || printRecord.referenceNumber || `INC-${printRecord.id?.slice(0, 8)?.toUpperCase()}`}
-          fileNo={printRecord.referenceNumber || 'ADD-INCOME'}
-          date={printRecord.date || printRecord.createdAt}
-          name={printRecord.payerName || printRecord.remarks?.match(/Payer:\s*([^|]+)/i)?.[1] || printRecord.category?.name || 'Received From Payer'}
-          fatherName={printRecord.fatherName || printRecord.remarks?.match(/Father:\s*([^|]+)/i)?.[1] || ''}
-          cnic={printRecord.cnic || printRecord.remarks?.match(/CNIC:\s*([^|]+)/i)?.[1] || ''}
-          mobile={printRecord.mobile || printRecord.remarks?.match(/Ph:\s*([^|]+)/i)?.[1] || ''}
-          address={printRecord.address || printRecord.remarks?.match(/Address:\s*([^|]+)/i)?.[1] || ''}
-          gham={printRecord.gham || printRecord.remarks?.match(/Gham:\s*([^|]+)/i)?.[1] || ''}
-          paymentMethod={printRecord.paymentMethod || 'CASH'}
-          accountName={printRecord.category?.name ? (printRecord.subCategory ? `${printRecord.category.name} - ${printRecord.subCategory}` : printRecord.category.name) : 'Income Account'}
-          particulars={`Income Received - ${printRecord.category?.name || 'Income'}${printRecord.subCategory ? ` (${printRecord.subCategory})` : ''}${printRecord.remarks ? `: ${printRecord.remarks}` : ''}`}
-          amount={printRecord.amount}
-          preparedBy="System Admin"
-          payeeLabel="Collector Signature"
-          partyLabel="Received From"
-        />
-      )}
+      {printRecord && (() => {
+        const rec = resolveVoucherRecipientDetails(printRecord);
+        return (
+          <VoucherSlipModal
+            isOpen={!!printRecord}
+            onClose={() => setPrintRecord(null)}
+            title={`${(printRecord.category?.name || 'INCOME').toUpperCase()} RECEIPT VOUCHER`}
+            voucherNo={printRecord.journalEntry?.voucherNo || printRecord.referenceNumber || `INC-${printRecord.id?.slice(0, 8)?.toUpperCase()}`}
+            fileNo={printRecord.referenceNumber || 'ADD-INCOME'}
+            date={printRecord.date || printRecord.createdAt}
+            name={rec.name !== '-' ? rec.name : ''}
+            fatherName={rec.fatherName !== '-' ? rec.fatherName : ''}
+            cnic={rec.cnic !== '-' ? rec.cnic : ''}
+            mobile={rec.mobile !== '-' ? rec.mobile : ''}
+            address={rec.address !== '-' ? rec.address : ''}
+            gham={rec.gham !== '-' ? rec.gham : ''}
+            paymentMethod={printRecord.paymentMethod || 'CASH'}
+            accountName={printRecord.category?.name ? (printRecord.subCategory ? `${printRecord.category.name} - ${printRecord.subCategory}` : printRecord.category.name) : 'Income Account'}
+            particulars={`Income Received - ${printRecord.category?.name || 'Income'}${printRecord.subCategory ? ` (${printRecord.subCategory})` : ''}${printRecord.remarks ? `: ${printRecord.remarks}` : ''}`}
+            amount={printRecord.amount}
+            preparedBy="System Admin"
+            payeeLabel="Collector Signature"
+            partyLabel="Received From"
+          />
+        );
+      })()}
     </div>
   );
 };

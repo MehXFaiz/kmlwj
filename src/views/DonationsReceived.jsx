@@ -12,6 +12,7 @@ import {
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
+import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolver';
 import { useConfirm } from '../components/ui/ConfirmationModal';
 import { DONATION_TYPES, donationTypeDisplay } from '../constants/donationTypes';
 import { paymentMethodLabel } from '../constants/paymentMethods';
@@ -40,11 +41,7 @@ function PrintReceiptModal({ donation, onClose }) {
     return res;
   })();
 
-  const cnicVal = donation.donor?.cnic || donation.member?.cnic || donation.beneficiary?.cnic || '';
-  const mobileVal = donation.donor?.mobile || donation.member?.mobile || donation.beneficiary?.mobile || '';
-  const fatherVal = donation.fatherName || meta.fatherName || donation.donor?.fatherName || donation.member?.fatherName || donation.beneficiary?.fatherName || donation.beneficiary?.husbandName || '';
-  const ghamVal = donation.gham || meta.gham || donation.donor?.gham || donation.member?.gham || donation.beneficiary?.gham || donation.beneficiary?.fatherGham || '';
-  const addressVal = donation.address || meta.address || donation.donor?.address || donation.member?.address || donation.beneficiary?.address || '';
+  const rec = resolveVoucherRecipientDetails(donation);
 
   const cleanNarration = (donation.narration || '')
     .replace(/Father:\s*[^|]+\s*\|?/gi, '')
@@ -60,12 +57,12 @@ function PrintReceiptModal({ donation, onClose }) {
       voucherNo={donation.receiptNo || donation.id?.slice(0, 8)?.toUpperCase()}
       fileNo={donation.donor?.donorCode || donation.donor?.cnic || ''}
       date={donation.receiptDate || donation.createdAt}
-      name={donation.donor?.fullName}
-      fatherName={fatherVal}
-      cnic={cnicVal}
-      mobile={mobileVal}
-      address={addressVal}
-      gham={ghamVal}
+      name={rec.name !== '-' ? rec.name : ''}
+      fatherName={rec.fatherName !== '-' ? rec.fatherName : ''}
+      cnic={rec.cnic !== '-' ? rec.cnic : ''}
+      mobile={rec.mobile !== '-' ? rec.mobile : ''}
+      address={rec.address !== '-' ? rec.address : ''}
+      gham={rec.gham !== '-' ? rec.gham : ''}
       paymentMethod={donation.paymentMethod}
       accountName={`${categoryLabel} A/c`}
       particulars={`Donation Received - ${categoryLabel}${cleanNarration ? ` (${cleanNarration})` : ''}${donation.chequeNo ? ` [Cheque #${donation.chequeNo}]` : ''}`}

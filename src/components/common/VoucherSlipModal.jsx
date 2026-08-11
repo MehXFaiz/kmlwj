@@ -4,6 +4,7 @@ import { Receipt, Printer, X } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 import { VoucherLogo } from './VoucherLogo';
 import { paymentMethodLabel } from '../../constants/paymentMethods';
+import { resolveVoucherRecipientDetails } from '../../utils/voucherRecipientResolver';
 
 const numberToWords = (num) => {
   if (!num || num === 0) return 'Zero';
@@ -415,6 +416,18 @@ export const VoucherSlipModal = ({
   if (!isOpen) return null;
 
   const contactMobile = mobile || phone || '';
+  const resolvedRecipient = resolveVoucherRecipientDetails({
+    name, fatherName, cnic, mobile: contactMobile, gham, address,
+    paidTo: name, description: particulars, reference: fileNo, remarks: remarksProp,
+    lines: ledgerRowsProp
+  });
+
+  const finalPaidTo = resolvedRecipient.name !== '-' ? resolvedRecipient.name : (name && !['recipient / bank account', 'bank account', 'cash in hand', 'cash', 'unknown'].includes(name.trim().toLowerCase()) ? name : '—');
+  const finalFatherName = resolvedRecipient.fatherName !== '-' ? resolvedRecipient.fatherName : (fatherName || '—');
+  const finalCnic = resolvedRecipient.cnic !== '-' ? resolvedRecipient.cnic : (cnic || '—');
+  const finalMobile = resolvedRecipient.mobile !== '-' ? resolvedRecipient.mobile : (contactMobile || '—');
+  const finalGham = resolvedRecipient.gham !== '-' ? resolvedRecipient.gham : (gham || '—');
+  const finalAddress = resolvedRecipient.address !== '-' ? resolvedRecipient.address : (address || '—');
 
   const handlePrint = () => {
     window.print();
@@ -450,18 +463,19 @@ export const VoucherSlipModal = ({
               {title} PREVIEW
             </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <button
               onClick={handlePrint}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C5A059] to-[#9A7B38] px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-white shadow-md transition hover:brightness-110"
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-bold text-white shadow-lg transition-all hover:from-emerald-500 hover:to-teal-500"
             >
-              <Printer className="h-4 w-4" /> Print Slip (A4)
+              <Printer className="h-4 w-4" />
+              <span>Print Slip / Save PDF</span>
             </button>
             <button
               onClick={onClose}
-              className="rounded-full p-2 text-slate-400 transition hover:bg-white/10 hover:text-white"
+              className="rounded-xl border border-slate-800 bg-slate-900 p-2 text-slate-400 hover:border-slate-700 hover:text-slate-200"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -544,12 +558,12 @@ export const VoucherSlipModal = ({
                   voucherNo={voucherNo}
                   fileNo={fileNo}
                   formattedDate={formattedDate}
-                  paidTo={name}
-                  fatherName={fatherName}
-                  cnic={cnic}
-                  mobile={contactMobile}
-                  address={address}
-                  gham={gham}
+                  paidTo={finalPaidTo}
+                  fatherName={finalFatherName}
+                  cnic={finalCnic}
+                  mobile={finalMobile}
+                  address={finalAddress}
+                  gham={finalGham}
                   paymentMethod={paymentMethod}
                   bankName={bankName}
                   chequeNumber={chequeNumber}
@@ -569,12 +583,12 @@ export const VoucherSlipModal = ({
                   voucherNo={voucherNo}
                   fileNo={fileNo}
                   formattedDate={formattedDate}
-                  paidTo={name}
-                  fatherName={fatherName}
-                  cnic={cnic}
-                  mobile={contactMobile}
-                  address={address}
-                  gham={gham}
+                  paidTo={finalPaidTo}
+                  fatherName={finalFatherName}
+                  cnic={finalCnic}
+                  mobile={finalMobile}
+                  address={finalAddress}
+                  gham={finalGham}
                   paymentMethod={paymentMethod}
                   bankName={bankName}
                   chequeNumber={chequeNumber}

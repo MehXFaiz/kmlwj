@@ -2,6 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { Printer, X, Receipt } from 'lucide-react';
 import { VoucherLogo } from './VoucherLogo';
+import { resolveVoucherRecipientDetails } from '../../utils/voucherRecipientResolver';
 
 const numberToWords = (num) => {
   if (!num || num === 0) return 'Zero';
@@ -46,8 +47,8 @@ export const PettyCashVoucherModal = ({ isOpen, onClose, voucher }) => {
     window.print();
   };
 
-  const amount = Number(voucher.amount || 0);
-  const words = `${numberToWords(amount)} Rupees Only`;
+  const resolvedRec = resolveVoucherRecipientDetails(voucher);
+  const displayPaidTo = resolvedRec.name !== '-' ? resolvedRec.name : (voucher.paidTo || '-');
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
@@ -112,7 +113,7 @@ export const PettyCashVoucherModal = ({ isOpen, onClose, voucher }) => {
               </div>
               <div className="flex justify-between py-1 border-b border-slate-800/40 print:border-gray-100">
                 <span className="text-slate-500 font-semibold print:text-gray-600">Paid To / Recipient:</span>
-                <span className="font-bold text-slate-200 print:text-black">{voucher.paidTo || '-'}</span>
+                <span className="font-bold text-slate-200 print:text-black">{displayPaidTo}</span>
               </div>
             </div>
 

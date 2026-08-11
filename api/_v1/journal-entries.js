@@ -37,6 +37,19 @@ var journal_entries_default = makeHandler(async (req, res) => {
         include: {
           lines: {
             include: { account: true }
+          },
+          donationReceived: {
+            include: { donor: true }
+          },
+          zakatCard: {
+            include: { member: true, beneficiary: true }
+          },
+          revenueCollection: true,
+          addIncomeRecord: {
+            include: { category: true }
+          },
+          pettyCashTransaction: {
+            include: { account: true, expenseHead: true }
           }
         },
         orderBy: { createdAt: "desc" },
@@ -56,9 +69,15 @@ var journal_entries_default = makeHandler(async (req, res) => {
       postedBy: je.postedBy,
       status: je.status,
       voucherType: je.voucherType,
+      donationReceived: je.donationReceived,
+      zakatCard: je.zakatCard,
+      revenueCollection: je.revenueCollection,
+      addIncomeRecord: je.addIncomeRecord,
+      pettyCashTransaction: je.pettyCashTransaction,
       lines: je.lines.map((line) => ({
         id: line.id,
         accountCode: line.account.glCode,
+        accountName: line.account.accountName,
         description: line.description,
         debit: line.debit,
         credit: line.credit

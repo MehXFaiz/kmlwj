@@ -9,6 +9,7 @@ import { MinusCircle, Search, X, CheckCircle2, TrendingDown, Building2, Banknote
 import { useConfirm } from '../components/ui/ConfirmationModal';
 import { paymentMethodLabel } from '../constants/paymentMethods';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
+import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolver';
 import { PhoneInput } from '../components/ui/PhoneInput';
 import { CNICInput } from '../components/ui/CNICInput';
 
@@ -538,29 +539,32 @@ export const Expenses = () => {
         editingExpense={editingExpense}
       />
 
-      {printExpense && (
-        <VoucherSlipModal
-          isOpen={true}
-          onClose={() => setPrintExpense(null)}
-          title="EXPENSE PAYMENT VOUCHER"
-          voucherNo={printExpense.id?.slice(0, 8)?.toUpperCase() || 'EXP-VOUCHER'}
-          fileNo={printExpense.reference || 'EXPENSE'}
-          date={printExpense.date}
-          name={printExpense.paidTo || 'Paid To Recipient'}
-          fatherName={printExpense.fatherName || printExpense.payeeFatherName || printExpense.beneficiary?.fatherName || printExpense.beneficiary?.husbandName || printExpense.member?.fatherName || ''}
-          cnic={printExpense.cnic || printExpense.payeeCnic || printExpense.beneficiary?.cnic || printExpense.member?.cnic || ''}
-          mobile={printExpense.mobile || printExpense.payeeMobile || printExpense.beneficiary?.mobile || printExpense.member?.mobile || ''}
-          address={printExpense.address || printExpense.payeeAddress || printExpense.beneficiary?.address || printExpense.member?.address || ''}
-          gham={printExpense.gham || printExpense.payeeGham || printExpense.beneficiary?.gham || printExpense.beneficiary?.fatherGham || printExpense.member?.gham || ''}
-          paymentMethod={printExpense.paymentMethod}
-          accountName={printExpense.expenseHead?.name || 'Expense Account'}
-          particulars={printExpense.description || 'Expense payment disbursement'}
-          amount={printExpense.amount}
-          preparedBy="System Admin"
-          payeeLabel="Payee Signature"
-          partyLabel="Paid To"
-        />
-      )}
+      {printExpense && (() => {
+        const rec = resolveVoucherRecipientDetails(printExpense);
+        return (
+          <VoucherSlipModal
+            isOpen={true}
+            onClose={() => setPrintExpense(null)}
+            title="EXPENSE PAYMENT VOUCHER"
+            voucherNo={printExpense.id?.slice(0, 8)?.toUpperCase() || 'EXP-VOUCHER'}
+            fileNo={printExpense.reference || 'EXPENSE'}
+            date={printExpense.date}
+            name={rec.name !== '-' ? rec.name : ''}
+            fatherName={rec.fatherName !== '-' ? rec.fatherName : ''}
+            cnic={rec.cnic !== '-' ? rec.cnic : ''}
+            mobile={rec.mobile !== '-' ? rec.mobile : ''}
+            address={rec.address !== '-' ? rec.address : ''}
+            gham={rec.gham !== '-' ? rec.gham : ''}
+            paymentMethod={printExpense.paymentMethod}
+            accountName={printExpense.expenseHead?.name || 'Expense Account'}
+            particulars={printExpense.description || 'Expense payment disbursement'}
+            amount={printExpense.amount}
+            preparedBy="System Admin"
+            payeeLabel="Payee Signature"
+            partyLabel="Paid To"
+          />
+        );
+      })()}
     </div>
   );
 };

@@ -7,6 +7,7 @@ import { showToast } from '../components/ui/Toast';
 import { Heart, Search, Plus, Edit2, Trash2, CheckCircle2, X, AlertTriangle, Printer, Phone, CreditCard, Banknote, Calendar, MapPin, SlidersHorizontal, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
+import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolver';
 import { EmptyState } from '../components/ui/EmptyState';
 import { DONATION_TYPES, donationTypeDisplay } from '../constants/donationTypes';
 import { paymentMethodLabel } from '../constants/paymentMethods';
@@ -300,13 +301,7 @@ const numberToWords = (num) => {
 function DonationInvoiceModal({ donation, onClose }) {
   if (!donation) return null;
 
-  const ben = donation.beneficiary;
-  const donor = donation.donor;
-  const cnicVal = ben?.cnic || donor?.cnic || '';
-  const mobileVal = ben?.mobile || donation.donorMobile || donor?.mobile || '';
-  const fullAddress = ben?.address
-    ? [ben.address, ben.area, ben.town].filter(Boolean).join(', ')
-    : (donor?.address || '');
+  const rec = resolveVoucherRecipientDetails(donation);
 
   return (
     <VoucherSlipModal
@@ -316,12 +311,12 @@ function DonationInvoiceModal({ donation, onClose }) {
       voucherNo={donation.id?.slice(0, 8)?.toUpperCase()}
       fileNo={donationTypeDisplay(donation.donationType, donation.customDonationType)}
       date={donation.createdAt}
-      name={donation.donorName || ben?.name || ''}
-      fatherName={ben?.fatherName || ben?.husbandName || donor?.fatherName || ''}
-      cnic={cnicVal}
-      mobile={mobileVal}
-      address={fullAddress}
-      gham={ben?.gham || ben?.fatherGham || ben?.husbandGham || donor?.gham || ''}
+      name={rec.name !== '-' ? rec.name : ''}
+      fatherName={rec.fatherName !== '-' ? rec.fatherName : ''}
+      cnic={rec.cnic !== '-' ? rec.cnic : ''}
+      mobile={rec.mobile !== '-' ? rec.mobile : ''}
+      address={rec.address !== '-' ? rec.address : ''}
+      gham={rec.gham !== '-' ? rec.gham : ''}
       paymentMethod={donation.paymentMethod}
       accountName="Donation Disbursement A/c"
       particulars={`Donation Given / Disbursement - ${donationTypeDisplay(donation.donationType, donation.customDonationType)}${donation.remarks ? ` (${donation.remarks})` : ''}${donation.chequeNumber ? ` [Cheque #${donation.chequeNumber}]` : ''}`}
