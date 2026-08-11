@@ -60,14 +60,26 @@ describe('Financial Year Opening/Closing & Automatic Rollover Engine', { timeout
       where: { code: { in: [testFy1, testFy2] } }
     });
 
-    // 3. Resolve Accounts
-    const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
-    cashAccountId = cashAccount.id;
-    cashGlCode = cashAccount.glCode;
+    // 3. Create isolated Test Asset Account
+    let assetType = await prisma.accountType.findFirst({ where: { name: { in: ['ASSET', 'Asset'] } } });
+    if (!assetType) assetType = await prisma.accountType.create({ data: { name: 'ASSET', description: 'Asset' } });
 
-    let revAccount = await prisma.account.findFirst({
-      where: { accountType: { name: { in: ['REVENUE', 'Revenue', 'INCOME', 'Income'] } }, isDeleted: false, children: { none: {} } }
-    });
+    let testCashAccount = await prisma.account.findUnique({ where: { glCode: '1010199-TEST' } });
+    if (!testCashAccount) {
+      testCashAccount = await prisma.account.create({
+        data: {
+          glCode: '1010199-TEST',
+          accountName: 'Test Bank Account',
+          accountLevel: 'GL',
+          accountTypeId: assetType.id,
+          detailType: 'Bank'
+        }
+      });
+    }
+    cashAccountId = testCashAccount.id;
+    cashGlCode = testCashAccount.glCode;
+
+    let revAccount = await prisma.account.findUnique({ where: { glCode: '4010199-TEST' } });
     if (!revAccount) {
       let revType = await prisma.accountType.findFirst({ where: { name: { in: ['REVENUE', 'Revenue'] } } });
       if (!revType) revType = await prisma.accountType.create({ data: { name: 'REVENUE', description: 'Revenue' } });
@@ -77,9 +89,7 @@ describe('Financial Year Opening/Closing & Automatic Rollover Engine', { timeout
     }
     revenueAccountId = revAccount.id;
 
-    let expAccount = await prisma.account.findFirst({
-      where: { accountType: { name: { in: ['EXPENSE', 'Expense', 'EXPENSES', 'Expenses'] } }, isDeleted: false, children: { none: {} } }
-    });
+    let expAccount = await prisma.account.findUnique({ where: { glCode: '5010199-TEST' } });
     if (!expAccount) {
       let expType = await prisma.accountType.findFirst({ where: { name: { in: ['EXPENSE', 'Expense'] } } });
       if (!expType) expType = await prisma.accountType.create({ data: { name: 'EXPENSE', description: 'Expense' } });
@@ -89,9 +99,7 @@ describe('Financial Year Opening/Closing & Automatic Rollover Engine', { timeout
     }
     expenseAccountId = expAccount.id;
 
-    let eqAccount = await prisma.account.findFirst({
-      where: { accountType: { name: { in: ['EQUITY', 'Equity'] } }, isDeleted: false, children: { none: {} } }
-    });
+    let eqAccount = await prisma.account.findUnique({ where: { glCode: '3030199-TEST' } });
     if (!eqAccount) {
       let eqType = await prisma.accountType.findFirst({ where: { name: { in: ['EQUITY', 'Equity'] } } });
       if (!eqType) eqType = await prisma.accountType.create({ data: { name: 'EQUITY', description: 'Equity' } });
@@ -237,7 +245,7 @@ describe('Financial Year Opening/Closing & Automatic Rollover Engine', { timeout
       postingDate: '2027-08-10'
     });
 
-    // Verify Trial Balance for FY 2027-2028 is balanced and cash equals 120,000 without double counting
+    // Verify Trial Balance for FY 2027-2028 is balanced
     const tbNext = await AccountingService.getTrialBalance('2027-07-01', '2028-06-30');
     expect(tbNext.difference).toBeLessThan(0.01);
   });
