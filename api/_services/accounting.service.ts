@@ -1319,6 +1319,42 @@ export class AccountingService {
     return false;
   }
 
+  /**
+   * The six canonical opening/closing-balance accounts of the seeded Chart of
+   * Accounts, addressed by their EXPLICIT GL code. These codes are structural
+   * (prisma/seed.ts) and stable; unlike account names they cannot drift or be
+   * accidentally matched by a substring.
+   */
+  static readonly BALANCE_CATEGORY_BY_GL_CODE: Readonly<Record<string, 'cashInHand' | 'banks' | 'advanceAndLoan' | 'receivable'>> = {
+    '1010101': 'banks',          // National Bank of Pakistan
+    '1010102': 'banks',          // NBP Zakat Bank
+    '1010103': 'cashInHand',     // Cash in Hand
+    '1010104': 'cashInHand',     // Petty Cash
+    '1010201': 'receivable',     // Accounts Receivable
+    '1010301': 'advanceAndLoan', // Advances & Loans
+  };
+
+  /** Structural fallback for asset accounts added after the seed. */
+  private static readonly BALANCE_CATEGORY_BY_DETAIL_TYPE: Readonly<Record<string, 'cashInHand' | 'banks' | 'advanceAndLoan' | 'receivable'>> = {
+    bank: 'banks',
+    cash: 'cashInHand',
+    pettycash: 'cashInHand',
+    receivable: 'receivable',
+    advance: 'advanceAndLoan',
+  };
+
+  /**
+   * Files a leaf ASSET account into its Opening/Closing Balance category using
+   * its GL code, falling back to its structural `detailType`. Never looks at the
+   * account name — see the note in getTrialBalance.
+   */
+  static classifyBalanceAccount(glCode: string, detailType: string | null): 'cashInHand' | 'banks' | 'advanceAndLoan' | 'receivable' | 'otherAssets' {
+    const byCode = AccountingService.BALANCE_CATEGORY_BY_GL_CODE[glCode];
+    if (byCode) return byCode;
+    const byDetail = AccountingService.BALANCE_CATEGORY_BY_DETAIL_TYPE[(detailType || '').toLowerCase()];
+    return byDetail ?? 'otherAssets';
+  }
+
   static isBankAccount(name: string, detailType: string): boolean {
     const nameLower = (name || '').toLowerCase();
     if (nameLower.includes('bank') || nameLower.includes('al-habib') || nameLower.includes('nbp') || nameLower.includes('national bank') || nameLower.includes('mcb') || nameLower.includes('ubl') || nameLower.includes('allied') || nameLower.includes('faysal')) return true;
@@ -1968,11 +2004,14 @@ export class AccountingService {
     // Receivable, and a residual "Other Assets" bucket for anything else.
     // Every figure comes from initialBalance + posted JournalEntryLine
     // aggregates only, via the exact same naturalBalance()/getPostedAggregates()
-    // helpers every other report in this service uses — nothing cached, and no
-    // account *name* is hardcoded, only the small set of `detailType`
-    // conventions seeded in prisma/seed.ts (Cash / Bank / Receivable / Advance),
-    // with the existing isCashAccount/isBankAccount name-fallback for any older
-    // account whose detailType predates that convention.
+    // helpers every other report in this service uses — nothing cached.
+    //
+    // Accounts are identified by their EXPLICIT GL code first, then by the
+    // structural `detailType` seeded in prisma/seed.ts. Account *names* are
+    // never inspected: the previous isCashAccount/isBankAccount fallback matched
+    // name substrings ('cash', 'bank', 'nbp', 'mcb', …), which silently
+    // mis-filed any account whose name happened to contain one of those words
+    // — e.g. a revenue account named "Bank Profit", or "Cash Donation Box".
     type CategoryKey = 'cashInHand' | 'banks' | 'advanceAndLoan' | 'receivable' | 'otherAssets';
     interface BalanceAccount {
       id: string;
@@ -2026,12 +2065,7 @@ export class AccountingService {
         const openingBal = AccountingService.naturalBalance(typeName, acc.initialBalance, priorAggregates.get(acc.id));
         const closingBal = AccountingService.naturalBalance(typeName, acc.initialBalance, cumulativeAggregates.get(acc.id));
 
-        let key: CategoryKey;
-        if (AccountingService.isBankAccount(acc.accountName, acc.detailType)) key = 'banks';
-        else if (AccountingService.isCashAccount(acc.accountName, acc.detailType)) key = 'cashInHand';
-        else if ((acc.detailType || '').toLowerCase() === 'receivable') key = 'receivable';
-        else if ((acc.detailType || '').toLowerCase() === 'advance') key = 'advanceAndLoan';
-        else key = 'otherAssets';
+        const key = AccountingService.classifyBalanceAccount(acc.glCode, acc.detailType);
 
         const opDeb = isDebitNormal ? (openingBal.gt(0) ? openingBal.toNumber() : 0) : (openingBal.lt(0) ? openingBal.abs().toNumber() : 0);
         const opCrd = isDebitNormal ? (openingBal.lt(0) ? openingBal.abs().toNumber() : 0) : (openingBal.gt(0) ? openingBal.toNumber() : 0);
@@ -2045,8 +2079,13 @@ export class AccountingService {
         closingCats[key].accounts.push({ id: acc.id, glCode: acc.glCode, name: acc.accountName, balance: closingBal.toNumber(), debit: clDeb, credit: clCrd, accountType: typeName });
       }
 
-      // Skip accounts with zero balance unless it's a primary Cash or Bank account or has an initial balance
-      const isCashOrBank = AccountingService.isCashAccount(acc.accountName, acc.detailType) || AccountingService.isBankAccount(acc.accountName, acc.detailType);
+      // Skip accounts with zero balance unless it's a primary Cash or Bank
+      // account or has an initial balance. Identified structurally (GL code /
+      // detailType) rather than by name substring, for the reason above.
+      const balanceCategory = typeName === 'ASSET'
+        ? AccountingService.classifyBalanceAccount(acc.glCode, acc.detailType)
+        : 'otherAssets';
+      const isCashOrBank = balanceCategory === 'cashInHand' || balanceCategory === 'banks';
       if (balance.isZero() && !isCashOrBank && new Prisma.Decimal(acc.initialBalance ?? 0).isZero()) continue;
 
       let debit = new Prisma.Decimal(0);
