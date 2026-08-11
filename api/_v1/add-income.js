@@ -285,43 +285,48 @@ var add_income_default = makeHandler(async (req, res) => {
     return res.status(200).json({ status: 200, message: "Income record updated successfully", data: result });
   }
   if (method === "DELETE") {
-    const targetId = String(req.query.id || req.body?.id || "");
-    if (!targetId) {
-      return res.status(400).json({ error: { message: "Income Record ID required", status: 400 } });
+    const bodyIds = req.body?.ids;
+    const queryIds = req.query.ids ? String(req.query.ids).split(",") : null;
+    const ids = Array.isArray(bodyIds) ? bodyIds : queryIds || (req.query.id || req.body?.id ? [String(req.query.id || req.body?.id)] : []);
+    if (!ids || ids.length === 0) {
+      return res.status(400).json({ error: { message: "Income Record ID(s) required", status: 400 } });
     }
     const isPermanent = req.query.permanent === "true" || req.query.action === "permanent_delete" || req.body?.permanent === true;
     if (isPermanent && !await isSuperAdmin(req)) {
       return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can permanently delete records", status: 403 } });
     }
     await prisma.$transaction(async (tx) => {
-      const existing = await tx.addIncomeRecord.findUnique({ where: { id: targetId } });
-      if (!existing) return;
-      if (existing.journalEntryId) {
-        try {
-          if (isPermanent) {
-            await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user.id, "Income Record Permanently Deleted");
-          } else {
-            await tx.journalEntry.update({
-              where: { id: existing.journalEntryId },
-              data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
-            });
-            await AccountingService.recalculateBalancesForJournalEntry(tx, existing.journalEntryId);
+      const existingRecords = await tx.addIncomeRecord.findMany({
+        where: { id: { in: ids } }
+      });
+      for (const existing of existingRecords) {
+        if (existing.journalEntryId) {
+          try {
+            if (isPermanent) {
+              await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user.id, "Income Record Permanently Deleted");
+            } else {
+              await tx.journalEntry.update({
+                where: { id: existing.journalEntryId },
+                data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
+              });
+              await AccountingService.recalculateBalancesForJournalEntry(tx, existing.journalEntryId);
+            }
+          } catch (e) {
           }
-        } catch (e) {
+        }
+        if (isPermanent) {
+          await tx.addIncomeRecord.delete({ where: { id: existing.id } });
+          await logAudit(req.user.id, "Permanent Delete Income Record", "Add Income", existing, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+        } else {
+          const updated = await tx.addIncomeRecord.update({
+            where: { id: existing.id },
+            data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
+          });
+          await logAudit(req.user.id, "Delete Income Record", "Add Income", existing, updated, req.headers["x-forwarded-for"], req.headers["user-agent"]);
         }
       }
-      if (isPermanent) {
-        await tx.addIncomeRecord.delete({ where: { id: targetId } });
-        await logAudit(req.user.id, "Permanent Delete Income Record", "Add Income", existing, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-      } else {
-        const updated = await tx.addIncomeRecord.update({
-          where: { id: targetId },
-          data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
-        });
-        await logAudit(req.user.id, "Delete Income Record", "Add Income", existing, updated, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-      }
     }, accountingTxOptions);
-    return res.status(200).json({ status: 200, message: "Income record deleted successfully" });
+    return res.status(200).json({ status: 200, message: `${ids.length} income record(s) deleted successfully` });
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
 });

@@ -24,7 +24,9 @@ import {
   ChevronRight,
   Lock,
   Tag,
-  Printer
+  Printer,
+  LayoutGrid,
+  Table as TableIcon
 } from 'lucide-react';
 import { pageActionsClass } from '../components/common/responsive';
 import * as XLSX from 'xlsx';
@@ -45,7 +47,8 @@ export const AddIncomeRecords = () => {
     loading,
     fetchCategories,
     fetchRecords,
-    deleteRecord
+    deleteRecord,
+    bulkDeleteRecords
   } = useAddIncomeStore();
 
   // Filters & Search
@@ -56,6 +59,12 @@ export const AddIncomeRecords = () => {
   const [endDate, setEndDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
+
+  // View Mode & Selection
+  const [viewMode, setViewMode] = useState('table');
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const [deletingRecordId, setDeletingRecordId] = useState(null);
   const [postingRecord, setPostingRecord] = useState(null);
@@ -83,6 +92,22 @@ export const AddIncomeRecords = () => {
   useEffect(() => {
     loadRecordsData();
   }, [loadRecordsData]);
+
+  // Selection handlers
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds(records.map((r) => r.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id, e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
 
   // Handle Ledger Post
   const handlePostToLedger = async () => {
@@ -125,15 +150,36 @@ export const AddIncomeRecords = () => {
     }
   };
 
-  // Confirm Record Delete
+  // Confirm Single Record Delete
   const handleDeleteRecord = async () => {
     if (!deletingRecordId) return;
     try {
       await deleteRecord(deletingRecordId);
       showToast('Income record deleted successfully', 'success');
+      setSelectedIds((prev) => prev.filter((id) => id !== deletingRecordId));
       setDeletingRecordId(null);
     } catch (err) {
       showToast(err.response?.data?.error?.message || err.message || 'Failed to delete record', 'error');
+    }
+  };
+
+  // Confirm Bulk Record Delete
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!isAdminOrSuperAdmin) {
+      showToast('Forbidden: Only Admin and Super Admin can Bulk Delete', 'error');
+      return;
+    }
+    try {
+      setBulkDeleting(true);
+      await bulkDeleteRecords(selectedIds);
+      showToast(`${selectedIds.length} income record(s) deleted successfully`, 'success');
+      setSelectedIds([]);
+      setShowBulkDeleteModal(false);
+    } catch (err) {
+      showToast(err.response?.data?.error?.message || err.message || 'Failed to delete records', 'error');
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -172,7 +218,7 @@ export const AddIncomeRecords = () => {
     startOfMonth.setHours(0, 0, 0, 0);
 
     const monthlyAmount = records
-      .filter(r => new Date(r.date) >= startOfMonth)
+      .filter((r) => new Date(r.date) >= startOfMonth)
       .reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
 
     return {
@@ -209,6 +255,16 @@ export const AddIncomeRecords = () => {
         </div>
 
         <div className={pageActionsClass}>
+          {isAdminOrSuperAdmin && selectedIds.length > 0 && (
+            <button
+              onClick={() => setShowBulkDeleteModal(true)}
+              className="flex items-center gap-2 px-3.5 py-2 bg-red-950/70 hover:bg-red-900/90 border border-red-800/80 rounded-xl text-red-300 text-xs font-bold transition-all cursor-pointer shadow-sm animate-in fade-in duration-200"
+            >
+              <Trash2 className="h-4 w-4" />
+              Bulk Delete ({selectedIds.length})
+            </button>
+          )}
+
           <button
             onClick={handleExport}
             className="flex items-center gap-2 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 rounded-xl text-slate-200 text-xs font-semibold transition-all cursor-pointer shadow-sm"
@@ -296,122 +352,127 @@ export const AddIncomeRecords = () => {
 
       {/* Toolbar */}
       <Card className="bg-slate-900/90 border-slate-800/80 p-4 space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          <div className="relative lg:col-span-2">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
-            <input
-              type="text"
-              placeholder="Search reference, remarks, category, bank..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-slate-950/70 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500/50"
-            />
-            {search && (
-              <button onClick={() => setSearch('')} className="absolute right-2.5 top-2.5 text-slate-500 hover:text-slate-300">
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 flex-1">
+            <div className="relative lg:col-span-1">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+              <input
+                type="text"
+                placeholder="Search reference, remarks, category, bank..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-slate-950/70 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500/50"
+              />
+              {search && (
+                <button onClick={() => setSearch('')} className="absolute right-2.5 top-2.5 text-slate-500 hover:text-slate-300">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
 
-          <div>
-            <select
-              value={selectedCategoryFilter}
-              onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-              className="w-full bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-brand-500/50"
-            >
-              <option value="all">All Categories ({categories.length})</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <select
-              value={selectedMethodFilter}
-              onChange={(e) => setSelectedMethodFilter(e.target.value)}
-              className="w-full bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-brand-500/50"
-            >
-              <option value="all">All Payment Methods</option>
-              <option value="CASH">Cash</option>
-              <option value="BANK">Bank</option>
-              <option value="CHEQUE">Cheque</option>
-              <option value="ONLINE">Online</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full bg-slate-950/70 border border-slate-800 rounded-xl px-2 py-2 text-xs text-slate-200 focus:outline-none focus:border-brand-500/50"
-              title="Start Date"
-            />
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full bg-slate-950/70 border border-slate-800 rounded-xl px-2 py-2 text-xs text-slate-200 focus:outline-none focus:border-brand-500/50"
-              title="End Date"
-            />
-            {(search || selectedCategoryFilter !== 'all' || selectedMethodFilter !== 'all' || startDate || endDate) && (
-              <button
-                onClick={() => {
-                  setSearch('');
-                  setSelectedCategoryFilter('all');
-                  setSelectedMethodFilter('all');
-                  setStartDate('');
-                  setEndDate('');
-                }}
-                className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 rounded-xl transition-colors shrink-0"
-                title="Reset Filters"
+            <div>
+              <select
+                value={selectedCategoryFilter}
+                onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+                className="w-full bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-brand-500/50"
               >
-                <RefreshCw className="h-3.5 w-3.5" />
-              </button>
-            )}
+                <option value="all">All Categories ({categories.length})</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <select
+                value={selectedMethodFilter}
+                onChange={(e) => setSelectedMethodFilter(e.target.value)}
+                className="w-full bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-brand-500/50"
+              >
+                <option value="all">All Payment Methods</option>
+                <option value="CASH">Cash</option>
+                <option value="BANK">Bank</option>
+                <option value="CHEQUE">Cheque</option>
+                <option value="ONLINE">Online</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full bg-slate-950/70 border border-slate-800 rounded-xl px-2 py-2 text-xs text-slate-200 focus:outline-none focus:border-brand-500/50"
+                title="Start Date"
+              />
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full bg-slate-950/70 border border-slate-800 rounded-xl px-2 py-2 text-xs text-slate-200 focus:outline-none focus:border-brand-500/50"
+                title="End Date"
+              />
+              {(search || selectedCategoryFilter !== 'all' || selectedMethodFilter !== 'all' || startDate || endDate) && (
+                <button
+                  onClick={() => {
+                    setSearch('');
+                    setSelectedCategoryFilter('all');
+                    setSelectedMethodFilter('all');
+                    setStartDate('');
+                    setEndDate('');
+                  }}
+                  className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 rounded-xl transition-colors shrink-0"
+                  title="Reset Filters"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center bg-slate-950/80 rounded-xl p-1 border border-slate-800 shrink-0">
+            <button
+              type="button"
+              onClick={() => setViewMode('cards')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                viewMode === 'cards' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" /> Card View
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                viewMode === 'table' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <TableIcon className="h-3.5 w-3.5" /> Table View
+            </button>
           </div>
         </div>
       </Card>
 
-      {/* Main Table View */}
+      {/* Main View Container */}
       <Card className="bg-slate-900/90 border-slate-800/80 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-slate-950/60 border-b border-slate-800/80 text-slate-400 font-bold uppercase tracking-wider">
-                <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4">Category</th>
-                <th className="py-3 px-4">Amount</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4">Payment Method</th>
-                <th className="py-3 px-4">Bank Account</th>
-                <th className="py-3 px-4">Ref # / Journal</th>
-                <th className="py-3 px-4">Remarks</th>
-                <th className="py-3 px-4 text-center">Attachment</th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60">
-              {loading && records.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-500">
-                    <div className="h-6 w-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                    Loading income records...
-                  </td>
-                </tr>
-              ) : records.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-500">
-                    <TrendingUp className="h-10 w-10 mx-auto text-slate-700 mb-2" />
-                    <p className="font-semibold text-slate-400">No income records found</p>
-                    <p className="text-[11px] text-slate-600 mt-1">Try adjusting filters or click "Add Income Entry"</p>
-                  </td>
-                </tr>
-              ) : (
-                records.map((rec) => {
+        {viewMode === 'cards' ? (
+          <div className="p-5">
+            {loading && records.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400">
+                <div className="h-6 w-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+                <span className="text-sm">Loading income records...</span>
+              </div>
+            ) : records.length === 0 ? (
+              <div className="py-16 text-center bg-slate-900/40 border border-slate-800/60 rounded-2xl">
+                <TrendingUp className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+                <p className="text-slate-400 font-semibold text-sm">No income records found</p>
+                <p className="text-slate-500 text-xs mt-1">Try adjusting filters or click "Add Income Entry"</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                {records.map((rec) => {
                   const methodBadge = {
                     CASH: 'bg-emerald-950/80 text-emerald-400 border-emerald-800/50',
                     BANK: 'bg-blue-950/80 text-blue-400 border-blue-800/50',
@@ -423,79 +484,132 @@ export const AddIncomeRecords = () => {
                   const isReverted = rec.status === 'REVERTED';
                   const isPending = !isPosted && !isReverted;
 
-                  const statusBadge = isPosted ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border uppercase bg-emerald-950/80 text-emerald-400 border-emerald-800/60">
-                      🟢 Posted
-                    </span>
-                  ) : isReverted ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border uppercase bg-red-950/80 text-red-400 border-red-800/60">
-                      🔴 Reverted
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border uppercase bg-amber-950/80 text-amber-400 border-amber-800/60">
-                      🟡 Pending Post
-                    </span>
-                  );
+                  const isSelected = selectedIds.includes(rec.id);
 
                   return (
-                    <tr key={rec.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="py-3 px-4 font-mono text-slate-300 whitespace-nowrap">
-                        {rec.date ? new Date(rec.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                      </td>
-                      <td className="py-3 px-4 font-semibold text-slate-200">
-                        {rec.category?.name ? (rec.subCategory ? `${rec.category.name} - ${rec.subCategory}` : rec.category.name) : 'Unassigned'}
-                      </td>
-                      <td className="py-3 px-4 font-bold font-mono text-brand-300 whitespace-nowrap">
-                        PKR {Number(rec.amount || 0).toLocaleString('en-PK', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        {statusBadge}
-                      </td>
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border uppercase ${methodBadge}`}>
-                          {rec.paymentMethod}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-slate-300">
-                        {rec.paymentMethod === 'BANK' || rec.bankAccount ? (
-                          <div className="flex items-center gap-1.5">
-                            <Building className="h-3.5 w-3.5 text-blue-400 shrink-0" />
-                            <span>{rec.bankAccount?.accountName || 'Bank Account'}</span>
+                    <div
+                      key={rec.id}
+                      className={`group relative rounded-2xl border bg-slate-900/90 p-5 shadow-xl hover:shadow-2xl hover:border-slate-700/80 transition-all duration-300 flex flex-col justify-between ${
+                        isSelected ? 'border-brand-500/60 bg-brand-950/20 shadow-brand-500/10' : 'border-slate-800/80'
+                      }`}
+                    >
+                      {/* Card Header */}
+                      <div>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3 min-w-0 flex-1">
+                            {isAdminOrSuperAdmin && (
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={(e) => handleSelectOne(rec.id, e)}
+                                className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-brand-500 focus:ring-brand-500 focus:ring-offset-slate-900 cursor-pointer shrink-0"
+                              />
+                            )}
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500/20 via-brand-500/10 to-transparent border border-brand-500/30 flex items-center justify-center text-brand-400 font-extrabold text-base shadow-inner shrink-0">
+                              <TrendingUp className="w-5 h-5 text-brand-400" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-sm font-bold text-slate-100 group-hover:text-brand-300 transition-colors leading-tight tracking-tight truncate">
+                                {rec.category?.name || 'Unassigned Category'}
+                              </h4>
+                              {rec.subCategory && (
+                                <p className="text-xs text-slate-400 font-medium mt-0.5 truncate">
+                                  {rec.subCategory}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                        ) : (
-                          <span className="text-slate-500">Cash in Hand</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-slate-300">
-                        <div className="space-y-0.5">
-                          <p className="font-mono text-[11px] font-bold">{rec.referenceNumber || '—'}</p>
-                          {rec.journalEntry?.voucherNo && (
-                            <span className="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-900/40 px-1.5 py-0.2 rounded">
-                              <CheckCircle2 className="h-2.5 w-2.5" />
-                              {rec.journalEntry.voucherNo}
+
+                          {/* Status Badge */}
+                          <span className="shrink-0">
+                            {isPosted ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[10px] font-extrabold uppercase tracking-wide bg-emerald-950/80 text-emerald-400 border-emerald-800/60">
+                                🟢 Posted
+                              </span>
+                            ) : isReverted ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[10px] font-extrabold uppercase tracking-wide bg-red-950/80 text-red-400 border-red-800/60">
+                                🔴 Reverted
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[10px] font-extrabold uppercase tracking-wide bg-amber-950/80 text-amber-400 border-amber-800/60">
+                                🟡 Pending
+                              </span>
+                            )}
+                          </span>
+                        </div>
+
+                        {/* Card Inner Well */}
+                        <div className="bg-slate-950/70 rounded-xl border border-slate-800/80 p-4 my-4 space-y-2.5 shadow-inner text-xs">
+                          <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                            <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider">Amount</span>
+                            <span className="font-extrabold text-brand-300 font-mono text-base">
+                              PKR {Number(rec.amount || 0).toLocaleString('en-PK', { minimumFractionDigits: 2 })}
                             </span>
+                          </div>
+
+                          <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                            <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider">Payment Method</span>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border uppercase ${methodBadge}`}>
+                              {rec.paymentMethod}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                            <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider">Bank Account</span>
+                            <span className="text-slate-200 font-medium truncate max-w-[170px] text-right">
+                              {rec.paymentMethod === 'BANK' || rec.bankAccount ? (
+                                <span className="flex items-center justify-end gap-1 text-blue-400">
+                                  <Building className="h-3.5 w-3.5 shrink-0" />
+                                  <span className="truncate">{rec.bankAccount?.accountName || 'Bank Account'}</span>
+                                </span>
+                              ) : (
+                                <span className="text-slate-400">Cash in Hand</span>
+                              )}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                            <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider">Reference / Voucher</span>
+                            <div className="text-right">
+                              <p className="font-mono text-slate-200 font-bold text-[11px]">{rec.referenceNumber || '—'}</p>
+                              {rec.journalEntry?.voucherNo && (
+                                <span className="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-900/40 px-1.5 py-0.2 rounded mt-0.5">
+                                  <CheckCircle2 className="h-2.5 w-2.5" /> {rec.journalEntry.voucherNo}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {rec.remarks && (
+                            <div className="border-b border-slate-800/60 pb-2">
+                              <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider block mb-0.5">Remarks</span>
+                              <p className="text-slate-300 italic text-[11px] line-clamp-2">{rec.remarks}</p>
+                            </div>
+                          )}
+
+                          {rec.attachmentUrl && (
+                            <div className="flex items-center justify-between pt-0.5">
+                              <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider">Attachment</span>
+                              <a
+                                href={rec.attachmentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-brand-300 hover:text-brand-200 bg-brand-950/50 border border-brand-900/40 px-2 py-0.5 rounded text-[10px] font-medium"
+                              >
+                                <Paperclip className="h-3 w-3" /> View Document
+                              </a>
+                            </div>
                           )}
                         </div>
-                      </td>
-                      <td className="py-3 px-4 text-slate-400 max-w-xs truncate">
-                        {rec.remarks || '—'}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        {rec.attachmentUrl ? (
-                          <a
-                            href={rec.attachmentUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-brand-300 hover:text-brand-200 bg-brand-950/50 border border-brand-900/40 px-2 py-1 rounded text-[10px] font-medium"
-                          >
-                            <Paperclip className="h-3 w-3" /> View
-                          </a>
-                        ) : (
-                          <span className="text-slate-600">—</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1.5">
+                      </div>
+
+                      {/* Card Footer */}
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-800/80">
+                        <span className="text-[11px] font-mono text-slate-400">
+                          {rec.date ? new Date(rec.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                        </span>
+
+                        <div className="flex items-center gap-1.5">
                           {isPending && (
                             <button
                               onClick={() => setPostingRecord(rec)}
@@ -506,7 +620,7 @@ export const AddIncomeRecords = () => {
                                   : 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
                               }`}
                             >
-                              Post to Ledger
+                              Post
                             </button>
                           )}
 
@@ -520,7 +634,7 @@ export const AddIncomeRecords = () => {
                                   : 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
                               }`}
                             >
-                              Revert Posting
+                              Revert
                             </button>
                           )}
 
@@ -574,14 +688,242 @@ export const AddIncomeRecords = () => {
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-950/60 border-b border-slate-800/80 text-slate-400 font-bold uppercase tracking-wider">
+                  <th className="py-3 px-4 w-10 text-center">
+                    {isAdminOrSuperAdmin && (
+                      <input
+                        type="checkbox"
+                        checked={records.length > 0 && selectedIds.length === records.length}
+                        onChange={handleSelectAll}
+                        className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-brand-500 focus:ring-brand-500 focus:ring-offset-slate-900 cursor-pointer"
+                        title="Select All"
+                      />
+                    )}
+                  </th>
+                  <th className="py-3 px-4">Date</th>
+                  <th className="py-3 px-4">Category</th>
+                  <th className="py-3 px-4">Amount</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Payment Method</th>
+                  <th className="py-3 px-4">Bank Account</th>
+                  <th className="py-3 px-4">Ref # / Journal</th>
+                  <th className="py-3 px-4">Remarks</th>
+                  <th className="py-3 px-4 text-center">Attachment</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {loading && records.length === 0 ? (
+                  <tr>
+                    <td colSpan={11} className="py-12 text-center text-slate-500">
+                      <div className="h-6 w-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                      Loading income records...
+                    </td>
+                  </tr>
+                ) : records.length === 0 ? (
+                  <tr>
+                    <td colSpan={11} className="py-12 text-center text-slate-500">
+                      <TrendingUp className="h-10 w-10 mx-auto text-slate-700 mb-2" />
+                      <p className="font-semibold text-slate-400">No income records found</p>
+                      <p className="text-[11px] text-slate-600 mt-1">Try adjusting filters or click "Add Income Entry"</p>
+                    </td>
+                  </tr>
+                ) : (
+                  records.map((rec) => {
+                    const methodBadge = {
+                      CASH: 'bg-emerald-950/80 text-emerald-400 border-emerald-800/50',
+                      BANK: 'bg-blue-950/80 text-blue-400 border-blue-800/50',
+                      CHEQUE: 'bg-purple-950/80 text-purple-400 border-purple-800/50',
+                      ONLINE: 'bg-amber-950/80 text-amber-400 border-amber-800/50'
+                    }[rec.paymentMethod] || 'bg-slate-800 text-slate-300 border-slate-700';
+
+                    const isPosted = rec.status === 'POSTED';
+                    const isReverted = rec.status === 'REVERTED';
+                    const isPending = !isPosted && !isReverted;
+
+                    const isSelected = selectedIds.includes(rec.id);
+
+                    const statusBadge = isPosted ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border uppercase bg-emerald-950/80 text-emerald-400 border-emerald-800/60">
+                        🟢 Posted
+                      </span>
+                    ) : isReverted ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border uppercase bg-red-950/80 text-red-400 border-red-800/60">
+                        🔴 Reverted
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border uppercase bg-amber-950/80 text-amber-400 border-amber-800/60">
+                        🟡 Pending Post
+                      </span>
+                    );
+
+                    return (
+                      <tr key={rec.id} className={`transition-colors ${isSelected ? 'bg-brand-950/30' : 'hover:bg-slate-800/40'}`}>
+                        <td className="py-3 px-4 text-center">
+                          {isAdminOrSuperAdmin && (
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => handleSelectOne(rec.id, e)}
+                              className="h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-brand-500 focus:ring-brand-500 focus:ring-offset-slate-900 cursor-pointer"
+                            />
+                          )}
+                        </td>
+                        <td className="py-3 px-4 font-mono text-slate-300 whitespace-nowrap">
+                          {rec.date ? new Date(rec.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                        </td>
+                        <td className="py-3 px-4 font-semibold text-slate-200">
+                          {rec.category?.name ? (rec.subCategory ? `${rec.category.name} - ${rec.subCategory}` : rec.category.name) : 'Unassigned'}
+                        </td>
+                        <td className="py-3 px-4 font-bold font-mono text-brand-300 whitespace-nowrap">
+                          PKR {Number(rec.amount || 0).toLocaleString('en-PK', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          {statusBadge}
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border uppercase ${methodBadge}`}>
+                            {rec.paymentMethod}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-slate-300">
+                          {rec.paymentMethod === 'BANK' || rec.bankAccount ? (
+                            <div className="flex items-center gap-1.5">
+                              <Building className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                              <span>{rec.bankAccount?.accountName || 'Bank Account'}</span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-500">Cash in Hand</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-slate-300">
+                          <div className="space-y-0.5">
+                            <p className="font-mono text-[11px] font-bold">{rec.referenceNumber || '—'}</p>
+                            {rec.journalEntry?.voucherNo && (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-900/40 px-1.5 py-0.2 rounded">
+                                <CheckCircle2 className="h-2.5 w-2.5" />
+                                {rec.journalEntry.voucherNo}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-slate-400 max-w-xs truncate">
+                          {rec.remarks || '—'}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          {rec.attachmentUrl ? (
+                            <a
+                              href={rec.attachmentUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-brand-300 hover:text-brand-200 bg-brand-950/50 border border-brand-900/40 px-2 py-1 rounded text-[10px] font-medium"
+                            >
+                              <Paperclip className="h-3 w-3" /> View
+                            </a>
+                          ) : (
+                            <span className="text-slate-600">—</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {isPending && (
+                              <button
+                                onClick={() => setPostingRecord(rec)}
+                                disabled={!isAdminOrSuperAdmin}
+                                className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-all shadow-sm ${
+                                  isAdminOrSuperAdmin
+                                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 cursor-pointer'
+                                    : 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
+                                }`}
+                              >
+                                Post to Ledger
+                              </button>
+                            )}
+
+                            {isPosted && (
+                              <button
+                                onClick={() => setRevertingRecord(rec)}
+                                disabled={!isAdminOrSuperAdmin}
+                                className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-all shadow-sm ${
+                                  isAdminOrSuperAdmin
+                                    ? 'bg-amber-600 hover:bg-amber-500 text-white border-amber-500 cursor-pointer'
+                                    : 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
+                                }`}
+                              >
+                                Revert Posting
+                              </button>
+                            )}
+
+                            {isReverted && (
+                              <button
+                                onClick={() => setPostingRecord(rec)}
+                                disabled={!isAdminOrSuperAdmin}
+                                className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-all shadow-sm ${
+                                  isAdminOrSuperAdmin
+                                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 cursor-pointer'
+                                    : 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
+                                }`}
+                              >
+                                Post Again
+                              </button>
+                            )}
+
+                            {/* Print Voucher */}
+                            <button
+                              onClick={() => setPrintRecord(rec)}
+                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-emerald-400 border border-slate-700 transition-colors cursor-pointer"
+                              title="Print Executive Income Voucher"
+                            >
+                              <Printer className="h-3.5 w-3.5" />
+                            </button>
+
+                            {/* Edit Record */}
+                            <Link
+                              to={`/add-income/edit/${rec.id}`}
+                              className={`p-1.5 rounded-lg border transition-colors ${
+                                isAdminOrSuperAdmin
+                                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-brand-400 border-slate-700 cursor-pointer'
+                                  : 'bg-slate-900 text-slate-600 border-slate-800 pointer-events-none'
+                              }`}
+                              title={isAdminOrSuperAdmin ? 'Edit Record' : 'Admin only'}
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </Link>
+
+                            {/* Delete Record */}
+                            <button
+                              onClick={() => setDeletingRecordId(rec.id)}
+                              disabled={!isAdminOrSuperAdmin}
+                              className={`p-1.5 rounded-lg border transition-colors ${
+                                isAdminOrSuperAdmin
+                                  ? 'bg-red-950/40 hover:bg-red-900/60 text-red-400 border-red-900/40 cursor-pointer'
+                                  : 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed'
+                              }`}
+                              title={isAdminOrSuperAdmin ? 'Delete Record' : 'Admin only'}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Pagination Footer */}
         {pagination.totalPages > 1 && (
@@ -593,14 +935,14 @@ export const AddIncomeRecords = () => {
             <div className="flex items-center gap-2">
               <button
                 disabled={pagination.page <= 1}
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                 className="p-1.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 border border-slate-800 rounded-lg text-slate-300 cursor-pointer"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <button
                 disabled={pagination.page >= pagination.totalPages}
-                onClick={() => setCurrentPage(prev => Math.min(pagination.totalPages, prev + 1))}
+                onClick={() => setCurrentPage((prev) => Math.min(pagination.totalPages, prev + 1))}
                 className="p-1.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 border border-slate-800 rounded-lg text-slate-300 cursor-pointer"
               >
                 <ChevronRight className="h-4 w-4" />
@@ -688,7 +1030,7 @@ export const AddIncomeRecords = () => {
         </Modal>
       )}
 
-      {/* Delete confirmation modal */}
+      {/* Single Delete confirmation modal */}
       {deletingRecordId && (
         <Modal
           isOpen={!!deletingRecordId}
@@ -711,6 +1053,46 @@ export const AddIncomeRecords = () => {
                 className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold cursor-pointer"
               >
                 Confirm Delete
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Bulk Delete confirmation modal */}
+      {showBulkDeleteModal && (
+        <Modal
+          isOpen={showBulkDeleteModal}
+          onClose={() => setShowBulkDeleteModal(false)}
+          title="Confirm Bulk Deletion"
+        >
+          <div className="space-y-4 pt-2">
+            <p className="text-xs text-slate-300">
+              Are you sure you want to delete <span className="font-bold text-red-400">{selectedIds.length}</span> selected income record(s)?
+            </p>
+            <div className="bg-red-950/40 border border-red-900/40 p-3 rounded-xl text-[11px] text-red-300 space-y-1">
+              <p className="font-bold flex items-center gap-1.5 text-red-400">
+                <Trash2 className="h-3.5 w-3.5" /> Warning
+              </p>
+              <p>
+                If any selected record has been posted to the General Ledger, its accounting journal entries will be automatically reversed or marked as deleted.
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                onClick={() => setShowBulkDeleteModal(false)}
+                disabled={bulkDeleting}
+                className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+                className="px-4 py-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold cursor-pointer flex items-center gap-2"
+              >
+                {bulkDeleting && <div className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                Confirm Bulk Delete ({selectedIds.length})
               </button>
             </div>
           </div>

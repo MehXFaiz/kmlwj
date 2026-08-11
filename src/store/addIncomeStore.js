@@ -77,5 +77,14 @@ export const useAddIncomeStore = create((set, get) => ({
       useDashboardStore.getState().invalidateAll();
     } catch (e) {}
     return res;
+  },
+
+  bulkDeleteRecords: async (ids) => {
+    const res = await addIncomeService.bulkDeleteRecords(ids);
+    await get().fetchRecords();
+    try {
+      useDashboardStore.getState().invalidateAll();
+    } catch (e) {}
+    return res;
   }
 }));

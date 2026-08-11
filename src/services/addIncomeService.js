@@ -59,6 +59,11 @@ export const addIncomeService = {
     return response.data;
   },
 
+  bulkDeleteRecords: async (ids) => {
+    const response = await api.delete('/api/v1/add-income', { data: { ids } });
+    return response.data;
+  },
+
   uploadFile: async (fieldName, file, onProgress) => {
     try {
       const signResult = (await api.post('/api/v1/upload/sign')).data.data;
