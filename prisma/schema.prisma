@@ -951,31 +951,59 @@ model PettyCashReconciliation {
   @@index([reconciliationDate])
 }
 
+model FinancialYear {
+  id             String    @id @default(uuid()) @db.Uuid
+  code           String    @unique
+  name           String
+  startDate      DateTime
+  endDate        DateTime
+  isClosed       Boolean   @default(false)
+  closedAt       DateTime?
+  closedById     String?   @db.Uuid
+  reopenedAt     DateTime?
+  reopenedById   String?   @db.Uuid
+  closingNotes   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([startDate, endDate])
+  @@index([isClosed])
+}
+
 model OpeningBalanceBatch {
-  id             String               @id @default(uuid()) @db.Uuid
-  openingDate    DateTime
-  financialYear  String               @unique
-  status         String               @default("Posted")
-  journalEntryId String               @unique @db.Uuid
-  journalEntry   JournalEntry         @relation("OpeningBalanceBatchJournalEntry", fields: [journalEntryId], references: [id])
-  createdBy      String               @db.Uuid
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  lines          OpeningBalanceLine[]
+  id                  String               @id @default(uuid()) @db.Uuid
+  openingDate         DateTime
+  financialYear       String               @unique
+  sourceFinancialYear String?
+  sourceClosingDate   DateTime?
+  isAutoRolled        Boolean              @default(false)
+  adjustmentReason    String?
+  adjustedById        String?              @db.Uuid
+  adjustedAt          DateTime?
+  status              String               @default("Posted")
+  journalEntryId      String               @unique @db.Uuid
+  journalEntry        JournalEntry         @relation("OpeningBalanceBatchJournalEntry", fields: [journalEntryId], references: [id])
+  createdBy           String               @db.Uuid
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  lines               OpeningBalanceLine[]
 
   @@index([openingDate])
   @@index([financialYear])
 }
 
 model OpeningBalanceLine {
-  id        String              @id @default(uuid()) @db.Uuid
-  batchId   String              @db.Uuid
-  batch     OpeningBalanceBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  accountId String              @db.Uuid
-  account   Account             @relation(fields: [accountId], references: [id])
-  amount    Decimal             @db.Decimal(18, 2)
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
+  id                   String              @id @default(uuid()) @db.Uuid
+  batchId              String              @db.Uuid
+  batch                OpeningBalanceBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  accountId            String              @db.Uuid
+  account              Account             @relation(fields: [accountId], references: [id])
+  glCode               String?
+  debitCredit          String              @default("DEBIT")
+  amount               Decimal             @db.Decimal(18, 2)
+  sourceClosingBalance Decimal?            @db.Decimal(18, 2)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
 
   @@index([batchId])
   @@index([accountId])
