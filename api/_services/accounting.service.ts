@@ -458,6 +458,21 @@ export class AccountingService {
    * Enforces Double Entry Accounting, dynamically resolves accounts, creates Journal Entry,
    * creates Journal Lines, creates General Ledger entries, updates running balances, and logs audit trail.
    */
+  static async assertFinancialYearOpen(tx: any, postingDate: Date | string) {
+    const dateObj = new Date(postingDate);
+    const fy = await tx.financialYear.findFirst({
+      where: {
+        startDate: { lte: dateObj },
+        endDate: { gte: dateObj },
+        isClosed: true
+      }
+    });
+
+    if (fy) {
+      throw new Error(`Accounting Engine Error: Financial Year ${fy.code} is closed. Normal transactions cannot be posted, edited, or deleted in a closed financial year.`);
+    }
+  }
+
   static async postTransaction(tx: any, payload: PostTransactionPayload) {
     if (!payload.lines || !Array.isArray(payload.lines) || payload.lines.length < 2) {
       throw new Error('Accounting Engine Error: Transaction must contain at least two accounting lines for double-entry posting.');
@@ -491,6 +506,11 @@ export class AccountingService {
     const subsidiary = payload.subsidiary || 'Global';
     const reference = payload.reference || 'Auto Post';
     const description = payload.description || `Automatic posting from ${payload.module}`;
+
+    // Enforcement: Block posting transactions in closed financial years (except YE closing entry itself)
+    if (voucherType !== 'YE') {
+      await AccountingService.assertFinancialYearOpen(tx, postingDate);
+    }
 
     // Generate voucher No if not provided. The random suffix has only 900,000
     // possible values per day per voucher type with no prior uniqueness check
@@ -1242,6 +1262,7 @@ export class AccountingService {
     });
 
     if (!je) return null;
+    await AccountingService.assertFinancialYearOpen(tx, je.postingDate);
 
     // Capture the affected account IDs before the lines are removed so the
     // balance cache can be scoped to just the accounts this entry touched.
