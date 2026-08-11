@@ -1,5 +1,3 @@
-// Verifies the accounting module is at a clean zero state after
-// `npm run db:clear` (scripts/reset-financial-data.ts). Read-only.
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -38,20 +36,24 @@ async function main() {
   console.log('── Transaction tables (must all be 0) ──');
   check('JournalEntries', await prisma.journalEntry.count());
   check('JournalEntryLines', await prisma.journalEntryLine.count());
+  check('AddIncomeRecords', await prisma.addIncomeRecord.count());
   check('SimpleIncomes', await prisma.simpleIncome.count());
   check('SimpleExpenses', await prisma.simpleExpense.count());
   check('RevenueCollections', await prisma.revenueCollection.count());
   check('Donations (Given)', await prisma.donation.count());
   check('DonationsReceived', await prisma.donationReceived.count());
+  check('ZakatCards', await prisma.zakatCard.count());
   check('Invoices', await prisma.invoice.count());
   check('InvoiceItems', await prisma.invoiceItem.count());
   check('HallBookings', await prisma.hallBooking.count());
+  check('PettyCashTransactions', await prisma.pettyCashTransaction.count());
+  check('PettyCashReconciliations', await prisma.pettyCashReconciliation.count());
+  check('OpeningBalanceBatches', await prisma.openingBalanceBatch.count());
+  check('OpeningBalanceLines', await prisma.openingBalanceLine.count());
+  check('AiRepairIssues', await prisma.aiRepairIssue.count());
+  check('AiRepairLogs', await prisma.aiRepairLog.count());
 
   console.log('\n── Orphan checks ──');
-  check(
-    'ZakatCards still pointing at a journal entry',
-    await prisma.zakatCard.count({ where: { journalEntryId: { not: null } } }),
-  );
   const orphanLines = await prisma.$queryRaw<{ n: bigint }[]>`
     SELECT COUNT(*)::bigint AS n FROM "JournalEntryLine" jel
     LEFT JOIN "JournalEntry" je ON je.id = jel."journalEntryId"
@@ -69,11 +71,8 @@ async function main() {
     select: { glCode: true, accountName: true, initialBalance: true, currentBalance: true },
   });
   check('Accounts with non-zero balance', nonZero.length);
-  for (const a of nonZero) {
-    console.log(`   ↳ ${a.glCode} ${a.accountName}: initial=${a.initialBalance}, current=${a.currentBalance}`);
-  }
 
-  const named = ['Cash in Hand', 'National Bank of Pakistan', 'NBP Zakat Account'];
+  const named = ['Cash in Hand', 'National Bank of Pakistan', 'Petty Cash'];
   for (const name of named) {
     const acc = await prisma.account.findFirst({
       where: { accountName: { contains: name, mode: 'insensitive' } },
@@ -81,22 +80,21 @@ async function main() {
     });
     if (acc) {
       check(`${acc.accountName} (${acc.glCode}) balance`, Number(acc.currentBalance));
-    } else {
-      console.log(`⚠️  Account matching "${name}" not found in COA`);
     }
   }
-
 
   console.log('\n── Preserved master data (informational) ──');
   console.log(`   Users: ${await prisma.user.count()}`);
   console.log(`   Roles: ${await prisma.role.count()}`);
-  console.log(`   Members: ${await prisma.member.count()}`);
-  console.log(`   Beneficiaries (Welfare): ${await prisma.beneficiary.count()}`);
-  console.log(`   ZakatCards: ${await prisma.zakatCard.count()}`);
-  console.log(`   FamilyRelationships: ${await prisma.familyRelationship.count()}`);
+  console.log(`   Permissions: ${await prisma.permission.count()}`);
   console.log(`   Accounts (COA): ${await prisma.account.count()}`);
-  console.log(`   RevenueHeads: ${await prisma.revenueHead.count()}`);
+  console.log(`   IncomeCategories: ${await prisma.incomeCategory.count()}`);
   console.log(`   ExpenseHeads: ${await prisma.expenseHead.count()}`);
+  console.log(`   RevenueHeads: ${await prisma.revenueHead.count()}`);
+  console.log(`   PettyCashConfigs: ${await prisma.pettyCashConfig.count()}`);
+  console.log(`   FinancialYears: ${await prisma.financialYear.count()}`);
+  console.log(`   Members: ${await prisma.member.count()}`);
+  console.log(`   Beneficiaries: ${await prisma.beneficiary.count()}`);
   console.log(`   Donors: ${await prisma.donor.count()}`);
   console.log(`   Customers: ${await prisma.customer.count()}`);
 
