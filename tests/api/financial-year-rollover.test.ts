@@ -245,9 +245,16 @@ describe('Financial Year Opening/Closing & Automatic Rollover Engine', { timeout
       postingDate: '2027-08-10'
     });
 
-    // Verify Trial Balance for FY 2027-2028 is balanced
-    const tbNext = await AccountingService.getTrialBalance('2027-07-01', '2028-06-30');
-    expect(tbNext.difference).toBeLessThan(0.01);
+    // Verify General Ledger for FY 2027-2028 Opening (130,000), Credit (10,000), Closing (120,000)
+    const glNext = await AccountingService.getGeneralLedger({
+      startDate: '2027-07-01',
+      endDate: '2028-06-30',
+      accountId: cashAccountId
+    });
+
+    expect(glNext.summary.openingBalance).toBe(130000);
+    expect(glNext.summary.totalCredit).toBe(10000);
+    expect(glNext.summary.closingBalance).toBe(120000);
   });
 
   it('Step 7: Closed Year Lock Enforcement', async () => {
