@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCoaStore } from '../store/coaStore';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
-import { useJournalStore, calculateAccountBalances } from '../store/journalStore';
+import { useJournalStore, validateSufficientFunds } from '../store/journalStore';
 import { ChevronLeft, Save, TrendingDown, TrendingUp, Info } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
 
@@ -88,21 +88,16 @@ export const BankVoucherForm = () => {
     }
 
     if (voucherType === 'BP') {
-      const { localBalances } = calculateAccountBalances(flatAccounts, journals, 'Global');
-      const avail = localBalances[bankAcc.code] !== undefined ? localBalances[bankAcc.code] : (bankAcc.initialBalance || 0);
-      if (val > avail) {
-        const isCash = bankAcc.detailType === 'Cash' || (bankAcc.name || '').toLowerCase().includes('cash');
-        const availNum = Number(avail) || 0;
-        const shortfall = val - availNum;
-        const formattedAvailable = availNum.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-        const formattedRequired = val.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-        const formattedShortfall = shortfall.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-
-        const msg = isCash
-          ? `Insufficient Cash Balance.\nAvailable Cash: Rs ${formattedAvailable}\nRequired Amount: Rs ${formattedRequired}\nShortfall: Rs ${formattedShortfall}`
-          : `Insufficient Bank Balance.\nAvailable Balance: Rs ${formattedAvailable}\nRequired Amount: Rs ${formattedRequired}\nShortfall: Rs ${formattedShortfall}`;
-
-        showToast(msg, 'error');
+      // Read-only pre-check against the live ledger — same helper, same formula
+      // as ExpenseEntryForm and the server's FundValidationService.
+      const funds = validateSufficientFunds({
+        accounts: flatAccounts,
+        journals,
+        account: bankAcc,
+        amount: val,
+      });
+      if (!funds.ok) {
+        showToast(funds.message, 'error');
         return;
       }
     }
