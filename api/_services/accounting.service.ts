@@ -2150,12 +2150,17 @@ export class AccountingService {
       totalDebit = totalDebit.plus(debit);
       totalCredit = totalCredit.plus(credit);
 
+      const itemOpeningBal = AccountingService.naturalBalance(typeName, acc.initialBalance, priorAggregates.get(acc.id));
+      const itemClosingBal = AccountingService.naturalBalance(typeName, acc.initialBalance, cumulativeAggregates.get(acc.id));
+
       formatted.push({
         id: acc.id,
         glCode: acc.glCode,
         accountName: acc.accountName,
         accountType: acc.accountType?.name || 'Asset',
         detailType: acc.detailType,
+        openingBalance: itemOpeningBal.toNumber(),
+        closingBalance: itemClosingBal.toNumber(),
         balance: balance.toNumber(),
         debit: debit.toNumber(),
         credit: credit.toNumber()

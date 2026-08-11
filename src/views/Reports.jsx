@@ -351,13 +351,15 @@ export const Reports = () => {
                   </div>
                 </div>
               )}
-              <table className="w-full text-left border-collapse min-w-[600px]">
+              <table className="w-full text-left border-collapse min-w-[700px]">
                 <thead>
                   <tr className="border-b border-slate-800 text-xs font-semibold text-slate-400 uppercase bg-slate-900/10">
-                    <th className="py-3 px-4 w-32">GL Code</th>
+                    <th className="py-3 px-4 w-28">GL Code</th>
                     <th className="py-3 px-4">Account Name</th>
-                    <th className="py-3 px-4 w-40 text-right">Debit</th>
-                    <th className="py-3 px-4 w-40 text-right">Credit</th>
+                    <th className="py-3 px-4 w-36 text-right">Opening Bal</th>
+                    <th className="py-3 px-4 w-36 text-right">Period Debit</th>
+                    <th className="py-3 px-4 w-36 text-right">Period Credit</th>
+                    <th className="py-3 px-4 w-36 text-right">Closing Bal</th>
                   </tr>
                 </thead>
                 <tbody className="text-xs divide-y divide-slate-800/40">
@@ -365,18 +367,23 @@ export const Reports = () => {
                     <tr key={row.id} className="hover:bg-slate-900/20 transition-colors">
                       <td className="py-3.5 px-4 font-mono text-brand-400">{row.glCode}</td>
                       <td className="py-3.5 px-4 text-slate-200">{row.accountName}</td>
+                      <td className="py-3.5 px-4 text-right font-mono text-slate-400">{row.openingBalance ? formatMoney(row.openingBalance) : '—'}</td>
                       <td className="py-3.5 px-4 text-right font-mono text-emerald-400">{row.debit > 0 ? formatMoney(row.debit) : '—'}</td>
-                      <td className="py-3.5 px-4 text-right font-mono text-emerald-400">{row.credit > 0 ? formatMoney(row.credit) : '—'}</td>
+                      <td className="py-3.5 px-4 text-right font-mono text-teal-400">{row.credit > 0 ? formatMoney(row.credit) : '—'}</td>
+                      <td className="py-3.5 px-4 text-right font-mono text-amber-400">{row.closingBalance ? formatMoney(row.closingBalance) : (row.balance ? formatMoney(row.balance) : '—')}</td>
                     </tr>
                   ))}
                   {/* Totals */}
                   <tr className="bg-slate-900/40 font-bold border-t-2 border-slate-700">
-                    <td colSpan={2} className="py-4 px-4 text-right text-slate-300 uppercase tracking-wider">Report Totals</td>
+                    <td colSpan={3} className="py-4 px-4 text-right text-slate-300 uppercase tracking-wider">Report Totals</td>
                     <td className={`py-4 px-4 text-right font-mono ${trialBalanceData.summary.isBalanced ? 'text-brand-400' : 'text-red-400'}`}>
                       {formatMoney(trialBalanceData.summary.totalDebit)}
                     </td>
                     <td className={`py-4 px-4 text-right font-mono ${trialBalanceData.summary.isBalanced ? 'text-brand-400' : 'text-red-400'}`}>
                       {formatMoney(trialBalanceData.summary.totalCredit)}
+                    </td>
+                    <td className="py-4 px-4 text-right font-mono text-amber-400">
+                      —
                     </td>
                   </tr>
                 </tbody>
@@ -526,9 +533,29 @@ export const Reports = () => {
           {/* CASH FLOW */}
           {!isLoading && activeTab === 'cash-flow' && cashFlowData && (
             <div className="p-4 sm:p-8 max-w-4xl mx-auto space-y-8 animate-in fade-in duration-200">
-              <div className="text-center mb-8">
+              <div className="text-center mb-6">
                 <h3 className="text-2xl font-bold text-slate-100 uppercase tracking-widest">Cash Flow Statement</h3>
                 <p className="text-sm text-slate-500 mt-1">{cashFlowData.summary?.periodLabel || `FY ${fiscalYear}`}</p>
+              </div>
+
+              {/* Dynamic Opening & Closing Balance Summary Header Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-950/60 p-4 rounded-2xl border border-slate-800/80 shadow-lg">
+                <div className="text-center p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Opening Cash & Bank</p>
+                  <p className="text-sm font-mono font-black text-blue-400 mt-1">{formatMoney(cashFlowData.summary?.beginningCash)}</p>
+                </div>
+                <div className="text-center p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Total Inflows (+)</p>
+                  <p className="text-sm font-mono font-black text-emerald-400 mt-1">{formatMoney(cashFlowData.summary?.totalInflow)}</p>
+                </div>
+                <div className="text-center p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Total Outflows (-)</p>
+                  <p className="text-sm font-mono font-black text-rose-400 mt-1">{formatMoney(cashFlowData.summary?.totalOutflow)}</p>
+                </div>
+                <div className="text-center p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Closing Cash & Bank</p>
+                  <p className="text-sm font-mono font-black text-amber-400 mt-1">{formatMoney(cashFlowData.summary?.endingCash)}</p>
+                </div>
               </div>
 
               {/* By Activity (Operating / Investing / Financing) */}
