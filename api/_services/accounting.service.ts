@@ -1883,7 +1883,7 @@ export class AccountingService {
         where: entryWhere,
         include: {
           account: { select: { glCode: true, accountName: true, initialBalance: true, accountType: { select: { name: true } } } },
-          journalEntry: { select: { voucherNo: true, postingDate: true } }
+          journalEntry: { select: { voucherNo: true, postingDate: true, voucherType: true } }
         },
         orderBy: [{ journalEntry: { postingDate: 'asc' } }, { createdAt: 'asc' }],
         skip,
