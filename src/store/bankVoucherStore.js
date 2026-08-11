@@ -11,8 +11,11 @@ export const useBankVoucherStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const res = await api.get(`/api/v1/journal-entries?type=${type}`);
-      set({ vouchers: res.data.data || [], loading: false });
+      const rawData = res.data?.data !== undefined ? res.data.data : res.data;
+      const list = Array.isArray(rawData) ? rawData : [];
+      set({ vouchers: list, loading: false });
     } catch (err) {
+      console.error('Failed to fetch bank vouchers:', err);
       set({ error: err.message || 'Failed to fetch vouchers', loading: false });
     }
   },
