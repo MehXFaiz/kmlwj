@@ -12,6 +12,7 @@ import {
 } from '../../src/utils/money.js';
 import { calculateAccountBalances, validateSufficientFunds } from '../../src/store/journalStore.js';
 import { serializeMoney } from '../../api/_utils/money.js';
+import { makeHandler } from '../../api/_utils/handler.js';
 
 /**
  * Regression suite for the corrupted "Available Cash" balance.
@@ -45,6 +46,38 @@ describe('wire format — money must leave the API as JSON numbers', () => {
     expect(typeof round.data[0].initialBalance).toBe('number');
     expect(round.data[0].initialBalance).toBe(7444213);
     expect(round.data[0].lines[0].debit).toBe(1000.5);
+  });
+
+  it('makeHandler emits numbers for a route that passes Decimals straight through', async () => {
+    // api/_v1/journal-entries.ts and api/_v1/accounts.ts hand Prisma Decimals
+    // directly to res.json. The wrapper must normalise them, so no route has to
+    // remember to call .toNumber().
+    const captured: any[] = [];
+    const res: any = {
+      setHeader: () => {},
+      status: () => res,
+      end: () => {},
+      json: (body: any) => { captured.push(body); return res; },
+    };
+
+    const handler = makeHandler(async (_req: any, r: any) =>
+      r.status(200).json({
+        data: [{
+          initialBalance: new Prisma.Decimal('7444213.00'),
+          lines: [{ debit: new Prisma.Decimal('1000'), credit: new Prisma.Decimal('0') }],
+        }],
+      }),
+    );
+
+    await handler({ method: 'GET', url: '/api/v1/journal-entries' } as any, res);
+
+    const body = captured[0];
+    expect(typeof body.data[0].initialBalance).toBe('number');
+    expect(body.data[0].initialBalance).toBe(7444213);
+    expect(typeof body.data[0].lines[0].debit).toBe('number');
+
+    // And the values survive JSON transport as numbers, not strings.
+    expect(typeof JSON.parse(JSON.stringify(body)).data[0].lines[0].debit).toBe('number');
   });
 
   it('leaves Dates and non-money values untouched', () => {

@@ -68,7 +68,14 @@ describe('Strict Fund Validation & Financial Integrity Engine', () => {
     const mockTx = {
       $queryRaw: async () => [{ id: 'mock-id', glCode: '1010101', accountName: 'Cash in Hand', initialBalance: 0, currentBalance: 100, detailType: 'Cash' }],
       account: {
-        findUnique: async () => ({ id: 'mock-id', glCode: '1010101', accountName: 'Cash in Hand', initialBalance: 0, currentBalance: 100, detailType: 'Cash', accountType: { name: 'ASSET' } })
+        findUnique: async () => ({ id: 'mock-id', glCode: '1010101', accountName: 'Cash in Hand', initialBalance: 0, currentBalance: 100, detailType: 'Cash', accountType: { name: 'ASSET' } }),
+        // getAvailableBalance rolls child accounts into the parent's balance;
+        // this mock account is a leaf, so it has none.
+        findMany: async () => [],
+        // The insufficient-funds branch looks for a separate primary Cash in
+        // Hand account to fall back to. There isn't one here, so the shortfall
+        // must be reported rather than satisfied elsewhere.
+        findFirst: async () => null
       },
       journalEntryLine: {
         aggregate: async () => ({ _sum: { debit: 100, credit: 0 } })
@@ -94,7 +101,9 @@ describe('Strict Fund Validation & Financial Integrity Engine', () => {
     const mockTx = {
       $queryRaw: async () => [{ id: 'mock-id', glCode: '1010101', accountName: 'Cash in Hand', initialBalance: 1000, currentBalance: 1000, detailType: 'Cash' }],
       account: {
-        findUnique: async () => ({ id: 'mock-id', glCode: '1010101', accountName: 'Cash in Hand', initialBalance: 1000, currentBalance: 1000, detailType: 'Cash', accountType: { name: 'ASSET' } })
+        findUnique: async () => ({ id: 'mock-id', glCode: '1010101', accountName: 'Cash in Hand', initialBalance: 1000, currentBalance: 1000, detailType: 'Cash', accountType: { name: 'ASSET' } }),
+        findMany: async () => [],
+        findFirst: async () => null
       },
       journalEntryLine: {
         aggregate: async () => ({ _sum: { debit: 0, credit: 0 } })

@@ -175,6 +175,15 @@ export const calculateAccountBalances = (accounts, journals, subsidiary = 'Globa
   // leaving total Cash + Bank unchanged.
   const localBalances = {};
   accounts.forEach((acc) => {
+    // Once ANY input for this account failed to parse, the balance is unknown.
+    // Computing it from the surviving lines would produce a plausible-looking
+    // but understated figure — worse than an explicit error, because nothing
+    // downstream could tell it was wrong.
+    if (invalidCodes.has(acc.code)) {
+      localBalances[acc.code] = NaN;
+      return;
+    }
+
     const { initialPaisa, debitPaisa, creditPaisa } = baseBalances[acc.code]
       || { initialPaisa: 0, debitPaisa: 0, creditPaisa: 0 };
 
