@@ -1,10 +1,279 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useDonationStore } from '../store/donationStore';
 import { useBeneficiaryStore } from '../store/beneficiaryStore';
-import { FileText, Download, LayoutGrid, Table as TableIcon, Heart, Calendar, CreditCard, Banknote, CheckCircle2, Clock, User, Phone } from 'lucide-react';
+import { FileText, Download, Upload, LayoutGrid, Table as TableIcon, Heart, Calendar, CreditCard, Banknote, CheckCircle2, Clock, User, Phone, FileSpreadsheet, X, AlertTriangle } from 'lucide-react';
 import { pageActionsClass } from '../components/common/responsive';
 import { DONATION_TYPES, donationTypeDisplay } from '../constants/donationTypes';
 import { paymentMethodLabel } from '../constants/paymentMethods';
+import { showToast } from '../components/ui/Toast';
+
+function ImportModal({ isOpen, onClose, onImportSuccess }) {
+  const { addDonation } = useDonationStore();
+  const fileInputRef = useRef(null);
+  const [parsedRows, setParsedRows] = useState([]);
+  const [isImporting, setIsImporting] = useState(false);
+  const [fileName, setFileName] = useState('');
+
+  if (!isOpen) return null;
+
+  const downloadSampleCSV = () => {
+    const csvContent = "Donor Name,Donation Type,Amount,Payment Method,Donor Mobile,Remarks\n" +
+      "Muhammad Ali,ZAKAT,5000,CASH,03001234567,Zakat Aid\n" +
+      "Fatima Zahra,SADQAH,2500,CASH,03219876543,Sadqah Inflow\n" +
+      "Usman Ghani,GENERAL,10000,BANK,03335554433,General Aid Support";
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "Sample_Donation_Import.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileName(file.name);
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const text = evt.target?.result || '';
+        const lines = text.split(/\r\n|\n/).filter(line => line.trim().length > 0);
+        if (lines.length <= 1) {
+          showToast('CSV file is empty or has no data rows.', 'warning');
+          return;
+        }
+
+        const parseLine = (line) => {
+          const result = [];
+          let current = '';
+          let inQuotes = false;
+          for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"') {
+              if (inQuotes && line[i + 1] === '"') {
+                current += '"';
+                i++;
+              } else {
+                inQuotes = !inQuotes;
+              }
+            } else if (char === ',' && !inQuotes) {
+              result.push(current.trim());
+              current = '';
+            } else {
+              current += char;
+            }
+          }
+          result.push(current.trim());
+          return result;
+        };
+
+        const rawHeaders = parseLine(lines[0]).map(h => h.toLowerCase().replace(/['"]/g, '').trim());
+
+        const findValue = (rowValues, possibleKeys) => {
+          for (const key of possibleKeys) {
+            const idx = rawHeaders.findIndex(h => h.includes(key));
+            if (idx !== -1 && rowValues[idx] !== undefined) {
+              return rowValues[idx].replace(/^["']|["']$/g, '').trim();
+            }
+          }
+          return '';
+        };
+
+        const rows = [];
+        for (let i = 1; i < lines.length; i++) {
+          const vals = parseLine(lines[i]);
+          if (vals.length === 0 || vals.every(v => !v)) continue;
+
+          const name = findValue(vals, ['donor', 'name', 'beneficiary', 'payee']);
+          const typeRaw = findValue(vals, ['type', 'category', 'head']).toUpperCase();
+          const amountRaw = findValue(vals, ['amount', 'pkr', 'rs', 'val']);
+          const methodRaw = findValue(vals, ['method', 'payment', 'mode']).toUpperCase();
+          const mobile = findValue(vals, ['mobile', 'phone', 'contact', 'cnic']);
+          const remarks = findValue(vals, ['remark', 'note', 'desc', 'narration']);
+
+          const amountNum = parseFloat(amountRaw.replace(/[^0-9.]/g, '')) || 0;
+          const method = ['BANK', 'CHEQUE', 'ONLINE'].includes(methodRaw) ? methodRaw : 'CASH';
+
+          let donationType = 'GENERAL';
+          if (typeRaw.includes('ZAKAT')) donationType = 'ZAKAT';
+          else if (typeRaw.includes('SADQAH')) donationType = 'SADQAH';
+          else if (typeRaw.includes('FITRA')) donationType = 'FITRA';
+          else if (typeRaw.includes('RATION')) donationType = 'RATION';
+          else if (typeRaw.includes('MEDICAL')) donationType = 'MEDICAL';
+          else if (typeRaw.includes('EDUCATION')) donationType = 'EDUCATION';
+
+          const isValid = Boolean(name && amountNum > 0);
+
+          rows.push({
+            id: i,
+            donorName: name || 'Anonymous Donor',
+            donationType,
+            amount: amountNum,
+            paymentMethod: method,
+            donorMobile: mobile,
+            remarks: remarks || 'Imported via CSV',
+            isValid,
+            error: !name ? 'Missing Name' : amountNum <= 0 ? 'Invalid Amount' : ''
+          });
+        }
+
+        setParsedRows(rows);
+        if (rows.length === 0) {
+          showToast('No valid data rows found in CSV file.', 'warning');
+        }
+      } catch (err) {
+        showToast('Error parsing CSV file: ' + err.message, 'error');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleImportSubmit = async () => {
+    const validRows = parsedRows.filter(r => r.isValid);
+    if (validRows.length === 0) {
+      showToast('No valid records to import.', 'warning');
+      return;
+    }
+
+    setIsImporting(true);
+    let successCount = 0;
+    try {
+      for (const row of validRows) {
+        await addDonation({
+          donorName: row.donorName,
+          donationType: row.donationType,
+          amount: String(row.amount),
+          paymentMethod: row.paymentMethod,
+          donorMobile: row.donorMobile,
+          remarks: row.remarks
+        });
+        successCount++;
+      }
+      showToast(`Successfully imported ${successCount} donation records!`, 'success');
+      onImportSuccess();
+      onClose();
+    } catch (e) {
+      showToast(`Imported ${successCount} records before encountering an error: ${e.message}`, 'error');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const validCount = parsedRows.filter(r => r.isValid).length;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between p-5 border-b border-slate-800 bg-slate-950/50">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
+              <Upload className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-100">Import Donation Records (CSV)</h3>
+              <p className="text-xs text-slate-400">Upload CSV spreadsheet to import donation entries in bulk</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="p-5 overflow-y-auto space-y-4">
+          <div className="flex items-center justify-between p-3.5 bg-slate-950/60 rounded-xl border border-slate-800 text-xs">
+            <div className="text-slate-300">
+              <span className="font-semibold text-slate-200">Need standard CSV format?</span> Download template file to see column structure.
+            </div>
+            <button
+              onClick={downloadSampleCSV}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/30 text-xs font-bold transition-all shrink-0 cursor-pointer"
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5" /> Sample CSV
+            </button>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Select CSV File</label>
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".csv,text/csv"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full py-6 border-2 border-dashed border-slate-700 hover:border-cyan-500/60 rounded-xl bg-slate-950/40 hover:bg-slate-950/70 transition-all flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-cyan-300 cursor-pointer group"
+            >
+              <FileSpreadsheet className="h-8 w-8 text-slate-500 group-hover:text-cyan-400 group-hover:scale-110 transition-all" />
+              <span className="text-xs font-bold text-slate-300">{fileName ? fileName : 'Click to select CSV file'}</span>
+              <span className="text-[11px] text-slate-500">Supports .CSV files exported from Excel, Sheets or system</span>
+            </button>
+          </div>
+
+          {parsedRows.length > 0 && (
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-300">File Preview</span>
+                <span className="text-slate-400">
+                  Total: <strong className="text-white">{parsedRows.length}</strong> | Ready: <strong className="text-emerald-400">{validCount}</strong>
+                </span>
+              </div>
+
+              <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/60">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-900 border-b border-slate-800 text-[10px] uppercase font-bold text-slate-400 sticky top-0">
+                    <tr>
+                      <th className="p-2.5">Donor / Beneficiary</th>
+                      <th className="p-2.5">Type</th>
+                      <th className="p-2.5">Amount</th>
+                      <th className="p-2.5">Method</th>
+                      <th className="p-2.5 text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 font-medium text-slate-300">
+                    {parsedRows.map(row => (
+                      <tr key={row.id} className={row.isValid ? 'hover:bg-slate-800/30' : 'bg-red-500/5 hover:bg-red-500/10'}>
+                        <td className="p-2.5 font-bold text-slate-200">{row.donorName}</td>
+                        <td className="p-2.5">{row.donationType}</td>
+                        <td className="p-2.5 font-bold text-emerald-400">Rs {row.amount.toLocaleString()}</td>
+                        <td className="p-2.5">{row.paymentMethod}</td>
+                        <td className="p-2.5 text-right font-bold">
+                          {row.isValid ? (
+                            <span className="text-emerald-400 text-[10px] bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">Valid</span>
+                          ) : (
+                            <span className="text-red-400 text-[10px] bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full">{row.error}</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="p-4 border-t border-slate-800 bg-slate-950/80 flex items-center justify-end gap-3">
+          <button onClick={onClose} disabled={isImporting} className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors">
+            Cancel
+          </button>
+          <button
+            onClick={handleImportSubmit}
+            disabled={isImporting || validCount === 0}
+            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold transition-all shadow-lg shadow-cyan-900/40 cursor-pointer"
+          >
+            <Upload className="h-4 w-4" /> {isImporting ? 'Importing Records...' : `Import ${validCount} Records`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export const DonationReports = () => {
   const { donations, fetchDonations } = useDonationStore();
@@ -15,6 +284,7 @@ export const DonationReports = () => {
   const [filterBeneficiary, setFilterBeneficiary] = useState('All');
   const [filterMethod, setFilterMethod] = useState('All');
   const [viewMode, setViewMode] = useState('cards');
+  const [showImportModal, setShowImportModal] = useState(false);
 
   useEffect(() => {
     fetchDonations();
@@ -97,6 +367,12 @@ export const DonationReports = () => {
 
   return (
     <div className="space-y-6 pb-10 print:bg-white print:text-black">
+      <ImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImportSuccess={() => fetchDonations()}
+      />
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -105,9 +381,12 @@ export const DonationReports = () => {
             </span>
           </div>
           <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">Donation Reports</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Filter and export donation records</p>
+          <p className="text-xs text-slate-500 mt-0.5">Filter, import and export donation records</p>
         </div>
         <div className={pageActionsClass}>
+          <button onClick={() => setShowImportModal(true)} className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-cyan-950/80 hover:bg-cyan-900/90 text-cyan-300 border border-cyan-700/50 text-xs font-bold transition-all cursor-pointer shadow-md">
+            <Upload className="h-4 w-4" /> Import CSV
+          </button>
           <button onClick={handleExportExcel} className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all cursor-pointer shadow-md">
             <Download className="h-4 w-4" /> Excel (CSV)
           </button>
