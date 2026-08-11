@@ -49,6 +49,8 @@ export const PettyCashVoucherModal = ({ isOpen, onClose, voucher }) => {
 
   const resolvedRec = resolveVoucherRecipientDetails(voucher);
   const displayPaidTo = resolvedRec.name !== '-' ? resolvedRec.name : (voucher.paidTo || '-');
+  const amount = Number(voucher.amount || 0);
+  const words = numberToWords(amount) + ' Only';
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
