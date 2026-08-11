@@ -40,6 +40,7 @@ import {
   FileText,
   CreditCard,
   Link2,
+  Scale,
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -217,6 +218,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
         { name: t('sidebar.generalLedger'), hint: t('sidebar.generalLedgerHint'), icon: BookOpen, path: '/ledger' },
         { name: t('sidebar.trialBalance'), hint: t('sidebar.trialBalanceHint'), icon: Layers, path: '/reports?tab=trial-balance', perms: ['VIEW_REPORTS'] },
         { name: t('sidebar.trialBalanceMatrix'), hint: t('sidebar.trialBalanceMatrixHint'), icon: Layers, path: '/trial-balance-sheet', perms: ['VIEW_REPORTS'] },
+        { name: 'Financial Year Closing', hint: 'Year-end validation, P&L close & auto-rollover', icon: ShieldCheck, path: '/financial-year-closing', perms: ['VIEW_REPORTS'] },
       ],
     },
     {

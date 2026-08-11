@@ -31,6 +31,8 @@ const Reports = lazy(() => import('./views/Reports').then(m => ({ default: m.Rep
 const TrialBalanceSheet = lazy(() => import('./views/TrialBalanceSheet').then(m => ({ default: m.TrialBalanceSheet })));
 const HallBookings = lazy(() => import('./views/HallBookings').then(m => ({ default: m.HallBookings })));
 const HallBookingForm = lazy(() => import('./views/HallBookingForm').then(m => ({ default: m.HallBookingForm })));
+const OpeningBalances = lazy(() => import('./views/OpeningBalances').then(m => ({ default: m.OpeningBalances })));
+const YearEndClosing = lazy(() => import('./views/YearEndClosing').then(m => ({ default: m.YearEndClosing })));
 
 // Donation Module Views
 const Beneficiaries = lazy(() => import('./views/Beneficiaries').then(m => ({ default: m.Beneficiaries })));
@@ -300,6 +302,12 @@ function App() {
             <Route path="/reports" element={
               <PermissionGuard requiredPerms={['VIEW_REPORTS']}>
                 <Reports />
+              </PermissionGuard>
+            } />
+            <Route path="/opening-balances" element={<OpeningBalances />} />
+            <Route path="/financial-year-closing" element={
+              <PermissionGuard requiredPerms={['VIEW_REPORTS']}>
+                <YearEndClosing />
               </PermissionGuard>
             } />
             <Route path="/add-income" element={<AddIncome />} />

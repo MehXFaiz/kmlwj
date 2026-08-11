@@ -64,6 +64,8 @@ import addIncomeHandler from './_v1/add-income.js';
 import ledgerPostHandler from './_v1/ledger-post.js';
 import { memberVerifyHandler } from './_v1/member-verify.js';
 import { zakatCardVerifyHandler } from './_v1/zakat-card-verify.js';
+import financialYearsHandler from './_v1/financial-years.js';
+import openingBalancesHandler from './_v1/opening-balances.js';
 import { uploadFields, handleUploadError } from './_middlewares/upload.middleware.js';
 
 // ── Startup storage configuration check ─────────────────────────────────────
@@ -275,6 +277,12 @@ app.delete('/api/v1/journal-entries', makeExpress(journalEntriesHandler));
 
 // Global Search Route
 app.get('/api/v1/search', makeExpress(searchHandler));
+
+// Financial Years & Opening Balances Routes
+app.get('/api/v1/financial-years', makeExpress(financialYearsHandler));
+app.post('/api/v1/financial-years', makeExpress(financialYearsHandler));
+app.get('/api/v1/opening-balances', makeExpress(openingBalancesHandler));
+app.post('/api/v1/opening-balances', makeExpress(openingBalancesHandler));
 
 // Financial Reports
 app.get('/api/v1/reports/trial-balance', makeExpress(trialBalanceHandler));

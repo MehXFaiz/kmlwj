@@ -1,374 +1,413 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOpeningBalanceStore } from '../store/openingBalanceStore';
+import { useFinancialYearStore } from '../store/financialYearStore';
 import { useAuthStore } from '../store/authStore';
-import { showToast } from '../components/ui/Toast';
 import {
-  FileSpreadsheet,
-  Calendar,
-  Building2,
-  Banknote,
-  Wallet,
-  Scale,
-  CheckCircle2,
-  AlertTriangle,
-  RefreshCw,
-  Save,
-  Lock,
-  ArrowRight,
-  ShieldCheck
+  Wallet, ShieldCheck, ShieldAlert, Lock, Unlock, ArrowRight,
+  RefreshCw, CheckCircle2, AlertTriangle, Info, Calendar, DollarSign,
+  Edit3, Save, History, Layers
 } from 'lucide-react';
-import { DashboardLayout } from '../layouts/DashboardLayout';
+import { showToast } from '../components/ui/Toast';
 
-const TARGET_FIELDS = [
-  {
-    key: '1010101',
-    label: 'National Bank of Pakistan Opening Balance',
-    subLabel: 'NBP General Bank Account (GL 1010101)',
-    icon: Building2,
-    color: 'text-blue-400',
-    bgColor: 'bg-blue-950/40 border-blue-800/40'
-  },
-  {
-    key: '1010102',
-    label: 'NBP Zakat Bank Opening Balance',
-    subLabel: 'NBP Zakat Bank Account (GL 1010102)',
-    icon: Building2,
-    color: 'text-teal-400',
-    bgColor: 'bg-teal-950/40 border-teal-800/40'
-  },
-  {
-    key: '1010103',
-    label: 'Cash in Hand Opening Balance',
-    subLabel: 'Main Cash in Hand Till (GL 1010103)',
-    icon: Banknote,
-    color: 'text-emerald-400',
-    bgColor: 'bg-emerald-950/40 border-emerald-800/40'
-  },
-  {
-    key: '1010104',
-    label: 'Petty Cash Opening Balance',
-    subLabel: 'Operational Petty Cash Imprest Fund (GL 1010104)',
-    icon: Wallet,
-    color: 'text-amber-400',
-    bgColor: 'bg-amber-950/40 border-amber-800/40'
-  },
-  {
-    key: '1010301',
-    label: 'Advances & Loans Opening Balance',
-    subLabel: 'Staff & Operational Advances (GL 1010301)',
-    icon: Scale,
-    color: 'text-purple-400',
-    bgColor: 'bg-purple-950/40 border-purple-800/40'
-  },
-  {
-    key: '1010201',
-    label: 'Accounts Receivable Opening Balance',
-    subLabel: 'Customer & Member Receivables (GL 1010201)',
-    icon: FileSpreadsheet,
-    color: 'text-sky-400',
-    bgColor: 'bg-sky-950/40 border-sky-800/40'
-  }
-];
-
-export const OpeningBalances = () => {
+export function OpeningBalances() {
   const { user } = useAuthStore();
+  const { years, fetchFinancialYears } = useFinancialYearStore();
   const {
-    loading,
-    saving,
-    error,
-    financialYear,
-    batch,
-    accounts,
-    fetchOpeningBalances,
+    financialYear, openingDate, isAutoRolled, sourceFinancialYear,
+    sourceClosingDate, adjustmentReason, hasPreviousYear, accounts,
+    allAccounts, batch, loading, saving, error, fetchOpeningBalances,
     saveOpeningBalances
   } = useOpeningBalanceStore();
 
-  const [date, setDate] = useState(() => {
-    // Default to July 1 of current or preceding year
-    const now = new Date();
-    const yr = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
-    return `${yr}-07-01`;
-  });
+  const [selectedFy, setSelectedFy] = useState('');
+  const [selectedDate, setSelectedDate] = useState('');
+  const [formBalances, setFormBalances] = useState({});
+  const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
+  const [adjustReason, setAdjustReason] = useState('');
+  const [adjusting, setAdjusting] = useState(false);
 
-  const [values, setValues] = useState({
-    '1010101': '',
-    '1010102': '',
-    '1010103': '',
-    '1010104': '',
-    '1010301': '',
-    '1010201': ''
-  });
+  const isAdmin = user?.role === 'Super Admin' || user?.role === 'Admin';
 
-  // Fetch opening balances whenever selected date changes
   useEffect(() => {
-    fetchOpeningBalances(date)
-      .then((data) => {
-        if (data && data.accounts) {
-          const newVals = {};
-          TARGET_FIELDS.forEach(f => {
-            const accData = data.accounts[f.key];
-            newVals[f.key] = accData && accData.amount ? String(accData.amount) : '';
-          });
-          setValues(newVals);
-        }
-      })
-      .catch(() => {});
-  }, [date, fetchOpeningBalances]);
+    fetchFinancialYears();
+    fetchOpeningBalances();
+  }, []);
 
-  const handleInputChange = (glCode, val) => {
-    // Allow numbers and single decimal point
-    if (val === '' || /^\d*\.?\d*$/.test(val)) {
-      setValues(prev => ({ ...prev, [glCode]: val }));
+  useEffect(() => {
+    if (financialYear) setSelectedFy(financialYear);
+    if (openingDate) setSelectedDate(openingDate);
+
+    // Initialize balance inputs
+    const initialInputs = {};
+    if (allAccounts && allAccounts.length > 0) {
+      allAccounts.forEach(acc => {
+        initialInputs[acc.glCode] = acc.amount ?? 0;
+      });
     }
+    setFormBalances(initialInputs);
+  }, [financialYear, openingDate, allAccounts]);
+
+  const handleFyChange = async (newFy) => {
+    setSelectedFy(newFy);
+    const { startYear } = parseFyCode(newFy);
+    const dateStr = `${startYear}-07-01`;
+    setSelectedDate(dateStr);
+    await fetchOpeningBalances(dateStr);
   };
 
-  // Live double-entry balance calculations
-  const totalDebit = useMemo(() => {
-    return TARGET_FIELDS.reduce((sum, f) => {
-      const num = parseFloat(values[f.key]) || 0;
-      return sum + (num > 0 ? num : 0);
-    }, 0);
-  }, [values]);
+  function parseFyCode(code) {
+    const clean = (code || '').replace(/[^0-9-]/g, '');
+    const parts = clean.split('-');
+    const startYear = parseInt(parts[0], 10) || new Date().getFullYear();
+    const endYear = parts[1] ? parseInt(parts[1], 10) : startYear + 1;
+    return { startYear, endYear };
+  }
 
-  const totalCredit = totalDebit; // Automatically balanced via Opening Equity
-  const equityBalancingAmount = totalDebit;
-  const difference = 0.00;
+  const handleInputChange = (glCode, value) => {
+    const num = parseFloat(value);
+    setFormBalances(prev => ({
+      ...prev,
+      [glCode]: isNaN(num) ? 0 : num
+    }));
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
 
-    if (!date) {
-      showToast('Please select a valid opening balance date.', 'warning');
+    if (isAutoRolled) {
+      showToast.error('Automatically rolled balances are locked. Use "Adjust Opening Balance" to make an explicit adjustment.');
       return;
     }
 
-    const payloadBalances = {};
-    for (const f of TARGET_FIELDS) {
-      const num = parseFloat(values[f.key]) || 0;
-      if (num < 0) {
-        showToast(`Opening balance for ${f.label} cannot be negative.`, 'warning');
-        return;
-      }
-      payloadBalances[f.key] = num;
-    }
-
     try {
-      const res = await saveOpeningBalances(date, payloadBalances);
-      showToast(res.message || 'Opening balances saved and posted successfully!', 'success');
+      await saveOpeningBalances(selectedDate, formBalances);
+      showToast.success(`Opening balances for ${selectedFy} saved successfully!`);
     } catch (err) {
-      showToast(err.message || 'Failed to save opening balances.', 'error');
+      // Error handled in store
     }
   };
 
-  return (
-    <DashboardLayout>
-      <div className="mx-auto max-w-6xl space-y-6 pb-12">
-        {/* Header Banner */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-3xl bg-slate-900/90 border border-slate-800 p-6 shadow-xl backdrop-blur-md">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
-                <Scale className="h-6 w-6" />
-              </div>
-              <div>
-                <h1 className="text-xl font-black tracking-tight text-slate-100">Opening Balance Setup</h1>
-                <p className="text-xs font-semibold text-slate-400">Enter opening balances for the selected financial year.</p>
-              </div>
-            </div>
-          </div>
+  const handleExecuteAdjustment = async () => {
+    if (!adjustReason || adjustReason.trim().length < 5) {
+      showToast.error('Please provide a detailed adjustment reason (at least 5 characters).');
+      return;
+    }
 
-          <div className="flex items-center gap-3 flex-wrap">
-            {batch ? (
-              <span className="inline-flex items-center gap-2 rounded-xl bg-emerald-950/80 border border-emerald-800/60 px-3.5 py-2 text-xs font-bold text-emerald-300">
-                <CheckCircle2 className="h-4 w-4" />
-                <span>Posted Entry ({batch.voucherNo || batch.financialYear})</span>
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-2 rounded-xl bg-slate-950/80 border border-slate-800 px-3.5 py-2 text-xs font-semibold text-slate-400">
-                <span>Not Posted for {financialYear || 'Selected Year'}</span>
-              </span>
-            )}
+    setAdjusting(true);
+    try {
+      await saveOpeningBalances(selectedDate, formBalances, true, adjustReason);
+      showToast.success('Opening balance adjustment recorded with audit trail!');
+      setIsAdjustModalOpen(false);
+      setAdjustReason('');
+    } catch (err) {
+      showToast.error(err.message || 'Failed to adjust opening balances');
+    } finally {
+      setAdjusting(false);
+    }
+  };
+
+  // Primary Accounts for quick entry / key presentation
+  const primaryCodes = ['1010101', '1010102', '1010103', '1010104', '1010301', '1010201'];
+  const displayAccounts = (allAccounts && allAccounts.length > 0)
+    ? allAccounts
+    : primaryCodes.map(code => ({ glCode: code, accountName: getAccountName(code), accountType: 'ASSET', amount: formBalances[code] || 0 }));
+
+  function getAccountName(code) {
+    switch (code) {
+      case '1010101': return 'National Bank of Pakistan';
+      case '1010102': return 'NBP Zakat Bank';
+      case '1010103': return 'Cash in Hand';
+      case '1010104': return 'Petty Cash';
+      case '1010301': return 'Advances & Loans';
+      case '1010201': return 'Accounts Receivable';
+      default: return `GL Account ${code}`;
+    }
+  }
+
+  const totalOpeningAmount = Object.values(formBalances).reduce((sum, val) => sum + (Number(val) || 0), 0);
+
+  return (
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      {/* ── Top Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800 pb-5">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-950/70 text-amber-400 border border-amber-800/60">
+              Accounting Cycle
+            </span>
           </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            Opening Balances
+          </h1>
+          <p className="text-sm text-slate-400 mt-1">
+            Manage organization starting balances for each financial year cycle.
+          </p>
         </div>
 
-        {/* Date Selection Card */}
-        <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 shadow-xl space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+        {/* Financial Year Selector */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5">
+            <Calendar className="h-4 w-4 text-slate-400" />
+            <select
+              value={selectedFy}
+              onChange={(e) => handleFyChange(e.target.value)}
+              className="bg-transparent text-sm font-semibold text-white focus:outline-none cursor-pointer"
+            >
+              {years.map(y => (
+                <option key={y.id || y.code} value={y.code} className="bg-slate-900 text-white">
+                  {y.code} {y.isClosed ? '(Closed)' : ''}
+                </option>
+              ))}
+              {!years.some(y => y.code === selectedFy) && (
+                <option value={selectedFy} className="bg-slate-900 text-white">{selectedFy}</option>
+              )}
+            </select>
+          </div>
+
+          <button
+            onClick={() => fetchOpeningBalances(selectedDate)}
+            disabled={loading}
+            className="p-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-slate-300 transition-colors"
+            title="Refresh opening balances"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Status Banner & Source Card ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Source Card */}
+        <div className="lg:col-span-2 rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm relative overflow-hidden">
+          <div className="flex items-start justify-between">
             <div className="space-y-1">
-              <label htmlFor="opening-balance-date-picker" className="block text-xs font-bold uppercase tracking-wider text-slate-300">
-                Opening Balance Date <span className="text-rose-500">*</span>
-              </label>
-              <p className="text-xs text-slate-400">
-                Select the financial year opening date (e.g. 01-07-2025). This date applies to all entries in this form.
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Source Verification</span>
+              <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                {isAutoRolled ? (
+                  <>
+                    <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                    <span>Automatically Rolled Forward from {sourceFinancialYear}</span>
+                  </>
+                ) : hasPreviousYear ? (
+                  <>
+                    <Info className="h-5 w-5 text-amber-400" />
+                    <span>Previous Financial Year Detected</span>
+                  </>
+                ) : (
+                  <>
+                    <Wallet className="h-5 w-5 text-amber-400" />
+                    <span>Initial Opening Balance Setup</span>
+                  </>
+                )}
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                {isAutoRolled
+                  ? `Balances automatically carried forward from ${sourceFinancialYear} closing balances as of ${sourceClosingDate || 'year end'}.`
+                  : hasPreviousYear
+                  ? 'Opening balances will be automatically carried forward when previous financial year is closed.'
+                  : 'Organization first-year setup. Enter initial starting balances for cash, bank, and asset accounts.'}
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <input
-                  id="opening-balance-date-picker"
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="rounded-2xl bg-slate-950/80 border border-slate-800 px-4 py-2.5 text-sm font-bold font-mono text-slate-100 focus:outline-none focus:border-amber-500/60 transition-all shadow-inner"
-                />
-              </div>
-              <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-amber-300">
-                {financialYear || 'FY'}
-              </div>
+
+            <div className="flex flex-col items-end gap-1.5">
+              {isAutoRolled ? (
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 flex items-center gap-1.5">
+                  <Lock className="h-3.5 w-3.5" /> Locked (Auto-Rolled)
+                </span>
+              ) : (
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-950/80 text-amber-400 border border-amber-800/60 flex items-center gap-1.5">
+                  <Unlock className="h-3.5 w-3.5" /> Editable Initial Setup
+                </span>
+              )}
+
+              {batch?.voucherNo && (
+                <span className="text-[11px] font-mono text-slate-500">
+                  Voucher: {batch.voucherNo}
+                </span>
+              )}
             </div>
           </div>
 
-          {error && (
-            <div className="flex items-center gap-3 rounded-2xl bg-rose-950/60 border border-rose-800/60 p-4 text-xs font-semibold text-rose-300">
-              <AlertTriangle className="h-5 w-5 text-rose-400 shrink-0" />
-              <span>{error}</span>
+          {adjustmentReason && (
+            <div className="mt-4 pt-3 border-t border-slate-800/80 text-xs text-slate-400 flex items-start gap-2">
+              <History className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold text-slate-300">Adjustment Note:</span> {adjustmentReason}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Accounts Form */}
-        <form onSubmit={handleSave} className="space-y-6">
-          <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
-              <h2 className="text-sm font-black uppercase tracking-wider text-slate-300">Predefined Target Opening Accounts</h2>
-              <span className="text-xs font-semibold text-slate-500">6 Asset GL Accounts</span>
+        {/* Summary Card */}
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm flex flex-col justify-between">
+          <div>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Total Opening Debits</span>
+            <div className="text-2xl sm:text-3xl font-extrabold font-mono text-white mt-1">
+              PKR {totalOpeningAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
+          </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              {TARGET_FIELDS.map((field) => {
-                const IconComp = field.icon;
-                const accState = accounts[field.key];
-                const isConfigured = accState?.configured !== false;
+          <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
+            <span className="text-slate-400">Opening Date:</span>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              disabled={isAutoRolled}
+              className="bg-slate-950 border border-slate-800 text-slate-200 font-mono text-xs px-2.5 py-1 rounded-lg focus:outline-none"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Main Accounts Table Form ── */}
+      <form onSubmit={handleSave} className="rounded-2xl border border-slate-800/80 bg-slate-900/60 overflow-hidden backdrop-blur-sm shadow-xl">
+        <div className="px-6 py-4 border-b border-slate-800/80 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Layers className="h-5 w-5 text-amber-400" />
+            <h2 className="text-base font-bold text-white">Account Opening Balances</h2>
+          </div>
+
+          {isAutoRolled && isAdmin && (
+            <button
+              type="button"
+              onClick={() => setIsAdjustModalOpen(true)}
+              className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/40 transition-colors flex items-center gap-1.5"
+            >
+              <Edit3 className="h-3.5 w-3.5" /> Adjust Opening Balance
+            </button>
+          )}
+        </div>
+
+        {error && (
+          <div className="mx-6 mt-4 p-3.5 bg-red-950/60 border border-red-800/80 rounded-xl text-xs text-red-300 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-red-400 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-300">
+            <thead className="bg-slate-950/70 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800/80">
+              <tr>
+                <th className="py-3.5 px-6">GL Code</th>
+                <th className="py-3.5 px-6">Account Name</th>
+                <th className="py-3.5 px-6">Category / Type</th>
+                <th className="py-3.5 px-6 text-right">Opening Balance (PKR)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/50 text-xs">
+              {displayAccounts.map((acc) => {
+                const isPrimary = primaryCodes.includes(acc.glCode);
+                const val = formBalances[acc.glCode] ?? 0;
 
                 return (
-                  <div
-                    key={field.key}
-                    className={`rounded-2xl border p-4 transition-all ${
-                      isConfigured
-                        ? 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700'
-                        : 'bg-rose-950/20 border-rose-800/40'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3 mb-2">
-                      <div className="flex items-center gap-2.5">
-                        <div className={`p-2 rounded-xl border ${field.bgColor}`}>
-                          <IconComp className={`h-4 w-4 ${field.color}`} />
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold text-slate-100">{field.label}</div>
-                          <div className="text-[10.5px] font-semibold text-slate-400">{field.subLabel}</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {!isConfigured ? (
-                      <div className="mt-2 text-xs font-semibold text-rose-400">
-                        Required account is not configured in Chart of Accounts.
-                      </div>
-                    ) : (
-                      <div className="relative mt-2">
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">
-                          PKR
+                  <tr key={acc.glCode} className={`hover:bg-slate-800/30 transition-colors ${isPrimary ? 'bg-amber-950/10' : ''}`}>
+                    <td className="py-3.5 px-6 font-mono font-bold text-amber-400">
+                      {acc.glCode}
+                    </td>
+                    <td className="py-3.5 px-6 font-semibold text-slate-100">
+                      {acc.accountName}
+                      {isPrimary && (
+                        <span className="ml-2 text-[9px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                          Primary
                         </span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-6 text-slate-400 font-medium">
+                      {acc.accountType || acc.detailType || 'Asset'}
+                    </td>
+                    <td className="py-3.5 px-6 text-right">
+                      {isAutoRolled ? (
+                        <span className="font-mono font-bold text-slate-100 text-sm">
+                          {Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      ) : (
                         <input
-                          type="text"
-                          value={values[field.key]}
-                          onChange={(e) => handleInputChange(field.key, e.target.value)}
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={val}
+                          onChange={(e) => handleInputChange(acc.glCode, e.target.value)}
+                          className="w-48 bg-slate-950 border border-slate-800 focus:border-amber-500 text-right font-mono font-bold text-amber-300 px-3 py-1.5 rounded-xl focus:outline-none transition-colors"
                           placeholder="0.00"
-                          className="w-full rounded-xl bg-slate-900 border border-slate-800 pl-14 pr-4 py-2.5 text-sm font-black font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 transition-all text-right shadow-inner"
                         />
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </td>
+                  </tr>
                 );
               })}
-            </div>
+            </tbody>
+          </table>
+        </div>
+
+        {!isAutoRolled && (
+          <div className="p-6 border-t border-slate-800/80 bg-slate-950/40 flex items-center justify-between">
+            <span className="text-xs text-slate-400">
+              * Opening balances will post through the double-entry accounting engine to Opening Equity.
+            </span>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-6 py-2.5 rounded-xl text-sm font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 transition-all duration-150 flex items-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50"
+            >
+              {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              <span>Save Opening Balances</span>
+            </button>
           </div>
+        )}
+      </form>
 
-          {/* Double-Entry Balancing Summary Box */}
-          <div className="rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-slate-800 p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5 text-emerald-400" />
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-200">Double-Entry Accounting Verification</h3>
+      {/* ── Adjustment Reason Modal ── */}
+      {isAdjustModalOpen && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-amber-950/80 border border-amber-800/60 rounded-xl text-amber-400">
+                <AlertTriangle className="h-5 w-5" />
               </div>
-              <span className="text-[11px] font-extrabold uppercase tracking-widest text-emerald-400 bg-emerald-950/80 border border-emerald-800/60 px-3 py-1 rounded-lg">
-                100% Balanced
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-              <div className="rounded-2xl bg-slate-950/80 border border-slate-800 p-3.5">
-                <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Total Opening Debit</div>
-                <div className="text-sm font-black font-mono text-emerald-400 mt-1">
-                  Rs {totalDebit.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </div>
-              </div>
-
-              <div className="rounded-2xl bg-slate-950/80 border border-slate-800 p-3.5">
-                <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Total Opening Credit</div>
-                <div className="text-sm font-black font-mono text-teal-400 mt-1">
-                  Rs {totalCredit.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </div>
-              </div>
-
-              <div className="rounded-2xl bg-slate-950/80 border border-slate-800 p-3.5">
-                <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Opening Equity Credit</div>
-                <div className="text-sm font-black font-mono text-purple-400 mt-1">
-                  Rs {equityBalancingAmount.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </div>
-              </div>
-
-              <div className="rounded-2xl bg-slate-950/80 border border-slate-800 p-3.5">
-                <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Balance Difference</div>
-                <div className="text-sm font-black font-mono text-amber-400 mt-1">
-                  PKR {difference.toFixed(2)}
-                </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Adjust Opening Balance</h3>
+                <p className="text-xs text-slate-400">Explicit adjustment audit trail required.</p>
               </div>
             </div>
 
-            {/* Submit Action Bar */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-800/80">
+            <p className="text-xs text-slate-300 leading-relaxed">
+              You are adjusting auto-rolled opening balances for <span className="font-bold text-amber-400">{selectedFy}</span>. An audit trail entry will record your user name, timestamp, previous amount, new amount, and reason.
+            </p>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Adjustment Reason / Reference *</label>
+              <textarea
+                value={adjustReason}
+                onChange={(e) => setAdjustReason(e.target.value)}
+                placeholder="e.g. Audited bank reconciliation correction per FY 2026 audit report..."
+                rows={3}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-800">
               <button
                 type="button"
-                onClick={() => {
-                  setValues({
-                    '1010101': '',
-                    '1010102': '',
-                    '1010103': '',
-                    '1010104': '',
-                    '1010301': '',
-                    '1010201': ''
-                  });
-                }}
-                className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-2.5 text-xs font-bold text-slate-400 hover:text-slate-200 hover:border-slate-700 transition-all"
+                onClick={() => setIsAdjustModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300"
               >
-                Reset Form
+                Cancel
               </button>
-
               <button
-                type="submit"
-                disabled={saving || loading}
-                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-600 px-6 py-2.5 text-xs font-black uppercase tracking-wider text-slate-950 shadow-xl hover:brightness-110 active:scale-[0.99] disabled:opacity-50 transition-all"
+                type="button"
+                onClick={handleExecuteAdjustment}
+                disabled={adjusting}
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center gap-2"
               >
-                {saving ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    <span>Saving & Posting...</span>
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    <span>Save Opening Balances</span>
-                  </>
-                )}
+                {adjusting ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                Confirm & Adjust
               </button>
             </div>
           </div>
-        </form>
-      </div>
-    </DashboardLayout>
+        </div>
+      )}
+    </div>
   );
-};
-
-export default OpeningBalances;
+}

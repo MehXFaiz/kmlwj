@@ -4,18 +4,19 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
+import { FinancialYearService, parseFinancialYearCode } from "../_services/financial-year.service.js";
 import { PERMS } from "../_constants/permissions.js";
 function getFinancialYearFromDate(dateInput) {
   const d = new Date(dateInput);
-  const year = d.getFullYear();
-  const month = d.getMonth() + 1;
+  const year = d.getUTCFullYear();
+  const month = d.getUTCMonth() + 1;
   if (month >= 7) {
     return `FY ${year}-${year + 1}`;
   } else {
     return `FY ${year - 1}-${year}`;
   }
 }
-const TARGET_GL_CODES = [
+const PRIMARY_GL_CODES = [
   "1010101",
   // National Bank of Pakistan
   "1010102",
@@ -35,7 +36,7 @@ async function getOrCreateOpeningEquityAccount(tx) {
       isDeleted: false,
       OR: [
         { glCode: "3030101" },
-        { glCode: "5010101" },
+        { glCode: "3010199" },
         { accountName: { contains: "Opening Equity", mode: "insensitive" } },
         { accountName: { contains: "Retained Earnings", mode: "insensitive" } },
         { accountType: { name: { equals: "EQUITY", mode: "insensitive" } } }
@@ -83,12 +84,12 @@ var opening_balances_default = makeHandler(async (req, res) => {
     }
     const { date, financialYear: fyParam } = req.query;
     const selectedDate = date ? new Date(date) : /* @__PURE__ */ new Date();
-    const financialYear = fyParam || getFinancialYearFromDate(selectedDate);
+    const financialYear = fyParam ? fyParam.startsWith("FY ") ? fyParam : `FY ${fyParam}` : getFinancialYearFromDate(selectedDate);
     const batch = await prisma.openingBalanceBatch.findUnique({
       where: { financialYear },
       include: {
         lines: {
-          include: { account: true }
+          include: { account: { include: { accountType: true } } }
         },
         journalEntry: {
           include: {
@@ -97,42 +98,72 @@ var opening_balances_default = makeHandler(async (req, res) => {
         }
       }
     });
-    const targetAccountsList = await prisma.account.findMany({
-      where: {
-        glCode: { in: TARGET_GL_CODES },
-        isDeleted: false
-      },
-      include: { accountType: true }
+    const { startYear } = parseFinancialYearCode(financialYear);
+    const prevFyCode = `FY ${startYear - 1}-${startYear}`;
+    const previousFyRecord = await prisma.financialYear.findFirst({
+      where: { code: prevFyCode }
     });
-    const targetAccountMap = {};
-    for (const code of TARGET_GL_CODES) {
-      const acc = targetAccountsList.find((a) => a.glCode === code);
-      const line = batch?.lines.find((l) => l.accountId === acc?.id);
-      targetAccountMap[code] = {
-        id: acc?.id || null,
-        glCode: code,
-        accountName: acc?.accountName || null,
-        detailType: acc?.detailType || null,
-        amount: line ? Number(line.amount) : 0,
-        configured: !!acc
+    const previousBatchRecord = await prisma.openingBalanceBatch.findFirst({
+      where: { financialYear: prevFyCode }
+    });
+    const hasPreviousYear = Boolean(previousFyRecord || previousBatchRecord);
+    const allBsAccounts = await prisma.account.findMany({
+      where: {
+        isDeleted: false,
+        accountLevel: "GL",
+        accountType: { name: { in: ["ASSET", "ASSETS", "LIABILITY", "LIABILITIES", "EQUITY"] } }
+      },
+      include: { accountType: true },
+      orderBy: { glCode: "asc" }
+    });
+    const primaryAccountsMap = {};
+    const allAccountsList = [];
+    for (const acc of allBsAccounts) {
+      const line = batch?.lines.find((l) => l.accountId === acc.id || l.glCode === acc.glCode);
+      const amt = line ? Number(line.amount) : Number(acc.initialBalance || 0);
+      const accData = {
+        id: acc.id,
+        glCode: acc.glCode,
+        accountName: acc.accountName,
+        detailType: acc.detailType,
+        accountType: acc.accountType?.name || "Asset",
+        amount: amt,
+        debitCredit: line?.debitCredit || (["ASSET", "ASSETS"].includes(acc.accountType?.name?.toUpperCase() || "") ? "DEBIT" : "CREDIT"),
+        sourceClosingBalance: line?.sourceClosingBalance ? Number(line.sourceClosingBalance) : null
       };
+      if (PRIMARY_GL_CODES.includes(acc.glCode)) {
+        primaryAccountsMap[acc.glCode] = accData;
+      }
+      allAccountsList.push(accData);
     }
     return res.status(200).json({
       status: 200,
       data: {
         financialYear,
-        openingDate: batch?.openingDate ? batch.openingDate.toISOString().split("T")[0] : selectedDate.toISOString().split("T")[0],
+        openingDate: batch?.openingDate ? batch.openingDate.toISOString().split("T")[0] : `${startYear}-07-01`,
+        hasPreviousYear,
+        previousFinancialYear: prevFyCode,
+        isAutoRolled: batch?.isAutoRolled ?? false,
+        sourceFinancialYear: batch?.sourceFinancialYear ?? null,
+        sourceClosingDate: batch?.sourceClosingDate ? batch.sourceClosingDate.toISOString().split("T")[0] : null,
+        adjustmentReason: batch?.adjustmentReason ?? null,
         batch: batch ? {
           id: batch.id,
-          openingDate: batch.openingDate,
+          openingDate: batch.openingDate.toISOString().split("T")[0],
           financialYear: batch.financialYear,
+          sourceFinancialYear: batch.sourceFinancialYear,
+          sourceClosingDate: batch.sourceClosingDate ? batch.sourceClosingDate.toISOString().split("T")[0] : null,
+          isAutoRolled: batch.isAutoRolled,
+          adjustmentReason: batch.adjustmentReason,
+          adjustedAt: batch.adjustedAt,
           status: batch.status,
           journalEntryId: batch.journalEntryId,
           voucherNo: batch.journalEntry?.voucherNo,
           createdAt: batch.createdAt,
           updatedAt: batch.updatedAt
         } : null,
-        accounts: targetAccountMap
+        accounts: primaryAccountsMap,
+        allAccounts: allAccountsList
       }
     });
   }
@@ -140,50 +171,68 @@ var opening_balances_default = makeHandler(async (req, res) => {
     if (!await verifyPermission(req, res, PERMS.POST_JOURNAL)) {
       return res.status(403).json({ error: { message: "Forbidden: Only authorized administrators can save opening balances", status: 403 } });
     }
-    const { openingDate, balances } = req.body || {};
+    const { openingDate, balances, isAdjustment, reason } = req.body || {};
     if (!openingDate || isNaN(Date.parse(openingDate))) {
       return res.status(400).json({ error: { message: "Valid opening balance date is required", status: 400 } });
     }
     if (!balances || typeof balances !== "object") {
       return res.status(400).json({ error: { message: "Opening balance amounts object is required", status: 400 } });
     }
-    const financialYear = getFinancialYearFromDate(openingDate);
+    const rawFy = getFinancialYearFromDate(openingDate);
+    const financialYear = req.body.financialYear ? req.body.financialYear.startsWith("FY ") ? req.body.financialYear : `FY ${req.body.financialYear}` : rawFy;
     const parsedDate = new Date(openingDate);
-    const targetAccounts = await prisma.account.findMany({
+    const accountKeys = Object.keys(balances);
+    const accounts = await prisma.account.findMany({
       where: {
-        glCode: { in: TARGET_GL_CODES },
+        OR: [
+          { id: { in: accountKeys.filter((k) => k.length === 36) } },
+          { glCode: { in: accountKeys } }
+        ],
         isDeleted: false
-      }
+      },
+      include: { accountType: true }
     });
-    const missingAccounts = TARGET_GL_CODES.filter((code) => !targetAccounts.some((a) => a.glCode === code));
-    if (missingAccounts.length > 0) {
+    if (accounts.length === 0) {
+      return res.status(400).json({ error: { message: "No valid accounts specified in opening balances payload.", status: 400 } });
+    }
+    const existingBatch = await prisma.openingBalanceBatch.findUnique({
+      where: { financialYear },
+      include: { journalEntry: true }
+    });
+    if (existingBatch?.isAutoRolled && !isAdjustment) {
       return res.status(400).json({
         error: {
-          message: `Required account is not configured in Chart of Accounts (missing GL: ${missingAccounts.join(", ")}).`,
+          message: `Opening balances for ${financialYear} were automatically rolled forward from ${existingBatch.sourceFinancialYear}. Silent modification is not allowed. Please use the "Adjust Opening Balance" action with an explicit reason.`,
           status: 400
         }
       });
     }
+    if (isAdjustment && (!reason || reason.trim().length < 5)) {
+      return res.status(400).json({ error: { message: "An explicit adjustment reason (at least 5 characters) is required when modifying opening balances.", status: 400 } });
+    }
     const accountAmountPairs = [];
     let totalDebit = new Prisma.Decimal(0);
-    for (const code of TARGET_GL_CODES) {
-      const rawVal = balances[code] ?? 0;
+    let totalCredit = new Prisma.Decimal(0);
+    for (const acc of accounts) {
+      const key = balances[acc.id] !== void 0 ? acc.id : acc.glCode;
+      const rawVal = balances[key] ?? 0;
       const numVal = Number(rawVal);
       if (isNaN(numVal) || numVal < 0) {
-        return res.status(400).json({ error: { message: `Opening balance amount for GL ${code} must be a valid non-negative number`, status: 400 } });
+        return res.status(400).json({ error: { message: `Opening balance for ${acc.accountName} must be a valid non-negative number`, status: 400 } });
       }
-      const account = targetAccounts.find((a) => a.glCode === code);
       const decAmount = new Prisma.Decimal(numVal);
-      accountAmountPairs.push({ account, amount: decAmount });
-      totalDebit = totalDebit.plus(decAmount);
+      if (decAmount.gt(0)) {
+        const typeName = (acc.accountType?.name || "").toUpperCase();
+        const isDebitNormal = ["ASSET", "ASSETS", "EXPENSE", "EXPENSES"].includes(typeName);
+        const dc = isDebitNormal ? "DEBIT" : "CREDIT";
+        if (dc === "DEBIT") totalDebit = totalDebit.plus(decAmount);
+        else totalCredit = totalCredit.plus(decAmount);
+        accountAmountPairs.push({ account: acc, amount: decAmount, debitCredit: dc });
+      }
     }
     try {
       const result = await prisma.$transaction(async (tx) => {
         const equityAccount = await getOrCreateOpeningEquityAccount(tx);
-        const existingBatch = await tx.openingBalanceBatch.findUnique({
-          where: { financialYear },
-          include: { journalEntry: true }
-        });
         const oldValues = existingBatch ? {
           batchId: existingBatch.id,
           journalEntryId: existingBatch.journalEntryId,
@@ -193,40 +242,44 @@ var opening_balances_default = makeHandler(async (req, res) => {
           await tx.openingBalanceLine.deleteMany({
             where: { batchId: existingBatch.id }
           });
-          await tx.journalEntry.update({
-            where: { id: existingBatch.journalEntryId },
-            data: {
-              isDeleted: true,
-              deletedAt: /* @__PURE__ */ new Date(),
-              deletedBy: req.user.id
-            }
-          });
-          await AccountingService.recalculateBalancesForJournalEntry(tx, existingBatch.journalEntryId);
+          if (existingBatch.journalEntryId) {
+            await tx.journalEntry.update({
+              where: { id: existingBatch.journalEntryId },
+              data: {
+                isDeleted: true,
+                deletedAt: /* @__PURE__ */ new Date(),
+                deletedBy: req.user.id
+              }
+            });
+            await AccountingService.recalculateBalancesForJournalEntry(tx, existingBatch.journalEntryId);
+          }
         }
         const journalLinesPayload = [];
-        for (const { account, amount } of accountAmountPairs) {
-          if (amount.greaterThan(0)) {
+        for (const { account, amount, debitCredit } of accountAmountPairs) {
+          journalLinesPayload.push({
+            accountId: account.id,
+            description: `Opening Balance (${account.accountName}) - ${financialYear}`,
+            debit: debitCredit === "DEBIT" ? amount.toNumber() : 0,
+            credit: debitCredit === "CREDIT" ? amount.toNumber() : 0
+          });
+        }
+        const netDiff = totalDebit.minus(totalCredit);
+        if (!netDiff.isZero()) {
+          if (netDiff.gt(0)) {
             journalLinesPayload.push({
-              accountId: account.id,
-              description: `Opening Balance (${account.accountName}) - ${financialYear}`,
-              debit: amount.toNumber(),
+              accountId: equityAccount.id,
+              description: `Opening Equity Balancing Entry - ${financialYear}`,
+              debit: 0,
+              credit: netDiff.toNumber()
+            });
+          } else {
+            journalLinesPayload.push({
+              accountId: equityAccount.id,
+              description: `Opening Equity Balancing Entry - ${financialYear}`,
+              debit: netDiff.abs().toNumber(),
               credit: 0
             });
           }
-        }
-        if (totalDebit.greaterThan(0)) {
-          journalLinesPayload.push({
-            accountId: equityAccount.id,
-            description: `Opening Equity Balancing Entry - ${financialYear}`,
-            debit: 0,
-            credit: totalDebit.toNumber()
-          });
-        }
-        const sumDebit = journalLinesPayload.reduce((s, l) => s + l.debit, 0);
-        const sumCredit = journalLinesPayload.reduce((s, l) => s + l.credit, 0);
-        const diff = Math.abs(sumDebit - sumCredit);
-        if (diff > 0.01) {
-          throw new Error(`Opening balances are not balanced. Total Debit: PKR ${sumDebit.toFixed(2)}, Total Credit: PKR ${sumCredit.toFixed(2)}, Difference: PKR ${diff.toFixed(2)}.`);
         }
         const yearSuffix = parsedDate.getFullYear().toString();
         const randStr = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -238,7 +291,7 @@ var opening_balances_default = makeHandler(async (req, res) => {
             postingDate: parsedDate,
             subsidiary: "Global",
             reference: refStr,
-            description: `Opening Balances - ${financialYear}`,
+            description: isAdjustment ? `Adjusted Opening Balances - ${financialYear}: ${reason}` : `Opening Balances - ${financialYear}`,
             postedBy: req.user.fullName || "Administrator",
             status: "Posted",
             voucherType: "JV",
@@ -260,10 +313,15 @@ var opening_balances_default = makeHandler(async (req, res) => {
               openingDate: parsedDate,
               journalEntryId: journalEntry.id,
               status: "Posted",
+              adjustmentReason: isAdjustment ? reason : existingBatch.adjustmentReason,
+              adjustedById: isAdjustment ? req.user.id : existingBatch.adjustedById,
+              adjustedAt: isAdjustment ? /* @__PURE__ */ new Date() : existingBatch.adjustedAt,
               createdBy: req.user.id,
               lines: {
                 create: accountAmountPairs.map((p) => ({
                   accountId: p.account.id,
+                  glCode: p.account.glCode,
+                  debitCredit: p.debitCredit,
                   amount: p.amount
                 }))
               }
@@ -281,6 +339,8 @@ var opening_balances_default = makeHandler(async (req, res) => {
               lines: {
                 create: accountAmountPairs.map((p) => ({
                   accountId: p.account.id,
+                  glCode: p.account.glCode,
+                  debitCredit: p.debitCredit,
                   amount: p.amount
                 }))
               }
@@ -288,17 +348,20 @@ var opening_balances_default = makeHandler(async (req, res) => {
             include: { lines: true }
           });
         }
+        await FinancialYearService.getOrCreateYearByCode(financialYear, tx);
         await AccountingService.recalculateBalancesForJournalEntry(tx, journalEntry.id);
         const newValues = {
           batchId: batchRecord.id,
           financialYear: batchRecord.financialYear,
           openingDate: batchRecord.openingDate,
           journalEntryId: journalEntry.id,
-          totalDebit: totalDebit.toNumber()
+          totalDebit: totalDebit.toNumber(),
+          isAdjustment: Boolean(isAdjustment),
+          reason: reason || null
         };
         await logAudit(
           req.user.id,
-          existingBatch ? "Update Opening Balances" : "Create Opening Balances",
+          isAdjustment ? "Opening Balance Adjustment" : existingBatch ? "Update Opening Balances" : "Create Opening Balances",
           "FINANCIAL",
           oldValues,
           newValues,
@@ -321,6 +384,7 @@ var opening_balances_default = makeHandler(async (req, res) => {
       });
     }
   }
+  return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
 });
 export {
   opening_balances_default as default,

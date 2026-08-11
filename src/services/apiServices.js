@@ -104,6 +104,14 @@ export const reportsService = {
   }
 };
 
+export const financialYearService = {
+  getAll: () => api.get('/api/v1/financial-years').then((r) => r.data.data),
+  validate: (financialYear) => api.post('/api/v1/financial-years', { action: 'validate', financialYear }).then((r) => r.data.data),
+  close: (data) => api.post('/api/v1/financial-years', { action: 'close', ...data }).then((r) => r.data),
+  reopen: (data) => api.post('/api/v1/financial-years', { action: 'reopen', ...data }).then((r) => r.data),
+  adjust: (data) => api.post('/api/v1/financial-years', { action: 'adjust', ...data }).then((r) => r.data),
+};
+
 export const searchService = {
   search: (q) => api.get(`/api/v1/search?q=${encodeURIComponent(q)}`).then((r) => r.data.data),
 };
