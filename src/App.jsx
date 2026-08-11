@@ -79,7 +79,6 @@ const RevenueEntryForm = lazy(() => import('./views/RevenueEntryForm').then(m =>
 const ExpenseEntryForm = lazy(() => import('./views/ExpenseEntryForm').then(m => ({ default: m.ExpenseEntryForm })));
 const TransferForm = lazy(() => import('./views/TransferForm').then(m => ({ default: m.TransferForm })));
 const PettyCash = lazy(() => import('./views/PettyCash').then(m => ({ default: m.PettyCash })));
-const OpeningBalances = lazy(() => import('./views/OpeningBalances').then(m => ({ default: m.OpeningBalances })));
 
 // Auth Views (also lazy-loaded)
 const Login = lazy(() => import('./views/Login').then(m => ({ default: m.Login })));
@@ -304,7 +303,6 @@ function App() {
                 <Reports />
               </PermissionGuard>
             } />
-            <Route path="/opening-balances" element={<OpeningBalances />} />
             <Route path="/financial-year-closing" element={
               <PermissionGuard requiredPerms={['VIEW_REPORTS']}>
                 <YearEndClosing />
