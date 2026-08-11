@@ -11,6 +11,7 @@ import { JournalEntryModal } from '../components/ledger/JournalEntryModal';
 import { Plus, Calendar, ChevronDown, ChevronUp, FileSpreadsheet, Check, X, Search, Trash2, AlertTriangle } from 'lucide-react';
 import { MobileOnly, DesktopOnly } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
+import { sumMoney, formatMoney } from '../utils/money';
 
 export const JournalEntries = () => {
   const { journals, fetchJournals, isLoading, updateJournalStatus, deleteJournalEntry, bulkDeleteJournalEntries } = useJournalStore();
@@ -228,8 +229,8 @@ export const JournalEntries = () => {
                     <Badge variant="brand">{je.subsidiary}</Badge>
                   </div>
                   <div className="flex justify-between font-mono text-xs">
-                    <span className="text-emerald-400">DR PKR {debitTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                    <span className="text-slate-400">CR PKR {creditTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span className="text-emerald-400">DR PKR {formatMoney(debitTotal, { decimals: 2 })}</span>
+                    <span className="text-slate-400">CR PKR {formatMoney(creditTotal, { decimals: 2 })}</span>
                   </div>
                 </button>
                 {isExpanded && (
@@ -237,7 +238,7 @@ export const JournalEntries = () => {
                     {je.lines.map((line, idx) => (
                       <div key={idx} className="text-[11px] grid grid-cols-2 gap-1">
                         <span className="font-mono text-slate-300">{line.accountCode}</span>
-                        <span className="text-right font-mono text-emerald-400">{line.debit > 0 ? `Rs ${line.debit.toFixed(2)}` : line.credit > 0 ? `(Rs ${line.credit.toFixed(2)})` : '—'}</span>
+                        <span className="text-right font-mono text-emerald-400">{line.debit > 0 ? `Rs ${formatMoney(line.debit, { decimals: 2 })}` : line.credit > 0 ? `(Rs ${formatMoney(line.credit, { decimals: 2 })})` : '—'}</span>
                         {line.description && <span className="col-span-2 text-slate-500 truncate">{line.description}</span>}
                       </div>
                     ))}
@@ -335,10 +336,10 @@ export const JournalEntries = () => {
                           {je.reference} {je.description && <span className="text-slate-500 font-normal ml-1">- {je.description}</span>}
                         </td>
                         <td className="py-3.5 px-4 text-right font-mono font-semibold text-emerald-400">
-                          PKR {debitTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          PKR {formatMoney(debitTotal, { decimals: 2 })}
                         </td>
                         <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-300">
-                          PKR {creditTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          PKR {formatMoney(creditTotal, { decimals: 2 })}
                         </td>
                         <td className="py-3.5 px-4 text-center">
                           {getStatusBadge(je.status)}
@@ -408,10 +409,10 @@ export const JournalEntries = () => {
                                           {line.description || '—'}
                                         </td>
                                         <td className="py-2 px-3 text-right font-mono text-emerald-400">
-                                          {line.debit > 0 ? `Rs ${line.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
+                                          {line.debit > 0 ? `Rs ${formatMoney(line.debit, { decimals: 2 })}` : '—'}
                                         </td>
                                         <td className="py-2 px-3 text-right font-mono text-red-400">
-                                          {line.credit > 0 ? `Rs ${line.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
+                                          {line.credit > 0 ? `Rs ${formatMoney(line.credit, { decimals: 2 })}` : '—'}
                                         </td>
                                       </tr>
                                     ))}
@@ -419,10 +420,10 @@ export const JournalEntries = () => {
                                       <td className="py-2 px-3">Total Voucher</td>
                                       <td className="py-2 px-3"></td>
                                       <td className="py-2 px-3 text-right font-mono text-emerald-400">
-                                        PKR {debitTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        PKR {formatMoney(debitTotal, { decimals: 2 })}
                                       </td>
                                       <td className="py-2 px-3 text-right font-mono text-slate-300">
-                                        PKR {creditTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        PKR {formatMoney(creditTotal, { decimals: 2 })}
                                       </td>
                                     </tr>
                                   </tbody>
