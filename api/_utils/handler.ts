@@ -1,15 +1,31 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { ZodError } from 'zod';
 import { logger } from './logger.js';
+import { serializeMoney } from './money.js';
 
 type ServerlessFunction = (req: any, res: any) => Promise<any>;
 
 /**
- * Wraps a Vercel serverless function handler to handle CORS, standard errors, 
+ * Wraps a Vercel serverless function handler to handle CORS, standard errors,
  * Zod validation errors, and requests log.
  */
 export function makeHandler(fn: ServerlessFunction) {
   return async (req: VercelRequest, res: VercelResponse) => {
+    // Money leaves the API as JSON NUMBERS, always.
+    //
+    // Every money column is Decimal(18,2), so Prisma returns Prisma.Decimal,
+    // whose toJSON() emits a STRING. Routes that passed a Decimal straight
+    // into res.json (e.g. accounts.initialBalance, journalEntry line
+    // debit/credit) therefore shipped "1000" instead of 1000, and any client
+    // that accumulated them with `+` got string concatenation rather than
+    // addition — the root cause of the corrupted "Available Cash" balance.
+    //
+    // Normalising here rather than in each route means the guarantee holds for
+    // every endpoint, including ones added later, and cannot be forgotten at a
+    // call site. See api/_utils/money.ts.
+    const sendJson = res.json.bind(res);
+    (res as any).json = (body: any) => sendJson(serializeMoney(body));
+
     // CORS headers
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || 'http://localhost:5173');
