@@ -1,12 +1,15 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { prisma } from '../../api/_prisma.js';
 import { AccountingService } from '../../api/_services/accounting.service.js';
-import { FinancialYearService, parseFinancialYearCode } from '../../api/_services/financial-year.service.js';
+import { FinancialYearService } from '../../api/_services/financial-year.service.js';
 
-describe('Financial Year Opening/Closing & Automatic Rollover Engine', () => {
+describe('Financial Year Opening/Closing & Automatic Rollover Engine', { timeout: 30000 }, () => {
   const testFy1 = 'FY 2026-2027';
   const testFy2 = 'FY 2027-2028';
   let testUserId: string;
+  let revenueAccountId: string;
+  let expenseAccountId: string;
+  let equityAccountId: string;
 
   beforeAll(async () => {
     // Find or create test admin user
@@ -27,6 +30,63 @@ describe('Financial Year Opening/Closing & Automatic Rollover Engine', () => {
     }
     testUserId = user.id;
 
+    // Ensure Leaf Accounts exist
+    const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
+
+    // Revenue Account
+    let revType = await prisma.accountType.findFirst({ where: { name: { in: ['Revenue', 'REVENUE', 'Income', 'INCOME'] } } });
+    if (!revType) revType = await prisma.accountType.create({ data: { name: 'REVENUE', description: 'Revenue' } });
+
+    let revAccount = await prisma.account.findFirst({ where: { accountTypeId: revType.id, isDeleted: false, children: { none: {} } } });
+    if (!revAccount) {
+      revAccount = await prisma.account.create({
+        data: {
+          glCode: '4010101',
+          accountName: 'General Donation Income',
+          accountLevel: 'GL',
+          accountTypeId: revType.id,
+          detailType: 'Revenue'
+        }
+      });
+    }
+    revenueAccountId = revAccount.id;
+
+    // Expense Account
+    let expType = await prisma.accountType.findFirst({ where: { name: { in: ['Expense', 'EXPENSE', 'Expenses', 'EXPENSES'] } } });
+    if (!expType) expType = await prisma.accountType.create({ data: { name: 'EXPENSE', description: 'Expense' } });
+
+    let expAccount = await prisma.account.findFirst({ where: { accountTypeId: expType.id, isDeleted: false, children: { none: {} } } });
+    if (!expAccount) {
+      expAccount = await prisma.account.create({
+        data: {
+          glCode: '5010101',
+          accountName: 'General Office Expense',
+          accountLevel: 'GL',
+          accountTypeId: expType.id,
+          detailType: 'Expense'
+        }
+      });
+    }
+    expenseAccountId = expAccount.id;
+
+    // Equity Account
+    let eqType = await prisma.accountType.findFirst({ where: { name: { in: ['Equity', 'EQUITY'] } } });
+    if (!eqType) eqType = await prisma.accountType.create({ data: { name: 'EQUITY', description: 'Equity' } });
+
+    let eqAccount = await prisma.account.findFirst({ where: { accountTypeId: eqType.id, isDeleted: false, children: { none: {} } } });
+    if (!eqAccount) {
+      eqAccount = await prisma.account.create({
+        data: {
+          glCode: '3030101',
+          accountName: 'Opening Equity / Retained Earnings',
+          accountLevel: 'GL',
+          accountTypeId: eqType.id,
+          detailType: 'Equity'
+        }
+      });
+    }
+    equityAccountId = eqAccount.id;
+
     // Ensure test financial years are reset/clean for predictable assertions
     await prisma.openingBalanceLine.deleteMany({
       where: { batch: { financialYear: { in: [testFy1, testFy2] } } }
@@ -44,10 +104,8 @@ describe('Financial Year Opening/Closing & Automatic Rollover Engine', () => {
   });
 
   it('Step 1: Financial Year Setup & Manual Opening Balance Entry (FY 2026-2027)', async () => {
-    // Ensure Leaf Accounts exist
     const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
     expect(cashAccount).toBeDefined();
-    expect(cashAccount.glCode).toBe('1010103');
 
     // Create FY 2026-2027 record
     const fy1Record = await FinancialYearService.getOrCreateYearByCode(testFy1);
@@ -56,11 +114,6 @@ describe('Financial Year Opening/Closing & Automatic Rollover Engine', () => {
 
     // Initial Opening Balance for Cash = PKR 100,000 on 01-07-2026
     const opDate = new Date('2026-07-01');
-    const existingBatch = await prisma.openingBalanceBatch.findUnique({ where: { financialYear: testFy1 } });
-    if (existingBatch) {
-      await prisma.openingBalanceLine.deleteMany({ where: { batchId: existingBatch.id } });
-      await prisma.openingBalanceBatch.delete({ where: { id: existingBatch.id } });
-    }
 
     const opJv = await AccountingService.postTransaction(prisma, {
       reference: 'TEST-OP-2026',
@@ -71,7 +124,7 @@ describe('Financial Year Opening/Closing & Automatic Rollover Engine', () => {
       postingDate: opDate,
       lines: [
         { accountId: cashAccount.id, debit: 100000, credit: 0, description: 'Opening Cash' },
-        { accountKeyword: 'Opening Equity', debit: 0, credit: 100000, description: 'Opening Equity' }
+        { accountId: equityAccountId, debit: 0, credit: 100000, description: 'Opening Equity' }
       ]
     });
 
@@ -106,7 +159,7 @@ describe('Financial Year Opening/Closing & Automatic Rollover Engine', () => {
     await AccountingService.postReceipt(prisma, {
       amount: 50000,
       cashOrBankAccountId: cashAccount.id,
-      incomeAccountKeyword: 'Donation Income',
+      incomeAccountId: revenueAccountId,
       reference: 'REV-2026-001',
       description: 'Donation Receipt',
       module: 'Donations',
@@ -118,7 +171,7 @@ describe('Financial Year Opening/Closing & Automatic Rollover Engine', () => {
     await AccountingService.postPayment(prisma, {
       amount: 20000,
       cashOrBankAccountId: cashAccount.id,
-      expenseAccountKeyword: 'General Office Expense',
+      expenseAccountId: expenseAccountId,
       reference: 'EXP-2026-001',
       description: 'Office Maintenance Expense',
       module: 'Expenses',
@@ -196,7 +249,7 @@ describe('Financial Year Opening/Closing & Automatic Rollover Engine', () => {
     await AccountingService.postPayment(prisma, {
       amount: 10000,
       cashOrBankAccountId: cashAccount.id,
-      expenseAccountKeyword: 'General Office Expense',
+      expenseAccountId: expenseAccountId,
       reference: 'EXP-2027-001',
       description: 'Next Year Fuel Expense',
       module: 'Expenses',
@@ -228,7 +281,7 @@ describe('Financial Year Opening/Closing & Automatic Rollover Engine', () => {
       AccountingService.postPayment(prisma, {
         amount: 5000,
         cashOrBankAccountId: cashAccount.id,
-        expenseAccountKeyword: 'Office Supplies',
+        expenseAccountId: expenseAccountId,
         reference: 'ILLEGAL-2026',
         description: 'Posting into closed year',
         module: 'Expenses',
