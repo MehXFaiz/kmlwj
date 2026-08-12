@@ -60,9 +60,9 @@ const BalanceCategoryGrid = ({ categories, formatMoney }) => {
   ];
 
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="flex flex-wrap gap-3 print:break-inside-avoid">
       {tiles.map((tile) => (
-        <div key={tile.key} className="flex-1 min-w-[150px] rounded-xl bg-slate-950/60 border border-slate-800 px-3.5 py-2.5">
+        <div key={tile.key} className="flex-1 min-w-[150px] rounded-xl bg-slate-950/60 border border-slate-800 px-3.5 py-2.5 print:bg-white print:border-slate-300 print:break-inside-avoid">
           <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider truncate" title={tile.label}>{tile.label}</p>
           <p className="text-sm font-mono font-bold text-slate-200 mt-0.5">{formatMoney(tile.value)}</p>
         </div>
@@ -1038,7 +1038,7 @@ export const TrialBalanceSheet = () => {
           regardless of view mode. Every figure is read straight from
           tbReport.openingBalances (AccountingService.getTrialBalance),
           computed from initialBalance + posted ledger lines only. */}
-      <Card className="bg-slate-900/60 border-slate-800">
+      <Card className="bg-slate-900/60 border-slate-800 print:bg-white print:border-slate-300 print:break-inside-avoid">
         <CardContent className="p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest">Opening Balances</h3>
@@ -1323,7 +1323,7 @@ export const TrialBalanceSheet = () => {
 
       {/* CLOSING BALANCES — mirrors Opening Balances above, shown regardless
           of view mode, read straight from tbReport.closingBalances. */}
-      <Card className="bg-slate-900/60 border-slate-800">
+      <Card className="bg-slate-900/60 border-slate-800 print:bg-white print:border-slate-300 print:break-inside-avoid">
         <CardContent className="p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest">Closing Balances</h3>
