@@ -352,16 +352,16 @@ export const AddIncomeRecords = () => {
 
       {/* Toolbar */}
       <Card className="bg-slate-900/90 border-slate-800/80 p-4 space-y-3">
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 flex-1">
-            <div className="relative lg:col-span-1">
+        <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 flex-1">
+            <div className="relative sm:col-span-2 lg:col-span-1 xl:col-span-2">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
               <input
                 type="text"
                 placeholder="Search reference, remarks, category, bank..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-slate-950/70 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500/50"
+                className="w-full bg-slate-950/70 border border-slate-800 rounded-xl pl-9 pr-8 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500/50"
               />
               {search && (
                 <button onClick={() => setSearch('')} className="absolute right-2.5 top-2.5 text-slate-500 hover:text-slate-300">
@@ -399,7 +399,7 @@ export const AddIncomeRecords = () => {
               </select>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div>
               <input
                 type="date"
                 value={startDate}
@@ -407,6 +407,9 @@ export const AddIncomeRecords = () => {
                 className="w-full bg-slate-950/70 border border-slate-800 rounded-xl px-2 py-2 text-xs text-slate-200 focus:outline-none focus:border-brand-500/50"
                 title="Start Date"
               />
+            </div>
+
+            <div className="flex items-center gap-2">
               <input
                 type="date"
                 value={endDate}
@@ -432,7 +435,7 @@ export const AddIncomeRecords = () => {
             </div>
           </div>
 
-          <div className="flex items-center bg-slate-950/80 rounded-xl p-1 border border-slate-800 shrink-0">
+          <div className="flex items-center bg-slate-950/80 rounded-xl p-1 border border-slate-800 shrink-0 self-start xl:self-center">
             <button
               type="button"
               onClick={() => setViewMode('cards')}
