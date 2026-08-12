@@ -25,8 +25,30 @@ export const fiscalYearRange = (fy) => ({
   endDate: `${Number(fy)}-06-30`,
 });
 
-/** Financial year the report opens on. */
-const DEFAULT_FISCAL_YEAR = 2026;
+/**
+ * The Jammat fiscal year (N) whose 01-07-(N−1) .. 30-06-N window contains
+ * `today`. Computed arithmetically from the current date — never hardcoded —
+ * so the report's default period always covers "now".
+ *
+ * ROOT CAUSE FIX: this file previously hardcoded `DEFAULT_FISCAL_YEAR = 2026`.
+ * That was correct only while "today" fell inside 01-07-2025..30-06-2026. Once
+ * the calendar crossed 30-06-2026, every freshly posted Income/Expense
+ * transaction (dated in the new FY) fell outside that frozen default window,
+ * so the Trial Balance Matrix opened on a stale period and rendered its
+ * Income/Expense rows as empty — even though AccountingService.getTrialBalance
+ * correctly includes them once the date filter is widened to cover the
+ * transaction's actual posting date. Deriving the default from `new Date()`
+ * (same 01-07→30-06 convention the file already documents) keeps the default
+ * view current on every page load, indefinitely, with no yearly manual edit.
+ */
+export const getCurrentJammatFiscalYear = (today = new Date()) => {
+  const year = today.getFullYear();
+  const month = today.getMonth() + 1; // 1-12
+  return month >= 7 ? year + 1 : year;
+};
+
+/** Financial year the report opens on — the one containing today. */
+const DEFAULT_FISCAL_YEAR = getCurrentJammatFiscalYear();
 
 const BalanceCategoryGrid = ({ categories, formatMoney }) => {
   const tiles = [
