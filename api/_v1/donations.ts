@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
 import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import { enforceRestrictedRolePolicy, loadIsPrivileged } from '../_middlewares/rbac.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
@@ -98,7 +99,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const action = (req.query.action || req.body?.action) as string;
 
   if (method === 'GET') {
-    if (!await verifyPermission(req, res, PERMS.MANAGE_DONATIONS)) return;
+    // VIEW permission allows both privileged and restricted roles to read
+    if (!await verifyPermission(req, res, PERMS.VIEW_DONATIONS)) return;
 
     const { limit = '100', page = '1' } = req.query as any;
     const pageNum = parseInt(page) || 1;
@@ -123,6 +125,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     return res.status(200).json({ status: 200, data: donations, meta: { total, page: pageNum, limit: limitNum } });
   }
+
+  // ── All write methods ───────────────────────────────────────────────────────
+  // RBAC enforcement: PUT / PATCH / DELETE require isPrivileged (Admin / Super Admin).
+  // POST is allowed for restricted roles (CREATE permission checked below).
+  // This check runs BEFORE any other write logic so restricted users can never
+  // bypass it by crafting a special action parameter.
+  if (!await enforceRestrictedRolePolicy(req, res)) return;
 
   if (method === 'PUT' || method === 'POST' || method === 'PATCH') {
     if (action === 'restore') {
@@ -170,12 +179,22 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
   }
 
-  // Every write below immediately posts a real disbursement to the General Ledger.
-  if (!await verifyPermission(req, res, PERMS.RECORD_EXPENSE)) return;
+  // POST: Create or Approve — requires CREATE_DONATION permission
+  // Approve action additionally requires isPrivileged (Admin/Super Admin) because
+  // it posts to the General Ledger — a privileged operation.
+  if (!await verifyPermission(req, res, PERMS.CREATE_DONATION)) return;
 
   if (method === 'POST') {
-    // Action: Approve Donation
+    // Action: Approve Donation — Admin/Super Admin only (posts to GL)
     if (action === 'approve') {
+      if (!await loadIsPrivileged(req)) {
+        return res.status(403).json({
+          error: {
+            message: 'Forbidden: Approving donations requires Admin or Super Admin role.',
+            status: 403,
+          },
+        });
+      }
       const { id } = req.body;
       if (!id) return res.status(400).json({ error: { message: 'Donation ID is required', status: 400 } });
 

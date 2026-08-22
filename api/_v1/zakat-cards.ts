@@ -1,6 +1,7 @@
 import type { VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
 import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import { enforceRestrictedRolePolicy } from '../_middlewares/rbac.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
@@ -57,9 +58,18 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
 
-  if (!await verifyPermission(req, res, PERMS.MANAGE_ZAKAT_CARDS)) return;
+  // RBAC: PUT/PATCH/DELETE always blocked for non-privileged roles
+  if (!await enforceRestrictedRolePolicy(req, res)) return;
 
-  const { method } = req;
+  const method = req.method?.toUpperCase() ?? '';
+  if (method === 'GET') {
+    if (!await verifyPermission(req, res, PERMS.VIEW_ZAKAT_CARDS)) return;
+  } else if (method === 'POST') {
+    if (!await verifyPermission(req, res, PERMS.CREATE_ZAKAT_CARD)) return;
+  } else {
+    if (!await verifyPermission(req, res, PERMS.VIEW_ZAKAT_CARDS)) return;
+  }
+
   const id = req.query.id as string;
   const action = (req.query.action || req.body?.action) as string;
 

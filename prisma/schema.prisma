@@ -47,6 +47,9 @@ model Role {
   id              String           @id @default(uuid()) @db.Uuid
   name            String           @unique
   description     String?
+  /// true only for Super Admin and Admin — grants full CRUD access.
+  /// All other roles default to false (restricted: view + create only).
+  isPrivileged    Boolean          @default(false)
   users           User[]
   rolePermissions RolePermission[]
   createdAt       DateTime         @default(now())

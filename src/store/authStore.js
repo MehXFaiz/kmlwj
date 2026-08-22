@@ -2,29 +2,45 @@ import { create } from 'zustand';
 import { authService, tokenStorage } from '../services/authService';
 import api from '../services/api';
 
-export const canUserEditOrDelete = (role) => {
-  if (!role) return false;
-  const r = String(role).toLowerCase().trim();
-  return r === 'admin' || r === 'super admin' || r === 'administrator';
+/**
+ * Returns true if the user holds a privileged role (Super Admin or Admin).
+ * Uses the isPrivileged flag from the /me API response — never checks role
+ * name strings so a future role rename won't break authorization.
+ *
+ * Privileged roles: full CRUD access.
+ * All other roles: View + Create only (Edit/Delete hidden and backend-blocked).
+ */
+export const canUserEditOrDelete = (isPrivileged) => {
+  return isPrivileged === true;
 };
 
-export const canUserPostToLedger = (role) => {
-  if (!role) return false;
-  const r = String(role).toLowerCase().trim();
-  return r === 'admin' || r === 'super admin' || r === 'administrator';
+export const canUserPostToLedger = (isPrivileged) => {
+  return isPrivileged === true;
 };
 
 export const useAuthStore = create((set, get) => {
   // Listen for session expiry event from service layer
   if (typeof window !== 'undefined') {
     window.addEventListener('auth_session_expired', () => {
-      set({ user: null, role: null, permissions: [], canEditOrDelete: false, canPostToLedger: false, isAuthenticated: false, loading: false, error: 'Your session has expired. Please log in again.' });
+      set({
+        user: null,
+        role: null,
+        isPrivileged: false,
+        permissions: [],
+        canEditOrDelete: false,
+        canPostToLedger: false,
+        isAuthenticated: false,
+        loading: false,
+        error: 'Your session has expired. Please log in again.',
+      });
     });
   }
 
   return {
     user: null,
     role: null,
+    /** true = Super Admin or Admin (full CRUD). false = restricted (View + Create only). */
+    isPrivileged: false,
     permissions: [],
     canEditOrDelete: false,
     canPostToLedger: false,
@@ -33,8 +49,8 @@ export const useAuthStore = create((set, get) => {
     error: null,
     successMessage: null,
 
-    checkCanEditOrDelete: () => canUserEditOrDelete(get().role),
-    checkCanPostToLedger: () => canUserPostToLedger(get().role),
+    checkCanEditOrDelete: () => get().canEditOrDelete,
+    checkCanPostToLedger: () => get().canPostToLedger,
 
     clearError: () => set({ error: null }),
     clearSuccess: () => set({ successMessage: null }),
@@ -42,17 +58,19 @@ export const useAuthStore = create((set, get) => {
     restoreSession: async () => {
       const token = tokenStorage.getAccessToken();
       if (!token) return false;
-      
+
       set({ loading: true, error: null });
       try {
         const res = await api.get('/api/v1/auth/me');
         const userData = res.data.data;
+        const privileged = userData.isPrivileged === true;
         set({
           user: userData,
           role: userData.role,
+          isPrivileged: privileged,
           permissions: userData.permissions || [],
-          canEditOrDelete: canUserEditOrDelete(userData.role),
-          canPostToLedger: canUserPostToLedger(userData.role),
+          canEditOrDelete: canUserEditOrDelete(privileged),
+          canPostToLedger: canUserPostToLedger(privileged),
           isAuthenticated: true,
           loading: false,
         });
@@ -61,7 +79,16 @@ export const useAuthStore = create((set, get) => {
         if (err.response && (err.response.status === 401 || err.response.status === 403)) {
           tokenStorage.clear();
         }
-        set({ user: null, role: null, permissions: [], canEditOrDelete: false, canPostToLedger: false, isAuthenticated: false, loading: false });
+        set({
+          user: null,
+          role: null,
+          isPrivileged: false,
+          permissions: [],
+          canEditOrDelete: false,
+          canPostToLedger: false,
+          isAuthenticated: false,
+          loading: false,
+        });
         return false;
       }
     },
@@ -70,18 +97,20 @@ export const useAuthStore = create((set, get) => {
       set({ loading: true, error: null });
       try {
         await authService.login(email, password);
-        // Immediately fetch the full user profile including permissions
+        // Immediately fetch the full user profile including isPrivileged + permissions
         const res = await api.get('/api/v1/auth/me');
         const userData = res.data.data;
-        
+        const privileged = userData.isPrivileged === true;
+
         set({
           user: userData,
           role: userData.role,
+          isPrivileged: privileged,
           permissions: userData.permissions || [],
-          canEditOrDelete: canUserEditOrDelete(userData.role),
-          canPostToLedger: canUserPostToLedger(userData.role),
+          canEditOrDelete: canUserEditOrDelete(privileged),
+          canPostToLedger: canUserPostToLedger(privileged),
           isAuthenticated: true,
-          loading: false
+          loading: false,
         });
         return true;
       } catch (err) {
@@ -111,7 +140,17 @@ export const useAuthStore = create((set, get) => {
       try {
         await authService.logout();
       } finally {
-        set({ user: null, role: null, permissions: [], canEditOrDelete: false, isAuthenticated: false, loading: false, successMessage: 'Logged out successfully' });
+        set({
+          user: null,
+          role: null,
+          isPrivileged: false,
+          permissions: [],
+          canEditOrDelete: false,
+          canPostToLedger: false,
+          isAuthenticated: false,
+          loading: false,
+          successMessage: 'Logged out successfully',
+        });
       }
     },
 

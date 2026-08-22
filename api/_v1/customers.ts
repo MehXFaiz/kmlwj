@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
 import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import { enforceRestrictedRolePolicy } from '../_middlewares/rbac.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { PERMS } from '../_constants/permissions.js';
@@ -10,9 +11,18 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
 
-  if (!await verifyPermission(req, res, PERMS.MANAGE_CUSTOMERS)) return;
+  // RBAC: PUT/PATCH/DELETE always blocked for non-privileged roles
+  if (!await enforceRestrictedRolePolicy(req, res)) return;
 
-  const { method } = req;
+  const method = req.method?.toUpperCase() ?? '';
+  if (method === 'GET') {
+    if (!await verifyPermission(req, res, PERMS.VIEW_CUSTOMERS)) return;
+  } else if (method === 'POST') {
+    if (!await verifyPermission(req, res, PERMS.CREATE_CUSTOMER)) return;
+  } else {
+    if (!await verifyPermission(req, res, PERMS.VIEW_CUSTOMERS)) return;
+  }
+
   const id = req.query.id as string;
   const action = (req.query.action || req.body?.action) as string;
 

@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
 import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import { enforceRestrictedRolePolicy } from '../_middlewares/rbac.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { logger } from '../_utils/logger.js';
@@ -70,6 +71,11 @@ async function backfillMemberNos<T extends { id: string; memberNo: string | null
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
+
+  // RBAC: PUT/PATCH/DELETE always 403 for non-privileged roles.
+  // Even if UPDATE_MEMBER/DELETE_MEMBER were somehow in the permission set,
+  // this gate prevents their use outside of Admin/Super Admin.
+  if (!await enforceRestrictedRolePolicy(req, res)) return;
 
   const { method } = req;
   const id = req.query.id as string;

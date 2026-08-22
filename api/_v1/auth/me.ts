@@ -44,6 +44,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       fullName: user.fullName,
       email: user.email,
       role: user.role.name,
+      /**
+       * isPrivileged: true  → Super Admin or Admin (full CRUD access)
+       * isPrivileged: false → all other roles (View + Create only)
+       * The frontend uses this to hide Edit/Delete buttons.
+       * The backend enforces this independently — UI state cannot bypass it.
+       */
+      isPrivileged: user.role.isPrivileged,
       permissions,
     },
   });

@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
 import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import { enforceRestrictedRolePolicy } from '../_middlewares/rbac.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
@@ -67,13 +68,16 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
 
-  const { method } = req;
+  // RBAC: PUT/PATCH/DELETE always blocked for non-privileged roles
+  if (!await enforceRestrictedRolePolicy(req, res)) return;
+
+  const method = req.method?.toUpperCase() ?? '';
   const id = req.query.id as string;
   const action = (req.query.action || req.body?.action) as string;
   const categoryFilter = req.query.category as string;
 
   if (method === 'GET') {
-    if (!await verifyPermission(req, res, PERMS.MANAGE_REVENUE_COLLECTIONS)) return;
+    if (!await verifyPermission(req, res, PERMS.VIEW_REVENUE_COLLECTIONS)) return;
 
     const whereClause: any = {
       ...(categoryFilter ? { category: categoryFilter } : {}),
@@ -135,7 +139,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   // Every write below (create, approve, edit, revert) posts directly to the General Ledger.
-  if (!await verifyPermission(req, res, PERMS.RECORD_INCOME)) return;
+  // Non-privileged roles can only create (POST); PUT/DELETE already blocked above.
+  if (!await verifyPermission(req, res, PERMS.CREATE_REVENUE_COLLECTION)) return;
 
   if (method === 'POST') {
     // Action: Approve & Post to Ledger
