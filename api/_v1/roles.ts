@@ -25,11 +25,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   if (!await verifyPermission(req, res, PERMS.MANAGE_ROLES)) return;
 
   // UI toggle-group → canonical permission mapping. Every name referenced here
-  // must exist in PERMS (api/_constants/permissions.ts) / prisma/seed.ts — this
-  // route upserts them by name, so a typo here would silently mint a stray,
-  // unused permission row.
+  // must exist in PERMS (api/_constants/permissions.ts) / prisma/seed.ts.
+  // For non-privileged roles, these assign VIEW + CREATE permissions.
   const permMap: Record<string, string[]> = {
-    coa: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT', 'LOCK_ACCOUNT'],
+    coa: ['CREATE_ACCOUNT'],
     journals: ['VIEW_JOURNALS', 'POST_JOURNAL'],
     reports: ['VIEW_REPORTS'],
     audit: ['VIEW_AUDIT'],
@@ -37,15 +36,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     settings: ['SYSTEM_SETTINGS', 'MANAGE_ROLES', 'MANAGE_RESERVED_CODES'],
     income: ['RECORD_INCOME', 'MANAGE_REVENUE_HEADS'],
     expense: ['RECORD_EXPENSE', 'MANAGE_EXPENSE_HEADS'],
-    invoices: ['MANAGE_INVOICES'],
-    members: ['VIEW_MEMBERS', 'CREATE_MEMBER', 'UPDATE_MEMBER', 'DELETE_MEMBER'],
-    beneficiaries: ['VIEW_BENEFICIARIES', 'CREATE_BENEFICIARY', 'UPDATE_BENEFICIARY', 'DELETE_BENEFICIARY'],
-    donations: ['MANAGE_DONATIONS'],
-    hallBookings: ['MANAGE_HALL_BOOKINGS'],
-    revenueCollections: ['MANAGE_REVENUE_COLLECTIONS'],
-    zakatCards: ['MANAGE_ZAKAT_CARDS'],
-    donors: ['MANAGE_DONORS'],
-    customers: ['MANAGE_CUSTOMERS'],
+    invoices: ['VIEW_INVOICES', 'CREATE_INVOICE'],
+    members: ['VIEW_MEMBERS', 'CREATE_MEMBER'],
+    beneficiaries: ['VIEW_BENEFICIARIES', 'CREATE_BENEFICIARY'],
+    donations: ['VIEW_DONATIONS', 'CREATE_DONATION', 'VIEW_DONATIONS_RECEIVED', 'CREATE_DONATION_RECEIVED'],
+    hallBookings: ['VIEW_HALL_BOOKINGS', 'CREATE_HALL_BOOKING'],
+    revenueCollections: ['VIEW_REVENUE_COLLECTIONS', 'CREATE_REVENUE_COLLECTION'],
+    zakatCards: ['VIEW_ZAKAT_CARDS', 'CREATE_ZAKAT_CARD'],
+    donors: ['VIEW_DONORS', 'CREATE_DONOR'],
+    customers: ['VIEW_CUSTOMERS', 'CREATE_CUSTOMER'],
   };
 
   if (method === 'GET') {
@@ -63,16 +62,17 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       const permissions: Record<string, boolean> = {};
       for (const key of Object.keys(permMap)) {
-        permissions[key] = permMap[key].every((p) => activePermNames.includes(p));
+        permissions[key] = permMap[key].some((p) => activePermNames.includes(p));
       }
 
-      // Check if role is locked (Super Admin cannot be modified, or check description)
-      const locked = role.name === 'Super Admin' || role.description?.includes('Locked');
+      // Check if role is locked (Super Admin & Admin cannot be modified from non-dev)
+      const locked = role.isPrivileged || role.name === 'Super Admin' || role.name === 'Admin' || role.description?.includes('Locked');
 
       return {
         id: role.id,
         name: role.name,
         description: role.description,
+        isPrivileged: role.isPrivileged,
         permissions,
         locked,
       };
@@ -95,8 +95,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(404).json({ error: { message: 'Role not found', status: 404 } });
     }
 
-    if (existingRole.name === 'Super Admin') {
-      return res.status(400).json({ error: { message: 'Super Admin permissions cannot be modified', status: 400 } });
+    if (existingRole.isPrivileged || existingRole.name === 'Super Admin' || existingRole.name === 'Admin') {
+      return res.status(400).json({ error: { message: 'System Admin role permissions cannot be modified from the panel', status: 400 } });
     }
 
     const { permissions, locked } = req.body;

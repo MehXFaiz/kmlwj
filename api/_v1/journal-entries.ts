@@ -1,6 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
 import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import { enforceRestrictedRolePolicy } from '../_middlewares/rbac.middleware.js';
+import { checkPermission } from '../_services/permission.service.js';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
@@ -14,6 +16,9 @@ const accountingTxOptions = { maxWait: 10000, timeout: 30000 };
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
+
+  // RBAC: PUT/PATCH/DELETE always blocked for non-privileged roles
+  if (!await enforceRestrictedRolePolicy(req, res)) return;
 
   const { method } = req;
   const action = (req.query.action || req.body?.action) as string;

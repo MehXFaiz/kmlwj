@@ -60,14 +60,31 @@ async function main() {
     { name: 'CREATE_BENEFICIARY', description: 'Add welfare beneficiaries' },
     { name: 'UPDATE_BENEFICIARY', description: 'Update welfare beneficiary records' },
     { name: 'DELETE_BENEFICIARY', description: 'Delete welfare beneficiary records' },
-    // Operational modules
-    { name: 'MANAGE_DONATIONS', description: 'Manage donations given (welfare disbursements) and donations received' },
-    { name: 'MANAGE_INVOICES', description: 'Manage invoices' },
-    { name: 'MANAGE_HALL_BOOKINGS', description: 'Manage hall bookings' },
-    { name: 'MANAGE_REVENUE_COLLECTIONS', description: 'Manage revenue collections' },
-    { name: 'MANAGE_ZAKAT_CARDS', description: 'Manage Zakat cards' },
-    { name: 'MANAGE_DONORS', description: 'Manage donor records' },
-    { name: 'MANAGE_CUSTOMERS', description: 'Manage customer records' },
+    // Operational modules (Granular View & Create)
+    { name: 'VIEW_DONATIONS', description: 'View donations given (welfare disbursements)' },
+    { name: 'CREATE_DONATION', description: 'Record donations given (welfare disbursements)' },
+    { name: 'VIEW_DONATIONS_RECEIVED', description: 'View donations received receipts' },
+    { name: 'CREATE_DONATION_RECEIVED', description: 'Record donations received receipts' },
+    { name: 'VIEW_INVOICES', description: 'View invoices' },
+    { name: 'CREATE_INVOICE', description: 'Create invoices' },
+    { name: 'VIEW_HALL_BOOKINGS', description: 'View hall bookings' },
+    { name: 'CREATE_HALL_BOOKING', description: 'Create hall bookings' },
+    { name: 'VIEW_REVENUE_COLLECTIONS', description: 'View revenue collections' },
+    { name: 'CREATE_REVENUE_COLLECTION', description: 'Record revenue collections' },
+    { name: 'VIEW_ZAKAT_CARDS', description: 'View Zakat cards' },
+    { name: 'CREATE_ZAKAT_CARD', description: 'Issue Zakat cards' },
+    { name: 'VIEW_DONORS', description: 'View donor records' },
+    { name: 'CREATE_DONOR', description: 'Register donor records' },
+    { name: 'VIEW_CUSTOMERS', description: 'View customer records' },
+    { name: 'CREATE_CUSTOMER', description: 'Register customer records' },
+    // Legacy Aliases
+    { name: 'MANAGE_DONATIONS', description: 'Manage donations given and received (legacy alias)' },
+    { name: 'MANAGE_INVOICES', description: 'Manage invoices (legacy alias)' },
+    { name: 'MANAGE_HALL_BOOKINGS', description: 'Manage hall bookings (legacy alias)' },
+    { name: 'MANAGE_REVENUE_COLLECTIONS', description: 'Manage revenue collections (legacy alias)' },
+    { name: 'MANAGE_ZAKAT_CARDS', description: 'Manage Zakat cards (legacy alias)' },
+    { name: 'MANAGE_DONORS', description: 'Manage donor records (legacy alias)' },
+    { name: 'MANAGE_CUSTOMERS', description: 'Manage customer records (legacy alias)' },
     // Configuration (Admin+)
     { name: 'MANAGE_EXPENSE_HEADS', description: 'Manage expense head configuration' },
     { name: 'MANAGE_REVENUE_HEADS', description: 'Manage revenue head configuration' },
@@ -90,51 +107,87 @@ async function main() {
   }
 
   // 2. Seed Roles
-  // ALL permission names, used for Super Admin and to compute "operational" (non-security) sets.
   const ALL_PERM_NAMES = permissionsList.map((p) => p.name);
   const SECURITY_ONLY = ['SYSTEM_SETTINGS', 'MANAGE_USERS', 'MANAGE_ROLES'];
-  // Everything except the three Super-Admin-exclusive security permissions.
   const OPERATIONAL_PERM_NAMES = ALL_PERM_NAMES.filter((n) => !SECURITY_ONLY.includes(n));
-  // Read-only permissions across every module — used by Viewer/Auditor.
+
   const READ_ONLY_PERM_NAMES = [
     'VIEW_REPORTS', 'VIEW_AUDIT', 'VIEW_JOURNALS', 'VIEW_MEMBERS', 'VIEW_BENEFICIARIES',
+    'VIEW_DONATIONS', 'VIEW_DONATIONS_RECEIVED', 'VIEW_INVOICES', 'VIEW_HALL_BOOKINGS',
+    'VIEW_REVENUE_COLLECTIONS', 'VIEW_ZAKAT_CARDS', 'VIEW_DONORS', 'VIEW_CUSTOMERS',
   ];
-  // "Create only" permissions — used by Operator. Everything that adds a new record
-  // without granting update/delete/config/security access.
+
   const CREATE_ONLY_PERM_NAMES = [
-    'RECORD_INCOME', 'RECORD_EXPENSE', 'CREATE_MEMBER', 'CREATE_BENEFICIARY',
-    'MANAGE_DONATIONS', 'MANAGE_INVOICES', 'MANAGE_HALL_BOOKINGS',
-    'MANAGE_REVENUE_COLLECTIONS', 'MANAGE_ZAKAT_CARDS', 'MANAGE_DONORS', 'MANAGE_CUSTOMERS',
-    'CREATE_ACCOUNT', 'POST_JOURNAL',
+    'RECORD_INCOME', 'RECORD_EXPENSE',
+    'VIEW_MEMBERS', 'CREATE_MEMBER',
+    'VIEW_BENEFICIARIES', 'CREATE_BENEFICIARY',
+    'VIEW_DONATIONS', 'CREATE_DONATION',
+    'VIEW_DONATIONS_RECEIVED', 'CREATE_DONATION_RECEIVED',
+    'VIEW_INVOICES', 'CREATE_INVOICE',
+    'VIEW_HALL_BOOKINGS', 'CREATE_HALL_BOOKING',
+    'VIEW_REVENUE_COLLECTIONS', 'CREATE_REVENUE_COLLECTION',
+    'VIEW_ZAKAT_CARDS', 'CREATE_ZAKAT_CARD',
+    'VIEW_DONORS', 'CREATE_DONOR',
+    'VIEW_CUSTOMERS', 'CREATE_CUSTOMER',
+    'CREATE_ACCOUNT', 'POST_JOURNAL', 'VIEW_JOURNALS', 'VIEW_REPORTS',
   ];
 
   const rolesList = [
-    { name: 'Super Admin', description: 'Full access to all system modules and actions, including security settings, role management, and user management', perms: ALL_PERM_NAMES },
-    { name: 'Admin', description: 'Manages operational data across all modules but cannot touch System Settings, Role Management, Permission Management, Database Restore, Fiscal Year Closing, or User Management', perms: OPERATIONAL_PERM_NAMES },
-    { name: 'Manager', description: 'Manages assigned modules — financial recording, member/beneficiary administration, and reporting', perms: [
+    { name: 'Super Admin', isPrivileged: true, description: 'Full access to all system modules and actions, including security settings, role management, and user management', perms: ALL_PERM_NAMES },
+    { name: 'Admin', isPrivileged: true, description: 'Manages operational data across all modules with full edit and delete capabilities', perms: OPERATIONAL_PERM_NAMES },
+    { name: 'Manager', isPrivileged: false, description: 'Manages assigned modules — financial recording, member/beneficiary administration, and reporting (View + Add)', perms: [
       'VIEW_REPORTS', 'VIEW_AUDIT', 'VIEW_JOURNALS', 'POST_JOURNAL',
       'RECORD_INCOME', 'RECORD_EXPENSE',
-      'VIEW_MEMBERS', 'CREATE_MEMBER', 'UPDATE_MEMBER',
-      'VIEW_BENEFICIARIES', 'CREATE_BENEFICIARY', 'UPDATE_BENEFICIARY',
-      'MANAGE_DONATIONS', 'MANAGE_INVOICES', 'MANAGE_HALL_BOOKINGS',
-      'MANAGE_REVENUE_COLLECTIONS', 'MANAGE_ZAKAT_CARDS', 'MANAGE_DONORS', 'MANAGE_CUSTOMERS',
+      'VIEW_MEMBERS', 'CREATE_MEMBER',
+      'VIEW_BENEFICIARIES', 'CREATE_BENEFICIARY',
+      'VIEW_DONATIONS', 'CREATE_DONATION', 'VIEW_DONATIONS_RECEIVED', 'CREATE_DONATION_RECEIVED',
+      'VIEW_INVOICES', 'CREATE_INVOICE',
+      'VIEW_HALL_BOOKINGS', 'CREATE_HALL_BOOKING',
+      'VIEW_REVENUE_COLLECTIONS', 'CREATE_REVENUE_COLLECTION',
+      'VIEW_ZAKAT_CARDS', 'CREATE_ZAKAT_CARD',
+      'VIEW_DONORS', 'CREATE_DONOR',
+      'VIEW_CUSTOMERS', 'CREATE_CUSTOMER',
     ] },
-    { name: 'Operator', description: 'Create-only access — can record new transactions and entries but cannot edit, delete, or view configuration/security data', perms: CREATE_ONLY_PERM_NAMES },
-    { name: 'Viewer', description: 'Read-only access to reports, audit logs, journals, members, and beneficiaries', perms: READ_ONLY_PERM_NAMES },
-    // Legacy roles kept for backward compatibility with existing assigned users.
-    { name: 'Accountant', description: 'Manage charts of accounts, journals, hall bookings, donations, invoices, and financial reports', perms: [
-      'CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT', 'LOCK_ACCOUNT',
+    { name: 'Operator', isPrivileged: false, description: 'Create-only access — can record new transactions and entries (View + Add)', perms: CREATE_ONLY_PERM_NAMES },
+    { name: 'Viewer', isPrivileged: false, description: 'Read-only access to reports, audit logs, journals, members, and beneficiaries', perms: READ_ONLY_PERM_NAMES },
+    { name: 'Accountant', isPrivileged: false, description: 'Manage charts of accounts, journals, hall bookings, donations, invoices, and financial reports (View + Add)', perms: [
+      'CREATE_ACCOUNT',
       'VIEW_REPORTS', 'VIEW_AUDIT', 'VIEW_JOURNALS', 'POST_JOURNAL',
       'RECORD_INCOME', 'RECORD_EXPENSE',
-      'MANAGE_HALL_BOOKINGS', 'MANAGE_DONATIONS', 'MANAGE_REVENUE_COLLECTIONS',
-      'MANAGE_INVOICES', 'MANAGE_DONORS', 'MANAGE_CUSTOMERS', 'MANAGE_ZAKAT_CARDS',
+      'VIEW_HALL_BOOKINGS', 'CREATE_HALL_BOOKING',
+      'VIEW_DONATIONS', 'CREATE_DONATION', 'VIEW_DONATIONS_RECEIVED', 'CREATE_DONATION_RECEIVED',
+      'VIEW_REVENUE_COLLECTIONS', 'CREATE_REVENUE_COLLECTION',
+      'VIEW_INVOICES', 'CREATE_INVOICE',
+      'VIEW_DONORS', 'CREATE_DONOR',
+      'VIEW_CUSTOMERS', 'CREATE_CUSTOMER',
+      'VIEW_ZAKAT_CARDS', 'CREATE_ZAKAT_CARD',
       'MANAGE_EXPENSE_HEADS', 'MANAGE_REVENUE_HEADS',
-      'VIEW_MEMBERS', 'CREATE_MEMBER', 'UPDATE_MEMBER',
-      'VIEW_BENEFICIARIES', 'CREATE_BENEFICIARY', 'UPDATE_BENEFICIARY'
+      'VIEW_MEMBERS', 'CREATE_MEMBER',
+      'VIEW_BENEFICIARIES', 'CREATE_BENEFICIARY',
     ] },
-    { name: 'Auditor', description: 'Read-only access to reports and audit logs', perms: READ_ONLY_PERM_NAMES },
-    { name: 'Data Entry Operator', description: 'Create and update accounts but cannot delete or lock', perms: ['CREATE_ACCOUNT'] },
-    { name: 'Donation and Zakat Manager', description: 'Manage donations and Zakat distributions', perms: ['VIEW_REPORTS', 'RECORD_INCOME', 'RECORD_EXPENSE', 'MANAGE_DONATIONS', 'MANAGE_ZAKAT_CARDS'] },
+    { name: 'Auditor', isPrivileged: false, description: 'Read-only access to reports and audit logs', perms: READ_ONLY_PERM_NAMES },
+    { name: 'Data Entry Operator', isPrivileged: false, description: 'Data entry operator with View + Add access across community, welfare, and financial operational modules', perms: [
+      'CREATE_ACCOUNT',
+      'VIEW_MEMBERS', 'CREATE_MEMBER',
+      'VIEW_BENEFICIARIES', 'CREATE_BENEFICIARY',
+      'VIEW_DONATIONS', 'CREATE_DONATION', 'VIEW_DONATIONS_RECEIVED', 'CREATE_DONATION_RECEIVED',
+      'VIEW_HALL_BOOKINGS', 'CREATE_HALL_BOOKING',
+      'VIEW_REVENUE_COLLECTIONS', 'CREATE_REVENUE_COLLECTION',
+      'VIEW_ZAKAT_CARDS', 'CREATE_ZAKAT_CARD',
+      'VIEW_DONORS', 'CREATE_DONOR',
+      'VIEW_CUSTOMERS', 'CREATE_CUSTOMER',
+      'RECORD_INCOME', 'RECORD_EXPENSE',
+      'VIEW_JOURNALS', 'VIEW_REPORTS',
+    ] },
+    { name: 'Donation and Zakat Manager', isPrivileged: false, description: 'Manage donations, disbursements, and Zakat distributions (View + Add)', perms: [
+      'VIEW_REPORTS',
+      'RECORD_INCOME', 'RECORD_EXPENSE',
+      'VIEW_DONATIONS', 'CREATE_DONATION',
+      'VIEW_DONATIONS_RECEIVED', 'CREATE_DONATION_RECEIVED',
+      'VIEW_ZAKAT_CARDS', 'CREATE_ZAKAT_CARD',
+      'VIEW_BENEFICIARIES', 'CREATE_BENEFICIARY',
+      'VIEW_DONORS', 'CREATE_DONOR',
+    ] },
   ];
 
   console.log('Seeding Roles...');
@@ -142,8 +195,8 @@ async function main() {
   for (const role of rolesList) {
     const record = await prisma.role.upsert({
       where: { name: role.name },
-      update: { description: role.description },
-      create: { name: role.name, description: role.description },
+      update: { description: role.description, isPrivileged: role.isPrivileged },
+      create: { name: role.name, description: role.description, isPrivileged: role.isPrivileged },
     });
     seededRoles[role.name] = record;
   }

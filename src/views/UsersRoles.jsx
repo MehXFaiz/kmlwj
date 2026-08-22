@@ -166,23 +166,23 @@ function UserFormPanel({ onClose, onSave, initial, availableRoles }) {
 
 /* ─── Dynamic Role Form Panel ─── */
 const PERMISSION_MODULES = [
-  { key: 'coa', label: 'Chart of Accounts', shortLabel: 'Accounts', desc: 'Create, edit & manage ledger accounts' },
-  { key: 'journals', label: 'Journal Entries', shortLabel: 'Journals', desc: 'Post general & bank vouchers' },
-  { key: 'reports', label: 'Financial Reports', shortLabel: 'Reports', desc: 'Balance sheet, income statement & trial balance' },
-  { key: 'audit', label: 'Audit Logs & Health', shortLabel: 'Audit', desc: 'View audit logs and accounting health checks' },
-  { key: 'income', label: 'Income & Revenues', shortLabel: 'Income', desc: 'Record donations, receipts & revenue heads' },
-  { key: 'expense', label: 'Expense & Payables', shortLabel: 'Expense', desc: 'Record bills, expenses & expense heads' },
-  { key: 'hallBookings', label: 'Hall Bookings', shortLabel: 'Hall Bookings', desc: 'Manage hall reservations & bookings' },
-  { key: 'donations', label: 'Donations & Welfare', shortLabel: 'Donations', desc: 'Manage donations received & welfare disbursements' },
-  { key: 'revenueCollections', label: 'Revenue Collections', shortLabel: 'Collections', desc: 'Manage revenue collections, bus bookings & membership fees' },
-  { key: 'invoices', label: 'Invoices & Billing', shortLabel: 'Invoices', desc: 'Create & manage customer invoices' },
-  { key: 'donors', label: 'Donors Directory', shortLabel: 'Donors', desc: 'Manage registered donor profiles' },
-  { key: 'customers', label: 'Customers Directory', shortLabel: 'Customers', desc: 'Manage client & customer records' },
-  { key: 'members', label: 'Community Members', shortLabel: 'Members', desc: 'Manage Jamaat member registrations' },
-  { key: 'beneficiaries', label: 'Welfare Beneficiaries', shortLabel: 'Beneficiaries', desc: 'Manage welfare beneficiary registrations' },
-  { key: 'zakatCards', label: 'Zakat & Member Cards', shortLabel: 'Zakat Cards', desc: 'Issue & print Zakat disbursement cards' },
-  { key: 'users', label: 'User Directory', shortLabel: 'Users', desc: 'Provision users & reset credentials' },
-  { key: 'settings', label: 'Security & Settings', shortLabel: 'Settings', desc: 'Manage system settings & reserved GL codes' },
+  { key: 'coa', label: 'Chart of Accounts', shortLabel: 'Accounts', desc: 'View accounts & create new ledger codes' },
+  { key: 'journals', label: 'Journal Entries', shortLabel: 'Journals', desc: 'View & record journal entries' },
+  { key: 'reports', label: 'Financial Reports', shortLabel: 'Reports', desc: 'View balance sheet, income statement & trial balance' },
+  { key: 'audit', label: 'Audit Logs & Health', shortLabel: 'Audit', desc: 'View audit trail & accounting health checks' },
+  { key: 'income', label: 'Income & Revenues', shortLabel: 'Income', desc: 'View & record income receipts' },
+  { key: 'expense', label: 'Expense & Payables', shortLabel: 'Expense', desc: 'View & record expense vouchers' },
+  { key: 'hallBookings', label: 'Hall Bookings', shortLabel: 'Hall Bookings', desc: 'View availability & create reservations' },
+  { key: 'donations', label: 'Donations & Welfare', shortLabel: 'Donations', desc: 'View & record donations given & received' },
+  { key: 'revenueCollections', label: 'Revenue Collections', shortLabel: 'Collections', desc: 'View & record collections, bus & membership' },
+  { key: 'invoices', label: 'Invoices & Billing', shortLabel: 'Invoices', desc: 'View & create customer billing invoices' },
+  { key: 'donors', label: 'Donors Directory', shortLabel: 'Donors', desc: 'View & register donor profiles' },
+  { key: 'customers', label: 'Customers Directory', shortLabel: 'Customers', desc: 'View & register customer profiles' },
+  { key: 'members', label: 'Community Members', shortLabel: 'Members', desc: 'View & register Jamaat members' },
+  { key: 'beneficiaries', label: 'Welfare Beneficiaries', shortLabel: 'Beneficiaries', desc: 'View & register welfare recipients' },
+  { key: 'zakatCards', label: 'Zakat & Member Cards', shortLabel: 'Zakat Cards', desc: 'View & issue Zakat disbursement cards' },
+  { key: 'users', label: 'User Directory', shortLabel: 'Users', desc: 'View users directory (Admin access required)' },
+  { key: 'settings', label: 'Security & Settings', shortLabel: 'Settings', desc: 'Manage system settings (Admin access required)' },
 ];
 
 function RoleFormPanel({ onClose, onSave }) {
@@ -277,9 +277,17 @@ function RoleFormPanel({ onClose, onSave }) {
           />
         </div>
 
+        <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-900/40 text-amber-300 text-xs flex items-start gap-2">
+          <Shield className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+          <div className="text-[11px] leading-relaxed">
+            <span className="font-bold block text-amber-200 mb-0.5">Role Policy: View + Add Operations</span>
+            Enabling a module grants this role the ability to <strong>View</strong> and <strong>Insert / Add</strong> records. Edit and Delete actions are restricted to Admin & Super Admin.
+          </div>
+        </div>
+
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className={labelClass}>Permissions Matrix *</label>
+            <label className={labelClass}>Module Access (View + Add) *</label>
             <div className="flex items-center gap-2">
               <button
                 type="button"

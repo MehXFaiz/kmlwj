@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import jwt from 'jsonwebtoken';
-import { loadPermissions } from '../_services/permission.service.js';
+import { loadPermissions, isPrivilegedUser } from '../_services/permission.service.js';
 
 export interface AuthenticatedRequest extends VercelRequest {
   user?: {
@@ -58,13 +58,18 @@ export async function verifyPermission(
     return false;
   }
   const perms = await loadPermissions(req);
-  if (!perms.has(permission)) {
-    res.status(403).json({
-      error: { message: `Forbidden: '${permission}' permission required`, status: 403 },
-    });
-    return false;
+  if (perms.has(permission)) return true;
+
+  // Privileged roles (Super Admin, Admin) have unrestricted access to all operational modules
+  const isSecurityPerm = permission === 'SYSTEM_SETTINGS' || permission === 'MANAGE_USERS' || permission === 'MANAGE_ROLES';
+  if (!isSecurityPerm && await isPrivilegedUser(req)) {
+    return true;
   }
-  return true;
+
+  res.status(403).json({
+    error: { message: `Forbidden: '${permission}' permission required`, status: 403 },
+  });
+  return false;
 }
 
 /**
