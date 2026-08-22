@@ -1,15 +1,11 @@
 import { makeHandler } from "../_utils/handler.js";
-import { verifyAuth } from "../_middlewares/auth.middleware.js";
+import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
+import { isPrivilegedUser } from "../_services/permission.service.js";
+import { PERMS } from "../_constants/permissions.js";
 import { LedgerWorkflowService } from "../_services/ledger-workflow.service.js";
 var ledger_post_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
-  const isAdminOrSuperAdmin = req.user.role === "Admin" || req.user.role === "Super Admin";
-  if (!isAdminOrSuperAdmin) {
-    return res.status(403).json({
-      error: { message: "Forbidden: Only Admin and Super Admin can Post or Revert ledger entries", status: 403 }
-    });
-  }
   if (req.method === "POST" || req.method === "PUT") {
     const action = req.query.action || req.body?.action || "post";
     const { module, recordId, reason } = req.body || {};
@@ -18,8 +14,13 @@ var ledger_post_default = makeHandler(async (req, res) => {
         error: { message: "Module name and Record ID are required fields", status: 400 }
       });
     }
-    try {
-      if (action === "revert" || action === "revert-ledger") {
+    if (action === "revert" || action === "revert-ledger") {
+      if (!await isPrivilegedUser(req)) {
+        return res.status(403).json({
+          error: { message: "Forbidden: Only Admin and Super Admin can revert ledger entries", status: 403 }
+        });
+      }
+      try {
         const result = await LedgerWorkflowService.revertPosting({
           module,
           recordId,
@@ -33,7 +34,15 @@ var ledger_post_default = makeHandler(async (req, res) => {
           message: "Transaction posting reverted successfully from General Ledger",
           data: result
         });
-      } else {
+      } catch (err) {
+        const status = err.status || err.statusCode || 400;
+        return res.status(status).json({
+          error: { message: err.message || "Ledger workflow operation failed", status }
+        });
+      }
+    } else {
+      if (!await verifyPermission(req, res, PERMS.POST_LEDGER)) return;
+      try {
         const result = await LedgerWorkflowService.postToLedger({
           module,
           recordId,
@@ -46,11 +55,12 @@ var ledger_post_default = makeHandler(async (req, res) => {
           message: "Transaction posted successfully to the General Ledger",
           data: result
         });
+      } catch (err) {
+        const status = err.status || err.statusCode || (err.message?.includes("already posted") ? 409 : 400);
+        return res.status(status).json({
+          error: { message: err.message || "Ledger workflow operation failed", status }
+        });
       }
-    } catch (err) {
-      return res.status(400).json({
-        error: { message: err.message || "Ledger workflow operation failed", status: 400 }
-      });
     }
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });

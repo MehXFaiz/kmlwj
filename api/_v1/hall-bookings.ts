@@ -218,14 +218,20 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'POST') {
-    // Action: Approve Booking & Post to Ledger
+    // Action: Approve Booking & Post to Ledger — requires POST_LEDGER permission
     if (action === 'approve') {
+      if (!await verifyPermission(req, res, PERMS.POST_LEDGER)) return;
+
       const { id } = req.body;
       if (!id) return res.status(400).json({ error: { message: 'Booking ID is required', status: 400 } });
 
       const booking = await prisma.hallBooking.findUnique({ where: { id }, include: { hallAccount: true } });
       if (!booking) return res.status(404).json({ error: { message: 'Booking not found', status: 404 } });
-      if (booking.status === 'POSTED') return res.status(400).json({ error: { message: 'Booking is already posted', status: 400 } });
+      if (booking.status === 'POSTED') {
+        return res.status(409).json({
+          error: { message: 'Transaction has already been posted to the General Ledger.', status: 409 }
+        });
+      }
 
       const revenueAccountId = booking.hallId;
       if (!revenueAccountId) return res.status(400).json({ error: { message: 'Revenue account (Hall) is required to post.', status: 400 } });
@@ -301,7 +307,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         return { approvedBooking, journalEntry: postingResult.journalEntry };
       });
 
-      await logAudit(req.user.id, 'Post Hall Booking', 'REVENUE', booking, result.approvedBooking, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      await logAudit(req.user.id, 'POST_TO_LEDGER', 'Hall Bookings', booking, result.approvedBooking, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
 
       return res.status(200).json({ status: 200, data: result.approvedBooking, message: 'Booking posted and journal entries created successfully' });

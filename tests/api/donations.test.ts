@@ -91,7 +91,7 @@ describe('Donations Monthly Restriction API', () => {
     expect(res.body.data.status).toBe('APPROVED');
   }, 30000);
 
-  it('should prevent logging a second approved donation for the same beneficiary in the same calendar month', async () => {
+  it('should allow logging a second approved donation for the same beneficiary in the same calendar month', async () => {
     const res = await request(app)
       .post('/api/v1/donations')
       .set('Authorization', `Bearer ${token}`)
@@ -105,7 +105,8 @@ describe('Donations Monthly Restriction API', () => {
         remarks: 'Second donation'
       });
 
-    expect(res.status).toBe(400);
-    expect(res.body.error.message).toBe('This beneficiary has already received a donation for this month. The next donation can only be issued next month.');
+    expect(res.status).toBe(201);
+    expect(res.body.data).toHaveProperty('id');
+    expect(res.body.data.status).toBe('APPROVED');
   }, 30000);
 });

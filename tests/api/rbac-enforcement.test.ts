@@ -37,18 +37,15 @@ describe('ERP RBAC Strict Privilege Enforcement Suite', () => {
       });
     }
 
-    superAdminUser = await prisma.user.findFirst({ where: { roleId: superAdminRole.id } });
-    if (!superAdminUser) {
-      superAdminUser = await prisma.user.create({
-        data: {
-          email: `superadmin_rbac_${Date.now()}@erp.com`,
-          password: 'hashed_password',
-          fullName: 'Super Admin RBAC',
-          roleId: superAdminRole.id,
-          isActive: true,
-        }
-      });
-    }
+    superAdminUser = await prisma.user.create({
+      data: {
+        email: `superadmin_rbac_${Date.now()}@erp.com`,
+        password: 'hashed_password',
+        fullName: 'Super Admin RBAC',
+        roleId: superAdminRole.id,
+        isActive: true,
+      }
+    });
     superAdminToken = jwt.sign({ sub: superAdminUser.id, email: superAdminUser.email, role: superAdminRole.name }, secret);
 
     // 2. Get or create Admin
@@ -64,18 +61,15 @@ describe('ERP RBAC Strict Privilege Enforcement Suite', () => {
       });
     }
 
-    adminUser = await prisma.user.findFirst({ where: { roleId: adminRole.id } });
-    if (!adminUser) {
-      adminUser = await prisma.user.create({
-        data: {
-          email: `admin_rbac_${Date.now()}@erp.com`,
-          password: 'hashed_password',
-          fullName: 'Admin RBAC',
-          roleId: adminRole.id,
-          isActive: true,
-        }
-      });
-    }
+    adminUser = await prisma.user.create({
+      data: {
+        email: `admin_rbac_${Date.now()}@erp.com`,
+        password: 'hashed_password',
+        fullName: 'Admin RBAC',
+        roleId: adminRole.id,
+        isActive: true,
+      }
+    });
     adminToken = jwt.sign({ sub: adminUser.id, email: adminUser.email, role: adminRole.name }, secret);
 
     // 3. Get or create Data Entry Operator (restricted role)
@@ -156,7 +150,13 @@ describe('ERP RBAC Strict Privilege Enforcement Suite', () => {
     if (donationManagerUser) {
       await prisma.user.delete({ where: { id: donationManagerUser.id } }).catch(() => {});
     }
-  });
+    if (superAdminUser) {
+      await prisma.user.delete({ where: { id: superAdminUser.id } }).catch(() => {});
+    }
+    if (adminUser) {
+      await prisma.user.delete({ where: { id: adminUser.id } }).catch(() => {});
+    }
+  }, 60000);
 
   describe('1. /api/v1/auth/me Endpoint isPrivileged Flag', () => {
     it('returns isPrivileged: true for Super Admin', async () => {

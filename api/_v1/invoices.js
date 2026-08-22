@@ -164,6 +164,7 @@ var invoices_default = makeHandler(async (req, res) => {
   }
   if (method === "POST") {
     if (action === "post") {
+      if (!await verifyPermission(req, res, PERMS.POST_LEDGER)) return;
       const { id: invoiceId, revenueAccountId } = req.body;
       if (!invoiceId || !revenueAccountId) {
         return res.status(400).json({ error: { message: "Invoice ID and Revenue Account ID are required to post", status: 400 } });
@@ -173,6 +174,11 @@ var invoices_default = makeHandler(async (req, res) => {
         include: { customer: true }
       });
       if (!invoice) return res.status(404).json({ error: { message: "Invoice not found", status: 404 } });
+      if (invoice.status === "POSTED") {
+        return res.status(409).json({
+          error: { message: "Transaction has already been posted to the General Ledger.", status: 409 }
+        });
+      }
       if (invoice.status !== "DRAFT") return res.status(400).json({ error: { message: "Only DRAFT invoices can be posted", status: 400 } });
       const revenueAccount = await prisma.account.findUnique({ where: { id: revenueAccountId } });
       if (!revenueAccount) return res.status(400).json({ error: { message: "Revenue account not found", status: 400 } });
@@ -198,7 +204,7 @@ var invoices_default = makeHandler(async (req, res) => {
         });
         return { updatedInvoice, journalEntry: postingResult.journalEntry };
       });
-      await logAudit(req.user.id, "Post Invoice", "INVOICE", invoice, result.updatedInvoice, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      await logAudit(req.user.id, "POST_TO_LEDGER", "Invoices", invoice, result.updatedInvoice, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, data: result.updatedInvoice, message: "Invoice posted and ledger transactions logged successfully" });
     }
     if (action === "pay") {

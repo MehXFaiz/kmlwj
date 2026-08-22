@@ -38,6 +38,7 @@ import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolve
 export const AddIncomeRecords = () => {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
+  const canPostToLedger = useAuthStore((state) => state.canPostToLedger);
   const isAdminOrSuperAdmin = user?.role === 'Admin' || user?.role === 'Super Admin';
 
   const {
@@ -112,8 +113,8 @@ export const AddIncomeRecords = () => {
   // Handle Ledger Post
   const handlePostToLedger = async () => {
     if (!postingRecord) return;
-    if (!isAdminOrSuperAdmin) {
-      showToast('Forbidden: Only Admin and Super Admin can Post to Ledger', 'error');
+    if (!canPostToLedger) {
+      showToast('Forbidden: "Post to Ledger" permission required', 'error');
       return;
     }
     try {
@@ -616,9 +617,9 @@ export const AddIncomeRecords = () => {
                           {isPending && (
                             <button
                               onClick={() => setPostingRecord(rec)}
-                              disabled={!isAdminOrSuperAdmin}
+                              disabled={!canPostToLedger}
                               className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-all shadow-sm ${
-                                isAdminOrSuperAdmin
+                                canPostToLedger
                                   ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 cursor-pointer'
                                   : 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
                               }`}
@@ -644,9 +645,9 @@ export const AddIncomeRecords = () => {
                           {isReverted && (
                             <button
                               onClick={() => setPostingRecord(rec)}
-                              disabled={!isAdminOrSuperAdmin}
+                              disabled={!canPostToLedger}
                               className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-all shadow-sm ${
-                                isAdminOrSuperAdmin
+                                canPostToLedger
                                   ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 cursor-pointer'
                                   : 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
                               }`}
@@ -843,9 +844,9 @@ export const AddIncomeRecords = () => {
                             {isPending && (
                               <button
                                 onClick={() => setPostingRecord(rec)}
-                                disabled={!isAdminOrSuperAdmin}
+                                disabled={!canPostToLedger}
                                 className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-all shadow-sm ${
-                                  isAdminOrSuperAdmin
+                                  canPostToLedger
                                     ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 cursor-pointer'
                                     : 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
                                 }`}
@@ -871,9 +872,9 @@ export const AddIncomeRecords = () => {
                             {isReverted && (
                               <button
                                 onClick={() => setPostingRecord(rec)}
-                                disabled={!isAdminOrSuperAdmin}
+                                disabled={!canPostToLedger}
                                 className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-all shadow-sm ${
-                                  isAdminOrSuperAdmin
+                                  canPostToLedger
                                     ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 cursor-pointer'
                                     : 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
                                 }`}

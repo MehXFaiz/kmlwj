@@ -113,11 +113,16 @@ var revenue_collections_default = makeHandler(async (req, res) => {
   if (!await verifyPermission(req, res, PERMS.CREATE_REVENUE_COLLECTION)) return;
   if (method === "POST") {
     if (action === "approve") {
+      if (!await verifyPermission(req, res, PERMS.POST_LEDGER)) return;
       const { id: id2 } = req.body;
       if (!id2) return res.status(400).json({ error: { message: "Collection ID is required", status: 400 } });
       const item = await prisma.revenueCollection.findUnique({ where: { id: id2 }, include: { bankAccount: true } });
       if (!item) return res.status(404).json({ error: { message: "Record not found", status: 404 } });
-      if (item.status === "POSTED") return res.status(400).json({ error: { message: "Record is already posted to ledger", status: 400 } });
+      if (item.status === "POSTED") {
+        return res.status(409).json({
+          error: { message: "Transaction has already been posted to the General Ledger.", status: 409 }
+        });
+      }
       let debitAccountId2 = null;
       if (item.paymentMethod === "CASH") {
         const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
@@ -153,7 +158,7 @@ var revenue_collections_default = makeHandler(async (req, res) => {
         });
         return { approvedItem, journalEntry: postingResult.journalEntry };
       }, accountingTxOptions);
-      await logAudit(req.user.id, `Post ${item.category}`, "REVENUE", item, result2.approvedItem, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      await logAudit(req.user.id, "POST_TO_LEDGER", item.category || "Revenue Collections", item, result2.approvedItem, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, data: result2.approvedItem, message: `${item.category} posted to ledger successfully` });
     }
     if (action === "revert") {

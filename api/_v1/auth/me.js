@@ -1,6 +1,8 @@
 import { makeHandler } from "../../_utils/handler.js";
 import { verifyAuth } from "../../_middlewares/auth.middleware.js";
 import { prisma } from "../../_prisma.js";
+import { loadPermissions } from "../../_services/permission.service.js";
+import { ERP_MODULE_DEFINITIONS } from "../../_constants/permissions.js";
 var me_default = makeHandler(async (req, res) => {
   if (req.method !== "GET") {
     return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
@@ -27,7 +29,17 @@ var me_default = makeHandler(async (req, res) => {
   if (!user.isActive) {
     return res.status(403).json({ error: { message: "This account has been deactivated", status: 403 } });
   }
-  const permissions = user.role.rolePermissions.map((rp) => rp.permission.name);
+  const permissionSet = await loadPermissions(req);
+  const permissions = Array.from(permissionSet);
+  const isPrivileged = user.role.isPrivileged === true;
+  const modulePermissions = {};
+  for (const mod of ERP_MODULE_DEFINITIONS) {
+    const actMap = {};
+    for (const act of mod.actions) {
+      actMap[act] = isPrivileged || permissionSet.has(`${mod.key}.${act}`);
+    }
+    modulePermissions[mod.key] = actMap;
+  }
   return res.status(200).json({
     status: 200,
     data: {
@@ -35,14 +47,10 @@ var me_default = makeHandler(async (req, res) => {
       fullName: user.fullName,
       email: user.email,
       role: user.role.name,
-      /**
-       * isPrivileged: true  → Super Admin or Admin (full CRUD access)
-       * isPrivileged: false → all other roles (View + Create only)
-       * The frontend uses this to hide Edit/Delete buttons.
-       * The backend enforces this independently — UI state cannot bypass it.
-       */
-      isPrivileged: user.role.isPrivileged,
-      permissions
+      roleId: user.role.id,
+      isPrivileged,
+      permissions,
+      modulePermissions
     }
   });
 });

@@ -1,16 +1,14 @@
 /**
  * RBAC Enforcement Middleware
  *
- * Core Business Rule:
- *   isPrivileged roles (Super Admin, Admin) → full CRUD access
- *   All other roles → VIEW + CREATE only (PUT / PATCH / DELETE → 403)
- *
- * This is enforced at the API layer regardless of the frontend state,
- * so a restricted user cannot bypass UI restrictions via Postman, curl, etc.
+ * Dynamic Role Authorization:
+ *   - isPrivileged roles (Super Admin, Admin) → full access to all operational modules
+ *   - Dynamic custom roles → granular access governed by database permissions
  */
 import type { VercelResponse } from '@vercel/node';
 import type { AuthenticatedRequest } from './auth.middleware.js';
 import { prisma } from '../_prisma.js';
+import { loadPermissions, checkPermission } from '../_services/permission.service.js';
 
 // Cache key on req to avoid double DB round-trips within one request
 const PRIV_CACHE_KEY = '__isPrivileged';
@@ -42,21 +40,17 @@ export async function loadIsPrivileged(req: AuthenticatedRequest): Promise<boole
  * Vercel/serverless version.
  *
  * Call AFTER verifyAuth. For PUT / PATCH / DELETE requests, checks that the
- * authenticated user is a privileged role. If not, sends 403 and returns false.
+ * authenticated user has permission for the operation (either via isPrivileged or granular permission).
  * Returns true when the request should proceed.
- *
- * Usage:
- *   if (!await enforceRestrictedRolePolicy(req, res)) return;
- *   // ... route logic
  */
 export async function enforceRestrictedRolePolicy(
   req: AuthenticatedRequest,
   res: VercelResponse,
+  requiredPermission?: string | string[]
 ): Promise<boolean> {
   const method = req.method?.toUpperCase() ?? '';
 
-  // GET and POST are allowed for all authenticated roles (subject to permission checks).
-  // Only PUT, PATCH, DELETE are restricted to privileged roles.
+  // GET and POST are allowed for all authenticated roles (subject to module-specific permission checks)
   if (method !== 'PUT' && method !== 'PATCH' && method !== 'DELETE') {
     return true;
   }
@@ -67,8 +61,7 @@ export async function enforceRestrictedRolePolicy(
   res.status(403).json({
     error: {
       message:
-        'Forbidden: Edit and Delete operations require Admin or Super Admin role. ' +
-        'Your role is restricted to View and Create only.',
+        'Forbidden: Restricted roles are not permitted to edit or delete records. Please contact an administrator.',
       status: 403,
       code: 'RESTRICTED_ROLE',
     },
@@ -78,14 +71,6 @@ export async function enforceRestrictedRolePolicy(
 
 /**
  * Express-compatible middleware version (used in the dev server / index.ts).
- *
- * Blocks PUT / PATCH / DELETE for non-privileged roles.
- * Must be placed AFTER requireAuth middleware.
- *
- * Usage:
- *   router.use(enforceRestrictedRolePolicyMiddleware);
- *   // or per-route:
- *   router.put('/donations/:id', requireAuth, enforceRestrictedRolePolicyMiddleware, handler);
  */
 export function enforceRestrictedRolePolicyMiddleware(
   req: any,
@@ -100,20 +85,20 @@ export function enforceRestrictedRolePolicyMiddleware(
   }
 
   loadIsPrivileged(req as AuthenticatedRequest)
-    .then((privileged) => {
+    .then(async (privileged) => {
       if (privileged) {
         next();
-      } else {
-        res.status(403).json({
-          error: {
-            message:
-              'Forbidden: Edit and Delete operations require Admin or Super Admin role. ' +
-              'Your role is restricted to View and Create only.',
-            status: 403,
-            code: 'RESTRICTED_ROLE',
-          },
-        });
+        return;
       }
+
+      res.status(403).json({
+        error: {
+          message:
+            'Forbidden: Restricted roles are not permitted to edit or delete records. Please contact an administrator.',
+          status: 403,
+          code: 'RESTRICTED_ROLE',
+        },
+      });
     })
     .catch(next);
 }

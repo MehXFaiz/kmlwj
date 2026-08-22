@@ -46,6 +46,7 @@ async function main() {
     { name: 'RUN_AI_AUDIT', description: 'Trigger AI analysis of detected accounting issues' },
     { name: 'APPLY_AI_REPAIR', description: 'Approve, apply, or auto-run AI-proposed accounting repairs' },
     // Journal / GL posting
+    { name: 'ledger.post', description: 'Post approved ERP transactions to the General Ledger' },
     { name: 'POST_JOURNAL', description: 'Post, reverse, or restore journal entries and transactions' },
     // Income & Expense
     { name: 'RECORD_INCOME', description: 'Record income and revenue collections that post to the General Ledger' },

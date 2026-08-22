@@ -42,32 +42,48 @@ export async function verifyAuth(
 }
 
 /**
- * Checks that req.user holds the given permission, loaded live from the database.
+ * Checks that req.user holds the given permission(s), loaded live from the database.
+ * Supports a single permission name or an array of aliases.
  * Sends 403 and returns false if denied; returns true if allowed.
  *
  * Usage:
- *   if (!await verifyPermission(req, res, PERMS.RECORD_INCOME)) return;
+ *   if (!await verifyPermission(req, res, [PERMS.RECORD_INCOME, 'revenue.create'])) return;
  */
 export async function verifyPermission(
   req: AuthenticatedRequest,
   res: VercelResponse,
-  permission: string
+  permission: string | string[]
 ): Promise<boolean> {
   if (!req.user) {
     res.status(401).json({ error: { message: 'Authentication required', status: 401 } });
     return false;
   }
   const perms = await loadPermissions(req);
-  if (perms.has(permission)) return true;
+  const permList = Array.isArray(permission) ? permission : [permission];
+
+  const hasDirectMatch = permList.some((p) => perms.has(p));
+  if (hasDirectMatch) return true;
 
   // Privileged roles (Super Admin, Admin) have unrestricted access to all operational modules
-  const isSecurityPerm = permission === 'SYSTEM_SETTINGS' || permission === 'MANAGE_USERS' || permission === 'MANAGE_ROLES';
-  if (!isSecurityPerm && await isPrivilegedUser(req)) {
+  const isSecurityPerm = permList.some(
+    (p) =>
+      p === 'SYSTEM_SETTINGS' ||
+      p === 'MANAGE_USERS' ||
+      p === 'MANAGE_ROLES' ||
+      p.startsWith('users.') ||
+      p.startsWith('roles.') ||
+      p.startsWith('settings.')
+  );
+
+  if (!isSecurityPerm && (await isPrivilegedUser(req))) {
     return true;
   }
 
   res.status(403).json({
-    error: { message: `Forbidden: '${permission}' permission required`, status: 403 },
+    error: {
+      message: `Forbidden: '${permList.join(' or ')}' permission required`,
+      status: 403,
+    },
   });
   return false;
 }
@@ -104,16 +120,37 @@ export function requireAuth(req: any, res: any, next: any): void {
  *
  * Usage: router.post('/income', requireAuth, requirePermission(PERMS.RECORD_INCOME), handler)
  */
-export function requirePermission(permission: string) {
+export function requirePermission(permission: string | string[]) {
   return async (req: any, res: any, next: any): Promise<void> => {
     if (!req.user) {
       res.status(401).json({ error: { message: 'Authentication required', status: 401 } });
       return;
     }
     const perms = await loadPermissions(req);
-    if (!perms.has(permission)) {
+    const permList = Array.isArray(permission) ? permission : [permission];
+    const hasDirectMatch = permList.some((p) => perms.has(p));
+
+    if (!hasDirectMatch) {
+      const isSecurityPerm = permList.some(
+        (p) =>
+          p === 'SYSTEM_SETTINGS' ||
+          p === 'MANAGE_USERS' ||
+          p === 'MANAGE_ROLES' ||
+          p.startsWith('users.') ||
+          p.startsWith('roles.') ||
+          p.startsWith('settings.')
+      );
+
+      if (!isSecurityPerm && (await isPrivilegedUser(req))) {
+        next();
+        return;
+      }
+
       res.status(403).json({
-        error: { message: `Forbidden: '${permission}' permission required`, status: 403 },
+        error: {
+          message: `Forbidden: '${permList.join(' or ')}' permission required`,
+          status: 403,
+        },
       });
       return;
     }
