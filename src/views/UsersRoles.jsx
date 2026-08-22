@@ -735,7 +735,11 @@ export const UsersRoles = () => {
                                   {r.locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
                                   {r.locked ? 'Locked' : 'Editable'}
                                 </button>
-                                {!isCore && (
+                                {isCore ? (
+                                  <span className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-850 border border-slate-800 text-slate-400 flex items-center gap-1.5" title="Core system role cannot be deleted">
+                                    <Shield className="h-3.5 w-3.5 text-amber-500/80" /> Protected
+                                  </span>
+                                ) : (
                                   confirmDeleteRoleId === r.id ? (
                                     <div className="flex items-center gap-1">
                                       <button onClick={() => handleDeleteRole(r.id)} className="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold">Confirm</button>

@@ -7,7 +7,14 @@ var roles_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
   const { method } = req;
-  const id = req.query.id;
+  let id = req.query.id || req.params?.id || req.body?.id;
+  if (!id && req.url) {
+    const urlParts = req.url.split("?")[0].split("/");
+    const lastPart = urlParts[urlParts.length - 1];
+    if (lastPart && lastPart !== "roles") {
+      id = lastPart;
+    }
+  }
   if (!await verifyPermission(req, res, PERMS.MANAGE_ROLES)) return;
   const permMap = {
     coa: ["CREATE_ACCOUNT", "UPDATE_ACCOUNT", "DELETE_ACCOUNT", "LOCK_ACCOUNT"],
@@ -195,41 +202,72 @@ var roles_default = makeHandler(async (req, res) => {
     return res.status(201).json({ status: 201, message: "Role created successfully", data: formattedNewRole });
   }
   if (method === "DELETE") {
-    if (!id) {
-      return res.status(400).json({ error: { message: "Role ID is required", status: 400 } });
+    if (!id || typeof id !== "string" || !id.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: { message: "Role ID is required", status: 400 },
+        message: "Role ID is required"
+      });
+    }
+    const trimmedId = id.trim();
+    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(trimmedId);
+    if (!isUuid) {
+      return res.status(404).json({
+        success: false,
+        error: { message: "Role not found", status: 404 },
+        message: "Role not found"
+      });
     }
     const roleToDelete = await prisma.role.findUnique({
-      where: { id },
+      where: { id: trimmedId },
       include: { users: true }
     });
     if (!roleToDelete) {
-      return res.status(404).json({ error: { message: "Role not found", status: 404 } });
-    }
-    if (roleToDelete.name === "Super Admin" || roleToDelete.name === "Admin") {
-      return res.status(400).json({ error: { message: `Core system role "${roleToDelete.name}" cannot be deleted`, status: 400 } });
-    }
-    if (roleToDelete.users && roleToDelete.users.length > 0) {
-      return res.status(400).json({
-        error: {
-          message: `Cannot delete role "${roleToDelete.name}" because ${roleToDelete.users.length} user(s) are currently assigned to it. Please reassign those users first.`,
-          status: 400
-        }
+      return res.status(404).json({
+        success: false,
+        error: { message: "Role not found", status: 404 },
+        message: "Role not found"
       });
     }
-    await prisma.$transaction([
-      prisma.rolePermission.deleteMany({ where: { roleId: id } }),
-      prisma.role.delete({ where: { id } })
-    ]);
+    const PROTECTED_SYSTEM_ROLES = ["Super Admin", "Admin"];
+    if (PROTECTED_SYSTEM_ROLES.includes(roleToDelete.name)) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          message: `${roleToDelete.name} is a protected system role and cannot be deleted.`,
+          status: 403
+        },
+        message: `${roleToDelete.name} is a protected system role and cannot be deleted.`
+      });
+    }
+    if (roleToDelete.users && roleToDelete.users.length > 0) {
+      return res.status(409).json({
+        success: false,
+        error: {
+          message: `This role is assigned to ${roleToDelete.users.length} user(s). Reassign those users before deleting the role.`,
+          status: 409
+        },
+        message: `This role is assigned to ${roleToDelete.users.length} user(s). Reassign those users before deleting the role.`
+      });
+    }
+    await prisma.$transaction(async (tx) => {
+      await tx.rolePermission.deleteMany({ where: { roleId: trimmedId } });
+      await tx.role.delete({ where: { id: trimmedId } });
+    });
     await logAudit(
       req.user.id,
-      `Deleted custom role "${roleToDelete.name}"`,
+      "ROLE_DELETED",
       "ROLES",
-      { name: roleToDelete.name },
+      { id: roleToDelete.id, name: roleToDelete.name },
       null,
       req.headers["x-forwarded-for"],
       req.headers["user-agent"]
     );
-    return res.status(200).json({ status: 200, message: "Role deleted successfully" });
+    return res.status(200).json({
+      status: 200,
+      success: true,
+      message: `Role "${roleToDelete.name}" deleted successfully`
+    });
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
 });
