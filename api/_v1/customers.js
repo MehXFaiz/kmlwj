@@ -1,5 +1,6 @@
 import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
+import { enforceRestrictedRolePolicy } from "../_middlewares/rbac.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { PERMS } from "../_constants/permissions.js";
@@ -7,8 +8,15 @@ import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 var customers_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
-  if (!await verifyPermission(req, res, PERMS.MANAGE_CUSTOMERS)) return;
-  const { method } = req;
+  if (!await enforceRestrictedRolePolicy(req, res)) return;
+  const method = req.method?.toUpperCase() ?? "";
+  if (method === "GET") {
+    if (!await verifyPermission(req, res, PERMS.VIEW_CUSTOMERS)) return;
+  } else if (method === "POST") {
+    if (!await verifyPermission(req, res, PERMS.CREATE_CUSTOMER)) return;
+  } else {
+    if (!await verifyPermission(req, res, PERMS.VIEW_CUSTOMERS)) return;
+  }
   const id = req.query.id;
   const action = req.query.action || req.body?.action;
   if (method === "GET") {

@@ -1,5 +1,6 @@
 import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
+import { enforceRestrictedRolePolicy } from "../_middlewares/rbac.middleware.js";
 import { prisma } from "../_prisma.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { PERMS } from "../_constants/permissions.js";
@@ -9,6 +10,7 @@ const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };
 var simple_income_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
+  if (!await enforceRestrictedRolePolicy(req, res)) return;
   const action = req.query.action || req.body?.action;
   const idParam = req.query.id || req.body?.id;
   if (req.method === "GET") {

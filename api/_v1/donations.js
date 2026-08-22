@@ -1,5 +1,6 @@
 import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
+import { enforceRestrictedRolePolicy, loadIsPrivileged } from "../_middlewares/rbac.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
@@ -83,7 +84,7 @@ var donations_default = makeHandler(async (req, res) => {
   const { method } = req;
   const action = req.query.action || req.body?.action;
   if (method === "GET") {
-    if (!await verifyPermission(req, res, PERMS.MANAGE_DONATIONS)) return;
+    if (!await verifyPermission(req, res, PERMS.VIEW_DONATIONS)) return;
     const { limit = "100", page = "1" } = req.query;
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
@@ -105,6 +106,7 @@ var donations_default = makeHandler(async (req, res) => {
     ]);
     return res.status(200).json({ status: 200, data: donations, meta: { total, page: pageNum, limit: limitNum } });
   }
+  if (!await enforceRestrictedRolePolicy(req, res)) return;
   if (method === "PUT" || method === "POST" || method === "PATCH") {
     if (action === "restore") {
       if (!await isSuperAdmin(req)) {
@@ -143,9 +145,17 @@ var donations_default = makeHandler(async (req, res) => {
       return res.status(200).json({ status: 200, message: "Donation restored successfully", data: restored });
     }
   }
-  if (!await verifyPermission(req, res, PERMS.RECORD_EXPENSE)) return;
+  if (!await verifyPermission(req, res, PERMS.CREATE_DONATION)) return;
   if (method === "POST") {
     if (action === "approve") {
+      if (!await loadIsPrivileged(req)) {
+        return res.status(403).json({
+          error: {
+            message: "Forbidden: Approving donations requires Admin or Super Admin role.",
+            status: 403
+          }
+        });
+      }
       const { id } = req.body;
       if (!id) return res.status(400).json({ error: { message: "Donation ID is required", status: 400 } });
       const donation = await prisma.donation.findUnique({ where: { id }, include: { beneficiary: true } });

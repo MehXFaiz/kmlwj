@@ -1,5 +1,6 @@
 import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
+import { enforceRestrictedRolePolicy } from "../_middlewares/rbac.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
@@ -50,12 +51,13 @@ import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 var revenue_collections_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
-  const { method } = req;
+  if (!await enforceRestrictedRolePolicy(req, res)) return;
+  const method = req.method?.toUpperCase() ?? "";
   const id = req.query.id;
   const action = req.query.action || req.body?.action;
   const categoryFilter = req.query.category;
   if (method === "GET") {
-    if (!await verifyPermission(req, res, PERMS.MANAGE_REVENUE_COLLECTIONS)) return;
+    if (!await verifyPermission(req, res, PERMS.VIEW_REVENUE_COLLECTIONS)) return;
     const whereClause = {
       ...categoryFilter ? { category: categoryFilter } : {},
       ...getDeletedFilter(req.query)
@@ -108,7 +110,7 @@ var revenue_collections_default = makeHandler(async (req, res) => {
       return res.status(200).json({ status: 200, message: "Revenue collection restored successfully", data: restored });
     }
   }
-  if (!await verifyPermission(req, res, PERMS.RECORD_INCOME)) return;
+  if (!await verifyPermission(req, res, PERMS.CREATE_REVENUE_COLLECTION)) return;
   if (method === "POST") {
     if (action === "approve") {
       const { id: id2 } = req.body;

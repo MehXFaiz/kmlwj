@@ -1,5 +1,6 @@
 import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
+import { enforceRestrictedRolePolicy } from "../_middlewares/rbac.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
@@ -31,8 +32,15 @@ function isKnownStatus(value) {
 var hall_bookings_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
-  if (!await verifyPermission(req, res, PERMS.MANAGE_HALL_BOOKINGS)) return;
-  const { method } = req;
+  if (!await enforceRestrictedRolePolicy(req, res)) return;
+  const method = req.method?.toUpperCase() ?? "";
+  if (method === "GET") {
+    if (!await verifyPermission(req, res, PERMS.VIEW_HALL_BOOKINGS)) return;
+  } else if (method === "POST") {
+    if (!await verifyPermission(req, res, PERMS.CREATE_HALL_BOOKING)) return;
+  } else if (method === "PUT" || method === "PATCH" || method === "DELETE") {
+    if (!await verifyPermission(req, res, PERMS.VIEW_HALL_BOOKINGS)) return;
+  }
   const action = req.query.action;
   if (method === "GET") {
     if (req.url?.includes("/check-availability") || action === "check-availability") {

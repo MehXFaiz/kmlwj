@@ -17,7 +17,7 @@ var roles_default = makeHandler(async (req, res) => {
   }
   if (!await verifyPermission(req, res, PERMS.MANAGE_ROLES)) return;
   const permMap = {
-    coa: ["CREATE_ACCOUNT", "UPDATE_ACCOUNT", "DELETE_ACCOUNT", "LOCK_ACCOUNT"],
+    coa: ["CREATE_ACCOUNT"],
     journals: ["VIEW_JOURNALS", "POST_JOURNAL"],
     reports: ["VIEW_REPORTS"],
     audit: ["VIEW_AUDIT"],
@@ -25,15 +25,16 @@ var roles_default = makeHandler(async (req, res) => {
     settings: ["SYSTEM_SETTINGS", "MANAGE_ROLES", "MANAGE_RESERVED_CODES"],
     income: ["RECORD_INCOME", "MANAGE_REVENUE_HEADS"],
     expense: ["RECORD_EXPENSE", "MANAGE_EXPENSE_HEADS"],
-    invoices: ["MANAGE_INVOICES"],
-    members: ["VIEW_MEMBERS", "CREATE_MEMBER", "UPDATE_MEMBER", "DELETE_MEMBER"],
-    beneficiaries: ["VIEW_BENEFICIARIES", "CREATE_BENEFICIARY", "UPDATE_BENEFICIARY", "DELETE_BENEFICIARY"],
-    donations: ["MANAGE_DONATIONS"],
-    hallBookings: ["MANAGE_HALL_BOOKINGS"],
-    revenueCollections: ["MANAGE_REVENUE_COLLECTIONS"],
-    zakatCards: ["MANAGE_ZAKAT_CARDS"],
-    donors: ["MANAGE_DONORS"],
-    customers: ["MANAGE_CUSTOMERS"]
+    invoices: ["VIEW_INVOICES", "CREATE_INVOICE"],
+    members: ["VIEW_MEMBERS", "CREATE_MEMBER"],
+    beneficiaries: ["VIEW_BENEFICIARIES", "CREATE_BENEFICIARY"],
+    donations: ["VIEW_DONATIONS", "CREATE_DONATION", "VIEW_DONATIONS_RECEIVED", "CREATE_DONATION_RECEIVED"],
+    hallBookings: ["VIEW_HALL_BOOKINGS", "CREATE_HALL_BOOKING"],
+    revenueCollections: ["VIEW_REVENUE_COLLECTIONS", "CREATE_REVENUE_COLLECTION"],
+    zakatCards: ["VIEW_ZAKAT_CARDS", "CREATE_ZAKAT_CARD"],
+    zakat: ["VIEW_ZAKAT_CARDS", "CREATE_ZAKAT_CARD"],
+    donors: ["VIEW_DONORS", "CREATE_DONOR"],
+    customers: ["VIEW_CUSTOMERS", "CREATE_CUSTOMER"]
   };
   if (method === "GET") {
     const dbRoles = await prisma.role.findMany({
@@ -48,13 +49,14 @@ var roles_default = makeHandler(async (req, res) => {
       const activePermNames = role.rolePermissions.map((rp) => rp.permission.name);
       const permissions = {};
       for (const key of Object.keys(permMap)) {
-        permissions[key] = permMap[key].every((p) => activePermNames.includes(p));
+        permissions[key] = permMap[key].some((p) => activePermNames.includes(p));
       }
-      const locked = role.name === "Super Admin" || role.description?.includes("Locked");
+      const locked = role.isPrivileged || role.name === "Super Admin" || role.name === "Admin" || role.description?.includes("Locked");
       return {
         id: role.id,
         name: role.name,
         description: role.description,
+        isPrivileged: role.isPrivileged,
         permissions,
         locked
       };
@@ -72,8 +74,8 @@ var roles_default = makeHandler(async (req, res) => {
     if (!existingRole) {
       return res.status(404).json({ error: { message: "Role not found", status: 404 } });
     }
-    if (existingRole.name === "Super Admin") {
-      return res.status(400).json({ error: { message: "Super Admin permissions cannot be modified", status: 400 } });
+    if (existingRole.isPrivileged || existingRole.name === "Super Admin" || existingRole.name === "Admin") {
+      return res.status(400).json({ error: { message: "System Admin role permissions cannot be modified from the panel", status: 400 } });
     }
     const { permissions, locked } = req.body;
     if (locked !== void 0) {

@@ -43,6 +43,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     hallBookings: ['VIEW_HALL_BOOKINGS', 'CREATE_HALL_BOOKING'],
     revenueCollections: ['VIEW_REVENUE_COLLECTIONS', 'CREATE_REVENUE_COLLECTION'],
     zakatCards: ['VIEW_ZAKAT_CARDS', 'CREATE_ZAKAT_CARD'],
+    zakat: ['VIEW_ZAKAT_CARDS', 'CREATE_ZAKAT_CARD'],
     donors: ['VIEW_DONORS', 'CREATE_DONOR'],
     customers: ['VIEW_CUSTOMERS', 'CREATE_CUSTOMER'],
   };
