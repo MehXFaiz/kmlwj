@@ -388,12 +388,18 @@ export const UsersRoles = () => {
   };
 
   const handleDeleteRole = async (id) => {
+    const role = roles.find((r) => r.id === id);
+    if (role && (role.name === 'Super Admin' || role.name === 'Admin')) {
+      showToast(`${role.name} is a protected system role and cannot be deleted.`, 'warning');
+      return;
+    }
     try {
       await deleteRole(id);
-      showToast('Role deleted successfully');
+      showToast(role ? `Role "${role.name}" deleted successfully` : 'Role deleted successfully', 'success');
       setConfirmDeleteRoleId(null);
     } catch (err) {
-      showToast(err.message || 'Failed to delete role');
+      const errMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to delete role';
+      showToast(errMsg, 'error');
     }
   };
 
@@ -664,7 +670,9 @@ export const UsersRoles = () => {
                             {r.locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
                             {r.locked ? 'Locked' : 'Editable'}
                           </button>
-                          {!isCore && (
+                          {isCore ? (
+                            <span className="px-2 py-1 rounded text-[10px] font-semibold bg-slate-800/80 border border-slate-700 text-slate-400">Protected</span>
+                          ) : (
                             confirmDeleteRoleId === r.id ? (
                               <div className="flex items-center gap-1">
                                 <button onClick={() => handleDeleteRole(r.id)} className="px-2 py-1 rounded bg-red-600 text-white text-[10px] font-bold">Delete</button>

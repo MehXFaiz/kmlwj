@@ -14,19 +14,22 @@ export const useRoleStore = create((set, get) => ({
       const data = await roleService.getAll();
       set({ roles: data, loading: false });
     } catch (err) {
-      set({ error: err.message || 'Failed to fetch roles', loading: false });
+      const msg = err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to fetch roles';
+      set({ error: msg, loading: false });
     }
   },
 
   addRole: async (payload) => {
     set({ loading: true, error: null });
     try {
-      await roleService.create(payload);
+      const res = await roleService.create(payload);
       await get().fetchRoles();
       set({ loading: false });
       useDashboardStore.getState().invalidateAll();
+      return res;
     } catch (err) {
-      set({ error: err.message || 'Failed to create role', loading: false });
+      const msg = err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to create role';
+      set({ error: msg, loading: false });
       throw err;
     }
   },
@@ -34,12 +37,14 @@ export const useRoleStore = create((set, get) => ({
   updateRole: async (id, payload) => {
     set({ loading: true, error: null });
     try {
-      await roleService.update(id, payload);
+      const res = await roleService.update(id, payload);
       await get().fetchRoles();
       set({ loading: false });
       useDashboardStore.getState().invalidateAll();
+      return res;
     } catch (err) {
-      set({ error: err.message || 'Failed to update role', loading: false });
+      const msg = err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to update role';
+      set({ error: msg, loading: false });
       throw err;
     }
   },
@@ -47,12 +52,14 @@ export const useRoleStore = create((set, get) => ({
   deleteRole: async (id) => {
     set({ loading: true, error: null });
     try {
-      await roleService.delete(id);
+      const res = await roleService.delete(id);
       await get().fetchRoles();
       set({ loading: false });
       useDashboardStore.getState().invalidateAll();
+      return res;
     } catch (err) {
-      set({ error: err.message || 'Failed to delete role', loading: false });
+      const msg = err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to delete role';
+      set({ error: msg, loading: false });
       throw err;
     }
   },

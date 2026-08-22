@@ -254,48 +254,85 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'DELETE') {
-    if (!id) {
-      return res.status(400).json({ error: { message: 'Role ID is required', status: 400 } });
+    if (!id || typeof id !== 'string' || !id.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Role ID is required', status: 400 },
+        message: 'Role ID is required'
+      });
+    }
+
+    const trimmedId = id.trim();
+
+    // Check UUID format (prevent invalid UUID queries)
+    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(trimmedId);
+    if (!isUuid) {
+      return res.status(404).json({
+        success: false,
+        error: { message: 'Role not found', status: 404 },
+        message: 'Role not found'
+      });
     }
 
     const roleToDelete = await prisma.role.findUnique({
-      where: { id },
+      where: { id: trimmedId },
       include: { users: true }
     });
 
     if (!roleToDelete) {
-      return res.status(404).json({ error: { message: 'Role not found', status: 404 } });
-    }
-
-    if (roleToDelete.name === 'Super Admin' || roleToDelete.name === 'Admin') {
-      return res.status(400).json({ error: { message: `Core system role "${roleToDelete.name}" cannot be deleted`, status: 400 } });
-    }
-
-    if (roleToDelete.users && roleToDelete.users.length > 0) {
-      return res.status(400).json({
-        error: {
-          message: `Cannot delete role "${roleToDelete.name}" because ${roleToDelete.users.length} user(s) are currently assigned to it. Please reassign those users first.`,
-          status: 400
-        }
+      return res.status(404).json({
+        success: false,
+        error: { message: 'Role not found', status: 404 },
+        message: 'Role not found'
       });
     }
 
-    await prisma.$transaction([
-      prisma.rolePermission.deleteMany({ where: { roleId: id } }),
-      prisma.role.delete({ where: { id } })
-    ]);
+    // Protected system roles: Super Admin and Admin cannot be deleted
+    const PROTECTED_SYSTEM_ROLES = ['Super Admin', 'Admin'];
+    if (PROTECTED_SYSTEM_ROLES.includes(roleToDelete.name)) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          message: `${roleToDelete.name} is a protected system role and cannot be deleted.`,
+          status: 403
+        },
+        message: `${roleToDelete.name} is a protected system role and cannot be deleted.`
+      });
+    }
+
+    // Check if any users are assigned to this role
+    if (roleToDelete.users && roleToDelete.users.length > 0) {
+      return res.status(409).json({
+        success: false,
+        error: {
+          message: `This role is assigned to ${roleToDelete.users.length} user(s). Reassign those users before deleting the role.`,
+          status: 409
+        },
+        message: `This role is assigned to ${roleToDelete.users.length} user(s). Reassign those users before deleting the role.`
+      });
+    }
+
+    // Safe transaction: cascade delete role permissions and delete role
+    await prisma.$transaction(async (tx) => {
+      await tx.rolePermission.deleteMany({ where: { roleId: trimmedId } });
+      await tx.role.delete({ where: { id: trimmedId } });
+    });
 
     await logAudit(
       req.user.id,
-      `Deleted custom role "${roleToDelete.name}"`,
+      'ROLE_DELETED',
       'ROLES',
-      { name: roleToDelete.name },
+      { id: roleToDelete.id, name: roleToDelete.name },
       null,
       req.headers['x-forwarded-for'] as string,
       req.headers['user-agent']
     );
 
-    return res.status(200).json({ status: 200, message: 'Role deleted successfully' });
+    return res.status(200).json({
+      status: 200,
+      success: true,
+      message: `Role "${roleToDelete.name}" deleted successfully`
+    });
   }
 
   return res.status(405).json({ error: { message: 'Method Not Allowed', status: 405 } });
