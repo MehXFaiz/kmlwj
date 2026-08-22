@@ -122,7 +122,16 @@ async function main() {
     { name: 'Operator', description: 'Create-only access — can record new transactions and entries but cannot edit, delete, or view configuration/security data', perms: CREATE_ONLY_PERM_NAMES },
     { name: 'Viewer', description: 'Read-only access to reports, audit logs, journals, members, and beneficiaries', perms: READ_ONLY_PERM_NAMES },
     // Legacy roles kept for backward compatibility with existing assigned users.
-    { name: 'Accountant', description: 'Manage charts of accounts and view reports', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'VIEW_REPORTS', 'VIEW_JOURNALS', 'POST_JOURNAL', 'RECORD_INCOME', 'RECORD_EXPENSE'] },
+    { name: 'Accountant', description: 'Manage charts of accounts, journals, hall bookings, donations, invoices, and financial reports', perms: [
+      'CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT', 'LOCK_ACCOUNT',
+      'VIEW_REPORTS', 'VIEW_AUDIT', 'VIEW_JOURNALS', 'POST_JOURNAL',
+      'RECORD_INCOME', 'RECORD_EXPENSE',
+      'MANAGE_HALL_BOOKINGS', 'MANAGE_DONATIONS', 'MANAGE_REVENUE_COLLECTIONS',
+      'MANAGE_INVOICES', 'MANAGE_DONORS', 'MANAGE_CUSTOMERS', 'MANAGE_ZAKAT_CARDS',
+      'MANAGE_EXPENSE_HEADS', 'MANAGE_REVENUE_HEADS',
+      'VIEW_MEMBERS', 'CREATE_MEMBER', 'UPDATE_MEMBER',
+      'VIEW_BENEFICIARIES', 'CREATE_BENEFICIARY', 'UPDATE_BENEFICIARY'
+    ] },
     { name: 'Auditor', description: 'Read-only access to reports and audit logs', perms: READ_ONLY_PERM_NAMES },
     { name: 'Data Entry Operator', description: 'Create and update accounts but cannot delete or lock', perms: ['CREATE_ACCOUNT'] },
     { name: 'Donation and Zakat Manager', description: 'Manage donations and Zakat distributions', perms: ['VIEW_REPORTS', 'RECORD_INCOME', 'RECORD_EXPENSE', 'MANAGE_DONATIONS', 'MANAGE_ZAKAT_CARDS'] },

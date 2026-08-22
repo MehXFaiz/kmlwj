@@ -166,14 +166,23 @@ function UserFormPanel({ onClose, onSave, initial, availableRoles }) {
 
 /* ─── Dynamic Role Form Panel ─── */
 const PERMISSION_MODULES = [
-  { key: 'coa', label: 'Chart of Accounts', desc: 'Create, edit & manage ledger accounts' },
-  { key: 'journals', label: 'Journal Entries', desc: 'Post general & bank vouchers' },
-  { key: 'reports', label: 'Financial Reports', desc: 'Balance sheet, income statement & trial balance' },
-  { key: 'income', label: 'Income & Revenues', desc: 'Record donations, receipts & revenue collections' },
-  { key: 'expense', label: 'Expense & Payables', desc: 'Record bills, expenses & vendor payments' },
-  { key: 'invoices', label: 'Invoices & Billing', desc: 'Create & manage customer invoices' },
-  { key: 'users', label: 'User Directory', desc: 'Provision users & reset credentials' },
-  { key: 'settings', label: 'Security & Roles', desc: 'Manage system settings & dynamic roles' },
+  { key: 'coa', label: 'Chart of Accounts', shortLabel: 'Accounts', desc: 'Create, edit & manage ledger accounts' },
+  { key: 'journals', label: 'Journal Entries', shortLabel: 'Journals', desc: 'Post general & bank vouchers' },
+  { key: 'reports', label: 'Financial Reports', shortLabel: 'Reports', desc: 'Balance sheet, income statement & trial balance' },
+  { key: 'audit', label: 'Audit Logs & Health', shortLabel: 'Audit', desc: 'View audit logs and accounting health checks' },
+  { key: 'income', label: 'Income & Revenues', shortLabel: 'Income', desc: 'Record donations, receipts & revenue heads' },
+  { key: 'expense', label: 'Expense & Payables', shortLabel: 'Expense', desc: 'Record bills, expenses & expense heads' },
+  { key: 'hallBookings', label: 'Hall Bookings', shortLabel: 'Hall Bookings', desc: 'Manage hall reservations & bookings' },
+  { key: 'donations', label: 'Donations & Welfare', shortLabel: 'Donations', desc: 'Manage donations received & welfare disbursements' },
+  { key: 'revenueCollections', label: 'Revenue Collections', shortLabel: 'Collections', desc: 'Manage revenue collections, bus bookings & membership fees' },
+  { key: 'invoices', label: 'Invoices & Billing', shortLabel: 'Invoices', desc: 'Create & manage customer invoices' },
+  { key: 'donors', label: 'Donors Directory', shortLabel: 'Donors', desc: 'Manage registered donor profiles' },
+  { key: 'customers', label: 'Customers Directory', shortLabel: 'Customers', desc: 'Manage client & customer records' },
+  { key: 'members', label: 'Community Members', shortLabel: 'Members', desc: 'Manage Jamaat member registrations' },
+  { key: 'beneficiaries', label: 'Welfare Beneficiaries', shortLabel: 'Beneficiaries', desc: 'Manage welfare beneficiary registrations' },
+  { key: 'zakatCards', label: 'Zakat & Member Cards', shortLabel: 'Zakat Cards', desc: 'Issue & print Zakat disbursement cards' },
+  { key: 'users', label: 'User Directory', shortLabel: 'Users', desc: 'Provision users & reset credentials' },
+  { key: 'settings', label: 'Security & Settings', shortLabel: 'Settings', desc: 'Manage system settings & reserved GL codes' },
 ];
 
 function RoleFormPanel({ onClose, onSave }) {
@@ -183,9 +192,18 @@ function RoleFormPanel({ onClose, onSave }) {
     coa: true,
     journals: true,
     reports: true,
+    audit: false,
     income: true,
     expense: true,
+    hallBookings: true,
+    donations: true,
+    revenueCollections: true,
     invoices: true,
+    donors: true,
+    customers: true,
+    members: true,
+    beneficiaries: true,
+    zakatCards: true,
     users: false,
     settings: false,
   });
@@ -439,7 +457,8 @@ export const UsersRoles = () => {
   };
 
   const roleNames = useMemo(() => roles.map((r) => r.name), [roles]);
-  const permKeys = ['coa', 'journals', 'reports', 'income', 'expense', 'invoices', 'users', 'settings'];
+  const permKeys = useMemo(() => PERMISSION_MODULES.map((m) => m.key), []);
+  const getModuleLabel = (key) => PERMISSION_MODULES.find((m) => m.key === key)?.shortLabel || key;
 
   if (loading) {
     return (
@@ -663,7 +682,7 @@ export const UsersRoles = () => {
                         {permKeys.map((k) => (
                           <label key={k} className={`px-2 py-1.5 rounded text-[11px] font-semibold flex items-center gap-1.5 ${r.permissions[k] ? 'bg-emerald-950/60 border border-emerald-900/50 text-emerald-400' : 'bg-slate-850 border border-slate-800 text-slate-500'}`}>
                             <input type="checkbox" disabled={r.locked || r.name === 'Super Admin'} checked={!!r.permissions[k]} onChange={() => togglePerm(r.id, k)} className="accent-emerald-500 cursor-pointer disabled:cursor-not-allowed" />
-                            {k}
+                            {getModuleLabel(k)}
                           </label>
                         ))}
                       </div>
@@ -697,7 +716,7 @@ export const UsersRoles = () => {
                                 {permKeys.map((k) => (
                                   <label key={k} className={`px-2 py-1 rounded text-[11px] font-semibold flex items-center gap-1.5 border transition-all ${r.permissions[k] ? 'bg-emerald-950/60 border border-emerald-900/50 text-emerald-400' : 'bg-slate-850 border border-slate-800 text-slate-500'}`}>
                                     <input type="checkbox" disabled={r.locked || r.name === 'Super Admin'} checked={!!r.permissions[k]} onChange={() => togglePerm(r.id, k)} className="accent-emerald-500 cursor-pointer disabled:cursor-not-allowed" />
-                                    {k}
+                                    {getModuleLabel(k)}
                                   </label>
                                 ))}
                               </div>
