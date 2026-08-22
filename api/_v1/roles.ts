@@ -10,7 +10,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   if (!authenticated || !req.user) return;
 
   const { method } = req;
-  const id = req.query.id as string;
+  let id = (req.query.id || (req as any).params?.id || req.body?.id) as string;
+  if (!id && req.url) {
+    const urlParts = req.url.split('?')[0].split('/');
+    const lastPart = urlParts[urlParts.length - 1];
+    if (lastPart && lastPart !== 'roles') {
+      id = lastPart;
+    }
+  }
 
   // Role Management is a security-sensitive operation — MANAGE_ROLES is granted
   // only to Super Admin by seed data/convention; this checks the permission set
