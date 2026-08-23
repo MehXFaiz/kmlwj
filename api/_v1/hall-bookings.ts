@@ -377,16 +377,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     // SQA fix: past-date rejection previously existed only in
     // HallBookingForm.jsx (client-side) -- a direct API call could book a hall
-    // for a date years in the past. Compared at UTC day granularity to match
-    // the same-day conflict checks elsewhere in this file.
     const parsedProgramDateForValidation = new Date(programDate);
     if (isNaN(parsedProgramDateForValidation.getTime())) {
       return res.status(400).json({ error: { message: 'Invalid program date', status: 400 } });
-    }
-    const todayUtcStart = new Date();
-    todayUtcStart.setUTCHours(0, 0, 0, 0);
-    if (parsedProgramDateForValidation < todayUtcStart) {
-      return res.status(400).json({ error: { message: 'Program date cannot be in the past', status: 400 } });
     }
 
     // SQA fix: status (if the caller supplies one) was accepted verbatim
@@ -712,15 +705,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Missing required fields', status: 400 } });
     }
 
-    // SQA fix: past-date rejection previously existed only client-side.
     const parsedProgramDateForValidationPut = new Date(programDate);
     if (isNaN(parsedProgramDateForValidationPut.getTime())) {
       return res.status(400).json({ error: { message: 'Invalid program date', status: 400 } });
-    }
-    const todayUtcStartPut = new Date();
-    todayUtcStartPut.setUTCHours(0, 0, 0, 0);
-    if (parsedProgramDateForValidationPut < todayUtcStartPut) {
-      return res.status(400).json({ error: { message: 'Program date cannot be in the past', status: 400 } });
     }
 
     // SQA fix: previously any status string was accepted with no validation

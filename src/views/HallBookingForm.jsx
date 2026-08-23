@@ -272,12 +272,6 @@ export const HallBookingForm = () => {
       return;
     }
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    if (data.programDate < todayStr) {
-      showToast('Program date must be today or a future date.', 'warning');
-      return;
-    }
-
     // Resolve functionType: if 'Other' use the free-text field
     const resolvedFunctionType = data.functionType === 'Other'
       ? (data.functionTypeOther || 'Other')

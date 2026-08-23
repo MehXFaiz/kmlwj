@@ -298,11 +298,6 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     if (isNaN(parsedProgramDateForValidation.getTime())) {
       return res.status(400).json({ error: { message: "Invalid program date", status: 400 } });
     }
-    const todayUtcStart = /* @__PURE__ */ new Date();
-    todayUtcStart.setUTCHours(0, 0, 0, 0);
-    if (parsedProgramDateForValidation < todayUtcStart) {
-      return res.status(400).json({ error: { message: "Program date cannot be in the past", status: 400 } });
-    }
     const requestedCreateStatus = req.body.status;
     if (requestedCreateStatus !== void 0 && !isKnownStatus(requestedCreateStatus)) {
       return res.status(400).json({ error: { message: `Status must be one of: ${HALL_BOOKING_STATUSES.join(", ")}`, status: 400 } });
@@ -563,11 +558,6 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     const parsedProgramDateForValidationPut = new Date(programDate);
     if (isNaN(parsedProgramDateForValidationPut.getTime())) {
       return res.status(400).json({ error: { message: "Invalid program date", status: 400 } });
-    }
-    const todayUtcStartPut = /* @__PURE__ */ new Date();
-    todayUtcStartPut.setUTCHours(0, 0, 0, 0);
-    if (parsedProgramDateForValidationPut < todayUtcStartPut) {
-      return res.status(400).json({ error: { message: "Program date cannot be in the past", status: 400 } });
     }
     const requestedUpdateStatus = req.body.status;
     if (requestedUpdateStatus !== void 0 && !isKnownStatus(requestedUpdateStatus)) {
