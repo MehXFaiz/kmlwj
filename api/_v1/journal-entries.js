@@ -1,5 +1,7 @@
 import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth } from "../_middlewares/auth.middleware.js";
+import { enforceRestrictedRolePolicy } from "../_middlewares/rbac.middleware.js";
+import { checkPermission } from "../_services/permission.service.js";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
@@ -11,6 +13,7 @@ const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };
 var journal_entries_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
+  if (!await enforceRestrictedRolePolicy(req, res)) return;
   const { method } = req;
   const action = req.query.action || req.body?.action;
   if (method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE") {

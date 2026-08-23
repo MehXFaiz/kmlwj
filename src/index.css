@@ -284,6 +284,15 @@
   ::-webkit-scrollbar-thumb  { background: var(--accent-border); border-radius: 9999px; }
   ::-webkit-scrollbar-thumb:hover { background: rgba(150, 114, 89, 0.55); }
 
+  /* Utility to completely hide scrollbar while keeping scrollable functionality */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
   /* Focus rings — copper */
   :focus-visible {
     outline: 2px solid var(--accent-hover);

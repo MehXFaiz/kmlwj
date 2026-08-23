@@ -96,22 +96,6 @@ export const DonationForm = () => {
     }
   };
 
-  const hasDonationThisMonth = useMemo(() => {
-    if (!form.beneficiaryId) return false;
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
-
-    return donations.some(d => {
-      if (id && d.id === id) return false;
-      if (d.beneficiaryId !== form.beneficiaryId) return false;
-      if (d.status !== 'APPROVED') return false;
-
-      const dDate = new Date(d.createdAt);
-      return dDate.getFullYear() === currentYear && dDate.getMonth() === currentMonth;
-    });
-  }, [form.beneficiaryId, donations, id]);
-
   const bankAccounts = useMemo(() => {
     return flatAccounts.filter(a =>
       (a.name || '').toLowerCase().includes('bank') || (a.type || '').toLowerCase().includes('bank')
@@ -297,16 +281,6 @@ export const DonationForm = () => {
                       onChange={e => setForm(f => ({ ...f, donorName: e.target.value }))}
                       className="w-full mt-3 px-3.5 py-2.5 rounded-xl bg-slate-950/90 border border-amber-500 text-sm font-semibold text-amber-300 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
                     />
-                  )}
-                  {hasDonationThisMonth && (
-                    <div className="mt-3 p-3.5 rounded-xl bg-red-500/10 border border-red-500/25 flex items-start gap-2.5 animate-pulse animate-duration-1000">
-                      <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-xs font-semibold text-red-400">
-                          This beneficiary has already received a donation for this month. The next donation can only be issued next month.
-                        </p>
-                      </div>
-                    </div>
                   )}
                   {selectedBeneficiary && (
                     <div className="mt-3.5 p-3.5 rounded-xl bg-slate-950/90 border border-amber-500/40 flex flex-col sm:flex-row items-center sm:items-start gap-4 shadow-lg">
@@ -494,7 +468,7 @@ export const DonationForm = () => {
               <Link to="/donations" className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">
                 Cancel
               </Link>
-              <button type="submit" disabled={loading || hasDonationThisMonth}
+              <button type="submit" disabled={loading}
                 className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold transition-all shadow-lg shadow-amber-600/25 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
                 <Save className="w-4 h-4" />
                 <span>{loading ? 'Saving...' : (id ? 'Update Donation' : 'Log Donation')}</span>

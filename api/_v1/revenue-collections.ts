@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
 import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import { enforceRestrictedRolePolicy } from '../_middlewares/rbac.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
@@ -67,13 +68,16 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
 
-  const { method } = req;
+  // RBAC: PUT/PATCH/DELETE always blocked for non-privileged roles
+  if (!await enforceRestrictedRolePolicy(req, res)) return;
+
+  const method = req.method?.toUpperCase() ?? '';
   const id = req.query.id as string;
   const action = (req.query.action || req.body?.action) as string;
   const categoryFilter = req.query.category as string;
 
   if (method === 'GET') {
-    if (!await verifyPermission(req, res, PERMS.MANAGE_REVENUE_COLLECTIONS)) return;
+    if (!await verifyPermission(req, res, PERMS.VIEW_REVENUE_COLLECTIONS)) return;
 
     const whereClause: any = {
       ...(categoryFilter ? { category: categoryFilter } : {}),
@@ -135,17 +139,24 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   // Every write below (create, approve, edit, revert) posts directly to the General Ledger.
-  if (!await verifyPermission(req, res, PERMS.RECORD_INCOME)) return;
+  // Non-privileged roles can only create (POST); PUT/DELETE already blocked above.
+  if (!await verifyPermission(req, res, PERMS.CREATE_REVENUE_COLLECTION)) return;
 
   if (method === 'POST') {
-    // Action: Approve & Post to Ledger
+    // Action: Approve & Post to Ledger — requires POST_LEDGER permission
     if (action === 'approve') {
+      if (!await verifyPermission(req, res, PERMS.POST_LEDGER)) return;
+
       const { id } = req.body;
       if (!id) return res.status(400).json({ error: { message: 'Collection ID is required', status: 400 } });
 
       const item = await prisma.revenueCollection.findUnique({ where: { id }, include: { bankAccount: true } });
       if (!item) return res.status(404).json({ error: { message: 'Record not found', status: 404 } });
-      if (item.status === 'POSTED') return res.status(400).json({ error: { message: 'Record is already posted to ledger', status: 400 } });
+      if (item.status === 'POSTED') {
+        return res.status(409).json({
+          error: { message: 'Transaction has already been posted to the General Ledger.', status: 409 }
+        });
+      }
 
       let debitAccountId: string | null = null;
       if (item.paymentMethod === 'CASH') {
@@ -187,7 +198,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         return { approvedItem, journalEntry: postingResult.journalEntry };
       }, accountingTxOptions);
 
-      await logAudit(req.user.id, `Post ${item.category}`, 'REVENUE', item, result.approvedItem, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      await logAudit(req.user.id, 'POST_TO_LEDGER', item.category || 'Revenue Collections', item, result.approvedItem, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
 
       return res.status(200).json({ status: 200, data: result.approvedItem, message: `${item.category} posted to ledger successfully` });

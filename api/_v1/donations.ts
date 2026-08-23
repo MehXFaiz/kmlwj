@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
 import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import { enforceRestrictedRolePolicy, loadIsPrivileged } from '../_middlewares/rbac.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
@@ -68,28 +69,6 @@ async function getExpenseAccountForDonation(donationType: string, tx: any) {
   return acc;
 }
 
-async function checkMonthlyRestriction(beneficiaryId: string | null | undefined, donationDate: Date, excludeId?: string) {
-  if (!beneficiaryId) return false;
-
-  const startOfMonth = new Date(donationDate.getFullYear(), donationDate.getMonth(), 1, 0, 0, 0, 0);
-  const endOfMonth = new Date(donationDate.getFullYear(), donationDate.getMonth() + 1, 0, 23, 59, 59, 999);
-
-  const existingApproved = await prisma.donation.findFirst({
-    where: {
-      beneficiaryId,
-      status: 'APPROVED',
-      isDeleted: false,
-      createdAt: {
-        gte: startOfMonth,
-        lte: endOfMonth,
-      },
-      ...(excludeId ? { NOT: { id: excludeId } } : {}),
-    },
-  });
-
-  return !!existingApproved;
-}
-
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -98,7 +77,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const action = (req.query.action || req.body?.action) as string;
 
   if (method === 'GET') {
-    if (!await verifyPermission(req, res, PERMS.MANAGE_DONATIONS)) return;
+    // VIEW permission allows both privileged and restricted roles to read
+    if (!await verifyPermission(req, res, PERMS.VIEW_DONATIONS)) return;
 
     const { limit = '100', page = '1' } = req.query as any;
     const pageNum = parseInt(page) || 1;
@@ -123,6 +103,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     return res.status(200).json({ status: 200, data: donations, meta: { total, page: pageNum, limit: limitNum } });
   }
+
+  // ── All write methods ───────────────────────────────────────────────────────
+  // RBAC enforcement: PUT / PATCH / DELETE require isPrivileged (Admin / Super Admin).
+  // POST is allowed for restricted roles (CREATE permission checked below).
+  // This check runs BEFORE any other write logic so restricted users can never
+  // bypass it by crafting a special action parameter.
+  if (!await enforceRestrictedRolePolicy(req, res)) return;
 
   if (method === 'PUT' || method === 'POST' || method === 'PATCH') {
     if (action === 'restore') {
@@ -170,29 +157,28 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
   }
 
-  // Every write below immediately posts a real disbursement to the General Ledger.
-  if (!await verifyPermission(req, res, PERMS.RECORD_EXPENSE)) return;
+  // POST: Create or Approve — requires CREATE_DONATION permission
+  // Approve action additionally requires isPrivileged (Admin/Super Admin) because
+  // it posts to the General Ledger — a privileged operation.
+  if (!await verifyPermission(req, res, PERMS.CREATE_DONATION)) return;
 
   if (method === 'POST') {
-    // Action: Approve Donation
+    // Action: Approve Donation & Post to Ledger — requires POST_LEDGER permission
     if (action === 'approve') {
+      if (!await verifyPermission(req, res, PERMS.POST_LEDGER)) return;
+
       const { id } = req.body;
       if (!id) return res.status(400).json({ error: { message: 'Donation ID is required', status: 400 } });
 
       const donation = await prisma.donation.findUnique({ where: { id }, include: { beneficiary: true } });
       if (!donation) return res.status(404).json({ error: { message: 'Donation not found', status: 404 } });
-      if (donation.status === 'APPROVED') return res.status(400).json({ error: { message: 'Donation is already approved', status: 400 } });
-
-      if (donation.beneficiaryId) {
-        const hasDuplicate = await checkMonthlyRestriction(donation.beneficiaryId, donation.createdAt, donation.id);
-        if (hasDuplicate) {
-          return res.status(400).json({
-            error: {
-              message: 'This beneficiary has already received a donation for this month. The next donation can only be issued next month.',
-              status: 400
-            }
-          });
-        }
+      if (donation.status === 'APPROVED') {
+        return res.status(409).json({
+          error: {
+            message: 'Transaction has already been posted to the General Ledger.',
+            status: 409
+          }
+        });
       }
 
       let cashOrBankAccountId: string | null = null;
@@ -247,7 +233,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         timeout: 15000,
       });
 
-      await logAudit(req.user.id, 'Approve Donation', 'DONATION', donation, result.approvedDonation, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      await logAudit(req.user.id, 'POST_TO_LEDGER', 'DONATION', donation, result.approvedDonation, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
 
       return res.status(200).json({ status: 200, data: result.approvedDonation, message: 'Donation approved and journal entries created successfully' });
@@ -284,18 +270,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if (!isWithinMaxLength(chequeNumber, 30)) return res.status(400).json({ error: maxLengthError('Cheque number', 30) });
     if (beneficiaryId && !isValidBeneficiaryId(beneficiaryId)) {
       return res.status(400).json({ error: { message: 'Selected recipient is invalid or out of date. Please re-select the recipient from People We Help and try again.', status: 400 } });
-    }
-
-    if (beneficiaryId) {
-      const hasDuplicate = await checkMonthlyRestriction(beneficiaryId, new Date());
-      if (hasDuplicate) {
-        return res.status(400).json({
-          error: {
-            message: 'This beneficiary has already received a donation for this month. The next donation can only be issued next month.',
-            status: 400
-          }
-        });
-      }
     }
 
     const newDonation = await prisma.$transaction(async (tx) => {
@@ -393,18 +367,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     if (targetBeneficiaryId && !isValidBeneficiaryId(targetBeneficiaryId)) {
       return res.status(400).json({ error: { message: 'Selected recipient is invalid or out of date. Please re-select the recipient from People We Help and try again.', status: 400 } });
-    }
-
-    if (targetStatus === 'APPROVED' && targetBeneficiaryId) {
-      const hasDuplicate = await checkMonthlyRestriction(targetBeneficiaryId, existingDonation.createdAt, existingDonation.id);
-      if (hasDuplicate) {
-        return res.status(400).json({
-          error: {
-            message: 'This beneficiary has already received a donation for this month. The next donation can only be issued next month.',
-            status: 400
-          }
-        });
-      }
     }
 
     const updatedDonation = await prisma.$transaction(async (tx) => {

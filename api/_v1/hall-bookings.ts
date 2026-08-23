@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
 import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import { enforceRestrictedRolePolicy } from '../_middlewares/rbac.middleware.js';
 import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
@@ -57,9 +58,20 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
 
-  if (!await verifyPermission(req, res, PERMS.MANAGE_HALL_BOOKINGS)) return;
+  // RBAC: PUT/PATCH/DELETE always blocked for non-privileged roles (view+create only)
+  if (!await enforceRestrictedRolePolicy(req, res)) return;
 
-  const { method } = req;
+  // Permission check: minimum required is VIEW for GET, CREATE for writes
+  const method = req.method?.toUpperCase() ?? '';
+  if (method === 'GET') {
+    if (!await verifyPermission(req, res, PERMS.VIEW_HALL_BOOKINGS)) return;
+  } else if (method === 'POST') {
+    if (!await verifyPermission(req, res, PERMS.CREATE_HALL_BOOKING)) return;
+  } else if (method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
+    // These are already blocked above for non-privileged; privileged still needs the base perm
+    if (!await verifyPermission(req, res, PERMS.VIEW_HALL_BOOKINGS)) return;
+  }
+
   const action = req.query.action as string;
 
   if (method === 'GET') {
@@ -206,14 +218,20 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'POST') {
-    // Action: Approve Booking & Post to Ledger
+    // Action: Approve Booking & Post to Ledger — requires POST_LEDGER permission
     if (action === 'approve') {
+      if (!await verifyPermission(req, res, PERMS.POST_LEDGER)) return;
+
       const { id } = req.body;
       if (!id) return res.status(400).json({ error: { message: 'Booking ID is required', status: 400 } });
 
       const booking = await prisma.hallBooking.findUnique({ where: { id }, include: { hallAccount: true } });
       if (!booking) return res.status(404).json({ error: { message: 'Booking not found', status: 404 } });
-      if (booking.status === 'POSTED') return res.status(400).json({ error: { message: 'Booking is already posted', status: 400 } });
+      if (booking.status === 'POSTED') {
+        return res.status(409).json({
+          error: { message: 'Transaction has already been posted to the General Ledger.', status: 409 }
+        });
+      }
 
       const revenueAccountId = booking.hallId;
       if (!revenueAccountId) return res.status(400).json({ error: { message: 'Revenue account (Hall) is required to post.', status: 400 } });
@@ -289,7 +307,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         return { approvedBooking, journalEntry: postingResult.journalEntry };
       });
 
-      await logAudit(req.user.id, 'Post Hall Booking', 'REVENUE', booking, result.approvedBooking, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      await logAudit(req.user.id, 'POST_TO_LEDGER', 'Hall Bookings', booking, result.approvedBooking, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
 
       return res.status(200).json({ status: 200, data: result.approvedBooking, message: 'Booking posted and journal entries created successfully' });

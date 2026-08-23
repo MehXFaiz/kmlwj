@@ -162,7 +162,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
 
   const hasPerm = (requiredPerms) => {
     if (!user) return false;
-    if (user.role === 'Super Admin') return true;
+    if (user.isPrivileged) return true;
     if (!user.permissions) return false;
     return requiredPerms.some(p => user.permissions.includes(p));
   };
@@ -362,8 +362,8 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
         {/* ── Navigation ── */}
         <nav className={`flex-1 min-h-0 py-3 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-700 hover:scrollbar-thumb-slate-600 ${isCollapsed ? 'px-1.5' : 'px-3'}`}>
           {sidebarSections.map((section, secIdx) => {
-            // Hide admin-only sections from non-Super Admin users
-            if (section.adminOnly && user?.role !== 'Super Admin') return null;
+            // Hide admin-only sections from non-privileged users (non-Admin / non-Super Admin)
+            if (section.adminOnly && !user?.isPrivileged) return null;
 
             const visibleItems = section.items.filter(item => !item.perms || hasPerm(item.perms));
             if (visibleItems.length === 0) return null;

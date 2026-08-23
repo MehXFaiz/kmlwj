@@ -1,5 +1,6 @@
 import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
+import { enforceRestrictedRolePolicy } from "../_middlewares/rbac.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
@@ -34,11 +35,12 @@ function isUniqueViolation(err) {
 var donations_received_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
+  if (!await enforceRestrictedRolePolicy(req, res)) return;
   const { method } = req;
   const id = req.query.id;
   const action = req.query.action || req.body?.action;
   if (method === "GET") {
-    if (!await verifyPermission(req, res, PERMS.MANAGE_DONATIONS)) return;
+    if (!await verifyPermission(req, res, PERMS.VIEW_DONATIONS_RECEIVED)) return;
     const search = req.query.search || "";
     const status = req.query.status;
     const donationType = req.query.donationType;
@@ -134,7 +136,7 @@ var donations_received_default = makeHandler(async (req, res) => {
     }
   }
   if (method === "POST") {
-    if (!await verifyPermission(req, res, PERMS.RECORD_INCOME)) return;
+    if (!await verifyPermission(req, res, PERMS.CREATE_DONATION_RECEIVED)) return;
     const {
       receiptDate,
       donorId,

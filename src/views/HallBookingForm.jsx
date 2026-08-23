@@ -165,7 +165,7 @@ export const HallBookingForm = () => {
           });
         }
       } catch (err) {
-        showToast(err.message || 'Failed to load booking details', 'error');
+        showToast(err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to load booking details', 'error');
         navigate('/hall-bookings');
       } finally {
         setLoading(false);
@@ -325,7 +325,8 @@ export const HallBookingForm = () => {
       }
       setNewlyCreatedBooking(savedBooking);
     } catch (err) {
-      showToast(err.message || "Couldn't save booking. Try again.", 'error');
+      const errMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message || "Couldn't save booking. Try again.";
+      showToast(errMsg, 'error');
     }
   };
 

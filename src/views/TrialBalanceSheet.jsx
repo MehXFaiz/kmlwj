@@ -26,8 +26,30 @@ export const fiscalYearRange = (fy) => ({
   endDate: `${Number(fy)}-06-30`,
 });
 
-/** Financial year the report opens on. */
-const DEFAULT_FISCAL_YEAR = 2026;
+/**
+ * The Jammat fiscal year (N) whose 01-07-(N−1) .. 30-06-N window contains
+ * `today`. Computed arithmetically from the current date — never hardcoded —
+ * so the report's default period always covers "now".
+ *
+ * ROOT CAUSE FIX: this file previously hardcoded `DEFAULT_FISCAL_YEAR = 2026`.
+ * That was correct only while "today" fell inside 01-07-2025..30-06-2026. Once
+ * the calendar crossed 30-06-2026, every freshly posted Income/Expense
+ * transaction (dated in the new FY) fell outside that frozen default window,
+ * so the Trial Balance Matrix opened on a stale period and rendered its
+ * Income/Expense rows as empty — even though AccountingService.getTrialBalance
+ * correctly includes them once the date filter is widened to cover the
+ * transaction's actual posting date. Deriving the default from `new Date()`
+ * (same 01-07→30-06 convention the file already documents) keeps the default
+ * view current on every page load, indefinitely, with no yearly manual edit.
+ */
+export const getCurrentJammatFiscalYear = (today = new Date()) => {
+  const year = today.getFullYear();
+  const month = today.getMonth() + 1; // 1-12
+  return month >= 7 ? year + 1 : year;
+};
+
+/** Financial year the report opens on — the one containing today. */
+const DEFAULT_FISCAL_YEAR = getCurrentJammatFiscalYear();
 
 const BalanceCategoryGrid = ({ categories, formatMoney }) => {
   const tiles = [
@@ -39,9 +61,13 @@ const BalanceCategoryGrid = ({ categories, formatMoney }) => {
   ];
 
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="flex flex-wrap gap-3 print:break-inside-avoid">
       {tiles.map((tile) => (
+<<<<<<< HEAD
         <div key={tile.key} className="flex-1 min-w-[150px] rounded-xl bg-slate-950/60 print:bg-transparent border border-slate-800 print:border-slate-300 px-3.5 py-2.5">
+=======
+        <div key={tile.key} className="flex-1 min-w-[150px] rounded-xl bg-slate-950/60 border border-slate-800 px-3.5 py-2.5 print:bg-white print:border-slate-300 print:break-inside-avoid">
+>>>>>>> b8503e0a68ebac4b8a43011b67e111878bc7d9a5
           <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider truncate" title={tile.label}>{tile.label}</p>
           <p className="text-sm font-mono font-bold text-slate-200 mt-0.5">{formatMoney(tile.value)}</p>
         </div>
@@ -1018,11 +1044,19 @@ export const TrialBalanceSheet = () => {
           regardless of view mode. Every figure is read straight from
           tbReport.openingBalances (AccountingService.getTrialBalance),
           computed from initialBalance + posted ledger lines only. */}
+<<<<<<< HEAD
       <Card className="bg-slate-900/60 print:bg-transparent border-slate-800 print:border-slate-300 print:shadow-none">
         <CardContent className="p-4 space-y-3 print:p-0">
           <div className="flex items-center justify-between print:mb-2">
             <h3 className="text-xs font-bold text-slate-300 print:text-black uppercase tracking-widest">Opening Balances</h3>
             <span className="text-[11px] text-slate-500 print:text-black font-mono">As of {fromDate || 'Inception'}</span>
+=======
+      <Card className="bg-slate-900/60 border-slate-800 print:bg-white print:border-slate-300 print:break-inside-avoid">
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest">Opening Balances</h3>
+            <span className="text-[11px] text-slate-500 font-mono">As of {fromDate || 'Inception'}</span>
+>>>>>>> b8503e0a68ebac4b8a43011b67e111878bc7d9a5
           </div>
           <BalanceCategoryGrid categories={balanceSheetCategories.opening} formatMoney={formatMoney} />
         </CardContent>
@@ -1303,11 +1337,19 @@ export const TrialBalanceSheet = () => {
 
       {/* CLOSING BALANCES — mirrors Opening Balances above, shown regardless
           of view mode, read straight from tbReport.closingBalances. */}
+<<<<<<< HEAD
       <Card className="bg-slate-900/60 print:bg-transparent border-slate-800 print:border-slate-300 print:shadow-none print:mt-6">
         <CardContent className="p-4 space-y-3 print:p-0">
           <div className="flex items-center justify-between print:mb-2">
             <h3 className="text-xs font-bold text-slate-300 print:text-black uppercase tracking-widest">Closing Balances</h3>
             <span className="text-[11px] text-slate-500 print:text-black font-mono">As of {toDate || 'Today'}</span>
+=======
+      <Card className="bg-slate-900/60 border-slate-800 print:bg-white print:border-slate-300 print:break-inside-avoid">
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest">Closing Balances</h3>
+            <span className="text-[11px] text-slate-500 font-mono">As of {toDate || 'Today'}</span>
+>>>>>>> b8503e0a68ebac4b8a43011b67e111878bc7d9a5
           </div>
           <BalanceCategoryGrid categories={balanceSheetCategories.closing} formatMoney={formatMoney} />
         </CardContent>

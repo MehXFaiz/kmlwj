@@ -1,18 +1,13 @@
 import type { VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
-import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import { isPrivilegedUser } from '../_services/permission.service.js';
+import { PERMS } from '../_constants/permissions.js';
 import { LedgerWorkflowService } from '../_services/ledger-workflow.service.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
-
-  const isAdminOrSuperAdmin = req.user.role === 'Admin' || req.user.role === 'Super Admin';
-  if (!isAdminOrSuperAdmin) {
-    return res.status(403).json({
-      error: { message: 'Forbidden: Only Admin and Super Admin can Post or Revert ledger entries', status: 403 }
-    });
-  }
 
   if (req.method === 'POST' || req.method === 'PUT') {
     const action = (req.query.action || req.body?.action || 'post') as string;
@@ -24,8 +19,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       });
     }
 
-    try {
-      if (action === 'revert' || action === 'revert-ledger') {
+    if (action === 'revert' || action === 'revert-ledger') {
+      if (!await isPrivilegedUser(req)) {
+        return res.status(403).json({
+          error: { message: 'Forbidden: Only Admin and Super Admin can revert ledger entries', status: 403 }
+        });
+      }
+
+      try {
         const result = await LedgerWorkflowService.revertPosting({
           module,
           recordId,
@@ -39,7 +40,17 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           message: 'Transaction posting reverted successfully from General Ledger',
           data: result
         });
-      } else {
+      } catch (err: any) {
+        const status = err.status || err.statusCode || 400;
+        return res.status(status).json({
+          error: { message: err.message || 'Ledger workflow operation failed', status }
+        });
+      }
+    } else {
+      // POST TO LEDGER: requires ledger.post permission (available to all assigned roles)
+      if (!await verifyPermission(req, res, PERMS.POST_LEDGER)) return;
+
+      try {
         const result = await LedgerWorkflowService.postToLedger({
           module,
           recordId,
@@ -52,11 +63,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           message: 'Transaction posted successfully to the General Ledger',
           data: result
         });
+      } catch (err: any) {
+        const status = err.status || err.statusCode || (err.message?.includes('already posted') ? 409 : 400);
+        return res.status(status).json({
+          error: { message: err.message || 'Ledger workflow operation failed', status }
+        });
       }
-    } catch (err: any) {
-      return res.status(400).json({
-        error: { message: err.message || 'Ledger workflow operation failed', status: 400 }
-      });
     }
   }
 

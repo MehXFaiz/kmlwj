@@ -2,6 +2,8 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../../_utils/handler.js';
 import { verifyAuth, AuthenticatedRequest } from '../../_middlewares/auth.middleware.js';
 import { prisma } from '../../_prisma.js';
+import { loadPermissions } from '../../_services/permission.service.js';
+import { ERP_MODULE_DEFINITIONS } from '../../_constants/permissions.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   if (req.method !== 'GET') {
@@ -34,8 +36,21 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     return res.status(403).json({ error: { message: 'This account has been deactivated', status: 403 } });
   }
 
-  // Compile permissions list
-  const permissions = user.role.rolePermissions.map((rp) => rp.permission.name);
+  // Load expanded permissions (includes canonical and legacy aliases)
+  const permissionSet = await loadPermissions(req);
+  const permissions = Array.from(permissionSet);
+
+  // Build modulePermissions map for structured UI queries
+  const isPrivileged = user.role.isPrivileged === true;
+  const modulePermissions: Record<string, Record<string, boolean>> = {};
+
+  for (const mod of ERP_MODULE_DEFINITIONS) {
+    const actMap: Record<string, boolean> = {};
+    for (const act of mod.actions) {
+      actMap[act] = isPrivileged || permissionSet.has(`${mod.key}.${act}`);
+    }
+    modulePermissions[mod.key] = actMap;
+  }
 
   return res.status(200).json({
     status: 200,
@@ -44,7 +59,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       fullName: user.fullName,
       email: user.email,
       role: user.role.name,
+      roleId: user.role.id,
+      isPrivileged,
       permissions,
+      modulePermissions,
     },
   });
 });

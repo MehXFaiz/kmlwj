@@ -488,6 +488,7 @@ function PreviewModal({ card, onClose, onPrint, onPrintPvc, onCopyQr }) {
 export const ZakatCards = () => {
   const { cards, fetchCards, issueCard, deleteCard, loading } = useZakatCardStore();
   const user = useAuthStore((state) => state.user);
+  const canEditOrDelete = useAuthStore((state) => state.canEditOrDelete);
   const [searchTerm, setSearchTerm] = useState('');
   const [previewCard, setPreviewCard] = useState(null);
   const [pvcPrintCard, setPvcPrintCard] = useState(null);
@@ -784,18 +785,20 @@ export const ZakatCards = () => {
                 >
                   <Link2 size={11} />
                 </button>
-                <button
-                  onClick={() => handleDelete(card)}
-                  title="Delete this zakat card"
-                  style={{
-                    padding: '5px 8px', borderRadius: '7px', cursor: 'pointer',
-                    background: 'rgba(127,29,29,0.15)', border: '1px solid rgba(239,68,68,0.2)',
-                    color: '#f87171', fontSize: '11px', fontWeight: 600,
-                    display: 'flex', alignItems: 'center', gap: '4px',
-                  }}
-                >
-                  <Trash2 size={11} />
-                </button>
+                {canEditOrDelete && (
+                  <button
+                    onClick={() => handleDelete(card)}
+                    title="Delete this zakat card"
+                    style={{
+                      padding: '5px 8px', borderRadius: '7px', cursor: 'pointer',
+                      background: 'rgba(127,29,29,0.15)', border: '1px solid rgba(239,68,68,0.2)',
+                      color: '#f87171', fontSize: '11px', fontWeight: 600,
+                      display: 'flex', alignItems: 'center', gap: '4px',
+                    }}
+                  >
+                    <Trash2 size={11} />
+                  </button>
+                )}
               </div>
             </div>
           ))}

@@ -46,7 +46,7 @@ export const HallBookings = () => {
       await postBooking(id);
       showToast('Booking posted to ledger successfully!', 'success');
     } catch (err) {
-      showToast(err.message || 'Failed to post booking', 'error');
+      showToast(err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to post booking', 'error');
     }
   };
 

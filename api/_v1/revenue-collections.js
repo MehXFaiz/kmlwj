@@ -1,5 +1,6 @@
 import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
+import { enforceRestrictedRolePolicy } from "../_middlewares/rbac.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
@@ -50,12 +51,13 @@ import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 var revenue_collections_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
-  const { method } = req;
+  if (!await enforceRestrictedRolePolicy(req, res)) return;
+  const method = req.method?.toUpperCase() ?? "";
   const id = req.query.id;
   const action = req.query.action || req.body?.action;
   const categoryFilter = req.query.category;
   if (method === "GET") {
-    if (!await verifyPermission(req, res, PERMS.MANAGE_REVENUE_COLLECTIONS)) return;
+    if (!await verifyPermission(req, res, PERMS.VIEW_REVENUE_COLLECTIONS)) return;
     const whereClause = {
       ...categoryFilter ? { category: categoryFilter } : {},
       ...getDeletedFilter(req.query)
@@ -108,14 +110,19 @@ var revenue_collections_default = makeHandler(async (req, res) => {
       return res.status(200).json({ status: 200, message: "Revenue collection restored successfully", data: restored });
     }
   }
-  if (!await verifyPermission(req, res, PERMS.RECORD_INCOME)) return;
+  if (!await verifyPermission(req, res, PERMS.CREATE_REVENUE_COLLECTION)) return;
   if (method === "POST") {
     if (action === "approve") {
+      if (!await verifyPermission(req, res, PERMS.POST_LEDGER)) return;
       const { id: id2 } = req.body;
       if (!id2) return res.status(400).json({ error: { message: "Collection ID is required", status: 400 } });
       const item = await prisma.revenueCollection.findUnique({ where: { id: id2 }, include: { bankAccount: true } });
       if (!item) return res.status(404).json({ error: { message: "Record not found", status: 404 } });
-      if (item.status === "POSTED") return res.status(400).json({ error: { message: "Record is already posted to ledger", status: 400 } });
+      if (item.status === "POSTED") {
+        return res.status(409).json({
+          error: { message: "Transaction has already been posted to the General Ledger.", status: 409 }
+        });
+      }
       let debitAccountId2 = null;
       if (item.paymentMethod === "CASH") {
         const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
@@ -151,7 +158,7 @@ var revenue_collections_default = makeHandler(async (req, res) => {
         });
         return { approvedItem, journalEntry: postingResult.journalEntry };
       }, accountingTxOptions);
-      await logAudit(req.user.id, `Post ${item.category}`, "REVENUE", item, result2.approvedItem, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      await logAudit(req.user.id, "POST_TO_LEDGER", item.category || "Revenue Collections", item, result2.approvedItem, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, data: result2.approvedItem, message: `${item.category} posted to ledger successfully` });
     }
     if (action === "revert") {
