@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Search, Download, Printer, Plus, Edit2, CheckCircle2, AlertTriangle, Grid, List, FileText } from 'lucide-react';
 import { Button } from '../components/ui/Button';
+import { VoucherLogo } from '../components/common/VoucherLogo';
 import { useCoaStore } from '../store/coaStore';
 import { AccountFormDrawer } from '../components/coa/AccountFormDrawer';
 import { reportsService } from '../services/apiServices';
@@ -40,7 +41,7 @@ const BalanceCategoryGrid = ({ categories, formatMoney }) => {
   return (
     <div className="flex flex-wrap gap-3">
       {tiles.map((tile) => (
-        <div key={tile.key} className="flex-1 min-w-[150px] rounded-xl bg-slate-950/60 border border-slate-800 px-3.5 py-2.5">
+        <div key={tile.key} className="flex-1 min-w-[150px] rounded-xl bg-slate-950/60 print:bg-transparent border border-slate-800 print:border-slate-300 px-3.5 py-2.5">
           <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider truncate" title={tile.label}>{tile.label}</p>
           <p className="text-sm font-mono font-bold text-slate-200 mt-0.5">{formatMoney(tile.value)}</p>
         </div>
@@ -737,8 +738,9 @@ export const TrialBalanceSheet = () => {
   return (
     <div className="space-y-6">
       {/* Print-Only Header Logo & Title */}
-      <div className="hidden print:block text-center space-y-1 border-b-2 border-black pb-4 mb-6">
-        <h1 className="text-xl font-bold uppercase tracking-wider text-black font-serif">KUTCHI MUSLIM LOHAR WADA JAMMAT REGD.(1319)</h1>
+      <div className="hidden print:flex flex-col items-center justify-center space-y-2 border-b-2 border-black pb-4 mb-6">
+        <VoucherLogo className="w-16 h-16" />
+        <h1 className="text-xl font-bold uppercase tracking-wider text-black font-serif">Kutchi Muslim Loharwada Welfare Jamat</h1>
         <h2 className="text-sm font-bold tracking-widest text-black uppercase">TRIAL BALANCE</h2>
         <p className="text-xs font-semibold text-gray-800 font-mono">
           As On {officialJammatSheetData.startStr} TO {officialJammatSheetData.endStr}
@@ -1016,11 +1018,11 @@ export const TrialBalanceSheet = () => {
           regardless of view mode. Every figure is read straight from
           tbReport.openingBalances (AccountingService.getTrialBalance),
           computed from initialBalance + posted ledger lines only. */}
-      <Card className="bg-slate-900/60 border-slate-800">
-        <CardContent className="p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest">Opening Balances</h3>
-            <span className="text-[11px] text-slate-500 font-mono">As of {fromDate || 'Inception'}</span>
+      <Card className="bg-slate-900/60 print:bg-transparent border-slate-800 print:border-slate-300 print:shadow-none">
+        <CardContent className="p-4 space-y-3 print:p-0">
+          <div className="flex items-center justify-between print:mb-2">
+            <h3 className="text-xs font-bold text-slate-300 print:text-black uppercase tracking-widest">Opening Balances</h3>
+            <span className="text-[11px] text-slate-500 print:text-black font-mono">As of {fromDate || 'Inception'}</span>
           </div>
           <BalanceCategoryGrid categories={balanceSheetCategories.opening} formatMoney={formatMoney} />
         </CardContent>
@@ -1301,11 +1303,11 @@ export const TrialBalanceSheet = () => {
 
       {/* CLOSING BALANCES — mirrors Opening Balances above, shown regardless
           of view mode, read straight from tbReport.closingBalances. */}
-      <Card className="bg-slate-900/60 border-slate-800">
-        <CardContent className="p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest">Closing Balances</h3>
-            <span className="text-[11px] text-slate-500 font-mono">As of {toDate || 'Today'}</span>
+      <Card className="bg-slate-900/60 print:bg-transparent border-slate-800 print:border-slate-300 print:shadow-none print:mt-6">
+        <CardContent className="p-4 space-y-3 print:p-0">
+          <div className="flex items-center justify-between print:mb-2">
+            <h3 className="text-xs font-bold text-slate-300 print:text-black uppercase tracking-widest">Closing Balances</h3>
+            <span className="text-[11px] text-slate-500 print:text-black font-mono">As of {toDate || 'Today'}</span>
           </div>
           <BalanceCategoryGrid categories={balanceSheetCategories.closing} formatMoney={formatMoney} />
         </CardContent>
