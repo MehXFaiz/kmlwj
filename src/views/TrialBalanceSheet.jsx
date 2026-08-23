@@ -63,11 +63,7 @@ const BalanceCategoryGrid = ({ categories, formatMoney }) => {
   return (
     <div className="flex flex-wrap gap-3 print:break-inside-avoid">
       {tiles.map((tile) => (
-<<<<<<< HEAD
-        <div key={tile.key} className="flex-1 min-w-[150px] rounded-xl bg-slate-950/60 print:bg-transparent border border-slate-800 print:border-slate-300 px-3.5 py-2.5">
-=======
         <div key={tile.key} className="flex-1 min-w-[150px] rounded-xl bg-slate-950/60 border border-slate-800 px-3.5 py-2.5 print:bg-white print:border-slate-300 print:break-inside-avoid">
->>>>>>> b8503e0a68ebac4b8a43011b67e111878bc7d9a5
           <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider truncate" title={tile.label}>{tile.label}</p>
           <p className="text-sm font-mono font-bold text-slate-200 mt-0.5">{formatMoney(tile.value)}</p>
         </div>
@@ -1044,19 +1040,11 @@ export const TrialBalanceSheet = () => {
           regardless of view mode. Every figure is read straight from
           tbReport.openingBalances (AccountingService.getTrialBalance),
           computed from initialBalance + posted ledger lines only. */}
-<<<<<<< HEAD
-      <Card className="bg-slate-900/60 print:bg-transparent border-slate-800 print:border-slate-300 print:shadow-none">
-        <CardContent className="p-4 space-y-3 print:p-0">
-          <div className="flex items-center justify-between print:mb-2">
-            <h3 className="text-xs font-bold text-slate-300 print:text-black uppercase tracking-widest">Opening Balances</h3>
-            <span className="text-[11px] text-slate-500 print:text-black font-mono">As of {fromDate || 'Inception'}</span>
-=======
       <Card className="bg-slate-900/60 border-slate-800 print:bg-white print:border-slate-300 print:break-inside-avoid">
         <CardContent className="p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest">Opening Balances</h3>
             <span className="text-[11px] text-slate-500 font-mono">As of {fromDate || 'Inception'}</span>
->>>>>>> b8503e0a68ebac4b8a43011b67e111878bc7d9a5
           </div>
           <BalanceCategoryGrid categories={balanceSheetCategories.opening} formatMoney={formatMoney} />
         </CardContent>
@@ -1337,19 +1325,11 @@ export const TrialBalanceSheet = () => {
 
       {/* CLOSING BALANCES — mirrors Opening Balances above, shown regardless
           of view mode, read straight from tbReport.closingBalances. */}
-<<<<<<< HEAD
-      <Card className="bg-slate-900/60 print:bg-transparent border-slate-800 print:border-slate-300 print:shadow-none print:mt-6">
-        <CardContent className="p-4 space-y-3 print:p-0">
-          <div className="flex items-center justify-between print:mb-2">
-            <h3 className="text-xs font-bold text-slate-300 print:text-black uppercase tracking-widest">Closing Balances</h3>
-            <span className="text-[11px] text-slate-500 print:text-black font-mono">As of {toDate || 'Today'}</span>
-=======
       <Card className="bg-slate-900/60 border-slate-800 print:bg-white print:border-slate-300 print:break-inside-avoid">
         <CardContent className="p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest">Closing Balances</h3>
             <span className="text-[11px] text-slate-500 font-mono">As of {toDate || 'Today'}</span>
->>>>>>> b8503e0a68ebac4b8a43011b67e111878bc7d9a5
           </div>
           <BalanceCategoryGrid categories={balanceSheetCategories.closing} formatMoney={formatMoney} />
         </CardContent>
