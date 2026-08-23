@@ -24,6 +24,16 @@ const getNormalizedHallName = (name) => {
   return null;
 };
 
+const formatDateDDMMYYYY = (dateVal) => {
+  if (!dateVal) return 'N/A';
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return 'N/A';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
 export const HallBookingForm = () => {
   const { t } = useTranslation();
   const { id } = useParams();
@@ -488,7 +498,7 @@ export const HallBookingForm = () => {
                             <div className="flex items-center justify-between gap-1 mb-1.5 border-b border-slate-800/60 pb-1.5">
                               <span className="font-bold text-slate-200 flex items-center gap-1.5 text-[13px]">
                                 <Clock className="h-3.5 w-3.5 text-amber-400" />
-                                {b.programDate ? new Date(b.programDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+                                {formatDateDDMMYYYY(b.programDate)}
                               </span>
                               <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                                 isConflict ? 'bg-red-500 text-white font-black' : 'bg-slate-800 text-amber-300 border border-slate-700'

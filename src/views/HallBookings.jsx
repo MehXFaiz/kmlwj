@@ -23,6 +23,16 @@ const formatHallName = (booking) => {
   return raw;
 };
 
+const formatDateDDMMYYYY = (dateVal) => {
+  if (!dateVal) return 'N/A';
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return 'N/A';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
 export const HallBookings = () => {
   const { t, i18n } = useTranslation();
   const { bookings, loading, fetchBookings, postBooking, revertBooking, deleteBooking, bulkDeleteBookings } = useHallBookingStore();
@@ -355,7 +365,7 @@ export const HallBookings = () => {
                               <Clock className="w-3.5 h-3.5 text-amber-400" /> PROGRAM DATE
                             </span>
                             <span className="font-semibold text-slate-100 text-xs">
-                              {new Date(booking.programDate).toLocaleDateString()}
+                              {formatDateDDMMYYYY(booking.programDate)}
                               {booking.timings && <span className="text-slate-400 font-normal ml-1.5">({booking.timings})</span>}
                             </span>
                           </div>
@@ -365,7 +375,7 @@ export const HallBookings = () => {
                       {/* Card Footer: Date & Action Icons */}
                       <div className="flex flex-col gap-3 pt-3.5 border-t border-slate-800/80">
                         <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5 text-slate-400" /> {booking.programDate ? new Date(booking.programDate).toLocaleDateString() : 'N/A'}
+                          <Calendar className="w-3.5 h-3.5 text-slate-400" /> {formatDateDDMMYYYY(booking.programDate)}
                         </span>
                         <div className="flex items-center justify-end gap-2 w-full">
                           <button
@@ -479,7 +489,7 @@ export const HallBookings = () => {
                         <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">{booking.mobile || 'N/A'}</div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="font-medium">{new Date(booking.programDate).toLocaleDateString()}</div>
+                        <div className="font-medium">{formatDateDDMMYYYY(booking.programDate)}</div>
                         <div className="text-xs text-slate-500">{booking.timings || 'Any time'}</div>
                       </td>
                       <td className="px-6 py-4">
