@@ -293,6 +293,10 @@ export const HallBookingForm = () => {
       showToast('Received Amount cannot exceed Net Amount.', 'warning');
       return;
     }
+    if (data.status === 'POSTED' && parsedRemainingAmount > 0) {
+      showToast(`Cannot set status to Posted to Ledger: Remaining amount must be Rs. 0 (Current remaining: Rs. ${Math.round(parsedRemainingAmount).toLocaleString()}). Please collect full payment first.`, 'warning');
+      return;
+    }
 
     try {
       let savedBooking;

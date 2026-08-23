@@ -233,6 +233,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         });
       }
 
+      const checkNetAmt = Number(booking.netAmount ?? booking.hallCharges ?? 0);
+      const checkRecAmt = Number(booking.receivedAmount ?? 0);
+      const checkRemAmt = Number(booking.remainingAmount ?? (checkNetAmt - checkRecAmt));
+      if (checkRemAmt > 0) {
+        return res.status(400).json({
+          error: { message: `Cannot post hall booking: Remaining amount must be 0 before posting to ledger. (Remaining: Rs. ${Math.round(checkRemAmt).toLocaleString()})`, status: 400 }
+        });
+      }
+
       const revenueAccountId = booking.hallId;
       if (!revenueAccountId) return res.status(400).json({ error: { message: 'Revenue account (Hall) is required to post.', status: 400 } });
 
@@ -415,6 +424,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     const calculatedRemainingAmount = Math.round((calculatedNetAmount - parsedReceivedAmount) * 100) / 100;
+
+    if (requestedCreateStatus === 'POSTED' && calculatedRemainingAmount > 0) {
+      return res.status(400).json({ error: { message: `Cannot set status to POSTED: Remaining amount must be 0 before posting to ledger. (Remaining: Rs. ${Math.round(calculatedRemainingAmount).toLocaleString()})`, status: 400 } });
+    }
 
     if ((paymentMethod === 'BANK' || paymentMethod === 'CHEQUE') && !bankAccountId) {
       return res.status(400).json({ error: { message: 'Bank account is required for Bank/Cheque payment methods', status: 400 } });
@@ -752,6 +765,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     const calculatedRemainingAmount = Math.round((calculatedNetAmount - parsedReceivedAmount) * 100) / 100;
+
+    if (requestedUpdateStatus === 'POSTED' && calculatedRemainingAmount > 0) {
+      return res.status(400).json({ error: { message: `Cannot set status to POSTED: Remaining amount must be 0 before posting to ledger. (Remaining: Rs. ${Math.round(calculatedRemainingAmount).toLocaleString()})`, status: 400 } });
+    }
 
     if ((paymentMethod === 'BANK' || paymentMethod === 'CHEQUE') && !bankAccountId) {
       return res.status(400).json({ error: { message: 'Bank account is required for Bank/Cheque payment methods', status: 400 } });

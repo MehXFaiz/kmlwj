@@ -41,7 +41,20 @@ export const HallBookings = () => {
     fetchBookings();
   }, []);
 
-  const handlePost = async (id) => {
+  const handlePost = async (idOrBooking) => {
+    const booking = typeof idOrBooking === 'object' 
+      ? idOrBooking 
+      : bookings.find(b => b.id === idOrBooking);
+
+    if (booking) {
+      const remaining = Number(booking.remainingAmount || 0);
+      if (remaining > 0) {
+        showToast(`Cannot post booking to ledger: Remaining amount must be Rs. 0 (Current remaining: Rs. ${Math.round(remaining).toLocaleString()}). Please collect full payment first.`, 'error');
+        return;
+      }
+    }
+
+    const id = typeof idOrBooking === 'object' ? idOrBooking.id : idOrBooking;
     try {
       await postBooking(id);
       showToast('Booking posted to ledger successfully!', 'success');
@@ -367,9 +380,13 @@ export const HallBookings = () => {
                           {(booking.status === 'Confirmed' || booking.status === 'Pending') && canPostToLedger && (
                             <button
                               type="button"
-                              onClick={() => handlePost(booking.id)}
-                              className="px-3 py-1.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-bold text-xs transition-all cursor-pointer shadow-sm"
-                              title="Post to Ledger"
+                              onClick={() => handlePost(booking)}
+                              className={`px-3 py-1.5 rounded-full flex items-center gap-1 font-bold text-xs transition-all cursor-pointer shadow-sm ${
+                                Number(booking.remainingAmount || 0) > 0
+                                  ? 'bg-slate-800/80 text-slate-500 border border-slate-700/50 hover:bg-slate-800'
+                                  : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30'
+                              }`}
+                              title={Number(booking.remainingAmount || 0) > 0 ? "Remaining amount must be 0 to post to ledger" : "Post to Ledger"}
                             >
                               <CheckCircle2 className="w-3.5 h-3.5" /> Post
                             </button>
@@ -495,9 +512,13 @@ export const HallBookings = () => {
                       </td>
                       <td className="px-6 py-4 text-right space-x-2">
                         {(booking.status === 'Confirmed' || booking.status === 'Pending') && canPostToLedger && (
-                          <button onClick={() => handlePost(booking.id)}
-                            className="p-1.5 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-950/40 rounded transition-colors inline-flex"
-                            title="Post to Ledger">
+                          <button onClick={() => handlePost(booking)}
+                            className={`p-1.5 rounded transition-colors inline-flex ${
+                              Number(booking.remainingAmount || 0) > 0
+                                ? 'text-slate-600 hover:text-slate-400 hover:bg-slate-800/50'
+                                : 'text-emerald-500 hover:text-emerald-400 hover:bg-emerald-950/40'
+                            }`}
+                            title={Number(booking.remainingAmount || 0) > 0 ? "Remaining amount must be 0 to post to ledger" : "Post to Ledger"}>
                             <CheckCircle2 className="h-4 w-4" />
                           </button>
                         )}
