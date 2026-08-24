@@ -668,6 +668,18 @@ export const Dashboard = () => {
             delay: 80,
           },
           {
+            title: 'Hall Booking Received',
+            value: stats.hallBookingReceived || 0,
+            icon: Receipt,
+            iconColor: 'text-amber-400',
+            iconBg: 'bg-amber-500/10 border-amber-500/20',
+            trend: 'up',
+            trendLabel: 'Total Received',
+            trendColor: 'text-amber-400',
+            accentBar: 'from-amber-500 to-amber-400',
+            delay: 120,
+          },
+          {
             // BUG FIX: Show actual cash balance (not clamped); overdraft shows as negative
             title: t('dashboard.cashInHand'),
             value: stats.cashBalance || 0,

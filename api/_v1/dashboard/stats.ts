@@ -157,6 +157,17 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     where: { createdAt: { gte: startOfMonth }, isDeleted: false }
   });
 
+  // Total received amount for hall bookings in the requested period (or all-time if no dates)
+  const hbWhere: any = { isDeleted: false };
+  if (startDate) hbWhere.createdAt = { ...(hbWhere.createdAt || {}), gte: new Date(startDate) };
+  if (endDate) hbWhere.createdAt = { ...(hbWhere.createdAt || {}), lte: new Date(endDate) };
+
+  const hallBookingReceivedRaw = await prisma.hallBooking.aggregate({
+    _sum: { receivedAmount: true },
+    where: hbWhere
+  });
+  const totalHallBookingReceived = Number(hallBookingReceivedRaw._sum.receivedAmount || 0);
+
   const outstandingInvoices = await prisma.invoice.count({
     where: { status: { in: ['ISSUED', 'OVERDUE'] }, isDeleted: false }
   });
@@ -221,6 +232,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         baseEquity,
         totalRevenue,
         totalExpense,
+        hallBookingReceived: totalHallBookingReceived,
         cashBalance,
         bankBalance,
         openingCashBalance,
