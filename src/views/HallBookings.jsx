@@ -172,8 +172,16 @@ export const HallBookings = () => {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-extrabold text-slate-100 tracking-tight">{t('tables.hallBookings.title')}</h1>
-            <p className="text-sm text-slate-400 mt-1">{t('tables.hallBookings.desc')}</p>
+            <div className="flex items-center gap-3">
+              <div>
+                <h1 className="text-2xl font-extrabold text-slate-100 tracking-tight">{t('tables.hallBookings.title')}</h1>
+                <p className="text-sm text-slate-400 mt-1">{t('tables.hallBookings.desc')}</p>
+              </div>
+              <div className="ml-3 px-3 py-2 rounded-lg bg-slate-800/40 border border-slate-700">
+                <p className="text-[11px] text-slate-400">Total Hall Income</p>
+                <p className="text-lg font-bold text-emerald-300">Rs {((bookings || []).reduce((s, b) => s + (Number(b.netAmount || 0)), 0)).toLocaleString()}</p>
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             {canEditOrDelete && selectedIds.length > 0 && (
