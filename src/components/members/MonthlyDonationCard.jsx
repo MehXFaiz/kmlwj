@@ -29,17 +29,17 @@ function CardShell({ children }) {
       flex: 1,
       display: 'flex',
       flexDirection: 'column',
-      background: 'linear-gradient(135deg, #EAEFF2 0%, #F8FAFC 50%, #DFE5EA 100%)',
+      background: 'linear-gradient(135deg, #E8ECEF 0%, #F8FAFC 50%, #DDE3E8 100%)',
       border: '1.5px solid #0D4E2B',
       borderRadius: 'inherit',
       boxSizing: 'border-box',
-      fontFamily: "'Noto Nastaliq Urdu', 'Noto Sans Arabic', 'Inter', 'Segoe UI', system-ui, sans-serif",
+      fontFamily: "'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif",
     }}>
       {/* Watermark Logo */}
       <div style={{
         position: 'absolute', inset: 0, zIndex: 1,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        opacity: 0.12, pointerEvents: 'none',
+        opacity: 0.10, pointerEvents: 'none',
       }}>
         <img src={logoSrc} alt="" style={{ width: '65%', height: 'auto', objectFit: 'contain' }} />
       </div>
@@ -56,7 +56,7 @@ export function MonthlyDonationCardFront({ card }) {
 
   const displayName = (card?.name || beneficiary?.name || member?.fullName || donor?.fullName || 'RECIPIENT NAME').toUpperCase();
   const fatherName = card?.fatherName || beneficiary?.fatherName || beneficiary?.husbandName || member?.fatherName || donor?.fatherName || '—';
-  const cardNo = card?.cardNumber || 'MD-2026-001';
+  const cardNo = card?.cardNumber || 'MFS-2026-001';
   const issueDate = fmtDate(card?.issueDate || card?.createdAt || new Date());
   const amount = card?.amount || card?.monthlyAmount || 5000;
   const cnic = card?.cnic || beneficiary?.cnic || member?.cnic || donor?.cnic || '—';
@@ -90,8 +90,8 @@ export function MonthlyDonationCardFront({ card }) {
         </defs>
 
         {/* Top-Right Decorative Corner Shield */}
-        <path d="M 230 0 L 340 0 L 340 65 Q 280 40 230 0 Z" fill="url(#emeraldGrad)" />
-        <path d="M 228 0 Q 280 42 340 67" fill="none" stroke="url(#goldGrad)" strokeWidth="2.5" />
+        <path d="M 245 0 L 340 0 L 340 55 Q 285 35 245 0 Z" fill="url(#emeraldGrad)" />
+        <path d="M 243 0 Q 285 37 340 57" fill="none" stroke="url(#goldGrad)" strokeWidth="2.5" />
 
         {/* Main Right Side Wave Container for Photo Frame */}
         <path d="M 340 35 C 255 75 240 120 260 175 C 270 195 300 205 340 205 Z" fill="url(#emeraldGrad)" />
@@ -102,29 +102,30 @@ export function MonthlyDonationCardFront({ card }) {
       <div style={{ position: 'relative', zIndex: 2, flex: 1, display: 'flex', flexDirection: 'column' }}>
 
         {/* ── TOP HEADER SECTION ── */}
-        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', padding: '6px 10px 0 10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', padding: '5px 8px 0 8px' }}>
           {/* Mosque Logo Icon */}
           <div style={{
-            width: '46px', height: '46px', flexShrink: 0, marginRight: '8px',
+            width: '44px', height: '44px', flexShrink: 0, marginRight: '7px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <img src={logoSrc} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
 
           {/* Titles & Tagline (Urdu & English) */}
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ flex: 1, minWidth: 0, paddingRight: '25px' }}>
             {/* Urdu Header */}
             <div style={{
-              fontSize: '11px', fontWeight: 900, color: '#0D4E2B',
-              lineHeight: 1.1, textAlign: 'left', direction: 'rtl',
-              fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Segoe UI', Tahoma, sans-serif",
+              fontSize: '11.5px', fontWeight: 900, color: '#0D4E2B',
+              lineHeight: 1.15, textAlign: 'left', direction: 'rtl',
+              fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', Tahoma, sans-serif",
             }}>
               {ORG_NAME_UR}
             </div>
             {/* English Header */}
             <div style={{
-              fontSize: '8px', fontWeight: 800, color: '#1B2A1E',
-              letterSpacing: '0.04em', lineHeight: 1.1, textTransform: 'uppercase', marginTop: '1px',
+              fontSize: '7.5px', fontWeight: 900, color: '#1B2A1E',
+              letterSpacing: '0.02em', lineHeight: 1.1, textTransform: 'uppercase', marginTop: '1px',
+              whiteSpace: 'nowrap',
             }}>
               {ORG_NAME_EN}
             </div>
@@ -136,32 +137,31 @@ export function MonthlyDonationCardFront({ card }) {
               <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, transparent 0%, #D4AF37 100%)' }} />
             </div>
 
-            {/* Card Subtitle Badge */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            {/* Card Subtitle Badge: MONTHLY FINANCIAL SUPPORT CARD */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'nowrap' }}>
               <div style={{
-                fontSize: '9.5px', fontWeight: 900, color: '#0D4E2B',
-                letterSpacing: '0.12em', textTransform: 'uppercase', lineHeight: 1.1,
+                fontSize: '8.5px', fontWeight: 900, color: '#0D4E2B',
+                letterSpacing: '0.08em', textTransform: 'uppercase', lineHeight: 1.1,
+                whiteSpace: 'nowrap',
               }}>
-                MONTHLY DONATION CARD
+                MONTHLY FINANCIAL SUPPORT CARD
               </div>
               <div style={{
-                fontSize: '9.5px', fontWeight: 900, color: '#D4AF37',
-                lineHeight: 1.1,
+                fontSize: '8.5px', fontWeight: 900, color: '#AA7C11',
+                lineHeight: 1.1, whiteSpace: 'nowrap',
                 fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', sans-serif",
               }}>
-                (ماہانہ عطیہ کارڈ)
+                (ماہانہ مالی امداد کارڈ)
               </div>
             </div>
           </div>
-
-          <div style={{ width: '36px', height: '16px', zIndex: 3 }} />
         </div>
 
         {/* ── CENTER SECTION: LEFT DETAILS & RIGHT PHOTO FRAME ── */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'row', padding: '5px 10px 0 10px', alignItems: 'center' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'row', padding: '4px 8px 0 8px', alignItems: 'center' }}>
 
           {/* Left Details List with Round Emerald Badges and Dual Language Labels */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px', pr: '4px' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 }}>
 
             {/* Name */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -319,7 +319,7 @@ export function MonthlyDonationCardFront({ card }) {
         {/* ── LOWER SECTION: LEFT QR CODE & SLOGAN ── */}
         <div style={{
           display: 'flex', flexDirection: 'row', alignItems: 'flex-end',
-          justifyContent: 'space-between', padding: '2px 10px 3px 10px',
+          justifyContent: 'space-between', padding: '2px 8px 3px 8px',
         }}>
           {/* Bottom Left Small QR Code */}
           <div style={{
@@ -331,7 +331,7 @@ export function MonthlyDonationCardFront({ card }) {
           </div>
 
           <div style={{
-            fontSize: '8px', fontWeight: 900, color: '#0D4E2B',
+            fontSize: '8.5px', fontWeight: 900, color: '#0D4E2B',
             fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', sans-serif",
             direction: 'rtl', textAlign: 'right', paddingBottom: '2px',
           }}>
@@ -363,7 +363,7 @@ export function MonthlyDonationCardBack({ card }) {
 
   const address = card?.address || beneficiary?.address || member?.address || donor?.address || 'Lyari, Karachi';
   const mobile = card?.mobile || beneficiary?.mobile || member?.mobile || donor?.mobile || '0300-XXXXXXX';
-  const gham = card?.gham || beneficiary?.gham || member?.ghamName || '—';
+  const gham = card?.gham || beneficiary?.gham || member?.ghamName || 'LOHARWADA';
 
   const VERIFY_BASE = (typeof window !== 'undefined' && window.location?.origin)
     ? window.location.origin
@@ -387,58 +387,70 @@ export function MonthlyDonationCardBack({ card }) {
           </linearGradient>
         </defs>
 
-        {/* Left Side Curved Panel */}
-        <path d="M 0 0 L 115 0 C 95 65 95 135 115 190 L 0 190 Z" fill="url(#backEmeraldGrad)" />
-        <path d="M 115 0 C 95 65 95 135 115 190" fill="none" stroke="#D4AF37" strokeWidth="2.5" />
+        {/* Left Side Curved Panel (Expanded for high prominence) */}
+        <path d="M 0 0 L 105 0 C 85 65 85 135 105 190 L 0 190 Z" fill="url(#backEmeraldGrad)" />
+        <path d="M 105 0 C 85 65 85 135 105 190" fill="none" stroke="#D4AF37" strokeWidth="2.5" />
       </svg>
 
       {/* ── CARD BODY ── */}
       <div style={{ position: 'relative', zIndex: 2, flex: 1, display: 'flex', flexDirection: 'column' }}>
 
         {/* ── MAIN CONTENT GRID ── */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'row', padding: '6px 10px 4px 10px' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'row', padding: '6px 8px 3px 6px' }}>
 
-          {/* Left Emerald Section: Logo & Jamaat Title in Urdu & English */}
+          {/* Left Emerald Section: Large Clear Logo & Jamaat Title */}
           <div style={{
-            width: '90px', flexShrink: 0, display: 'flex', flexDirection: 'column',
+            width: '88px', flexShrink: 0, display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center', textAlign: 'center',
-            paddingRight: '6px', paddingLeft: '4px', boxSizing: 'border-box',
+            paddingRight: '4px', paddingLeft: '2px', boxSizing: 'border-box',
           }}>
-            <img src={logoSrc} alt="Logo" style={{ width: '40px', height: '40px', objectFit: 'contain', filter: 'brightness(1.2)' }} />
+            {/* ENLARGED LOGO (56px) with high visibility */}
             <div style={{
-              fontSize: '8px', fontWeight: 900, color: '#FFFFFF',
-              lineHeight: 1.15, marginTop: '4px',
+              width: '56px', height: '56px',
+              background: 'rgba(255,255,255,0.15)',
+              borderRadius: '50%',
+              padding: '3px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+              border: '1.5px solid rgba(245,215,127,0.4)',
+            }}>
+              <img src={logoSrc} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'brightness(1.25)' }} />
+            </div>
+
+            <div style={{
+              fontSize: '8.5px', fontWeight: 900, color: '#FFFFFF',
+              lineHeight: 1.2, marginTop: '5px',
               fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', sans-serif",
               direction: 'rtl',
             }}>
               کچھی مسلم لوہارواڈھا
             </div>
             <div style={{
-              fontSize: '6.5px', fontWeight: 800, color: '#F5D77F',
-              letterSpacing: '0.02em', lineHeight: 1.1, textTransform: 'uppercase', marginTop: '1px',
+              fontSize: '7px', fontWeight: 900, color: '#F5D77F',
+              letterSpacing: '0.04em', lineHeight: 1.1, textTransform: 'uppercase', marginTop: '1px',
             }}>
-              KMLW JAMAT
+              WELFARE JAMAT
             </div>
-            <div style={{ fontSize: '6px', color: '#D4AF37', marginTop: '2px' }}>
+            <div style={{ fontSize: '7px', color: '#D4AF37', marginTop: '1px' }}>
               &#9670;&#9644;&#9670;
             </div>
           </div>
 
-          {/* Center & Right Sections: Rules in Urdu + Verification QR Code */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingLeft: '8px', minWidth: 0 }}>
+          {/* Center & Right Sections: Much Larger Rules in Urdu + Verification QR Code */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingLeft: '6px', minWidth: 0 }}>
 
             {/* Header: Notice */}
-            <div style={{ textAlign: 'center', marginBottom: '4px' }}>
+            <div style={{ textAlign: 'center', marginBottom: '3px' }}>
               <div style={{
-                fontSize: '8.5px', fontWeight: 900, color: '#0D4E2B',
+                fontSize: '9.5px', fontWeight: 900, color: '#0D4E2B',
                 letterSpacing: '0.02em', textTransform: 'uppercase',
                 fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', sans-serif",
                 direction: 'rtl',
               }}>
-                ضروری ہدایات و معلومات (TERMS & CONDITIONS)
+                ضروری ہدایات و شرائط (TERMS & CONDITIONS)
               </div>
               {/* Divider */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', margin: '2px auto 0', width: '80%' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', margin: '1px auto 0', width: '85%' }}>
                 <div style={{ flex: 1, height: '1px', background: '#D4AF37' }} />
                 <div style={{ width: '3px', height: '3px', transform: 'rotate(45deg)', background: '#D4AF37' }} />
                 <div style={{ flex: 1, height: '1px', background: '#D4AF37' }} />
@@ -448,79 +460,79 @@ export function MonthlyDonationCardBack({ card }) {
             {/* Rules & Large QR Side by Side */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '6px' }}>
 
-              {/* 3 Terms Rules in Urdu & English */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4.5px' }}>
+              {/* 3 Terms Rules in Urdu - ENLARGED & HIGHLY LEGIBLE */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px' }}>
 
                 {/* Rule 1 */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '5px' }}>
                   <div style={{
-                    width: '14px', height: '14px', borderRadius: '50%', background: '#0D4E2B',
+                    width: '16px', height: '16px', borderRadius: '50%', background: '#0D4E2B',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px',
                   }}>
-                    <span style={{ fontSize: '7px', color: '#FFFFFF', fontWeight: 900 }}>۱</span>
+                    <span style={{ fontSize: '8px', color: '#FFFFFF', fontWeight: 900 }}>۱</span>
                   </div>
                   <span style={{
-                    fontSize: '7px', color: '#222222', fontWeight: 800, lineHeight: 1.25,
+                    fontSize: '8.5px', color: '#111111', fontWeight: 800, lineHeight: 1.25,
                     fontFamily: "'Noto Nastaliq Urdu', 'Segoe UI', sans-serif",
                   }}>
-                    یہ کارڈ کچھی مسلم لوہارواڈھا ویلفیئر جماعت کی ملکیت ہے۔ (Property of KMLWJ)
+                    یہ کارڈ کچھی مسلم لوہارواڈھا ویلفیئر جماعت کی ملکیت ہے۔
                   </span>
                 </div>
 
                 {/* Rule 2 */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '5px' }}>
                   <div style={{
-                    width: '14px', height: '14px', borderRadius: '50%', background: '#0D4E2B',
+                    width: '16px', height: '16px', borderRadius: '50%', background: '#0D4E2B',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px',
                   }}>
-                    <span style={{ fontSize: '7px', color: '#FFFFFF', fontWeight: 900 }}>۲</span>
+                    <span style={{ fontSize: '8px', color: '#FFFFFF', fontWeight: 900 }}>۲</span>
                   </div>
                   <span style={{
-                    fontSize: '7px', color: '#222222', fontWeight: 800, lineHeight: 1.25,
+                    fontSize: '8.5px', color: '#111111', fontWeight: 800, lineHeight: 1.25,
                     fontFamily: "'Noto Nastaliq Urdu', 'Segoe UI', sans-serif",
                   }}>
-                    یہ کارڈ ناقابلِ انتقال ہے اور صرف نامزد فرد کے لیے ہے۔ (Non-transferable)
+                    یہ کارڈ ناقابلِ انتقال ہے اور صرف نامزد فرد کے لیے ہے۔
                   </span>
                 </div>
 
                 {/* Rule 3 */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '5px' }}>
                   <div style={{
-                    width: '14px', height: '14px', borderRadius: '50%', background: '#0D4E2B',
+                    width: '16px', height: '16px', borderRadius: '50%', background: '#0D4E2B',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px',
                   }}>
-                    <span style={{ fontSize: '7px', color: '#FFFFFF', fontWeight: 900 }}>۳</span>
+                    <span style={{ fontSize: '8px', color: '#FFFFFF', fontWeight: 900 }}>۳</span>
                   </div>
                   <span style={{
-                    fontSize: '7px', color: '#222222', fontWeight: 800, lineHeight: 1.25,
+                    fontSize: '8.5px', color: '#111111', fontWeight: 800, lineHeight: 1.25,
                     fontFamily: "'Noto Nastaliq Urdu', 'Segoe UI', sans-serif",
                   }}>
-                    گمشدگی کی صورت میں فوراً جماعت کے دفتر جمع کروائیں۔ (Return to Jamat office)
+                    گمشدگی کی صورت میں فوراً جماعت کے دفتر جمع کروائیں۔
                   </span>
                 </div>
 
                 {/* Address & Contact summary */}
                 <div style={{
-                  fontSize: '6.5px', color: '#444444', fontWeight: 700, marginTop: '2px',
+                  fontSize: '8px', color: '#0D4E2B', fontWeight: 800, marginTop: '2px',
                   borderTop: '1px dashed #D4AF37', paddingTop: '2px',
                 }}>
-                  گام: <strong>{gham}</strong> • فون: <strong>{mobile}</strong>
+                  گام: <strong>{gham}</strong> &nbsp;•&nbsp; فون: <strong>{mobile}</strong>
                 </div>
 
               </div>
 
-              {/* Verification QR Box */}
+              {/* Verification QR Box - Prominent */}
               <div style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', flexShrink: 0,
               }}>
                 <div style={{
                   background: '#FFFFFF', padding: '3px', borderRadius: '6px',
-                  width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)', border: '1.5px solid #D4AF37',
+                  width: '52px', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.18)', border: '1.5px solid #D4AF37',
                 }}>
                   <QRCodeSVG value={qrValue} size={128} style={{ width: '100%', height: '100%' }} />
                 </div>
-                <span style={{ fontSize: '6px', color: '#0D4E2B', fontWeight: 900, letterSpacing: '0.04em' }}>
+                <span style={{ fontSize: '6.5px', color: '#0D4E2B', fontWeight: 900, letterSpacing: '0.04em' }}>
                   تصدیق / VERIFY
                 </span>
               </div>
@@ -534,27 +546,27 @@ export function MonthlyDonationCardBack({ card }) {
         {/* ── BOTTOM FOOTER STRIP ── */}
         <div style={{
           background: 'linear-gradient(90deg, #0D4E2B 0%, #08381E 100%)',
-          padding: '2.5px 6px',
+          padding: '3.5px 8px',
           display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-          borderTop: '1px solid #D4AF37', marginTop: 'auto', gap: '4px',
+          borderTop: '1px solid #D4AF37', marginTop: 'auto', gap: '6px',
         }}>
           {/* Location */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
-            <span style={{ fontSize: '6.5px', color: '#FFFFFF', fontWeight: 800, whiteSpace: 'nowrap' }}>
-              {ORG_RETURN_UR}
+            <span style={{ fontSize: '7.5px', color: '#FFFFFF', fontWeight: 800, whiteSpace: 'nowrap' }}>
+              📍 {ORG_RETURN_UR}
             </span>
           </div>
 
           {/* Contact */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
-            <span style={{ fontSize: '6.5px', color: '#F5D77F', fontWeight: 800, whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: '7.5px', color: '#F5D77F', fontWeight: 800, whiteSpace: 'nowrap' }}>
               📞 {ORG_PHONE}
             </span>
           </div>
 
           {/* Website */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
-            <span style={{ fontSize: '6.5px', color: '#FFFFFF', fontWeight: 800, whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: '7.5px', color: '#FFFFFF', fontWeight: 800, whiteSpace: 'nowrap' }}>
               🌐 {ORG_WEBSITE}
             </span>
           </div>

@@ -128,10 +128,10 @@ function IssueModal({ onClose, onSubmit }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
           <div>
             <div style={{ fontSize: '16px', fontWeight: 700, color: '#f1f5f9' }}>
-              Issue Monthly Donation Card (ماہانہ عطیہ کارڈ)
+              Issue Monthly Financial Support Card (ماہانہ مالی امداد کارڈ)
             </div>
             <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-              Create a personalized bilingual Urdu / English PVC donation card
+              Create a personalized bilingual Urdu / English PVC financial support card
             </div>
           </div>
           <button onClick={onClose} style={{
@@ -348,7 +348,7 @@ function PreviewModal({ card, onClose, onPrint, onPrintPvc, onCopyQr }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
           <div>
             <div style={{ fontSize: '16px', fontWeight: 700, color: '#f1f5f9' }}>
-              Monthly Donation Card Preview (ماہانہ عطیہ کارڈ)
+              Monthly Financial Support Card Preview (ماہانہ مالی امداد کارڈ)
             </div>
             <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
               {card?.name} • {card?.cardNumber}
@@ -549,12 +549,12 @@ export const MonthlyDonationCards = () => {
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-bold text-slate-100">Monthly Donation Cards</h1>
+              <h1 className="text-xl font-bold text-slate-100">Monthly Financial Support Cards</h1>
               <span style={{
                 fontSize: '11px', fontWeight: 700, color: '#D4AF37',
                 fontFamily: "'Noto Nastaliq Urdu', sans-serif",
               }}>
-                (ماہانہ عطیہ کارڈز)
+                (ماہانہ مالی امداد کارڈز)
               </span>
               <span style={{
                 fontSize: '10px', fontWeight: 700, textTransform: 'uppercase',
@@ -566,7 +566,7 @@ export const MonthlyDonationCards = () => {
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Issue, preview and print bilingual Urdu / English monthly donation PVC cards
+              Issue, preview and print bilingual Urdu / English monthly financial support PVC cards
             </p>
           </div>
         </div>
@@ -585,7 +585,7 @@ export const MonthlyDonationCards = () => {
             style={{ background: 'linear-gradient(135deg, #0D4E2B, #1A6B3C)', border: '1px solid rgba(212,175,55,0.4)', color: '#F5D77F' }}
           >
             <Plus size={14} />
-            Issue Monthly Card (نیا کارڈ)
+            Issue Support Card (نیا کارڈ)
           </button>
         </div>
       </div>
