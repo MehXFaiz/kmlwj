@@ -283,7 +283,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           });
         }
 
-        // Credit Income account for the net amount
+        // Credit Income account for the net amount (only if positive)
         if (netAmt > 0) {
           lines.push({
             accountId: revenueAccountId,
@@ -293,27 +293,30 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           });
         }
 
-        const postingResult = await AccountingService.postTransaction(tx, {
-          voucherType: 'BR',
-          postingDate: booking.bookingDate || new Date(),
-          reference: `HB-${booking.receiptNo}`,
-          description: `Hall Booking Receipt for ${booking.bookerName} - ${booking.hallAccount?.accountName || 'Selected Hall'}`,
-          module: 'Hall Booking',
-          postedBy: req.user!.id,
-          lines,
-          ipAddress: req.headers['x-forwarded-for'] as string,
-          userAgent: req.headers['user-agent']
-        });
+        let postingResult: any = null;
+        if (lines.length > 0) {
+          postingResult = await AccountingService.postTransaction(tx, {
+            voucherType: 'BR',
+            postingDate: booking.bookingDate || new Date(),
+            reference: `HB-${booking.receiptNo}`,
+            description: `Hall Booking Receipt for ${booking.bookerName} - ${booking.hallAccount?.accountName || 'Selected Hall'}`,
+            module: 'Hall Booking',
+            postedBy: req.user!.id,
+            lines,
+            ipAddress: req.headers['x-forwarded-for'] as string,
+            userAgent: req.headers['user-agent']
+          });
+        }
 
         const approvedBooking = await tx.hallBooking.update({
           where: { id },
-          data: { 
+          data: {
             status: 'POSTED',
-            journalEntryId: postingResult.journalEntry.id 
+            journalEntryId: postingResult ? postingResult.journalEntry.id : null
           }
         });
 
-        return { approvedBooking, journalEntry: postingResult.journalEntry };
+        return { approvedBooking, journalEntry: postingResult ? postingResult.journalEntry : null };
       });
 
       await logAudit(req.user.id, 'POST_TO_LEDGER', 'Hall Bookings', booking, result.approvedBooking, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);

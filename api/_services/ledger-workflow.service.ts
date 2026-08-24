@@ -475,29 +475,34 @@ export class LedgerWorkflowService {
             description: `Receivable for ${record.bookerName} - Hall Booking #${record.receiptNo}`
           });
         }
-        lines.push({
-          accountId: revenueAccountId,
-          debit: 0,
-          credit: netAmt,
-          description: `Revenue for ${record.bookerName} - ${record.hallAccount?.accountName || 'Selected Hall'}`
-        });
+        if (netAmt > 0) {
+          lines.push({
+            accountId: revenueAccountId,
+            debit: 0,
+            credit: netAmt,
+            description: `Revenue for ${record.bookerName} - ${record.hallAccount?.accountName || 'Selected Hall'}`
+          });
+        }
 
-        const postingResult = await AccountingService.postTransaction(tx, {
-          voucherType: 'BR',
-          reference: `HALL-${record.receiptNo}`,
-          description: `Hall Booking - ${record.bookerName} (${record.hallAccount?.accountName || 'Selected Hall'})`,
-          module: 'Hall Bookings',
-          postedBy: userId,
-          lines,
-          ipAddress,
-          userAgent
-        });
+        let postingResult: any = null;
+        if (lines.length > 0) {
+          postingResult = await AccountingService.postTransaction(tx, {
+            voucherType: 'BR',
+            reference: `HALL-${record.receiptNo}`,
+            description: `Hall Booking - ${record.bookerName} (${record.hallAccount?.accountName || 'Selected Hall'})`,
+            module: 'Hall Bookings',
+            postedBy: userId,
+            lines,
+            ipAddress,
+            userAgent
+          });
+        }
 
         const updatedRecord = await tx.hallBooking.update({
           where: { id: recordId },
           data: {
             status: 'POSTED',
-            journalEntryId: postingResult.journalEntry.id
+            journalEntryId: postingResult ? postingResult.journalEntry.id : null
           },
           include: { hallAccount: true, bankAccount: true, createdBy: true }
         });

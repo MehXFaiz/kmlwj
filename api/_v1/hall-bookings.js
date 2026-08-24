@@ -229,25 +229,30 @@ var hall_bookings_default = makeHandler(async (req, res) => {
             description: `Revenue: Hall Booking Receipt for ${booking.bookerName} - ${booking.hallAccount?.accountName || "Selected Hall"}`
           });
         }
-        const postingResult = await AccountingService.postTransaction(tx, {
-          voucherType: "BR",
-          postingDate: booking.bookingDate || /* @__PURE__ */ new Date(),
-          reference: `HB-${booking.receiptNo}`,
-          description: `Hall Booking Receipt for ${booking.bookerName} - ${booking.hallAccount?.accountName || "Selected Hall"}`,
-          module: "Hall Booking",
-          postedBy: req.user.id,
-          lines,
-          ipAddress: req.headers["x-forwarded-for"],
-          userAgent: req.headers["user-agent"]
-        });
+
+        let postingResult = null;
+        if (lines.length > 0) {
+          postingResult = await AccountingService.postTransaction(tx, {
+            voucherType: "BR",
+            postingDate: booking.bookingDate || /* @__PURE__ */ new Date(),
+            reference: `HB-${booking.receiptNo}`,
+            description: `Hall Booking Receipt for ${booking.bookerName} - ${booking.hallAccount?.accountName || "Selected Hall"}`,
+            module: "Hall Booking",
+            postedBy: req.user.id,
+            lines,
+            ipAddress: req.headers["x-forwarded-for"],
+            userAgent: req.headers["user-agent"]
+          });
+        }
+
         const approvedBooking = await tx.hallBooking.update({
           where: { id },
           data: {
             status: "POSTED",
-            journalEntryId: postingResult.journalEntry.id
+            journalEntryId: postingResult ? postingResult.journalEntry.id : null
           }
         });
-        return { approvedBooking, journalEntry: postingResult.journalEntry };
+        return { approvedBooking, journalEntry: postingResult ? postingResult.journalEntry : null };
       });
       await logAudit(req.user.id, "POST_TO_LEDGER", "Hall Bookings", booking, result.approvedBooking, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, data: result.approvedBooking, message: "Booking posted and journal entries created successfully" });
