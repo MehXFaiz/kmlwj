@@ -232,10 +232,11 @@ export const HallBookingForm = () => {
     .sort((a, b) => new Date(a.programDate) - new Date(b.programDate));
 
   const conflictBooking = (bookings || []).find(b => {
-    if (b.id === id || b.status === 'Cancelled' || b.status === 'Rejected') return false;
+    if (b.id === id || b.isDeleted || b.status === 'Cancelled' || b.status === 'Rejected') return false;
     if (!b.programDate || !programDate) return false;
     const bDate = new Date(b.programDate).toISOString().split('T')[0];
-    if (bDate !== programDate) return false;
+    const targetDate = programDate.includes('T') ? programDate.split('T')[0] : programDate;
+    if (bDate !== targetDate) return false;
     if (hallId && b.hallId !== hallId && b.hallAccount?.id !== hallId && b.hallAccount?.accountId !== hallId) return false;
     if (b.timings === timings || b.timings === 'Full Day' || timings === 'Full Day' || !timings || !b.timings) return true;
     return false;
@@ -253,6 +254,7 @@ export const HallBookingForm = () => {
       params: {
         hallId,
         bookingDate: programDate,
+        timings: timings || undefined,
         excludeId: id || undefined
       }
     })
@@ -272,7 +274,7 @@ export const HallBookingForm = () => {
     });
 
     return () => { isMounted = false; };
-  }, [hallId, programDate, id]);
+  }, [hallId, programDate, timings, id]);
 
   // Fixed payment rates removed per user request so amounts can be entered manually
 

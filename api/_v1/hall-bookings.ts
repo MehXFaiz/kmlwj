@@ -85,15 +85,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         return res.status(400).json({ error: { message: 'hallId and bookingDate (or programDate) are required parameters', status: 400 } });
       }
 
-      const parsedDate = new Date(dateParam);
-      if (isNaN(parsedDate.getTime())) {
+      const dateOnlyStr = typeof dateParam === 'string' && dateParam.includes('T')
+        ? dateParam.split('T')[0]
+        : (typeof dateParam === 'string' ? dateParam : new Date(dateParam).toISOString().split('T')[0]);
+      const startOfDay = new Date(`${dateOnlyStr}T00:00:00.000Z`);
+      const endOfDay = new Date(`${dateOnlyStr}T23:59:59.999Z`);
+
+      if (isNaN(startOfDay.getTime())) {
         return res.status(400).json({ error: { message: 'Invalid date format', status: 400 } });
       }
-
-      const startOfDay = new Date(parsedDate);
-      startOfDay.setUTCHours(0, 0, 0, 0);
-      const endOfDay = new Date(parsedDate);
-      endOfDay.setUTCHours(23, 59, 59, 999);
 
       const sameDayBookings = await prisma.hallBooking.findMany({
         where: {
@@ -442,14 +442,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     const eventDateStr = programDate || bookingDate;
-    const parsedProgDate = new Date(eventDateStr);
-    const startOfDay = new Date(parsedProgDate);
-    startOfDay.setUTCHours(0, 0, 0, 0);
-    const endOfDay = new Date(parsedProgDate);
-    endOfDay.setUTCHours(23, 59, 59, 999);
+    const dateOnlyStr = typeof eventDateStr === 'string' && eventDateStr.includes('T')
+      ? eventDateStr.split('T')[0]
+      : (typeof eventDateStr === 'string' ? eventDateStr : new Date(eventDateStr).toISOString().split('T')[0]);
+    const startOfDay = new Date(`${dateOnlyStr}T00:00:00.000Z`);
+    const endOfDay = new Date(`${dateOnlyStr}T23:59:59.999Z`);
 
     const sameDayBookings = await prisma.hallBooking.findMany({
       where: {
+        isDeleted: false,
         hallId: hallId,
         programDate: {
           gte: startOfDay,
@@ -497,6 +498,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       // timingsConflict/isValidBookingStatus below for the full rationale).
       const sameDayInTx = await tx.hallBooking.findMany({
         where: {
+          isDeleted: false,
           hallId,
           programDate: { gte: startOfDay, lte: endOfDay },
           status: { in: ['Confirmed', 'Pending', 'POSTED'] },
@@ -519,7 +521,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           fatherHusbandName: fatherHusbandName || null,
           address: address || null,
           mobile: mobile || null,
-          programDate: new Date(programDate),
+          programDate: new Date(`${dateOnlyStr}T00:00:00.000Z`),
           programType: programType || null,
           functionType: functionType || null,
           timeFrom: timeFrom || null,
@@ -774,14 +776,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Bank account is required for Bank/Cheque payment methods', status: 400 } });
     }
     const eventDateStr = programDate || bookingDate;
-    const parsedProgDate = new Date(eventDateStr);
-    const startOfDay = new Date(parsedProgDate);
-    startOfDay.setUTCHours(0, 0, 0, 0);
-    const endOfDay = new Date(parsedProgDate);
-    endOfDay.setUTCHours(23, 59, 59, 999);
+    const dateOnlyStr = typeof eventDateStr === 'string' && eventDateStr.includes('T')
+      ? eventDateStr.split('T')[0]
+      : (typeof eventDateStr === 'string' ? eventDateStr : new Date(eventDateStr).toISOString().split('T')[0]);
+    const startOfDay = new Date(`${dateOnlyStr}T00:00:00.000Z`);
+    const endOfDay = new Date(`${dateOnlyStr}T23:59:59.999Z`);
 
     const sameDayBookingsForUpdate = await prisma.hallBooking.findMany({
       where: {
+        isDeleted: false,
         hallId: hallId,
         programDate: {
           gte: startOfDay,
@@ -902,7 +905,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             fatherHusbandName: fatherHusbandName || null,
             address: address || null,
             mobile: mobile || null,
-            programDate: new Date(programDate),
+            programDate: new Date(`${dateOnlyStr}T00:00:00.000Z`),
             programType: programType || null,
             functionType: functionType || null,
             timeFrom: timeFrom || null,
