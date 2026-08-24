@@ -400,6 +400,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if (requestedCreateStatus !== undefined && !isKnownStatus(requestedCreateStatus)) {
       return res.status(400).json({ error: { message: `Status must be one of: ${HALL_BOOKING_STATUSES.join(', ')}`, status: 400 } });
     }
+    // Security: only users with POST_LEDGER permission may create a booking
+    // already marked POSTED (which implies ledger posting intent). Without
+    // this guard a naive client could set status=POSTED and later trigger
+    // an automatic post flow or be mistaken for a posted transaction.
+    if (requestedCreateStatus === 'POSTED' && !(await verifyPermission(req, res, PERMS.POST_LEDGER))) {
+      return res.status(403).json({ error: { message: 'Forbidden: insufficient permission to create a POSTED booking', status: 403 } });
+    }
     // Round to cents at every parse/derive step (matches validateAmount()/
     // computeInvoiceTotals()'s convention elsewhere) so float noise from
     // parseFloat/subtraction never reaches the ledger as a fractional-cent

@@ -313,6 +313,11 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     if (requestedCreateStatus !== void 0 && !isKnownStatus(requestedCreateStatus)) {
       return res.status(400).json({ error: { message: `Status must be one of: ${HALL_BOOKING_STATUSES.join(", ")}`, status: 400 } });
     }
+    // Security: only users with POST_LEDGER permission may create a booking
+    // already marked POSTED.
+    if (requestedCreateStatus === 'POSTED' && !(await verifyPermission(req, res, PERMS.POST_LEDGER))) {
+      return res.status(403).json({ error: { message: 'Forbidden: insufficient permission to create a POSTED booking', status: 403 } });
+    }
     const parsedHallCharges = Math.round(parseFloat(rawHallCharges) * 100) / 100;
     if (isNaN(parsedHallCharges) || parsedHallCharges <= 0) {
       return res.status(400).json({ error: { message: "Hall Charges must be greater than 0", status: 400 } });
