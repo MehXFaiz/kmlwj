@@ -3,9 +3,9 @@ import { QRCodeSVG } from 'qrcode.react';
 import logoSrc from '../../assets/logo.png';
 
 const ORG_NAME_EN = 'KUTCHI MUSLIM LOHARWADA WELFARE JAMAT';
-const ORG_NAME_UR = 'کچھی مسلم لوہارواڈھا ویلفیئر جماعت';
+const ORG_NAME_UR = 'کچھی مسلم لوہارواڈہ ویلفیئر جماعت';
 const ORG_RETURN_EN = 'Jamat Khana, Loharwada, Lyari, Karachi - Pakistan';
-const ORG_RETURN_UR = 'جماعت خانہ، لوہارواڈھا، لیاری، کراچی';
+const ORG_RETURN_UR = 'جماعت خانہ، لوہارواڈہ، لیاری، کراچی';
 const ORG_PHONE = '021-32524455';
 const ORG_WEBSITE = 'www.kmlwj.org';
 
@@ -115,7 +115,7 @@ export function MonthlyDonationCardFront({ card }) {
           <div style={{ flex: 1, minWidth: 0, paddingRight: '25px' }}>
             {/* Urdu Header */}
             <div style={{
-              fontSize: '11.5px', fontWeight: 900, color: '#0D4E2B',
+              fontSize: '10px', fontWeight: 900, color: '#0D4E2B',
               lineHeight: 1.15, textAlign: 'left', direction: 'rtl',
               fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', Tahoma, sans-serif",
             }}>
@@ -419,15 +419,15 @@ export function MonthlyDonationCardBack({ card }) {
 
             <div style={{
               fontSize: '8.5px', fontWeight: 900, color: '#FFFFFF',
-              lineHeight: 1.2, marginTop: '5px',
-              fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', sans-serif",
+              lineHeight: 1.3, marginTop: '4px', textAlign: 'center',
+              fontFamily: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Segoe UI', sans-serif",
               direction: 'rtl',
             }}>
-              کچھی مسلم لوہارواڈھا
+              کچھی مسلم لوہارواڈہ ویلفیئر جماعت
             </div>
             <div style={{
-              fontSize: '7px', fontWeight: 900, color: '#F5D77F',
-              letterSpacing: '0.04em', lineHeight: 1.1, textTransform: 'uppercase', marginTop: '1px',
+              fontSize: '6.5px', fontWeight: 900, color: '#F5D77F',
+              letterSpacing: '0.04em', lineHeight: 1.1, textTransform: 'uppercase', marginTop: '2px',
             }}>
               WELFARE JAMAT
             </div>
@@ -475,7 +475,7 @@ export function MonthlyDonationCardBack({ card }) {
                     fontSize: '8.5px', color: '#111111', fontWeight: 800, lineHeight: 1.25,
                     fontFamily: "'Noto Nastaliq Urdu', 'Segoe UI', sans-serif",
                   }}>
-                    یہ کارڈ کچھی مسلم لوہارواڈھا ویلفیئر جماعت کی ملکیت ہے۔
+                    یہ کارڈ کچھی مسلم لوہارواڈہ ویلفیئر جماعت کی ملکیت ہے۔
                   </span>
                 </div>
 
