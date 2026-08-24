@@ -69,6 +69,7 @@ const MemberDetails = lazy(() => import('./views/MemberDetails').then(m => ({ de
 const MemberForm = lazy(() => import('./views/MemberForm').then(m => ({ default: m.MemberForm })));
 const MembershipCards = lazy(() => import('./views/MembershipCards').then(m => ({ default: m.MembershipCards })));
 const ZakatCards = lazy(() => import('./views/ZakatCards').then(m => ({ default: m.ZakatCards })));
+const MonthlyDonationCards = lazy(() => import('./views/MonthlyDonationCards').then(m => ({ default: m.MonthlyDonationCards })));
 const MemberVerify = lazy(() => import('./views/MemberVerify').then(m => ({ default: m.MemberVerify })));
 const ZakatCardVerify = lazy(() => import('./views/ZakatCardVerify'));
 
@@ -371,6 +372,7 @@ function App() {
             <Route path="/members/:id" element={<MemberDetails />} />
             <Route path="/membership-cards" element={<MembershipCards />} />
             <Route path="/zakat-cards" element={<ZakatCards />} />
+            <Route path="/monthly-donation-cards" element={<MonthlyDonationCards />} />
             <Route path="/invoices" element={
               <PermissionGuard requiredPerms={['VIEW_INVOICES']}>
                 <Invoices />

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Printer, X, Loader2, CheckCircle2 } from 'lucide-react';
 import { CardFront, CardBack } from './MembershipCard';
 import { ZakatCardFront, ZakatCardBack } from './ZakatCard';
+import { MonthlyDonationCardFront, MonthlyDonationCardBack } from './MonthlyDonationCard';
 import logoSrc from '../../assets/logo.png';
 
 /* ─────────────────────────────────────────────────────────────
@@ -149,10 +150,12 @@ async function waitForAssets(rootEl) {
  * ──────────────────────────────────────────────────────────── */
 function renderFront({ variant, data }) {
   if (variant === 'zakat') return <ZakatCardFront card={data} />;
+  if (variant === 'monthly') return <MonthlyDonationCardFront card={data} />;
   return <CardFront member={data} />;
 }
 function renderBack({ variant, data }) {
   if (variant === 'zakat') return <ZakatCardBack card={data} />;
+  if (variant === 'monthly') return <MonthlyDonationCardBack card={data} />;
   return <CardBack member={data} />;
 }
 
@@ -184,8 +187,8 @@ function CardPage({ children }) {
 export function PvcCardPrintView({
   isOpen,
   onClose,
-  variant = 'member',       // 'member' | 'zakat'
-  data,                     // member object OR zakat card object
+  variant = 'member',       // 'member' | 'zakat' | 'monthly'
+  data,                     // member object OR zakat card object OR monthly card object
   title,                    // optional override
 }) {
   usePvcPrintStyles();
@@ -195,10 +198,14 @@ export function PvcCardPrintView({
 
   const resolvedTitle = title || (variant === 'zakat'
     ? 'Zakat Card — PVC Lamination Print'
+    : variant === 'monthly'
+    ? 'Monthly Donation Card — PVC Lamination Print'
     : 'Membership Card — PVC Lamination Print');
 
   const subject = variant === 'zakat'
     ? (data?.cardNumber || data?.beneficiary?.name || data?.member?.fullName || 'Zakat Card')
+    : variant === 'monthly'
+    ? (data?.cardNumber || data?.name || data?.beneficiary?.name || data?.member?.fullName || 'Monthly Donation Card')
     : (data?.fullName || data?.memberNo || 'Member Card');
 
   /* Preload the logo + photo up front (QR is inline SVG, no network) */
@@ -207,8 +214,8 @@ export function PvcCardPrintView({
     let cancelled = false;
     setStatus('preparing');
     setError(null);
-    const photoUrl = variant === 'zakat'
-      ? (data?.beneficiary?.photoUrl || data?.member?.photoUrl)
+    const photoUrl = (variant === 'zakat' || variant === 'monthly')
+      ? (data?.photoUrl || data?.beneficiary?.photoUrl || data?.member?.photoUrl)
       : data?.photoUrl;
     Promise.all([loadImage(logoSrc), loadImage(photoUrl)])
       .then(() => { if (!cancelled) setStatus('ready'); })

@@ -204,6 +204,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
         { name: 'Monthly Aid Disbursements', hint: 'Disburse monthly aid to beneficiaries', icon: Calendar, path: '/donations?aidType=MONTHLY' },
         { name: 'General Aid Disbursements', hint: 'Disburse general aid to beneficiaries', icon: Gift, path: '/donations?aidType=GENERAL_DONATION' },
         { name: 'Zakat Aid Disbursements', hint: 'Disburse Zakat aid to beneficiaries', icon: Coins, path: '/donations?aidType=ZAKAT' },
+        { name: 'Monthly Donation Cards', hint: 'Issue & print bilingual monthly donation cards', icon: CreditCard, path: '/monthly-donation-cards' },
         { name: 'Donations Given (Disbursements)', hint: 'All financial aid disbursements', icon: Heart, path: '/donations' },
         { name: t('sidebar.donationReports', 'Donation Reports'), hint: t('sidebar.donationReportsHint', 'Monthly summaries'), icon: FileText, path: '/donation-reports' },
       ],
@@ -214,6 +215,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
         { name: t('sidebar.members', 'Community Members'), hint: t('sidebar.membersHint', 'Manage Jamia member registrations & records'), icon: Users, path: '/members' },
         { name: 'Membership Cards', hint: 'Generate & print CR80 membership ID cards', icon: CreditCard, path: '/membership-cards' },
         { name: 'Zakat Cards', hint: 'Issue & print Zakat disbursement cards', icon: CreditCard, path: '/zakat-cards' },
+        { name: 'Monthly Donation Cards', hint: 'Issue & print bilingual monthly donation cards', icon: CreditCard, path: '/monthly-donation-cards' },
       ],
     },
     {
