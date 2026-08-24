@@ -632,10 +632,10 @@ export const MonthlyDonationCards = () => {
         }}>
           <CreditCard size={40} color="#334155" style={{ margin: '0 auto 12px' }} />
           <div style={{ color: '#475569', fontSize: '15px', fontWeight: 600 }}>
-            {searchTerm ? 'No monthly donation cards match your search' : 'No monthly donation cards issued yet'}
+            {searchTerm ? 'No financial support cards match your search' : 'No monthly financial support cards issued yet'}
           </div>
           <div style={{ color: '#334155', fontSize: '12px', marginTop: '6px' }}>
-            {searchTerm ? 'Try a different search term' : 'Issue your first monthly donation card to get started'}
+            {searchTerm ? 'Try a different search term' : 'Issue your first financial support card to get started'}
           </div>
           {!searchTerm && (
             <button
@@ -649,7 +649,7 @@ export const MonthlyDonationCards = () => {
               }}
             >
               <Plus size={14} />
-              Issue Monthly Card
+              Issue Financial Support Card
             </button>
           )}
         </div>
