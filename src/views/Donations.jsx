@@ -365,6 +365,10 @@ export const Donations = () => {
   useEffect(() => {
     const q = searchParams.get('search') || '';
     if (q) setSearch(q);
+    const aidTypeParam = searchParams.get('aidType');
+    if (aidTypeParam) {
+      setFilters(f => ({ ...f, aidType: aidTypeParam }));
+    }
   }, [searchParams]);
 
   const setFilter = (key, value) => setFilters(f => ({ ...f, [key]: value, quickFilter: key === 'quickFilter' ? value : (key === 'dateFrom' || key === 'dateTo' ? '' : f.quickFilter) }));
