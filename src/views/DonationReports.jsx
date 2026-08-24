@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useDonationStore } from '../store/donationStore';
 import { useBeneficiaryStore } from '../store/beneficiaryStore';
-import { FileText, Download, Upload, LayoutGrid, Table as TableIcon, Heart, Calendar, CreditCard, Banknote, CheckCircle2, Clock, User, Phone, FileSpreadsheet, X, AlertTriangle } from 'lucide-react';
+import { FileText, Download, Upload, LayoutGrid, Table as TableIcon, Heart, Calendar, CreditCard, Banknote, CheckCircle2, Clock, User, Phone, FileSpreadsheet, X, AlertTriangle, Search } from 'lucide-react';
 import { pageActionsClass } from '../components/common/responsive';
 import { DONATION_TYPES, donationTypeDisplay } from '../constants/donationTypes';
 import { paymentMethodLabel } from '../constants/paymentMethods';
@@ -283,6 +283,7 @@ export const DonationReports = () => {
   const [filterType, setFilterType] = useState('All');
   const [filterBeneficiary, setFilterBeneficiary] = useState('All');
   const [filterMethod, setFilterMethod] = useState('All');
+  const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('cards');
   const [showImportModal, setShowImportModal] = useState(false);
 
@@ -304,6 +305,33 @@ export const DonationReports = () => {
 
   const filtered = useMemo(() => {
     return donations.filter(d => {
+      // Text search filter
+      if (searchTerm) {
+        const q = searchTerm.toLowerCase().trim();
+        const bName = getBeneficiaryName(d).toLowerCase();
+        const mobile = (d.donorMobile || d.beneficiary?.mobile || '').toLowerCase();
+        const cnic = (d.donorCnic || d.beneficiary?.cnic || d.cnic || '').toLowerCase();
+        const type = (d.donationType || '').toLowerCase();
+        const customType = (d.customDonationType || '').toLowerCase();
+        const method = (d.paymentMethod || '').toLowerCase();
+        const voucher = (d.voucherNo || d.receiptNo || d.id || '').toLowerCase();
+        const notes = (d.description || d.notes || '').toLowerCase();
+        const amt = String(d.amount || '');
+
+        const matches =
+          bName.includes(q) ||
+          mobile.includes(q) ||
+          cnic.includes(q) ||
+          type.includes(q) ||
+          customType.includes(q) ||
+          method.includes(q) ||
+          voucher.includes(q) ||
+          notes.includes(q) ||
+          amt.includes(q);
+
+        if (!matches) return false;
+      }
+
       // Basic filters
       if (filterType !== 'All' && d.donationType !== filterType) return false;
       if (filterBeneficiary !== 'All') {
@@ -323,7 +351,7 @@ export const DonationReports = () => {
 
       return true;
     });
-  }, [donations, filterType, filterBeneficiary, filterMethod, dateRange, beneficiaries]);
+  }, [donations, searchTerm, filterType, filterBeneficiary, filterMethod, dateRange, beneficiaries]);
 
   const totalAmount = filtered.reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
 
@@ -394,6 +422,28 @@ export const DonationReports = () => {
             <Download className="h-4 w-4" /> PDF
           </button>
         </div>
+      </div>
+
+      {/* Search Input Bar */}
+      <div className="relative w-full max-w-xl print:hidden">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-500" />
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          placeholder="Search by Beneficiary Name, CNIC, Mobile, Aid Type, Amount..."
+          className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-600/50 focus:ring-1 focus:ring-cyan-600/20 transition-all font-medium"
+        />
+        {searchTerm && (
+          <button
+            type="button"
+            onClick={() => setSearchTerm('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            title="Clear search"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 print:hidden">
