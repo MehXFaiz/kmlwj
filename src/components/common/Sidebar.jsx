@@ -41,6 +41,7 @@ import {
   CreditCard,
   Link2,
   Scale,
+  Coins,
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -180,7 +181,10 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
         { name: 'Add Income', hint: 'Log & manage extra income entries', icon: PlusCircle, path: '/add-income' },
         { name: 'Opening Balances', hint: 'Set up financial-year opening balances', icon: Scale, path: '/opening-balances', perms: ['POST_JOURNAL'] },
         { name: t('sidebar.hallBookings', 'Hall Bookings'), hint: t('sidebar.hallBookingsHint', 'Manage hall reservations'), icon: Calendar, path: '/hall-bookings' },
-        { name: 'Donations Received', hint: 'Charitable inflow receipts', icon: Heart, path: '/donations-received' },
+        { name: 'Monthly Donations', hint: 'Monthly donor contributions & receipts', icon: Calendar, path: '/monthly-donations' },
+        { name: 'General Donations', hint: 'General & other charitable receipts', icon: Gift, path: '/general-donations' },
+        { name: 'Zakat Collection', hint: 'Zakat receipts & donor ledger postings', icon: Coins, path: '/zakat' },
+        { name: 'Donations Received', hint: 'All charitable inflow receipts', icon: Heart, path: '/donations-received' },
         { name: 'Donors Directory', hint: 'Manage registered donors', icon: Users, path: '/donors' },
         { name: t('sidebar.membershipFee', 'Membership Fee'), hint: 'Manage member fees and renewals', icon: Building, path: '/membership-fees' },
         { name: t('sidebar.busBooking', 'Bus Booking'), hint: 'Manage bus reservations and trips', icon: Bus, path: '/bus-bookings' },
@@ -197,6 +201,9 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
       title: t('sidebar.welfare', 'Welfare'),
       items: [
         { name: t('sidebar.peopleWeHelp', 'People We Help'), hint: t('sidebar.peopleWeHelpHint', 'Beneficiary list'), icon: Users, path: '/beneficiaries' },
+        { name: 'Monthly Donations', hint: 'Monthly donor contributions & receipts', icon: Calendar, path: '/monthly-donations' },
+        { name: 'General Donations', hint: 'General & other charitable receipts', icon: Gift, path: '/general-donations' },
+        { name: 'Zakat Collection', hint: 'Zakat receipts & donor ledger postings', icon: Coins, path: '/zakat' },
         { name: 'Donations Given (Disbursements)', hint: 'Financial aid disbursements', icon: Heart, path: '/donations' },
         { name: t('sidebar.donationReports', 'Donation Reports'), hint: t('sidebar.donationReportsHint', 'Monthly summaries'), icon: FileText, path: '/donation-reports' },
       ],

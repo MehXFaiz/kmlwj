@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom';
 import { useDonationReceivedStore } from '../store/donationReceivedStore';
 import { useDonorStore } from '../store/donorStore';
 import { useCoaStore } from '../store/coaStore';
@@ -132,7 +132,9 @@ function QuickDonorModal({ isOpen, onClose, onCreated }) {
 export const DonationReceiptForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+  const [searchParams] = useSearchParams();
+  const typeParam = searchParams.get('type');
+
   const { donations, fetchDonations, addDonation, updateDonationStatus } = useDonationReceivedStore();
   const { donors, fetchDonors } = useDonorStore();
   const { flatAccounts, fetchAccountsList } = useCoaStore();
@@ -147,7 +149,7 @@ export const DonationReceiptForm = () => {
     fatherName: '',
     gham: '',
     address: '',
-    donationType: 'GENERAL_DONATION',
+    donationType: typeParam || 'GENERAL_DONATION',
     customDonationType: '',
     amount: '',
     paymentMethod: 'CASH',

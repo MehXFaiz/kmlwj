@@ -341,6 +341,8 @@ function App() {
             <Route path="/donors/new" element={<DonorForm />} />
             <Route path="/donors/edit/:id" element={<DonorForm />} />
             <Route path="/donations-received" element={<DonationsReceived />} />
+            <Route path="/monthly-donations" element={<DonationsReceived defaultType="MONTHLY" titleOverride="Monthly Donations (Inflow)" />} />
+            <Route path="/general-donations" element={<DonationsReceived defaultType="GENERAL_DONATION" titleOverride="General & Other Donations (Inflow)" />} />
             <Route path="/donations-received/new" element={<DonationReceiptForm />} />
             <Route path="/donations-received/edit/:id" element={<DonationReceiptForm />} />
             <Route path="/donation-reports" element={

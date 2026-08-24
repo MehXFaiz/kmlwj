@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useDonationReceivedStore } from '../store/donationReceivedStore';
 import { useDonorStore } from '../store/donorStore';
 import { useCoaStore } from '../store/coaStore';
@@ -74,10 +74,11 @@ function PrintReceiptModal({ donation, onClose }) {
   );
 }
 
-
-
-export const DonationsReceived = () => {
+export const DonationsReceived = ({ defaultType = null, titleOverride = null }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const typeFromQuery = searchParams.get('type') || defaultType;
+
   const { donations, stats, loading, fetchDonations, updateDonationStatus, deleteDonation, bulkDeleteDonations } = useDonationReceivedStore();
   const { canEditOrDelete } = useAuthStore();
   const canPostToLedger = useAuthStore((s) => s.canPostToLedger);
@@ -87,7 +88,7 @@ export const DonationsReceived = () => {
   const [selectedIds, setSelectedIds] = useState([]);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [filterType, setFilterType] = useState('');
+  const [filterType, setFilterType] = useState(typeFromQuery || '');
   const [filterMethod, setFilterMethod] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [search, setSearch] = useState('');
@@ -95,6 +96,12 @@ export const DonationsReceived = () => {
   useEffect(() => {
     fetchDonations();
   }, [fetchDonations]);
+
+  useEffect(() => {
+    if (typeFromQuery) {
+      setFilterType(typeFromQuery);
+    }
+  }, [typeFromQuery]);
 
 
 
@@ -223,15 +230,31 @@ export const DonationsReceived = () => {
     }
   };
 
+  const pageHeaderTitle = titleOverride || (
+    filterType === 'MONTHLY' ? 'Monthly Donations (Inflow)' :
+    filterType === 'GENERAL_DONATION' ? 'General & Other Donations (Inflow)' :
+    filterType === 'ZAKAT' ? 'Zakat Inflow Receipts' :
+    'Donations Received (Inflow)'
+  );
+
+  const pageHeaderDesc = (
+    filterType === 'MONTHLY' ? 'Track monthly recurring donor contributions, receipts, and ledger postings' :
+    filterType === 'GENERAL_DONATION' ? 'Track general charitable contributions, receipts, and ledger postings' :
+    filterType === 'ZAKAT' ? 'Track Zakat contributions and ledger postings' :
+    'Track charitable receipts, Zakat contributions, and automatic Chart of Accounts ledger postings'
+  );
+
+  const newReceiptPath = filterType ? `/donations-received/new?type=${filterType}` : '/donations-received/new';
+
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-300">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-5">
         <div>
           <h1 className="text-2xl font-black text-slate-100 tracking-tight flex items-center gap-2.5">
-            <ArrowDownLeft className="h-7 w-7 text-emerald-400" /> Donations Received (Inflow)
+            <ArrowDownLeft className="h-7 w-7 text-emerald-400" /> {pageHeaderTitle}
           </h1>
-          <p className="text-xs text-slate-400 mt-1">Track charitable receipts, Zakat contributions, and automatic Chart of Accounts ledger postings</p>
+          <p className="text-xs text-slate-400 mt-1">{pageHeaderDesc}</p>
         </div>
         <div className={pageActionsClass}>
           {selectedIds.length > 0 && (
@@ -245,7 +268,7 @@ export const DonationsReceived = () => {
             </button>
           )}
           <Link
-            to="/donations-received/new"
+            to={newReceiptPath}
             className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition-all shadow-lg shadow-emerald-600/25 active:scale-95 cursor-pointer"
           >
             <Plus className="h-4 w-4" />
