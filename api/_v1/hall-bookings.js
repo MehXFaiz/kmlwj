@@ -18,6 +18,21 @@ function timingsConflict(existingTimings, requestedTimings) {
   if (existingTimings === "Full Day" || requestedTimings === "Full Day") return true;
   return existingTimings === requestedTimings;
 }
+  function normalizeTiming(t) {
+    if (t == null) return null;
+    const s = String(t).trim().toLowerCase();
+    if (!s) return null;
+    if (s === 'full day' || s === 'fullday' || s === 'full-day') return 'full day';
+    return s;
+  }
+
+  function timingsConflict(existingTimings, requestedTimings) {
+    const e = normalizeTiming(existingTimings);
+    const r = normalizeTiming(requestedTimings);
+    if (!e || !r) return true;
+    if (e === 'full day' || r === 'full day') return true;
+    return e === r;
+  }
 const HALL_BOOKING_STATUSES = ["Pending", "Confirmed", "POSTED", "Cancelled", "Refunded"];
 const ALLOWED_STATUS_TRANSITIONS = {
   Pending: ["Pending", "Confirmed", "POSTED", "Cancelled", "Refunded"],
@@ -75,6 +90,9 @@ var hall_bookings_default = makeHandler(async (req, res) => {
           createdBy: true
         }
       });
+        if (typeof requestedTimings === 'undefined') {
+          return res.status(200).json({ available: true });
+        }
       const conflictBooking = sameDayBookings.find((b) => timingsConflict(b.timings, requestedTimings));
       if (conflictBooking) {
         const ipAddress = req.headers["x-forwarded-for"] || req.socket?.remoteAddress;

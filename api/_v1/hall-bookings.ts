@@ -22,10 +22,20 @@ function generateVoucherNumber() {
 // covering the whole day). Previously the server ignored timings entirely
 // and treated any second same-day booking as a conflict, rejecting
 // legitimate non-overlapping bookings the UI itself allows.
+function normalizeTiming(t: string | null | undefined): string | null {
+  if (t == null) return null;
+  const s = String(t).trim().toLowerCase();
+  if (!s) return null;
+  if (s === 'full day' || s === 'fullday' || s === 'full-day') return 'full day';
+  return s;
+}
+
 function timingsConflict(existingTimings: string | null, requestedTimings: string | null | undefined): boolean {
-  if (!requestedTimings || !existingTimings) return true;
-  if (existingTimings === 'Full Day' || requestedTimings === 'Full Day') return true;
-  return existingTimings === requestedTimings;
+  const e = normalizeTiming(existingTimings);
+  const r = normalizeTiming(requestedTimings);
+  if (!e || !r) return true; // unset timings treated as covering whole day
+  if (e === 'full day' || r === 'full day') return true;
+  return e === r;
 }
 
 // SQA fix: `status` is a free-text Prisma String column with no enum, and
@@ -113,6 +123,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           createdBy: true,
         },
       });
+
+      // If client didn't supply timings for the availability check, do not
+      // assume a full-day conflict — return available so the UI can prompt
+      // the user to choose a timing instead of blocking them.
+      if (typeof requestedTimings === 'undefined') {
+        return res.status(200).json({ available: true });
+      }
 
       const conflictBooking = sameDayBookings.find(b => timingsConflict(b.timings, requestedTimings));
 
@@ -474,7 +491,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         hallAccount: true,
       },
     });
-    const conflictBooking = sameDayBookings.find(b => timingsConflict(b.timings, timings));
+      // If the client didn't provide timings for the availability check, do not
+      // treat it as a full-day conflict — return available so the UI can prompt
+      // the user to select a timing rather than blocking them.
+      if (typeof timings === 'undefined') {
+        return res.status(200).json({ available: true });
+      }
+
+      const conflictBooking = sameDayBookings.find(b => timingsConflict(b.timings, timings));
 
     if (conflictBooking) {
       const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress;
