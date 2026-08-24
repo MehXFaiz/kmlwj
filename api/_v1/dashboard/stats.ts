@@ -127,7 +127,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     return {
       id: je.voucherNo || je.id.slice(0, 8),
       dbId: je.id,
-      date: je.postingDate ? new Date(je.postingDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '',
+      date: je.postingDate ? new Date(je.postingDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '',
       reference: je.reference || je.description || 'Journal Entry',
       description: je.description,
       status: je.status || 'Posted',
@@ -157,16 +157,19 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     where: { createdAt: { gte: startOfMonth }, isDeleted: false }
   });
 
-  // Total received amount for hall bookings in the requested period (or all-time if no dates)
-  const hbWhere: any = { isDeleted: false };
-  if (startDate) hbWhere.createdAt = { ...(hbWhere.createdAt || {}), gte: new Date(startDate) };
-  if (endDate) hbWhere.createdAt = { ...(hbWhere.createdAt || {}), lte: new Date(endDate) };
+  // Total received amount for hall bookings paid in cash in the requested period
+  const hbCashWhere: any = { isDeleted: false, receivedAmount: { gt: 0 } };
+  if (startDate) hbCashWhere.createdAt = { ...(hbCashWhere.createdAt || {}), gte: new Date(startDate) };
+  if (endDate) hbCashWhere.createdAt = { ...(hbCashWhere.createdAt || {}), lte: new Date(endDate) };
+  hbCashWhere.paymentMethod = 'CASH';
 
-  const hallBookingReceivedRaw = await prisma.hallBooking.aggregate({
+  const hallBookingReceivedCashRaw = await prisma.hallBooking.aggregate({
     _sum: { receivedAmount: true },
-    where: hbWhere
+    where: hbCashWhere
   });
-  const totalHallBookingReceived = Number(hallBookingReceivedRaw._sum.receivedAmount || 0);
+  const totalHallBookingReceivedCash = Number(hallBookingReceivedCashRaw._sum.receivedAmount || 0);
+
+  
 
   const outstandingInvoices = await prisma.invoice.count({
     where: { status: { in: ['ISSUED', 'OVERDUE'] }, isDeleted: false }
@@ -232,7 +235,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         baseEquity,
         totalRevenue,
         totalExpense,
-        hallBookingReceived: totalHallBookingReceived,
+        hallBookingReceivedCash: totalHallBookingReceivedCash,
         cashBalance,
         bankBalance,
         openingCashBalance,

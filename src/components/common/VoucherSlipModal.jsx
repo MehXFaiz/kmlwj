@@ -436,7 +436,7 @@ export const VoucherSlipModal = ({
   const isCollectionOrReceipt = /RECEIPT|COLLECTION|INCOME|REVENUE|MEMBERSHIP|FEE|DONATION RECEIVED/i.test(title);
   const computedPartyLabel = partyLabel || (isCollectionOrReceipt ? 'Paid By / Donor' : 'Paid To / Recipient');
 
-  const formattedDate = date ? new Date(date).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
+  const formattedDate = date ? new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const words = numberToWords(amount || 0);
   const paymentMethod = paymentMethodLabel(paymentMethodProp ?? debitCredit);
   const ledgerRows = (ledgerRowsProp && ledgerRowsProp.length > 0)

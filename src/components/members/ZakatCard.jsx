@@ -13,7 +13,7 @@ function fmtDate(val) {
   if (!val) return '—';
   const d = new Date(val);
   if (isNaN(d.getTime())) return val;
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).toUpperCase();
 }
 function fmtAmount(val) {
   if (!val && val !== 0) return '—';

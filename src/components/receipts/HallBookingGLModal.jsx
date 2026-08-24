@@ -286,7 +286,7 @@ export const HallBookingGLModal = ({ booking, onClose }) => {
                 {/* Footer */}
                 <div className="mt-6 pt-3 border-t border-slate-200 text-center">
                   <p className="text-[10px] text-slate-400 font-sans">
-                    Kutchi Muslim Loharwadha Welfare Jamaat Lyari Karachi &bull; General Ledger Voucher &bull; Printed on {new Date().toLocaleDateString('en-GB')}
+                    Kutchi Muslim Loharwadha Welfare Jamaat Lyari Karachi &bull; General Ledger Voucher &bull; Printed on {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                   </p>
                 </div>
 

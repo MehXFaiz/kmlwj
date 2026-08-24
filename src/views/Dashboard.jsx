@@ -591,7 +591,7 @@ export const Dashboard = () => {
     return (journals || []).slice(0, 6).map(je => ({
       id: je.voucherNo || je.id?.slice?.(0, 8) || je.id,
       dbId: je.dbId || je.id,
-      date: je.postingDate ? new Date(je.postingDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : je.date || '',
+      date: je.postingDate ? new Date(je.postingDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : je.date || '',
       reference: je.reference || je.description || 'Journal Entry',
       amount: je.lines ? je.lines.reduce((s, l) => s + (Number(l.debit) || 0), 0) : je.amount || 0,
       status: je.status || 'Posted'
@@ -643,9 +643,9 @@ export const Dashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 sm:gap-4">
         {[
           {
-            // Show Hall Booking Received as Total Income when available
+            // Show gross revenue (Total Income)
             title: t('dashboard.totalIncome', { year: fiscalYear || 2026 }),
-            value: (stats.hallBookingReceived != null && stats.hallBookingReceived !== 0) ? stats.hallBookingReceived : (stats.revenue || 0),
+            value: stats.revenue || 0,
             icon: TrendingUp,
             iconColor: 'text-emerald-400',
             iconBg: 'bg-emerald-500/10 border-emerald-500/20',
@@ -667,31 +667,25 @@ export const Dashboard = () => {
             accentBar: 'from-red-500 to-red-400',
             delay: 80,
           },
+          
           {
-            title: 'Hall Booking Received',
-            value: stats.hallBookingReceived || 0,
-            icon: Receipt,
-            iconColor: 'text-amber-400',
-            iconBg: 'bg-amber-500/10 border-amber-500/20',
-            trend: 'up',
-            trendLabel: 'Total Received',
-            trendColor: 'text-amber-400',
-            accentBar: 'from-amber-500 to-amber-400',
-            delay: 120,
-          },
-          {
-            // BUG FIX: Show actual cash balance (not clamped); overdraft shows as negative
-            title: t('dashboard.cashInHand'),
-            value: stats.cashBalance || 0,
-            icon: Banknote,
-            iconColor: (stats.cashBalance || 0) < 0 ? 'text-red-400' : 'text-blue-400',
-            iconBg: (stats.cashBalance || 0) < 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-blue-500/10 border-blue-500/20',
-            trend: (stats.cashBalance || 0) < 0 ? 'down' : 'neutral',
-            trendLabel: (stats.cashBalance || 0) < 0 ? 'Overdraft' : t('dashboard.availableCash'),
-            trendColor: (stats.cashBalance || 0) < 0 ? 'text-red-400' : 'text-slate-400',
-            accentBar: (stats.cashBalance || 0) < 0 ? 'from-red-500 to-red-400' : 'from-blue-500 to-blue-400',
-            delay: 160,
-          },
+              // Show cash-in-hand; if whole income was received in cash, display that
+              title: t('dashboard.cashInHand'),
+              value: (() => {
+                const cashReceived = stats.hallBookingReceivedCash || 0;
+                const revenue = stats.revenue || 0;
+                if (cashReceived > 0 && cashReceived === revenue) return cashReceived;
+                return stats.cashBalance || 0;
+              })(),
+              icon: Banknote,
+              iconColor: ((stats.hallBookingReceivedCash || 0) > 0 && (stats.hallBookingReceivedCash === (stats.revenue || 0))) ? 'text-emerald-400' : ((stats.cashBalance || 0) < 0 ? 'text-red-400' : 'text-blue-400'),
+              iconBg: ((stats.hallBookingReceivedCash || 0) > 0 && (stats.hallBookingReceivedCash === (stats.revenue || 0))) ? 'bg-emerald-500/10 border-emerald-500/20' : ((stats.cashBalance || 0) < 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-blue-500/10 border-blue-500/20'),
+              trend: (stats.cashBalance || 0) < 0 ? 'down' : 'neutral',
+              trendLabel: (stats.cashBalance || 0) < 0 ? 'Overdraft' : t('dashboard.availableCash'),
+              trendColor: (stats.cashBalance || 0) < 0 ? 'text-red-400' : 'text-slate-400',
+              accentBar: (stats.cashBalance || 0) < 0 ? 'from-red-500 to-red-400' : 'from-blue-500 to-blue-400',
+              delay: 160,
+            },
           {
             // BUG FIX: Show actual bank balance (not clamped); overdraft shows as negative
             title: t('dashboard.bankBalance'),

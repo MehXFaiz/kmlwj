@@ -193,7 +193,7 @@ export const AddIncomeRecords = () => {
 
     const exportData = records.map((r, idx) => ({
       'S.No': idx + 1,
-      'Date': r.date ? new Date(r.date).toLocaleDateString('en-GB') : '',
+      'Date': r.date ? new Date(r.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '',
       'Category': r.category?.name ? (r.subCategory ? `${r.category.name} - ${r.subCategory}` : r.category.name) : 'N/A',
       'Amount (PKR)': Number(r.amount) || 0,
       'Payment Method': r.paymentMethod || 'CASH',
@@ -610,7 +610,7 @@ export const AddIncomeRecords = () => {
                       {/* Card Footer */}
                       <div className="flex items-center justify-between pt-3 border-t border-slate-800/80">
                         <span className="text-[11px] font-mono text-slate-400">
-                          {rec.date ? new Date(rec.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                          {rec.date ? new Date(rec.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
                         </span>
 
                         <div className="flex items-center gap-1.5">
@@ -785,7 +785,7 @@ export const AddIncomeRecords = () => {
                           )}
                         </td>
                         <td className="py-3 px-4 font-mono text-slate-300 whitespace-nowrap">
-                          {rec.date ? new Date(rec.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                          {rec.date ? new Date(rec.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
                         </td>
                         <td className="py-3 px-4 font-semibold text-slate-200">
                           {rec.category?.name ? (rec.subCategory ? `${rec.category.name} - ${rec.subCategory}` : rec.category.name) : 'Unassigned'}
