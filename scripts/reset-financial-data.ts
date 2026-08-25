@@ -52,7 +52,21 @@ export async function resetFinancialData(client = prisma) {
     const jel = await tx.journalEntryLine.deleteMany({});
     const je = await tx.journalEntry.deleteMany({});
 
-    // 4. Reset Monetary Balances across all Chart of Accounts to 0
+    // 4. Operational Business Entities (Members, Beneficiaries, Donors, Customers)
+    const famRel = await tx.familyRelationship.deleteMany({});
+    const memb = await tx.member.deleteMany({});
+    const ben = await tx.beneficiary.deleteMany({});
+    const dnr = await tx.donor.deleteMany({});
+    const cust = await tx.customer.deleteMany({});
+    const refTokens = await tx.refreshToken.deleteMany({});
+    const auditLogs = await tx.auditLog.deleteMany({});
+
+    // 5. Reset Financial Years (ensure all FY are open)
+    await tx.financialYear.updateMany({
+      data: { isClosed: false, closedAt: null, closedById: null, reopenedAt: null, reopenedById: null, closingNotes: null }
+    });
+
+    // 6. Reset Monetary Balances across all Chart of Accounts to 0
     const accUpdate = await tx.account.updateMany({
       data: {
         initialBalance: 0,
@@ -60,12 +74,12 @@ export async function resetFinancialData(client = prisma) {
       },
     });
 
-    // 5. Reset RevenueHead amounts to 0
+    // 7. Reset RevenueHead amounts to 0
     const revHeadUpdate = await tx.revenueHead.updateMany({
       data: { amount: 0 },
     });
 
-    // 6. Reset Autoincrement Voucher Sequences
+    // 8. Reset Autoincrement Sequences
     try {
       await tx.$executeRawUnsafe('ALTER SEQUENCE "HallBooking_receiptNo_seq" RESTART WITH 1;');
     } catch (e) {}
@@ -73,7 +87,7 @@ export async function resetFinancialData(client = prisma) {
       await tx.$executeRawUnsafe('ALTER SEQUENCE "RevenueCollection_receiptNo_seq" RESTART WITH 1;');
     } catch (e) {}
 
-    // 7. Accounting Verification Guard
+    // 9. Accounting Verification Guard
     const remainingJEs = await tx.journalEntry.count({});
     if (remainingJEs > 0) {
       throw new Error(`Integrity error: ${remainingJEs} orphan journal entries remain post deletion.`);
@@ -109,6 +123,12 @@ export async function resetFinancialData(client = prisma) {
       obLineCount: obLine.count,
       jelCount: jel.count,
       jeCount: je.count,
+      memberCount: memb.count,
+      beneficiaryCount: ben.count,
+      donorCount: dnr.count,
+      customerCount: cust.count,
+      refreshTokenCount: refTokens.count,
+      auditLogCount: auditLogs.count,
       accCount: accUpdate.count,
       revHeadCount: revHeadUpdate.count,
       totalDebit,
@@ -131,6 +151,12 @@ export async function resetFinancialData(client = prisma) {
   console.log(`✅ Deleted ${results.pettyCashTxCount} Petty Cash Transactions`);
   console.log(`✅ Deleted ${results.pettyCashRecCount} Petty Cash Reconciliations`);
   console.log(`✅ Deleted ${results.obBatchCount} Opening Balance Batches (${results.obLineCount} lines)`);
+  console.log(`✅ Deleted ${results.memberCount} Members`);
+  console.log(`✅ Deleted ${results.beneficiaryCount} Beneficiaries`);
+  console.log(`✅ Deleted ${results.donorCount} Donors`);
+  console.log(`✅ Deleted ${results.customerCount} Customers`);
+  console.log(`✅ Deleted ${results.refreshTokenCount} Refresh Tokens`);
+  console.log(`✅ Deleted ${results.auditLogCount} Audit Logs`);
   console.log(`✅ Reset monetary balances to 0 across ${results.accCount} Chart of Accounts`);
   console.log(`✅ Reset Revenue Head amounts across ${results.revHeadCount} heads`);
   console.log(`✅ Accounting Trial Balance: Total Debits = PKR ${results.totalDebit}, Total Credits = PKR ${results.totalCredit} (BALANCED)`);
