@@ -643,9 +643,9 @@ export const Dashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 sm:gap-4">
         {[
           {
-            // Show gross revenue (Total Income) including whole hall-booking amount
+            // Total Income (Gross Revenue from General Ledger)
             title: t('dashboard.totalIncome', { year: fiscalYear || 2026 }),
-            value: (Number(stats.revenue || 0) + Number(stats.hallBookingTotal || 0)),
+            value: stats.revenue || 0,
             icon: TrendingUp,
             iconColor: 'text-emerald-400',
             iconBg: 'bg-emerald-500/10 border-emerald-500/20',
