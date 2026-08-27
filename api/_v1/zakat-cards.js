@@ -49,14 +49,16 @@ async function resolveZakatExpenseAccount(tx) {
 var zakat_cards_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
-  if (!await enforceRestrictedRolePolicy(req, res)) return;
+  if (!await enforceRestrictedRolePolicy(req, res, method === "DELETE" ? ["zakatCards.delete", PERMS.DELETE_ZAKAT_CARD] : ["zakatCards.update", PERMS.UPDATE_ZAKAT_CARD])) return;
   const method = req.method?.toUpperCase() ?? "";
   if (method === "GET") {
-    if (!await verifyPermission(req, res, PERMS.VIEW_ZAKAT_CARDS)) return;
+    if (!await verifyPermission(req, res, ["zakatCards.view", PERMS.VIEW_ZAKAT_CARDS])) return;
   } else if (method === "POST") {
-    if (!await verifyPermission(req, res, PERMS.CREATE_ZAKAT_CARD)) return;
+    if (!await verifyPermission(req, res, ["zakatCards.create", PERMS.CREATE_ZAKAT_CARD])) return;
+  } else if (method === "DELETE") {
+    if (!await verifyPermission(req, res, ["zakatCards.delete", PERMS.DELETE_ZAKAT_CARD])) return;
   } else {
-    if (!await verifyPermission(req, res, PERMS.VIEW_ZAKAT_CARDS)) return;
+    if (!await verifyPermission(req, res, ["zakatCards.update", PERMS.UPDATE_ZAKAT_CARD])) return;
   }
   const id = req.query.id;
   const action = req.query.action || req.body?.action;
