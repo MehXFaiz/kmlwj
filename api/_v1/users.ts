@@ -26,9 +26,16 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const id = req.query.id as string;
   const action = (req.query.action || req.body?.action) as string;
 
-  if (!await verifyPermission(req, res, PERMS.MANAGE_USERS)) return;
-  const userPerms = await loadPermissions(req);
-  const actorHoldsSystemSettings = userPerms.has(PERMS.SYSTEM_SETTINGS);
+  if (method === 'GET') {
+    if (!await verifyPermission(req, res, ['users.view', PERMS.MANAGE_USERS])) return;
+  } else if (method === 'POST') {
+    if (!await verifyPermission(req, res, ['users.create', PERMS.MANAGE_USERS])) return;
+  } else if (method === 'DELETE') {
+    if (!await verifyPermission(req, res, ['users.delete', PERMS.MANAGE_USERS])) return;
+  } else {
+    if (!await verifyPermission(req, res, ['users.update', PERMS.MANAGE_USERS])) return;
+  }
+
 
   if (method === 'GET') {
     const dbUsers = await prisma.user.findMany({
