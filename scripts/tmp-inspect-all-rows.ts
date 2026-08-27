@@ -21,47 +21,49 @@ const pool = new pg.Pool({
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
 async function checkAll() {
-  console.log('=== USERS ===');
-  console.log(await prisma.user.findMany({ select: { id: true, email: true, fullName: true, role: { select: { name: true } } } }));
+  console.log('=== CURRENT ACTIVE JOURNAL ENTRIES ===');
+  const allPostedJEs = await prisma.journalEntry.findMany({
+    where: { status: 'Posted' },
+    include: { lines: { include: { account: true } } }
+  });
+  console.log(`Total Posted JEs (including isDeleted: true): ${allPostedJEs.length}`);
+  
+  const activePostedJEs = allPostedJEs.filter(j => !j.isDeleted);
+  console.log(`Active Posted JEs (isDeleted: false): ${activePostedJEs.length}`);
 
-  console.log('=== DONORS ===');
-  console.log(await prisma.donor.findMany({ select: { id: true, donorCode: true, fullName: true, cnic: true, mobile: true } }));
+  let totalDebitActive = 0;
+  let totalCreditActive = 0;
+  for (const j of activePostedJEs) {
+    for (const l of j.lines) {
+      totalDebitActive += Number(l.debit);
+      totalCreditActive += Number(l.credit);
+    }
+  }
+  console.log(`Active Posted JEs: Total Debit = ${totalDebitActive}, Total Credit = ${totalCreditActive}, Balanced = ${totalDebitActive === totalCreditActive}`);
 
-  console.log('=== MEMBERS ===');
-  console.log(await prisma.member.findMany({ select: { id: true, memberNo: true, fullName: true, cnic: true, mobile: true } }));
+  // Check legitimate JEs (HB-4 through HB-17)
+  const legitJEs = allPostedJEs.filter(j => j.reference && j.reference.startsWith('HB-') && parseInt(j.reference.replace('HB-', '')) >= 4);
+  console.log(`Legitimate User JEs (HB-4 to HB-17): count = ${legitJEs.length}`);
+  let totalDebitLegit = 0;
+  let totalCreditLegit = 0;
+  const legitAccountBalances = {};
+  for (const j of legitJEs) {
+    for (const l of j.lines) {
+      totalDebitLegit += Number(l.debit);
+      totalCreditLegit += Number(l.credit);
+      const acc = `${l.account?.glCode} (${l.account?.accountName})`;
+      legitAccountBalances[acc] = (legitAccountBalances[acc] || 0) + Number(l.debit) - Number(l.credit);
+    }
+  }
+  console.log(`Legitimate JEs: Total Debit = ${totalDebitLegit}, Total Credit = ${totalCreditLegit}, Balanced = ${totalDebitLegit === totalCreditLegit}`);
+  console.log('Legitimate Net Balances per Account (Debit - Credit):', JSON.stringify(legitAccountBalances, null, 2));
 
-  console.log('=== BENEFICIARIES ===');
-  console.log(await prisma.beneficiary.findMany({ select: { id: true, name: true, cnic: true, mobile: true } }));
-
-  console.log('=== CUSTOMERS ===');
-  console.log(await prisma.customer.findMany({ select: { id: true, name: true, phone: true } }));
-
-  console.log('=== DONATIONS RECEIVED ===');
-  console.log(await prisma.donationReceived.findMany({ select: { id: true, receiptNo: true, donationType: true, amount: true, donorId: true } }));
-
-  console.log('=== DONATIONS GIVEN ===');
-  console.log(await prisma.donation.findMany({ select: { id: true, donationType: true, amount: true, beneficiaryId: true } }));
-
-  console.log('=== HALL BOOKINGS ===');
-  console.log(await prisma.hallBooking.findMany({ select: { id: true, receiptNo: true, bookerName: true, netAmount: true } }));
-
-  console.log('=== REVENUE COLLECTIONS ===');
-  console.log(await prisma.revenueCollection.findMany({ select: { id: true, receiptNo: true, title: true, category: true, amount: true } }));
-
-  console.log('=== ZAKAT CARDS ===');
-  console.log(await prisma.zakatCard.findMany({ select: { id: true, cardNumber: true, zakatAmount: true } }));
-
-  console.log('=== INVOICES ===');
-  console.log(await prisma.invoice.findMany({ select: { id: true, invoiceNo: true, total: true } }));
-
-  console.log('=== SIMPLE INCOME ===');
-  console.log(await prisma.simpleIncome.findMany({ select: { id: true, amount: true, description: true } }));
-
-  console.log('=== SIMPLE EXPENSE ===');
-  console.log(await prisma.simpleExpense.findMany({ select: { id: true, amount: true, description: true } }));
-
-  console.log('=== JOURNAL ENTRIES ===');
-  console.log(await prisma.journalEntry.findMany({ select: { id: true, voucherNo: true, voucherType: true, reference: true } }));
+  // Current Account Table Balances
+  const accountsWithBalance = await prisma.account.findMany({
+    where: { OR: [{ currentBalance: { not: 0 } }, { initialBalance: { not: 0 } }] },
+    select: { glCode: true, accountName: true, initialBalance: true, currentBalance: true }
+  });
+  console.log('Accounts with non-zero balance currently in DB:', JSON.stringify(accountsWithBalance, null, 2));
 }
 
 checkAll()
