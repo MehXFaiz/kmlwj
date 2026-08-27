@@ -194,27 +194,12 @@ const ProtectedRoutesWrapper = () => {
   );
 };
 
-const PermissionGuard = ({ requiredPerms, children }) => {
-  const user = useAuthStore((state) => state.user);
-  if (!user) return <Navigate to="/login" replace />;
-  if (user.role === 'Super Admin') return children;
+import { RouteGuard } from './components/common/RouteGuard';
 
-  const hasPerm = requiredPerms.some((p) => user.permissions?.includes(p));
-  if (!hasPerm) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[50vh] text-center px-4">
-        <div className="w-16 h-16 rounded-full bg-red-950/40 border border-red-900/40 flex items-center justify-center mb-4">
-          <span className="text-3xl">🔒</span>
-        </div>
-        <h3 className="text-base font-bold text-slate-200">You don't have access to this page</h3>
-        <p className="text-sm text-slate-500 mt-2 max-w-xs">
-          Please contact your administrator to request access.
-        </p>
-      </div>
-    );
-  }
-  return children;
+const PermissionGuard = ({ requiredPerms, module, action = 'view', children }) => {
+  return <RouteGuard module={module} action={action} requiredPerms={requiredPerms}>{children}</RouteGuard>;
 };
+
 
 function App() {
   const [splashDone, setSplashDone] = useState(() => typeof window !== 'undefined' && !!window.navigator.webdriver);
@@ -275,151 +260,364 @@ function App() {
           <Route element={<ProtectedRoutesWrapper />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/coa" element={
-              <PermissionGuard requiredPerms={['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT', 'LOCK_ACCOUNT']}>
+              <RouteGuard module="coa">
                 <ChartOfAccounts />
-              </PermissionGuard>
+              </RouteGuard>
             } />
             <Route path="/revenue-heads" element={
-              <PermissionGuard requiredPerms={['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT']}>
+              <RouteGuard module="revenue">
                 <RevenueHeads />
-              </PermissionGuard>
+              </RouteGuard>
             } />
             <Route path="/income-category-mapping" element={
-              <PermissionGuard requiredPerms={['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT']}>
+              <RouteGuard module="revenue">
                 <IncomeCategoryMapping />
-              </PermissionGuard>
+              </RouteGuard>
             } />
             <Route path="/expense-heads" element={
-              <PermissionGuard requiredPerms={['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT']}>
+              <RouteGuard module="expenses">
                 <ExpenseHeads />
-              </PermissionGuard>
+              </RouteGuard>
             } />
             <Route path="/reserved" element={
-              <PermissionGuard requiredPerms={['MANAGE_RESERVED_CODES']}>
+              <RouteGuard module="settings">
                 <ReservedCodes />
-              </PermissionGuard>
+              </RouteGuard>
             } />
             <Route path="/reports" element={
-              <PermissionGuard requiredPerms={['VIEW_REPORTS']}>
+              <RouteGuard module="reports">
                 <Reports />
-              </PermissionGuard>
+              </RouteGuard>
             } />
             <Route path="/financial-year-closing" element={
-              <PermissionGuard requiredPerms={['VIEW_REPORTS']}>
+              <RouteGuard module="reports">
                 <YearEndClosing />
-              </PermissionGuard>
+              </RouteGuard>
             } />
-            <Route path="/add-income" element={<AddIncome />} />
-            <Route path="/add-income/new" element={<AddIncome />} />
-            <Route path="/add-income/edit/:id" element={<AddIncome />} />
-            <Route path="/add-income/records" element={<AddIncome />} />
+            <Route path="/add-income" element={
+              <RouteGuard module="revenue">
+                <AddIncome />
+              </RouteGuard>
+            } />
+            <Route path="/add-income/new" element={
+              <RouteGuard module="revenue" action="create">
+                <AddIncome />
+              </RouteGuard>
+            } />
+            <Route path="/add-income/edit/:id" element={
+              <RouteGuard module="revenue" action="update">
+                <AddIncome />
+              </RouteGuard>
+            } />
+            <Route path="/add-income/records" element={
+              <RouteGuard module="revenue">
+                <AddIncome />
+              </RouteGuard>
+            } />
             <Route path="/income" element={
-              <PermissionGuard requiredPerms={['RECORD_INCOME', 'CREATE_ACCOUNT']}>
+              <RouteGuard module="revenue">
                 <Income />
-              </PermissionGuard>
+              </RouteGuard>
             } />
             <Route path="/expenses" element={
-              <PermissionGuard requiredPerms={['RECORD_EXPENSE', 'CREATE_ACCOUNT']}>
+              <RouteGuard module="expenses">
                 <Expenses />
-              </PermissionGuard>
+              </RouteGuard>
             } />
-            <Route path="/petty-cash" element={<PettyCash />} />
+            <Route path="/petty-cash" element={
+              <RouteGuard module="expenses">
+                <PettyCash />
+              </RouteGuard>
+            } />
             <Route path="/trial-balance-sheet" element={
-              <PermissionGuard requiredPerms={['VIEW_REPORTS']}>
+              <RouteGuard module="reports">
                 <TrialBalanceSheet />
-              </PermissionGuard>
+              </RouteGuard>
             } />
-            <Route path="/hall-bookings" element={<HallBookings />} />
-            <Route path="/hall-bookings/new" element={<HallBookingForm />} />
-            <Route path="/hall-bookings/edit/:id" element={<HallBookingForm />} />
-            <Route path="/beneficiaries" element={<Beneficiaries />} />
-            <Route path="/beneficiaries/new" element={<BeneficiaryForm />} />
-            <Route path="/beneficiaries/edit/:id" element={<BeneficiaryForm />} />
-            <Route path="/donations" element={<Donations />} />
-            <Route path="/donations/new" element={<DonationForm />} />
-            <Route path="/donations/edit/:id" element={<DonationForm />} />
-            <Route path="/donors" element={<Donors />} />
-            <Route path="/donors/new" element={<DonorForm />} />
-            <Route path="/donors/edit/:id" element={<DonorForm />} />
-            <Route path="/donations-received" element={<DonationsReceived />} />
-            <Route path="/monthly-donations" element={<DonationsReceived defaultType="MONTHLY" titleOverride="Monthly Donations (Inflow)" />} />
-            <Route path="/general-donations" element={<DonationsReceived defaultType="GENERAL_DONATION" titleOverride="General & Other Donations (Inflow)" />} />
-            <Route path="/donations-received/new" element={<DonationReceiptForm />} />
-            <Route path="/donations-received/edit/:id" element={<DonationReceiptForm />} />
+            <Route path="/hall-bookings" element={
+              <RouteGuard module="hallBookings">
+                <HallBookings />
+              </RouteGuard>
+            } />
+            <Route path="/hall-bookings/new" element={
+              <RouteGuard module="hallBookings" action="create">
+                <HallBookingForm />
+              </RouteGuard>
+            } />
+            <Route path="/hall-bookings/edit/:id" element={
+              <RouteGuard module="hallBookings" action="update">
+                <HallBookingForm />
+              </RouteGuard>
+            } />
+            <Route path="/beneficiaries" element={
+              <RouteGuard module="beneficiaries">
+                <Beneficiaries />
+              </RouteGuard>
+            } />
+            <Route path="/beneficiaries/new" element={
+              <RouteGuard module="beneficiaries" action="create">
+                <BeneficiaryForm />
+              </RouteGuard>
+            } />
+            <Route path="/beneficiaries/edit/:id" element={
+              <RouteGuard module="beneficiaries" action="update">
+                <BeneficiaryForm />
+              </RouteGuard>
+            } />
+            <Route path="/donations" element={
+              <RouteGuard module="donations">
+                <Donations />
+              </RouteGuard>
+            } />
+            <Route path="/donations/new" element={
+              <RouteGuard module="donations" action="create">
+                <DonationForm />
+              </RouteGuard>
+            } />
+            <Route path="/donations/edit/:id" element={
+              <RouteGuard module="donations" action="update">
+                <DonationForm />
+              </RouteGuard>
+            } />
+            <Route path="/donors" element={
+              <RouteGuard module="donors">
+                <Donors />
+              </RouteGuard>
+            } />
+            <Route path="/donors/new" element={
+              <RouteGuard module="donors" action="create">
+                <DonorForm />
+              </RouteGuard>
+            } />
+            <Route path="/donors/edit/:id" element={
+              <RouteGuard module="donors" action="update">
+                <DonorForm />
+              </RouteGuard>
+            } />
+            <Route path="/donations-received" element={
+              <RouteGuard module="revenueCollections">
+                <DonationsReceived />
+              </RouteGuard>
+            } />
+            <Route path="/monthly-donations" element={
+              <RouteGuard module="revenueCollections">
+                <DonationsReceived defaultType="MONTHLY" titleOverride="Monthly Donations (Inflow)" />
+              </RouteGuard>
+            } />
+            <Route path="/general-donations" element={
+              <RouteGuard module="revenueCollections">
+                <DonationsReceived defaultType="GENERAL_DONATION" titleOverride="General & Other Donations (Inflow)" />
+              </RouteGuard>
+            } />
+            <Route path="/donations-received/new" element={
+              <RouteGuard module="revenueCollections" action="create">
+                <DonationReceiptForm />
+              </RouteGuard>
+            } />
+            <Route path="/donations-received/edit/:id" element={
+              <RouteGuard module="revenueCollections" action="update">
+                <DonationReceiptForm />
+              </RouteGuard>
+            } />
             <Route path="/donation-reports" element={
-              <PermissionGuard requiredPerms={['VIEW_REPORTS']}>
+              <RouteGuard module="reports">
                 <DonationReports />
-              </PermissionGuard>
+              </RouteGuard>
             } />
-            <Route path="/membership-fees" element={<MembershipFeeSection />} />
-            <Route path="/membership-fees/new" element={<SpecializedRevenueForm category="Membership Fee" title="Membership Fee Collection" desc="Manage member fee contributions and annual renewals" titleLabel="Member Name" subTitleLabel="Membership ID / CNIC" dateLabel="Fee Date" showRate={true} rateLabel="Fee Rate" backPath="/membership-fees" />} />
-            <Route path="/membership-fees/edit/:id" element={<SpecializedRevenueForm category="Membership Fee" title="Membership Fee Collection" desc="Manage member fee contributions and annual renewals" titleLabel="Member Name" subTitleLabel="Membership ID / CNIC" dateLabel="Fee Date" showRate={true} rateLabel="Fee Rate" backPath="/membership-fees" />} />
-            <Route path="/bus-bookings" element={<BusBookingSection />} />
-            <Route path="/bus-bookings/new" element={<SpecializedRevenueForm category="Bus Booking" title="Bus Booking Receipt" desc="Manage Jamia bus reservations, trip schedules, and ledger receipts" titleLabel="Booker Name" subTitleLabel="Bus / Vehicle Number" dateLabel="Trip Date" showDest={true} destLabel="Trip Destination" backPath="/bus-bookings" />} />
-            <Route path="/bus-bookings/edit/:id" element={<SpecializedRevenueForm category="Bus Booking" title="Bus Booking Receipt" desc="Manage Jamia bus reservations, trip schedules, and ledger receipts" titleLabel="Booker Name" subTitleLabel="Bus / Vehicle Number" dateLabel="Trip Date" showDest={true} destLabel="Trip Destination" backPath="/bus-bookings" />} />
-            <Route path="/zakat" element={<ZakatSection />} />
-            <Route path="/zakat/new" element={<SpecializedRevenueForm category="Zakat" title="Zakat Collection" desc="Manage Zakat contributions, donor records, and ledger postings" titleLabel="Donor Name" subTitleLabel="CNIC / ID" dateLabel="Collection Date" backPath="/zakat" />} />
-            <Route path="/zakat/edit/:id" element={<SpecializedRevenueForm category="Zakat" title="Zakat Collection" desc="Manage Zakat contributions, donor records, and ledger postings" titleLabel="Donor Name" subTitleLabel="CNIC / ID" dateLabel="Collection Date" backPath="/zakat" />} />
-            <Route path="/fitra" element={<FitraSection />} />
-            <Route path="/fitra/new" element={<SpecializedRevenueForm category="Fitra" title="Fitra Collection" desc="Manage Eid Fitra collections and head-counts" titleLabel="Donor Name" subTitleLabel={null} dateLabel="Collection Date" showQty={true} qtyLabel="Head Count" showRate={true} rateLabel="Rate per Head" backPath="/fitra" />} />
-            <Route path="/fitra/edit/:id" element={<SpecializedRevenueForm category="Fitra" title="Fitra Collection" desc="Manage Eid Fitra collections and head-counts" titleLabel="Donor Name" subTitleLabel={null} dateLabel="Collection Date" showQty={true} qtyLabel="Head Count" showRate={true} rateLabel="Rate per Head" backPath="/fitra" />} />
-            <Route path="/customers" element={<Customers />} />
-            <Route path="/customers/new" element={<CustomerForm />} />
-            <Route path="/customers/edit/:id" element={<CustomerForm />} />
-            <Route path="/members" element={<Members />} />
-            <Route path="/members/new" element={<MemberForm />} />
-            <Route path="/members/edit/:id" element={<MemberForm />} />
-            <Route path="/members/:id" element={<MemberDetails />} />
-            <Route path="/membership-cards" element={<MembershipCards />} />
-            <Route path="/zakat-cards" element={<ZakatCards />} />
-            <Route path="/monthly-donation-cards" element={<MonthlyDonationCards />} />
+            <Route path="/membership-fees" element={
+              <RouteGuard module="revenueCollections">
+                <MembershipFeeSection />
+              </RouteGuard>
+            } />
+            <Route path="/membership-fees/new" element={
+              <RouteGuard module="revenueCollections" action="create">
+                <SpecializedRevenueForm category="Membership Fee" title="Membership Fee Collection" desc="Manage member fee contributions and annual renewals" titleLabel="Member Name" subTitleLabel="Membership ID / CNIC" dateLabel="Fee Date" showRate={true} rateLabel="Fee Rate" backPath="/membership-fees" />
+              </RouteGuard>
+            } />
+            <Route path="/membership-fees/edit/:id" element={
+              <RouteGuard module="revenueCollections" action="update">
+                <SpecializedRevenueForm category="Membership Fee" title="Membership Fee Collection" desc="Manage member fee contributions and annual renewals" titleLabel="Member Name" subTitleLabel="Membership ID / CNIC" dateLabel="Fee Date" showRate={true} rateLabel="Fee Rate" backPath="/membership-fees" />
+              </RouteGuard>
+            } />
+            <Route path="/bus-bookings" element={
+              <RouteGuard module="revenueCollections">
+                <BusBookingSection />
+              </RouteGuard>
+            } />
+            <Route path="/bus-bookings/new" element={
+              <RouteGuard module="revenueCollections" action="create">
+                <SpecializedRevenueForm category="Bus Booking" title="Bus Booking Receipt" desc="Manage Jamia bus reservations, trip schedules, and ledger receipts" titleLabel="Booker Name" subTitleLabel="Bus / Vehicle Number" dateLabel="Trip Date" showDest={true} destLabel="Trip Destination" backPath="/bus-bookings" />
+              </RouteGuard>
+            } />
+            <Route path="/bus-bookings/edit/:id" element={
+              <RouteGuard module="revenueCollections" action="update">
+                <SpecializedRevenueForm category="Bus Booking" title="Bus Booking Receipt" desc="Manage Jamia bus reservations, trip schedules, and ledger receipts" titleLabel="Booker Name" subTitleLabel="Bus / Vehicle Number" dateLabel="Trip Date" showDest={true} destLabel="Trip Destination" backPath="/bus-bookings" />
+              </RouteGuard>
+            } />
+            <Route path="/zakat" element={
+              <RouteGuard module="zakat">
+                <ZakatSection />
+              </RouteGuard>
+            } />
+            <Route path="/zakat/new" element={
+              <RouteGuard module="zakat" action="create">
+                <SpecializedRevenueForm category="Zakat" title="Zakat Collection" desc="Manage Zakat contributions, donor records, and ledger postings" titleLabel="Donor Name" subTitleLabel="CNIC / ID" dateLabel="Collection Date" backPath="/zakat" />
+              </RouteGuard>
+            } />
+            <Route path="/zakat/edit/:id" element={
+              <RouteGuard module="zakat" action="update">
+                <SpecializedRevenueForm category="Zakat" title="Zakat Collection" desc="Manage Zakat contributions, donor records, and ledger postings" titleLabel="Donor Name" subTitleLabel="CNIC / ID" dateLabel="Collection Date" backPath="/zakat" />
+              </RouteGuard>
+            } />
+            <Route path="/fitra" element={
+              <RouteGuard module="revenueCollections">
+                <FitraSection />
+              </RouteGuard>
+            } />
+            <Route path="/fitra/new" element={
+              <RouteGuard module="revenueCollections" action="create">
+                <SpecializedRevenueForm category="Fitra" title="Fitra Collection" desc="Manage Eid Fitra collections and head-counts" titleLabel="Donor Name" subTitleLabel={null} dateLabel="Collection Date" showQty={true} qtyLabel="Head Count" showRate={true} rateLabel="Rate per Head" backPath="/fitra" />
+              </RouteGuard>
+            } />
+            <Route path="/fitra/edit/:id" element={
+              <RouteGuard module="revenueCollections" action="update">
+                <SpecializedRevenueForm category="Fitra" title="Fitra Collection" desc="Manage Eid Fitra collections and head-counts" titleLabel="Donor Name" subTitleLabel={null} dateLabel="Collection Date" showQty={true} qtyLabel="Head Count" showRate={true} rateLabel="Rate per Head" backPath="/fitra" />
+              </RouteGuard>
+            } />
+            <Route path="/customers" element={
+              <RouteGuard module="customers">
+                <Customers />
+              </RouteGuard>
+            } />
+            <Route path="/customers/new" element={
+              <RouteGuard module="customers" action="create">
+                <CustomerForm />
+              </RouteGuard>
+            } />
+            <Route path="/customers/edit/:id" element={
+              <RouteGuard module="customers" action="update">
+                <CustomerForm />
+              </RouteGuard>
+            } />
+            <Route path="/members" element={
+              <RouteGuard module="members">
+                <Members />
+              </RouteGuard>
+            } />
+            <Route path="/members/new" element={
+              <RouteGuard module="members" action="create">
+                <MemberForm />
+              </RouteGuard>
+            } />
+            <Route path="/members/edit/:id" element={
+              <RouteGuard module="members" action="update">
+                <MemberForm />
+              </RouteGuard>
+            } />
+            <Route path="/members/:id" element={
+              <RouteGuard module="members">
+                <MemberDetails />
+              </RouteGuard>
+            } />
+            <Route path="/membership-cards" element={
+              <RouteGuard module="membership">
+                <MembershipCards />
+              </RouteGuard>
+            } />
+            <Route path="/zakat-cards" element={
+              <RouteGuard module="zakatCards">
+                <ZakatCards />
+              </RouteGuard>
+            } />
+            <Route path="/monthly-donation-cards" element={
+              <RouteGuard module="zakatCards">
+                <MonthlyDonationCards />
+              </RouteGuard>
+            } />
             <Route path="/invoices" element={
-              <PermissionGuard requiredPerms={['VIEW_INVOICES']}>
+              <RouteGuard module="invoices">
                 <Invoices />
-              </PermissionGuard>
+              </RouteGuard>
             } />
-            <Route path="/invoices/new" element={<InvoiceForm />} />
-            <Route path="/invoices/edit/:id" element={<InvoiceForm />} />
-            <Route path="/invoices/:id" element={<InvoiceDetail />} />
-            <Route path="/bank-vouchers" element={<BankVouchers />} />
+            <Route path="/invoices/new" element={
+              <RouteGuard module="invoices" action="create">
+                <InvoiceForm />
+              </RouteGuard>
+            } />
+            <Route path="/invoices/edit/:id" element={
+              <RouteGuard module="invoices" action="update">
+                <InvoiceForm />
+              </RouteGuard>
+            } />
+            <Route path="/invoices/:id" element={
+              <RouteGuard module="invoices">
+                <InvoiceDetail />
+              </RouteGuard>
+            } />
+            <Route path="/bank-vouchers" element={
+              <RouteGuard module="expenses">
+                <BankVouchers />
+              </RouteGuard>
+            } />
             <Route path="/opening-balances" element={
-              <PermissionGuard requiredPerms={['POST_JOURNAL']}>
+              <RouteGuard module="openingBalances">
                 <OpeningBalances />
-              </PermissionGuard>
+              </RouteGuard>
             } />
-            <Route path="/bank-vouchers/new" element={<BankVoucherForm />} />
-            <Route path="/bank-vouchers/revenue/new" element={<RevenueEntryForm />} />
-            <Route path="/bank-vouchers/expense/new" element={<ExpenseEntryForm />} />
-            <Route path="/bank-vouchers/transfer/new" element={<TransferForm />} />
+            <Route path="/bank-vouchers/new" element={
+              <RouteGuard module="expenses" action="create">
+                <BankVoucherForm />
+              </RouteGuard>
+            } />
+            <Route path="/bank-vouchers/revenue/new" element={
+              <RouteGuard module="revenue" action="create">
+                <RevenueEntryForm />
+              </RouteGuard>
+            } />
+            <Route path="/bank-vouchers/expense/new" element={
+              <RouteGuard module="expenses" action="create">
+                <ExpenseEntryForm />
+              </RouteGuard>
+            } />
+            <Route path="/bank-vouchers/transfer/new" element={
+              <RouteGuard module="expenses" action="create">
+                <TransferForm />
+              </RouteGuard>
+            } />
             <Route path="/users-roles" element={
-              <PermissionGuard requiredPerms={['MANAGE_USERS', 'MANAGE_ROLES']}>
+              <RouteGuard module="roles">
                 <UsersRoles />
-              </PermissionGuard>
+              </RouteGuard>
             } />
             <Route path="/ledger" element={
-              <PermissionGuard requiredPerms={['VIEW_REPORTS']}>
+              <RouteGuard module="generalLedger">
                 <GeneralLedger />
-              </PermissionGuard>
+              </RouteGuard>
             } />
             <Route path="/journals" element={
-              <PermissionGuard requiredPerms={['POST_JOURNAL']}>
+              <RouteGuard module="journalEntries">
                 <JournalEntries />
-              </PermissionGuard>
+              </RouteGuard>
             } />
             <Route path="/audit" element={
-              <PermissionGuard requiredPerms={['VIEW_REPORTS', 'MANAGE_USERS']}>
+              <RouteGuard module="audit">
                 <AuditTrail />
-              </PermissionGuard>
+              </RouteGuard>
             } />
             <Route path="/accounting-health" element={
-              <PermissionGuard requiredPerms={['VIEW_REPORTS', 'MANAGE_USERS']}>
+              <RouteGuard module="audit">
                 <AccountingHealthCheck />
-              </PermissionGuard>
+              </RouteGuard>
             } />
 
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/settings" element={
+              <RouteGuard module="settings">
+                <Settings />
+              </RouteGuard>
+            } />
             <Route path="/profile" element={<Profile />} />
             <Route path="/account" element={<MyAccount />} />
+
             <Route path="*" element={
               <div className="flex flex-col items-center justify-center h-[50vh] text-center px-4">
                 <div className="w-16 h-16 rounded-full bg-slate-800/60 border border-slate-700/40 flex items-center justify-center mb-4">

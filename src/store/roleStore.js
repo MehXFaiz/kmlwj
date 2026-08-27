@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { roleService, auditService } from '../services/apiServices';
 import { useDashboardStore } from './dashboardStore';
+import { useAuthStore } from './authStore';
 
 export const useRoleStore = create((set, get) => ({
   roles: [],
@@ -26,6 +27,7 @@ export const useRoleStore = create((set, get) => ({
       await get().fetchRoles();
       set({ loading: false });
       useDashboardStore.getState().invalidateAll();
+      useAuthStore.getState().restoreSession().catch(() => {});
       return res;
     } catch (err) {
       const msg = err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to create role';
@@ -41,6 +43,7 @@ export const useRoleStore = create((set, get) => ({
       await get().fetchRoles();
       set({ loading: false });
       useDashboardStore.getState().invalidateAll();
+      useAuthStore.getState().restoreSession().catch(() => {});
       return res;
     } catch (err) {
       const msg = err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to update role';

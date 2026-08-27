@@ -2,7 +2,6 @@ import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
-import { loadPermissions } from "../_services/permission.service.js";
 import { PERMS, SECURITY_PERMISSIONS } from "../_constants/permissions.js";
 import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 import bcrypt from "bcryptjs";
@@ -21,9 +20,15 @@ var users_default = makeHandler(async (req, res) => {
   const { method } = req;
   const id = req.query.id;
   const action = req.query.action || req.body?.action;
-  if (!await verifyPermission(req, res, PERMS.MANAGE_USERS)) return;
-  const userPerms = await loadPermissions(req);
-  const actorHoldsSystemSettings = userPerms.has(PERMS.SYSTEM_SETTINGS);
+  if (method === "GET") {
+    if (!await verifyPermission(req, res, ["users.view", PERMS.MANAGE_USERS])) return;
+  } else if (method === "POST") {
+    if (!await verifyPermission(req, res, ["users.create", PERMS.MANAGE_USERS])) return;
+  } else if (method === "DELETE") {
+    if (!await verifyPermission(req, res, ["users.delete", PERMS.MANAGE_USERS])) return;
+  } else {
+    if (!await verifyPermission(req, res, ["users.update", PERMS.MANAGE_USERS])) return;
+  }
   if (method === "GET") {
     const dbUsers = await prisma.user.findMany({
       where: getDeletedFilter(req.query),

@@ -161,11 +161,19 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
     return () => document.removeEventListener('keydown', handleEsc);
   }, [isSearchOpen]);
 
-  const hasPerm = (requiredPerms) => {
-    if (!user) return false;
-    if (user.isPrivileged) return true;
-    if (!user.permissions) return false;
-    return requiredPerms.some(p => user.permissions.includes(p));
+  const hasPermission = useAuthStore((state) => state.hasPermission);
+  const isPrivileged = useAuthStore((state) => state.isPrivileged);
+
+  const canShowItem = (item) => {
+    if (!item.module && !item.perms) return true; // e.g. Dashboard
+    if (isPrivileged || user?.role === 'Super Admin' || user?.role?.name === 'Super Admin') return true;
+    if (item.module) {
+      return hasPermission(item.module, item.action || 'view');
+    }
+    if (item.perms && item.perms.length > 0) {
+      return item.perms.some(p => hasPermission(p));
+    }
+    return false;
   };
 
   const sidebarSections = useMemo(() => [
@@ -178,68 +186,68 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
     {
       title: t('sidebar.moneyIn', 'Money In'),
       items: [
-        { name: 'Add Income', hint: 'Log & manage extra income entries', icon: PlusCircle, path: '/add-income' },
-        { name: 'Opening Balances', hint: 'Set up financial-year opening balances', icon: Scale, path: '/opening-balances', perms: ['POST_JOURNAL'] },
-        { name: t('sidebar.hallBookings', 'Hall Bookings'), hint: t('sidebar.hallBookingsHint', 'Manage hall reservations'), icon: Calendar, path: '/hall-bookings' },
-        { name: 'Monthly Donations (Inflow)', hint: 'Receive monthly donor contributions', icon: Calendar, path: '/monthly-donations' },
-        { name: 'General Donations (Inflow)', hint: 'Receive general & other donations', icon: Gift, path: '/general-donations' },
-        { name: 'Zakat Collection (Inflow)', hint: 'Receive Zakat & post to ledger', icon: Coins, path: '/zakat' },
-        { name: 'Donations Received', hint: 'All charitable inflow receipts', icon: Heart, path: '/donations-received' },
-        { name: 'Donors Directory', hint: 'Manage registered donors', icon: Users, path: '/donors' },
-        { name: t('sidebar.membershipFee', 'Membership Fee'), hint: 'Manage member fees and renewals', icon: Building, path: '/membership-fees' },
-        { name: t('sidebar.busBooking', 'Bus Booking'), hint: 'Manage bus reservations and trips', icon: Bus, path: '/bus-bookings' },
+        { name: 'Add Income', hint: 'Log & manage extra income entries', icon: PlusCircle, path: '/add-income', module: 'revenue' },
+        { name: 'Opening Balances', hint: 'Set up financial-year opening balances', icon: Scale, path: '/opening-balances', module: 'openingBalances' },
+        { name: t('sidebar.hallBookings', 'Hall Bookings'), hint: t('sidebar.hallBookingsHint', 'Manage hall reservations'), icon: Calendar, path: '/hall-bookings', module: 'hallBookings' },
+        { name: 'Monthly Donations (Inflow)', hint: 'Receive monthly donor contributions', icon: Calendar, path: '/monthly-donations', module: 'revenueCollections' },
+        { name: 'General Donations (Inflow)', hint: 'Receive general & other donations', icon: Gift, path: '/general-donations', module: 'revenueCollections' },
+        { name: 'Zakat Collection (Inflow)', hint: 'Receive Zakat & post to ledger', icon: Coins, path: '/zakat', module: 'zakat' },
+        { name: 'Donations Received', hint: 'All charitable inflow receipts', icon: Heart, path: '/donations-received', module: 'revenueCollections' },
+        { name: 'Donors Directory', hint: 'Manage registered donors', icon: Users, path: '/donors', module: 'donors' },
+        { name: t('sidebar.membershipFee', 'Membership Fee'), hint: 'Manage member fees and renewals', icon: Building, path: '/membership-fees', module: 'revenueCollections' },
+        { name: t('sidebar.busBooking', 'Bus Booking'), hint: 'Manage bus reservations and trips', icon: Bus, path: '/bus-bookings', module: 'revenueCollections' },
       ],
     },
     {
       title: t('sidebar.moneyOut', 'Money Out'),
       items: [
-        { name: t('sidebar.addExpenses', 'Add Expenses'), hint: 'Log & manage business expenses', icon: TrendingDown, path: '/bank-vouchers' },
-        { name: t('sidebar.pettyCash', 'Petty Cash'), hint: 'Imprest petty cash fund & operational expenses', icon: Wallet, path: '/petty-cash' },
+        { name: t('sidebar.addExpenses', 'Add Expenses'), hint: 'Log & manage business expenses', icon: TrendingDown, path: '/bank-vouchers', module: 'expenses' },
+        { name: t('sidebar.pettyCash', 'Petty Cash'), hint: 'Imprest petty cash fund & operational expenses', icon: Wallet, path: '/petty-cash', module: 'expenses' },
       ],
     },
     {
       title: t('sidebar.welfare', 'Welfare'),
       items: [
-        { name: t('sidebar.peopleWeHelp', 'People We Help'), hint: t('sidebar.peopleWeHelpHint', 'Beneficiary list'), icon: Users, path: '/beneficiaries' },
-        { name: 'Monthly Aid Disbursements', hint: 'Disburse monthly aid to beneficiaries', icon: Calendar, path: '/donations?aidType=MONTHLY' },
-        { name: 'General Aid Disbursements', hint: 'Disburse general aid to beneficiaries', icon: Gift, path: '/donations?aidType=GENERAL_DONATION' },
-        { name: 'Zakat Aid Disbursements', hint: 'Disburse Zakat aid to beneficiaries', icon: Coins, path: '/donations?aidType=ZAKAT' },
-        { name: 'Monthly Financial Support Cards', hint: 'Issue & print bilingual financial support cards', icon: CreditCard, path: '/monthly-donation-cards' },
-        { name: 'Donations Given (Disbursements)', hint: 'All financial aid disbursements', icon: Heart, path: '/donations' },
-        { name: t('sidebar.donationReports', 'Donation Reports'), hint: t('sidebar.donationReportsHint', 'Monthly summaries'), icon: FileText, path: '/donation-reports' },
+        { name: t('sidebar.peopleWeHelp', 'People We Help'), hint: t('sidebar.peopleWeHelpHint', 'Beneficiary list'), icon: Users, path: '/beneficiaries', module: 'beneficiaries' },
+        { name: 'Monthly Aid Disbursements', hint: 'Disburse monthly aid to beneficiaries', icon: Calendar, path: '/donations?aidType=MONTHLY', module: 'donations' },
+        { name: 'General Aid Disbursements', hint: 'Disburse general aid to beneficiaries', icon: Gift, path: '/donations?aidType=GENERAL_DONATION', module: 'donations' },
+        { name: 'Zakat Aid Disbursements', hint: 'Disburse Zakat aid to beneficiaries', icon: Coins, path: '/donations?aidType=ZAKAT', module: 'donations' },
+        { name: 'Monthly Financial Support Cards', hint: 'Issue & print bilingual financial support cards', icon: CreditCard, path: '/monthly-donation-cards', module: 'zakatCards' },
+        { name: 'Donations Given (Disbursements)', hint: 'All financial aid disbursements', icon: Heart, path: '/donations', module: 'donations' },
+        { name: t('sidebar.donationReports', 'Donation Reports'), hint: t('sidebar.donationReportsHint', 'Monthly summaries'), icon: FileText, path: '/donation-reports', module: 'reports' },
       ],
     },
     {
       title: t('sidebar.invoicesClients'),
       items: [
-        { name: t('sidebar.members', 'Community Members'), hint: t('sidebar.membersHint', 'Manage Jamia member registrations & records'), icon: Users, path: '/members' },
-        { name: 'Membership Cards', hint: 'Generate & print CR80 membership ID cards', icon: CreditCard, path: '/membership-cards' },
-        { name: 'Zakat Cards', hint: 'Issue & print Zakat disbursement cards', icon: CreditCard, path: '/zakat-cards' },
-        { name: 'Monthly Financial Support Cards', hint: 'Issue & print bilingual financial support cards', icon: CreditCard, path: '/monthly-donation-cards' },
+        { name: t('sidebar.members', 'Community Members'), hint: t('sidebar.membersHint', 'Manage Jamia member registrations & records'), icon: Users, path: '/members', module: 'members' },
+        { name: 'Membership Cards', hint: 'Generate & print CR80 membership ID cards', icon: CreditCard, path: '/membership-cards', module: 'membership' },
+        { name: 'Zakat Cards', hint: 'Issue & print Zakat disbursement cards', icon: CreditCard, path: '/zakat-cards', module: 'zakatCards' },
+        { name: 'Monthly Financial Support Cards', hint: 'Issue & print bilingual financial support cards', icon: CreditCard, path: '/monthly-donation-cards', module: 'zakatCards' },
       ],
     },
     {
       title: t('sidebar.reports'),
       items: [
-        { name: t('sidebar.incomeStatement'), hint: t('sidebar.incomeStatementHint'), icon: BarChart3, path: '/reports?tab=income-statement', perms: ['VIEW_REPORTS'] },
-        { name: t('sidebar.balanceSheet'), hint: t('sidebar.balanceSheetHint'), icon: PieChart, path: '/reports?tab=balance-sheet', perms: ['VIEW_REPORTS'] },
-        { name: t('sidebar.cashFlow'), hint: t('sidebar.cashFlowHint'), icon: Activity, path: '/reports?tab=cash-flow', perms: ['VIEW_REPORTS'] },
-        { name: t('sidebar.generalLedger'), hint: t('sidebar.generalLedgerHint'), icon: BookOpen, path: '/ledger' },
-        { name: t('sidebar.trialBalance'), hint: t('sidebar.trialBalanceHint'), icon: Layers, path: '/reports?tab=trial-balance', perms: ['VIEW_REPORTS'] },
-        { name: t('sidebar.trialBalanceMatrix'), hint: t('sidebar.trialBalanceMatrixHint'), icon: Layers, path: '/trial-balance-sheet', perms: ['VIEW_REPORTS'] },
-        { name: 'Financial Year Closing', hint: 'Year-end validation, P&L close & auto-rollover', icon: ShieldCheck, path: '/financial-year-closing', perms: ['VIEW_REPORTS'] },
+        { name: t('sidebar.incomeStatement'), hint: t('sidebar.incomeStatementHint'), icon: BarChart3, path: '/reports?tab=income-statement', module: 'reports' },
+        { name: t('sidebar.balanceSheet'), hint: t('sidebar.balanceSheetHint'), icon: PieChart, path: '/reports?tab=balance-sheet', module: 'reports' },
+        { name: t('sidebar.cashFlow'), hint: t('sidebar.cashFlowHint'), icon: Activity, path: '/reports?tab=cash-flow', module: 'reports' },
+        { name: t('sidebar.generalLedger'), hint: t('sidebar.generalLedgerHint'), icon: BookOpen, path: '/ledger', module: 'generalLedger' },
+        { name: t('sidebar.trialBalance'), hint: t('sidebar.trialBalanceHint'), icon: Layers, path: '/reports?tab=trial-balance', module: 'reports' },
+        { name: t('sidebar.trialBalanceMatrix'), hint: t('sidebar.trialBalanceMatrixHint'), icon: Layers, path: '/trial-balance-sheet', module: 'reports' },
+        { name: 'Financial Year Closing', hint: 'Year-end validation, P&L close & auto-rollover', icon: ShieldCheck, path: '/financial-year-closing', module: 'reports' },
       ],
     },
     {
       title: t('sidebar.manualRecords'),
       items: [
-        { name: t('sidebar.journalEntries'), hint: t('sidebar.journalEntriesHint'), icon: FileSpreadsheet, path: '/journals' },
+        { name: t('sidebar.journalEntries'), hint: t('sidebar.journalEntriesHint'), icon: FileSpreadsheet, path: '/journals', module: 'journalEntries' },
         {
           name: t('sidebar.accountStructure'),
           hint: t('sidebar.accountStructureHint'),
           icon: Layers,
           path: '/coa',
-          perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT', 'LOCK_ACCOUNT'],
+          module: 'coa',
           subItems: [
             { name: t('sidebar.assets'), path: '/coa?type=Asset' },
             { name: t('sidebar.liabilities'), path: '/coa?type=Liability' },
@@ -247,20 +255,18 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
             { name: t('sidebar.expenses'), path: '/coa?type=Expense' },
           ],
         },
-        { name: t('sidebar.incomeCategories'), hint: t('sidebar.incomeCategoriesHint'), icon: TrendingUp, path: '/revenue-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
-        { name: t('sidebar.incomeCategoryMapping'), hint: t('sidebar.incomeCategoryMappingHint'), icon: Link2, path: '/income-category-mapping', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
-        { name: t('sidebar.expenseCategories'), hint: t('sidebar.expenseCategoriesHint'), icon: TrendingDown, path: '/expense-heads', perms: ['CREATE_ACCOUNT', 'UPDATE_ACCOUNT', 'DELETE_ACCOUNT'] },
+        { name: t('sidebar.incomeCategories'), hint: t('sidebar.incomeCategoriesHint'), icon: TrendingUp, path: '/revenue-heads', module: 'revenue' },
+        { name: t('sidebar.incomeCategoryMapping'), hint: t('sidebar.incomeCategoryMappingHint'), icon: Link2, path: '/income-category-mapping', module: 'revenue' },
+        { name: t('sidebar.expenseCategories'), hint: t('sidebar.expenseCategoriesHint'), icon: TrendingDown, path: '/expense-heads', module: 'expenses' },
       ],
     },
     {
-      // Admin-only section
       title: t('sidebar.settingsAdmin'),
-      adminOnly: true,
       items: [
-        { name: t('sidebar.systemAccounts'), hint: t('sidebar.systemAccountsHint'), icon: ShieldCheck, path: '/reserved', perms: ['MANAGE_RESERVED_CODES'] },
-        { name: t('sidebar.usersAccess'), hint: t('sidebar.usersAccessHint'), icon: BadgeCheck, path: '/users-roles', perms: ['MANAGE_USERS', 'MANAGE_ROLES'] },
-        { name: t('sidebar.auditTrail'), hint: t('sidebar.auditTrailHint'), icon: History, path: '/audit', perms: ['VIEW_REPORTS', 'MANAGE_USERS'] },
-        { name: 'Accounting Health Check', hint: 'Verify accounting integrity & consistency', icon: ShieldCheck, path: '/accounting-health', perms: ['VIEW_REPORTS', 'MANAGE_USERS'] },
+        { name: t('sidebar.systemAccounts'), hint: t('sidebar.systemAccountsHint'), icon: ShieldCheck, path: '/reserved', module: 'settings' },
+        { name: t('sidebar.usersAccess'), hint: t('sidebar.usersAccessHint'), icon: BadgeCheck, path: '/users-roles', module: 'roles' },
+        { name: t('sidebar.auditTrail'), hint: t('sidebar.auditTrailHint'), icon: History, path: '/audit', module: 'audit' },
+        { name: 'Accounting Health Check', hint: 'Verify accounting integrity & consistency', icon: ShieldCheck, path: '/accounting-health', module: 'audit' },
       ],
     },
   ], [t]);
@@ -269,20 +275,23 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
     const items = [];
     sidebarSections.forEach(section => {
       section.items.forEach(item => {
-        items.push(item);
-        if (item.subItems) {
-          item.subItems.forEach(sub => {
-            items.push({ name: `${item.name} › ${sub.name}`, icon: item.icon, path: sub.path, perms: item.perms });
-          });
+        if (canShowItem(item)) {
+          items.push(item);
+          if (item.subItems) {
+            item.subItems.forEach(sub => {
+              items.push({ name: `${item.name} › ${sub.name}`, icon: item.icon, path: sub.path, module: item.module });
+            });
+          }
         }
       });
     });
     return items;
-  }, [sidebarSections]);
+  }, [sidebarSections, isPrivileged, hasPermission]);
 
   const filteredPages = query.trim()
-    ? menuItems.filter(item => (!item.perms || hasPerm(item.perms)) && item.name.toLowerCase().includes(query.toLowerCase()))
+    ? menuItems.filter(item => item.name.toLowerCase().includes(query.toLowerCase()))
     : [];
+
 
   const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || '?';
   const userName = user?.name || user?.email || 'User';
@@ -374,8 +383,9 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
             // Hide admin-only sections from non-privileged users (non-Admin / non-Super Admin)
             if (section.adminOnly && !user?.isPrivileged) return null;
 
-            const visibleItems = section.items.filter(item => !item.perms || hasPerm(item.perms));
+            const visibleItems = section.items.filter(item => canShowItem(item));
             if (visibleItems.length === 0) return null;
+
 
             return (
               <div key={secIdx} className={secIdx === 0 ? 'space-y-0.5' : 'mt-5 space-y-0.5'}>

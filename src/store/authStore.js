@@ -1,49 +1,22 @@
 import { create } from 'zustand';
 import { authService, tokenStorage } from '../services/authService';
 import api from '../services/api';
+import { hasPermission as checkPerm, canAccessModule as checkCanAccess, normalizePermissions } from '../utils/permissions';
 
 /**
  * Returns true if the user holds permission to edit or delete records.
- * Super Admin: Full edit/delete access.
- * Admin: Edit/delete access governed by assigned system permissions.
- * Restricted roles (Accountant, Data Entry Operator, Donation & Zakat Manager, etc.):
- * Strictly FALSE. They are never permitted to edit or delete records.
  */
 export const canUserEditOrDelete = (isPrivileged, permissions = [], module = null, role = null) => {
-  if (isPrivileged !== true) return false;
   if (role === 'Super Admin' || role?.name === 'Super Admin') return true;
+  if (isPrivileged !== true) return false;
   if (!module) return true;
-
-  if (Array.isArray(permissions)) {
-    return (
-      permissions.includes(`${module}.update`) ||
-      permissions.includes(`${module}.delete`) ||
-      permissions.includes(`UPDATE_${module.toUpperCase()}`) ||
-      permissions.includes(`DELETE_${module.toUpperCase()}`) ||
-      permissions.includes(`MANAGE_${module.toUpperCase()}`)
-    );
-  }
-
-  if (permissions && typeof permissions === 'object') {
-    if (permissions[module] && typeof permissions[module] === 'object') {
-      return Boolean(permissions[module].update || permissions[module].delete);
-    }
-    return Boolean(
-      permissions[`${module}.update`] ||
-      permissions[`${module}.delete`] ||
-      permissions[`UPDATE_${module.toUpperCase()}`] ||
-      permissions[`DELETE_${module.toUpperCase()}`] ||
-      permissions[`MANAGE_${module.toUpperCase()}`]
-    );
-  }
-
-  return false;
+  return checkPerm(permissions, isPrivileged, module, 'update') || checkPerm(permissions, isPrivileged, module, 'delete');
 };
 
 export const canUserPostToLedger = (isPrivileged, permissions = [], module = null) => {
   if (isPrivileged === true) return true;
-  if (module && permissions.includes(`${module}.post`)) return true;
-  return permissions.includes('ledger.post') || permissions.includes('POST_JOURNAL');
+  if (!module) return false;
+  return checkPerm(permissions, isPrivileged, module, 'post');
 };
 
 export const useAuthStore = create((set, get) => {
@@ -55,6 +28,8 @@ export const useAuthStore = create((set, get) => {
         role: null,
         isPrivileged: false,
         permissions: [],
+        permissionsList: [],
+        rawPermissions: [],
         modulePermissions: {},
         canEditOrDelete: false,
         canPostToLedger: false,
@@ -71,6 +46,8 @@ export const useAuthStore = create((set, get) => {
     /** true = Super Admin or Admin. false = restricted / dynamic role. */
     isPrivileged: false,
     permissions: [],
+    permissionsList: [],
+    rawPermissions: [],
     modulePermissions: {},
     canEditOrDelete: false,
     canPostToLedger: false,
@@ -79,67 +56,68 @@ export const useAuthStore = create((set, get) => {
     error: null,
     successMessage: null,
 
-    // Dynamic Permission Checker: can('donations', 'update')
-    can: (moduleKey, action) => {
+    // Dynamic Permission Checker: hasPermission('donations', 'view') or hasPermission('donations', 'create')
+    hasPermission: (moduleOrPerm, action) => {
       const state = get();
-      if (!moduleKey) return false;
-      const isEditOrDelete = action === 'update' || action === 'delete';
+      const isSuper = state.user?.role === 'Super Admin' || state.role === 'Super Admin' || state.role?.name === 'Super Admin';
+      if (isSuper) return true;
 
-      // Restricted roles are NEVER allowed to edit or delete records
-      if (isEditOrDelete && !state.isPrivileged) {
-        return false;
+      // Two-argument form: hasPermission(module, action)
+      if (action !== undefined) {
+        if ((action === 'update' || action === 'delete') && !state.isPrivileged) {
+          return false;
+        }
+        return checkPerm(state.permissionsList, state.isPrivileged, moduleOrPerm, action);
       }
 
-      if (state.user?.role === 'Super Admin' || state.role === 'Super Admin') return true;
-
-      // Check structured modulePermissions first
-      if (state.modulePermissions && state.modulePermissions[moduleKey]?.[action] !== undefined) {
-        return Boolean(state.modulePermissions[moduleKey][action]);
+      // Single argument: dot-notation string like 'donations.view'
+      if (typeof moduleOrPerm === 'string' && moduleOrPerm.includes('.')) {
+        const [mod, act] = moduleOrPerm.split('.');
+        if ((act === 'update' || act === 'delete') && !state.isPrivileged) {
+          return false;
+        }
+        return checkPerm(state.permissionsList, state.isPrivileged, mod, act);
       }
 
-      // Check raw permission strings
-      const targetPerm = `${moduleKey}.${action}`;
-      if (state.permissions.includes(targetPerm)) return true;
+      // Single argument: module name check for 'view'
+      if (typeof moduleOrPerm === 'string' && !moduleOrPerm.includes('_')) {
+        return checkCanAccess(state.permissionsList, state.isPrivileged, moduleOrPerm);
+      }
 
-      // Check action aliases
-      if (action === 'post' && (state.permissions.includes('ledger.post') || state.permissions.includes('POST_JOURNAL'))) {
+      // Single argument: legacy uppercase permission like 'MANAGE_USERS'
+      if (state.rawPermissions?.includes(moduleOrPerm) || state.permissions?.includes(moduleOrPerm)) {
         return true;
       }
 
       return false;
     },
 
-    hasPermission: (permName) => {
-      const state = get();
-      if (state.isPrivileged) {
-        const isSecurity =
-          permName === 'SYSTEM_SETTINGS' ||
-          permName === 'MANAGE_USERS' ||
-          permName === 'MANAGE_ROLES' ||
-          permName.startsWith('users.') ||
-          permName.startsWith('roles.') ||
-          permName.startsWith('settings.');
-        return state.user?.role === 'Super Admin' || state.role === 'Super Admin' || !isSecurity;
-      }
-      return state.permissions.includes(permName);
+    // Alias for hasPermission(module, action)
+    can: (moduleKey, action) => {
+      return get().hasPermission(moduleKey, action);
     },
 
-    canEdit: (moduleKey) => get().can(moduleKey, 'update'),
-    canDelete: (moduleKey) => get().can(moduleKey, 'delete'),
-    canApprove: (moduleKey) => get().can(moduleKey, 'approve'),
-    canExport: (moduleKey) => get().can(moduleKey, 'export') || get().hasPermission('reports.export'),
-    canPrint: (moduleKey) => get().can(moduleKey, 'print') || get().hasPermission('reports.print'),
+    canAccessModule: (moduleKey) => {
+      const state = get();
+      return checkCanAccess(state.permissionsList, state.isPrivileged, moduleKey);
+    },
+
+    canEdit: (moduleKey) => get().hasPermission(moduleKey, 'update'),
+    canDelete: (moduleKey) => get().hasPermission(moduleKey, 'delete'),
+    canApprove: (moduleKey) => get().hasPermission(moduleKey, 'approve'),
+    canExport: (moduleKey) => get().hasPermission(moduleKey, 'export'),
+    canPrint: (moduleKey) => get().hasPermission(moduleKey, 'print'),
 
     checkCanEditOrDelete: (moduleKey) => {
       const state = get();
-      if (moduleKey) return state.can(moduleKey, 'update') || state.can(moduleKey, 'delete');
-      return state.canEditOrDelete;
+      if (moduleKey) return state.hasPermission(moduleKey, 'update') || state.hasPermission(moduleKey, 'delete');
+      return state.isPrivileged;
     },
 
     checkCanPostToLedger: (moduleKey) => {
       const state = get();
-      if (moduleKey) return state.can(moduleKey, 'post');
-      return state.canPostToLedger;
+      if (moduleKey) return state.hasPermission(moduleKey, 'post');
+      return state.isPrivileged;
     },
 
     clearError: () => set({ error: null }),
@@ -153,18 +131,22 @@ export const useAuthStore = create((set, get) => {
       try {
         const res = await api.get('/api/v1/auth/me');
         const userData = res.data.data;
-        const privileged = userData.isPrivileged === true;
-        const perms = userData.permissions || [];
+        const roleName = userData.role?.name || userData.role || userData.roleName;
+        const privileged = userData.isPrivileged === true || userData.role?.isPrivileged === true || roleName === 'Super Admin';
+        const rawPerms = userData.rawPermissions || (Array.isArray(userData.permissions) && typeof userData.permissions[0] === 'string' ? userData.permissions : []);
+        const permsList = normalizePermissions(userData.permissions || rawPerms);
         const modPerms = userData.modulePermissions || {};
 
         set({
           user: userData,
-          role: userData.role,
+          role: roleName,
           isPrivileged: privileged,
-          permissions: perms,
+          permissions: userData.permissions || [],
+          permissionsList: permsList,
+          rawPermissions: rawPerms,
           modulePermissions: modPerms,
-          canEditOrDelete: canUserEditOrDelete(privileged, perms, null, userData.role),
-          canPostToLedger: canUserPostToLedger(privileged, perms),
+          canEditOrDelete: privileged,
+          canPostToLedger: privileged,
           isAuthenticated: true,
           loading: false,
         });
@@ -178,6 +160,8 @@ export const useAuthStore = create((set, get) => {
           role: null,
           isPrivileged: false,
           permissions: [],
+          permissionsList: [],
+          rawPermissions: [],
           modulePermissions: {},
           canEditOrDelete: false,
           canPostToLedger: false,
@@ -195,18 +179,22 @@ export const useAuthStore = create((set, get) => {
         // Fetch the full user profile including isPrivileged + permissions
         const res = await api.get('/api/v1/auth/me');
         const userData = res.data.data;
-        const privileged = userData.isPrivileged === true;
-        const perms = userData.permissions || [];
+        const roleName = userData.role?.name || userData.role || userData.roleName;
+        const privileged = userData.isPrivileged === true || userData.role?.isPrivileged === true || roleName === 'Super Admin';
+        const rawPerms = userData.rawPermissions || (Array.isArray(userData.permissions) && typeof userData.permissions[0] === 'string' ? userData.permissions : []);
+        const permsList = normalizePermissions(userData.permissions || rawPerms);
         const modPerms = userData.modulePermissions || {};
 
         set({
           user: userData,
-          role: userData.role,
+          role: roleName,
           isPrivileged: privileged,
-          permissions: perms,
+          permissions: userData.permissions || [],
+          permissionsList: permsList,
+          rawPermissions: rawPerms,
           modulePermissions: modPerms,
-          canEditOrDelete: canUserEditOrDelete(privileged, perms, null, userData.role),
-          canPostToLedger: canUserPostToLedger(privileged, perms),
+          canEditOrDelete: privileged,
+          canPostToLedger: privileged,
           isAuthenticated: true,
           loading: false,
         });
@@ -243,6 +231,8 @@ export const useAuthStore = create((set, get) => {
           role: null,
           isPrivileged: false,
           permissions: [],
+          permissionsList: [],
+          rawPermissions: [],
           modulePermissions: {},
           canEditOrDelete: false,
           canPostToLedger: false,

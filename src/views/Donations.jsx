@@ -343,10 +343,14 @@ const DEFAULT_FILTERS = {
 
 export const Donations = () => {
   const { donations, fetchDonations, approveDonation, deleteDonation, bulkDeleteDonations } = useDonationStore();
-  const { flatAccounts, fetchAccountsList } = useCoaStore();
-  const { canEditOrDelete } = useAuthStore();
-  const canPostToLedger = useAuthStore((s) => s.canPostToLedger);
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+  const canCreate = hasPermission('donations', 'create');
+  const canEdit = hasPermission('donations', 'update');
+  const canDelete = hasPermission('donations', 'delete');
+  const canPost = hasPermission('donations', 'post');
+  const canPrint = hasPermission('donations', 'print');
   const navigate = useNavigate();
+
 
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get('search') || '');
@@ -565,7 +569,7 @@ export const Donations = () => {
         </div>
 
         <div className={pageActionsClass}>
-          {canEditOrDelete && selectedIds.length > 0 && (
+          {canDelete && selectedIds.length > 0 && (
             <button
               onClick={() => setShowBulkConfirm(true)}
               className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30 transition-all text-xs font-bold flex-1 sm:flex-none mr-2 shadow-sm cursor-pointer"
@@ -573,10 +577,12 @@ export const Donations = () => {
               <Trash2 className="h-4 w-4" /> Bulk Delete ({selectedIds.length})
             </button>
           )}
-          <button onClick={() => navigate('/donations/new')}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold shadow-lg shadow-amber-500/15 hover:shadow-amber-500/25 transition-all flex-1 sm:flex-none cursor-pointer active:scale-95">
-            <Plus className="h-4 w-4 stroke-[2.5]" /> <span>Log Aid Disbursement</span>
-          </button>
+          {canCreate && (
+            <button onClick={() => navigate('/donations/new')}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold shadow-lg shadow-amber-500/15 hover:shadow-amber-500/25 transition-all flex-1 sm:flex-none cursor-pointer active:scale-95">
+              <Plus className="h-4 w-4 stroke-[2.5]" /> <span>Log Aid Disbursement</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -837,7 +843,7 @@ export const Donations = () => {
                 <div>
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                      {canEditOrDelete && (
+                      {canDelete && (
                         <input
                           type="checkbox"
                           checked={selectedIds.includes(d.id)}
@@ -845,6 +851,7 @@ export const Donations = () => {
                           className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800/60 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer shrink-0"
                         />
                       )}
+
                       <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/30 flex items-center justify-center text-amber-400 font-extrabold text-base shadow-inner shrink-0">
                         {d.donorName ? d.donorName.charAt(0).toUpperCase() : <Heart className="w-4 h-4 text-amber-400" />}
                       </div>
@@ -913,15 +920,17 @@ export const Donations = () => {
                     <Calendar className="w-3.5 h-3.5 text-slate-400" /> {d.createdAt ? new Date(d.createdAt).toLocaleDateString() : '7/7/2026'}
                   </span>
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPrintDonation(d)}
-                      className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 flex items-center justify-center transition-all cursor-pointer shadow-sm"
-                      title="Print Voucher Slip"
-                    >
-                      <Printer className="w-3.5 h-3.5" />
-                    </button>
-                    {d.status === 'PENDING' && canPostToLedger && (
+                    {canPrint && (
+                      <button
+                        type="button"
+                        onClick={() => setPrintDonation(d)}
+                        className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                        title="Print Voucher Slip"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {d.status === 'PENDING' && canPost && (
                       <button
                         type="button"
                         onClick={() => setApproveId(d.id)}
@@ -931,27 +940,28 @@ export const Donations = () => {
                         <CheckCircle2 className="w-3.5 h-3.5" /> Post
                       </button>
                     )}
-                    {canEditOrDelete && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/donations/edit/${d.id}`)}
-                          className="w-8 h-8 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
-                          title="Edit Aid Disbursement"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteId(d.id)}
-                          className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
-                          title="Delete Disbursement"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/donations/edit/${d.id}`)}
+                        className="w-8 h-8 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                        title="Edit Aid Disbursement"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        type="button"
+                        onClick={() => setDeleteId(d.id)}
+                        className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                        title="Delete Disbursement"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     )}
                   </div>
+
                 </div>
               </div>
             ))}

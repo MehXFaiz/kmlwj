@@ -86,9 +86,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const { method } = req;
 
   if (method === 'GET') {
-    if (!await verifyPermission(req, res, PERMS.VIEW_REPORTS) && !await verifyPermission(req, res, PERMS.POST_JOURNAL)) {
+    if (!await verifyPermission(req, res, ['openingBalances.view', PERMS.VIEW_REPORTS])) {
       return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions to view opening balances', status: 403 } });
     }
+
 
     const { date, financialYear: fyParam } = req.query as any;
     const selectedDate = date ? new Date(date) : new Date();
@@ -189,9 +190,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'POST') {
-    if (!await verifyPermission(req, res, PERMS.POST_JOURNAL)) {
+    if (!await verifyPermission(req, res, ['openingBalances.create', 'openingBalances.update', PERMS.POST_JOURNAL])) {
       return res.status(403).json({ error: { message: 'Forbidden: Only authorized administrators can save opening balances', status: 403 } });
     }
+
 
     const { openingDate, balances, isAdjustment, reason } = req.body || {};
 
