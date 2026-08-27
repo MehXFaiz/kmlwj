@@ -51,13 +51,13 @@ import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 var revenue_collections_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
-  if (!await enforceRestrictedRolePolicy(req, res)) return;
+  if (!await enforceRestrictedRolePolicy(req, res, method === "DELETE" ? ["revenueCollections.delete", PERMS.DELETE_REVENUE_COLLECTION] : ["revenueCollections.update", PERMS.UPDATE_REVENUE_COLLECTION])) return;
   const method = req.method?.toUpperCase() ?? "";
   const id = req.query.id;
   const action = req.query.action || req.body?.action;
   const categoryFilter = req.query.category;
   if (method === "GET") {
-    if (!await verifyPermission(req, res, PERMS.VIEW_REVENUE_COLLECTIONS)) return;
+    if (!await verifyPermission(req, res, ["revenueCollections.view", PERMS.VIEW_REVENUE_COLLECTIONS])) return;
     const whereClause = {
       ...categoryFilter ? { category: categoryFilter } : {},
       ...getDeletedFilter(req.query)
@@ -110,10 +110,9 @@ var revenue_collections_default = makeHandler(async (req, res) => {
       return res.status(200).json({ status: 200, message: "Revenue collection restored successfully", data: restored });
     }
   }
-  if (!await verifyPermission(req, res, PERMS.CREATE_REVENUE_COLLECTION)) return;
   if (method === "POST") {
     if (action === "approve") {
-      if (!await verifyPermission(req, res, PERMS.POST_LEDGER)) return;
+      if (!await verifyPermission(req, res, ["revenueCollections.post", PERMS.POST_LEDGER])) return;
       const { id: id2 } = req.body;
       if (!id2) return res.status(400).json({ error: { message: "Collection ID is required", status: 400 } });
       const item = await prisma.revenueCollection.findUnique({ where: { id: id2 }, include: { bankAccount: true } });
@@ -186,6 +185,7 @@ var revenue_collections_default = makeHandler(async (req, res) => {
       await logAudit(req.user.id, `Revert ${item.category}`, "REVENUE", item, result2, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, data: result2, message: `${item.category} reverted from ledger successfully` });
     }
+    if (!await verifyPermission(req, res, ["revenueCollections.create", PERMS.CREATE_REVENUE_COLLECTION])) return;
     const { category, title, subTitle, mobile, eventDate, quantity, rate, destination, amount, paymentMethod, bankAccountId, chequeNumber, remarks } = req.body;
     if (!category || !title || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: "Missing required fields (category, title, amount, paymentMethod)", status: 400 } });

@@ -62,12 +62,12 @@ async function backfillMemberNos(members) {
 var members_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
-  if (!await enforceRestrictedRolePolicy(req, res)) return;
+  if (!await enforceRestrictedRolePolicy(req, res, method === "DELETE" ? ["members.delete", PERMS.DELETE_MEMBER] : ["members.update", PERMS.UPDATE_MEMBER])) return;
   const { method } = req;
   const id = req.query.id;
   const action = req.query.action || req.body?.action;
   if (method === "GET") {
-    if (!await verifyPermission(req, res, PERMS.VIEW_MEMBERS)) return;
+    if (!await verifyPermission(req, res, ["members.view", PERMS.VIEW_MEMBERS])) return;
     if (id && !req.query.limit) {
       const member = await prisma.member.findUnique({ where: { id } });
       if (!member) {
@@ -115,7 +115,7 @@ var members_default = makeHandler(async (req, res) => {
     }
   }
   if (method === "POST") {
-    if (!await verifyPermission(req, res, PERMS.CREATE_MEMBER)) return;
+    if (!await verifyPermission(req, res, ["members.create", PERMS.CREATE_MEMBER])) return;
     const validated = createMemberSchema.parse(req.body);
     let {
       memberNo,
@@ -183,7 +183,7 @@ var members_default = makeHandler(async (req, res) => {
     return res.status(201).json({ status: 201, data: newMember });
   }
   if (method === "PUT") {
-    if (!await verifyPermission(req, res, PERMS.UPDATE_MEMBER)) return;
+    if (!await verifyPermission(req, res, ["members.update", PERMS.UPDATE_MEMBER])) return;
     if (!id) {
       return res.status(400).json({ error: { message: "Member ID is required", status: 400 } });
     }
@@ -282,7 +282,7 @@ var members_default = makeHandler(async (req, res) => {
     if (isPermanent && !await isSuperAdmin(req)) {
       return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can permanently delete records", status: 403 } });
     }
-    if (!await verifyPermission(req, res, PERMS.DELETE_MEMBER)) return;
+    if (!await verifyPermission(req, res, ["members.delete", PERMS.DELETE_MEMBER])) return;
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
     if (!idsRaw) {
       return res.status(400).json({ error: { message: "Member ID(s) required", status: 400 } });
