@@ -1,11 +1,32 @@
-import { PrismaClient } from '@prisma/client';
+import type { VercelResponse } from '@vercel/node';
+import { makeHandler } from '../_utils/handler.js';
+import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import { prisma } from '../_prisma.js';
 import { PettyCashService } from '../_services/petty-cash.service.js';
+import { PERMS } from '../_constants/permissions.js';
+import { isPrivilegedUser } from '../_services/permission.service.js';
 
-const prisma = new PrismaClient();
+export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
+  const authenticated = await verifyAuth(req, res);
+  if (!authenticated || !req.user) return;
 
-export default async function handler(req: any, res: any) {
-  const { method, query, body, user } = req;
-  const action = query.action || (req.path ? req.path.split('/').pop() : '');
+  const { method, query, body } = req;
+  const action = query.action || (req.url ? req.url.split('?')[0].split('/').pop() : '');
+
+  // Permission checks by method
+  if (method === 'GET') {
+    if (!await verifyPermission(req, res, ['expenses.view', PERMS.RECORD_EXPENSE])) return;
+  } else if (method === 'POST') {
+    if (action === 'bulk-delete' || action === 'bulk-revert' || action === 'revert' || action === 'delete') {
+      if (!await verifyPermission(req, res, ['expenses.delete'])) return;
+    } else {
+      if (!await verifyPermission(req, res, ['expenses.create', PERMS.RECORD_EXPENSE])) return;
+    }
+  } else if (method === 'PUT' || method === 'PATCH') {
+    if (!await verifyPermission(req, res, ['expenses.update'])) return;
+  } else if (method === 'DELETE') {
+    if (!await verifyPermission(req, res, ['expenses.delete'])) return;
+  }
 
   try {
     if (method === 'GET') {
@@ -16,17 +37,17 @@ export default async function handler(req: any, res: any) {
 
       if (action === 'register') {
         const register = await PettyCashService.getRegister({
-          startDate: query.startDate,
-          endDate: query.endDate,
-          type: query.type,
-          page: query.page ? parseInt(query.page, 10) : 1,
-          limit: query.limit ? parseInt(query.limit, 10) : 50
+          startDate: query.startDate as string,
+          endDate: query.endDate as string,
+          type: query.type as string,
+          page: query.page ? parseInt(query.page as string, 10) : 1,
+          limit: query.limit ? parseInt(query.limit as string, 10) : 50
         });
         return res.status(200).json(register);
       }
 
       if (action === 'voucher' || query.voucherNo || query.id) {
-        const voucherId = query.voucherNo || query.id || action;
+        const voucherId = (query.voucherNo || query.id || action) as string;
         const voucher = await PettyCashService.getVoucher(voucherId);
         return res.status(200).json(voucher);
       }
@@ -45,15 +66,11 @@ export default async function handler(req: any, res: any) {
     }
 
     if (method === 'PUT') {
-      let createdById = user?.id;
-      if (!createdById) {
-        const defaultUser = await prisma.user.findFirst({ where: { isDeleted: false } });
-        createdById = defaultUser?.id || '00000000-0000-0000-0000-000000000000';
-      }
+      const createdById = req.user.id;
 
       if (action === 'config') {
-        const isAdmin = user?.role === 'ADMIN' || user?.roleName === 'ADMIN' || user?.role?.name === 'ADMIN' || user?.role === 'Super Admin';
-        if (!isAdmin) {
+        const isPrivileged = await isPrivilegedUser(req);
+        if (!isPrivileged) {
           return res.status(403).json({ error: 'Permission denied. Only Administrators can modify Petty Cash configuration.' });
         }
 
@@ -70,11 +87,7 @@ export default async function handler(req: any, res: any) {
     }
 
     if (method === 'POST') {
-      let createdById = user?.id;
-      if (!createdById) {
-        const defaultUser = await prisma.user.findFirst({ where: { isDeleted: false } });
-        createdById = defaultUser?.id || '00000000-0000-0000-0000-000000000000';
-      }
+      const createdById = req.user.id;
 
       if (action === 'add-cash' || action === 'transfer-in') {
         const result = await PettyCashService.addCash({
@@ -152,4 +165,4 @@ export default async function handler(req: any, res: any) {
     console.error('[Petty Cash API Error]:', err);
     return res.status(err.status || 400).json({ error: err.message || 'Petty Cash processing failed' });
   }
-}
+});

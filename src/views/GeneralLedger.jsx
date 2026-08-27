@@ -7,6 +7,7 @@ import { useCoaStore } from '../store/coaStore';
 import { useAuthStore } from '../store/authStore';
 import { Search, Calendar, Filter, Trash2, AlertCircle, Printer, Download } from 'lucide-react';
 import { showToast, ToastPlaceholder } from '../components/ui/Toast';
+import { handleDeleteError } from '../utils/deleteHandler';
 import { MobileOnly, DesktopOnly } from '../components/common/responsive';
 import logoImg from '../assets/logo.png';
 
@@ -128,17 +129,26 @@ export const GeneralLedger = () => {
 
   const executeDelete = async (id) => {
     setIsDeleting(true);
-    const res = await useLedgerStore.getState().deleteLedgerEntry(id, filters);
-    startTransition(() => {
-      setIsDeleting(false);
-      setConfirmDelete(null);
-      if (res.success) {
-        showToast('General Ledger entry deleted successfully', 'success');
-        setSelectedIds(prev => prev.filter(item => item !== id));
-      } else {
-        showToast(res.error || 'Failed to delete GL entry', 'error');
-      }
-    });
+    try {
+      const res = await useLedgerStore.getState().deleteLedgerEntry(id, filters);
+      startTransition(() => {
+        setIsDeleting(false);
+        setConfirmDelete(null);
+        if (res?.success) {
+          showToast('General Ledger entry deleted successfully', 'success');
+          setSelectedIds(prev => prev.filter(item => item !== id));
+        } else {
+          const isForbidden = res?.error?.includes('403') || res?.error?.includes('Restricted') || res?.error?.includes('permission');
+          showToast(isForbidden ? 'You do not have permission to delete this record.' : (res?.error || 'Failed to delete GL entry'), 'error');
+        }
+      });
+    } catch (err) {
+      startTransition(() => {
+        setIsDeleting(false);
+        setConfirmDelete(null);
+        handleDeleteError(err, 'Failed to delete GL entry');
+      });
+    }
   };
 
   const handleSelectAll = (e) => {
@@ -158,17 +168,26 @@ export const GeneralLedger = () => {
 
   const executeBulkDelete = async () => {
     setIsDeleting(true);
-    const res = await useLedgerStore.getState().bulkDeleteLedgerEntries(selectedIds, filters);
-    startTransition(() => {
-      setIsDeleting(false);
-      setShowBulkConfirm(false);
-      if (res.success) {
-        showToast(`${selectedIds.length} GL entries deleted successfully`, 'success');
-        setSelectedIds([]);
-      } else {
-        showToast(res.error || 'Failed to bulk delete GL entries', 'error');
-      }
-    });
+    try {
+      const res = await useLedgerStore.getState().bulkDeleteLedgerEntries(selectedIds, filters);
+      startTransition(() => {
+        setIsDeleting(false);
+        setShowBulkConfirm(false);
+        if (res?.success) {
+          showToast(`${selectedIds.length} GL entries deleted successfully`, 'success');
+          setSelectedIds([]);
+        } else {
+          const isForbidden = res?.error?.includes('403') || res?.error?.includes('Restricted') || res?.error?.includes('permission');
+          showToast(isForbidden ? 'You do not have permission to delete this record.' : (res?.error || 'Failed to bulk delete GL entries'), 'error');
+        }
+      });
+    } catch (err) {
+      startTransition(() => {
+        setIsDeleting(false);
+        setShowBulkConfirm(false);
+        handleDeleteError(err, 'Failed to bulk delete GL entries');
+      });
+    }
   };
 
   const isDebitNormal = accountInfo && ['ASSET', 'EXPENSE'].includes(accountInfo.type.toUpperCase());

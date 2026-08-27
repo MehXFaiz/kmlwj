@@ -1,11 +1,12 @@
 import type { VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
-import { verifyAuth, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
+import { verifyAuth, verifyPermission, AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
 import { prisma } from '../_prisma.js';
 import { AccountingService } from '../_services/accounting.service.js';
 import { validateAmount } from '../_utils/amount.js';
 import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
 import { logAudit } from '../_utils/audit.js';
+import { PERMS } from '../_constants/permissions.js';
 
 const accountingTxOptions = { maxWait: 10000, timeout: 30000 };
 
@@ -17,9 +18,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const idParam = (req.query.id || req.body?.id) as string;
   const action = (req.query.action || req.body?.action) as string;
 
-  const isAdminOrSuperAdmin = req.user.role === 'Admin' || req.user.role === 'Super Admin' || await isSuperAdmin(req);
-
   if (method === 'GET') {
+    if (!await verifyPermission(req, res, ['revenue.view', PERMS.RECORD_INCOME])) return;
+
     const { categoryId, paymentMethod, startDate, endDate, search, page, limit } = req.query as Record<string, string>;
 
     const whereClause: any = getDeletedFilter(req.query);
@@ -118,9 +119,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
   }
 
-  // Admin & Super Admin restriction for Create, Update, Delete
-  if (!isAdminOrSuperAdmin) {
-    return res.status(403).json({ error: { message: 'Forbidden: Only Admin and Super Admin can Add/Edit/Delete Income records', status: 403 } });
+  // Permission enforcement for write operations
+  if (method === 'POST') {
+    if (!await verifyPermission(req, res, ['revenue.create', PERMS.RECORD_INCOME])) return;
+  } else if (method === 'PUT' || method === 'PATCH') {
+    if (!await verifyPermission(req, res, ['revenue.update'])) return;
+  } else if (method === 'DELETE') {
+    if (!await verifyPermission(req, res, ['revenue.delete'])) return;
   }
 
   if (method === 'POST') {

@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { FileSpreadsheet, Search, Plus, Edit2, Trash2, ChevronRight, Eye, AlertTriangle } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
+import { handleDeleteError } from '../utils/deleteHandler';
 
 export const Invoices = () => {
   const navigate = useNavigate();
@@ -47,9 +48,10 @@ export const Invoices = () => {
     setIsDeleting(true);
     try {
       await deleteInvoice(id);
+      showToast('Invoice deleted successfully', 'success');
       setDeleteId(null);
     } catch (err) {
-      alert(err.message || "Failed to delete invoice");
+      handleDeleteError(err, 'Failed to delete invoice');
     } finally {
       setIsDeleting(false);
     }
@@ -78,7 +80,7 @@ export const Invoices = () => {
       showToast(`${selectedIds.length} invoice(s) deleted successfully`, 'success');
       setSelectedIds([]);
     } catch (err) {
-      showToast(err.message || 'Failed to bulk delete invoices', 'error');
+      handleDeleteError(err, 'Failed to bulk delete invoices');
     } finally {
       setIsDeleting(false);
       setShowBulkConfirm(false);

@@ -338,7 +338,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     if (!checkPerm('DELETE_ACCOUNT')) {
-      return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions', status: 403 } });
+      const message = 'You do not have permission to delete this record.';
+      return res.status(403).json({ success: false, message, error: { message, status: 403 } });
     }
 
     if (!id) {

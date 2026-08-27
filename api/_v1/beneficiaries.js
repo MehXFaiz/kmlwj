@@ -58,12 +58,12 @@ function pickData(body, isCreate) {
 var beneficiaries_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
-  if (!await enforceRestrictedRolePolicy(req, res)) return;
+  if (!await enforceRestrictedRolePolicy(req, res, method === "DELETE" ? ["beneficiaries.delete", PERMS.DELETE_BENEFICIARY] : ["beneficiaries.update", PERMS.UPDATE_BENEFICIARY])) return;
   const { method } = req;
   const id = req.query.id;
   const action = req.query.action || req.body?.action;
   if (method === "GET") {
-    if (!await verifyPermission(req, res, PERMS.VIEW_BENEFICIARIES)) return;
+    if (!await verifyPermission(req, res, ["beneficiaries.view", PERMS.VIEW_BENEFICIARIES])) return;
     const { limit = "100", page = "1" } = req.query;
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
@@ -102,7 +102,7 @@ var beneficiaries_default = makeHandler(async (req, res) => {
     }
   }
   if (method === "POST") {
-    if (!await verifyPermission(req, res, PERMS.CREATE_BENEFICIARY)) return;
+    if (!await verifyPermission(req, res, ["beneficiaries.create", PERMS.CREATE_BENEFICIARY])) return;
     const { name, fatherName, husbandName, cnic, mobile, email, address, town, area, gham, housingStatus, housingOther, familySize, monthlyIncome, monthlyExpenses, debtAmount } = req.body;
     if (!name || !String(name).trim()) {
       return res.status(400).json({ error: { message: "Name is required", status: 400 } });
@@ -158,7 +158,7 @@ var beneficiaries_default = makeHandler(async (req, res) => {
     return res.status(201).json({ status: 201, data: newBeneficiary });
   }
   if (method === "PUT") {
-    if (!await verifyPermission(req, res, PERMS.UPDATE_BENEFICIARY)) return;
+    if (!await verifyPermission(req, res, ["beneficiaries.update", PERMS.UPDATE_BENEFICIARY])) return;
     if (!id) {
       return res.status(400).json({ error: { message: "Beneficiary ID is required", status: 400 } });
     }
@@ -240,7 +240,7 @@ var beneficiaries_default = makeHandler(async (req, res) => {
       await logAudit(req.user.id, "Permanent Delete Beneficiary", "DONATION", existingBeneficiary2, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, message: "Beneficiary permanently deleted successfully" });
     }
-    if (!await verifyPermission(req, res, PERMS.DELETE_BENEFICIARY)) return;
+    if (!await verifyPermission(req, res, ["beneficiaries.delete", PERMS.DELETE_BENEFICIARY])) return;
     if (!id) {
       return res.status(400).json({ error: { message: "Beneficiary ID is required", status: 400 } });
     }

@@ -26,6 +26,7 @@ import {
   Filter,
 } from 'lucide-react';
 import { showToast, ToastPlaceholder } from '../components/ui/Toast';
+import { handleDeleteError } from '../utils/deleteHandler';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { pageActionsClass } from '../components/common/responsive';
 import { ManagePermissionsModal } from '../components/admin/ManagePermissionsModal';
@@ -380,11 +381,11 @@ export const UsersRoles = () => {
   const handleDeleteUser = async (id) => {
     try {
       await deleteUser(id);
-      showToast('User deleted successfully');
+      showToast('User deleted successfully', 'success');
       setConfirmDeleteId(null);
       if (editingUser?.id === id) setUserModalOpen(false);
     } catch (err) {
-      showToast(err.message || 'Failed to delete user');
+      handleDeleteError(err, 'Failed to delete user');
     }
   };
 
@@ -399,12 +400,7 @@ export const UsersRoles = () => {
       showToast(role ? `Role "${role.name}" deleted successfully` : 'Role deleted successfully', 'success');
       setConfirmDeleteRoleId(null);
     } catch (err) {
-      const errMsg =
-        err.response?.data?.error?.message ||
-        err.response?.data?.message ||
-        err.message ||
-        'Failed to delete role';
-      showToast(errMsg, 'error');
+      handleDeleteError(err, 'Failed to delete role');
     }
   };
 

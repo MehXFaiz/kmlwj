@@ -47,8 +47,16 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         });
       }
     } else {
-      // POST TO LEDGER: requires ledger.post permission (available to all assigned roles)
-      if (!await verifyPermission(req, res, PERMS.POST_LEDGER)) return;
+      // POST TO LEDGER: requires module-specific post permission (e.g. donations.post) or global ledger.post
+      const moduleStr = typeof module === 'string' ? module.trim() : '';
+      const requiredPerms: string[] = [PERMS.POST_LEDGER, 'ledger.post'];
+      if (moduleStr) {
+        requiredPerms.unshift(`${moduleStr}.post`);
+        if (moduleStr.toLowerCase() !== moduleStr) {
+          requiredPerms.unshift(`${moduleStr.toLowerCase()}.post`);
+        }
+      }
+      if (!await verifyPermission(req, res, requiredPerms)) return;
 
       try {
         const result = await LedgerWorkflowService.postToLedger({

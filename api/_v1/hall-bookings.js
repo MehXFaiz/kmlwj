@@ -41,14 +41,16 @@ function isKnownStatus(value) {
 var hall_bookings_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
-  if (!await enforceRestrictedRolePolicy(req, res)) return;
+  if (!await enforceRestrictedRolePolicy(req, res, method === "DELETE" ? ["hallBookings.delete", PERMS.DELETE_HALL_BOOKING] : ["hallBookings.update", PERMS.UPDATE_HALL_BOOKING])) return;
   const method = req.method?.toUpperCase() ?? "";
   if (method === "GET") {
-    if (!await verifyPermission(req, res, PERMS.VIEW_HALL_BOOKINGS)) return;
+    if (!await verifyPermission(req, res, ["hallBookings.view", PERMS.VIEW_HALL_BOOKINGS])) return;
   } else if (method === "POST") {
-    if (!await verifyPermission(req, res, PERMS.CREATE_HALL_BOOKING)) return;
-  } else if (method === "PUT" || method === "PATCH" || method === "DELETE") {
-    if (!await verifyPermission(req, res, PERMS.VIEW_HALL_BOOKINGS)) return;
+    if (!await verifyPermission(req, res, ["hallBookings.create", PERMS.CREATE_HALL_BOOKING])) return;
+  } else if (method === "DELETE") {
+    if (!await verifyPermission(req, res, ["hallBookings.delete", PERMS.DELETE_HALL_BOOKING])) return;
+  } else if (method === "PUT" || method === "PATCH") {
+    if (!await verifyPermission(req, res, ["hallBookings.update", PERMS.UPDATE_HALL_BOOKING])) return;
   }
   const action = req.query.action;
   if (method === "GET") {

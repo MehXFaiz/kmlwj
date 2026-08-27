@@ -4,28 +4,40 @@ import api from '../services/api';
 
 /**
  * Returns true if the user holds permission to edit or delete records.
- * Privileged roles (Super Admin, Admin) have global edit/delete access.
- * Dynamic custom roles check against module-specific or global permissions.
+ * Super Admin: Full edit/delete access.
+ * Admin: Edit/delete access governed by assigned system permissions.
+ * Restricted roles (Accountant, Data Entry Operator, Donation & Zakat Manager, etc.):
+ * Strictly FALSE. They are never permitted to edit or delete records.
  */
-export const canUserEditOrDelete = (isPrivileged, permissions = [], module = null) => {
-  if (isPrivileged === true) return true;
-  if (!module) {
-    return permissions.some(
-      (p) =>
-        p.endsWith('.update') ||
-        p.endsWith('.delete') ||
-        p.includes('UPDATE') ||
-        p.includes('DELETE') ||
-        p.includes('MANAGE')
+export const canUserEditOrDelete = (isPrivileged, permissions = [], module = null, role = null) => {
+  if (isPrivileged !== true) return false;
+  if (role === 'Super Admin' || role?.name === 'Super Admin') return true;
+  if (!module) return true;
+
+  if (Array.isArray(permissions)) {
+    return (
+      permissions.includes(`${module}.update`) ||
+      permissions.includes(`${module}.delete`) ||
+      permissions.includes(`UPDATE_${module.toUpperCase()}`) ||
+      permissions.includes(`DELETE_${module.toUpperCase()}`) ||
+      permissions.includes(`MANAGE_${module.toUpperCase()}`)
     );
   }
-  return (
-    permissions.includes(`${module}.update`) ||
-    permissions.includes(`${module}.delete`) ||
-    permissions.includes(`UPDATE_${module.toUpperCase()}`) ||
-    permissions.includes(`DELETE_${module.toUpperCase()}`) ||
-    permissions.includes(`MANAGE_${module.toUpperCase()}`)
-  );
+
+  if (permissions && typeof permissions === 'object') {
+    if (permissions[module] && typeof permissions[module] === 'object') {
+      return Boolean(permissions[module].update || permissions[module].delete);
+    }
+    return Boolean(
+      permissions[`${module}.update`] ||
+      permissions[`${module}.delete`] ||
+      permissions[`UPDATE_${module.toUpperCase()}`] ||
+      permissions[`DELETE_${module.toUpperCase()}`] ||
+      permissions[`MANAGE_${module.toUpperCase()}`]
+    );
+  }
+
+  return false;
 };
 
 export const canUserPostToLedger = (isPrivileged, permissions = [], module = null) => {
@@ -56,7 +68,7 @@ export const useAuthStore = create((set, get) => {
   return {
     user: null,
     role: null,
-    /** true = Super Admin or Admin (full CRUD). false = restricted / dynamic role. */
+    /** true = Super Admin or Admin. false = restricted / dynamic role. */
     isPrivileged: false,
     permissions: [],
     modulePermissions: {},
@@ -70,12 +82,19 @@ export const useAuthStore = create((set, get) => {
     // Dynamic Permission Checker: can('donations', 'update')
     can: (moduleKey, action) => {
       const state = get();
-      if (state.isPrivileged) return true;
       if (!moduleKey) return false;
+      const isEditOrDelete = action === 'update' || action === 'delete';
+
+      // Restricted roles are NEVER allowed to edit or delete records
+      if (isEditOrDelete && !state.isPrivileged) {
+        return false;
+      }
+
+      if (state.user?.role === 'Super Admin' || state.role === 'Super Admin') return true;
 
       // Check structured modulePermissions first
-      if (state.modulePermissions && state.modulePermissions[moduleKey]?.[action]) {
-        return true;
+      if (state.modulePermissions && state.modulePermissions[moduleKey]?.[action] !== undefined) {
+        return Boolean(state.modulePermissions[moduleKey][action]);
       }
 
       // Check raw permission strings
@@ -100,7 +119,7 @@ export const useAuthStore = create((set, get) => {
           permName.startsWith('users.') ||
           permName.startsWith('roles.') ||
           permName.startsWith('settings.');
-        return state.user?.role === 'Super Admin' || !isSecurity;
+        return state.user?.role === 'Super Admin' || state.role === 'Super Admin' || !isSecurity;
       }
       return state.permissions.includes(permName);
     },
@@ -144,7 +163,7 @@ export const useAuthStore = create((set, get) => {
           isPrivileged: privileged,
           permissions: perms,
           modulePermissions: modPerms,
-          canEditOrDelete: canUserEditOrDelete(privileged, perms),
+          canEditOrDelete: canUserEditOrDelete(privileged, perms, null, userData.role),
           canPostToLedger: canUserPostToLedger(privileged, perms),
           isAuthenticated: true,
           loading: false,
@@ -186,7 +205,7 @@ export const useAuthStore = create((set, get) => {
           isPrivileged: privileged,
           permissions: perms,
           modulePermissions: modPerms,
-          canEditOrDelete: canUserEditOrDelete(privileged, perms),
+          canEditOrDelete: canUserEditOrDelete(privileged, perms, null, userData.role),
           canPostToLedger: canUserPostToLedger(privileged, perms),
           isAuthenticated: true,
           loading: false,

@@ -43,15 +43,16 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
 
-  // RBAC: PUT/PATCH/DELETE always blocked for non-privileged roles
-  if (!await enforceRestrictedRolePolicy(req, res)) return;
+  // Granular RBAC: PUT / PATCH require beneficiaries.update, DELETE requires beneficiaries.delete
+  if (!await enforceRestrictedRolePolicy(req, res, method === 'DELETE' ? ['beneficiaries.delete', PERMS.DELETE_BENEFICIARY] : ['beneficiaries.update', PERMS.UPDATE_BENEFICIARY])) return;
 
   const { method } = req;
   const id = req.query.id as string;
   const action = (req.query.action || req.body?.action) as string;
 
   if (method === 'GET') {
-    if (!await verifyPermission(req, res, PERMS.VIEW_BENEFICIARIES)) return;
+    if (!await verifyPermission(req, res, ['beneficiaries.view', PERMS.VIEW_BENEFICIARIES])) return;
+
 
     const { limit = '100', page = '1' } = req.query as any;
     const pageNum = parseInt(page) || 1;
@@ -94,7 +95,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'POST') {
-    if (!await verifyPermission(req, res, PERMS.CREATE_BENEFICIARY)) return;
+    if (!await verifyPermission(req, res, ['beneficiaries.create', PERMS.CREATE_BENEFICIARY])) return;
 
     const { name, fatherName, husbandName, cnic, mobile, email, address, town, area, gham, housingStatus, housingOther, familySize, monthlyIncome, monthlyExpenses, debtAmount } = req.body;
 
@@ -158,7 +159,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'PUT') {
-    if (!await verifyPermission(req, res, PERMS.UPDATE_BENEFICIARY)) return;
+    if (!await verifyPermission(req, res, ['beneficiaries.update', PERMS.UPDATE_BENEFICIARY])) return;
 
     if (!id) {
       return res.status(400).json({ error: { message: 'Beneficiary ID is required', status: 400 } });
@@ -251,7 +252,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(200).json({ status: 200, message: 'Beneficiary permanently deleted successfully' });
     }
 
-    if (!await verifyPermission(req, res, PERMS.DELETE_BENEFICIARY)) return;
+    if (!await verifyPermission(req, res, ['beneficiaries.delete', PERMS.DELETE_BENEFICIARY])) return;
 
     if (!id) {
       return res.status(400).json({ error: { message: 'Beneficiary ID is required', status: 400 } });

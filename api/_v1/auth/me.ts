@@ -52,17 +52,55 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     modulePermissions[mod.key] = actMap;
   }
 
+  // Build canonical structured permissions array: [ { module, action } ]
+  const structuredPermissions: { module: string; action: string }[] = [];
+  if (isPrivileged) {
+    for (const mod of ERP_MODULE_DEFINITIONS) {
+      for (const act of mod.actions) {
+        structuredPermissions.push({ module: mod.key, action: act });
+      }
+    }
+  } else {
+    const added = new Set<string>();
+    for (const p of permissionSet) {
+      if (p.includes('.')) {
+        const [modKey, act] = p.split('.');
+        const key = `${modKey}:${act}`;
+        if (!added.has(key)) {
+          added.add(key);
+          structuredPermissions.push({ module: modKey, action: act });
+        }
+      }
+    }
+  }
+
   return res.status(200).json({
     status: 200,
     data: {
+      user: {
+        id: user.id,
+        name: user.fullName,
+        email: user.email,
+        role: user.role.name,
+        roleId: user.role.id,
+      },
+      role: {
+        id: user.role.id,
+        name: user.role.name,
+        isPrivileged,
+      },
+      permissions: structuredPermissions,
+      rawPermissions: Array.from(permissionSet),
+      // Flat properties for backward compatibility
       id: user.id,
+      name: user.fullName,
       fullName: user.fullName,
       email: user.email,
-      role: user.role.name,
+      roleName: user.role.name,
       roleId: user.role.id,
       isPrivileged,
-      permissions,
       modulePermissions,
     },
   });
 });
+

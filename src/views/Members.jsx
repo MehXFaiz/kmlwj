@@ -6,6 +6,7 @@ import {
   Briefcase, CheckCircle, ArrowRight, Building, AlertTriangle, CreditCard, GitBranch
 } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
+import { handleDeleteError } from '../utils/deleteHandler';
 import { useAuthStore } from '../store/authStore';
 
 export const Members = () => {
@@ -35,8 +36,13 @@ export const Members = () => {
 
   const handleDelete = async () => {
     if (!deleteId) return;
-    await deleteMember(deleteId);
-    setDeleteId(null);
+    try {
+      await deleteMember(deleteId);
+      showToast('Member deleted successfully', 'success');
+      setDeleteId(null);
+    } catch (err) {
+      handleDeleteError(err, 'Failed to delete member');
+    }
   };
 
   const handleSelectAll = (e) => {
@@ -62,7 +68,7 @@ export const Members = () => {
       showToast(`${selectedIds.length} member(s) deleted successfully`, 'success');
       setSelectedIds([]);
     } catch (err) {
-      showToast(err.message || 'Failed to bulk delete members', 'error');
+      handleDeleteError(err, 'Failed to bulk delete members');
     } finally {
       setIsDeleting(false);
       setShowBulkConfirm(false);

@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { Users, Search, Plus, Edit2, Trash2, X, AlertTriangle, CheckCircle, Phone, MapPin, Briefcase } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
+import { handleDeleteError } from '../utils/deleteHandler';
 import { EmptyState } from '../components/ui/EmptyState';
 
 // Replace null DB values with '' so controlled inputs stay controlled
@@ -222,7 +223,7 @@ export const Beneficiaries = () => {
       setSelectedIds(p => p.filter(i => i !== id));
       setDeleteId(null);
     } catch (err) {
-      showToast(err.response?.data?.error?.message || err.message || 'Error deleting beneficiary', 'error');
+      handleDeleteError(err, 'Error deleting beneficiary');
     } finally {
       setIsDeleting(false);
     }
@@ -262,8 +263,7 @@ export const Beneficiaries = () => {
       const errorMsg = lastError?.response?.data?.error?.message || lastError?.message || 'associated records';
       showToast(`Removed ${successfulIds.length} record(s). ${failedIds.length} record(s) could not be removed: ${errorMsg}`, 'warning');
     } else if (failedIds.length > 0) {
-      const errorMsg = lastError?.response?.data?.error?.message || lastError?.message || 'Some records could not be removed.';
-      showToast(errorMsg, 'error');
+      handleDeleteError(lastError, 'Some records could not be removed.');
     }
     setIsDeleting(false);
   };

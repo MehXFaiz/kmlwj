@@ -9,6 +9,7 @@ import { useCoaStore } from '../store/coaStore';
 import { useMemberStore } from '../store/memberStore';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { showToast } from '../components/ui/Toast';
+import { handleDeleteError } from '../utils/deleteHandler';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolver';
 import { paymentMethodLabel } from '../constants/paymentMethods';
@@ -94,7 +95,7 @@ export const SpecializedRevenueSection = ({
   };
 
   const handleDelete = async (id) => {
-    const confirmed = await useConfirmStore.getState().showConfirm({
+    await useConfirmStore.getState().showConfirm({
       type: 'danger',
       isDangerous: true,
       title: `Delete ${category} Record?`,
@@ -114,10 +115,6 @@ export const SpecializedRevenueSection = ({
         setSelectedIds(prev => prev.filter(item => item !== id));
       },
     });
-
-    if (confirmed) {
-      showToast('Record deleted successfully', 'success');
-    }
   };
 
   const handleSelectAll = (e) => {
@@ -138,14 +135,20 @@ export const SpecializedRevenueSection = ({
   const executeBulkDelete = async () => {
     setIsDeleting(true);
     await new Promise(resolve => setTimeout(resolve, 15));
-    const res = await bulkDeleteCollections(selectedIds);
-    setIsDeleting(false);
-    setShowBulkConfirm(false);
-    if (res.success) {
-      showToast(`${selectedIds.length} record(s) deleted successfully`, 'success');
-      setSelectedIds([]);
-    } else {
-      showToast(res.error || 'Failed to bulk delete records', 'error');
+    try {
+      const res = await bulkDeleteCollections(selectedIds);
+      if (res?.success) {
+        showToast(`${selectedIds.length} record(s) deleted successfully`, 'success');
+        setSelectedIds([]);
+      } else {
+        const isForbidden = res?.error?.includes('403') || res?.error?.includes('Restricted') || res?.error?.includes('permission');
+        showToast(isForbidden ? 'You do not have permission to delete this record.' : (res?.error || 'Failed to bulk delete records'), 'error');
+      }
+    } catch (err) {
+      handleDeleteError(err, 'Failed to bulk delete records');
+    } finally {
+      setIsDeleting(false);
+      setShowBulkConfirm(false);
     }
   };
 

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass, statGridClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
+import { handleDeleteError } from '../utils/deleteHandler';
 
 /* ─── Stat Card ─── */
 function StatCard({ title, value, icon: Icon, iconBg, iconColor, sub, delay = 0 }) {
@@ -195,8 +196,7 @@ export const ReservedCodes = () => {
       setSelectedIds(p => p.filter(i => i !== id));
       setDeleteId(null);
     } catch (err) {
-      console.error(err);
-      showToast(err.response?.data?.error?.message || err.message || 'Failed to delete reserved code', 'error');
+      handleDeleteError(err, 'Failed to delete reserved code');
     }
     setIsDeleting(false);
   };
@@ -235,8 +235,7 @@ export const ReservedCodes = () => {
       const errorMsg = lastError?.response?.data?.error?.message || lastError?.message || 'associated records';
       showToast(`Removed ${successfulIds.length} code(s). ${failedIds.length} code(s) could not be removed: ${errorMsg}`, 'warning');
     } else if (failedIds.length > 0) {
-      const errorMsg = lastError?.response?.data?.error?.message || lastError?.message || 'Some records could not be removed.';
-      showToast(errorMsg, 'error');
+      handleDeleteError(lastError, 'Some records could not be removed.');
     }
 
     setIsDeleting(false);

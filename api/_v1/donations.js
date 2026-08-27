@@ -66,7 +66,7 @@ var donations_default = makeHandler(async (req, res) => {
   const { method } = req;
   const action = req.query.action || req.body?.action;
   if (method === "GET") {
-    if (!await verifyPermission(req, res, PERMS.VIEW_DONATIONS)) return;
+    if (!await verifyPermission(req, res, ["donations.view", PERMS.VIEW_DONATIONS])) return;
     const { limit = "100", page = "1" } = req.query;
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
@@ -88,7 +88,7 @@ var donations_default = makeHandler(async (req, res) => {
     ]);
     return res.status(200).json({ status: 200, data: donations, meta: { total, page: pageNum, limit: limitNum } });
   }
-  if (!await enforceRestrictedRolePolicy(req, res)) return;
+  if (!await enforceRestrictedRolePolicy(req, res, method === "DELETE" ? ["donations.delete", PERMS.DELETE_DONATION] : ["donations.update", PERMS.UPDATE_DONATION])) return;
   if (method === "PUT" || method === "POST" || method === "PATCH") {
     if (action === "restore") {
       if (!await isSuperAdmin(req)) {
@@ -127,10 +127,9 @@ var donations_default = makeHandler(async (req, res) => {
       return res.status(200).json({ status: 200, message: "Donation restored successfully", data: restored });
     }
   }
-  if (!await verifyPermission(req, res, PERMS.CREATE_DONATION)) return;
   if (method === "POST") {
     if (action === "approve") {
-      if (!await verifyPermission(req, res, PERMS.POST_LEDGER)) return;
+      if (!await verifyPermission(req, res, ["donations.post", PERMS.POST_LEDGER])) return;
       const { id } = req.body;
       if (!id) return res.status(400).json({ error: { message: "Donation ID is required", status: 400 } });
       const donation = await prisma.donation.findUnique({ where: { id }, include: { beneficiary: true } });
@@ -192,6 +191,7 @@ var donations_default = makeHandler(async (req, res) => {
       await logAudit(req.user.id, "POST_TO_LEDGER", "DONATION", donation, result.approvedDonation, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, data: result.approvedDonation, message: "Donation approved and journal entries created successfully" });
     }
+    if (!await verifyPermission(req, res, ["donations.create", PERMS.CREATE_DONATION])) return;
     const { beneficiaryId, donorName, donorMobile, donationType, customDonationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks } = req.body;
     if (!donorName || !donationType || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: "Missing required fields", status: 400 } });

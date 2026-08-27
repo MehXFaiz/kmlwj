@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass, statGridClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
+import { handleDeleteError } from '../utils/deleteHandler';
 
 const EXPENSE_CATEGORIES = [
   'Salaries & Benefits',
@@ -229,7 +230,7 @@ export const ExpenseHeads = () => {
       setSelectedIds(p => p.filter(i => i !== id));
       setDeleteId(null);
     } catch (err) {
-      showToast(err?.response?.data?.error?.message || err.message || 'Error deleting expense head', 'error');
+      handleDeleteError(err, 'Error deleting expense head');
     } finally {
       setIsDeleting(false);
     }
@@ -269,8 +270,7 @@ export const ExpenseHeads = () => {
       const errorMsg = lastError?.response?.data?.error?.message || lastError?.message || 'associated records';
       showToast(`Removed ${successfulIds.length} head(s). ${failedIds.length} head(s) could not be removed: ${errorMsg}`, 'warning');
     } else if (failedIds.length > 0) {
-      const errorMsg = lastError?.response?.data?.error?.message || lastError?.message || 'Some records could not be removed.';
-      showToast(errorMsg, 'error');
+      handleDeleteError(lastError, 'Failed to delete expense heads.');
     }
 
     setIsDeleting(false);

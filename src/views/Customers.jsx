@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { Users, Search, Plus, Edit2, Trash2, X, Building2, Mail, Phone, AlertTriangle, CheckCircle, MapPin, Briefcase } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
+import { handleDeleteError } from '../utils/deleteHandler';
 import { EmptyState } from '../components/ui/EmptyState';
 
 // Replace null DB values with '' so controlled inputs stay controlled
@@ -220,7 +221,7 @@ export const Customers = () => {
       showToast("Customer deleted successfully", "success");
       setDeleteId(null);
     } catch (err) {
-      showToast(err.message || "Failed to delete customer. Ensure they have no registered invoices.", "error");
+      handleDeleteError(err, "Failed to delete customer. Ensure they have no registered invoices.");
     } finally {
       setIsDeleting(false);
     }
@@ -249,7 +250,7 @@ export const Customers = () => {
       showToast(`${selectedIds.length} customer(s) deleted successfully`, 'success');
       setSelectedIds([]);
     } catch (err) {
-      showToast(err.message || 'Failed to bulk delete customers. Ensure they have no registered invoices.', 'error');
+      handleDeleteError(err, 'Failed to bulk delete customers. Ensure they have no registered invoices.');
     } finally {
       setIsDeleting(false);
       setShowBulkConfirm(false);

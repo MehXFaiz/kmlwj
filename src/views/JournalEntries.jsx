@@ -11,6 +11,7 @@ import { JournalEntryModal } from '../components/ledger/JournalEntryModal';
 import { Plus, Calendar, ChevronDown, ChevronUp, FileSpreadsheet, Check, X, Search, Trash2, AlertTriangle } from 'lucide-react';
 import { MobileOnly, DesktopOnly } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
+import { handleDeleteError } from '../utils/deleteHandler';
 import { sumMoney, formatMoney } from '../utils/money';
 
 export const JournalEntries = () => {
@@ -66,7 +67,7 @@ export const JournalEntries = () => {
   };
 
   const handleDeleteJournal = async (dbId, voucherNo) => {
-    const confirmed = await useConfirmStore.getState().showConfirm({
+    await useConfirmStore.getState().showConfirm({
       type: 'danger',
       isDangerous: true,
       title: 'Delete Journal Entry?',
@@ -87,10 +88,6 @@ export const JournalEntries = () => {
         }
       },
     });
-
-    if (confirmed) {
-      showToast('Journal entry deleted successfully.', 'success');
-    }
   };
 
   const handleSelectAll = (e) => {
@@ -116,7 +113,7 @@ export const JournalEntries = () => {
       showToast(`${selectedIds.length} journal entry(s) deleted successfully`, 'success');
       setSelectedIds([]);
     } catch (err) {
-      showToast(err?.response?.data?.error?.message || err.message || 'Failed to bulk delete journal entries', 'error');
+      handleDeleteError(err, 'Failed to bulk delete journal entries');
     } finally {
       setIsDeleting(false);
       setShowBulkConfirm(false);

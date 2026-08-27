@@ -500,7 +500,7 @@ export const MonthlyDonationCards = () => {
     const name = card.name || 'Unknown';
     const cardNo = card.cardNumber || 'N/A';
 
-    const confirmed = await useConfirmStore.getState().showConfirm({
+    await useConfirmStore.getState().showConfirm({
       type: 'danger',
       isDangerous: true,
       title: 'Delete Monthly Donation Card?',
@@ -517,10 +517,6 @@ export const MonthlyDonationCards = () => {
         await deleteCard(card.id);
       },
     });
-
-    if (confirmed) {
-      showToast('Monthly Donation Card deleted successfully.');
-    }
   };
 
   const fmtAmount = (val) => {

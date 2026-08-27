@@ -414,6 +414,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   // ── DELETE: Delete Role ────────────────────────────────────────────────────
   if (method === 'DELETE') {
+    if (!await verifyPermission(req, res, [PERMS.MANAGE_ROLES, 'roles.delete'])) return;
+
     if (!id || typeof id !== 'string' || !id.trim()) {
       return res.status(400).json({
         success: false,

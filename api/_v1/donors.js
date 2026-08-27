@@ -23,14 +23,16 @@ async function nextDonorCode(tx) {
 var donors_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
-  if (!await enforceRestrictedRolePolicy(req, res)) return;
+  if (!await enforceRestrictedRolePolicy(req, res, method === "DELETE" ? ["donors.delete", PERMS.DELETE_DONOR] : ["donors.update", PERMS.UPDATE_DONOR])) return;
   const method = req.method?.toUpperCase() ?? "";
   if (method === "GET") {
-    if (!await verifyPermission(req, res, PERMS.VIEW_DONORS)) return;
+    if (!await verifyPermission(req, res, ["donors.view", PERMS.VIEW_DONORS])) return;
   } else if (method === "POST") {
-    if (!await verifyPermission(req, res, PERMS.CREATE_DONOR)) return;
+    if (!await verifyPermission(req, res, ["donors.create", PERMS.CREATE_DONOR])) return;
+  } else if (method === "DELETE") {
+    if (!await verifyPermission(req, res, ["donors.delete", PERMS.DELETE_DONOR])) return;
   } else {
-    if (!await verifyPermission(req, res, PERMS.VIEW_DONORS)) return;
+    if (!await verifyPermission(req, res, ["donors.update", PERMS.UPDATE_DONOR])) return;
   }
   const id = req.query.id;
   const action = req.query.action || req.body?.action;

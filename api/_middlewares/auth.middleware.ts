@@ -79,9 +79,17 @@ export async function verifyPermission(
     return true;
   }
 
+  const method = req.method?.toUpperCase() ?? '';
+  const message =
+    method === 'DELETE'
+      ? 'You do not have permission to delete this record.'
+      : `Forbidden: '${permList.join(' or ')}' permission required`;
+
   res.status(403).json({
+    success: false,
+    message,
     error: {
-      message: `Forbidden: '${permList.join(' or ')}' permission required`,
+      message,
       status: 403,
     },
   });

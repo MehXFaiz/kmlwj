@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { Users, Search, Plus, Edit2, Trash2, X, Phone, CreditCard, MapPin, AlertTriangle, CheckCircle, CheckSquare } from 'lucide-react';
 import { pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
+import { handleDeleteError } from '../utils/deleteHandler';
 import { useConfirm } from '../components/ui/ConfirmationModal';
 
 
@@ -108,7 +109,7 @@ export const Donors = () => {
       setShowBulkConfirm(false);
     } catch (err) {
       // Modal stays open on failure so the delete can be retried without reselecting.
-      showToast(err.message || 'Unable to delete selected donors.', 'error');
+      handleDeleteError(err, 'Unable to delete selected donors.');
     } finally {
       setIsDeleting(false);
     }

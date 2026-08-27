@@ -4,6 +4,7 @@ import { useDonationStore } from '../store/donationStore';
 import { useCoaStore } from '../store/coaStore';
 import { useAuthStore } from '../store/authStore';
 import { showToast } from '../components/ui/Toast';
+import { handleDeleteError } from '../utils/deleteHandler';
 import { Heart, Search, Plus, Edit2, Trash2, CheckCircle2, X, AlertTriangle, Printer, Phone, CreditCard, Banknote, Calendar, MapPin, SlidersHorizontal, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
@@ -508,22 +509,24 @@ export const Donations = () => {
       setDeleteId(null);
       setSelectedIds(prev => prev.filter(x => x !== id));
     } catch (e) {
-      showToast(e.message || 'Failed to delete donation', 'error');
+      handleDeleteError(e, 'Failed to delete donation');
     }
   };
 
   const handleBulkDelete = async () => {
     try {
       const res = await bulkDeleteDonations(selectedIds);
-      if (res.success) {
+      if (res?.success) {
         showToast(`${selectedIds.length} donation(s) deleted successfully`, 'success');
         setSelectedIds([]);
       } else {
-        showToast(res.error || 'Failed to bulk delete donations', 'error');
+        const isForbidden = res?.error?.includes('403') || res?.error?.includes('Restricted') || res?.error?.includes('permission');
+        showToast(isForbidden ? 'You do not have permission to delete this record.' : (res?.error || 'Failed to bulk delete donations'), 'error');
       }
-      setShowBulkConfirm(false);
     } catch (e) {
-      showToast(e.message || 'Failed to bulk delete donations', 'error');
+      handleDeleteError(e, 'Failed to bulk delete donations');
+    } finally {
+      setShowBulkConfirm(false);
     }
   };
 

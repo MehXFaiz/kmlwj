@@ -559,7 +559,7 @@ export const ZakatCards = () => {
     const beneficiaryName = card.beneficiary?.name || card.member?.fullName || 'Unknown Beneficiary';
     const cardNo = card.cardNumber || 'N/A';
 
-    const confirmed = await useConfirmStore.getState().showConfirm({
+    await useConfirmStore.getState().showConfirm({
       type: 'danger',
       isDangerous: true,
       title: 'Delete Zakat Card?',
@@ -578,10 +578,6 @@ export const ZakatCards = () => {
         await deleteCard(card.id);
       },
     });
-
-    if (confirmed) {
-      showToast('Zakat Card deleted successfully.');
-    }
   };
 
   const fmtAmount = (val) => {

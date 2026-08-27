@@ -68,8 +68,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
 
-  // RBAC: PUT/PATCH/DELETE always blocked for non-privileged roles
-  if (!await enforceRestrictedRolePolicy(req, res)) return;
+  // Granular RBAC: PUT / PATCH require update permission, DELETE requires delete permission
+  if (!await enforceRestrictedRolePolicy(req, res, method === 'DELETE' ? ['revenueCollections.delete', PERMS.DELETE_REVENUE_COLLECTION] : ['revenueCollections.update', PERMS.UPDATE_REVENUE_COLLECTION])) return;
 
   const method = req.method?.toUpperCase() ?? '';
   const id = req.query.id as string;
@@ -77,7 +77,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const categoryFilter = req.query.category as string;
 
   if (method === 'GET') {
-    if (!await verifyPermission(req, res, PERMS.VIEW_REVENUE_COLLECTIONS)) return;
+    if (!await verifyPermission(req, res, ['revenueCollections.view', PERMS.VIEW_REVENUE_COLLECTIONS])) return;
+
 
     const whereClause: any = {
       ...(categoryFilter ? { category: categoryFilter } : {}),
@@ -138,14 +139,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
   }
 
-  // Every write below (create, approve, edit, revert) posts directly to the General Ledger.
-  // Non-privileged roles can only create (POST); PUT/DELETE already blocked above.
-  if (!await verifyPermission(req, res, PERMS.CREATE_REVENUE_COLLECTION)) return;
-
   if (method === 'POST') {
-    // Action: Approve & Post to Ledger — requires POST_LEDGER permission
+    // Action: Approve & Post to Ledger — requires revenueCollections.post permission
     if (action === 'approve') {
-      if (!await verifyPermission(req, res, PERMS.POST_LEDGER)) return;
+      if (!await verifyPermission(req, res, ['revenueCollections.post', PERMS.POST_LEDGER])) return;
 
       const { id } = req.body;
       if (!id) return res.status(400).json({ error: { message: 'Collection ID is required', status: 400 } });
@@ -237,6 +234,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     // Action: Create Record & Auto-Post to Ledger
+    if (!await verifyPermission(req, res, ['revenueCollections.create', PERMS.CREATE_REVENUE_COLLECTION])) return;
+
     const { category, title, subTitle, mobile, eventDate, quantity, rate, destination, amount, paymentMethod, bankAccountId, chequeNumber, remarks } = req.body;
 
     if (!category || !title || !amount || !paymentMethod) {

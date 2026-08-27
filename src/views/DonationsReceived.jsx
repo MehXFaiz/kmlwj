@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
+import { handleDeleteError } from '../utils/deleteHandler';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolver';
 import { useConfirm } from '../components/ui/ConfirmationModal';
@@ -223,7 +224,7 @@ export const DonationsReceived = ({ defaultType = null, titleOverride = null }) 
       showToast(`${selectedIds.length} donation receipt(s) deleted successfully`, 'success');
       setSelectedIds([]);
     } catch (err) {
-      showToast(err.message || 'Failed to bulk delete donation receipts', 'error');
+      handleDeleteError(err, 'Failed to bulk delete donation receipts');
     } finally {
       setIsDeleting(false);
       setShowBulkConfirm(false);

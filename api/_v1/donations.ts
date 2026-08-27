@@ -77,8 +77,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const action = (req.query.action || req.body?.action) as string;
 
   if (method === 'GET') {
-    // VIEW permission allows both privileged and restricted roles to read
-    if (!await verifyPermission(req, res, PERMS.VIEW_DONATIONS)) return;
+    // VIEW permission allows reading donations
+    if (!await verifyPermission(req, res, ['donations.view', PERMS.VIEW_DONATIONS])) return;
 
     const { limit = '100', page = '1' } = req.query as any;
     const pageNum = parseInt(page) || 1;
@@ -105,11 +105,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   // ── All write methods ───────────────────────────────────────────────────────
-  // RBAC enforcement: PUT / PATCH / DELETE require isPrivileged (Admin / Super Admin).
-  // POST is allowed for restricted roles (CREATE permission checked below).
-  // This check runs BEFORE any other write logic so restricted users can never
-  // bypass it by crafting a special action parameter.
-  if (!await enforceRestrictedRolePolicy(req, res)) return;
+  // Granular RBAC: PUT / PATCH require donations.update, DELETE requires donations.delete
+  if (!await enforceRestrictedRolePolicy(req, res, method === 'DELETE' ? ['donations.delete', PERMS.DELETE_DONATION] : ['donations.update', PERMS.UPDATE_DONATION])) return;
 
   if (method === 'PUT' || method === 'POST' || method === 'PATCH') {
     if (action === 'restore') {
@@ -130,10 +127,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           data: { isDeleted: false, deletedAt: null, deletedBy: null }
         });
 
-        // An APPROVED donation's journal entry was soft-deleted alongside it —
-        // restore it too and rebuild the cached balances, or the restored
-        // donation stays invisible to every report (same bug fixed for Simple
-        // Income / Invoices). Same reference lookup the delete path already uses.
         if (updated.status === 'APPROVED') {
           const ref = `DON-${updated.id.substring(0, 8)}`;
           const je = await tx.journalEntry.findFirst({ where: { reference: ref, isDeleted: true } });
@@ -157,15 +150,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
   }
 
-  // POST: Create or Approve — requires CREATE_DONATION permission
-  // Approve action additionally requires isPrivileged (Admin/Super Admin) because
-  // it posts to the General Ledger — a privileged operation.
-  if (!await verifyPermission(req, res, PERMS.CREATE_DONATION)) return;
-
+  // POST: Create or Approve
   if (method === 'POST') {
-    // Action: Approve Donation & Post to Ledger — requires POST_LEDGER permission
+    // Action: Approve Donation & Post to Ledger — requires donations.post permission
     if (action === 'approve') {
-      if (!await verifyPermission(req, res, PERMS.POST_LEDGER)) return;
+      if (!await verifyPermission(req, res, ['donations.post', PERMS.POST_LEDGER])) return;
+
 
       const { id } = req.body;
       if (!id) return res.status(400).json({ error: { message: 'Donation ID is required', status: 400 } });
@@ -240,6 +230,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     // Action: Create Donation
+    if (!await verifyPermission(req, res, ['donations.create', PERMS.CREATE_DONATION])) return;
+
     const { beneficiaryId, donorName, donorMobile, donationType, customDonationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks } = req.body;
 
     if (!donorName || !donationType || !amount || !paymentMethod) {

@@ -20,10 +20,10 @@ export const PERMISSION_EXPANSIONS: Record<string, string[]> = {
 
   // ── Opening Balances ────────────────────────────────────────────────────────
   'openingBalances.view': ['VIEW_REPORTS', 'openingBalances.view'],
-  'openingBalances.create': ['POST_JOURNAL', 'openingBalances.create'],
-  'openingBalances.update': ['POST_JOURNAL', 'openingBalances.update'],
-  'openingBalances.delete': ['POST_JOURNAL', 'openingBalances.delete'],
-  'openingBalances.post': ['ledger.post', 'POST_JOURNAL'],
+  'openingBalances.create': ['openingBalances.view', 'openingBalances.create'],
+  'openingBalances.update': ['openingBalances.view', 'openingBalances.update'],
+  'openingBalances.delete': ['openingBalances.view', 'openingBalances.delete'],
+  'openingBalances.post': ['openingBalances.view', 'openingBalances.post'],
 
   // ── Reports & Audit ────────────────────────────────────────────────────────
   VIEW_REPORTS: [
@@ -36,18 +36,18 @@ export const PERMISSION_EXPANSIONS: Record<string, string[]> = {
   ],
   VIEW_AUDIT: ['audit.view', 'audit.export', 'audit.print'],
   VIEW_JOURNALS: ['journalEntries.view', 'journalEntries.print'],
-  'reports.view': ['VIEW_REPORTS'],
-  'reports.export': ['VIEW_REPORTS'],
-  'reports.print': ['VIEW_REPORTS'],
-  'audit.view': ['VIEW_AUDIT'],
-  'audit.export': ['VIEW_AUDIT'],
-  'audit.print': ['VIEW_AUDIT'],
+  'reports.view': ['VIEW_REPORTS', 'reports.view'],
+  'reports.export': ['VIEW_REPORTS', 'reports.export'],
+  'reports.print': ['VIEW_REPORTS', 'reports.print'],
+  'audit.view': ['VIEW_AUDIT', 'audit.view'],
+  'audit.export': ['VIEW_AUDIT', 'audit.export'],
+  'audit.print': ['VIEW_AUDIT', 'audit.print'],
   'generalLedger.view': ['VIEW_REPORTS', 'generalLedger.view'],
   'generalLedger.export': ['VIEW_REPORTS', 'generalLedger.export'],
   'generalLedger.print': ['VIEW_REPORTS', 'generalLedger.print'],
 
   // ── Journals & Ledger ──────────────────────────────────────────────────────
-  POST_JOURNAL: ['ledger.post', 'journalEntries.post', 'journalEntries.create', 'journalEntries.update'],
+  POST_JOURNAL: ['journalEntries.post', 'journalEntries.create', 'journalEntries.update', 'journalEntries.view'],
   'ledger.post': [
     'POST_JOURNAL',
     'donations.post',
@@ -63,10 +63,10 @@ export const PERMISSION_EXPANSIONS: Record<string, string[]> = {
     'journalEntries.post',
   ],
   'journalEntries.view': ['VIEW_JOURNALS', 'journalEntries.view'],
-  'journalEntries.create': ['POST_JOURNAL', 'journalEntries.create'],
-  'journalEntries.update': ['POST_JOURNAL', 'journalEntries.update'],
-  'journalEntries.delete': ['POST_JOURNAL', 'journalEntries.delete'],
-  'journalEntries.post': ['ledger.post', 'POST_JOURNAL'],
+  'journalEntries.create': ['journalEntries.view', 'journalEntries.create'],
+  'journalEntries.update': ['journalEntries.view', 'journalEntries.update'],
+  'journalEntries.delete': ['journalEntries.view', 'journalEntries.delete'],
+  'journalEntries.post': ['journalEntries.view', 'journalEntries.post'],
 
   // ── Income / Revenue ───────────────────────────────────────────────────────
   RECORD_INCOME: [
@@ -78,52 +78,52 @@ export const PERMISSION_EXPANSIONS: Record<string, string[]> = {
     'revenueCollections.update',
   ],
   'revenue.view': ['RECORD_INCOME', 'revenue.view'],
-  'revenue.create': ['RECORD_INCOME', 'revenue.create'],
-  'revenue.update': ['RECORD_INCOME', 'revenue.update'],
-  'revenue.delete': ['RECORD_INCOME', 'revenue.delete'],
-  'revenue.post': ['ledger.post', 'POST_JOURNAL'],
+  'revenue.create': ['RECORD_INCOME', 'revenue.view', 'revenue.create'],
+  'revenue.update': ['RECORD_INCOME', 'revenue.view', 'revenue.update'],
+  'revenue.delete': ['RECORD_INCOME', 'revenue.view', 'revenue.delete'],
+  'revenue.post': ['revenue.view', 'revenue.post'],
 
   // ── Expense ────────────────────────────────────────────────────────────────
   RECORD_EXPENSE: ['expenses.view', 'expenses.create', 'expenses.update'],
   'expenses.view': ['RECORD_EXPENSE', 'expenses.view'],
-  'expenses.create': ['RECORD_EXPENSE', 'expenses.create'],
-  'expenses.update': ['RECORD_EXPENSE', 'expenses.update'],
-  'expenses.delete': ['RECORD_EXPENSE', 'expenses.delete'],
-  'expenses.post': ['ledger.post', 'POST_JOURNAL'],
+  'expenses.create': ['RECORD_EXPENSE', 'expenses.view', 'expenses.create'],
+  'expenses.update': ['RECORD_EXPENSE', 'expenses.view', 'expenses.update'],
+  'expenses.delete': ['RECORD_EXPENSE', 'expenses.view', 'expenses.delete'],
+  'expenses.post': ['expenses.view', 'expenses.post'],
 
   // ── Members & Membership ───────────────────────────────────────────────────
   VIEW_MEMBERS: ['members.view', 'membership.view'],
-  CREATE_MEMBER: ['members.create', 'membership.create'],
-  UPDATE_MEMBER: ['members.update', 'membership.update'],
-  DELETE_MEMBER: ['members.delete', 'membership.delete'],
+  CREATE_MEMBER: ['members.create', 'members.view', 'membership.create', 'membership.view'],
+  UPDATE_MEMBER: ['members.update', 'members.view', 'membership.update', 'membership.view'],
+  DELETE_MEMBER: ['members.delete', 'members.view', 'membership.delete', 'membership.view'],
   'members.view': ['VIEW_MEMBERS', 'members.view'],
-  'members.create': ['CREATE_MEMBER', 'members.create'],
-  'members.update': ['UPDATE_MEMBER', 'members.update'],
-  'members.delete': ['DELETE_MEMBER', 'members.delete'],
+  'members.create': ['CREATE_MEMBER', 'members.view', 'members.create'],
+  'members.update': ['UPDATE_MEMBER', 'members.view', 'members.update'],
+  'members.delete': ['DELETE_MEMBER', 'members.view', 'members.delete'],
   'membership.view': ['VIEW_MEMBERS', 'membership.view'],
-  'membership.create': ['CREATE_MEMBER', 'membership.create'],
-  'membership.update': ['UPDATE_MEMBER', 'membership.update'],
-  'membership.delete': ['DELETE_MEMBER', 'membership.delete'],
+  'membership.create': ['CREATE_MEMBER', 'membership.view', 'membership.create'],
+  'membership.update': ['UPDATE_MEMBER', 'membership.view', 'membership.update'],
+  'membership.delete': ['DELETE_MEMBER', 'membership.view', 'membership.delete'],
 
   // ── Beneficiaries ──────────────────────────────────────────────────────────
   VIEW_BENEFICIARIES: ['beneficiaries.view'],
-  CREATE_BENEFICIARY: ['beneficiaries.create'],
-  UPDATE_BENEFICIARY: ['beneficiaries.update'],
-  DELETE_BENEFICIARY: ['beneficiaries.delete'],
+  CREATE_BENEFICIARY: ['beneficiaries.view', 'beneficiaries.create'],
+  UPDATE_BENEFICIARY: ['beneficiaries.view', 'beneficiaries.update'],
+  DELETE_BENEFICIARY: ['beneficiaries.view', 'beneficiaries.delete'],
   'beneficiaries.view': ['VIEW_BENEFICIARIES', 'beneficiaries.view'],
-  'beneficiaries.create': ['CREATE_BENEFICIARY', 'beneficiaries.create'],
-  'beneficiaries.update': ['UPDATE_BENEFICIARY', 'beneficiaries.update'],
-  'beneficiaries.delete': ['DELETE_BENEFICIARY', 'beneficiaries.delete'],
+  'beneficiaries.create': ['CREATE_BENEFICIARY', 'beneficiaries.view', 'beneficiaries.create'],
+  'beneficiaries.update': ['UPDATE_BENEFICIARY', 'beneficiaries.view', 'beneficiaries.update'],
+  'beneficiaries.delete': ['DELETE_BENEFICIARY', 'beneficiaries.view', 'beneficiaries.delete'],
 
   // ── Donations & Received ───────────────────────────────────────────────────
   VIEW_DONATIONS: ['donations.view'],
-  CREATE_DONATION: ['donations.create'],
-  UPDATE_DONATION: ['donations.update'],
-  DELETE_DONATION: ['donations.delete'],
+  CREATE_DONATION: ['donations.view', 'donations.create'],
+  UPDATE_DONATION: ['donations.view', 'donations.update'],
+  DELETE_DONATION: ['donations.view', 'donations.delete'],
   VIEW_DONATIONS_RECEIVED: ['donations.view', 'revenueCollections.view'],
-  CREATE_DONATION_RECEIVED: ['donations.create', 'revenueCollections.create'],
-  UPDATE_DONATION_RECEIVED: ['donations.update', 'revenueCollections.update'],
-  DELETE_DONATION_RECEIVED: ['donations.delete', 'revenueCollections.delete'],
+  CREATE_DONATION_RECEIVED: ['donations.view', 'donations.create', 'revenueCollections.view', 'revenueCollections.create'],
+  UPDATE_DONATION_RECEIVED: ['donations.view', 'donations.update', 'revenueCollections.view', 'revenueCollections.update'],
+  DELETE_DONATION_RECEIVED: ['donations.view', 'donations.delete', 'revenueCollections.view', 'revenueCollections.delete'],
   MANAGE_DONATIONS: [
     'VIEW_DONATIONS',
     'CREATE_DONATION',
@@ -143,17 +143,17 @@ export const PERMISSION_EXPANSIONS: Record<string, string[]> = {
     'donations.print',
   ],
   'donations.view': ['VIEW_DONATIONS', 'VIEW_DONATIONS_RECEIVED', 'donations.view'],
-  'donations.create': ['CREATE_DONATION', 'CREATE_DONATION_RECEIVED', 'donations.create'],
-  'donations.update': ['UPDATE_DONATION', 'UPDATE_DONATION_RECEIVED', 'donations.update'],
-  'donations.delete': ['DELETE_DONATION', 'DELETE_DONATION_RECEIVED', 'donations.delete'],
-  'donations.post': ['ledger.post', 'POST_JOURNAL'],
-  'donations.approve': ['ledger.post', 'POST_JOURNAL', 'donations.approve'],
+  'donations.create': ['CREATE_DONATION', 'CREATE_DONATION_RECEIVED', 'donations.view', 'donations.create'],
+  'donations.update': ['UPDATE_DONATION', 'UPDATE_DONATION_RECEIVED', 'donations.view', 'donations.update'],
+  'donations.delete': ['DELETE_DONATION', 'DELETE_DONATION_RECEIVED', 'donations.view', 'donations.delete'],
+  'donations.post': ['donations.view', 'donations.post'],
+  'donations.approve': ['donations.view', 'donations.post', 'donations.approve'],
 
   // ── Invoices ───────────────────────────────────────────────────────────────
   VIEW_INVOICES: ['invoices.view'],
-  CREATE_INVOICE: ['invoices.create'],
-  UPDATE_INVOICE: ['invoices.update'],
-  DELETE_INVOICE: ['invoices.delete'],
+  CREATE_INVOICE: ['invoices.view', 'invoices.create'],
+  UPDATE_INVOICE: ['invoices.view', 'invoices.update'],
+  DELETE_INVOICE: ['invoices.view', 'invoices.delete'],
   MANAGE_INVOICES: [
     'VIEW_INVOICES',
     'CREATE_INVOICE',
@@ -167,16 +167,16 @@ export const PERMISSION_EXPANSIONS: Record<string, string[]> = {
     'invoices.print',
   ],
   'invoices.view': ['VIEW_INVOICES', 'invoices.view'],
-  'invoices.create': ['CREATE_INVOICE', 'invoices.create'],
-  'invoices.update': ['UPDATE_INVOICE', 'invoices.update'],
-  'invoices.delete': ['DELETE_INVOICE', 'invoices.delete'],
-  'invoices.post': ['ledger.post', 'POST_JOURNAL'],
+  'invoices.create': ['CREATE_INVOICE', 'invoices.view', 'invoices.create'],
+  'invoices.update': ['UPDATE_INVOICE', 'invoices.view', 'invoices.update'],
+  'invoices.delete': ['DELETE_INVOICE', 'invoices.view', 'invoices.delete'],
+  'invoices.post': ['invoices.view', 'invoices.post'],
 
   // ── Hall Bookings ──────────────────────────────────────────────────────────
   VIEW_HALL_BOOKINGS: ['hallBookings.view'],
-  CREATE_HALL_BOOKING: ['hallBookings.create'],
-  UPDATE_HALL_BOOKING: ['hallBookings.update'],
-  DELETE_HALL_BOOKING: ['hallBookings.delete'],
+  CREATE_HALL_BOOKING: ['hallBookings.view', 'hallBookings.create'],
+  UPDATE_HALL_BOOKING: ['hallBookings.view', 'hallBookings.update'],
+  DELETE_HALL_BOOKING: ['hallBookings.view', 'hallBookings.delete'],
   MANAGE_HALL_BOOKINGS: [
     'VIEW_HALL_BOOKINGS',
     'CREATE_HALL_BOOKING',
@@ -190,17 +190,17 @@ export const PERMISSION_EXPANSIONS: Record<string, string[]> = {
     'hallBookings.approve',
   ],
   'hallBookings.view': ['VIEW_HALL_BOOKINGS', 'hallBookings.view'],
-  'hallBookings.create': ['CREATE_HALL_BOOKING', 'hallBookings.create'],
-  'hallBookings.update': ['UPDATE_HALL_BOOKING', 'hallBookings.update'],
-  'hallBookings.delete': ['DELETE_HALL_BOOKING', 'hallBookings.delete'],
-  'hallBookings.post': ['ledger.post', 'POST_JOURNAL'],
-  'hallBookings.approve': ['ledger.post', 'POST_JOURNAL', 'hallBookings.approve'],
+  'hallBookings.create': ['CREATE_HALL_BOOKING', 'hallBookings.view', 'hallBookings.create'],
+  'hallBookings.update': ['UPDATE_HALL_BOOKING', 'hallBookings.view', 'hallBookings.update'],
+  'hallBookings.delete': ['DELETE_HALL_BOOKING', 'hallBookings.view', 'hallBookings.delete'],
+  'hallBookings.post': ['hallBookings.view', 'hallBookings.post'],
+  'hallBookings.approve': ['hallBookings.view', 'hallBookings.post', 'hallBookings.approve'],
 
   // ── Revenue Collections ────────────────────────────────────────────────────
   VIEW_REVENUE_COLLECTIONS: ['revenueCollections.view'],
-  CREATE_REVENUE_COLLECTION: ['revenueCollections.create'],
-  UPDATE_REVENUE_COLLECTION: ['revenueCollections.update'],
-  DELETE_REVENUE_COLLECTION: ['revenueCollections.delete'],
+  CREATE_REVENUE_COLLECTION: ['revenueCollections.view', 'revenueCollections.create'],
+  UPDATE_REVENUE_COLLECTION: ['revenueCollections.view', 'revenueCollections.update'],
+  DELETE_REVENUE_COLLECTION: ['revenueCollections.view', 'revenueCollections.delete'],
   MANAGE_REVENUE_COLLECTIONS: [
     'VIEW_REVENUE_COLLECTIONS',
     'CREATE_REVENUE_COLLECTION',
@@ -213,16 +213,16 @@ export const PERMISSION_EXPANSIONS: Record<string, string[]> = {
     'revenueCollections.post',
   ],
   'revenueCollections.view': ['VIEW_REVENUE_COLLECTIONS', 'revenueCollections.view'],
-  'revenueCollections.create': ['CREATE_REVENUE_COLLECTION', 'revenueCollections.create'],
-  'revenueCollections.update': ['UPDATE_REVENUE_COLLECTION', 'revenueCollections.update'],
-  'revenueCollections.delete': ['DELETE_REVENUE_COLLECTION', 'revenueCollections.delete'],
-  'revenueCollections.post': ['ledger.post', 'POST_JOURNAL'],
+  'revenueCollections.create': ['CREATE_REVENUE_COLLECTION', 'revenueCollections.view', 'revenueCollections.create'],
+  'revenueCollections.update': ['UPDATE_REVENUE_COLLECTION', 'revenueCollections.view', 'revenueCollections.update'],
+  'revenueCollections.delete': ['DELETE_REVENUE_COLLECTION', 'revenueCollections.view', 'revenueCollections.delete'],
+  'revenueCollections.post': ['revenueCollections.view', 'revenueCollections.post'],
 
   // ── Zakat & Zakat Cards ────────────────────────────────────────────────────
   VIEW_ZAKAT_CARDS: ['zakatCards.view', 'zakat.view'],
-  CREATE_ZAKAT_CARD: ['zakatCards.create', 'zakat.create'],
-  UPDATE_ZAKAT_CARD: ['zakatCards.update', 'zakat.update'],
-  DELETE_ZAKAT_CARD: ['zakatCards.delete', 'zakat.delete'],
+  CREATE_ZAKAT_CARD: ['zakatCards.view', 'zakatCards.create', 'zakat.view', 'zakat.create'],
+  UPDATE_ZAKAT_CARD: ['zakatCards.view', 'zakatCards.update', 'zakat.view', 'zakat.update'],
+  DELETE_ZAKAT_CARD: ['zakatCards.view', 'zakatCards.delete', 'zakat.view', 'zakat.delete'],
   MANAGE_ZAKAT_CARDS: [
     'VIEW_ZAKAT_CARDS',
     'CREATE_ZAKAT_CARD',
@@ -241,22 +241,22 @@ export const PERMISSION_EXPANSIONS: Record<string, string[]> = {
     'zakat.approve',
   ],
   'zakatCards.view': ['VIEW_ZAKAT_CARDS', 'zakatCards.view'],
-  'zakatCards.create': ['CREATE_ZAKAT_CARD', 'zakatCards.create'],
-  'zakatCards.update': ['UPDATE_ZAKAT_CARD', 'zakatCards.update'],
-  'zakatCards.delete': ['DELETE_ZAKAT_CARD', 'zakatCards.delete'],
-  'zakatCards.post': ['ledger.post', 'POST_JOURNAL'],
+  'zakatCards.create': ['CREATE_ZAKAT_CARD', 'zakatCards.view', 'zakatCards.create'],
+  'zakatCards.update': ['UPDATE_ZAKAT_CARD', 'zakatCards.view', 'zakatCards.update'],
+  'zakatCards.delete': ['DELETE_ZAKAT_CARD', 'zakatCards.view', 'zakatCards.delete'],
+  'zakatCards.post': ['zakatCards.view', 'zakatCards.post'],
   'zakat.view': ['VIEW_ZAKAT_CARDS', 'zakat.view'],
-  'zakat.create': ['CREATE_ZAKAT_CARD', 'zakat.create'],
-  'zakat.update': ['UPDATE_ZAKAT_CARD', 'zakat.update'],
-  'zakat.delete': ['DELETE_ZAKAT_CARD', 'zakat.delete'],
-  'zakat.post': ['ledger.post', 'POST_JOURNAL'],
-  'zakat.approve': ['ledger.post', 'POST_JOURNAL', 'zakat.approve'],
+  'zakat.create': ['CREATE_ZAKAT_CARD', 'zakat.view', 'zakat.create'],
+  'zakat.update': ['UPDATE_ZAKAT_CARD', 'zakat.view', 'zakat.update'],
+  'zakat.delete': ['DELETE_ZAKAT_CARD', 'zakat.view', 'zakat.delete'],
+  'zakat.post': ['zakat.view', 'zakat.post'],
+  'zakat.approve': ['zakat.view', 'zakat.post', 'zakat.approve'],
 
   // ── Donors ─────────────────────────────────────────────────────────────────
   VIEW_DONORS: ['donors.view'],
-  CREATE_DONOR: ['donors.create'],
-  UPDATE_DONOR: ['donors.update'],
-  DELETE_DONOR: ['donors.delete'],
+  CREATE_DONOR: ['donors.view', 'donors.create'],
+  UPDATE_DONOR: ['donors.view', 'donors.update'],
+  DELETE_DONOR: ['donors.view', 'donors.delete'],
   MANAGE_DONORS: [
     'VIEW_DONORS',
     'CREATE_DONOR',
@@ -268,9 +268,9 @@ export const PERMISSION_EXPANSIONS: Record<string, string[]> = {
     'donors.delete',
   ],
   'donors.view': ['VIEW_DONORS', 'donors.view'],
-  'donors.create': ['CREATE_DONOR', 'donors.create'],
-  'donors.update': ['UPDATE_DONOR', 'donors.update'],
-  'donors.delete': ['DELETE_DONOR', 'donors.delete'],
+  'donors.create': ['CREATE_DONOR', 'donors.view', 'donors.create'],
+  'donors.update': ['UPDATE_DONOR', 'donors.view', 'donors.update'],
+  'donors.delete': ['DELETE_DONOR', 'donors.view', 'donors.delete'],
 
   // ── Customers ──────────────────────────────────────────────────────────────
   VIEW_CUSTOMERS: ['customers.view'],
@@ -344,6 +344,14 @@ export async function loadPermissions(req: AuthenticatedRequest): Promise<Set<st
   const rawPerms = user?.role?.rolePermissions?.map((rp) => rp.permission.name) ?? [];
   const perms = new Set<string>(rawPerms);
 
+  // Dynamic Rule: Any action on a module implies module.view
+  for (const perm of rawPerms) {
+    if (perm.includes('.')) {
+      const [modKey] = perm.split('.');
+      perms.add(`${modKey}.view`);
+    }
+  }
+
   // Expand canonical and legacy composite permissions
   for (const perm of rawPerms) {
     const expansions = PERMISSION_EXPANSIONS[perm];
@@ -360,6 +368,53 @@ export async function loadPermissions(req: AuthenticatedRequest): Promise<Set<st
   }
 
   return perms;
+}
+
+/**
+ * Normalizes any permission string (canonical or legacy) into { module, action }
+ */
+export function parsePermission(perm: string): { module: string; action: string } | null {
+  if (perm.includes('.')) {
+    const [mod, act] = perm.split('.');
+    return { module: mod, action: act };
+  }
+  if (perm.startsWith('VIEW_')) {
+    const mod = perm.slice(5).toLowerCase();
+    if (mod === 'reports') return { module: 'reports', action: 'view' };
+    if (mod === 'audit') return { module: 'audit', action: 'view' };
+    if (mod === 'journals') return { module: 'journalEntries', action: 'view' };
+    if (mod === 'members') return { module: 'members', action: 'view' };
+    if (mod === 'beneficiaries') return { module: 'beneficiaries', action: 'view' };
+    if (mod === 'donations') return { module: 'donations', action: 'view' };
+    if (mod === 'donations_received') return { module: 'revenueCollections', action: 'view' };
+    if (mod === 'invoices') return { module: 'invoices', action: 'view' };
+    if (mod === 'hall_bookings') return { module: 'hallBookings', action: 'view' };
+    if (mod === 'revenue_collections') return { module: 'revenueCollections', action: 'view' };
+    if (mod === 'zakat_cards') return { module: 'zakatCards', action: 'view' };
+    if (mod === 'donors') return { module: 'donors', action: 'view' };
+    if (mod === 'customers') return { module: 'customers', action: 'view' };
+  }
+  if (perm.startsWith('CREATE_')) {
+    const mod = perm.slice(7).toLowerCase();
+    if (mod === 'account') return { module: 'coa', action: 'create' };
+    if (mod === 'member') return { module: 'members', action: 'create' };
+    if (mod === 'beneficiary') return { module: 'beneficiaries', action: 'create' };
+    if (mod === 'donation') return { module: 'donations', action: 'create' };
+    if (mod === 'donation_received') return { module: 'revenueCollections', action: 'create' };
+    if (mod === 'invoice') return { module: 'invoices', action: 'create' };
+    if (mod === 'hall_booking') return { module: 'hallBookings', action: 'create' };
+    if (mod === 'revenue_collection') return { module: 'revenueCollections', action: 'create' };
+    if (mod === 'zakat_card') return { module: 'zakatCards', action: 'create' };
+    if (mod === 'donor') return { module: 'donors', action: 'create' };
+    if (mod === 'customer') return { module: 'customers', action: 'create' };
+  }
+  if (perm === 'RECORD_INCOME') return { module: 'revenue', action: 'create' };
+  if (perm === 'RECORD_EXPENSE') return { module: 'expenses', action: 'create' };
+  if (perm === 'POST_JOURNAL') return { module: 'journalEntries', action: 'post' };
+  if (perm === 'SYSTEM_SETTINGS') return { module: 'settings', action: 'view' };
+  if (perm === 'MANAGE_USERS') return { module: 'users', action: 'view' };
+  if (perm === 'MANAGE_ROLES') return { module: 'roles', action: 'view' };
+  return null;
 }
 
 /**

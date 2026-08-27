@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/authStore';
 import { FileSpreadsheet, Search, Plus, Printer, CheckCircle, XCircle, Trash2, AlertTriangle, Edit, X, Banknote, Building2, Calendar, ArrowUpRight, ArrowDownLeft, FileText, ChevronDown, ChevronUp, Layers } from 'lucide-react';
 import { pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
+import { handleDeleteError } from '../utils/deleteHandler';
 import { useTranslation } from 'react-i18next';
 import { useConfirm } from '../components/ui/ConfirmationModal';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
@@ -669,7 +670,7 @@ export const BankVouchers = () => {
       showToast(`${selectedIds.length} voucher(s) deleted successfully`, 'success');
       setSelectedIds([]);
     } catch (err) {
-      showToast(err?.response?.data?.error?.message || err.message || 'Failed to bulk delete vouchers', 'error');
+      handleDeleteError(err, 'Failed to bulk delete vouchers');
     } finally {
       setIsDeleting(false);
       setShowBulkConfirm(false);

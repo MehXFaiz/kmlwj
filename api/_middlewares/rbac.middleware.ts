@@ -26,6 +26,12 @@ export async function loadIsPrivileged(req: AuthenticatedRequest): Promise<boole
     return false;
   }
 
+  const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(req.user.id);
+  if (!isUuid) {
+    (req as any)[PRIV_CACHE_KEY] = false;
+    return false;
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: req.user.id },
     select: { role: { select: { isPrivileged: true } } },
@@ -58,10 +64,21 @@ export async function enforceRestrictedRolePolicy(
   const privileged = await loadIsPrivileged(req);
   if (privileged) return true;
 
+  if (requiredPermission) {
+    const hasPerm = await checkPermission(req, requiredPermission);
+    if (hasPerm) return true;
+  }
+
+  const message =
+    method === 'DELETE'
+      ? 'You do not have permission to delete this record.'
+      : 'Forbidden: You do not have permission to edit this record. Please contact an administrator.';
+
   res.status(403).json({
+    success: false,
+    message,
     error: {
-      message:
-        'Forbidden: Restricted roles are not permitted to edit or delete records. Please contact an administrator.',
+      message,
       status: 403,
       code: 'RESTRICTED_ROLE',
     },
@@ -91,14 +108,22 @@ export function enforceRestrictedRolePolicyMiddleware(
         return;
       }
 
+      const message =
+        method === 'DELETE'
+          ? 'You do not have permission to delete this record.'
+          : 'Forbidden: You do not have permission to edit this record. Please contact an administrator.';
+
       res.status(403).json({
+        success: false,
+        message,
         error: {
-          message:
-            'Forbidden: Restricted roles are not permitted to edit or delete records. Please contact an administrator.',
+          message,
           status: 403,
           code: 'RESTRICTED_ROLE',
         },
       });
     })
-    .catch(next);
+    .catch((err) => {
+      res.status(500).json({ error: { message: err.message || 'Internal Server Error', status: 500 } });
+    });
 }

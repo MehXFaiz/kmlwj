@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAddIncomeStore } from '../store/addIncomeStore';
 import { useAuthStore } from '../store/authStore';
 import { showToast } from '../components/ui/Toast';
+import { handleDeleteError } from '../utils/deleteHandler';
 import { Modal } from '../components/ui/Modal';
 import { Card } from '../components/ui/Card';
 import {
@@ -160,7 +161,7 @@ export const AddIncomeRecords = () => {
       setSelectedIds((prev) => prev.filter((id) => id !== deletingRecordId));
       setDeletingRecordId(null);
     } catch (err) {
-      showToast(err.response?.data?.error?.message || err.message || 'Failed to delete record', 'error');
+      handleDeleteError(err, 'Failed to delete record');
     }
   };
 
@@ -168,7 +169,7 @@ export const AddIncomeRecords = () => {
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
     if (!isAdminOrSuperAdmin) {
-      showToast('Forbidden: Only Admin and Super Admin can Bulk Delete', 'error');
+      showToast('You do not have permission to delete this record.', 'error');
       return;
     }
     try {
@@ -178,7 +179,7 @@ export const AddIncomeRecords = () => {
       setSelectedIds([]);
       setShowBulkDeleteModal(false);
     } catch (err) {
-      showToast(err.response?.data?.error?.message || err.message || 'Failed to delete records', 'error');
+      handleDeleteError(err, 'Failed to delete records');
     } finally {
       setBulkDeleting(false);
     }

@@ -1,10 +1,11 @@
 import { makeHandler } from "../_utils/handler.js";
-import { verifyAuth } from "../_middlewares/auth.middleware.js";
+import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { validateAmount } from "../_utils/amount.js";
 import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 import { logAudit } from "../_utils/audit.js";
+import { PERMS } from "../_constants/permissions.js";
 const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };
 var add_income_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
@@ -12,8 +13,8 @@ var add_income_default = makeHandler(async (req, res) => {
   const { method } = req;
   const idParam = req.query.id || req.body?.id;
   const action = req.query.action || req.body?.action;
-  const isAdminOrSuperAdmin = req.user.role === "Admin" || req.user.role === "Super Admin" || await isSuperAdmin(req);
   if (method === "GET") {
+    if (!await verifyPermission(req, res, ["revenue.view", PERMS.RECORD_INCOME])) return;
     const { categoryId, paymentMethod, startDate, endDate, search, page, limit } = req.query;
     const whereClause = getDeletedFilter(req.query);
     if (categoryId && categoryId !== "all") {
@@ -101,8 +102,12 @@ var add_income_default = makeHandler(async (req, res) => {
       return res.status(200).json({ status: 200, message: "Income record restored successfully", data: restored });
     }
   }
-  if (!isAdminOrSuperAdmin) {
-    return res.status(403).json({ error: { message: "Forbidden: Only Admin and Super Admin can Add/Edit/Delete Income records", status: 403 } });
+  if (method === "POST") {
+    if (!await verifyPermission(req, res, ["revenue.create", PERMS.RECORD_INCOME])) return;
+  } else if (method === "PUT" || method === "PATCH") {
+    if (!await verifyPermission(req, res, ["revenue.update"])) return;
+  } else if (method === "DELETE") {
+    if (!await verifyPermission(req, res, ["revenue.delete"])) return;
   }
   if (method === "POST") {
     const { categoryId, customCategoryName, subCategory, amount, date, paymentMethod, bankAccountId, referenceNumber, remarks, attachmentUrl } = req.body;

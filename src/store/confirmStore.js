@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { showToast } from '../components/ui/Toast';
 
 export const useConfirmStore = create((set, get) => ({
   isOpen: false,
@@ -47,7 +48,7 @@ export const useConfirmStore = create((set, get) => ({
     const { action, resolve, successMessage } = get();
 
     if (action) {
-      set({ isLoading: true, error: null });
+      set({ isLoading: true, error: null, isSuccess: false });
       try {
         await action();
         if (successMessage) {
@@ -58,10 +59,16 @@ export const useConfirmStore = create((set, get) => ({
         }
       } catch (err) {
         console.error('Confirmation action error:', err);
+        const isForbidden = err?.response?.status === 401 || err?.response?.status === 403;
+        const errMsg = isForbidden
+          ? 'You do not have permission to delete this record.'
+          : (err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'An error occurred.');
         set({
           isLoading: false,
-          error: err.response?.data?.error?.message || err.message || 'An error occurred.',
+          isSuccess: false,
+          error: errMsg,
         });
+        showToast(errMsg, 'error');
       }
     } else {
       set({ isOpen: false });
@@ -76,8 +83,9 @@ export const useConfirmStore = create((set, get) => ({
   },
 
   handleClose: () => {
-    const { resolve } = get();
+    const { resolve, isSuccess } = get();
     set({ isOpen: false });
-    if (resolve) resolve(true);
+    if (resolve) resolve(Boolean(isSuccess));
   },
 }));
+

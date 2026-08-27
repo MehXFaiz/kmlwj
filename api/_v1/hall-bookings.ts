@@ -68,18 +68,19 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
 
-  // RBAC: PUT/PATCH/DELETE always blocked for non-privileged roles (view+create only)
-  if (!await enforceRestrictedRolePolicy(req, res)) return;
+  // Granular RBAC: PUT / PATCH require update permission, DELETE requires delete permission
+  if (!await enforceRestrictedRolePolicy(req, res, method === 'DELETE' ? ['hallBookings.delete', PERMS.DELETE_HALL_BOOKING] : ['hallBookings.update', PERMS.UPDATE_HALL_BOOKING])) return;
 
   // Permission check: minimum required is VIEW for GET, CREATE for writes
   const method = req.method?.toUpperCase() ?? '';
   if (method === 'GET') {
-    if (!await verifyPermission(req, res, PERMS.VIEW_HALL_BOOKINGS)) return;
+    if (!await verifyPermission(req, res, ['hallBookings.view', PERMS.VIEW_HALL_BOOKINGS])) return;
   } else if (method === 'POST') {
-    if (!await verifyPermission(req, res, PERMS.CREATE_HALL_BOOKING)) return;
-  } else if (method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
-    // These are already blocked above for non-privileged; privileged still needs the base perm
-    if (!await verifyPermission(req, res, PERMS.VIEW_HALL_BOOKINGS)) return;
+    if (!await verifyPermission(req, res, ['hallBookings.create', PERMS.CREATE_HALL_BOOKING])) return;
+  } else if (method === 'DELETE') {
+    if (!await verifyPermission(req, res, ['hallBookings.delete', PERMS.DELETE_HALL_BOOKING])) return;
+  } else if (method === 'PUT' || method === 'PATCH') {
+    if (!await verifyPermission(req, res, ['hallBookings.update', PERMS.UPDATE_HALL_BOOKING])) return;
   }
 
   const action = req.query.action as string;

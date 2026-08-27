@@ -7,6 +7,7 @@ import { useAuthStore } from '../store/authStore';
 import { useConfirmStore } from '../store/confirmStore';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { showToast } from '../components/ui/Toast';
+import { handleDeleteError } from '../utils/deleteHandler';
 import { HallBookingReceiptModal } from '../components/receipts/HallBookingReceiptModal';
 import { HallBookingGLModal } from '../components/receipts/HallBookingGLModal';
 import HallBookingCalendar from '../components/common/HallBookingCalendar';
@@ -97,7 +98,7 @@ export const HallBookings = () => {
   };
 
   const handleDelete = async (id) => {
-    const confirmed = await useConfirmStore.getState().showConfirm({
+    await useConfirmStore.getState().showConfirm({
       type: 'danger',
       isDangerous: true,
       title: 'Delete Hall Booking?',
@@ -117,10 +118,6 @@ export const HallBookings = () => {
         setSelectedIds(prev => prev.filter(item => item !== id));
       },
     });
-
-    if (confirmed) {
-      showToast('Booking deleted successfully', 'success');
-    }
   };
 
   const handleSelectAll = (e) => {
@@ -141,14 +138,20 @@ export const HallBookings = () => {
   const executeBulkDelete = async () => {
     setIsDeleting(true);
     await new Promise(resolve => setTimeout(resolve, 15));
-    const res = await bulkDeleteBookings(selectedIds);
-    setIsDeleting(false);
-    setShowBulkConfirm(false);
-    if (res.success) {
-      showToast(`${selectedIds.length} hall booking(s) deleted successfully`, 'success');
-      setSelectedIds([]);
-    } else {
-      showToast(res.error || 'Failed to bulk delete hall bookings', 'error');
+    try {
+      const res = await bulkDeleteBookings(selectedIds);
+      if (res?.success) {
+        showToast(`${selectedIds.length} hall booking(s) deleted successfully`, 'success');
+        setSelectedIds([]);
+      } else {
+        const isForbidden = res?.error?.includes('403') || res?.error?.includes('Restricted') || res?.error?.includes('permission');
+        showToast(isForbidden ? 'You do not have permission to delete this record.' : (res?.error || 'Failed to bulk delete hall bookings'), 'error');
+      }
+    } catch (err) {
+      handleDeleteError(err, 'Failed to bulk delete hall bookings');
+    } finally {
+      setIsDeleting(false);
+      setShowBulkConfirm(false);
     }
   };
 

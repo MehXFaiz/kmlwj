@@ -1,9 +1,26 @@
-import { PrismaClient } from "@prisma/client";
+import { makeHandler } from "../_utils/handler.js";
+import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
 import { PettyCashService } from "../_services/petty-cash.service.js";
-const prisma = new PrismaClient();
-async function handler(req, res) {
-  const { method, query, body, user } = req;
-  const action = query.action || (req.path ? req.path.split("/").pop() : "");
+import { PERMS } from "../_constants/permissions.js";
+import { isPrivilegedUser } from "../_services/permission.service.js";
+var petty_cash_default = makeHandler(async (req, res) => {
+  const authenticated = await verifyAuth(req, res);
+  if (!authenticated || !req.user) return;
+  const { method, query, body } = req;
+  const action = query.action || (req.url ? req.url.split("?")[0].split("/").pop() : "");
+  if (method === "GET") {
+    if (!await verifyPermission(req, res, ["expenses.view", PERMS.RECORD_EXPENSE])) return;
+  } else if (method === "POST") {
+    if (action === "bulk-delete" || action === "bulk-revert" || action === "revert" || action === "delete") {
+      if (!await verifyPermission(req, res, ["expenses.delete"])) return;
+    } else {
+      if (!await verifyPermission(req, res, ["expenses.create", PERMS.RECORD_EXPENSE])) return;
+    }
+  } else if (method === "PUT" || method === "PATCH") {
+    if (!await verifyPermission(req, res, ["expenses.update"])) return;
+  } else if (method === "DELETE") {
+    if (!await verifyPermission(req, res, ["expenses.delete"])) return;
+  }
   try {
     if (method === "GET") {
       if (action === "config") {
@@ -36,14 +53,10 @@ async function handler(req, res) {
       return res.status(200).json({ config, ...register });
     }
     if (method === "PUT") {
-      let createdById = user?.id;
-      if (!createdById) {
-        const defaultUser = await prisma.user.findFirst({ where: { isDeleted: false } });
-        createdById = defaultUser?.id || "00000000-0000-0000-0000-000000000000";
-      }
+      const createdById = req.user.id;
       if (action === "config") {
-        const isAdmin = user?.role === "ADMIN" || user?.roleName === "ADMIN" || user?.role?.name === "ADMIN" || user?.role === "Super Admin";
-        if (!isAdmin) {
+        const isPrivileged = await isPrivilegedUser(req);
+        if (!isPrivileged) {
           return res.status(403).json({ error: "Permission denied. Only Administrators can modify Petty Cash configuration." });
         }
         const updated = await PettyCashService.updateConfig(body);
@@ -56,11 +69,7 @@ async function handler(req, res) {
       }
     }
     if (method === "POST") {
-      let createdById = user?.id;
-      if (!createdById) {
-        const defaultUser = await prisma.user.findFirst({ where: { isDeleted: false } });
-        createdById = defaultUser?.id || "00000000-0000-0000-0000-000000000000";
-      }
+      const createdById = req.user.id;
       if (action === "add-cash" || action === "transfer-in") {
         const result = await PettyCashService.addCash({
           sourceAccountId: body.sourceAccountId,
@@ -129,7 +138,7 @@ async function handler(req, res) {
     console.error("[Petty Cash API Error]:", err);
     return res.status(err.status || 400).json({ error: err.message || "Petty Cash processing failed" });
   }
-}
+});
 export {
-  handler as default
+  petty_cash_default as default
 };

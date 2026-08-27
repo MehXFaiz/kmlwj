@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
+import { handleDeleteError } from '../utils/deleteHandler';
 
 // Replace null DB values with '' so controlled inputs stay controlled
 const nullsToEmpty = (obj) =>
@@ -356,7 +357,7 @@ export const RevenueHeads = () => {
       setSelectedIds(p => p.filter(i => i !== id));
       setDeleteId(null);
     } catch (err) {
-      showToast(err?.response?.data?.error?.message || err.message || 'Error deleting revenue head', 'error');
+      handleDeleteError(err, 'Error deleting revenue head');
     } finally {
       setIsDeleting(false);
     }
@@ -396,8 +397,7 @@ export const RevenueHeads = () => {
       const errorMsg = lastError?.response?.data?.error?.message || lastError?.message || 'associated records';
       showToast(`Removed ${successfulIds.length} head(s). ${failedIds.length} head(s) could not be removed: ${errorMsg}`, 'warning');
     } else if (failedIds.length > 0) {
-      const errorMsg = lastError?.response?.data?.error?.message || lastError?.message || 'Some records could not be removed.';
-      showToast(errorMsg, 'error');
+      handleDeleteError(lastError, 'Failed to delete revenue heads.');
     }
 
     setIsDeleting(false);

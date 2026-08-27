@@ -276,7 +276,8 @@ var accounts_default = makeHandler(async (req, res) => {
       return res.status(200).json({ status: 200, message: "Account permanently deleted successfully" });
     }
     if (!checkPerm("DELETE_ACCOUNT")) {
-      return res.status(403).json({ error: { message: "Forbidden: Insufficient permissions", status: 403 } });
+      const message = "You do not have permission to delete this record.";
+      return res.status(403).json({ success: false, message, error: { message, status: 403 } });
     }
     if (!id) {
       return res.status(400).json({ error: { message: "Account ID is required", status: 400 } });
