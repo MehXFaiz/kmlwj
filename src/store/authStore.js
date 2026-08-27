@@ -64,20 +64,15 @@ export const useAuthStore = create((set, get) => {
 
       // Two-argument form: hasPermission(module, action)
       if (action !== undefined) {
-        if ((action === 'update' || action === 'delete') && !state.isPrivileged) {
-          return false;
-        }
         return checkPerm(state.permissionsList, state.isPrivileged, moduleOrPerm, action);
       }
 
       // Single argument: dot-notation string like 'donations.view'
       if (typeof moduleOrPerm === 'string' && moduleOrPerm.includes('.')) {
         const [mod, act] = moduleOrPerm.split('.');
-        if ((act === 'update' || act === 'delete') && !state.isPrivileged) {
-          return false;
-        }
         return checkPerm(state.permissionsList, state.isPrivileged, mod, act);
       }
+
 
       // Single argument: module name check for 'view'
       if (typeof moduleOrPerm === 'string' && !moduleOrPerm.includes('_')) {
@@ -130,18 +125,37 @@ export const useAuthStore = create((set, get) => {
       set({ loading: true, error: null });
       try {
         const res = await api.get('/api/v1/auth/me');
-        const userData = res.data.data;
-        const roleName = userData.role?.name || userData.role || userData.roleName;
-        const privileged = userData.isPrivileged === true || userData.role?.isPrivileged === true || roleName === 'Super Admin';
-        const rawPerms = userData.rawPermissions || (Array.isArray(userData.permissions) && typeof userData.permissions[0] === 'string' ? userData.permissions : []);
-        const permsList = normalizePermissions(userData.permissions || rawPerms);
-        const modPerms = userData.modulePermissions || {};
+        const payload = res.data.data || {};
+        const userRecord = payload.user || payload;
+        const roleObj = payload.role && typeof payload.role === 'object' ? payload.role : null;
+        const roleName = typeof userRecord.role === 'string'
+          ? userRecord.role
+          : (roleObj?.name || payload.roleName || (typeof payload.role === 'string' ? payload.role : 'Staff'));
+        const privileged = payload.isPrivileged === true || roleObj?.isPrivileged === true || userRecord.isPrivileged === true || roleName === 'Super Admin';
+        const rawPerms = payload.rawPermissions || userRecord.rawPermissions || (Array.isArray(payload.permissions) && typeof payload.permissions[0] === 'string' ? payload.permissions : []);
+        const permsList = normalizePermissions(payload.permissions || rawPerms);
+        const modPerms = payload.modulePermissions || userRecord.modulePermissions || {};
+
+        const normalizedUser = {
+          ...userRecord,
+          id: userRecord.id || payload.id,
+          name: userRecord.name || userRecord.fullName || payload.name || payload.fullName,
+          fullName: userRecord.name || userRecord.fullName || payload.name || payload.fullName,
+          email: userRecord.email || payload.email,
+          role: roleName,
+          roleObj,
+          roleId: userRecord.roleId || roleObj?.id || payload.roleId,
+          isPrivileged: privileged,
+          permissions: payload.permissions || userRecord.permissions || [],
+          themePreference: userRecord.themePreference || payload.themePreference || 'system',
+        };
 
         set({
-          user: userData,
+          user: normalizedUser,
           role: roleName,
+          roleObj,
           isPrivileged: privileged,
-          permissions: userData.permissions || [],
+          permissions: payload.permissions || [],
           permissionsList: permsList,
           rawPermissions: rawPerms,
           modulePermissions: modPerms,
@@ -158,6 +172,7 @@ export const useAuthStore = create((set, get) => {
         set({
           user: null,
           role: null,
+          roleObj: null,
           isPrivileged: false,
           permissions: [],
           permissionsList: [],
@@ -178,18 +193,37 @@ export const useAuthStore = create((set, get) => {
         await authService.login(email, password);
         // Fetch the full user profile including isPrivileged + permissions
         const res = await api.get('/api/v1/auth/me');
-        const userData = res.data.data;
-        const roleName = userData.role?.name || userData.role || userData.roleName;
-        const privileged = userData.isPrivileged === true || userData.role?.isPrivileged === true || roleName === 'Super Admin';
-        const rawPerms = userData.rawPermissions || (Array.isArray(userData.permissions) && typeof userData.permissions[0] === 'string' ? userData.permissions : []);
-        const permsList = normalizePermissions(userData.permissions || rawPerms);
-        const modPerms = userData.modulePermissions || {};
+        const payload = res.data.data || {};
+        const userRecord = payload.user || payload;
+        const roleObj = payload.role && typeof payload.role === 'object' ? payload.role : null;
+        const roleName = typeof userRecord.role === 'string'
+          ? userRecord.role
+          : (roleObj?.name || payload.roleName || (typeof payload.role === 'string' ? payload.role : 'Staff'));
+        const privileged = payload.isPrivileged === true || roleObj?.isPrivileged === true || userRecord.isPrivileged === true || roleName === 'Super Admin';
+        const rawPerms = payload.rawPermissions || userRecord.rawPermissions || (Array.isArray(payload.permissions) && typeof payload.permissions[0] === 'string' ? payload.permissions : []);
+        const permsList = normalizePermissions(payload.permissions || rawPerms);
+        const modPerms = payload.modulePermissions || userRecord.modulePermissions || {};
+
+        const normalizedUser = {
+          ...userRecord,
+          id: userRecord.id || payload.id,
+          name: userRecord.name || userRecord.fullName || payload.name || payload.fullName,
+          fullName: userRecord.name || userRecord.fullName || payload.name || payload.fullName,
+          email: userRecord.email || payload.email,
+          role: roleName,
+          roleObj,
+          roleId: userRecord.roleId || roleObj?.id || payload.roleId,
+          isPrivileged: privileged,
+          permissions: payload.permissions || userRecord.permissions || [],
+          themePreference: userRecord.themePreference || payload.themePreference || 'system',
+        };
 
         set({
-          user: userData,
+          user: normalizedUser,
           role: roleName,
+          roleObj,
           isPrivileged: privileged,
-          permissions: userData.permissions || [],
+          permissions: payload.permissions || [],
           permissionsList: permsList,
           rawPermissions: rawPerms,
           modulePermissions: modPerms,
@@ -204,6 +238,7 @@ export const useAuthStore = create((set, get) => {
         return false;
       }
     },
+
 
     loginAsGuest: async () => {
       return get().login('guest@erp.com', 'guest_access_token_request');

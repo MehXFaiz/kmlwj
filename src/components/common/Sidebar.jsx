@@ -295,7 +295,8 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
 
   const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || '?';
   const userName = user?.name || user?.email || 'User';
-  const userRole = user?.role || 'Staff';
+  const userRole = typeof user?.role === 'object' && user?.role !== null ? (user.role.name || 'Staff') : (user?.role || 'Staff');
+
 
   return (
     <>

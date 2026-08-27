@@ -78,7 +78,8 @@ export const Profile = () => {
                 </div>
                 <div className="space-y-1">
                   <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500 flex items-center gap-1.5"><Briefcase className="h-3 w-3" /> System Role</span>
-                  <p className="text-sm font-medium text-slate-200">{user?.role || 'User'}</p>
+                  <p className="text-sm font-medium text-slate-200">{typeof user?.role === 'object' && user?.role !== null ? (user.role.name || 'User') : (user?.role || 'User')}</p>
+
                 </div>
                 <div className="space-y-1">
                   <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500 flex items-center gap-1.5"><Building2 className="h-3 w-3" /> Department</span>

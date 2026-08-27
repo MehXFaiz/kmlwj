@@ -232,7 +232,8 @@ export const Topbar = ({ onMobileMenuToggle }) => {
                   </span>
                   <span className="hidden xl:flex flex-col text-left leading-none">
                     <span className="text-xs font-bold text-slate-100">{user?.name || user?.fullName || 'Operator'}</span>
-                    <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-widest mt-0.5">{user?.role || 'User'}</span>
+                    <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-widest mt-0.5">{typeof user?.role === 'object' && user?.role !== null ? (user.role.name || 'User') : (user?.role || 'User')}</span>
+
                   </span>
                   <ChevronDown className={`h-3 w-3 text-slate-500 hidden xl:block transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
                 </>
