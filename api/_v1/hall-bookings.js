@@ -13,26 +13,20 @@ function generateVoucherNumber() {
   const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
   return `BR-${year}${month}-${randomStr}`;
 }
-function timingsConflict(existingTimings, requestedTimings) {
-  if (!requestedTimings || !existingTimings) return true;
-  if (existingTimings === "Full Day" || requestedTimings === "Full Day") return true;
-  return existingTimings === requestedTimings;
+function normalizeTiming(t) {
+  if (t == null) return null;
+  const s = String(t).trim().toLowerCase();
+  if (!s) return null;
+  if (s === "full day" || s === "fullday" || s === "full-day") return "full day";
+  return s;
 }
-  function normalizeTiming(t) {
-    if (t == null) return null;
-    const s = String(t).trim().toLowerCase();
-    if (!s) return null;
-    if (s === 'full day' || s === 'fullday' || s === 'full-day') return 'full day';
-    return s;
-  }
-
-  function timingsConflict(existingTimings, requestedTimings) {
-    const e = normalizeTiming(existingTimings);
-    const r = normalizeTiming(requestedTimings);
-    if (!e || !r) return true;
-    if (e === 'full day' || r === 'full day') return true;
-    return e === r;
-  }
+function timingsConflict(existingTimings, requestedTimings) {
+  const e = normalizeTiming(existingTimings);
+  const r = normalizeTiming(requestedTimings);
+  if (!e || !r) return true;
+  if (e === "full day" || r === "full day") return true;
+  return e === r;
+}
 const HALL_BOOKING_STATUSES = ["Pending", "Confirmed", "POSTED", "Cancelled", "Refunded"];
 const ALLOWED_STATUS_TRANSITIONS = {
   Pending: ["Pending", "Confirmed", "POSTED", "Cancelled", "Refunded"],
@@ -90,9 +84,9 @@ var hall_bookings_default = makeHandler(async (req, res) => {
           createdBy: true
         }
       });
-        if (typeof requestedTimings === 'undefined') {
-          return res.status(200).json({ available: true });
-        }
+      if (typeof requestedTimings === "undefined") {
+        return res.status(200).json({ available: true });
+      }
       const conflictBooking = sameDayBookings.find((b) => timingsConflict(b.timings, requestedTimings));
       if (conflictBooking) {
         const ipAddress = req.headers["x-forwarded-for"] || req.socket?.remoteAddress;
@@ -247,7 +241,6 @@ var hall_bookings_default = makeHandler(async (req, res) => {
             description: `Revenue: Hall Booking Receipt for ${booking.bookerName} - ${booking.hallAccount?.accountName || "Selected Hall"}`
           });
         }
-
         let postingResult = null;
         if (lines.length > 0) {
           postingResult = await AccountingService.postTransaction(tx, {
@@ -262,7 +255,6 @@ var hall_bookings_default = makeHandler(async (req, res) => {
             userAgent: req.headers["user-agent"]
           });
         }
-
         const approvedBooking = await tx.hallBooking.update({
           where: { id },
           data: {
@@ -331,10 +323,8 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     if (requestedCreateStatus !== void 0 && !isKnownStatus(requestedCreateStatus)) {
       return res.status(400).json({ error: { message: `Status must be one of: ${HALL_BOOKING_STATUSES.join(", ")}`, status: 400 } });
     }
-    // Security: only users with POST_LEDGER permission may create a booking
-    // already marked POSTED.
-    if (requestedCreateStatus === 'POSTED' && !(await verifyPermission(req, res, PERMS.POST_LEDGER))) {
-      return res.status(403).json({ error: { message: 'Forbidden: insufficient permission to create a POSTED booking', status: 403 } });
+    if (requestedCreateStatus === "POSTED" && !await verifyPermission(req, res, PERMS.POST_LEDGER)) {
+      return res.status(403).json({ error: { message: "Forbidden: insufficient permission to create a POSTED booking", status: 403 } });
     }
     const parsedHallCharges = Math.round(parseFloat(rawHallCharges) * 100) / 100;
     if (isNaN(parsedHallCharges) || parsedHallCharges <= 0) {
@@ -389,6 +379,9 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         hallAccount: true
       }
     });
+    if (typeof timings === "undefined") {
+      return res.status(200).json({ available: true });
+    }
     const conflictBooking = sameDayBookings.find((b) => timingsConflict(b.timings, timings));
     if (conflictBooking) {
       const ipAddress = req.headers["x-forwarded-for"] || req.socket?.remoteAddress;

@@ -88,7 +88,7 @@ var stats_default = makeHandler(async (req, res) => {
     return {
       id: je.voucherNo || je.id.slice(0, 8),
       dbId: je.id,
-      date: je.postingDate ? new Date(je.postingDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "",
+      date: je.postingDate ? new Date(je.postingDate).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }) : "",
       reference: je.reference || je.description || "Journal Entry",
       description: je.description,
       status: je.status || "Posted",
@@ -112,6 +112,23 @@ var stats_default = makeHandler(async (req, res) => {
   const hallBookingsThisMonth = await prisma.hallBooking.count({
     where: { createdAt: { gte: startOfMonth }, isDeleted: false }
   });
+  const hbTotalWhere = { isDeleted: false };
+  if (startDate) hbTotalWhere.createdAt = { ...hbTotalWhere.createdAt || {}, gte: new Date(startDate) };
+  if (endDate) hbTotalWhere.createdAt = { ...hbTotalWhere.createdAt || {}, lte: new Date(endDate) };
+  const hallBookingTotalRaw = await prisma.hallBooking.aggregate({
+    _sum: { netAmount: true },
+    where: hbTotalWhere
+  });
+  const totalHallBookingAmount = Number(hallBookingTotalRaw._sum.netAmount || 0);
+  const hbCashWhere = { isDeleted: false, receivedAmount: { gt: 0 } };
+  if (startDate) hbCashWhere.createdAt = { ...hbCashWhere.createdAt || {}, gte: new Date(startDate) };
+  if (endDate) hbCashWhere.createdAt = { ...hbCashWhere.createdAt || {}, lte: new Date(endDate) };
+  hbCashWhere.paymentMethod = "CASH";
+  const hallBookingReceivedCashRaw = await prisma.hallBooking.aggregate({
+    _sum: { receivedAmount: true },
+    where: hbCashWhere
+  });
+  const totalHallBookingReceivedCash = Number(hallBookingReceivedCashRaw._sum.receivedAmount || 0);
   const outstandingInvoices = await prisma.invoice.count({
     where: { status: { in: ["ISSUED", "OVERDUE"] }, isDeleted: false }
   });
@@ -170,6 +187,8 @@ var stats_default = makeHandler(async (req, res) => {
         baseEquity,
         totalRevenue,
         totalExpense,
+        hallBookingReceivedCash: totalHallBookingReceivedCash,
+        hallBookingTotal: totalHallBookingAmount,
         cashBalance,
         bankBalance,
         openingCashBalance,
