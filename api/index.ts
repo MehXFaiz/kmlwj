@@ -161,6 +161,7 @@ app.post('/api/auth/logout', makeExpress(logoutHandler));
 app.post('/api/auth/forgot-password', authLimiter, makeExpress(forgotPasswordHandler));
 app.post('/api/auth/reset-password', authLimiter, makeExpress(resetPasswordHandler));
 app.post('/api/auth/change-password', authLimiter, makeExpress(changePasswordHandler));
+app.all('/health', makeExpress(healthHandler));
 app.all('/api/health', makeExpress(healthHandler));
 app.all('/api/v1/health', makeExpress(healthV1Handler));
 

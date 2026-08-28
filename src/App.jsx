@@ -250,6 +250,7 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/health" element={<div className="min-h-screen bg-slate-950 flex items-center justify-center text-emerald-400 font-mono text-sm">OK</div>} />
 
           {/* Public Member Verification — no auth required (QR scan target) */}
           <Route path="/member/verify/:id" element={<MemberVerify />} />
