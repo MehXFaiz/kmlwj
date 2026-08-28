@@ -8,6 +8,10 @@ export default makeHandler(async (req: VercelRequest, res: VercelResponse) => {
     return res.status(405).json({ error: { message: 'Method Not Allowed', status: 405 } });
   }
 
+  return res.status(200).json({
+    status: 'OK',
+    timestamp: new Date(),
+  });
   try {
     // 1. Check raw PostgreSQL connection pool
     await pool.query('SELECT 1');
