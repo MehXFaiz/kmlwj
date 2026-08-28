@@ -6,7 +6,7 @@ import { logger } from '../api/_utils/logger.js';
 import app from '../api/index.js'; // The consolidated express app
 import { AccountingIntegrityService } from '../api/_services/accounting-integrity.service.js';
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.API_PORT || process.env.BACKEND_PORT || 4000;
 
 async function startServer() {
   logger.info('Initializing Dev Express server with consolidated API app...');

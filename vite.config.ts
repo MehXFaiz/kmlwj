@@ -13,6 +13,8 @@ export default defineConfig(({ mode }) => {
       tailwindcss()
     ],
     server: {
+      host: true,
+      port: Number(process.env.PORT || env.PORT || env.VITE_PORT || 20010),
       proxy: {
         '/api': {
           target: apiTarget,
