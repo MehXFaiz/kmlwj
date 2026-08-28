@@ -21,13 +21,11 @@ export default makeHandler(async (req: VercelRequest, res: VercelResponse) => {
       server: 'running',
     });
   } catch (error: any) {
-    return res.status(500).json({
     return res.status(503).json({
       success: false,
       status: 'error',
       database: 'disconnected',
       server: 'running',
-      error: error?.message || 'Database check failed',
     });
   }
 });
