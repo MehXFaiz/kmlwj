@@ -42,7 +42,7 @@
     "bcryptjs": "^3.0.3",
     "body-parser": "^2.3.0",
     "compression": "^1.8.1",
-    "confbox": "0.1.8",
+    "confbox": "0.2.1",
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
     "electron-log": "^5.4.4",

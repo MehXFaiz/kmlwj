@@ -15,12 +15,18 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true,
       port: Number(process.env.PORT || env.PORT || env.VITE_PORT || 20010),
+      allowedHosts: true,
       proxy: {
         '/api': {
           target: apiTarget,
           changeOrigin: true,
         },
       },
+    },
+    preview: {
+      host: true,
+      port: Number(process.env.PORT || env.PORT || env.VITE_PORT || 20010),
+      allowedHosts: true,
     },
     build: {
       rollupOptions: {
