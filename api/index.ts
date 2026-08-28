@@ -379,26 +379,8 @@ app.get('/api/v1/zakat-card/verify/:cardNumber', async (req: any, res: any) => {
   await zakatCardVerifyHandler(req, res);
 });
 
-// ── Serve Production Frontend (dist/) & SPA Routing Fallback ──────────────
-const distPath = path.join(process.cwd(), 'dist');
-if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath, { maxAge: '1h' }));
-
-  // Fallback for all non-API GET requests to React index.html
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) {
-      return next();
-    }
-    const indexPath = path.join(distPath, 'index.html');
-    if (fs.existsSync(indexPath)) {
-      return res.sendFile(indexPath);
-    }
-    return next();
-  });
-}
-
 // ── 404 handler for unmatched API routes (returns clean JSON, not HTML) ────
-app.all('/api/*', (req, res) => {
+app.use('/api', (req, res) => {
   res.status(404).json({
     error: {
       message: `API endpoint ${req.method} ${req.originalUrl || req.url} not found`,
@@ -406,6 +388,23 @@ app.all('/api/*', (req, res) => {
     },
   });
 });
+
+// ── Serve Production Frontend (dist/) & SPA Routing Fallback ──────────────
+const distPath = path.join(process.cwd(), 'dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath, { maxAge: '1h' }));
+
+  // Fallback for all non-API GET requests to React index.html
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
+      const indexPath = path.join(distPath, 'index.html');
+      if (fs.existsSync(indexPath)) {
+        return res.sendFile(indexPath);
+      }
+    }
+    return next();
+  });
+}
 
 // ── Global JSON error handler ────────────────────────────────────────────────
 // Must be the last middleware registered. Catches anything that reaches

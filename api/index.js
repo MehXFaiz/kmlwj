@@ -293,21 +293,7 @@ app.get("/api/v1/member/verify/:id", async (req, res) => {
 app.get("/api/v1/zakat-card/verify/:cardNumber", async (req, res) => {
   await zakatCardVerifyHandler(req, res);
 });
-const distPath = path.join(process.cwd(), "dist");
-if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath, { maxAge: "1h" }));
-  app.get("*", (req, res, next) => {
-    if (req.path.startsWith("/api/") || req.path.startsWith("/uploads/")) {
-      return next();
-    }
-    const indexPath = path.join(distPath, "index.html");
-    if (fs.existsSync(indexPath)) {
-      return res.sendFile(indexPath);
-    }
-    return next();
-  });
-}
-app.all("/api/*", (req, res) => {
+app.use("/api", (req, res) => {
   res.status(404).json({
     error: {
       message: `API endpoint ${req.method} ${req.originalUrl || req.url} not found`,
@@ -315,6 +301,19 @@ app.all("/api/*", (req, res) => {
     }
   });
 });
+const distPath = path.join(process.cwd(), "dist");
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath, { maxAge: "1h" }));
+  app.use((req, res, next) => {
+    if (req.method === "GET" && !req.path.startsWith("/api") && !req.path.startsWith("/uploads")) {
+      const indexPath = path.join(distPath, "index.html");
+      if (fs.existsSync(indexPath)) {
+        return res.sendFile(indexPath);
+      }
+    }
+    return next();
+  });
+}
 app.use((err, _req, res, _next) => {
   logger.error({ err: err?.message || err }, "Unhandled Express error");
   const status = err?.status ?? err?.statusCode ?? 500;
