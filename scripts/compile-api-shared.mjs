@@ -12,7 +12,7 @@ import * as esbuild from 'esbuild';
 
 const API_DIR = 'api';
 
-function collectSharedTsFiles(dir, insidePrivateFolder = false) {
+function collectAllTsFiles(dir) {
   const files = [];
 
   for (const entry of readdirSync(dir)) {
@@ -20,13 +20,11 @@ function collectSharedTsFiles(dir, insidePrivateFolder = false) {
     const stat = statSync(fullPath);
 
     if (stat.isDirectory()) {
-      if (entry.startsWith('_') || insidePrivateFolder) {
-        files.push(...collectSharedTsFiles(fullPath, entry.startsWith('_') || insidePrivateFolder));
-      }
+      files.push(...collectAllTsFiles(fullPath));
       continue;
     }
 
-    if (entry.endsWith('.ts') && insidePrivateFolder) {
+    if (entry.endsWith('.ts') && !entry.endsWith('.d.ts')) {
       files.push(fullPath);
     }
   }
@@ -34,10 +32,7 @@ function collectSharedTsFiles(dir, insidePrivateFolder = false) {
   return files;
 }
 
-const sharedFiles = [
-  ...collectSharedTsFiles(API_DIR),
-  join(API_DIR, '_prisma.ts'),
-].filter((file, index, all) => all.indexOf(file) === index);
+const sharedFiles = collectAllTsFiles(API_DIR).filter((file, index, all) => all.indexOf(file) === index);
 
 if (sharedFiles.length === 0) {
   console.warn('[compile-api-shared] No shared api TypeScript files found.');

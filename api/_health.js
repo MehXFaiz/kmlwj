@@ -1,5 +1,6 @@
-import { makeHandler } from "../_utils/handler.js";
-import { prisma, pool } from "../_prisma.js";
+import { makeHandler } from "./_utils/handler.js";
+import { prisma, pool } from "./_prisma.js";
+import { logger } from "./_utils/logger.js";
 var health_default = makeHandler(async (req, res) => {
   if (req.method !== "GET") {
     return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
@@ -8,17 +9,14 @@ var health_default = makeHandler(async (req, res) => {
     await pool.query("SELECT 1");
     await prisma.$queryRaw`SELECT 1`;
     return res.status(200).json({
-      success: true,
       status: "ok",
-      database: "connected",
-      server: "running"
+      database: "connected"
     });
-  } catch (error) {
+  } catch (err) {
+    logger.error({ error: err?.message }, "Health check database probe failed");
     return res.status(503).json({
-      success: false,
       status: "error",
-      database: "disconnected",
-      server: "running"
+      database: "disconnected"
     });
   }
 });

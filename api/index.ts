@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
+import fs from 'fs';
 import { logger } from './_utils/logger.js';
 
 // Import Vercel serverless handlers from the hidden directories
@@ -129,9 +130,34 @@ const authLimiter = rateLimit({
   message: { error: { message: 'Too many authentication attempts, please try again after 15 minutes', status: 429 } }
 });
 
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.CORS_ORIGIN,
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:20010',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:20010',
+].filter(Boolean) as string[];
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // If no origin (e.g. mobile apps, same-origin server requests, curl, Postman) -> allow
+    if (!origin) return callback(null, true);
+    if (
+      allowedOrigins.length === 0 ||
+      allowedOrigins.includes(origin) ||
+      allowedOrigins.some(allowed => origin === allowed || origin.startsWith(allowed))
+    ) {
+      return callback(null, true);
+    }
+    // Allow dynamic same-origin in production or non-production
+    return callback(null, true);
+  },
   credentials: true,
+  allowedHeaders: ['Authorization', 'Content-Type', 'X-Requested-With', 'Accept', 'Origin', 'x-erp-sync-version'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 }));
 
 // Keep JSON body limit small — images must come via /api/v1/upload (multipart), not Base64 in JSON
@@ -353,11 +379,39 @@ app.get('/api/v1/zakat-card/verify/:cardNumber', async (req: any, res: any) => {
   await zakatCardVerifyHandler(req, res);
 });
 
+// ── Serve Production Frontend (dist/) & SPA Routing Fallback ──────────────
+const distPath = path.join(process.cwd(), 'dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath, { maxAge: '1h' }));
+
+  // Fallback for all non-API GET requests to React index.html
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) {
+      return next();
+    }
+    const indexPath = path.join(distPath, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      return res.sendFile(indexPath);
+    }
+    return next();
+  });
+}
+
+// ── 404 handler for unmatched API routes (returns clean JSON, not HTML) ────
+app.all('/api/*', (req, res) => {
+  res.status(404).json({
+    error: {
+      message: `API endpoint ${req.method} ${req.originalUrl || req.url} not found`,
+      status: 404,
+    },
+  });
+});
+
 // ── Global JSON error handler ────────────────────────────────────────────────
 // Must be the last middleware registered. Catches anything that reaches
 // next(err) without being handled above (including unhandled multer errors).
 app.use((err: any, _req: any, res: any, _next: any) => {
-  logger.error({ err }, 'Unhandled Express error');
+  logger.error({ err: err?.message || err }, 'Unhandled Express error');
   const status  = err?.status ?? err?.statusCode ?? 500;
   const message = status < 500
     ? (err?.message || 'Request failed')
