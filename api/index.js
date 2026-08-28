@@ -87,7 +87,8 @@ import { uploadFields, handleUploadError } from "./_middlewares/upload.middlewar
 const app = express();
 app.set("trust proxy", 1);
 app.use(helmet({
-  contentSecurityPolicy: process.env.NODE_ENV === "production" ? void 0 : false
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
 }));
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1e3,
@@ -157,6 +158,9 @@ app.post("/api/auth/change-password", authLimiter, makeExpress(changePasswordHan
 app.all("/health", makeExpress(healthHandler));
 app.all("/api/health", makeExpress(healthHandler));
 app.all("/api/v1/health", makeExpress(healthV1Handler));
+app.use("/_vercel", (_req, res) => {
+  res.type("application/javascript").send("/* vercel noop */");
+});
 app.get("/api/v1/auth/me", makeExpress(meHandler));
 app.get("/api/v1/user-preferences", makeExpress(userPreferencesHandler));
 app.patch("/api/v1/user-preferences", makeExpress(userPreferencesHandler));

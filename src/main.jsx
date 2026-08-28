@@ -18,10 +18,12 @@ window.addEventListener('unhandledrejection', (event) => {
   }
 });
 
+const isVercel = typeof window !== 'undefined' && window.location.hostname.endsWith('vercel.app');
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
-    <Analytics />
-    <SpeedInsights />
+    {isVercel && <Analytics />}
+    {isVercel && <SpeedInsights />}
   </StrictMode>,
 )

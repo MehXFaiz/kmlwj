@@ -99,9 +99,10 @@ const app = express();
 // Trust the reverse proxy (e.g. Vercel) so rate limiting uses the correct IP
 app.set('trust proxy', 1);
 
-// Security Headers (Helmet)
+// Security Headers (Helmet) - disable strict CSP so preview proxies, inline scripts, and dynamic assets work smoothly
 app.use(helmet({
-  contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
 }));
 
 // Global Rate Limiting
@@ -190,6 +191,11 @@ app.post('/api/auth/change-password', authLimiter, makeExpress(changePasswordHan
 app.all('/health', makeExpress(healthHandler));
 app.all('/api/health', makeExpress(healthHandler));
 app.all('/api/v1/health', makeExpress(healthV1Handler));
+
+// Handle residual Vercel analytics/insights probes gracefully on non-Vercel hosting
+app.use('/_vercel', (_req, res) => {
+  res.type('application/javascript').send('/* vercel noop */');
+});
 
 // Register new API v1 route handlers
 app.get('/api/v1/auth/me', makeExpress(meHandler));
