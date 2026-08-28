@@ -1,13 +1,12 @@
 import dns from 'dns';
-dns.setServers(['8.8.8.8', '1.1.1.1']);
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch {
+  // Gracefully ignore custom DNS failures on restricted hosting environments
+}
 
 import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.resolve(__dirname, '../.env'), override: true });
+dotenv.config();
 
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -18,9 +17,9 @@ const globalForDb = globalThis as unknown as {
   pool?: pg.Pool;
 };
 
-const connectionString = process.env.DATABASE_URL;
+const connectionString = process.env.DATABASE_URL || '';
 if (!connectionString) {
-  throw new Error('DATABASE_URL is not set');
+  console.warn('[DATABASE WARNING] DATABASE_URL is not set in environment variables.');
 }
 
 export const pool = globalForDb.pool ?? new pg.Pool({

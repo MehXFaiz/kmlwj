@@ -6,6 +6,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const apiTarget = env.VITE_API_URL || 'http://localhost:4000'
+  const devPort = Number(env.VITE_PORT || (process.env.PORT && process.env.PORT !== '4000' ? process.env.PORT : 5173))
 
   return {
     plugins: [
@@ -14,7 +15,7 @@ export default defineConfig(({ mode }) => {
     ],
     server: {
       host: true,
-      port: Number(process.env.PORT || env.PORT || env.VITE_PORT || 20010),
+      port: devPort,
       allowedHosts: true,
       proxy: {
         '/api': {
