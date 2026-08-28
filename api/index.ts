@@ -142,7 +142,6 @@ const allowedOrigins = [
 ].filter(Boolean) as string[];
 
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   origin: (origin, callback) => {
     // If no origin (e.g. mobile apps, same-origin server requests, curl, Postman) -> allow
     if (!origin) return callback(null, true);
@@ -412,7 +411,6 @@ app.all('/api/*', (req, res) => {
 // Must be the last middleware registered. Catches anything that reaches
 // next(err) without being handled above (including unhandled multer errors).
 app.use((err: any, _req: any, res: any, _next: any) => {
-  logger.error({ err }, 'Unhandled Express error');
   logger.error({ err: err?.message || err }, 'Unhandled Express error');
   const status  = err?.status ?? err?.statusCode ?? 500;
   const message = status < 500

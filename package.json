@@ -5,7 +5,6 @@
   "type": "module",
   "description": "Accounting ERP – Full-stack monorepo",
   "author": "Kutchi Muslim Loharwada Welfare Jamat",
-  "main": "electron/main.cjs",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

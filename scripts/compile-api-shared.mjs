@@ -12,7 +12,6 @@ import * as esbuild from 'esbuild';
 
 const API_DIR = 'api';
 
-function collectSharedTsFiles(dir, insidePrivateFolder = false) {
 function collectAllTsFiles(dir) {
   const files = [];
 
@@ -21,14 +20,10 @@ function collectAllTsFiles(dir) {
     const stat = statSync(fullPath);
 
     if (stat.isDirectory()) {
-      if (entry.startsWith('_') || insidePrivateFolder) {
-        files.push(...collectSharedTsFiles(fullPath, entry.startsWith('_') || insidePrivateFolder));
-      }
       files.push(...collectAllTsFiles(fullPath));
       continue;
     }
 
-    if (entry.endsWith('.ts') && insidePrivateFolder) {
     if (entry.endsWith('.ts') && !entry.endsWith('.d.ts')) {
       files.push(fullPath);
     }
@@ -37,10 +32,6 @@ function collectAllTsFiles(dir) {
   return files;
 }
 
-const sharedFiles = [
-  ...collectSharedTsFiles(API_DIR),
-  join(API_DIR, '_prisma.ts'),
-].filter((file, index, all) => all.indexOf(file) === index);
 const sharedFiles = collectAllTsFiles(API_DIR).filter((file, index, all) => all.indexOf(file) === index);
 
 if (sharedFiles.length === 0) {

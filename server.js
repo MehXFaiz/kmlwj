@@ -25,7 +25,6 @@ async function startServer() {
   }
 
   const server = app.listen(PORT, HOST, () => {
-    logger.info(\ERP Application is running on http://\System.Management.Automation.Internal.Host.InternalHost:\\);
     logger.info(`ERP Application is running on http://${HOST}:${PORT}`);
   });
 
@@ -39,7 +38,6 @@ async function startServer() {
     server.close(async () => {
       logger.info('HTTP server closed.');
       try {
-        await prisma.\();
         await prisma.$disconnect();
         await pool.end();
         logger.info('Database pool and Prisma client closed successfully.');
