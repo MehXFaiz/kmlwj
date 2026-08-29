@@ -16,6 +16,7 @@ import resetPasswordHandler from './_auth/reset-password.js';
 import changePasswordHandler from './_auth/change-password.js';
 import healthHandler from './_health.js';
 import healthV1Handler from './_v1/health.js';
+import healthDbHandler from './_health-db.js';
 
 // New dynamic api/v1 route handlers
 import meHandler from './_v1/auth/me.js';
@@ -190,6 +191,7 @@ app.post('/api/auth/reset-password', authLimiter, makeExpress(resetPasswordHandl
 app.post('/api/auth/change-password', authLimiter, makeExpress(changePasswordHandler));
 app.all('/health', makeExpress(healthHandler));
 app.all('/api/health', makeExpress(healthHandler));
+app.all('/api/health/db', makeExpress(healthDbHandler));
 app.all('/api/v1/health', makeExpress(healthV1Handler));
 
 // Handle residual Vercel analytics/insights probes gracefully on non-Vercel hosting

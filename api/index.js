@@ -14,6 +14,7 @@ import resetPasswordHandler from "./_auth/reset-password.js";
 import changePasswordHandler from "./_auth/change-password.js";
 import healthHandler from "./_health.js";
 import healthV1Handler from "./_v1/health.js";
+import healthDbHandler from "./_health-db.js";
 import meHandler from "./_v1/auth/me.js";
 import userPreferencesHandler from "./_v1/user-preferences.js";
 import statsHandler from "./_v1/dashboard/stats.js";
@@ -157,6 +158,7 @@ app.post("/api/auth/reset-password", authLimiter, makeExpress(resetPasswordHandl
 app.post("/api/auth/change-password", authLimiter, makeExpress(changePasswordHandler));
 app.all("/health", makeExpress(healthHandler));
 app.all("/api/health", makeExpress(healthHandler));
+app.all("/api/health/db", makeExpress(healthDbHandler));
 app.all("/api/v1/health", makeExpress(healthV1Handler));
 app.use("/_vercel", (_req, res) => {
   res.type("application/javascript").send("/* vercel noop */");

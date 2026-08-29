@@ -6,7 +6,7 @@ import { logger } from '../api/_utils/logger.js';
 import app from '../api/index.js'; // The consolidated express app
 import { AccountingIntegrityService } from '../api/_services/accounting-integrity.service.js';
 
-const rawPort = process.env.PORT || process.env.API_PORT || process.env.BACKEND_PORT || 4000;
+const rawPort = process.env.PORT || process.env.API_PORT || process.env.BACKEND_PORT || 5000;
 const isNumericPort = !isNaN(Number(rawPort));
 const PORT = isNumericPort ? Number(rawPort) : rawPort;
 const HOST = '0.0.0.0';

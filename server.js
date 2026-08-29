@@ -7,7 +7,7 @@ import { logger } from './api/_utils/logger.js';
 import { prisma, pool, getDatabaseUrl } from './api/_prisma.js';
 
 const isPassenger = typeof globalThis.PhusionPassenger !== 'undefined' || process.env.PASSENGER_APP_ENV !== undefined || process.env.PORT === 'passenger';
-const rawPort = process.env.PORT || 3000;
+const rawPort = process.env.PORT || 5000;
 const isNumericPort = !isNaN(Number(rawPort));
 const PORT = isNumericPort ? Number(rawPort) : rawPort;
 const HOST = '0.0.0.0';
