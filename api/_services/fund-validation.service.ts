@@ -144,9 +144,9 @@ export class FundValidationService {
     let lockedAccount: any = null;
     try {
       const rows: any[] = await tx.$queryRaw`
-        SELECT "id", "glCode", "accountName", "initialBalance", "currentBalance", "detailType"
-        FROM "Account"
-        WHERE "id" = ${accountId}::uuid
+        SELECT \`id\`, \`glCode\`, \`accountName\`, \`initialBalance\`, \`currentBalance\`, \`detailType\`
+        FROM \`Account\`
+        WHERE \`id\` = ${accountId}
         FOR UPDATE
       `;
       if (rows && rows.length > 0) {

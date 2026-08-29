@@ -57,11 +57,11 @@ export async function applyRepair(
 ): Promise<ApplyRepairResult> {
   try {
     const result = await prisma.$transaction(async (tx) => {
-      // Serializes repairs across concurrent requests/serverless instances
-      // via a Postgres session-level advisory lock scoped to this transaction.
-      const [{ locked }] = await tx.$queryRaw<{ locked: boolean }[]>`
-        SELECT pg_try_advisory_xact_lock(hashtext('ai_repair_executor')) AS locked
+      // Serializes repairs across concurrent requests via a MySQL named lock
+      const rows = await tx.$queryRaw<{ locked: number }[]>`
+        SELECT GET_LOCK('ai_repair_executor', 0) AS locked
       `;
+      const locked = rows && rows.length > 0 && rows[0].locked === 1;
       if (!locked) throw new RepairInProgressError();
 
       const issue = await tx.aiRepairIssue.findUnique({ where: { id: issueId } });

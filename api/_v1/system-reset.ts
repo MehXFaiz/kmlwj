@@ -127,10 +127,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       // Step D: Reset Voucher Sequence Counters if requested
       if (resetSequences) {
         try {
-          await tx.$executeRawUnsafe('ALTER SEQUENCE "HallBooking_receiptNo_seq" RESTART WITH 1;');
+          await tx.$executeRawUnsafe('ALTER TABLE `HallBooking` AUTO_INCREMENT = 1;');
         } catch (e) {}
         try {
-          await tx.$executeRawUnsafe('ALTER SEQUENCE "RevenueCollection_receiptNo_seq" RESTART WITH 1;');
+          await tx.$executeRawUnsafe('ALTER TABLE `RevenueCollection` AUTO_INCREMENT = 1;');
         } catch (e) {}
       }
 
