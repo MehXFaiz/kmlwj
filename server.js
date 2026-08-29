@@ -18,7 +18,7 @@ const maskedUrl = resolvedDbUrl ? resolvedDbUrl.replace(/:([^:@]+)@/, ':****@') 
 logger.info('Starting ERP Production Server on GoDaddy Node.js Hosting...');
 logger.info(`Environment: ${process.env.NODE_ENV || 'production'}`);
 logger.info(`Port/Socket: ${isPassenger ? 'passenger' : PORT}`);
-logger.info(`Database: ${maskedUrl ? 'Neon PostgreSQL configured' : 'DATABASE_URL not set'}`);
+logger.info(`Database: ${maskedUrl ? 'GoDaddy MySQL configured' : 'DATABASE_URL or DB_* not set'}`);
 
 // Bind HTTP server IMMEDIATELY so platform/hosting detects the process as ready
 let server;
@@ -48,7 +48,7 @@ if (isPassenger) {
   try {
     const dbConnected = await checkDatabaseConnection();
     if (dbConnected) {
-      logger.info('Neon PostgreSQL database connection established successfully.');
+      logger.info('GoDaddy MySQL database connection established successfully.');
     } else {
       logger.warn('Initial database connectivity check did not respond — server is running and will retry on requests.');
     }

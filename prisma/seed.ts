@@ -1,7 +1,5 @@
 
 import { PrismaClient, AccountLevel } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -11,20 +9,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../.env'), override: true });
 
-const connectionString = process.env.DIRECT_URL || process.env.DATABASE_URL;
+const connectionString = process.env.DATABASE_URL || (
+  process.env.DB_HOST && process.env.DB_USER && process.env.DB_NAME
+    ? `mysql://${encodeURIComponent(process.env.DB_USER)}:${encodeURIComponent(process.env.DB_PASSWORD || '')}@${process.env.DB_HOST}:${process.env.DB_PORT || '3306'}/${process.env.DB_NAME}`
+    : ''
+);
+
 if (!connectionString) {
-  throw new Error('Neither DIRECT_URL nor DATABASE_URL environment variables are defined');
+  throw new Error('Neither DATABASE_URL nor DB_* environment variables are defined');
 }
 
-const pool = new pg.Pool({
-  connectionString,
-  ssl: connectionString.includes('sslmode=require') || connectionString.includes('neon.tech')
-    ? { rejectUnauthorized: false }
-    : undefined,
+const prisma = new PrismaClient({
+  datasources: { db: { url: connectionString } },
 });
-
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log('Starting database seeding...');

@@ -9,49 +9,73 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import pg from 'pg';
+import mysql from 'mysql2/promise';
 
+/**
+ * Resolves the active MySQL connection URL based on either:
+ * 1. process.env.DATABASE_URL (e.g. mysql://user:pass@host:port/dbname)
+ * 2. Individual GoDaddy cPanel variables (DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME)
+ */
 export function getDatabaseUrl(): string {
-  return process.env.DATABASE_URL || process.env.DIRECT_URL || '';
+  if (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('mysql://')) {
+    return process.env.DATABASE_URL;
+  }
+
+  const host = process.env.DB_HOST || 'localhost';
+  const port = process.env.DB_PORT || '3306';
+  const user = process.env.DB_USER || 'root';
+  const password = process.env.DB_PASSWORD || '';
+  const database = process.env.DB_NAME || 'kmlwj_erp';
+
+  if (host && user && database) {
+    const encodedUser = encodeURIComponent(user);
+    const encodedPassword = password ? encodeURIComponent(password) : '';
+    const authPart = encodedPassword ? `${encodedUser}:${encodedPassword}` : encodedUser;
+    return `mysql://${authPart}@${host}:${port}/${database}`;
+  }
+
+  return process.env.DATABASE_URL || '';
 }
 
 export function getDatabaseType(): string {
-  return 'postgres';
+  return 'mysql';
 }
 
 export function isMySQL(): boolean {
-  return false;
+  return true;
 }
 
 export function isPostgres(): boolean {
-  return true;
+  return false;
 }
 
 const connectionString = getDatabaseUrl();
 
 if (!connectionString) {
-  console.warn('[DATABASE WARNING] DATABASE_URL is not set in environment variables.');
+  console.warn('[DATABASE WARNING] MySQL DATABASE_URL or DB_* environment variables are not set.');
 }
 
 const globalForDb = globalThis as unknown as {
   prisma?: PrismaClient;
-  pool?: pg.Pool;
+  pool?: mysql.Pool;
 };
 
-export const pool = globalForDb.pool ?? new pg.Pool({
-  connectionString: connectionString || undefined,
-  max: 20,
-  idleTimeoutMillis: 10000,
-  ssl: connectionString.includes('sslmode=require') || connectionString.includes('neon.tech')
-    ? { rejectUnauthorized: false }
-    : undefined,
-});
-
-const adapter = connectionString ? new PrismaPg(pool) : undefined;
+// Create mysql2 connection pool
+export const pool = globalForDb.pool ?? mysql.createPool(
+  connectionString || {
+    host: process.env.DB_HOST || 'localhost',
+    port: Number(process.env.DB_PORT || '3306'),
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'kmlwj_erp',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+  }
+);
 
 export const prisma = globalForDb.prisma ?? new PrismaClient({
-  adapter,
+  datasources: connectionString ? { db: { url: connectionString } } : undefined,
   log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
 });
 
