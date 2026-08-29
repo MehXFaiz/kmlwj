@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from './_utils/handler.js';
-import { prisma } from './_prisma.js';
+import { prisma, pool } from './_prisma.js';
 import { logger } from './_utils/logger.js';
 
 export default makeHandler(async (req: VercelRequest, res: VercelResponse) => {
@@ -9,7 +9,9 @@ export default makeHandler(async (req: VercelRequest, res: VercelResponse) => {
   }
 
   try {
-    // Check Prisma ORM client connection
+    if (pool) {
+      await pool.query('SELECT 1');
+    }
     await prisma.$queryRaw`SELECT 1`;
 
     return res.status(200).json({
