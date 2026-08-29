@@ -39,6 +39,7 @@ const globalForDb = globalThis as unknown as {
 };
 
 export const prisma = globalForDb.prisma ?? new PrismaClient({
+  datasources: connectionUrl ? { db: { url: connectionUrl } } : undefined,
   log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
 });
 
