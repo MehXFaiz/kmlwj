@@ -6,42 +6,61 @@ import { logger } from '../api/_utils/logger.js';
 import app from '../api/index.js'; // The consolidated express app
 import { AccountingIntegrityService } from '../api/_services/accounting-integrity.service.js';
 
-const PORT = process.env.API_PORT || process.env.BACKEND_PORT || 4000;
+const rawPort = process.env.PORT || process.env.API_PORT || process.env.BACKEND_PORT || 4000;
+const isNumericPort = !isNaN(Number(rawPort));
+const PORT = isNumericPort ? Number(rawPort) : rawPort;
+const HOST = '0.0.0.0';
 
-async function startServer() {
-  logger.info('Initializing Dev Express server with consolidated API app...');
+logger.info('Initializing Express server with consolidated API & frontend app...');
 
-  // Verify Database Connection
-  const dbConnected = await checkDatabaseConnection();
-  if (!dbConnected) {
-    logger.error('Database connection could not be established. Exiting dev process...');
-    process.exit(1);
-  }
+// Bind HTTP server IMMEDIATELY so preview/container platforms detect the process as ready
+const server = isNumericPort
+  ? app.listen(PORT, HOST, () => {
+      logger.info(`Server is running and listening on http://${HOST}:${PORT}`);
+    })
+  : app.listen(PORT, () => {
+      logger.info(`Server is running and listening on socket ${PORT}`);
+    });
 
-  // Run Accounting Integrity Check on Startup
+// Perform non-blocking database connectivity check and startup integrity check in background
+(async () => {
   try {
-    const checkResult = await AccountingIntegrityService.runFullCheck();
-    if (checkResult.totalIssues > 0) {
-      logger.warn(`Accounting Integrity Check found ${checkResult.totalIssues} issues!`);
-      checkResult.issues.forEach(issue => {
-        logger[issue.severity === 'critical' ? 'error' : issue.severity === 'warning' ? 'warn' : 'info'](
-          `${issue.type.toUpperCase()}: ${issue.description}`,
-          issue.item
-        );
-      });
+    const dbConnected = await checkDatabaseConnection();
+    if (dbConnected) {
+      logger.info('Database connection established successfully.');
+      try {
+        const checkResult = await AccountingIntegrityService.runFullCheck();
+        if (checkResult.totalIssues > 0) {
+          logger.warn(`Accounting Integrity Check found ${checkResult.totalIssues} issues.`);
+        } else {
+          logger.info('Accounting Integrity Check passed — 0 issues found.');
+        }
+      } catch (checkErr: any) {
+        logger.warn({ error: checkErr?.message }, 'Accounting integrity check warning (non-fatal)');
+      }
     } else {
-      logger.info('Accounting Integrity Check passed - no issues found!');
+      logger.warn('Initial database connectivity probe did not respond — server is active and will retry on requests.');
     }
-  } catch (error) {
-    logger.error({ error }, 'Failed to run accounting integrity check');
+  } catch (err: any) {
+    logger.warn({ error: err?.message }, 'Initial database check warning — server remains active.');
   }
+})();
 
-  app.listen(PORT, () => {
-    logger.info(`Dev Express server is running on port ${PORT}`);
-  });
-}
+// Graceful shutdown handling
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received. Shutting down server...');
+  server.close(() => process.exit(0));
+});
 
-startServer().catch((error) => {
-  logger.error({ error }, 'Failed to start dev server');
-  process.exit(1);
+process.on('SIGINT', () => {
+  logger.info('SIGINT received. Shutting down server...');
+  server.close(() => process.exit(0));
+});
+
+process.on('unhandledRejection', (reason: any) => {
+  logger.error({ reason: reason?.message || reason }, 'Unhandled Promise Rejection (non-fatal)');
+});
+
+process.on('uncaughtException', (err: any) => {
+  logger.error({ error: err?.message, stack: err?.stack }, 'Uncaught Exception');
 });
