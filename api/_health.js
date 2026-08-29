@@ -1,11 +1,12 @@
 import { makeHandler } from "./_utils/handler.js";
-import { prisma, pool, getMySQLDatabaseUrl } from "./_prisma.js";
+import { prisma, pool, getDatabaseUrl, getDatabaseType } from "./_prisma.js";
 import { logger } from "./_utils/logger.js";
 var health_default = makeHandler(async (req, res) => {
   if (req.method !== "GET") {
     return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
   }
-  const dbUrl = getMySQLDatabaseUrl();
+  const dbUrl = getDatabaseUrl();
+  const dbType = getDatabaseType();
   const maskedDbUrl = dbUrl ? dbUrl.replace(/:([^:@]+)@/, ":****@") : "NOT_CONFIGURED";
   try {
     let poolStatus = "not_configured";
@@ -18,7 +19,8 @@ var health_default = makeHandler(async (req, res) => {
     return res.status(200).json({
       status: "ok",
       database: "connected",
-      mysqlPool: poolStatus,
+      dialect: dbType,
+      poolStatus,
       target: maskedDbUrl,
       usersInDb: userCount,
       timestamp: (/* @__PURE__ */ new Date()).toISOString()
@@ -28,6 +30,7 @@ var health_default = makeHandler(async (req, res) => {
     return res.status(503).json({
       status: "error",
       database: "disconnected",
+      dialect: dbType,
       target: maskedDbUrl,
       error: err?.message || "Database connection probe failed",
       timestamp: (/* @__PURE__ */ new Date()).toISOString()

@@ -4,22 +4,24 @@ dotenv.config();
 import app from './api/index.js';
 import { checkDatabaseConnection } from './api/_config/database.js';
 import { logger } from './api/_utils/logger.js';
-import { prisma, pool, getMySQLDatabaseUrl } from './api/_prisma.js';
+import { prisma, pool, getDatabaseUrl, getDatabaseType } from './api/_prisma.js';
 
 const rawPort = process.env.PORT || 3000;
 const isNumericPort = !isNaN(Number(rawPort));
 const PORT = isNumericPort ? Number(rawPort) : rawPort;
 const HOST = '0.0.0.0';
 
-const resolvedDbUrl = getMySQLDatabaseUrl();
+const resolvedDbUrl = getDatabaseUrl();
+const dbType = getDatabaseType();
 const maskedUrl = resolvedDbUrl ? resolvedDbUrl.replace(/:([^:@]+)@/, ':****@') : '';
 
-logger.info('Starting ERP Production Server on GoDaddy Node.js Hosting...');
+logger.info(`Starting ERP Server (${dbType === 'mysql' ? 'GoDaddy MySQL' : 'Neon PostgreSQL'})...`);
 logger.info(`Environment: ${process.env.NODE_ENV || 'production'}`);
 logger.info(`Port: ${PORT}`);
-logger.info(`Database target: ${maskedUrl || 'Not configured (check DB_* or DATABASE_URL env vars)'}`);
+logger.info(`Dialect: ${dbType}`);
+logger.info(`Database target: ${maskedUrl || 'Not configured (check DATABASE_URL or DB_* env vars)'}`);
 
-// Bind HTTP server IMMEDIATELY so GoDaddy/Passenger detects the process as ready
+// Bind HTTP server IMMEDIATELY so platform/hosting detects the process as ready
 const server = isNumericPort
   ? app.listen(PORT, HOST, () => {
       logger.info(`Express server started successfully on http://${HOST}:${PORT}`);
@@ -31,13 +33,13 @@ const server = isNumericPort
 // Perform non-blocking database connectivity check after server is listening
 (async () => {
   if (!resolvedDbUrl) {
-    logger.warn('Neither DATABASE_URL nor DB_HOST/DB_USER/DB_NAME is set. Database operations will fail until configured.');
+    logger.warn('DATABASE_URL is not set. Database operations will fail until configured.');
     return;
   }
   try {
     const dbConnected = await checkDatabaseConnection();
     if (dbConnected) {
-      logger.info('GoDaddy MySQL database connection established successfully.');
+      logger.info(`Database (${dbType}) connection established successfully.`);
     } else {
       logger.warn('Initial database connectivity check did not respond — server is running and will retry on requests.');
     }

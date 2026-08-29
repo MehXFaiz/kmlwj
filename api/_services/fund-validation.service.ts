@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import { prisma } from '../_prisma.js';
+import { prisma, isMySQL } from '../_prisma.js';
 
 export class InsufficientFundsError extends Error {
   status: number;
@@ -143,14 +143,26 @@ export class FundValidationService {
     // 1. Execute row-level lock on Account table using Prisma raw query inside transaction
     let lockedAccount: any = null;
     try {
-      const rows: any[] = await tx.$queryRaw`
-        SELECT \`id\`, \`glCode\`, \`accountName\`, \`initialBalance\`, \`currentBalance\`, \`detailType\`
-        FROM \`Account\`
-        WHERE \`id\` = ${accountId}
-        FOR UPDATE
-      `;
-      if (rows && rows.length > 0) {
-        lockedAccount = rows[0];
+      if (isMySQL()) {
+        const rows: any[] = await tx.$queryRaw`
+          SELECT \`id\`, \`glCode\`, \`accountName\`, \`initialBalance\`, \`currentBalance\`, \`detailType\`
+          FROM \`Account\`
+          WHERE \`id\` = ${accountId}
+          FOR UPDATE
+        `;
+        if (rows && rows.length > 0) {
+          lockedAccount = rows[0];
+        }
+      } else {
+        const rows: any[] = await tx.$queryRaw`
+          SELECT "id", "glCode", "accountName", "initialBalance", "currentBalance", "detailType"
+          FROM "Account"
+          WHERE "id" = ${accountId}::uuid
+          FOR UPDATE
+        `;
+        if (rows && rows.length > 0) {
+          lockedAccount = rows[0];
+        }
       }
     } catch (e) {
       // Fallback for non-Postgres test environments

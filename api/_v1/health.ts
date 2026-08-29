@@ -1,13 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
-import { prisma, pool, getMySQLDatabaseUrl } from '../_prisma.js';
+import { prisma, pool, getDatabaseUrl, getDatabaseType } from '../_prisma.js';
 
 export default makeHandler(async (req: VercelRequest, res: VercelResponse) => {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: { message: 'Method Not Allowed', status: 405 } });
   }
 
-  const dbUrl = getMySQLDatabaseUrl();
+  const dbUrl = getDatabaseUrl();
+  const dbType = getDatabaseType();
   const maskedDbUrl = dbUrl ? dbUrl.replace(/:([^:@]+)@/, ':****@') : 'NOT_CONFIGURED';
 
   try {
@@ -24,7 +25,8 @@ export default makeHandler(async (req: VercelRequest, res: VercelResponse) => {
       success: true,
       status: 'ok',
       database: 'connected',
-      mysqlPool: poolStatus,
+      dialect: dbType,
+      poolStatus,
       target: maskedDbUrl,
       usersInDb: userCount,
       server: 'running',
@@ -35,6 +37,7 @@ export default makeHandler(async (req: VercelRequest, res: VercelResponse) => {
       success: false,
       status: 'error',
       database: 'disconnected',
+      dialect: dbType,
       target: maskedDbUrl,
       error: error?.message || 'Database connection probe failed',
       server: 'running',

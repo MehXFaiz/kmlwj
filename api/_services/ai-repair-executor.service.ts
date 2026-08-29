@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import { prisma } from '../_prisma.js';
+import { prisma, isMySQL } from '../_prisma.js';
 import { logger } from '../_utils/logger.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingSyncService } from './accounting-sync.service.js';
@@ -57,12 +57,20 @@ export async function applyRepair(
 ): Promise<ApplyRepairResult> {
   try {
     const result = await prisma.$transaction(async (tx) => {
-      // Serializes repairs across concurrent requests via a MySQL named lock
-      const rows = await tx.$queryRaw<{ locked: number }[]>`
-        SELECT GET_LOCK('ai_repair_executor', 0) AS locked
-      `;
-      const locked = rows && rows.length > 0 && rows[0].locked === 1;
-      if (!locked) throw new RepairInProgressError();
+      // Serializes repairs across concurrent requests
+      if (isMySQL()) {
+        const rows = await tx.$queryRaw<{ locked: number }[]>`
+          SELECT GET_LOCK('ai_repair_executor', 0) AS locked
+        `;
+        const locked = rows && rows.length > 0 && rows[0].locked === 1;
+        if (!locked) throw new RepairInProgressError();
+      } else {
+        const rows = await tx.$queryRaw<{ locked: boolean }[]>`
+          SELECT pg_try_advisory_xact_lock(hashtext('ai_repair_executor')) AS locked
+        `;
+        const locked = rows && rows.length > 0 && Boolean(rows[0].locked);
+        if (!locked) throw new RepairInProgressError();
+      }
 
       const issue = await tx.aiRepairIssue.findUnique({ where: { id: issueId } });
       if (!issue) throw new RepairNotActionableError('Issue not found.');

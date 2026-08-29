@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import { prisma } from '../_prisma.js';
+import { prisma, isMySQL } from '../_prisma.js';
 import { logger } from '../_utils/logger.js';
 import { POSTED_JOURNAL_FILTER, AccountingService } from './accounting.service.js';
 
@@ -28,27 +28,52 @@ export class AccountingBalanceRebuildService {
   static async rebuildAllSummaries(txObj?: any, startDate?: string, endDate?: string): Promise<FinancialSummaryTotals> {
     const runInTx = async (tx: any) => {
       // 1. Execute set-based SQL UPDATE to recompute currentBalance for every account from posted lines
-      await tx.$executeRaw(Prisma.sql`
-        UPDATE Account a
-        JOIN Account a2 ON a.id = a2.id
-        LEFT JOIN AccountType t ON t.id = a2.accountTypeId
-        LEFT JOIN (
-          SELECT l.accountId,
-                 SUM(l.debit)  AS total_debit,
-                 SUM(l.credit) AS total_credit
-          FROM JournalEntryLine l
-          JOIN JournalEntry j ON j.id = l.journalEntryId
-          WHERE j.status = 'Posted' AND j.isDeleted = 0
-          GROUP BY l.accountId
-        ) s ON s.accountId = a2.id
-        SET a.currentBalance = a2.initialBalance +
-          CASE
-            WHEN COALESCE(UPPER(t.name), 'ASSET') IN ('ASSET', 'EXPENSE')
-              THEN COALESCE(s.total_debit, 0) - COALESCE(s.total_credit, 0)
-            ELSE COALESCE(s.total_credit, 0) - COALESCE(s.total_debit, 0)
-          END
-        WHERE a2.accountLevel IN ('GL', 'SUBSIDIARY')
-      `);
+      if (isMySQL()) {
+        await tx.$executeRaw(Prisma.sql`
+          UPDATE Account a
+          JOIN Account a2 ON a.id = a2.id
+          LEFT JOIN AccountType t ON t.id = a2.accountTypeId
+          LEFT JOIN (
+            SELECT l.accountId,
+                   SUM(l.debit)  AS total_debit,
+                   SUM(l.credit) AS total_credit
+            FROM JournalEntryLine l
+            JOIN JournalEntry j ON j.id = l.journalEntryId
+            WHERE j.status = 'Posted' AND j.isDeleted = 0
+            GROUP BY l.accountId
+          ) s ON s.accountId = a2.id
+          SET a.currentBalance = a2.initialBalance +
+            CASE
+              WHEN COALESCE(UPPER(t.name), 'ASSET') IN ('ASSET', 'EXPENSE')
+                THEN COALESCE(s.total_debit, 0) - COALESCE(s.total_credit, 0)
+              ELSE COALESCE(s.total_credit, 0) - COALESCE(s.total_debit, 0)
+            END
+          WHERE a2.accountLevel IN ('GL', 'SUBSIDIARY')
+        `);
+      } else {
+        await tx.$executeRaw(Prisma.sql`
+          UPDATE "Account" a
+          SET "currentBalance" = a2."initialBalance" +
+            CASE
+              WHEN COALESCE(UPPER(t."name"), 'ASSET') IN ('ASSET', 'EXPENSE')
+                THEN COALESCE(s.total_debit, 0) - COALESCE(s.total_credit, 0)
+              ELSE COALESCE(s.total_credit, 0) - COALESCE(s.total_debit, 0)
+            END
+          FROM "Account" a2
+          LEFT JOIN "AccountType" t ON t."id" = a2."accountTypeId"
+          LEFT JOIN (
+            SELECT l."accountId",
+                   SUM(l."debit")  AS total_debit,
+                   SUM(l."credit") AS total_credit
+            FROM "JournalEntryLine" l
+            JOIN "JournalEntry" j ON j."id" = l."journalEntryId"
+            WHERE j."status" = 'Posted' AND j."isDeleted" = false
+            GROUP BY l."accountId"
+          ) s ON s."accountId" = a2."id"
+          WHERE a."id" = a2."id"
+          AND a2."accountLevel" IN ('GL', 'SUBSIDIARY')
+        `);
+      }
 
       // 2. Fetch all active accounts
       const accounts = await tx.account.findMany({

@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import { prisma } from '../_prisma.js';
+import { prisma, isMySQL } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { logger } from '../_utils/logger.js';
 import { AccountingSyncService } from './accounting-sync.service.js';
@@ -882,32 +882,61 @@ export class AccountingService {
    * counting only lines whose parent entry satisfies POSTED_JOURNAL_FILTER.
    */
   private static async rebuildBalanceCache(tx: any, accountIds?: string[]): Promise<number> {
-    const scope = accountIds && accountIds.length > 0
-      ? Prisma.sql`AND a2.id IN (${Prisma.join(accountIds.map(id => Prisma.sql`${id}`))})`
-      : Prisma.sql`AND a2.accountLevel IN ('GL', 'SUBSIDIARY')`;
+    if (isMySQL()) {
+      const scope = accountIds && accountIds.length > 0
+        ? Prisma.sql`AND a2.id IN (${Prisma.join(accountIds.map(id => Prisma.sql`${id}`))})`
+        : Prisma.sql`AND a2.accountLevel IN ('GL', 'SUBSIDIARY')`;
 
-    return tx.$executeRaw(Prisma.sql`
-      UPDATE Account a
-      JOIN Account a2 ON a.id = a2.id
-      LEFT JOIN AccountType t ON t.id = a2.accountTypeId
-      LEFT JOIN (
-        SELECT l.accountId,
-               SUM(l.debit)  AS total_debit,
-               SUM(l.credit) AS total_credit
-        FROM JournalEntryLine l
-        JOIN JournalEntry j ON j.id = l.journalEntryId
-        WHERE j.status = 'Posted' AND j.isDeleted = 0
-        GROUP BY l.accountId
-      ) s ON s.accountId = a2.id
-      SET a.currentBalance = a2.initialBalance +
-        CASE
-          WHEN COALESCE(UPPER(t.name), 'ASSET') IN ('ASSET', 'EXPENSE')
-            THEN COALESCE(s.total_debit, 0) - COALESCE(s.total_credit, 0)
-          ELSE COALESCE(s.total_credit, 0) - COALESCE(s.total_debit, 0)
-        END
-      WHERE 1=1
-      ${scope}
-    `);
+      return tx.$executeRaw(Prisma.sql`
+        UPDATE Account a
+        JOIN Account a2 ON a.id = a2.id
+        LEFT JOIN AccountType t ON t.id = a2.accountTypeId
+        LEFT JOIN (
+          SELECT l.accountId,
+                 SUM(l.debit)  AS total_debit,
+                 SUM(l.credit) AS total_credit
+          FROM JournalEntryLine l
+          JOIN JournalEntry j ON j.id = l.journalEntryId
+          WHERE j.status = 'Posted' AND j.isDeleted = 0
+          GROUP BY l.accountId
+        ) s ON s.accountId = a2.id
+        SET a.currentBalance = a2.initialBalance +
+          CASE
+            WHEN COALESCE(UPPER(t.name), 'ASSET') IN ('ASSET', 'EXPENSE')
+              THEN COALESCE(s.total_debit, 0) - COALESCE(s.total_credit, 0)
+            ELSE COALESCE(s.total_credit, 0) - COALESCE(s.total_debit, 0)
+          END
+        WHERE 1=1
+        ${scope}
+      `);
+    } else {
+      const scope = accountIds && accountIds.length > 0
+        ? Prisma.sql`AND a2."id" IN (${Prisma.join(accountIds.map(id => Prisma.sql`${id}::uuid`))})`
+        : Prisma.sql`AND a2."accountLevel" IN ('GL', 'SUBSIDIARY')`;
+
+      return tx.$executeRaw(Prisma.sql`
+        UPDATE "Account" a
+        SET "currentBalance" = a2."initialBalance" +
+          CASE
+            WHEN COALESCE(UPPER(t."name"), 'ASSET') IN ('ASSET', 'EXPENSE')
+              THEN COALESCE(s.total_debit, 0) - COALESCE(s.total_credit, 0)
+            ELSE COALESCE(s.total_credit, 0) - COALESCE(s.total_debit, 0)
+          END
+        FROM "Account" a2
+        LEFT JOIN "AccountType" t ON t."id" = a2."accountTypeId"
+        LEFT JOIN (
+          SELECT l."accountId",
+                 SUM(l."debit")  AS total_debit,
+                 SUM(l."credit") AS total_credit
+          FROM "JournalEntryLine" l
+          JOIN "JournalEntry" j ON j."id" = l."journalEntryId"
+          WHERE j."status" = 'Posted' AND j."isDeleted" = false
+          GROUP BY l."accountId"
+        ) s ON s."accountId" = a2."id"
+        WHERE a."id" = a2."id"
+        ${scope}
+      `);
+    }
   }
 
   /**
