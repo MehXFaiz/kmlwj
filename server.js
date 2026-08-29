@@ -4,31 +4,40 @@ dotenv.config();
 import app from './api/index.js';
 import { checkDatabaseConnection } from './api/_config/database.js';
 import { logger } from './api/_utils/logger.js';
-import { prisma, pool, getDatabaseUrl, getDatabaseType } from './api/_prisma.js';
+import { prisma, pool, getDatabaseUrl } from './api/_prisma.js';
 
+const isPassenger = typeof globalThis.PhusionPassenger !== 'undefined' || process.env.PASSENGER_APP_ENV !== undefined || process.env.PORT === 'passenger';
 const rawPort = process.env.PORT || 3000;
 const isNumericPort = !isNaN(Number(rawPort));
 const PORT = isNumericPort ? Number(rawPort) : rawPort;
 const HOST = '0.0.0.0';
 
 const resolvedDbUrl = getDatabaseUrl();
-const dbType = getDatabaseType();
 const maskedUrl = resolvedDbUrl ? resolvedDbUrl.replace(/:([^:@]+)@/, ':****@') : '';
 
-logger.info(`Starting ERP Server (${dbType === 'mysql' ? 'GoDaddy MySQL' : 'Neon PostgreSQL'})...`);
+logger.info('Starting ERP Production Server on GoDaddy Node.js Hosting...');
 logger.info(`Environment: ${process.env.NODE_ENV || 'production'}`);
-logger.info(`Port: ${PORT}`);
-logger.info(`Dialect: ${dbType}`);
-logger.info(`Database target: ${maskedUrl || 'Not configured (check DATABASE_URL or DB_* env vars)'}`);
+logger.info(`Port/Socket: ${isPassenger ? 'passenger' : PORT}`);
+logger.info(`Database: ${maskedUrl ? 'Neon PostgreSQL configured' : 'DATABASE_URL not set'}`);
 
 // Bind HTTP server IMMEDIATELY so platform/hosting detects the process as ready
-const server = isNumericPort
-  ? app.listen(PORT, HOST, () => {
-      logger.info(`Express server started successfully on http://${HOST}:${PORT}`);
-    })
-  : app.listen(PORT, () => {
-      logger.info(`Express server started successfully on socket ${PORT}`);
-    });
+let server;
+if (isPassenger) {
+  if (typeof globalThis.PhusionPassenger !== 'undefined') {
+    globalThis.PhusionPassenger.configure({ autoInstall: false });
+  }
+  server = app.listen('passenger', () => {
+    logger.info('Express server started successfully under Phusion Passenger');
+  });
+} else if (isNumericPort) {
+  server = app.listen(PORT, HOST, () => {
+    logger.info(`Express server started successfully on http://${HOST}:${PORT}`);
+  });
+} else {
+  server = app.listen(PORT, () => {
+    logger.info(`Express server started successfully on socket ${PORT}`);
+  });
+}
 
 // Perform non-blocking database connectivity check after server is listening
 (async () => {
@@ -39,7 +48,7 @@ const server = isNumericPort
   try {
     const dbConnected = await checkDatabaseConnection();
     if (dbConnected) {
-      logger.info(`Database (${dbType}) connection established successfully.`);
+      logger.info('Neon PostgreSQL database connection established successfully.');
     } else {
       logger.warn('Initial database connectivity check did not respond — server is running and will retry on requests.');
     }
