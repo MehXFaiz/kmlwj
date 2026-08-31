@@ -145,7 +145,7 @@ var accounts_default = makeHandler(async (req, res) => {
         accountTypeId: accountType.id,
         description,
         currency: currency || "PKR",
-        subsidiary: subsidiary || ["Global"],
+        subsidiary: Array.isArray(subsidiary) ? subsidiary : subsidiary ? [subsidiary] : ["Global"],
         initialBalance: parseFloat(initialBalance) || 0,
         detailType: detailType || "Header",
         isLocked: !!isLocked,
@@ -216,7 +216,7 @@ var accounts_default = makeHandler(async (req, res) => {
     if (name !== void 0) updateData.accountName = name;
     if (description !== void 0) updateData.description = description;
     if (currency !== void 0) updateData.currency = currency;
-    if (subsidiary !== void 0) updateData.subsidiary = subsidiary;
+    if (subsidiary !== void 0) updateData.subsidiary = Array.isArray(subsidiary) ? subsidiary : [subsidiary];
     if (initialBalance !== void 0) updateData.initialBalance = parseFloat(initialBalance) || 0;
     if (detailType !== void 0) updateData.detailType = detailType;
     if (isLocked !== void 0) updateData.isLocked = isLocked;

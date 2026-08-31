@@ -21,7 +21,7 @@ async function fixSubsidiary() {
     const db = client.db();
     const col = db.collection('Account');
 
-    const strDocs = await col.find({ subsidiary: { $type: 'string' } }).toArray();
+    const strDocs = await col.find({ subsidiary: { $type: 'string', $not: { $type: 'array' } } }).toArray();
     console.log(`Converting ${strDocs.length} Account documents with string subsidiary to array...`);
 
     for (const d of strDocs) {

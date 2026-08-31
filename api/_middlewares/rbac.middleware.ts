@@ -4,6 +4,7 @@
  * Dynamic Role Authorization:
  *   - isPrivileged roles (Super Admin, Admin) → full access to all operational modules
  *   - Dynamic custom roles → granular access governed by database permissions
+ *   - Non-privileged roles → read and create only; PUT/PATCH/DELETE strictly rejected with HTTP 403
  */
 import type { VercelResponse } from '@vercel/node';
 import type { AuthenticatedRequest } from './auth.middleware.js';
@@ -45,8 +46,9 @@ export async function loadIsPrivileged(req: AuthenticatedRequest): Promise<boole
 /**
  * Vercel/serverless version.
  *
- * Call AFTER verifyAuth. For PUT / PATCH / DELETE requests, checks that the
- * authenticated user has permission for the operation (either via isPrivileged or granular permission).
+ * Call AFTER verifyAuth. For PUT / PATCH / DELETE requests:
+ * - Privileged users (Super Admin, Admin) are allowed (optionally checking specific permission if supplied).
+ * - Non-privileged users are strictly rejected with HTTP 403.
  * Returns true when the request should proceed.
  */
 export async function enforceRestrictedRolePolicy(
@@ -54,7 +56,7 @@ export async function enforceRestrictedRolePolicy(
   res: VercelResponse,
   requiredPermission?: string | string[]
 ): Promise<boolean> {
-  const method = req.method?.toUpperCase() ?? '';
+  const method = (req.method ?? '').toUpperCase();
 
   // GET and POST are allowed for all authenticated roles (subject to module-specific permission checks)
   if (method !== 'PUT' && method !== 'PATCH' && method !== 'DELETE') {
@@ -62,13 +64,29 @@ export async function enforceRestrictedRolePolicy(
   }
 
   const privileged = await loadIsPrivileged(req);
-  if (privileged) return true;
-
-  if (requiredPermission) {
-    const hasPerm = await checkPermission(req, requiredPermission);
-    if (hasPerm) return true;
+  if (privileged) {
+    if (requiredPermission) {
+      const hasPerm = await checkPermission(req, requiredPermission);
+      if (!hasPerm) {
+        const message = method === 'DELETE'
+          ? 'You do not have permission to delete this record.'
+          : `Forbidden: '${Array.isArray(requiredPermission) ? requiredPermission.join(' or ') : requiredPermission}' permission required`;
+        res.status(403).json({
+          success: false,
+          message,
+          error: {
+            message,
+            status: 403,
+            code: 'RESTRICTED_ROLE',
+          },
+        });
+        return false;
+      }
+    }
+    return true;
   }
 
+  // Non-privileged roles are strictly forbidden from EDIT (PUT/PATCH) and DELETE
   const message =
     method === 'DELETE'
       ? 'You do not have permission to delete this record.'
@@ -124,6 +142,10 @@ export function enforceRestrictedRolePolicyMiddleware(
       });
     })
     .catch((err) => {
-      res.status(500).json({ error: { message: err.message || 'Internal Server Error', status: 500 } });
+      res.status(500).json({
+        success: false,
+        message: 'Internal Server Error',
+        error: { message: err.message || 'Internal Server Error', status: 500 },
+      });
     });
 }

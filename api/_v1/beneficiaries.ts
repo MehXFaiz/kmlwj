@@ -43,12 +43,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
 
-  // Granular RBAC: PUT / PATCH require beneficiaries.update, DELETE requires beneficiaries.delete
-  if (!await enforceRestrictedRolePolicy(req, res, method === 'DELETE' ? ['beneficiaries.delete', PERMS.DELETE_BENEFICIARY] : ['beneficiaries.update', PERMS.UPDATE_BENEFICIARY])) return;
-
-  const { method } = req;
+  const method = (req.method?.toUpperCase() ?? '');
   const id = req.query.id as string;
   const action = (req.query.action || req.body?.action) as string;
+
+  // Granular RBAC: PUT / PATCH require beneficiaries.update, DELETE requires beneficiaries.delete
+  if (!await enforceRestrictedRolePolicy(req, res, method === 'DELETE' ? ['beneficiaries.delete', PERMS.DELETE_BENEFICIARY] : ['beneficiaries.update', PERMS.UPDATE_BENEFICIARY])) return;
 
   if (method === 'GET') {
     if (!await verifyPermission(req, res, ['beneficiaries.view', PERMS.VIEW_BENEFICIARIES])) return;

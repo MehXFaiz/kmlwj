@@ -19,7 +19,7 @@ async function checkSubsidiary() {
   try {
     await client.connect();
     const db = client.db();
-    const strSubsidiary = await db.collection('Account').countDocuments({ subsidiary: { $type: 'string' } });
+    const strSubsidiary = await db.collection('Account').countDocuments({ subsidiary: { $type: 'string', $not: { $type: 'array' } } });
     const arrSubsidiary = await db.collection('Account').countDocuments({ subsidiary: { $type: 'array' } });
     console.log(`Account subsidiary: string=${strSubsidiary}, array=${arrSubsidiary}`);
   } finally {

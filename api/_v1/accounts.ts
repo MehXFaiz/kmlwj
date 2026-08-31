@@ -177,7 +177,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         accountTypeId: accountType.id,
         description,
         currency: currency || 'PKR',
-        subsidiary: subsidiary || ['Global'],
+        subsidiary: Array.isArray(subsidiary) ? subsidiary : (subsidiary ? [subsidiary] : ['Global']),
         initialBalance: parseFloat(initialBalance) || 0,
         detailType: detailType || 'Header',
         isLocked: !!isLocked,
@@ -266,7 +266,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if (name !== undefined) updateData.accountName = name;
     if (description !== undefined) updateData.description = description;
     if (currency !== undefined) updateData.currency = currency;
-    if (subsidiary !== undefined) updateData.subsidiary = subsidiary;
+    if (subsidiary !== undefined) updateData.subsidiary = Array.isArray(subsidiary) ? subsidiary : [subsidiary];
     if (initialBalance !== undefined) updateData.initialBalance = parseFloat(initialBalance) || 0;
     if (detailType !== undefined) updateData.detailType = detailType;
     if (isLocked !== undefined) updateData.isLocked = isLocked;

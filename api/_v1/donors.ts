@@ -29,10 +29,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
 
+  const method = req.method?.toUpperCase() ?? '';
+
   // Granular RBAC: PUT / PATCH require donors.update, DELETE requires donors.delete
   if (!await enforceRestrictedRolePolicy(req, res, method === 'DELETE' ? ['donors.delete', PERMS.DELETE_DONOR] : ['donors.update', PERMS.UPDATE_DONOR])) return;
-
-  const method = req.method?.toUpperCase() ?? '';
   if (method === 'GET') {
     if (!await verifyPermission(req, res, ['donors.view', PERMS.VIEW_DONORS])) return;
   } else if (method === 'POST') {

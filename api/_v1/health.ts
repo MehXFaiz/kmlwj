@@ -8,19 +8,18 @@ export default makeHandler(async (req: VercelRequest, res: VercelResponse) => {
   }
 
   try {
-    // Verify Prisma MongoDB connection
     await prisma.$runCommandRaw({ ping: 1 });
 
     return res.status(200).json({
       success: true,
-      database: 'mongodb',
+      database: 'connected',
       status: 'connected',
       server: 'running',
     });
   } catch (error: any) {
     return res.status(500).json({
       success: false,
-      database: 'mongodb',
+      database: 'disconnected',
       status: 'disconnected',
       server: 'running',
       error: error?.message || 'Database check failed',
