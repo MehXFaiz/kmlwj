@@ -464,7 +464,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
           }
         });
         return newBooking;
-      }, { isolationLevel: "Serializable" });
+      }, { maxWait: 15e3, timeout: 3e4 });
       await logAudit(req.user.id, "Create & Post Hall Booking", "REVENUE", null, result, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(201).json({ status: 201, data: result });
     } catch (err) {

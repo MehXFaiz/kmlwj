@@ -589,13 +589,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       });
 
       return newBooking;
-    }, { isolationLevel: 'Serializable' });
-      // SQA fix: Serializable isolation makes the re-check-then-insert above
-      // atomic against concurrent bookings for the same hall/date/timings —
-      // without it, two overlapping transactions could both pass the re-check
-      // before either commits (classic TOCTOU), a race the prior date-only
-      // unique index masked for the exact-match case but couldn't cover once
-      // `timings` was added to the mix.
+    }, { maxWait: 15000, timeout: 30000 });
 
       await logAudit(req.user.id, 'Create & Post Hall Booking', 'REVENUE', null, result, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
