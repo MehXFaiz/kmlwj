@@ -288,10 +288,16 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         userAgent: req.headers['user-agent']
       });
 
+      const lastCollection = await tx.revenueCollection.findFirst({
+        orderBy: { receiptNo: 'desc' },
+        select: { receiptNo: true },
+      });
+      const receiptNo = (lastCollection?.receiptNo || 0) + 1;
+
       const newItem = await tx.revenueCollection.create({
         data: {
           category,
-          // receiptNo is autoincrement — do NOT set it manually
+          receiptNo,
           title,
           subTitle: subTitle || null,
           mobile: mobile || null,

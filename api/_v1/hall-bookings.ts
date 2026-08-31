@@ -543,14 +543,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         throw Object.assign(new Error('This hall is already booked for the selected date and time slot. Please choose another date or time.'), { status: 409 });
       }
 
-      // SQA fix: receiptNo was previously computed as `count() + 1` and set
-      // explicitly, racing under concurrent submissions (and, since the
-      // column has no unique constraint, a collision would silently create
-      // two bookings with the same receipt number rather than erroring).
-      // receiptNo is `@default(autoincrement())` in the schema — omitting it
-      // here lets Postgres assign it atomically instead.
+      const lastBooking = await tx.hallBooking.findFirst({
+        orderBy: { receiptNo: 'desc' },
+        select: { receiptNo: true },
+      });
+      const receiptNo = (lastBooking?.receiptNo || 0) + 1;
+
       const newBooking = await tx.hallBooking.create({
         data: {
+          receiptNo,
           bookingDate: bookingDate ? new Date(bookingDate) : undefined,
           bookerName,
           fatherHusbandName: fatherHusbandName || null,

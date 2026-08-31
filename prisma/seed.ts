@@ -1,7 +1,12 @@
 
+import dns from 'dns';
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch {
+  // Ignore in environments where setting DNS servers is not allowed
+}
+
 import { PrismaClient, AccountLevel } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -11,20 +16,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../.env'), override: true });
 
-const connectionString = process.env.DIRECT_URL || process.env.DATABASE_URL;
-if (!connectionString) {
-  throw new Error('Neither DIRECT_URL nor DATABASE_URL environment variables are defined');
-}
-
-const pool = new pg.Pool({
-  connectionString,
-  ssl: connectionString.includes('sslmode=require') || connectionString.includes('neon.tech')
-    ? { rejectUnauthorized: false }
-    : undefined,
-});
-
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient();
 
 async function main() {
   console.log('Starting database seeding...');

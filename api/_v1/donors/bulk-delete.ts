@@ -9,7 +9,7 @@ import { isAdminOrAbove } from '../../_utils/soft-delete.js';
 /** Upper bound on one request so a runaway client can't soft-delete the whole directory. */
 const MAX_BULK_IDS = 500;
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_RE = /^[0-9a-fA-F]{24}$|^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
 /**
  * Bulk soft-delete for donors.

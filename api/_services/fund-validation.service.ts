@@ -140,22 +140,8 @@ export class FundValidationService {
       return { availableBalance: 0, account: null };
     }
 
-    // 1. Execute row-level lock on Account table using Prisma raw query inside transaction
-    let lockedAccount: any = null;
-    try {
-      const rows: any[] = await tx.$queryRaw`
-        SELECT "id", "glCode", "accountName", "initialBalance", "currentBalance", "detailType"
-        FROM "Account"
-        WHERE "id" = ${accountId}::uuid
-        FOR UPDATE
-      `;
-      if (rows && rows.length > 0) {
-        lockedAccount = rows[0];
-      }
-    } catch (e) {
-      // Fallback for non-Postgres test environments
-      lockedAccount = await tx.account.findUnique({ where: { id: accountId } });
-    }
+    // 1. Fetch account within transaction
+    const lockedAccount = await tx.account.findUnique({ where: { id: accountId } });
 
     // 2. Fetch full account and calculate available balance
     const { account, availableBalance, isCash, isBank } = await FundValidationService.getAvailableBalance(tx, accountId);

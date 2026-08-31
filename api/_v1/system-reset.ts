@@ -126,12 +126,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
       // Step D: Reset Voucher Sequence Counters if requested
       if (resetSequences) {
-        try {
-          await tx.$executeRawUnsafe('ALTER SEQUENCE "HallBooking_receiptNo_seq" RESTART WITH 1;');
-        } catch (e) {}
-        try {
-          await tx.$executeRawUnsafe('ALTER SEQUENCE "RevenueCollection_receiptNo_seq" RESTART WITH 1;');
-        } catch (e) {}
+        // In MongoDB, sequential counters are dynamically computed from max existing receiptNo
       }
 
       // Step E: Post-Reset Verification & Accounting Reconciliation

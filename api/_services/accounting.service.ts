@@ -882,32 +882,57 @@ export class AccountingService {
    * counting only lines whose parent entry satisfies POSTED_JOURNAL_FILTER.
    */
   private static async rebuildBalanceCache(tx: any, accountIds?: string[]): Promise<number> {
-    const scope = accountIds && accountIds.length > 0
-      ? Prisma.sql`AND a2."id" IN (${Prisma.join(accountIds.map(id => Prisma.sql`${id}::uuid`))})`
-      : Prisma.sql`AND a2."accountLevel" IN ('GL', 'SUBSIDIARY')`;
+    const whereCondition: any = {
+      isDeleted: false,
+    };
+    if (accountIds && accountIds.length > 0) {
+      whereCondition.id = { in: accountIds };
+    } else {
+      whereCondition.accountLevel = { in: ['GL', 'SUBSIDIARY'] };
+    }
 
-    return tx.$executeRaw(Prisma.sql`
-      UPDATE "Account" a
-      SET "currentBalance" = a2."initialBalance" +
-        CASE
-          WHEN COALESCE(UPPER(t."name"), 'ASSET') IN ('ASSET', 'EXPENSE')
-            THEN COALESCE(s.total_debit, 0) - COALESCE(s.total_credit, 0)
-          ELSE COALESCE(s.total_credit, 0) - COALESCE(s.total_debit, 0)
-        END
-      FROM "Account" a2
-      LEFT JOIN "AccountType" t ON t."id" = a2."accountTypeId"
-      LEFT JOIN (
-        SELECT l."accountId",
-               SUM(l."debit")  AS total_debit,
-               SUM(l."credit") AS total_credit
-        FROM "JournalEntryLine" l
-        JOIN "JournalEntry" j ON j."id" = l."journalEntryId"
-        WHERE j."status" = 'Posted' AND j."isDeleted" = false
-        GROUP BY l."accountId"
-      ) s ON s."accountId" = a2."id"
-      WHERE a."id" = a2."id"
-      ${scope}
-    `);
+    const accounts = await tx.account.findMany({
+      where: whereCondition,
+      include: { accountType: true },
+    });
+
+    if (accounts.length === 0) return 0;
+
+    const targetAccountIds = accounts.map((a: any) => a.id);
+
+    const postedSums = await tx.journalEntryLine.groupBy({
+      by: ['accountId'],
+      where: {
+        accountId: { in: targetAccountIds },
+        journalEntry: { status: 'Posted', isDeleted: false },
+      },
+      _sum: {
+        debit: true,
+        credit: true,
+      },
+    });
+
+    const sumsByAccount = new Map<string, { debit: number; credit: number }>();
+    for (const s of postedSums) {
+      sumsByAccount.set(s.accountId, {
+        debit: Number(s._sum?.debit || 0),
+        credit: Number(s._sum?.credit || 0),
+      });
+    }
+
+    for (const acc of accounts) {
+      const typeName = (acc.accountType?.name || 'ASSET').toUpperCase();
+      const isNormalDebit = typeName === 'ASSET' || typeName === 'EXPENSE' || typeName === 'EXPENSES' || typeName === 'ASSETS';
+      const sum = sumsByAccount.get(acc.id) || { debit: 0, credit: 0 };
+      const movement = isNormalDebit ? (sum.debit - sum.credit) : (sum.credit - sum.debit);
+      const newBalance = Number(acc.initialBalance || 0) + movement;
+      await tx.account.update({
+        where: { id: acc.id },
+        data: { currentBalance: newBalance },
+      });
+    }
+
+    return accounts.length;
   }
 
   /**

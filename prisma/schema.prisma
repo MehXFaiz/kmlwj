@@ -3,25 +3,24 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "mongodb"
+  url      = env("MONGODB_URI")
 }
 
 model User {
-  id                       String              @id @default(uuid()) @db.Uuid
+  id                       String              @id @default(auto()) @map("_id") @db.ObjectId
   fullName                 String
   email                    String              @unique
   password                 String
   isActive                 Boolean             @default(true)
-  roleId                   String              @db.Uuid
+  roleId                   String              @db.ObjectId
   role                     Role                @relation(fields: [roleId], references: [id])
   resetPasswordToken       String?
   resetPasswordExpires     DateTime?
   themePreference          String? // 'light' | 'dark' | 'system' — null = use client default
   isDeleted                Boolean             @default(false)
   deletedAt                DateTime?
-  deletedBy                String?             @db.Uuid
+  deletedBy                String?             @db.ObjectId
   createdAt                DateTime            @default(now())
   updatedAt                DateTime            @updatedAt
   refreshTokens            RefreshToken[]
@@ -44,7 +43,7 @@ model User {
 }
 
 model Role {
-  id              String           @id @default(uuid()) @db.Uuid
+  id              String           @id @default(auto()) @map("_id") @db.ObjectId
   name            String           @unique
   description     String?
   /// true only for Super Admin and Admin — grants full CRUD access.
@@ -57,7 +56,7 @@ model Role {
 }
 
 model Permission {
-  id              String           @id @default(uuid()) @db.Uuid
+  id              String           @id @default(auto()) @map("_id") @db.ObjectId
   name            String           @unique
   description     String?
   rolePermissions RolePermission[]
@@ -66,10 +65,10 @@ model Permission {
 }
 
 model RolePermission {
-  id           String     @id @default(uuid()) @db.Uuid
-  roleId       String     @db.Uuid
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  roleId       String     @db.ObjectId
   role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permissionId String     @db.Uuid
+  permissionId String     @db.ObjectId
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
@@ -78,9 +77,9 @@ model RolePermission {
 }
 
 model RefreshToken {
-  id        String    @id @default(uuid()) @db.Uuid
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
   token     String    @unique
-  userId    String    @db.Uuid
+  userId    String    @db.ObjectId
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   createdAt DateTime  @default(now())
@@ -95,14 +94,14 @@ enum AccountLevel {
 }
 
 model Account {
-  id                     String              @id @default(uuid()) @db.Uuid
+  id                     String              @id @default(auto()) @map("_id") @db.ObjectId
   glCode                 String              @unique
   accountName            String
   accountLevel           AccountLevel
-  parentId               String?             @db.Uuid
-  parent                 Account?            @relation("AccountChildren", fields: [parentId], references: [id])
+  parentId               String?             @db.ObjectId
+  parent                 Account?            @relation("AccountChildren", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   children               Account[]           @relation("AccountChildren")
-  accountTypeId          String?             @db.Uuid
+  accountTypeId          String?             @db.ObjectId
   accountType            AccountType?        @relation(fields: [accountTypeId], references: [id])
   isLocked               Boolean             @default(false)
   isReserved             Boolean             @default(false)
@@ -110,13 +109,12 @@ model Account {
   description            String?
   currency               String              @default("PKR")
   subsidiary             String[]            @default(["Global"])
-  // Monetary columns (initialBalance, currentBalance) are Decimal(18,2)
-  initialBalance         Decimal             @default(0) @db.Decimal(18, 2)
-  currentBalance         Decimal             @default(0) @db.Decimal(18, 2)
+  initialBalance         Float               @default(0)
+  currentBalance         Float               @default(0)
   detailType             String              @default("Header")
   isDeleted              Boolean             @default(false)
   deletedAt              DateTime?
-  deletedBy              String?             @db.Uuid
+  deletedBy              String?             @db.ObjectId
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
   revenueHeads           RevenueHead[]
@@ -138,14 +136,13 @@ model Account {
   pettyCashReconciliations PettyCashReconciliation[]
   openingBalanceLines     OpeningBalanceLine[]
 
-  // Tree-building (parent lookups) and level-scoped scans hit these constantly.
   @@index([parentId])
   @@index([accountLevel])
   @@index([isDeleted])
 }
 
 model AccountType {
-  id          String    @id @default(uuid()) @db.Uuid
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
   name        String    @unique
   description String?
   accounts    Account[]
@@ -154,14 +151,14 @@ model AccountType {
 }
 
 model ReservedCode {
-  id            String    @id @default(uuid()) @db.Uuid
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
   reserveStart  String    @unique
   reserveEnd    String
   reserveReason String
   isActive      Boolean   @default(true)
   isDeleted     Boolean   @default(false)
   deletedAt     DateTime?
-  deletedBy     String?   @db.Uuid
+  deletedBy     String?   @db.ObjectId
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -169,17 +166,17 @@ model ReservedCode {
 }
 
 model RevenueHead {
-  id            String         @id @default(uuid()) @db.Uuid
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
   name          String
   category      String
   hall          String?
-  amount        Decimal?       @default(0) @db.Decimal(18, 2)
-  accountId     String?        @db.Uuid
+  amount        Float?         @default(0)
+  accountId     String?        @db.ObjectId
   account       Account?       @relation(fields: [accountId], references: [id])
   isActive      Boolean        @default(true)
   isDeleted     Boolean        @default(false)
   deletedAt     DateTime?
-  deletedBy     String?        @db.Uuid
+  deletedBy     String?        @db.ObjectId
   createdAt     DateTime       @default(now())
   simpleIncomes SimpleIncome[]
 
@@ -187,15 +184,15 @@ model RevenueHead {
 }
 
 model ExpenseHead {
-  id             String          @id @default(uuid()) @db.Uuid
+  id             String          @id @default(auto()) @map("_id") @db.ObjectId
   name           String
   category       String
-  accountId      String?         @db.Uuid
+  accountId      String?         @db.ObjectId
   account        Account?        @relation(fields: [accountId], references: [id])
   isActive       Boolean         @default(true)
   isDeleted      Boolean         @default(false)
   deletedAt      DateTime?
-  deletedBy      String?         @db.Uuid
+  deletedBy      String?         @db.ObjectId
   createdAt      DateTime        @default(now())
   simpleExpenses SimpleExpense[]
   pettyCashTransactions PettyCashTransaction[]
@@ -204,8 +201,8 @@ model ExpenseHead {
 }
 
 model AuditLog {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String?  @db.Uuid
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String?  @db.ObjectId
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   action    String
   module    String
@@ -219,7 +216,7 @@ model AuditLog {
 }
 
 model JournalEntry {
-  id                String             @id @default(uuid()) @db.Uuid
+  id                String             @id @default(auto()) @map("_id") @db.ObjectId
   voucherNo         String             @unique
   postingDate       DateTime
   subsidiary        String
@@ -230,7 +227,7 @@ model JournalEntry {
   voucherType       String             @default("JV")
   isDeleted         Boolean            @default(false)
   deletedAt         DateTime?
-  deletedBy         String?            @db.Uuid
+  deletedBy         String?            @db.ObjectId
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   lines             JournalEntryLine[]
@@ -242,28 +239,23 @@ model JournalEntry {
   pettyCashTransaction PettyCashTransaction? @relation("PettyCashJournalEntry")
   openingBalanceBatch  OpeningBalanceBatch?  @relation("OpeningBalanceBatchJournalEntry")
 
-  // Every financial report filters posted lines by their parent JournalEntry's
-  // status (+ posting-date window) via getPostedAggregates — this is the single
-  // hottest query in the system.
   @@index([status, postingDate])
   @@index([voucherType, postingDate])
   @@index([isDeleted])
 }
 
 model JournalEntryLine {
-  id             String       @id @default(uuid()) @db.Uuid
-  journalEntryId String       @db.Uuid
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  journalEntryId String       @db.ObjectId
   journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
-  accountId      String       @db.Uuid
+  accountId      String       @db.ObjectId
   account        Account      @relation(fields: [accountId], references: [id])
   description    String?
-  debit          Decimal      @default(0) @db.Decimal(18, 2)
-  credit         Decimal      @default(0) @db.Decimal(18, 2)
+  debit          Float        @default(0)
+  credit         Float        @default(0)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  // getPostedAggregates groups by accountId; delete/recalc paths filter by
-  // journalEntryId. Both were previously unindexed (sequential scans).
   @@index([accountId])
   @@index([journalEntryId])
 }
@@ -307,7 +299,7 @@ enum DonationStatus {
 }
 
 model Beneficiary {
-  id              String      @id @default(uuid()) @db.Uuid
+  id              String      @id @default(auto()) @map("_id") @db.ObjectId
   name            String
   fatherName      String?
   husbandName     String?
@@ -316,9 +308,9 @@ model Beneficiary {
   mobile          String?
   email           String?
   familySize      Int?
-  monthlyIncome   Decimal?    @db.Decimal(18, 2)
-  monthlyExpenses Decimal?    @db.Decimal(18, 2)
-  debtAmount      Decimal?    @db.Decimal(18, 2)
+  monthlyIncome   Float?
+  monthlyExpenses Float?
+  debtAmount      Float?
   housingStatus   String?
   housingOther    String?
   address         String?
@@ -331,13 +323,13 @@ model Beneficiary {
   profession      String?
   firm            String?
   remarks         String?
-  photoUrl        String?     @db.Text
-  cnicFrontUrl    String?     @db.Text
-  cnicBackUrl     String?     @db.Text
+  photoUrl        String?
+  cnicFrontUrl    String?
+  cnicBackUrl     String?
   isActive        Boolean     @default(true)
   isDeleted       Boolean     @default(false)
   deletedAt       DateTime?
-  deletedBy       String?     @db.Uuid
+  deletedBy       String?     @db.ObjectId
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   donations       Donation[]
@@ -347,26 +339,26 @@ model Beneficiary {
 }
 
 model Donation {
-  id                 String         @id @default(uuid()) @db.Uuid
-  beneficiaryId      String?        @db.Uuid
+  id                 String         @id @default(auto()) @map("_id") @db.ObjectId
+  beneficiaryId      String?        @db.ObjectId
   beneficiary        Beneficiary?   @relation(fields: [beneficiaryId], references: [id])
   donorName          String?
   donorMobile        String?
   donationType       DonationType
   customDonationType String?
-  amount             Decimal        @db.Decimal(18, 2)
+  amount             Float
   paymentMethod      PaymentMethod
-  bankAccountId      String?        @db.Uuid
+  bankAccountId      String?        @db.ObjectId
   bankAccount        Account?       @relation("DonationBankAccount", fields: [bankAccountId], references: [id])
   chequeNumber       String?
   donorBankName      String?
   remarks            String?
   status             DonationStatus @default(PENDING)
-  createdById        String?        @db.Uuid
+  createdById        String?        @db.ObjectId
   createdBy          User?          @relation("DonationCreatedBy", fields: [createdById], references: [id])
   isDeleted          Boolean        @default(false)
   deletedAt          DateTime?
-  deletedBy          String?        @db.Uuid
+  deletedBy          String?        @db.ObjectId
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
 
@@ -376,23 +368,22 @@ model Donation {
   @@index([createdAt])
 }
 
-// ── Simple Income ─────────────────────────────────────────────
 model SimpleIncome {
-  id             String      @id @default(uuid()) @db.Uuid
+  id             String      @id @default(auto()) @map("_id") @db.ObjectId
   date           DateTime    @default(now())
-  revenueHeadId  String      @db.Uuid
+  revenueHeadId  String      @db.ObjectId
   revenueHead    RevenueHead @relation(fields: [revenueHeadId], references: [id])
   description    String?
-  amount         Decimal     @db.Decimal(18, 2)
+  amount         Float
   paymentMethod  String      @default("CASH")
-  bankAccountId  String?     @db.Uuid
+  bankAccountId  String?     @db.ObjectId
   reference      String?
-  journalEntryId String?     @db.Uuid
-  createdById    String?     @db.Uuid
+  journalEntryId String?     @db.ObjectId
+  createdById    String?     @db.ObjectId
   createdBy      User?       @relation("IncomeCreatedBy", fields: [createdById], references: [id])
   isDeleted      Boolean     @default(false)
   deletedAt      DateTime?
-  deletedBy      String?     @db.Uuid
+  deletedBy      String?     @db.ObjectId
   createdAt      DateTime    @default(now())
 
   @@index([isDeleted])
@@ -401,19 +392,16 @@ model SimpleIncome {
   @@index([bankAccountId])
 }
 
-// ── Add Income Module ─────────────────────────────────────────
 model IncomeCategory {
-  id            String            @id @default(uuid()) @db.Uuid
+  id            String            @id @default(auto()) @map("_id") @db.ObjectId
   name          String            @unique
   description   String?
-  // @unique: two categories must never share one GL account — otherwise
-  // postings from different categories become indistinguishable in reports.
-  accountId     String?           @unique @db.Uuid
+  accountId     String?           @unique @db.ObjectId
   account       Account?          @relation(fields: [accountId], references: [id])
   isActive      Boolean           @default(true)
   isDeleted     Boolean           @default(false)
   deletedAt     DateTime?
-  deletedBy     String?           @db.Uuid
+  deletedBy     String?           @db.ObjectId
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
   incomeRecords AddIncomeRecord[]
@@ -422,31 +410,31 @@ model IncomeCategory {
 }
 
 model AddIncomeRecord {
-  id              String         @id @default(uuid()) @db.Uuid
-  categoryId      String         @db.Uuid
+  id              String         @id @default(auto()) @map("_id") @db.ObjectId
+  categoryId      String         @db.ObjectId
   category        IncomeCategory @relation(fields: [categoryId], references: [id])
   subCategory     String?
-  amount          Decimal        @db.Decimal(18, 2)
+  amount          Float
   date            DateTime       @default(now())
   paymentMethod   PaymentMethod  @default(CASH)
-  bankAccountId   String?        @db.Uuid
+  bankAccountId   String?        @db.ObjectId
   bankAccount     Account?       @relation("AddIncomeBankAccount", fields: [bankAccountId], references: [id])
   referenceNumber String?
   remarks         String?
-  attachmentUrl   String?        @db.Text
-  journalEntryId  String?        @unique @db.Uuid
+  attachmentUrl   String?
+  journalEntryId  String?        @unique @db.ObjectId
   journalEntry    JournalEntry?  @relation("AddIncomeJournalEntry", fields: [journalEntryId], references: [id])
-  createdById     String?        @db.Uuid
+  createdById     String?        @db.ObjectId
   createdBy       User?          @relation("AddIncomeCreatedBy", fields: [createdById], references: [id])
   status          String         @default("PENDING_POST")
   postedAt        DateTime?
-  postedById      String?        @db.Uuid
+  postedById      String?        @db.ObjectId
   revertedAt      DateTime?
-  revertedById    String?        @db.Uuid
+  revertedById    String?        @db.ObjectId
   revertReason    String?
   isDeleted       Boolean        @default(false)
   deletedAt       DateTime?
-  deletedBy       String?        @db.Uuid
+  deletedBy       String?        @db.ObjectId
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
@@ -456,30 +444,29 @@ model AddIncomeRecord {
   @@index([bankAccountId])
 }
 
-// ── Simple Expense ────────────────────────────────────────────
 model SimpleExpense {
-  id             String      @id @default(uuid()) @db.Uuid
+  id             String      @id @default(auto()) @map("_id") @db.ObjectId
   date           DateTime    @default(now())
-  expenseHeadId  String      @db.Uuid
+  expenseHeadId  String      @db.ObjectId
   expenseHead    ExpenseHead @relation(fields: [expenseHeadId], references: [id])
   paidTo         String?
   description    String?
-  amount         Decimal     @db.Decimal(18, 2)
+  amount         Float
   paymentMethod  String      @default("CASH")
-  bankAccountId  String?     @db.Uuid
+  bankAccountId  String?     @db.ObjectId
   reference      String?
-  journalEntryId String?     @db.Uuid
-  createdById    String?     @db.Uuid
+  journalEntryId String?     @db.ObjectId
+  createdById    String?     @db.ObjectId
   createdBy      User?       @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
   status         String      @default("PENDING_POST")
   postedAt       DateTime?
-  postedById     String?     @db.Uuid
+  postedById     String?     @db.ObjectId
   revertedAt     DateTime?
-  revertedById   String?     @db.Uuid
+  revertedById   String?     @db.ObjectId
   revertReason   String?
   isDeleted      Boolean     @default(false)
   deletedAt      DateTime?
-  deletedBy      String?     @db.Uuid
+  deletedBy      String?     @db.ObjectId
   createdAt      DateTime    @default(now())
 
   @@index([isDeleted])
@@ -489,9 +476,9 @@ model SimpleExpense {
 }
 
 model HallBooking {
-  id                String        @id @default(uuid()) @db.Uuid
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
   bookingDate       DateTime      @default(now())
-  receiptNo         Int           @default(autoincrement())
+  receiptNo         Int           @default(0)
   bookerName        String
   fatherHusbandName String?
   address           String?
@@ -502,49 +489,34 @@ model HallBooking {
   timeFrom          String?
   timeTo            String?
   timings           String?
-  hallId            String?       @db.Uuid
+  hallId            String?       @db.ObjectId
   hallAccount       Account?      @relation("HallBookingAccount", fields: [hallId], references: [id])
   isForJamaat       Boolean       @default(false)
-  hallCharges       Decimal       @db.Decimal(18, 2)
-  discount          Decimal       @default(0) @db.Decimal(18, 2)
-  netAmount         Decimal?      @db.Decimal(18, 2)
-  receivedAmount    Decimal?      @db.Decimal(18, 2)
-  remainingAmount   Decimal?      @db.Decimal(18, 2)
-  refundAmount      Decimal?      @default(0) @db.Decimal(18, 2)
+  hallCharges       Float
+  discount          Float         @default(0)
+  netAmount         Float?
+  receivedAmount    Float?
+  remainingAmount   Float?
+  refundAmount      Float?        @default(0)
   refundDate        DateTime?
   refundReason      String?
   paymentMethod     PaymentMethod
-  bankAccountId     String?       @db.Uuid
+  bankAccountId     String?       @db.ObjectId
   bankAccount       Account?      @relation("HallBookingBankAccount", fields: [bankAccountId], references: [id])
   chequeNumber      String?
   chequeBankName    String?
   status            String        @default("Confirmed")
   remarks           String?
-  createdById       String?       @db.Uuid
+  createdById       String?       @db.ObjectId
   createdBy         User?         @relation("HallBookingCreatedBy", fields: [createdById], references: [id])
-  journalEntryId    String?       @unique @db.Uuid
+  journalEntryId    String?       @unique @db.ObjectId
   journalEntry      JournalEntry? @relation("HallBookingJournalEntry", fields: [journalEntryId], references: [id])
   isDeleted         Boolean       @default(false)
   deletedAt         DateTime?
-  deletedBy         String?       @db.Uuid
+  deletedBy         String?       @db.ObjectId
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
-  // SQA fix: this was `@@unique([hallId, programDate])` — date-only — which
-  // contradicted the app's own intent: HallBookingForm.jsx's own conflict
-  // preview (client-side) already treats two different `timings` values
-  // (e.g. "Morning" vs "Evening") on the same day as non-conflicting, but the
-  // DB constraint blocked ANY second booking for that hall/date regardless of
-  // timings, causing legitimate non-overlapping bookings to be rejected.
-  // `timings` is now part of the key so distinct time slots can coexist.
-  // NOTE: Postgres treats NULL as distinct from every other value in a unique
-  // index, so two bookings with an unset `timings` would NOT be blocked by
-  // this constraint alone — the application-level conflict check in
-  // api/_v1/hall-bookings.ts (which also matches "Full Day" against any
-  // timing, a rule this simple column-level index cannot express) remains
-  // the primary safeguard; this index is a backstop for the exact-match case.
-  // REQUIRES A MIGRATION: run `npm run db:push` (or `prisma migrate`) to
-  // apply this constraint change — not run automatically as part of this fix.
   @@unique([hallId, programDate, timings], name: "hallId_programDate_timings")
   @@index([isDeleted])
   @@index([bankAccountId])
@@ -552,7 +524,7 @@ model HallBooking {
 }
 
 model Customer {
-  id        String    @id @default(uuid()) @db.Uuid
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
   name      String
   email     String?
   phone     String?
@@ -561,7 +533,7 @@ model Customer {
   isActive  Boolean   @default(true)
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
-  deletedBy String?   @db.Uuid
+  deletedBy String?   @db.ObjectId
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   invoices  Invoice[]
@@ -570,28 +542,28 @@ model Customer {
 }
 
 model Invoice {
-  id            String        @id @default(uuid()) @db.Uuid
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
   invoiceNo     String        @unique
-  customerId    String        @db.Uuid
+  customerId    String        @db.ObjectId
   customer      Customer      @relation(fields: [customerId], references: [id])
   issueDate     DateTime
   dueDate       DateTime
   status        String        @default("DRAFT") // DRAFT, POSTED, PAID, CANCELLED
-  subtotal      Decimal       @db.Decimal(18, 2)
-  discount      Decimal       @default(0) @db.Decimal(18, 2)
-  tax           Decimal       @default(0) @db.Decimal(18, 2)
-  total         Decimal       @db.Decimal(18, 2)
+  subtotal      Float
+  discount      Float         @default(0)
+  tax           Float         @default(0)
+  total         Float
   paymentMethod String? // CASH, BANK, CHEQUE
-  bankAccountId String?       @db.Uuid
+  bankAccountId String?       @db.ObjectId
   bankAccount   Account?      @relation("InvoiceBankAccount", fields: [bankAccountId], references: [id])
   chequeNumber  String?
   remarks       String?
   items         InvoiceItem[]
-  createdById   String?       @db.Uuid
+  createdById   String?       @db.ObjectId
   createdBy     User?         @relation("InvoiceCreatedBy", fields: [createdById], references: [id])
   isDeleted     Boolean       @default(false)
   deletedAt     DateTime?
-  deletedBy     String?       @db.Uuid
+  deletedBy     String?       @db.ObjectId
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -603,42 +575,42 @@ model Invoice {
 }
 
 model InvoiceItem {
-  id          String   @id @default(uuid()) @db.Uuid
-  invoiceId   String   @db.Uuid
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  invoiceId   String   @db.ObjectId
   invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   description String
-  quantity    Decimal  @db.Decimal(18, 2)
-  unitPrice   Decimal  @db.Decimal(18, 2)
-  amount      Decimal  @db.Decimal(18, 2)
+  quantity    Float
+  unitPrice   Float
+  amount      Float
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
 model RevenueCollection {
-  id             String        @id @default(uuid()) @db.Uuid
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
   category       String // "Zakat", "Fitra", "Membership Fee", "Bus Booking"
-  receiptNo      Int           @default(autoincrement())
+  receiptNo      Int           @default(0)
   title          String // Donor Name / Member Name / Booker Name
   subTitle       String? // CNIC / Member ID / Bus Number / Destination
   mobile         String?
   eventDate      DateTime? // Trip Date / Fee Year / Collection Date
   quantity       Int? // Head Count / Seats
-  rate           Decimal?      @db.Decimal(18, 2) // Rate per Head / Fee Rate
+  rate           Float? // Rate per Head / Fee Rate
   destination    String?
-  amount         Decimal       @db.Decimal(18, 2)
+  amount         Float
   paymentMethod  PaymentMethod @default(CASH)
-  bankAccountId  String?       @db.Uuid
+  bankAccountId  String?       @db.ObjectId
   bankAccount    Account?      @relation("RevenueCollectionBankAccount", fields: [bankAccountId], references: [id])
   chequeNumber   String?
   status         String        @default("Confirmed")
   remarks        String?
-  createdById    String?       @db.Uuid
+  createdById    String?       @db.ObjectId
   createdBy      User?         @relation("RevenueCollectionCreatedBy", fields: [createdById], references: [id])
-  journalEntryId String?       @unique @db.Uuid
+  journalEntryId String?       @unique @db.ObjectId
   journalEntry   JournalEntry? @relation("RevenueCollectionJournalEntry", fields: [journalEntryId], references: [id])
   isDeleted      Boolean       @default(false)
   deletedAt      DateTime?
-  deletedBy      String?       @db.Uuid
+  deletedBy      String?       @db.ObjectId
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
@@ -648,7 +620,7 @@ model RevenueCollection {
 }
 
 model Member {
-  id              String               @id @default(uuid()) @db.Uuid
+  id              String               @id @default(auto()) @map("_id") @db.ObjectId
   memberNo        String?              @unique
   fullName        String
   fatherName      String?
@@ -664,13 +636,13 @@ model Member {
   profession      String?
   company         String?
   doi             String?
-  photoUrl        String?              @db.Text
-  cnicFrontUrl    String?              @db.Text
-  cnicBackUrl     String?              @db.Text
+  photoUrl        String?
+  cnicFrontUrl    String?
+  cnicBackUrl     String?
   isActive        Boolean              @default(true)
   isDeleted       Boolean              @default(false)
   deletedAt       DateTime?
-  deletedBy       String?              @db.Uuid
+  deletedBy       String?              @db.ObjectId
   zakatCards      ZakatCard[]
   familyLinksFrom FamilyRelationship[] @relation("MemberFamilyLinks")
   familyLinksTo   FamilyRelationship[] @relation("RelatedMemberFamilyLinks")
@@ -702,22 +674,17 @@ enum FamilyRelationType {
   OTHER
 }
 
-// Normalized, bidirectional link between two Members. A single logical link
-// (e.g. "A is Father of B") is stored as two rows — (A -> B, FATHER) and its
-// automatically-derived reciprocal (B -> A, SON/DAUGHTER) — so that either
-// member's family tree can be read with a single indexed query on memberId,
-// with no runtime traversal/inference needed.
 model FamilyRelationship {
-  id               String             @id @default(uuid()) @db.Uuid
-  memberId         String             @db.Uuid
+  id               String             @id @default(auto()) @map("_id") @db.ObjectId
+  memberId         String             @db.ObjectId
   member           Member             @relation("MemberFamilyLinks", fields: [memberId], references: [id], onDelete: Cascade)
-  relatedMemberId  String             @db.Uuid
+  relatedMemberId  String             @db.ObjectId
   relatedMember    Member             @relation("RelatedMemberFamilyLinks", fields: [relatedMemberId], references: [id], onDelete: Cascade)
   relationshipType FamilyRelationType
   customLabel      String?
   isDeleted        Boolean            @default(false)
   deletedAt        DateTime?
-  deletedBy        String?            @db.Uuid
+  deletedBy        String?            @db.ObjectId
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 
@@ -728,34 +695,33 @@ model FamilyRelationship {
 }
 
 model ZakatCard {
-  id             String        @id @default(uuid()) @db.Uuid
-  memberId       String?       @db.Uuid
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  memberId       String?       @db.ObjectId
   member         Member?       @relation(fields: [memberId], references: [id])
-  beneficiaryId  String?       @db.Uuid
+  beneficiaryId  String?       @db.ObjectId
   beneficiary    Beneficiary?  @relation(fields: [beneficiaryId], references: [id])
-  zakatAmount    Decimal       @db.Decimal(18, 2)
+  zakatAmount    Float
   issueDate      DateTime      @default(now())
   cardNumber     String        @unique
   paymentMethod  PaymentMethod @default(CASH)
-  bankAccountId  String?       @db.Uuid
-  journalEntryId String?       @unique @db.Uuid
+  bankAccountId  String?       @db.ObjectId
+  journalEntryId String?       @unique @db.ObjectId
   journalEntry   JournalEntry? @relation("ZakatCardJournalEntry", fields: [journalEntryId], references: [id])
-  createdById    String?       @db.Uuid
+  createdById    String?       @db.ObjectId
   createdBy      User?         @relation("ZakatCardCreatedBy", fields: [createdById], references: [id])
   isDeleted      Boolean       @default(false)
   deletedAt      DateTime?
-  deletedBy      String?       @db.Uuid
+  deletedBy      String?       @db.ObjectId
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
   @@index([memberId])
   @@index([beneficiaryId])
-  @@index([cardNumber])
   @@index([isDeleted])
 }
 
 model Donor {
-  id         String             @id @default(uuid()) @db.Uuid
+  id         String             @id @default(auto()) @map("_id") @db.ObjectId
   donorCode  String             @unique
   fullName   String
   fatherName String?
@@ -767,7 +733,7 @@ model Donor {
   isActive   Boolean            @default(true)
   isDeleted  Boolean            @default(false)
   deletedAt  DateTime?
-  deletedBy  String?            @db.Uuid
+  deletedBy  String?            @db.ObjectId
   donations  DonationReceived[]
   createdAt  DateTime           @default(now())
   updatedAt  DateTime           @updatedAt
@@ -776,31 +742,31 @@ model Donor {
 }
 
 model DonationReceived {
-  id                 String            @id @default(uuid()) @db.Uuid
+  id                 String            @id @default(auto()) @map("_id") @db.ObjectId
   receiptNo          String            @unique
   receiptDate        DateTime          @default(now())
-  donorId            String            @db.Uuid
+  donorId            String            @db.ObjectId
   donor              Donor             @relation(fields: [donorId], references: [id])
   donationType       DonationType
   customDonationType String?
-  amount             Decimal           @db.Decimal(18, 2)
+  amount             Float
   paymentMethod      PaymentMethod
-  cashAccountId      String?           @db.Uuid
+  cashAccountId      String?           @db.ObjectId
   cashAccount        Account?          @relation("DonationReceivedCashAccount", fields: [cashAccountId], references: [id])
-  bankAccountId      String?           @db.Uuid
+  bankAccountId      String?           @db.ObjectId
   bankAccount        Account?          @relation("DonationReceivedBankAccount", fields: [bankAccountId], references: [id])
   chequeNo           String?
   chequeDate         DateTime?
   referenceNo        String?
   narration          String?
-  journalEntryId     String?           @unique @db.Uuid
+  journalEntryId     String?           @unique @db.ObjectId
   journalEntry       JournalEntry?     @relation("DonationReceivedJournalEntry", fields: [journalEntryId], references: [id])
   status             TransactionStatus @default(POSTED)
-  createdById        String            @db.Uuid
+  createdById        String            @db.ObjectId
   createdBy          User              @relation("DonationReceivedCreatedBy", fields: [createdById], references: [id])
   isDeleted          Boolean           @default(false)
   deletedAt          DateTime?
-  deletedBy          String?           @db.Uuid
+  deletedBy          String?           @db.ObjectId
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
 
@@ -810,32 +776,24 @@ model DonationReceived {
   @@index([isDeleted])
 }
 
-// ── AI Accounting Health & Auto-Repair ─────────────────────────────────────
-// AiRepairIssue is the persisted result of AiReconciliationService's detection
-// pass, enriched in place by the AI auditor. AI never writes financial data
-// directly — it only fills in the aiXxx advisory fields on this row; the
-// actual repair (if any) is executed by repair-operations.registry.ts against
-// a fixed, pre-vetted operation, logged immutably to AiRepairLog.
 model AiRepairIssue {
-  id              String    @id @default(uuid()) @db.Uuid
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
   type            String
   severity        String // 'critical' | 'warning' | 'info' — deterministic, never AI-assigned
   description     String
   entityRef       String? // human-readable pointer, e.g. GL code or voucher number
-  currentValue    Decimal?  @db.Decimal(18, 2)
-  expectedValue   Decimal?  @db.Decimal(18, 2)
-  difference      Decimal?  @db.Decimal(18, 2)
+  currentValue    Float?
+  expectedValue   Float?
+  difference      Float?
   affectedRecords Json? // [{ model, id, ref }]
   status          String    @default("OPEN") // OPEN | ANALYZED | PENDING_APPROVAL | REJECTED | RESOLVED | REPAIR_FAILED
   detectedAt      DateTime  @default(now())
   lastSeenAt      DateTime  @default(now())
   resolvedAt      DateTime?
 
-  // AI advisory fields — nullable until AI Analyze runs; preserved across
-  // resolve/reopen cycles so history is never silently erased.
   aiRootCause          String?
   aiExplanation        String?
-  aiConfidence         Decimal?  @db.Decimal(4, 3)
+  aiConfidence         Float?
   aiRiskLevel          String? // LOW | MEDIUM | HIGH | CRITICAL — advisory only, never overrides the registry's fixed risk ceiling
   aiProposedRepairType String? // key into repair-operations.registry.ts, constrained by the AI tool schema's enum
   aiProposedChange     Json?
@@ -850,12 +808,10 @@ model AiRepairIssue {
   @@index([detectedAt])
 }
 
-// Immutable by convention (same pattern as AuditLog): no update/delete route
-// is ever exposed for this model.
 model AiRepairLog {
-  id                String   @id @default(uuid()) @db.Uuid
-  issueId           String?  @db.Uuid
-  userId            String?  @db.Uuid
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  issueId           String?  @db.ObjectId
+  userId            String?  @db.ObjectId
   user              User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   action            String // AUTO_REPAIR_APPLIED | MANUAL_REPAIR_APPLIED | REPAIR_REJECTED | REPAIR_ROLLED_BACK | MANUAL_REVIEW_ACKNOWLEDGED
   issueType         String
@@ -867,7 +823,7 @@ model AiRepairLog {
   affectedRecords   Json?
   riskLevel         String
   approvalStatus    String // AUTO_APPROVED_LOW_RISK | ADMIN_APPROVED | REJECTED
-  approvedById      String?  @db.Uuid
+  approvedById      String?  @db.ObjectId
   beforeCheckResult Json?
   afterCheckResult  Json?
   rollbackStatus    String   @default("NOT_NEEDED") // NOT_NEEDED | ROLLED_BACK | ROLLBACK_FAILED
@@ -879,12 +835,11 @@ model AiRepairLog {
   @@index([issueId])
 }
 
-// ── Petty Cash Module ─────────────────────────────────────────────────────
 model PettyCashConfig {
-  id            String   @id @default(uuid()) @db.Uuid
-  accountId     String   @unique @db.Uuid
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  accountId     String   @unique @db.ObjectId
   account       Account  @relation(fields: [accountId], references: [id])
-  fundLimit     Decimal  @default(50000) @db.Decimal(18, 2)
+  fundLimit     Float    @default(50000)
   custodianName String   @default("Authorized Custodian")
   status        String   @default("ACTIVE") // ACTIVE | SUSPENDED
   remarks       String?
@@ -893,35 +848,35 @@ model PettyCashConfig {
 }
 
 model PettyCashTransaction {
-  id                 String       @id @default(uuid()) @db.Uuid
+  id                 String       @id @default(auto()) @map("_id") @db.ObjectId
   voucherNo          String       @unique
   transactionType    String // OPENING_BALANCE | TRANSFER_IN | TRANSFER_OUT | EXPENSE | REPLENISHMENT | ADMIN_ADJUSTMENT
-  pettyCashAccountId String       @db.Uuid
+  pettyCashAccountId String       @db.ObjectId
   pettyCashAccount   Account      @relation("PettyCashAccount", fields: [pettyCashAccountId], references: [id])
-  sourceAccountId    String?      @db.Uuid
+  sourceAccountId    String?      @db.ObjectId
   sourceAccount      Account?     @relation("PettyCashSourceAccount", fields: [sourceAccountId], references: [id])
-  expenseAccountId   String?      @db.Uuid
+  expenseAccountId   String?      @db.ObjectId
   expenseAccount     Account?     @relation("PettyCashExpenseAccount", fields: [expenseAccountId], references: [id])
-  expenseHeadId      String?      @db.Uuid
+  expenseHeadId      String?      @db.ObjectId
   expenseHead        ExpenseHead? @relation(fields: [expenseHeadId], references: [id])
-  amount             Decimal      @db.Decimal(18, 2)
+  amount             Float
   date               DateTime     @default(now())
   paidTo             String?
   referenceNo        String?
   narration          String?
-  attachmentUrl      String?      @db.Text
-  journalEntryId     String?      @unique @db.Uuid
+  attachmentUrl      String?
+  journalEntryId     String?      @unique @db.ObjectId
   journalEntry       JournalEntry? @relation("PettyCashJournalEntry", fields: [journalEntryId], references: [id])
-  createdById        String       @db.Uuid
+  createdById        String       @db.ObjectId
   createdBy          User         @relation("PettyCashCreatedBy", fields: [createdById], references: [id])
   postedAt           DateTime?
-  postedById         String?      @db.Uuid
+  postedById         String?      @db.ObjectId
   revertedAt         DateTime?
-  revertedById       String?      @db.Uuid
+  revertedById       String?      @db.ObjectId
   revertReason       String?
   isDeleted          Boolean      @default(false)
   deletedAt          DateTime?
-  deletedBy          String?      @db.Uuid
+  deletedBy          String?      @db.ObjectId
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 
@@ -932,21 +887,21 @@ model PettyCashTransaction {
 }
 
 model PettyCashReconciliation {
-  id                 String    @id @default(uuid()) @db.Uuid
-  pettyCashAccountId String    @db.Uuid
+  id                 String    @id @default(auto()) @map("_id") @db.ObjectId
+  pettyCashAccountId String    @db.ObjectId
   pettyCashAccount   Account   @relation(fields: [pettyCashAccountId], references: [id])
   reconciliationDate DateTime  @default(now())
-  systemBalance      Decimal   @db.Decimal(18, 2)
-  physicalCount      Decimal   @db.Decimal(18, 2)
-  difference         Decimal   @db.Decimal(18, 2)
+  systemBalance      Float
+  physicalCount      Float
+  difference         Float
   explanation        String?
   status             String    @default("PENDING_APPROVAL") // PENDING_APPROVAL | APPROVED | REJECTED
-  reconciledById     String    @db.Uuid
+  reconciledById     String    @db.ObjectId
   reconciledBy       User      @relation("PettyCashReconciledBy", fields: [reconciledById], references: [id])
-  approvedById       String?   @db.Uuid
+  approvedById       String?   @db.ObjectId
   approvedBy         User?     @relation("PettyCashApprovedBy", fields: [approvedById], references: [id])
   approvedAt         DateTime?
-  journalEntryId     String?   @unique @db.Uuid
+  journalEntryId     String?   @unique @db.ObjectId
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -955,16 +910,16 @@ model PettyCashReconciliation {
 }
 
 model FinancialYear {
-  id             String    @id @default(uuid()) @db.Uuid
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
   code           String    @unique
   name           String
   startDate      DateTime
   endDate        DateTime
   isClosed       Boolean   @default(false)
   closedAt       DateTime?
-  closedById     String?   @db.Uuid
+  closedById     String?   @db.ObjectId
   reopenedAt     DateTime?
-  reopenedById   String?   @db.Uuid
+  reopenedById   String?   @db.ObjectId
   closingNotes   String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -974,37 +929,36 @@ model FinancialYear {
 }
 
 model OpeningBalanceBatch {
-  id                  String               @id @default(uuid()) @db.Uuid
+  id                  String               @id @default(auto()) @map("_id") @db.ObjectId
   openingDate         DateTime
   financialYear       String               @unique
   sourceFinancialYear String?
   sourceClosingDate   DateTime?
   isAutoRolled        Boolean              @default(false)
   adjustmentReason    String?
-  adjustedById        String?              @db.Uuid
+  adjustedById        String?              @db.ObjectId
   adjustedAt          DateTime?
   status              String               @default("Posted")
-  journalEntryId      String               @unique @db.Uuid
+  journalEntryId      String               @unique @db.ObjectId
   journalEntry        JournalEntry         @relation("OpeningBalanceBatchJournalEntry", fields: [journalEntryId], references: [id])
-  createdBy           String               @db.Uuid
+  createdBy           String               @db.ObjectId
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   lines               OpeningBalanceLine[]
 
   @@index([openingDate])
-  @@index([financialYear])
 }
 
 model OpeningBalanceLine {
-  id                   String              @id @default(uuid()) @db.Uuid
-  batchId              String              @db.Uuid
+  id                   String              @id @default(auto()) @map("_id") @db.ObjectId
+  batchId              String              @db.ObjectId
   batch                OpeningBalanceBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  accountId            String              @db.Uuid
+  accountId            String              @db.ObjectId
   account              Account             @relation(fields: [accountId], references: [id])
   glCode               String?
   debitCredit          String              @default("DEBIT")
-  amount               Decimal             @db.Decimal(18, 2)
-  sourceClosingBalance Decimal?            @db.Decimal(18, 2)
+  amount               Float
+  sourceClosingBalance Float?
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
 

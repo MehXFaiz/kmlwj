@@ -27,29 +27,42 @@ export class AccountingBalanceRebuildService {
    */
   static async rebuildAllSummaries(txObj?: any, startDate?: string, endDate?: string): Promise<FinancialSummaryTotals> {
     const runInTx = async (tx: any) => {
-      // 1. Execute set-based SQL UPDATE to recompute currentBalance for every account from posted lines
-      await tx.$executeRaw(Prisma.sql`
-        UPDATE "Account" a
-        SET "currentBalance" = a2."initialBalance" +
-          CASE
-            WHEN COALESCE(UPPER(t."name"), 'ASSET') IN ('ASSET', 'EXPENSE')
-              THEN COALESCE(s.total_debit, 0) - COALESCE(s.total_credit, 0)
-            ELSE COALESCE(s.total_credit, 0) - COALESCE(s.total_debit, 0)
-          END
-        FROM "Account" a2
-        LEFT JOIN "AccountType" t ON t."id" = a2."accountTypeId"
-        LEFT JOIN (
-          SELECT l."accountId",
-                 SUM(l."debit")  AS total_debit,
-                 SUM(l."credit") AS total_credit
-          FROM "JournalEntryLine" l
-          JOIN "JournalEntry" j ON j."id" = l."journalEntryId"
-          WHERE j."status" = 'Posted' AND j."isDeleted" = false
-          GROUP BY l."accountId"
-        ) s ON s."accountId" = a2."id"
-        WHERE a."id" = a2."id"
-        AND a2."accountLevel" IN ('GL', 'SUBSIDIARY')
-      `);
+      // 1. Recompute currentBalance for every account from posted lines
+      const postedSums = await tx.journalEntryLine.groupBy({
+        by: ['accountId'],
+        where: {
+          journalEntry: { status: 'Posted', isDeleted: false },
+        },
+        _sum: {
+          debit: true,
+          credit: true,
+        },
+      });
+
+      const sumsByAccount = new Map<string, { debit: number; credit: number }>();
+      for (const s of postedSums) {
+        sumsByAccount.set(s.accountId, {
+          debit: Number(s._sum?.debit || 0),
+          credit: Number(s._sum?.credit || 0),
+        });
+      }
+
+      const allPostingAccounts = await tx.account.findMany({
+        where: { isDeleted: false, accountLevel: { in: ['GL', 'SUBSIDIARY'] } },
+        include: { accountType: true },
+      });
+
+      for (const acc of allPostingAccounts) {
+        const typeName = (acc.accountType?.name || 'ASSET').toUpperCase();
+        const isNormalDebit = typeName === 'ASSET' || typeName === 'EXPENSE' || typeName === 'EXPENSES' || typeName === 'ASSETS';
+        const sum = sumsByAccount.get(acc.id) || { debit: 0, credit: 0 };
+        const movement = isNormalDebit ? (sum.debit - sum.credit) : (sum.credit - sum.debit);
+        const newBalance = Number(acc.initialBalance || 0) + movement;
+        await tx.account.update({
+          where: { id: acc.id },
+          data: { currentBalance: newBalance },
+        });
+      }
 
       // 2. Fetch all active accounts
       const accounts = await tx.account.findMany({

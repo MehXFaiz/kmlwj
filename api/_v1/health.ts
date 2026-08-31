@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { makeHandler } from '../_utils/handler.js';
-import { prisma, pool } from '../_prisma.js';
+import { prisma } from '../_prisma.js';
 
 export default makeHandler(async (req: VercelRequest, res: VercelResponse) => {
   if (req.method !== 'GET') {
@@ -8,21 +8,20 @@ export default makeHandler(async (req: VercelRequest, res: VercelResponse) => {
   }
 
   try {
-    // 1. Verify raw PostgreSQL connection
-    await pool.query('SELECT 1');
-
-    // 2. Verify Prisma connection
-    await prisma.$queryRaw`SELECT 1`;
+    // Verify Prisma MongoDB connection
+    await prisma.$runCommandRaw({ ping: 1 });
 
     return res.status(200).json({
       success: true,
-      database: 'connected',
+      database: 'mongodb',
+      status: 'connected',
       server: 'running',
     });
   } catch (error: any) {
     return res.status(500).json({
       success: false,
-      database: 'disconnected',
+      database: 'mongodb',
+      status: 'disconnected',
       server: 'running',
       error: error?.message || 'Database check failed',
     });

@@ -58,14 +58,22 @@ export const optionalSanitizedString = (options: { max?: number; fieldName?: str
 };
 
 /**
- * UUID Schema
+ * ID Schema — Supports both MongoDB 24-character ObjectIds and standard UUIDs
  */
-export const uuidSchema = z.string().trim().uuid({ message: 'Invalid UUID format' });
+const ID_PATTERN = /^[0-9a-fA-F]{24}$|^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
-export const optionalUuidSchema = z.preprocess(
+export const idSchema = z.string().trim().refine((val) => ID_PATTERN.test(val), {
+  message: 'Invalid ID format',
+});
+
+export const uuidSchema = idSchema;
+
+export const optionalIdSchema = z.preprocess(
   (val) => (val === null || val === undefined || val === '' ? undefined : val),
-  z.string().trim().uuid({ message: 'Invalid UUID format' }).optional()
+  idSchema.optional()
 );
+
+export const optionalUuidSchema = optionalIdSchema;
 
 /**
  * Amount & Numeric Schemas
