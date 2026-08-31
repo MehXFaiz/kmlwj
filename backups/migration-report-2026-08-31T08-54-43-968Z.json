@@ -1,0 +1,371 @@
+{
+  "collections": [
+    {
+      "collection": "AccountType",
+      "sqlRecords": 1,
+      "jsonRecords": 5,
+      "mergedRecords": 5,
+      "insertedRecords": 0,
+      "status": "FAIL",
+      "error": "MongoBulkWriteError: E11000 duplicate key error collection: kmlwj.AccountType index: AccountType_name_key dup key: { name: \"ASSET\" }"
+    },
+    {
+      "collection": "Role",
+      "sqlRecords": 1,
+      "jsonRecords": 7,
+      "mergedRecords": 7,
+      "insertedRecords": 0,
+      "status": "FAIL",
+      "error": "MongoBulkWriteError: E11000 duplicate key error collection: kmlwj.Role index: Role_name_key dup key: { name: \"Super Admin\" }"
+    },
+    {
+      "collection": "Permission",
+      "sqlRecords": 1,
+      "jsonRecords": 65,
+      "mergedRecords": 66,
+      "insertedRecords": 0,
+      "status": "FAIL",
+      "error": "MongoBulkWriteError: E11000 duplicate key error collection: kmlwj.Permission index: Permission_name_key dup key: { name: \"MANAGE_DONATIONS\" }"
+    },
+    {
+      "collection": "RolePermission",
+      "sqlRecords": 1,
+      "jsonRecords": 217,
+      "mergedRecords": 218,
+      "insertedRecords": 458,
+      "status": "PASS"
+    },
+    {
+      "collection": "User",
+      "sqlRecords": 1,
+      "jsonRecords": 18,
+      "mergedRecords": 18,
+      "insertedRecords": 0,
+      "status": "FAIL",
+      "error": "MongoBulkWriteError: E11000 duplicate key error collection: kmlwj.User index: User_email_key dup key: { email: \"admin@erp.com\" }"
+    },
+    {
+      "collection": "RefreshToken",
+      "sqlRecords": 1,
+      "jsonRecords": 3481,
+      "mergedRecords": 3482,
+      "insertedRecords": 3482,
+      "status": "PASS"
+    },
+    {
+      "collection": "Account",
+      "sqlRecords": 1,
+      "jsonRecords": 179,
+      "mergedRecords": 179,
+      "insertedRecords": 0,
+      "status": "FAIL",
+      "error": "MongoBulkWriteError: E11000 duplicate key error collection: kmlwj.Account index: Account_glCode_key dup key: { glCode: \"3010103\" }"
+    },
+    {
+      "collection": "ReservedCode",
+      "sqlRecords": 0,
+      "jsonRecords": 0,
+      "mergedRecords": 0,
+      "insertedRecords": 0,
+      "status": "SKIP"
+    },
+    {
+      "collection": "RevenueHead",
+      "sqlRecords": 1,
+      "jsonRecords": 22,
+      "mergedRecords": 22,
+      "insertedRecords": 36,
+      "status": "PASS"
+    },
+    {
+      "collection": "ExpenseHead",
+      "sqlRecords": 1,
+      "jsonRecords": 20,
+      "mergedRecords": 20,
+      "insertedRecords": 40,
+      "status": "PASS"
+    },
+    {
+      "collection": "IncomeCategory",
+      "sqlRecords": 1,
+      "jsonRecords": 10,
+      "mergedRecords": 10,
+      "insertedRecords": 0,
+      "status": "FAIL",
+      "error": "MongoBulkWriteError: E11000 duplicate key error collection: kmlwj.IncomeCategory index: IncomeCategory_name_key dup key: { name: \"Ramzan Zakat Income\" }"
+    },
+    {
+      "collection": "FinancialYear",
+      "sqlRecords": 1,
+      "jsonRecords": 2,
+      "mergedRecords": 3,
+      "insertedRecords": 0,
+      "status": "FAIL",
+      "error": "MongoBulkWriteError: E11000 duplicate key error collection: kmlwj.FinancialYear index: FinancialYear_code_key dup key: { code: \"FY 2026-2027\" }"
+    },
+    {
+      "collection": "JournalEntry",
+      "sqlRecords": 1,
+      "jsonRecords": 17,
+      "mergedRecords": 18,
+      "insertedRecords": 18,
+      "status": "PASS"
+    },
+    {
+      "collection": "JournalEntryLine",
+      "sqlRecords": 1,
+      "jsonRecords": 36,
+      "mergedRecords": 37,
+      "insertedRecords": 37,
+      "status": "PASS"
+    },
+    {
+      "collection": "OpeningBalanceBatch",
+      "sqlRecords": 1,
+      "jsonRecords": 2,
+      "mergedRecords": 3,
+      "insertedRecords": 0,
+      "status": "FAIL",
+      "error": "MongoBulkWriteError: E11000 duplicate key error collection: kmlwj.OpeningBalanceBatch index: OpeningBalanceBatch_financialYear_key dup key: { financialYear: \"FY 2027-2028\" }"
+    },
+    {
+      "collection": "OpeningBalanceLine",
+      "sqlRecords": 1,
+      "jsonRecords": 4,
+      "mergedRecords": 5,
+      "insertedRecords": 5,
+      "status": "PASS"
+    },
+    {
+      "collection": "HallBooking",
+      "sqlRecords": 1,
+      "jsonRecords": 79,
+      "mergedRecords": 80,
+      "insertedRecords": 0,
+      "status": "FAIL",
+      "error": "MongoBulkWriteError: E11000 duplicate key error collection: kmlwj.HallBooking index: HallBooking_journalEntryId_key dup key: { journalEntryId: null }"
+    },
+    {
+      "collection": "RevenueCollection",
+      "sqlRecords": 1,
+      "jsonRecords": 0,
+      "mergedRecords": 1,
+      "insertedRecords": 1,
+      "status": "PASS"
+    },
+    {
+      "collection": "AddIncomeRecord",
+      "sqlRecords": 0,
+      "jsonRecords": 8,
+      "mergedRecords": 8,
+      "insertedRecords": 0,
+      "status": "FAIL",
+      "error": "MongoBulkWriteError: E11000 duplicate key error collection: kmlwj.AddIncomeRecord index: AddIncomeRecord_journalEntryId_key dup key: { journalEntryId: null }"
+    },
+    {
+      "collection": "Beneficiary",
+      "sqlRecords": 0,
+      "jsonRecords": 5,
+      "mergedRecords": 5,
+      "insertedRecords": 5,
+      "status": "PASS"
+    },
+    {
+      "collection": "Member",
+      "sqlRecords": 0,
+      "jsonRecords": 10,
+      "mergedRecords": 10,
+      "insertedRecords": 10,
+      "status": "PASS"
+    },
+    {
+      "collection": "FamilyRelationship",
+      "sqlRecords": 0,
+      "jsonRecords": 2,
+      "mergedRecords": 2,
+      "insertedRecords": 2,
+      "status": "PASS"
+    },
+    {
+      "collection": "Donor",
+      "sqlRecords": 0,
+      "jsonRecords": 4,
+      "mergedRecords": 4,
+      "insertedRecords": 4,
+      "status": "PASS"
+    },
+    {
+      "collection": "DonationReceived",
+      "sqlRecords": 0,
+      "jsonRecords": 1,
+      "mergedRecords": 1,
+      "insertedRecords": 1,
+      "status": "PASS"
+    },
+    {
+      "collection": "Donation",
+      "sqlRecords": 0,
+      "jsonRecords": 2,
+      "mergedRecords": 2,
+      "insertedRecords": 2,
+      "status": "PASS"
+    },
+    {
+      "collection": "ZakatCard",
+      "sqlRecords": 0,
+      "jsonRecords": 0,
+      "mergedRecords": 0,
+      "insertedRecords": 0,
+      "status": "SKIP"
+    },
+    {
+      "collection": "Customer",
+      "sqlRecords": 0,
+      "jsonRecords": 0,
+      "mergedRecords": 0,
+      "insertedRecords": 0,
+      "status": "SKIP"
+    },
+    {
+      "collection": "Invoice",
+      "sqlRecords": 0,
+      "jsonRecords": 0,
+      "mergedRecords": 0,
+      "insertedRecords": 0,
+      "status": "SKIP"
+    },
+    {
+      "collection": "InvoiceItem",
+      "sqlRecords": 0,
+      "jsonRecords": 0,
+      "mergedRecords": 0,
+      "insertedRecords": 0,
+      "status": "SKIP"
+    },
+    {
+      "collection": "SimpleIncome",
+      "sqlRecords": 0,
+      "jsonRecords": 0,
+      "mergedRecords": 0,
+      "insertedRecords": 0,
+      "status": "SKIP"
+    },
+    {
+      "collection": "SimpleExpense",
+      "sqlRecords": 0,
+      "jsonRecords": 0,
+      "mergedRecords": 0,
+      "insertedRecords": 0,
+      "status": "SKIP"
+    },
+    {
+      "collection": "PettyCashConfig",
+      "sqlRecords": 1,
+      "jsonRecords": 1,
+      "mergedRecords": 1,
+      "insertedRecords": 1,
+      "status": "PASS"
+    },
+    {
+      "collection": "PettyCashTransaction",
+      "sqlRecords": 0,
+      "jsonRecords": 0,
+      "mergedRecords": 0,
+      "insertedRecords": 0,
+      "status": "SKIP"
+    },
+    {
+      "collection": "PettyCashReconciliation",
+      "sqlRecords": 0,
+      "jsonRecords": 0,
+      "mergedRecords": 0,
+      "insertedRecords": 0,
+      "status": "SKIP"
+    },
+    {
+      "collection": "AiRepairIssue",
+      "sqlRecords": 0,
+      "jsonRecords": 104,
+      "mergedRecords": 104,
+      "insertedRecords": 104,
+      "status": "PASS"
+    },
+    {
+      "collection": "AiRepairLog",
+      "sqlRecords": 0,
+      "jsonRecords": 0,
+      "mergedRecords": 0,
+      "insertedRecords": 0,
+      "status": "SKIP"
+    },
+    {
+      "collection": "AuditLog",
+      "sqlRecords": 0,
+      "jsonRecords": 5015,
+      "mergedRecords": 5015,
+      "insertedRecords": 5015,
+      "status": "PASS"
+    }
+  ],
+  "orphanChecks": [
+    {
+      "check": "User.roleId → Role._id",
+      "broken": 5,
+      "total": 7,
+      "status": "FAIL"
+    },
+    {
+      "check": "Account.parentId → Account._id",
+      "broken": 73,
+      "total": 156,
+      "status": "FAIL"
+    },
+    {
+      "check": "JournalEntryLine.journalEntryId → JournalEntry._id",
+      "broken": 1,
+      "total": 37,
+      "status": "FAIL"
+    },
+    {
+      "check": "JournalEntryLine.accountId → Account._id",
+      "broken": 24,
+      "total": 37,
+      "status": "FAIL"
+    },
+    {
+      "check": "HallBooking.createdById → User._id",
+      "broken": 1,
+      "total": 11,
+      "status": "FAIL"
+    },
+    {
+      "check": "AuditLog.userId → User._id (nullable)",
+      "broken": 3818,
+      "total": 4160,
+      "status": "FAIL"
+    },
+    {
+      "check": "RolePermission.roleId → Role._id",
+      "broken": 218,
+      "total": 458,
+      "status": "FAIL"
+    },
+    {
+      "check": "RolePermission.permissionId → Permission._id",
+      "broken": 218,
+      "total": 458,
+      "status": "FAIL"
+    }
+  ],
+  "financialCheck": {
+    "debitTotal": 653500,
+    "creditTotal": 599000,
+    "difference": 54500,
+    "status": "FAIL"
+  },
+  "startedAt": "2026-08-31T08:53:50.740Z",
+  "totalSourceRecords": 9326,
+  "totalMigratedRecords": 9221,
+  "finalStatus": "MIGRATION FAILED",
+  "completedAt": "2026-08-31T08:54:43.964Z"
+}
