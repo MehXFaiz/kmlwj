@@ -26,13 +26,20 @@ export const BankVoucherForm = () => {
     fetchJournals('Global', 1, 1000);
   }, [fetchAccountsList, fetchJournals]);
 
-  // Asset accounts for bank selection
+  // Asset accounts for bank selection (authorized banks + cash)
   const bankAccounts = useMemo(() => {
     return flatAccounts.filter(acc =>
       acc.type === 'Asset' &&
       acc.detailType !== 'Header' &&
-      (acc.level === 'GL' || acc.level === 'SUBSIDIARY') &&
-      (acc.detailType === 'Cash' || (acc.name || '').toLowerCase().includes('bank') || (acc.name || '').toLowerCase().includes('cash'))
+      !acc.isLocked && !acc.isDeleted &&
+      (
+        acc.code === '1010101' ||
+        acc.code === '1010102' ||
+        acc.code === '1010103' ||
+        (acc.name || '').toLowerCase().includes('national bank') ||
+        (acc.name || '').toLowerCase().includes('nbp-zakat') ||
+        (acc.name || '').toLowerCase().includes('cash in hand')
+      )
     );
   }, [flatAccounts]);
 

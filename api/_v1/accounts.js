@@ -185,8 +185,8 @@ var accounts_default = makeHandler(async (req, res) => {
     if (!existingAccount) {
       return res.status(404).json({ error: { message: "Account not found", status: 404 } });
     }
-    if (existingAccount.accountLevel === "MAIN") {
-      return res.status(400).json({ error: { message: "Level 1 (MAIN) accounts are permanent and cannot be modified.", status: 400 } });
+    if (existingAccount.accountLevel === "MAIN" || existingAccount.glCode === "3000000" || existingAccount.glCode === "4000000") {
+      return res.status(400).json({ error: { message: "Level 1 (MAIN) accounts are permanent and cannot be modified (cannot rename, change GL code, delete, or change level).", status: 400 } });
     }
     const isToggleLock = req.body.isLocked !== void 0 && Object.keys(req.body).length === 1;
     if (existingAccount.isLocked && !isToggleLock && req.body.isLocked !== false) {
@@ -270,6 +270,9 @@ var accounts_default = makeHandler(async (req, res) => {
       const existingAccount2 = await prisma.account.findUnique({ where: { id } });
       if (!existingAccount2) {
         return res.status(404).json({ error: { message: "Account not found", status: 404 } });
+      }
+      if (existingAccount2.accountLevel === "MAIN" || existingAccount2.isLocked || existingAccount2.glCode === "3000000" || existingAccount2.glCode === "4000000") {
+        return res.status(400).json({ error: { message: "MAIN accounts are permanently locked and cannot be deleted.", status: 400 } });
       }
       await prisma.account.delete({ where: { id } });
       await logAudit(req.user.id, "Permanent Delete Account", "COA", existingAccount2, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);

@@ -215,8 +215,7 @@ export const HallBookingForm = () => {
 
   const bankAccounts = flatAccounts.filter(a =>
     (a.type === 'Asset' || a.accountTypeName === 'ASSET') &&
-    a.level === 'SUBSIDIARY' &&
-    a.name.toLowerCase().includes('bank')
+    (a.code === '1010101' || a.code === '1010102' || a.name.toLowerCase().includes('national bank') || a.name.toLowerCase().includes('nbp-zakat'))
   );
 
   const todayStr = new Date().toISOString().split('T')[0];

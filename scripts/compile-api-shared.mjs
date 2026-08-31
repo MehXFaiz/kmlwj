@@ -26,7 +26,7 @@ function collectSharedTsFiles(dir, insidePrivateFolder = false) {
       continue;
     }
 
-    if (entry.endsWith('.ts') && insidePrivateFolder) {
+    if (entry.endsWith('.ts') && (insidePrivateFolder || entry.startsWith('_'))) {
       files.push(fullPath);
     }
   }
@@ -36,7 +36,6 @@ function collectSharedTsFiles(dir, insidePrivateFolder = false) {
 
 const sharedFiles = [
   ...collectSharedTsFiles(API_DIR),
-  join(API_DIR, '_prisma.ts'),
 ].filter((file, index, all) => all.indexOf(file) === index);
 
 if (sharedFiles.length === 0) {

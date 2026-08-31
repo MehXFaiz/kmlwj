@@ -219,8 +219,8 @@ export const PettyCash = () => {
       if (a.isLocked || a.status === 'Inactive') return false;
       if (config?.accountId && a.id === config.accountId) return false;
 
-      const isGlLevel = (a.level || a.accountLevel) === 'GL';
-      if (!isGlLevel) return false;
+      const isPostingLevel = ['GL', 'SUBSIDIARY'].includes(a.level || a.accountLevel);
+      if (!isPostingLevel) return false;
 
       const typeStr = (a.type || a.accountType?.name || '').toLowerCase();
       if (typeStr !== 'asset') return false;
@@ -228,16 +228,15 @@ export const PettyCash = () => {
       const nameStr = (a.name || a.accountName || '').toLowerCase();
       if (nameStr.includes('petty cash')) return false;
 
-      const detailStr = (a.detailType || '').toLowerCase();
-      const isCashOrBank =
-        detailStr === 'cash' ||
-        detailStr === 'bank' ||
-        nameStr.includes('bank') ||
-        nameStr.includes('cash') ||
-        nameStr.includes('till') ||
-        nameStr.includes('hand');
-
-      return isCashOrBank;
+      const codeStr = a.code || a.glCode || '';
+      return (
+        codeStr === '1010101' ||
+        codeStr === '1010102' ||
+        codeStr === '1010103' ||
+        nameStr.includes('national bank') ||
+        nameStr.includes('nbp-zakat') ||
+        nameStr.includes('cash in hand')
+      );
     });
   }, [accounts, config?.accountId]);
 
@@ -246,8 +245,8 @@ export const PettyCash = () => {
     return accounts.filter(a => {
       if (a.isLocked || a.status === 'Inactive') return false;
 
-      const isGlLevel = (a.level || a.accountLevel) === 'GL';
-      if (!isGlLevel) return false;
+      const isPostingLevel = ['GL', 'SUBSIDIARY'].includes(a.level || a.accountLevel);
+      if (!isPostingLevel) return false;
 
       const typeStr = (a.type || a.accountType?.name || '').toLowerCase();
       return typeStr === 'expense';

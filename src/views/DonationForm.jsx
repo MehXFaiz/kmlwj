@@ -98,7 +98,8 @@ export const DonationForm = () => {
 
   const bankAccounts = useMemo(() => {
     return flatAccounts.filter(a =>
-      (a.name || '').toLowerCase().includes('bank') || (a.type || '').toLowerCase().includes('bank')
+      !a.isLocked && !a.isDeleted &&
+      (a.code === '1010101' || a.code === '1010102' || (a.name || '').toLowerCase().includes('national bank') || (a.name || '').toLowerCase().includes('nbp-zakat'))
     );
   }, [flatAccounts]);
 

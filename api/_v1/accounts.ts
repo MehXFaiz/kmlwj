@@ -226,8 +226,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(404).json({ error: { message: 'Account not found', status: 404 } });
     }
 
-    if (existingAccount.accountLevel === 'MAIN') {
-      return res.status(400).json({ error: { message: 'Level 1 (MAIN) accounts are permanent and cannot be modified.', status: 400 } });
+    if (existingAccount.accountLevel === 'MAIN' || existingAccount.glCode === '3000000' || existingAccount.glCode === '4000000') {
+      return res.status(400).json({ error: { message: 'Level 1 (MAIN) accounts are permanent and cannot be modified (cannot rename, change GL code, delete, or change level).', status: 400 } });
     }
 
     // Locked accounts cannot be edited (unless it's just unlocking it)
@@ -331,6 +331,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       const existingAccount = await prisma.account.findUnique({ where: { id } });
       if (!existingAccount) {
         return res.status(404).json({ error: { message: 'Account not found', status: 404 } });
+      }
+      if (existingAccount.accountLevel === 'MAIN' || existingAccount.isLocked || existingAccount.glCode === '3000000' || existingAccount.glCode === '4000000') {
+        return res.status(400).json({ error: { message: 'MAIN accounts are permanently locked and cannot be deleted.', status: 400 } });
       }
       await prisma.account.delete({ where: { id } });
       await logAudit(req.user.id, 'Permanent Delete Account', 'COA', existingAccount, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);

@@ -183,7 +183,11 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
     onClose();
   };
 
-  const bankAccounts = accounts.filter(a => a.type === 'Asset' && !a.children?.length && a.name.toLowerCase().includes('bank'));
+  const bankAccounts = accounts.filter(a =>
+    a.type === 'Asset' &&
+    !a.children?.length &&
+    (a.code === '1010101' || a.code === '1010102' || (a.name || '').toLowerCase().includes('national bank') || (a.name || '').toLowerCase().includes('nbp-zakat'))
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

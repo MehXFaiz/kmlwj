@@ -14,7 +14,18 @@ export class LedgerConflictError extends Error {
 }
 
 async function getExpenseAccountForDonation(donationType: string, tx: any) {
-  let acc = await tx.account.findFirst({
+  const norm = (donationType || '').toUpperCase();
+  let code = '4071004'; // OTHER DONATION
+  if (norm.includes('MONTHLY') || norm.includes('RATION')) code = '4071001';
+  else if (norm.includes('MARRIAGE') || norm.includes('WEDDING') || norm.includes('SHADI')) code = '4071002';
+  else if (norm.includes('MEDICAL') || norm.includes('HEALTH') || norm.includes('TREATMENT') || norm.includes('HOSPITAL')) code = '4071003';
+
+  let acc = await tx.account.findUnique({
+    where: { glCode: code }
+  });
+  if (acc && !acc.isLocked && !acc.isDeleted) return acc;
+
+  acc = await tx.account.findFirst({
     where: {
       accountType: { name: { equals: 'Expense', mode: 'insensitive' } },
       NOT: { accountName: { contains: 'Salary', mode: 'insensitive' } },
@@ -48,6 +59,23 @@ async function getExpenseAccountForDonation(donationType: string, tx: any) {
 }
 
 async function getIncomeAccountForCategory(category: string, tx: any) {
+  const norm = (category || '').toUpperCase();
+  let code: string | null = null;
+  if (norm.includes('BUS')) code = '3021001';
+  else if (norm.includes('MEMBERSHIP')) code = '3021002';
+  else if (norm.includes('QURBANI')) code = '3021003';
+  else if (norm.includes('ZAKAT')) code = '3021004';
+  else if (norm.includes('FITRA')) code = '3021005';
+  else if (norm.includes('MARRIAGE')) code = '3021006';
+  else if (norm.includes('DECORATION') && norm.includes('LIGHTING')) code = '3021007';
+  else if (norm.includes('DECORATION')) code = '3031001';
+  else if (norm.includes('LIGHTING')) code = '3031002';
+
+  if (code) {
+    const acc = await tx.account.findUnique({ where: { glCode: code } });
+    if (acc && !acc.isLocked && !acc.isDeleted) return acc;
+  }
+
   let searchKeyword = category;
   if (/hall/i.test(category)) searchKeyword = 'Hall';
   else if (/bus/i.test(category)) searchKeyword = 'Bus';

@@ -214,14 +214,17 @@ export const AddIncomeForm = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [form]);
 
-  // Filter Bank Accounts from CoA
+  // Filter Bank Accounts from CoA (only National Bank of Pakistan & NBP-Zakat Account)
   const bankAccounts = useMemo(() => {
     return flatAccounts.filter(acc =>
       (acc.type === 'Asset' || acc.accountType?.name === 'Asset') &&
       !acc.isLocked &&
-      ((acc.detailType || '').toLowerCase().includes('bank') ||
-       (acc.name || '').toLowerCase().includes('bank') ||
-       (acc.name || '').toLowerCase().includes('cash'))
+      (
+        acc.code === '1010101' ||
+        acc.code === '1010102' ||
+        (acc.name || '').toLowerCase().includes('national bank') ||
+        (acc.name || '').toLowerCase().includes('nbp-zakat')
+      )
     );
   }, [flatAccounts]);
 

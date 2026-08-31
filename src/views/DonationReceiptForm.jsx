@@ -177,9 +177,8 @@ export const DonationReceiptForm = () => {
 
   const bankAccounts = useMemo(() => {
     return flatAccounts.filter(a =>
-      (a.name || a.accountName || '').toLowerCase().includes('bank') ||
-      (a.type || '').toLowerCase().includes('bank') ||
-      (a.name || a.accountName || '').toLowerCase().includes('cheque')
+      !a.isLocked && !a.isDeleted &&
+      (a.code === '1010101' || a.code === '1010102' || (a.name || a.accountName || '').toLowerCase().includes('national bank') || (a.name || a.accountName || '').toLowerCase().includes('nbp-zakat'))
     );
   }, [flatAccounts]);
 
