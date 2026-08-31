@@ -116,7 +116,9 @@ var users_default = makeHandler(async (req, res) => {
     const { fullName, role, isActive, password } = req.body;
     const updateData = {};
     if (fullName !== void 0) updateData.fullName = fullName;
-    if (isActive !== void 0) updateData.isActive = isActive;
+    if (isActive !== void 0) {
+      updateData.isActive = typeof isActive === "boolean" ? isActive : isActive === 1 || isActive === "1" || isActive === "true";
+    }
     if (password) {
       updateData.password = await bcrypt.hash(password, 12);
     }
@@ -143,7 +145,7 @@ var users_default = makeHandler(async (req, res) => {
         fullName: updatedUser.fullName,
         email: updatedUser.email,
         role: updatedUser.role.name,
-        isActive: updatedUser.isActive
+        isActive: Boolean(updatedUser.isActive)
       }
     });
   }

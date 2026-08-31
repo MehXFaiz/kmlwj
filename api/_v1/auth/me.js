@@ -9,24 +9,29 @@ var me_default = makeHandler(async (req, res) => {
   }
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
-  const user = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    include: {
-      role: {
-        include: {
-          rolePermissions: {
-            include: {
-              permission: true
+  let user;
+  try {
+    user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      include: {
+        role: {
+          include: {
+            rolePermissions: {
+              include: {
+                permission: true
+              }
             }
           }
         }
       }
-    }
-  });
+    });
+  } catch (err) {
+    return res.status(500).json({ error: { message: "Database service error loading user profile", status: 500 } });
+  }
   if (!user) {
     return res.status(404).json({ error: { message: "User not found", status: 404 } });
   }
-  if (!user.isActive) {
+  if (user.isActive !== true) {
     return res.status(403).json({ error: { message: "This account has been deactivated", status: 403 } });
   }
   const permissionSet = await loadPermissions(req);

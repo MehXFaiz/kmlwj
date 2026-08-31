@@ -85,10 +85,16 @@ export async function register(data: any) {
 export async function login(data: any) {
   const normalizedEmail = normalizeEmail(data.email);
 
-  let user = await prisma.user.findUnique({
-    where: { email: normalizedEmail },
-    include: { role: true },
-  });
+  let user: any;
+  try {
+    user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      include: { role: true },
+    });
+  } catch (err: any) {
+    logger.error({ err, email: normalizedEmail }, 'Database error querying user during login');
+    throw { status: 500, message: 'Authentication database service error. Please try again or contact administrator.' };
+  }
 
   // SQA fix: do not log the submitted email, whether the user exists, or the
   // outcome of the password comparison — these logs previously created a
@@ -125,7 +131,7 @@ export async function login(data: any) {
     // returned a distinct 403 message, letting an attacker enumerate which
     // emails correspond to real (if inactive) accounts. Deactivation state
     // is still fully enforced; it's just no longer disclosed to the caller.
-    if (!user || !user.isActive) {
+    if (!user || user.isActive !== true) {
       throw { status: 401, message: 'Invalid credentials' };
     }
 
@@ -135,7 +141,7 @@ export async function login(data: any) {
     }
   }
 
-  if (!user.isActive) {
+  if (user.isActive !== true) {
     throw { status: 401, message: 'Invalid credentials' };
   }
 
@@ -196,7 +202,7 @@ export async function rotateTokens(refreshTokenStr: string) {
     throw { status: 401, message: 'User not found' };
   }
 
-  if (!user.isActive) {
+  if (user.isActive !== true) {
     throw { status: 403, message: 'This account has been deactivated' };
   }
 
