@@ -139,20 +139,19 @@ function parseInsertStatement(table: string, statement: string): any[] {
           if (depth === 0) {
             currentRow += char;
             
-            // Look ahead for comma (might have whitespace)
+            // Look ahead for comma and skip all whitespace after it
             let j = i + 1;
-            while (j < valueStr.length && /\s/.test(valueStr[j])) {
+            while (j < valueStr.length && /[\s,]/.test(valueStr[j])) {
               j++;
             }
             
-            // If next non-whitespace is comma or end of statement, we're done with this row
-            if (j >= valueStr.length || valueStr[j] === ',') {
-              records.push(parseRow(currentRow.trim(), columns));
-              currentRow = '';
-              i = j; // Skip to after whitespace
-              if (i < valueStr.length && valueStr[i] === ',') i++; // Skip comma
-              continue;
-            }
+            // We've found the next non-whitespace, non-comma character (or end)
+            // This should be the opening paren of the next row or end of VALUES
+            records.push(parseRow(currentRow.trim(), columns));
+            currentRow = '';
+            i = j - 1; // Set i to the character before, so i++ moves to j
+            i++;
+            continue;
           }
         }
       }
