@@ -343,6 +343,7 @@ const DEFAULT_FILTERS = {
 
 export const Donations = () => {
   const { donations, fetchDonations, approveDonation, deleteDonation, bulkDeleteDonations } = useDonationStore();
+  const { flatAccounts, fetchAccountsList } = useCoaStore();
   const hasPermission = useAuthStore((s) => s.hasPermission);
   const canCreate = hasPermission('donations', 'create');
   const canEdit = hasPermission('donations', 'update');
