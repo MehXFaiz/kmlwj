@@ -62,10 +62,10 @@ async function backfillMemberNos(members) {
 var members_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
-  if (!await enforceRestrictedRolePolicy(req, res, method === "DELETE" ? ["members.delete", PERMS.DELETE_MEMBER] : ["members.update", PERMS.UPDATE_MEMBER])) return;
-  const { method } = req;
+  const method = req.method?.toUpperCase() ?? "";
   const id = req.query.id;
   const action = req.query.action || req.body?.action;
+  if (!await enforceRestrictedRolePolicy(req, res, method === "DELETE" ? ["members.delete", PERMS.DELETE_MEMBER] : ["members.update", PERMS.UPDATE_MEMBER])) return;
   if (method === "GET") {
     if (!await verifyPermission(req, res, ["members.view", PERMS.VIEW_MEMBERS])) return;
     if (id && !req.query.limit) {

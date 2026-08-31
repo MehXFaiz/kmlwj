@@ -58,10 +58,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
 
+  const method = req.method?.toUpperCase() ?? '';
+
   // Granular RBAC: PUT / PATCH require zakatCards.update, DELETE requires zakatCards.delete
   if (!await enforceRestrictedRolePolicy(req, res, method === 'DELETE' ? ['zakatCards.delete', PERMS.DELETE_ZAKAT_CARD] : ['zakatCards.update', PERMS.UPDATE_ZAKAT_CARD])) return;
-
-  const method = req.method?.toUpperCase() ?? '';
   if (method === 'GET') {
     if (!await verifyPermission(req, res, ['zakatCards.view', PERMS.VIEW_ZAKAT_CARDS])) return;
   } else if (method === 'POST') {

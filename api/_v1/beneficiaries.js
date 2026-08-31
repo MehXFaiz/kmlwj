@@ -58,10 +58,10 @@ function pickData(body, isCreate) {
 var beneficiaries_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
-  if (!await enforceRestrictedRolePolicy(req, res, method === "DELETE" ? ["beneficiaries.delete", PERMS.DELETE_BENEFICIARY] : ["beneficiaries.update", PERMS.UPDATE_BENEFICIARY])) return;
-  const { method } = req;
+  const method = req.method?.toUpperCase() ?? "";
   const id = req.query.id;
   const action = req.query.action || req.body?.action;
+  if (!await enforceRestrictedRolePolicy(req, res, method === "DELETE" ? ["beneficiaries.delete", PERMS.DELETE_BENEFICIARY] : ["beneficiaries.update", PERMS.UPDATE_BENEFICIARY])) return;
   if (method === "GET") {
     if (!await verifyPermission(req, res, ["beneficiaries.view", PERMS.VIEW_BENEFICIARIES])) return;
     const { limit = "100", page = "1" } = req.query;

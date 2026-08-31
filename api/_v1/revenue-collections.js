@@ -51,8 +51,8 @@ import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 var revenue_collections_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
-  if (!await enforceRestrictedRolePolicy(req, res, method === "DELETE" ? ["revenueCollections.delete", PERMS.DELETE_REVENUE_COLLECTION] : ["revenueCollections.update", PERMS.UPDATE_REVENUE_COLLECTION])) return;
   const method = req.method?.toUpperCase() ?? "";
+  if (!await enforceRestrictedRolePolicy(req, res, method === "DELETE" ? ["revenueCollections.delete", PERMS.DELETE_REVENUE_COLLECTION] : ["revenueCollections.update", PERMS.UPDATE_REVENUE_COLLECTION])) return;
   const id = req.query.id;
   const action = req.query.action || req.body?.action;
   const categoryFilter = req.query.category;

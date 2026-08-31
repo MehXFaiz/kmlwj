@@ -41,8 +41,8 @@ function isKnownStatus(value) {
 var hall_bookings_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
-  if (!await enforceRestrictedRolePolicy(req, res, method === "DELETE" ? ["hallBookings.delete", PERMS.DELETE_HALL_BOOKING] : ["hallBookings.update", PERMS.UPDATE_HALL_BOOKING])) return;
   const method = req.method?.toUpperCase() ?? "";
+  if (!await enforceRestrictedRolePolicy(req, res, method === "DELETE" ? ["hallBookings.delete", PERMS.DELETE_HALL_BOOKING] : ["hallBookings.update", PERMS.UPDATE_HALL_BOOKING])) return;
   if (method === "GET") {
     if (!await verifyPermission(req, res, ["hallBookings.view", PERMS.VIEW_HALL_BOOKINGS])) return;
   } else if (method === "POST") {

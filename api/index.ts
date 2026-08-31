@@ -166,6 +166,7 @@ app.all('/api/health', makeExpress(healthHandler));
 app.all('/api/v1/health', makeExpress(healthV1Handler));
 
 // Register new API v1 route handlers
+app.get('/api/auth/me', makeExpress(meHandler));
 app.get('/api/v1/auth/me', makeExpress(meHandler));
 app.get('/api/v1/user-preferences', makeExpress(userPreferencesHandler));
 app.patch('/api/v1/user-preferences', makeExpress(userPreferencesHandler));

@@ -68,10 +68,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
 
+  const method = req.method?.toUpperCase() ?? '';
+
   // Granular RBAC: PUT / PATCH require update permission, DELETE requires delete permission
   if (!await enforceRestrictedRolePolicy(req, res, method === 'DELETE' ? ['revenueCollections.delete', PERMS.DELETE_REVENUE_COLLECTION] : ['revenueCollections.update', PERMS.UPDATE_REVENUE_COLLECTION])) return;
-
-  const method = req.method?.toUpperCase() ?? '';
   const id = req.query.id as string;
   const action = (req.query.action || req.body?.action) as string;
   const categoryFilter = req.query.category as string;
