@@ -147,10 +147,10 @@ function parseInsertStatement(table: string, statement: string): any[] {
             
             // If next non-whitespace is comma or end of statement, we're done with this row
             if (j >= valueStr.length || valueStr[j] === ',') {
-              records.push(parseRow(currentRow, columns));
+              records.push(parseRow(currentRow.trim(), columns));
               currentRow = '';
-              i = j; // Skip to after comma
-              if (valueStr[i] === ',') i++;
+              i = j; // Skip to after whitespace
+              if (i < valueStr.length && valueStr[i] === ',') i++; // Skip comma
               continue;
             }
           }
@@ -180,8 +180,8 @@ function parseRow(rowStr: string, columns: string[]): Record<string, any> {
   const row: Record<string, any> = {};
   const values: any[] = [];
 
-  // Remove parentheses
-  rowStr = rowStr.replace(/^\(/, '').replace(/\)$/, '');
+  // Remove parentheses and trim
+  rowStr = rowStr.trim().replace(/^\(/, '').replace(/\)$/, '');
 
   // Parse values - handle quoted strings with commas
   let currentValue = '';
