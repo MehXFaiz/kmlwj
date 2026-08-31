@@ -61,7 +61,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       whereClause.subsidiary = subsidiary;
     }
     if (type) {
-      whereClause.voucherType = type;
+      // Support comma-separated types (e.g. "BP,CP") so the Bank Vouchers page
+      // can fetch both bank payments and cash payments in a single request.
+      const types = String(type).split(',').map((t: string) => t.trim()).filter(Boolean);
+      whereClause.voucherType = types.length === 1 ? types[0] : { in: types };
     }
 
     const [entries, total] = await Promise.all([

@@ -7,7 +7,7 @@ export const useBankVoucherStore = create((set, get) => ({
   loading: false,
   error: null,
 
-  fetchVouchers: async (type = 'BP') => {
+  fetchVouchers: async (type = 'BP,CP') => {
     set({ loading: true, error: null });
     try {
       const res = await api.get(`/api/v1/journal-entries?type=${type}`);

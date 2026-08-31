@@ -38,7 +38,9 @@ var journal_entries_default = makeHandler(async (req, res) => {
       whereClause.subsidiary = subsidiary;
     }
     if (type) {
-      whereClause.voucherType = type;
+      // Support comma-separated types (e.g. "BP,CP")
+      const types = String(type).split(',').map((t) => t.trim()).filter(Boolean);
+      whereClause.voucherType = types.length === 1 ? types[0] : { in: types };
     }
     const [entries, total] = await Promise.all([
       prisma.journalEntry.findMany({
