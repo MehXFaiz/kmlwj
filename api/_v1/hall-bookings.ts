@@ -68,11 +68,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
 
+  const method = req.method?.toUpperCase() ?? '';
+
   // Granular RBAC: PUT / PATCH require update permission, DELETE requires delete permission
   if (!await enforceRestrictedRolePolicy(req, res, method === 'DELETE' ? ['hallBookings.delete', PERMS.DELETE_HALL_BOOKING] : ['hallBookings.update', PERMS.UPDATE_HALL_BOOKING])) return;
 
   // Permission check: minimum required is VIEW for GET, CREATE for writes
-  const method = req.method?.toUpperCase() ?? '';
   if (method === 'GET') {
     if (!await verifyPermission(req, res, ['hallBookings.view', PERMS.VIEW_HALL_BOOKINGS])) return;
   } else if (method === 'POST') {
