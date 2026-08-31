@@ -298,6 +298,7 @@ async function migrateToMongoDB(db: any, collectionData: Map<string, any[]>) {
       console.log(`  → ${tableName} (${records.length} records)...`);
 
       let successCount = 0;
+      const errors: string[] = [];
 
       for (const record of records) {
         try {
@@ -315,6 +316,7 @@ async function migrateToMongoDB(db: any, collectionData: Map<string, any[]>) {
           stats.recordsMigrated++;
         } catch (error) {
           stats.recordsFailed++;
+          errors.push(error instanceof Error ? error.message : String(error));
         }
       }
 
@@ -325,11 +327,15 @@ async function migrateToMongoDB(db: any, collectionData: Map<string, any[]>) {
         console.log(`    ✓ ${count}/${records.length} documents`);
       } else {
         console.log(
-          `    ⚠ ${count}/${records.length} documents (${successCount - count} errors)`
+          `    ⚠ ${count}/${records.length} documents (${records.length - successCount} errors)`
         );
         stats.validationIssues.push(
           `${tableName}: ${successCount}/${records.length} records`
         );
+        // Log first error for debugging
+        if (errors.length > 0) {
+          console.log(`      Error: ${errors[0]}`);
+        }
       }
 
       stats.tablesProcessed++;
@@ -518,6 +524,25 @@ async function main() {
     console.log('✓ Connected to MongoDB\n');
 
     const db = client.db('kmlwj');
+
+    // Drop unique indexes that don't support multiple null values
+    console.log('🔧 Preparing collections (dropping nullable unique indexes)...');
+    try {
+      const hallBookingCollection = db.collection('HallBooking');
+      // Try different possible index names
+      const indexNames = ['journalEntryId_1', 'HallBooking_journalEntryId_key'];
+      for (const indexName of indexNames) {
+        try {
+          await hallBookingCollection.dropIndex(indexName);
+          console.log(`  ✓ Dropped HallBooking.${indexName}`);
+        } catch (error: any) {
+          // Index might not exist, that's okay
+        }
+      }
+    } catch (error) {
+      // Collection operations might fail gracefully
+    }
+    console.log('');
 
     // Migrate
     await migrateToMongoDB(db, sqlData);
