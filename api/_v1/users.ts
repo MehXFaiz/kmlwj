@@ -141,7 +141,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const updateData: any = {};
 
     if (fullName !== undefined) updateData.fullName = fullName;
-    if (isActive !== undefined) updateData.isActive = isActive;
+    if (isActive !== undefined) {
+      updateData.isActive = typeof isActive === 'boolean'
+        ? isActive
+        : (isActive === 1 || isActive === '1' || isActive === 'true');
+    }
     
     if (password) {
       updateData.password = await bcrypt.hash(password, 12);
@@ -174,7 +178,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         fullName: updatedUser.fullName,
         email: updatedUser.email,
         role: updatedUser.role.name,
-        isActive: updatedUser.isActive,
+        isActive: Boolean(updatedUser.isActive),
       },
     });
   }
