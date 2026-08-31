@@ -5,7 +5,7 @@ import { logAudit } from "../../_utils/audit.js";
 import { PERMS } from "../../_constants/permissions.js";
 import { isAdminOrAbove } from "../../_utils/soft-delete.js";
 const MAX_BULK_IDS = 500;
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_RE = /^[0-9a-fA-F]{24}$|^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 var bulk_delete_default = makeHandler(async (req, res) => {
   if (req.method !== "DELETE") {
     return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });

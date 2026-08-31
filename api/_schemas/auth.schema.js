@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { emailSchema, sanitizedString } from "./common.schema.js";
+import { emailSchema, sanitizedString, optionalIdSchema } from "./common.schema.js";
 const loginSchema = z.object({
   email: emailSchema,
   password: z.string().min(1, "Password is required")
@@ -8,7 +8,7 @@ const registerSchema = z.object({
   email: emailSchema,
   password: z.string().min(8, "Password must be at least 8 characters long"),
   fullName: sanitizedString({ min: 2, max: 100, fieldName: "Full Name" }),
-  roleId: z.string().uuid("Invalid role ID format").optional()
+  roleId: optionalIdSchema
 });
 const forgotPasswordSchema = z.object({
   email: emailSchema

@@ -21,8 +21,8 @@ async function memberVerifyHandler(req, res) {
       }
     });
     if (!member) {
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (uuidPattern.test(id)) {
+      const idPattern = /^[0-9a-fA-F]{24}$|^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+      if (idPattern.test(id)) {
         member = await prisma.member.findUnique({
           where: { id },
           select: {

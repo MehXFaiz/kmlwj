@@ -8,8 +8,9 @@ import { PERMS } from "../../_constants/permissions.js";
 import { classifyError, errDetails } from "../../_services/accounting.service.js";
 import { getRepairOperation, findOperationForIssueType } from "../../_services/repair-operations.registry.js";
 import { applyRepair, RepairInProgressError, RepairNotActionableError } from "../../_services/ai-repair-executor.service.js";
+import { idSchema } from "../../_schemas/common.schema.js";
 const bodySchema = z.object({
-  issueId: z.string().uuid(),
+  issueId: idSchema,
   decision: z.enum(["approve", "reject"]),
   notes: z.string().optional()
 });

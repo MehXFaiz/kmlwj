@@ -421,8 +421,14 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         if (sameDayInTx.some((b) => timingsConflict(b.timings, timings))) {
           throw Object.assign(new Error("This hall is already booked for the selected date and time slot. Please choose another date or time."), { status: 409 });
         }
+        const lastBooking = await tx.hallBooking.findFirst({
+          orderBy: { receiptNo: "desc" },
+          select: { receiptNo: true }
+        });
+        const receiptNo = (lastBooking?.receiptNo || 0) + 1;
         const newBooking = await tx.hallBooking.create({
           data: {
+            receiptNo,
             bookingDate: bookingDate ? new Date(bookingDate) : void 0,
             bookerName,
             fatherHusbandName: fatherHusbandName || null,

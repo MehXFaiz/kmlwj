@@ -36,11 +36,16 @@ const optionalSanitizedString = (options = {}) => {
     }).optional()
   );
 };
-const uuidSchema = z.string().trim().uuid({ message: "Invalid UUID format" });
-const optionalUuidSchema = z.preprocess(
+const ID_PATTERN = /^[0-9a-fA-F]{24}$|^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+const idSchema = z.string().trim().refine((val) => ID_PATTERN.test(val), {
+  message: "Invalid ID format"
+});
+const uuidSchema = idSchema;
+const optionalIdSchema = z.preprocess(
   (val) => val === null || val === void 0 || val === "" ? void 0 : val,
-  z.string().trim().uuid({ message: "Invalid UUID format" }).optional()
+  idSchema.optional()
 );
+const optionalUuidSchema = optionalIdSchema;
 const amountSchema = z.preprocess(
   (val) => {
     if (typeof val === "number") return val;
@@ -127,10 +132,12 @@ export {
   cnicSchema,
   dateSchema,
   emailSchema,
+  idSchema,
   nonNegativeAmountSchema,
   optionalCnicSchema,
   optionalDateSchema,
   optionalEmailSchema,
+  optionalIdSchema,
   optionalNonNegativeAmountSchema,
   optionalPhoneSchema,
   optionalSanitizedString,

@@ -97,14 +97,6 @@ var system_reset_default = makeHandler(async (req, res) => {
       }
       const revHeadCount = (await tx.revenueHead.updateMany({ data: { amount: 0 } })).count;
       if (resetSequences) {
-        try {
-          await tx.$executeRawUnsafe('ALTER SEQUENCE "HallBooking_receiptNo_seq" RESTART WITH 1;');
-        } catch (e) {
-        }
-        try {
-          await tx.$executeRawUnsafe('ALTER SEQUENCE "RevenueCollection_receiptNo_seq" RESTART WITH 1;');
-        } catch (e) {
-        }
       }
       const remainingJEs = await tx.journalEntry.count({
         where: resetMode === "FULL_FINANCIAL_RESET" ? {} : { id: { notIn: preservedObJeIds } }
