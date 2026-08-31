@@ -171,12 +171,13 @@ function parseRow(rowStr: string, columns: string[]): Record<string, any> {
   let currentValue = '';
   let inQuote = false;
   let quoteChar = '';
+  let i = 0;
 
-  for (let i = 0; i < rowStr.length; i++) {
+  while (i < rowStr.length) {
     const char = rowStr[i];
     const prevChar = i > 0 ? rowStr[i - 1] : '';
 
-    if ((char === "'" || char === '"') && prevChar !== '\\') {
+    if (prevChar !== '\\' && (char === "'" || char === '"')) {
       if (!inQuote) {
         inQuote = true;
         quoteChar = char;
@@ -193,6 +194,8 @@ function parseRow(rowStr: string, columns: string[]): Record<string, any> {
     } else {
       currentValue += char;
     }
+
+    i++;
   }
 
   // Last value
