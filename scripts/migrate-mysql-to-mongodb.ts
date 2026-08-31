@@ -115,8 +115,9 @@ function parseInsertStatement(table: string, statement: string): any[] {
     let depth = 0;
     let inQuote = false;
     let quoteChar = '';
+    let i = 0;
 
-    for (let i = 0; i < valueStr.length; i++) {
+    while (i < valueStr.length) {
       const char = valueStr[i];
       const prevChar = i > 0 ? valueStr[i - 1] : '';
 
@@ -131,18 +132,33 @@ function parseInsertStatement(table: string, statement: string): any[] {
 
       if (!inQuote) {
         if (char === '(') depth++;
-        if (char === ')') depth--;
+        if (char === ')') {
+          depth--;
 
-        if (char === ')' && depth === 0 && i < valueStr.length - 1 && valueStr[i + 1] === ',') {
-          currentRow += char;
-          records.push(parseRow(currentRow, columns));
-          currentRow = '';
-          i++; // Skip comma
-          continue;
+          // Found end of row (depth back to 0)
+          if (depth === 0) {
+            currentRow += char;
+            
+            // Look ahead for comma (might have whitespace)
+            let j = i + 1;
+            while (j < valueStr.length && /\s/.test(valueStr[j])) {
+              j++;
+            }
+            
+            // If next non-whitespace is comma or end of statement, we're done with this row
+            if (j >= valueStr.length || valueStr[j] === ',') {
+              records.push(parseRow(currentRow, columns));
+              currentRow = '';
+              i = j; // Skip to after comma
+              if (valueStr[i] === ',') i++;
+              continue;
+            }
+          }
         }
       }
 
       currentRow += char;
+      i++;
     }
 
     // Handle last row
