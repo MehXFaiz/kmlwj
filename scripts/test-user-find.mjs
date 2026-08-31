@@ -9,10 +9,11 @@ async function test() {
   try {
     const user = await prisma.user.findUnique({
       where: { email: 'admin@erp.com' },
+      include: { role: true },
     });
-    console.log('User found:', user);
+    console.log('User found with role:', user);
   } catch (err) {
-    console.error('Caught error as expected:');
+    console.error('Caught error:');
     console.error(err.message);
   } finally {
     await prisma.$disconnect();
