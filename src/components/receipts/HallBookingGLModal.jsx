@@ -2,16 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X, Printer, BookOpen, Loader2 } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 import api from '../../services/api';
-
-const formatDateDDMMYYYY = (dateVal) => {
-  if (!dateVal) return '—';
-  const d = new Date(dateVal);
-  if (isNaN(d)) return '—';
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const year = d.getFullYear();
-  return `${day}/${month}/${year}`;
-};
+import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 
 export const HallBookingGLModal = ({ booking, onClose }) => {
   const [glData, setGlData] = useState(null);

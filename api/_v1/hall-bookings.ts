@@ -550,10 +550,17 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       });
       const receiptNo = (lastBooking?.receiptNo || 0) + 1;
 
+      const bookingDateOnlyStr = bookingDate
+        ? (typeof bookingDate === 'string' && bookingDate.includes('T') ? bookingDate.split('T')[0] : (typeof bookingDate === 'string' ? bookingDate : new Date(bookingDate).toISOString().split('T')[0]))
+        : null;
+      const refundDateOnlyStr = req.body.refundDate
+        ? (typeof req.body.refundDate === 'string' && req.body.refundDate.includes('T') ? req.body.refundDate.split('T')[0] : (typeof req.body.refundDate === 'string' ? req.body.refundDate : new Date(req.body.refundDate).toISOString().split('T')[0]))
+        : null;
+
       const newBooking = await tx.hallBooking.create({
         data: {
           receiptNo,
-          bookingDate: bookingDate ? new Date(bookingDate) : undefined,
+          bookingDate: bookingDateOnlyStr ? new Date(`${bookingDateOnlyStr}T00:00:00.000Z`) : undefined,
           bookerName,
           fatherHusbandName: fatherHusbandName || null,
           address: address || null,
@@ -572,7 +579,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           receivedAmount: parsedReceivedAmount,
           remainingAmount: calculatedRemainingAmount,
           refundAmount: req.body.refundAmount != null ? parseFloat(req.body.refundAmount) : 0,
-          refundDate: req.body.refundDate ? new Date(req.body.refundDate) : null,
+          refundDate: refundDateOnlyStr ? new Date(`${refundDateOnlyStr}T00:00:00.000Z`) : null,
           refundReason: req.body.refundReason || null,
           paymentMethod,
           bankAccountId: bankAccountId || null,
@@ -928,10 +935,17 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           ? targetStatus
           : (wasPosted && newJournalEntryId ? 'POSTED' : 'Confirmed');
 
+        const bookingDateOnlyStr = bookingDate
+          ? (typeof bookingDate === 'string' && bookingDate.includes('T') ? bookingDate.split('T')[0] : (typeof bookingDate === 'string' ? bookingDate : new Date(bookingDate).toISOString().split('T')[0]))
+          : null;
+        const refundDateOnlyStr = req.body.refundDate
+          ? (typeof req.body.refundDate === 'string' && req.body.refundDate.includes('T') ? req.body.refundDate.split('T')[0] : (typeof req.body.refundDate === 'string' ? req.body.refundDate : new Date(req.body.refundDate).toISOString().split('T')[0]))
+          : null;
+
         return await tx.hallBooking.update({
           where: { id },
           data: {
-            bookingDate: bookingDate ? new Date(bookingDate) : undefined,
+            bookingDate: bookingDateOnlyStr ? new Date(`${bookingDateOnlyStr}T00:00:00.000Z`) : undefined,
             bookerName,
             fatherHusbandName: fatherHusbandName || null,
             address: address || null,
@@ -950,7 +964,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             receivedAmount: parsedReceivedAmount,
             remainingAmount: calculatedRemainingAmount,
             refundAmount: req.body.refundAmount != null ? parseFloat(req.body.refundAmount) : 0,
-            refundDate: req.body.refundDate ? new Date(req.body.refundDate) : null,
+            refundDate: refundDateOnlyStr ? new Date(`${refundDateOnlyStr}T00:00:00.000Z`) : null,
             refundReason: req.body.refundReason || null,
             paymentMethod,
             bankAccountId: bankAccountId || null,

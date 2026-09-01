@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, User, Building, Hash, AlertCircle, CheckCircle } from 'lucide-react';
+import { getLocalDateString, formatDateToInput, parseLocalDate } from '../../utils/dateUtils';
 
 const formatHallName = (booking) => {
   if (!booking) return 'N/A';
@@ -14,8 +15,14 @@ const formatHallName = (booking) => {
 
 export default function HallBookingCalendar({ bookings = [], selectedHallId, onSelectDate, selectedDate }) {
   const [currentDate, setCurrentDate] = useState(() => {
-    return selectedDate ? new Date(selectedDate) : new Date();
+    return parseLocalDate(selectedDate || new Date());
   });
+
+  useEffect(() => {
+    if (selectedDate) {
+      setCurrentDate(parseLocalDate(selectedDate));
+    }
+  }, [selectedDate]);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -42,7 +49,7 @@ export default function HallBookingCalendar({ bookings = [], selectedHallId, onS
     const map = {};
     activeBookings.forEach(b => {
       if (!b.programDate) return;
-      const dateStr = new Date(b.programDate).toISOString().split('T')[0];
+      const dateStr = formatDateToInput(b.programDate);
       if (!map[dateStr]) map[dateStr] = [];
       map[dateStr].push(b);
     });
@@ -67,7 +74,7 @@ export default function HallBookingCalendar({ bookings = [], selectedHallId, onS
     gridCells.push(<div key={`empty-${i}`} className="min-h-[70px] p-1 bg-slate-950/20 border border-slate-900/40 rounded-xl opacity-30" />);
   }
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalDateString(new Date());
 
   for (let day = 1; day <= daysInMonth; day++) {
     const dateObj = new Date(year, month, day);
