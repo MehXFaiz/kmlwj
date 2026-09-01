@@ -47,12 +47,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   // Build modulePermissions map for structured UI queries
   const isPrivileged = user.role.isPrivileged === true;
+  const isAccountant = user.role.name === 'Accountant' || user.role.name?.toLowerCase().includes('accountant');
   const modulePermissions: Record<string, Record<string, boolean>> = {};
 
   for (const mod of ERP_MODULE_DEFINITIONS) {
     const actMap: Record<string, boolean> = {};
     for (const act of mod.actions) {
-      actMap[act] = isPrivileged || permissionSet.has(`${mod.key}.${act}`);
+      actMap[act] = isPrivileged || (act === 'post' && isAccountant) || permissionSet.has(`${mod.key}.${act}`);
     }
     modulePermissions[mod.key] = actMap;
   }

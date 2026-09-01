@@ -64,6 +64,14 @@ export async function verifyPermission(
   const hasDirectMatch = permList.some((p) => perms.has(p));
   if (hasDirectMatch) return true;
 
+  const isPostingPerm = permList.some(
+    (p) => p.includes('.post') || p === 'ledger.post' || p === 'POST_JOURNAL' || p === 'POST_LEDGER'
+  );
+  const userRole = (req.user as any)?.role || '';
+  if (isPostingPerm && (userRole === 'Accountant' || userRole.toLowerCase().includes('accountant'))) {
+    return true;
+  }
+
   // Privileged roles (Super Admin, Admin) have unrestricted access to all operational modules
   const isSecurityPerm = permList.some(
     (p) =>

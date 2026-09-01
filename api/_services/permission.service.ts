@@ -47,9 +47,41 @@ export const PERMISSION_EXPANSIONS: Record<string, string[]> = {
   'generalLedger.print': ['VIEW_REPORTS', 'generalLedger.print'],
 
   // ── Journals & Ledger ──────────────────────────────────────────────────────
-  POST_JOURNAL: ['journalEntries.post', 'journalEntries.create', 'journalEntries.update', 'journalEntries.view'],
+  POST_JOURNAL: [
+    'journalEntries.post',
+    'journalEntries.create',
+    'journalEntries.update',
+    'journalEntries.view',
+    'ledger.post',
+    'hallBookings.post',
+    'donations.post',
+    'revenueCollections.post',
+    'invoices.post',
+    'revenue.post',
+    'expenses.post',
+    'zakatCards.post',
+    'zakat.post',
+    'coa.post',
+    'openingBalances.post',
+  ],
+  POST_LEDGER: [
+    'POST_JOURNAL',
+    'ledger.post',
+    'hallBookings.post',
+    'donations.post',
+    'revenueCollections.post',
+    'invoices.post',
+    'revenue.post',
+    'expenses.post',
+    'zakatCards.post',
+    'zakat.post',
+    'coa.post',
+    'openingBalances.post',
+    'journalEntries.post',
+  ],
   'ledger.post': [
     'POST_JOURNAL',
+    'POST_LEDGER',
     'donations.post',
     'revenueCollections.post',
     'hallBookings.post',
@@ -332,6 +364,7 @@ export async function loadPermissions(req: AuthenticatedRequest): Promise<Set<st
     select: {
       role: {
         select: {
+          name: true,
           isPrivileged: true,
           rolePermissions: {
             select: { permission: { select: { name: true } } },
@@ -344,6 +377,25 @@ export async function loadPermissions(req: AuthenticatedRequest): Promise<Set<st
   const rawPerms = user?.role?.rolePermissions?.map((rp) => rp.permission.name) ?? [];
   const perms = new Set<string>(rawPerms);
 
+  const roleName = user?.role?.name || (req.user as any)?.role || '';
+  const isAccountant = roleName === 'Accountant' || roleName?.toLowerCase?.().includes('accountant');
+  if (isAccountant) {
+    perms.add('ledger.post');
+    perms.add('POST_LEDGER');
+    perms.add('POST_JOURNAL');
+    perms.add('hallBookings.post');
+    perms.add('donations.post');
+    perms.add('revenueCollections.post');
+    perms.add('invoices.post');
+    perms.add('revenue.post');
+    perms.add('expenses.post');
+    perms.add('zakatCards.post');
+    perms.add('zakat.post');
+    perms.add('coa.post');
+    perms.add('openingBalances.post');
+    perms.add('journalEntries.post');
+  }
+
   // Dynamic Rule: Any action on a module implies module.view
   for (const perm of rawPerms) {
     if (perm.includes('.')) {
@@ -353,7 +405,7 @@ export async function loadPermissions(req: AuthenticatedRequest): Promise<Set<st
   }
 
   // Expand canonical and legacy composite permissions
-  for (const perm of rawPerms) {
+  for (const perm of Array.from(perms)) {
     const expansions = PERMISSION_EXPANSIONS[perm];
     if (expansions) {
       for (const exp of expansions) {

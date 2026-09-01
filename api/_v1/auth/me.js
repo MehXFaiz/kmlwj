@@ -37,11 +37,12 @@ var me_default = makeHandler(async (req, res) => {
   const permissionSet = await loadPermissions(req);
   const permissions = Array.from(permissionSet);
   const isPrivileged = user.role.isPrivileged === true;
+  const isAccountant = user.role.name === "Accountant" || user.role.name?.toLowerCase().includes("accountant");
   const modulePermissions = {};
   for (const mod of ERP_MODULE_DEFINITIONS) {
     const actMap = {};
     for (const act of mod.actions) {
-      actMap[act] = isPrivileged || permissionSet.has(`${mod.key}.${act}`);
+      actMap[act] = isPrivileged || act === "post" && isAccountant || permissionSet.has(`${mod.key}.${act}`);
     }
     modulePermissions[mod.key] = actMap;
   }
