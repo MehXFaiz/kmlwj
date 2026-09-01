@@ -6,6 +6,7 @@ import { FileSpreadsheet, Search, Plus, Edit2, Trash2, ChevronRight, Eye, AlertT
 import { MobileOnly, DesktopOnly, pageActionsClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 import { handleDeleteError } from '../utils/deleteHandler';
+import { formatDateDDMMYYYY } from '../utils/dateUtils';
 
 export const Invoices = () => {
   const navigate = useNavigate();
@@ -205,8 +206,8 @@ export const Invoices = () => {
                       {inv.remarks && <p className="text-[11px] text-slate-500 truncate max-w-44 mt-0.5">{inv.remarks}</p>}
                     </td>
                     <td className="px-6 py-4 space-y-0.5">
-                      <p className="text-xs text-slate-300">Issued: {new Date(inv.issueDate).toLocaleDateString()}</p>
-                      <p className="text-[10px] text-slate-500">Due: {new Date(inv.dueDate).toLocaleDateString()}</p>
+                      <p className="text-xs text-slate-300">Issued: {formatDateDDMMYYYY(inv.issueDate)}</p>
+                      <p className="text-[10px] text-slate-500">Due: {formatDateDDMMYYYY(inv.dueDate)}</p>
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-xs font-bold text-slate-250">

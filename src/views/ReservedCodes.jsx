@@ -8,6 +8,7 @@ import {
 import { MobileOnly, DesktopOnly, pageActionsClass, statGridClass } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 import { handleDeleteError } from '../utils/deleteHandler';
+import { formatDateDDMMYYYY } from '../utils/dateUtils';
 
 /* ─── Stat Card ─── */
 function StatCard({ title, value, icon: Icon, iconBg, iconColor, sub, delay = 0 }) {

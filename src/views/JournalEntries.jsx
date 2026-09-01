@@ -13,6 +13,7 @@ import { MobileOnly, DesktopOnly } from '../components/common/responsive';
 import { showToast } from '../components/ui/Toast';
 import { handleDeleteError } from '../utils/deleteHandler';
 import { sumMoney, formatMoney } from '../utils/money';
+import { formatDateDDMMYYYY } from '../utils/dateUtils';
 
 export const JournalEntries = () => {
   const { journals, fetchJournals, isLoading, updateJournalStatus, deleteJournalEntry, bulkDeleteJournalEntries } = useJournalStore();
@@ -222,7 +223,7 @@ export const JournalEntries = () => {
                   <p className="text-sm font-semibold text-slate-200 mb-1">{je.reference}</p>
                   <p className="text-xs text-slate-400 mb-2 truncate">{je.description || ''}</p>
                   <div className="flex flex-wrap gap-2 text-[11px] text-slate-500 mb-2">
-                    <span>{je.postingDate}</span>
+                    <span>{formatDateDDMMYYYY(je.postingDate)}</span>
                     <Badge variant="brand">{je.subsidiary}</Badge>
                   </div>
                   <div className="flex justify-between font-mono text-xs">
@@ -325,7 +326,7 @@ export const JournalEntries = () => {
                           </button>
                         </td>
                         <td className="py-3.5 px-4 font-mono font-bold text-brand-400">{je.voucherNo}</td>
-                        <td className="py-3.5 px-4 text-slate-300 font-medium">{je.postingDate}</td>
+                        <td className="py-3.5 px-4 text-slate-300 font-medium">{formatDateDDMMYYYY(je.postingDate)}</td>
                         <td className="py-3.5 px-4">
                           <Badge variant="brand">{je.subsidiary}</Badge>
                         </td>

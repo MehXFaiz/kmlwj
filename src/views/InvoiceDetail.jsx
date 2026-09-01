@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/authStore';
 import { FileSpreadsheet, ChevronLeft, Calendar, FileText, CheckCircle, CreditCard, DollarSign, XCircle, Printer, Book } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
 import { StatusStepper } from '../components/ui/StatusStepper';
+import { formatDateDDMMYYYY } from '../utils/dateUtils';
 
 export const InvoiceDetail = () => {
   const { id } = useParams();
@@ -280,8 +281,8 @@ export const InvoiceDetail = () => {
           <div className="sm:text-right space-y-3">
             <div>
               <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 print:text-slate-650">Dates</h4>
-              <p className="text-xs text-slate-350 print:text-black">Issued: {new Date(currentInvoice.issueDate).toLocaleDateString()}</p>
-              <p className="text-xs text-slate-350 print:text-black">Due: {new Date(currentInvoice.dueDate).toLocaleDateString()}</p>
+              <p className="text-xs text-slate-350 print:text-black">Issued: {formatDateDDMMYYYY(currentInvoice.issueDate)}</p>
+              <p className="text-xs text-slate-350 print:text-black">Due: {formatDateDDMMYYYY(currentInvoice.dueDate)}</p>
             </div>
             <div>
               <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 print:text-slate-650">Status</h4>

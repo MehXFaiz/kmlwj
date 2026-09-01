@@ -12,12 +12,13 @@ import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolve
 import { EmptyState } from '../components/ui/EmptyState';
 import { DONATION_TYPES, donationTypeDisplay } from '../constants/donationTypes';
 import { paymentMethodLabel } from '../constants/paymentMethods';
+import { formatDateDDMMYYYY, getLocalDateString } from '../utils/dateUtils';
 
 // Replace null DB values with '' so controlled inputs stay controlled
 const nullsToEmpty = (obj) =>
   Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === null ? '' : v]));
 
-const DEFAULT_DONATION = { donorName: '', donorMobile: '', donationType: 'ZAKAT', amount: '', paymentMethod: 'BANK', bankAccountId: '', chequeNumber: '', donorBankName: '', remarks: '', customDonationType: '', date: new Date().toISOString().split('T')[0] };
+const DEFAULT_DONATION = { donorName: '', donorMobile: '', donationType: 'ZAKAT', amount: '', paymentMethod: 'BANK', bankAccountId: '', chequeNumber: '', donorBankName: '', remarks: '', customDonationType: '', date: getLocalDateString(new Date()) };
 
 function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
   const [form, setForm] = useState(
@@ -961,7 +962,7 @@ export const Donations = () => {
                 {/* Card Footer: Date & Action Icons */}
                 <div className="flex items-center justify-between gap-2 pt-3.5 border-t border-slate-800/80">
                   <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-slate-400" /> {d.createdAt ? new Date(d.createdAt).toLocaleDateString() : '7/7/2026'}
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" /> {formatDateDDMMYYYY(d.createdAt || d.date)}
                   </span>
                   <div className="flex items-center gap-2">
                     {canPrint && (
