@@ -5,7 +5,7 @@ import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { loadPermissions } from '../_services/permission.service.js';
 import { PERMS } from '../_constants/permissions.js';
-import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
+import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from '../_utils/soft-delete.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
@@ -113,8 +113,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   if (method === 'DELETE') {
     const isPermanent = req.query.permanent === 'true' || req.query.action === 'permanent_delete' || req.body?.permanent === true;
     if (isPermanent) {
-      if (!await isSuperAdmin(req)) {
-        return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can permanently delete records', status: 403 } });
+      if (!await isAdminOrAbove(req)) {
+        return res.status(403).json({ error: { message: 'Forbidden: Only Admin or Super Admin can permanently delete records', status: 403 } });
       }
       if (!id) {
         return res.status(400).json({ error: { message: 'Revenue Head ID is required', status: 400 } });

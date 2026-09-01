@@ -47,7 +47,7 @@ async function getIncomeAccountForCategory(category, tx) {
   }
   return acc;
 }
-import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
+import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from "../_utils/soft-delete.js";
 var revenue_collections_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;

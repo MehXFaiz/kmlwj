@@ -3,7 +3,7 @@ import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js
 import { prisma } from "../_prisma.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { validateAmount } from "../_utils/amount.js";
-import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
+import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from "../_utils/soft-delete.js";
 import { logAudit } from "../_utils/audit.js";
 import { PERMS } from "../_constants/permissions.js";
 const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };

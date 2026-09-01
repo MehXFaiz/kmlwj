@@ -7,7 +7,7 @@ import { AccountingService } from "../_services/accounting.service.js";
 import { validateAmount } from "../_utils/amount.js";
 import { isWithinMaxLength, maxLengthError } from "../_utils/text-length.js";
 import { PERMS } from "../_constants/permissions.js";
-import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
+import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from "../_utils/soft-delete.js";
 function donationTitleFragment(donationType, customType) {
   const map = {
     ZAKAT: "Zakat",

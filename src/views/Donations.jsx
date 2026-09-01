@@ -17,18 +17,45 @@ import { paymentMethodLabel } from '../constants/paymentMethods';
 const nullsToEmpty = (obj) =>
   Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === null ? '' : v]));
 
-const DEFAULT_DONATION = { donorName: '', donorMobile: '', donationType: 'ZAKAT', amount: '', paymentMethod: 'CASH', bankAccountId: '', chequeNumber: '', donorBankName: '', remarks: '', customDonationType: '' };
+const DEFAULT_DONATION = { donorName: '', donorMobile: '', donationType: 'ZAKAT', amount: '', paymentMethod: 'BANK', bankAccountId: '', chequeNumber: '', donorBankName: '', remarks: '', customDonationType: '', date: new Date().toISOString().split('T')[0] };
 
 function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
   const [form, setForm] = useState(
     initial ? nullsToEmpty(initial) : DEFAULT_DONATION
   );
 
+  const bankAccounts = useMemo(() => {
+    return (accounts || []).filter(a => {
+      if (a.isLocked || a.isDeleted) return false;
+      const nameLower = (a.name || a.accountName || '').toLowerCase();
+      const detailLower = (a.detailType || '').toLowerCase();
+      if (detailLower === 'bank') return true;
+      if (a.code === '1010101' || a.code === '1010102' || a.glCode === '1010101' || a.glCode === '1010102') return true;
+      if (nameLower.includes('bank') || nameLower.includes('nbp') || nameLower.includes('mcb') || nameLower.includes('hbl') || nameLower.includes('ubl') || nameLower.includes('habib') || nameLower.includes('allied') || nameLower.includes('faysal') || nameLower.includes('alfalah') || nameLower.includes('meezan') || nameLower.includes('soneri') || nameLower.includes('askari') || nameLower.includes('js bank') || nameLower.includes('bop') || nameLower.includes('dubai islamic')) {
+        return true;
+      }
+      return false;
+    });
+  }, [accounts]);
+
   useEffect(() => {
     if (isOpen) {
-      setForm(initial ? nullsToEmpty(initial) : DEFAULT_DONATION);
+      const baseForm = initial ? nullsToEmpty({
+        ...initial,
+        date: initial.createdAt ? new Date(initial.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+      }) : {
+        ...DEFAULT_DONATION,
+        bankAccountId: bankAccounts[0]?.id || ''
+      };
+      setForm(baseForm);
     }
-  }, [isOpen, initial]);
+  }, [isOpen, initial, bankAccounts]);
+
+  useEffect(() => {
+    if (!initial && (form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && !form.bankAccountId && bankAccounts.length > 0) {
+      setForm(f => ({ ...f, bankAccountId: bankAccounts[0].id }));
+    }
+  }, [initial, form.paymentMethod, form.bankAccountId, bankAccounts]);
 
   if (!isOpen) return null;
 
@@ -84,7 +111,7 @@ function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-100">{initial ? 'Edit Donation' : 'New Donation'}</h3>
-              <p className="text-[11px] text-slate-500">Log a charitable contribution</p>
+              <p className="text-[11px] text-slate-500">Log a charitable disbursement</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors">
@@ -108,7 +135,7 @@ function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
                     <div className="w-6 h-6 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
                       <Heart className="w-3 h-3 text-amber-400" />
                     </div>
-                    <span className="text-xs font-semibold text-slate-300">Tracks Donation Inflow</span>
+                    <span className="text-xs font-semibold text-slate-300">Tracks Donation Outflow</span>
                   </div>
                   <div className="flex items-center gap-2.5">
                     <div className="w-6 h-6 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
@@ -131,16 +158,16 @@ function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
               <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
                 <div className="px-4 py-3 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
                   <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">01</span>
-                  <h4 className="text-sm font-semibold text-slate-200">Donor & Amount</h4>
+                  <h4 className="text-sm font-semibold text-slate-200">Recipient & Amount</h4>
                 </div>
                 <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className={labelClass}>Donor Name *</label>
+                    <label className={labelClass}>Recipient / Person Name *</label>
                     <input type="text" value={form.donorName} onChange={e => setForm(f => ({ ...f, donorName: e.target.value }))}
                       placeholder="E.g. Muhammad Ali" className={inputClass} />
                   </div>
                   <div>
-                    <label className={labelClass}>Donor Mobile</label>
+                    <label className={labelClass}>Recipient Mobile</label>
                     <input type="text" value={form.donorMobile} onChange={e => setForm(f => ({ ...f, donorMobile: e.target.value }))}
                       placeholder="E.g. 0300-1234567" className={inputClass} />
                   </div>
@@ -172,9 +199,14 @@ function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
                     )}
                   </div>
                   <div>
-                    <label className={labelClass}>Amount *</label>
+                    <label className={labelClass}>Amount (PKR) *</label>
                     <input type="number" min="0" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
                       placeholder="10000" className={inputClass} />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className={labelClass}>Donation Date *</label>
+                    <input type="date" value={form.date || ''} onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+                      className={inputClass} />
                   </div>
                 </div>
               </div>
@@ -183,13 +215,13 @@ function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
               <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
                 <div className="px-4 py-3 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
                   <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">02</span>
-                  <h4 className="text-sm font-semibold text-slate-200">Payment Details</h4>
+                  <h4 className="text-sm font-semibold text-slate-200">Payment & Bank Source</h4>
                 </div>
                 <div className="p-4 space-y-3">
                   <div>
                     <label className={labelClass}>Payment Method *</label>
                     <select value={form.paymentMethod} onChange={e => setForm(f => ({ ...f, paymentMethod: e.target.value, bankAccountId: '', chequeNumber: '', donorBankName: '' }))} className={inputClass}>
-                      {['CASH', 'BANK', 'CHEQUE'].map(t => (
+                      {['BANK', 'CASH', 'CHEQUE'].map(t => (
                         <option key={t} value={t}>{t}</option>
                       ))}
                     </select>
@@ -202,20 +234,31 @@ function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
                         <select value={form.bankAccountId} onChange={e => setForm(f => ({ ...f, bankAccountId: e.target.value }))}
                           className={inputClass}>
                           <option value="">Select Bank Account</option>
-                          {accounts.map(a => (
-                            <option key={a.id} value={a.id}>{a.accountName}</option>
+                          {bankAccounts.map(a => (
+                            <option key={a.id} value={a.id}>{a.accountName || a.name} {a.glCode || a.code ? `(${a.glCode || a.code})` : ''}</option>
                           ))}
                         </select>
                       </div>
-                      {form.paymentMethod === 'CHEQUE' && (
-                        <div>
-                          <label className={labelClass}>Cheque/Ref Number *</label>
-                          <input value={form.chequeNumber} onChange={e => setForm(f => ({ ...f, chequeNumber: e.target.value }))}
-                            placeholder="CHQ-001" className={inputClass} />
-                        </div>
-                      )}
+                      <div>
+                        <label className={labelClass}>{form.paymentMethod === 'CHEQUE' ? 'Cheque Number *' : 'Reference / Slip Number'}</label>
+                        <input value={form.chequeNumber} onChange={e => setForm(f => ({ ...f, chequeNumber: e.target.value }))}
+                          placeholder={form.paymentMethod === 'CHEQUE' ? 'CHQ-001' : 'REF-001'} className={inputClass} />
+                      </div>
                     </div>
                   )}
+
+                  {/* Accounting Impact Preview */}
+                  <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs space-y-1">
+                    <div className="font-semibold text-slate-400">GL Accounting Entry:</div>
+                    <div className="flex items-center justify-between text-emerald-400 font-mono">
+                      <span>DR: Donation Expense</span>
+                      <span>Rs {Number(form.amount || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-blue-400 font-mono">
+                      <span>CR: {form.paymentMethod === 'CASH' ? 'Cash in Hand (1010103)' : (bankAccounts.find(a => a.id === form.bankAccountId)?.accountName || bankAccounts.find(a => a.id === form.bankAccountId)?.name || 'Selected Bank Account')}</span>
+                      <span>Rs {Number(form.amount || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
 
                   {(form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && (
                     <div>

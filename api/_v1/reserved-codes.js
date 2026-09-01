@@ -4,7 +4,7 @@ import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { compareCodes } from "../_utils/code-compare.js";
 import { PERMS } from "../_constants/permissions.js";
-import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
+import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from "../_utils/soft-delete.js";
 var reserved_codes_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;

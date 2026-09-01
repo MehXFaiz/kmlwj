@@ -5,7 +5,7 @@ import { prisma } from "../_prisma.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { PERMS } from "../_constants/permissions.js";
 import { validateAmount } from "../_utils/amount.js";
-import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
+import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from "../_utils/soft-delete.js";
 const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };
 var simple_income_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);

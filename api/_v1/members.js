@@ -5,7 +5,7 @@ import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { logger } from "../_utils/logger.js";
 import { PERMS } from "../_constants/permissions.js";
-import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
+import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from "../_utils/soft-delete.js";
 import { createMemberSchema, updateMemberSchema } from "../_schemas/members.schema.js";
 function trimOrNull(v) {
   if (v === void 0 || v === null) return null;

@@ -219,6 +219,27 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     email: log.user ? log.user.email : null,
   }));
 
+  // Total donations paid/disbursed in the requested period (or overall if no period specified)
+  const donationTotalWhere: any = { status: 'APPROVED', isDeleted: false };
+  if (startDate) donationTotalWhere.createdAt = { ...(donationTotalWhere.createdAt || {}), gte: new Date(startDate) };
+  if (endDate) donationTotalWhere.createdAt = { ...(donationTotalWhere.createdAt || {}), lte: new Date(endDate) };
+
+  const donationsTotalRaw = await prisma.donation.aggregate({
+    _sum: { amount: true },
+    where: donationTotalWhere
+  });
+  const totalDonationsPaid = Number(donationsTotalRaw._sum.amount || 0);
+
+  const donationBankWhere: any = { status: 'APPROVED', isDeleted: false, paymentMethod: { in: ['BANK', 'CHEQUE', 'ONLINE'] } };
+  if (startDate) donationBankWhere.createdAt = { ...(donationBankWhere.createdAt || {}), gte: new Date(startDate) };
+  if (endDate) donationBankWhere.createdAt = { ...(donationBankWhere.createdAt || {}), lte: new Date(endDate) };
+
+  const donationsBankRaw = await prisma.donation.aggregate({
+    _sum: { amount: true },
+    where: donationBankWhere
+  });
+  const donationsPaidFromBank = Number(donationsBankRaw._sum.amount || 0);
+
   return res.status(200).json({
     status: 200,
     data: {
@@ -232,6 +253,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       monthlyData,
       recentActivities,
       pendingDonations,
+      donationsPaid: totalDonationsPaid,
+      donationsPaidFromBank,
+      totalDonationsPaid,
       donationsThisMonth: donationsThisMonthRaw._count,
       donationsAmountThisMonth: donationsThisMonthRaw._sum.amount || 0,
       hallBookingsThisMonth,
@@ -253,6 +277,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         openingCashBalance,
         openingBankBalance,
         netIncome,
+        donationsPaid: totalDonationsPaid,
+        donationsPaidFromBank,
+        totalDonationsPaid,
         isEquationBalanced
       },
       recentTransactions

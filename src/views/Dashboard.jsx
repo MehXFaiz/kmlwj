@@ -494,6 +494,9 @@ export const Dashboard = () => {
         // Do NOT clamp to 0 — overdrafts and losses must be visible
         cashBalance: dbStats.summary.cashBalance || 0,
         bankBalance: dbStats.summary.bankBalance || 0,
+        donationsPaid: dbStats.summary.donationsPaid ?? dbStats.donationsPaid ?? 0,
+        donationsPaidFromBank: dbStats.summary.donationsPaidFromBank ?? dbStats.donationsPaidFromBank ?? 0,
+        totalDonationsPaid: dbStats.summary.totalDonationsPaid ?? dbStats.totalDonationsPaid ?? 0,
         // As of the fiscal year's start — reconciles against Cash in Hand:
         // Opening Cash + this period's Net Surplus should explain the closing
         // balance, instead of Cash in Hand looking disconnected from Net Surplus.
@@ -640,7 +643,7 @@ export const Dashboard = () => {
 
 
       {/* ── Financial KPI Cards ── premium redesign ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
         {[
           {
             // Total Income (Gross Revenue from General Ledger)
@@ -667,25 +670,37 @@ export const Dashboard = () => {
             accentBar: 'from-red-500 to-red-400',
             delay: 80,
           },
-          
           {
-              // Show cash-in-hand; if whole income was received in cash, display that
-              title: t('dashboard.cashInHand'),
-              value: (() => {
-                const cashReceived = stats.hallBookingReceivedCash || 0;
-                const revenue = stats.revenue || 0;
-                if (cashReceived > 0 && cashReceived === revenue) return cashReceived;
-                return stats.cashBalance || 0;
-              })(),
-              icon: Banknote,
-              iconColor: ((stats.hallBookingReceivedCash || 0) > 0 && (stats.hallBookingReceivedCash === (stats.revenue || 0))) ? 'text-emerald-400' : ((stats.cashBalance || 0) < 0 ? 'text-red-400' : 'text-blue-400'),
-              iconBg: ((stats.hallBookingReceivedCash || 0) > 0 && (stats.hallBookingReceivedCash === (stats.revenue || 0))) ? 'bg-emerald-500/10 border-emerald-500/20' : ((stats.cashBalance || 0) < 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-blue-500/10 border-blue-500/20'),
-              trend: (stats.cashBalance || 0) < 0 ? 'down' : 'neutral',
-              trendLabel: (stats.cashBalance || 0) < 0 ? 'Overdraft' : t('dashboard.availableCash'),
-              trendColor: (stats.cashBalance || 0) < 0 ? 'text-red-400' : 'text-slate-400',
-              accentBar: (stats.cashBalance || 0) < 0 ? 'from-red-500 to-red-400' : 'from-blue-500 to-blue-400',
-              delay: 160,
-            },
+            title: t('dashboard.donationsPaid', { year: fiscalYear || 2026 }) || `Donations Paid (FY ${fiscalYear || 2026})`,
+            value: stats.donationsPaid ?? dbStats?.summary?.donationsPaid ?? dbStats?.donationsPaid ?? 0,
+            icon: Heart,
+            iconColor: 'text-amber-400',
+            iconBg: 'bg-amber-500/10 border-amber-500/20',
+            trend: 'neutral',
+            trendLabel: t('dashboard.totalDonationsPaid') || 'Disbursed / Paid',
+            trendColor: 'text-amber-400',
+            accentBar: 'from-amber-500 to-amber-400',
+            subLabel: t('dashboard.amountAllocatedFromBank') || 'Amount allocated from Bank',
+            delay: 160,
+          },
+          {
+            // Show cash-in-hand; if whole income was received in cash, display that
+            title: t('dashboard.cashInHand'),
+            value: (() => {
+              const cashReceived = stats.hallBookingReceivedCash || 0;
+              const revenue = stats.revenue || 0;
+              if (cashReceived > 0 && cashReceived === revenue) return cashReceived;
+              return stats.cashBalance || 0;
+            })(),
+            icon: Banknote,
+            iconColor: ((stats.hallBookingReceivedCash || 0) > 0 && (stats.hallBookingReceivedCash === (stats.revenue || 0))) ? 'text-emerald-400' : ((stats.cashBalance || 0) < 0 ? 'text-red-400' : 'text-blue-400'),
+            iconBg: ((stats.hallBookingReceivedCash || 0) > 0 && (stats.hallBookingReceivedCash === (stats.revenue || 0))) ? 'bg-emerald-500/10 border-emerald-500/20' : ((stats.cashBalance || 0) < 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-blue-500/10 border-blue-500/20'),
+            trend: (stats.cashBalance || 0) < 0 ? 'down' : 'neutral',
+            trendLabel: (stats.cashBalance || 0) < 0 ? 'Overdraft' : t('dashboard.availableCash'),
+            trendColor: (stats.cashBalance || 0) < 0 ? 'text-red-400' : 'text-slate-400',
+            accentBar: (stats.cashBalance || 0) < 0 ? 'from-red-500 to-red-400' : 'from-blue-500 to-blue-400',
+            delay: 240,
+          },
           {
             // BUG FIX: Show actual bank balance (not clamped); overdraft shows as negative
             title: t('dashboard.bankBalance'),
@@ -697,7 +712,7 @@ export const Dashboard = () => {
             trendLabel: (stats.bankBalance || 0) < 0 ? 'Overdraft' : t('dashboard.inBankAccounts'),
             trendColor: (stats.bankBalance || 0) < 0 ? 'text-red-400' : 'text-slate-400',
             accentBar: (stats.bankBalance || 0) < 0 ? 'from-red-500 to-red-400' : 'from-violet-500 to-violet-400',
-            delay: 240,
+            delay: 320,
           },
           {
             title: t('dashboard.netAfterExpenses', { year: fiscalYear || 2026 }),
@@ -709,7 +724,7 @@ export const Dashboard = () => {
             trendLabel: (stats.netIncome || 0) < 0 ? t('dashboard.netLoss') : t('dashboard.netSurplus'),
             trendColor: (stats.netIncome || 0) < 0 ? 'text-red-400' : 'text-emerald-400',
             accentBar: (stats.netIncome || 0) < 0 ? 'from-red-500 to-red-400' : 'from-emerald-500 to-emerald-400',
-            delay: 320,
+            delay: 400,
           },
         ].map((card) => (
           <StatCard key={card.title} {...card} />

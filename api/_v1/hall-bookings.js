@@ -5,7 +5,7 @@ import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { PERMS } from "../_constants/permissions.js";
-import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
+import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from "../_utils/soft-delete.js";
 function generateVoucherNumber() {
   const date = /* @__PURE__ */ new Date();
   const year = date.getFullYear().toString().slice(-2);

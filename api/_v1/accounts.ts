@@ -7,7 +7,7 @@ import { logAudit } from '../_utils/audit.js';
 import { compareCodes } from '../_utils/code-compare.js';
 import { AccountingService } from '../_services/accounting.service.js';
 import { loadPermissions } from '../_services/permission.service.js';
-import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
+import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from '../_utils/soft-delete.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
@@ -322,8 +322,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   if (method === 'DELETE') {
     const isPermanent = req.query.permanent === 'true' || req.query.action === 'permanent_delete' || req.body?.permanent === true;
     if (isPermanent) {
-      if (!await isSuperAdmin(req)) {
-        return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can permanently delete records', status: 403 } });
+      if (!await isAdminOrAbove(req)) {
+        return res.status(403).json({ error: { message: 'Forbidden: Only Admin or Super Admin can permanently delete records', status: 403 } });
       }
       if (!id) {
         return res.status(400).json({ error: { message: 'Account ID is required', status: 400 } });

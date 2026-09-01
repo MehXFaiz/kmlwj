@@ -3,7 +3,7 @@ import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { PERMS, SECURITY_PERMISSIONS } from "../_constants/permissions.js";
-import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
+import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from "../_utils/soft-delete.js";
 import bcrypt from "bcryptjs";
 async function roleGrantsSecurityPermission(roleName) {
   const role = await prisma.role.findUnique({

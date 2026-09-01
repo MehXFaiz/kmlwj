@@ -14,8 +14,8 @@ const nullsToEmpty = (obj) =>
 const DEFAULT_DONATION = {
   beneficiaryId: '',
   donorName: '', donorMobile: '', donationType: 'ZAKAT', amount: '',
-  paymentMethod: 'CASH', bankAccountId: '', chequeNumber: '', donorBankName: '', remarks: '',
-  customDonationType: ''
+  paymentMethod: 'BANK', bankAccountId: '', chequeNumber: '', donorBankName: '', remarks: '',
+  customDonationType: '', date: new Date().toISOString().split('T')[0]
 };
 
 const PAKISTANI_BANKS = [
@@ -47,7 +47,11 @@ export const DonationForm = () => {
     if (id && donations.length > 0) {
       const existing = donations.find(d => d.id === id);
       if (existing) {
-        setForm(nullsToEmpty({ ...existing, customDonationType: existing.customDonationType || '' }));
+        setForm(nullsToEmpty({
+          ...existing,
+          customDonationType: existing.customDonationType || '',
+          date: existing.createdAt ? new Date(existing.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+        }));
         setIsCustom(!existing.beneficiaryId && !!existing.donorName);
       }
     }
@@ -97,11 +101,25 @@ export const DonationForm = () => {
   };
 
   const bankAccounts = useMemo(() => {
-    return flatAccounts.filter(a =>
-      !a.isLocked && !a.isDeleted &&
-      (a.code === '1010101' || a.code === '1010102' || (a.name || '').toLowerCase().includes('national bank') || (a.name || '').toLowerCase().includes('nbp-zakat'))
-    );
+    return flatAccounts.filter(a => {
+      if (a.isLocked || a.isDeleted) return false;
+      const nameLower = (a.name || a.accountName || '').toLowerCase();
+      const detailLower = (a.detailType || '').toLowerCase();
+      if (detailLower === 'bank') return true;
+      if (a.code === '1010101' || a.code === '1010102') return true;
+      if (nameLower.includes('bank') || nameLower.includes('nbp') || nameLower.includes('mcb') || nameLower.includes('hbl') || nameLower.includes('ubl') || nameLower.includes('habib') || nameLower.includes('allied') || nameLower.includes('faysal') || nameLower.includes('alfalah') || nameLower.includes('meezan') || nameLower.includes('soneri') || nameLower.includes('askari') || nameLower.includes('js bank') || nameLower.includes('bop') || nameLower.includes('dubai islamic')) {
+        return true;
+      }
+      return false;
+    });
   }, [flatAccounts]);
+
+  // Auto-select first bank account when bank payment is active and none is selected
+  useEffect(() => {
+    if (!id && (form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && !form.bankAccountId && bankAccounts.length > 0) {
+      setForm(f => ({ ...f, bankAccountId: bankAccounts[0].id }));
+    }
+  }, [id, form.paymentMethod, form.bankAccountId, bankAccounts]);
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -400,6 +418,11 @@ export const DonationForm = () => {
                   <input type="number" min="0" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
                     placeholder="10000" className={inputClass} />
                 </div>
+                <div>
+                  <label className={labelClass}>Donation Date *</label>
+                  <input type="date" value={form.date || ''} onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+                    className={inputClass} />
+                </div>
               </div>
             </div>
 
@@ -407,7 +430,7 @@ export const DonationForm = () => {
             <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
               <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
                 <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">02</span>
-                <h3 className="text-sm font-semibold text-slate-200">Payment Details</h3>
+                <h3 className="text-sm font-semibold text-slate-200">Payment & Bank Source</h3>
               </div>
               <div className="p-5 space-y-4">
                 <div>
@@ -415,7 +438,7 @@ export const DonationForm = () => {
                   <select value={form.paymentMethod}
                     onChange={e => setForm(f => ({ ...f, paymentMethod: e.target.value, bankAccountId: '', chequeNumber: '', donorBankName: '' }))}
                     className={inputClass}>
-                    {['CASH', 'BANK', 'CHEQUE'].map(t => (
+                    {['BANK', 'CASH', 'CHEQUE'].map(t => (
                       <option key={t} value={t}>{t}</option>
                     ))}
                   </select>
@@ -429,23 +452,21 @@ export const DonationForm = () => {
                         className={inputClass}>
                         <option value="">Select Bank Account</option>
                         {bankAccounts.map(a => (
-                          <option key={a.id} value={a.id}>{a.name || a.accountName}</option>
+                          <option key={a.id} value={a.id}>{a.name || a.accountName} {a.code ? `(${a.code})` : ''}</option>
                         ))}
                       </select>
                     </div>
-                    {form.paymentMethod === 'CHEQUE' && (
-                      <div>
-                        <label className={labelClass}>Cheque / Ref Number *</label>
-                        <input value={form.chequeNumber} onChange={e => setForm(f => ({ ...f, chequeNumber: e.target.value }))}
-                          placeholder="CHQ-001" className={inputClass} />
-                      </div>
-                    )}
+                    <div>
+                      <label className={labelClass}>{form.paymentMethod === 'CHEQUE' ? 'Cheque Number *' : 'Reference / Slip Number'}</label>
+                      <input value={form.chequeNumber} onChange={e => setForm(f => ({ ...f, chequeNumber: e.target.value }))}
+                        placeholder={form.paymentMethod === 'CHEQUE' ? 'CHQ-001' : 'REF-001'} className={inputClass} />
+                    </div>
                   </div>
                 )}
 
                 {(form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && (
                   <div>
-                    <label className={labelClass}>Donor Bank (Pakistani Banks)</label>
+                    <label className={labelClass}>Recipient / Donor Bank (Pakistani Banks)</label>
                     <select value={form.donorBankName} onChange={e => setForm(f => ({ ...f, donorBankName: e.target.value }))}
                       className={inputClass}>
                       <option value="">Select Bank (Optional)</option>
@@ -455,6 +476,19 @@ export const DonationForm = () => {
                     </select>
                   </div>
                 )}
+
+                {/* Accounting Impact Preview */}
+                <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs space-y-1.5">
+                  <div className="font-semibold text-slate-400">General Ledger Accounting Entry:</div>
+                  <div className="flex items-center justify-between text-emerald-400 font-mono">
+                    <span>DR: Donation Expense Account ({form.donationType || 'General'})</span>
+                    <span>Rs {Number(form.amount || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-blue-400 font-mono">
+                    <span>CR: {form.paymentMethod === 'CASH' ? 'Cash in Hand (1010103)' : (bankAccounts.find(a => a.id === form.bankAccountId)?.name || bankAccounts.find(a => a.id === form.bankAccountId)?.accountName || 'Selected Bank Account')}</span>
+                    <span>Rs {Number(form.amount || 0).toLocaleString()}</span>
+                  </div>
+                </div>
 
                 <div>
                   <label className={labelClass}>Remarks</label>

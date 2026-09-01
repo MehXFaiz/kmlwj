@@ -8,7 +8,7 @@ import { AccountingService } from '../_services/accounting.service.js';
 import { validateAmount } from '../_utils/amount.js';
 import { isWithinMaxLength, maxLengthError } from '../_utils/text-length.js';
 import { PERMS } from '../_constants/permissions.js';
-import { isSuperAdmin, getDeletedFilter } from '../_utils/soft-delete.js';
+import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from '../_utils/soft-delete.js';
 
 function generateVoucherNumber() {
   const date = new Date();
@@ -212,7 +212,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           reference: `DON-${donation.id.substring(0, 8)}`,
           description: `Donation Given / Disbursement to ${donation.donorName || 'Beneficiary'} - ${donation.donationType === 'CUSTOM' ? ((donation as any).customDonationType || 'Custom') : donation.donationType}`,  
           module: 'Donations Given',
-          voucherType: 'BP',
+          voucherType: donation.paymentMethod === 'CASH' ? 'CP' : 'BP',
+          postingDate: donation.createdAt,
           postedBy: req.user!.id,
           ipAddress: req.headers['x-forwarded-for'] as string,
           userAgent: req.headers['user-agent']
@@ -232,7 +233,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     // Action: Create Donation
     if (!await verifyPermission(req, res, ['donations.create', PERMS.CREATE_DONATION])) return;
 
-    const { beneficiaryId, donorName, donorMobile, donationType, customDonationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks } = req.body;
+    const { beneficiaryId, donorName, donorMobile, donationType, customDonationType, amount, paymentMethod = 'BANK', bankAccountId, chequeNumber, donorBankName, remarks, date } = req.body;
 
     if (!donorName || !donationType || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: 'Missing required fields', status: 400 } });
@@ -249,8 +250,16 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
     }
     const parsedAmount = amountCheck.amount;
-    if ((paymentMethod === 'BANK' || paymentMethod === 'CHEQUE') && !bankAccountId) {
-      return res.status(400).json({ error: { message: 'Bank account is required for Bank/Cheque payment methods', status: 400 } });
+    if ((paymentMethod === 'BANK' || paymentMethod === 'CHEQUE')) {
+      if (!bankAccountId) {
+        return res.status(400).json({ error: { message: 'Bank account is required for Bank/Cheque payment methods', status: 400 } });
+      }
+      const bankAcc = await prisma.account.findFirst({
+        where: { id: bankAccountId, isDeleted: false, isLocked: false }
+      });
+      if (!bankAcc) {
+        return res.status(400).json({ error: { message: 'Selected bank account was not found or is inactive', status: 400 } });
+      }
     }
     if (paymentMethod === 'CHEQUE' && !chequeNumber) {
       return res.status(400).json({ error: { message: 'Cheque number is required for Cheque payment method', status: 400 } });
@@ -264,6 +273,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Selected recipient is invalid or out of date. Please re-select the recipient from People We Help and try again.', status: 400 } });
     }
 
+    const creationDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : new Date();
+
     const newDonation = await prisma.$transaction(async (tx) => {
       const createdDonation = await tx.donation.create({
         data: {
@@ -274,11 +285,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           customDonationType: donationType === 'CUSTOM' ? (customDonationType || null) : null,
           amount: parsedAmount,
           paymentMethod,
-          bankAccountId: bankAccountId || null,
+          bankAccountId: (paymentMethod === 'BANK' || paymentMethod === 'CHEQUE') ? (bankAccountId || null) : null,
           chequeNumber: chequeNumber || null,
           donorBankName: donorBankName || null,
           remarks: remarks || null,
           status: 'APPROVED',
+          createdAt: creationDate,
           createdById: req.user!.id,
         },
       });
@@ -301,7 +313,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             reference: `DON-${createdDonation.id.substring(0, 8)}`,
             description: `Donation Given / Disbursement to ${donorName || 'Beneficiary'} - ${donationType === 'CUSTOM' ? (customDonationType || 'Custom') : donationType}`,  
             module: 'Donations Given',
-            voucherType: 'BP',
+            voucherType: paymentMethod === 'CASH' ? 'CP' : 'BP',
+            postingDate: creationDate,
             postedBy: req.user!.id,
             ipAddress: req.headers['x-forwarded-for'] as string,
             userAgent: req.headers['user-agent']
@@ -415,7 +428,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
               reference: `DON-${updated.id.substring(0, 8)}`,
               description: `Donation Given / Disbursement to ${updated.donorName || 'Beneficiary'} - ${updated.donationType === 'CUSTOM' ? ((updated as any).customDonationType || 'Custom') : updated.donationType}`,  
               module: 'Donations Given',
-              voucherType: 'BP',
+              voucherType: updated.paymentMethod === 'CASH' ? 'CP' : 'BP',
+              postingDate: updated.createdAt,
               postedBy: req.user!.id,
               ipAddress: req.headers['x-forwarded-for'] as string,
               userAgent: req.headers['user-agent']
@@ -437,8 +451,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   if (method === 'DELETE') {
     const isPermanent = req.query.permanent === 'true' || req.query.action === 'permanent_delete' || req.body?.permanent === true;
-    if (isPermanent && !await isSuperAdmin(req)) {
-      return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can permanently delete records', status: 403 } });
+    if (isPermanent && !await isAdminOrAbove(req)) {
+      return res.status(403).json({ error: { message: 'Forbidden: Only Admin or Super Admin can permanently delete records', status: 403 } });
     }
 
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;

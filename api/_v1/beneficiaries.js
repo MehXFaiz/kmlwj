@@ -4,7 +4,7 @@ import { enforceRestrictedRolePolicy } from "../_middlewares/rbac.middleware.js"
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { PERMS } from "../_constants/permissions.js";
-import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
+import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from "../_utils/soft-delete.js";
 const ALL_FIELDS = [
   "name",
   "fatherName",

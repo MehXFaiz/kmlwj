@@ -7,7 +7,7 @@ import { AccountingService } from "../_services/accounting.service.js";
 import { validateAmount } from "../_utils/amount.js";
 import { isWithinMaxLength, maxLengthError } from "../_utils/text-length.js";
 import { PERMS } from "../_constants/permissions.js";
-import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
+import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from "../_utils/soft-delete.js";
 function generateVoucherNumber() {
   const date = /* @__PURE__ */ new Date();
   const year = date.getFullYear().toString().slice(-2);
@@ -179,7 +179,8 @@ var donations_default = makeHandler(async (req, res) => {
           reference: `DON-${donation.id.substring(0, 8)}`,
           description: `Donation Given / Disbursement to ${donation.donorName || "Beneficiary"} - ${donation.donationType === "CUSTOM" ? donation.customDonationType || "Custom" : donation.donationType}`,
           module: "Donations Given",
-          voucherType: "BP",
+          voucherType: donation.paymentMethod === "CASH" ? "CP" : "BP",
+          postingDate: donation.createdAt,
           postedBy: req.user.id,
           ipAddress: req.headers["x-forwarded-for"],
           userAgent: req.headers["user-agent"]
@@ -192,7 +193,7 @@ var donations_default = makeHandler(async (req, res) => {
       return res.status(200).json({ status: 200, data: result.approvedDonation, message: "Donation approved and journal entries created successfully" });
     }
     if (!await verifyPermission(req, res, ["donations.create", PERMS.CREATE_DONATION])) return;
-    const { beneficiaryId, donorName, donorMobile, donationType, customDonationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks } = req.body;
+    const { beneficiaryId, donorName, donorMobile, donationType, customDonationType, amount, paymentMethod = "BANK", bankAccountId, chequeNumber, donorBankName, remarks, date } = req.body;
     if (!donorName || !donationType || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: "Missing required fields", status: 400 } });
     }
@@ -204,8 +205,16 @@ var donations_default = makeHandler(async (req, res) => {
       return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
     }
     const parsedAmount = amountCheck.amount;
-    if ((paymentMethod === "BANK" || paymentMethod === "CHEQUE") && !bankAccountId) {
-      return res.status(400).json({ error: { message: "Bank account is required for Bank/Cheque payment methods", status: 400 } });
+    if (paymentMethod === "BANK" || paymentMethod === "CHEQUE") {
+      if (!bankAccountId) {
+        return res.status(400).json({ error: { message: "Bank account is required for Bank/Cheque payment methods", status: 400 } });
+      }
+      const bankAcc = await prisma.account.findFirst({
+        where: { id: bankAccountId, isDeleted: false, isLocked: false }
+      });
+      if (!bankAcc) {
+        return res.status(400).json({ error: { message: "Selected bank account was not found or is inactive", status: 400 } });
+      }
     }
     if (paymentMethod === "CHEQUE" && !chequeNumber) {
       return res.status(400).json({ error: { message: "Cheque number is required for Cheque payment method", status: 400 } });
@@ -216,6 +225,7 @@ var donations_default = makeHandler(async (req, res) => {
     if (beneficiaryId && !isValidBeneficiaryId(beneficiaryId)) {
       return res.status(400).json({ error: { message: "Selected recipient is invalid or out of date. Please re-select the recipient from People We Help and try again.", status: 400 } });
     }
+    const creationDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : /* @__PURE__ */ new Date();
     const newDonation = await prisma.$transaction(async (tx) => {
       const createdDonation = await tx.donation.create({
         data: {
@@ -226,11 +236,12 @@ var donations_default = makeHandler(async (req, res) => {
           customDonationType: donationType === "CUSTOM" ? customDonationType || null : null,
           amount: parsedAmount,
           paymentMethod,
-          bankAccountId: bankAccountId || null,
+          bankAccountId: paymentMethod === "BANK" || paymentMethod === "CHEQUE" ? bankAccountId || null : null,
           chequeNumber: chequeNumber || null,
           donorBankName: donorBankName || null,
           remarks: remarks || null,
           status: "APPROVED",
+          createdAt: creationDate,
           createdById: req.user.id
         }
       });
@@ -251,7 +262,8 @@ var donations_default = makeHandler(async (req, res) => {
             reference: `DON-${createdDonation.id.substring(0, 8)}`,
             description: `Donation Given / Disbursement to ${donorName || "Beneficiary"} - ${donationType === "CUSTOM" ? customDonationType || "Custom" : donationType}`,
             module: "Donations Given",
-            voucherType: "BP",
+            voucherType: paymentMethod === "CASH" ? "CP" : "BP",
+            postingDate: creationDate,
             postedBy: req.user.id,
             ipAddress: req.headers["x-forwarded-for"],
             userAgent: req.headers["user-agent"]
@@ -341,7 +353,8 @@ var donations_default = makeHandler(async (req, res) => {
               reference: `DON-${updated.id.substring(0, 8)}`,
               description: `Donation Given / Disbursement to ${updated.donorName || "Beneficiary"} - ${updated.donationType === "CUSTOM" ? updated.customDonationType || "Custom" : updated.donationType}`,
               module: "Donations Given",
-              voucherType: "BP",
+              voucherType: updated.paymentMethod === "CASH" ? "CP" : "BP",
+              postingDate: updated.createdAt,
               postedBy: req.user.id,
               ipAddress: req.headers["x-forwarded-for"],
               userAgent: req.headers["user-agent"]

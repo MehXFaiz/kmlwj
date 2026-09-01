@@ -8,7 +8,7 @@ import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { FundValidationService } from "../_services/fund-validation.service.js";
 import { PERMS } from "../_constants/permissions.js";
-import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
+import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from "../_utils/soft-delete.js";
 const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };
 var journal_entries_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
@@ -38,8 +38,7 @@ var journal_entries_default = makeHandler(async (req, res) => {
       whereClause.subsidiary = subsidiary;
     }
     if (type) {
-      // Support comma-separated types (e.g. "BP,CP")
-      const types = String(type).split(',').map((t) => t.trim()).filter(Boolean);
+      const types = String(type).split(",").map((t) => t.trim()).filter(Boolean);
       whereClause.voucherType = types.length === 1 ? types[0] : { in: types };
     }
     const [entries, total] = await Promise.all([

@@ -5,7 +5,7 @@ import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { PERMS } from "../_constants/permissions.js";
-import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
+import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from "../_utils/soft-delete.js";
 import { validateAmount } from "../_utils/amount.js";
 const CARD_NO_PREFIX = "ZK-";
 async function nextCardNumber(tx) {

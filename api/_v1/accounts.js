@@ -6,7 +6,7 @@ import { logAudit } from "../_utils/audit.js";
 import { compareCodes } from "../_utils/code-compare.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { loadPermissions } from "../_services/permission.service.js";
-import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
+import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from "../_utils/soft-delete.js";
 var accounts_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
