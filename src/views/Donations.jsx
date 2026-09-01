@@ -58,6 +58,15 @@ function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
     }
   }, [initial, form.paymentMethod, form.bankAccountId, bankAccounts]);
 
+  const selectedBank = useMemo(() => {
+    if (!form.bankAccountId) return null;
+    return bankAccounts.find(a => a.id === form.bankAccountId) || null;
+  }, [form.bankAccountId, bankAccounts]);
+
+  const bankBalance = selectedBank ? (selectedBank.currentBalance ?? selectedBank.balance ?? 0) : 0;
+  const numAmount = Number(form.amount || 0);
+  const isInsufficient = (form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && numAmount > 0 && numAmount > bankBalance;
+
   if (!isOpen) return null;
 
   const handleSave = () => {
@@ -66,7 +75,7 @@ function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
       return;
     }
     if (!/^[a-zA-Z\s.]{3,50}$/.test(form.donorName)) {
-      showToast('Donor Name must contain only letters, spaces and dots (3-50 characters).', 'warning');
+      showToast('Recipient / Beneficiary Name must contain only letters, spaces and dots (3-50 characters).', 'warning');
       return;
     }
     if (form.donorMobile && !/^((\+92|92|0)?3[0-9]{2}-?[0-9]{7})$/.test(form.donorMobile)) {
@@ -77,8 +86,16 @@ function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
       showToast('Amount must be a positive number with up to 2 decimal places.', 'warning');
       return;
     }
+    if (form.donationType === 'MONTHLY' && form.paymentMethod === 'CASH') {
+      showToast('Monthly donation disbursements must be paid from a Bank Account.', 'warning');
+      return;
+    }
     if ((form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && !form.bankAccountId) {
       showToast('Bank Account is required.', 'warning');
+      return;
+    }
+    if (isInsufficient) {
+      showToast(`Insufficient Bank Balance. Available: Rs ${bankBalance.toLocaleString()}, Required: Rs ${numAmount.toLocaleString()}`, 'error');
       return;
     }
     if (form.paymentMethod === 'CHEQUE' && !form.chequeNumber) {
@@ -220,11 +237,29 @@ function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
                 </div>
                 <div className="p-4 space-y-3">
                   <div>
-                    <label className={labelClass}>Payment Method *</label>
-                    <select value={form.paymentMethod} onChange={e => setForm(f => ({ ...f, paymentMethod: e.target.value, bankAccountId: '', chequeNumber: '', donorBankName: '' }))} className={inputClass}>
-                      {['BANK', 'CASH', 'CHEQUE'].map(t => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className={labelClass}>Payment Method *</label>
+                      {form.donationType === 'MONTHLY' && (
+                        <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                          Bank Required for Monthly Aid
+                        </span>
+                      )}
+                    </div>
+                    <select
+                      value={form.paymentMethod}
+                      disabled={form.donationType === 'MONTHLY'}
+                      onChange={e => setForm(f => ({ ...f, paymentMethod: e.target.value, bankAccountId: '', chequeNumber: '', donorBankName: '' }))}
+                      className={inputClass}
+                    >
+                      {form.donationType === 'MONTHLY' ? (
+                        ['BANK', 'CHEQUE'].map(t => (
+                          <option key={t} value={t}>{t}</option>
+                        ))
+                      ) : (
+                        ['BANK', 'CASH', 'CHEQUE'].map(t => (
+                          <option key={t} value={t}>{t}</option>
+                        ))
+                      )}
                     </select>
                   </div>
 
@@ -236,7 +271,9 @@ function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
                           className={inputClass}>
                           <option value="">Select Bank Account</option>
                           {bankAccounts.map(a => (
-                            <option key={a.id} value={a.id}>{a.accountName || a.name} {a.glCode || a.code ? `(${a.glCode || a.code})` : ''}</option>
+                            <option key={a.id} value={a.id}>
+                              {a.accountName || a.name} {a.glCode || a.code ? `(${a.glCode || a.code})` : ''} • Bal: Rs {Number(a.currentBalance || 0).toLocaleString()}
+                            </option>
                           ))}
                         </select>
                       </div>
@@ -245,6 +282,30 @@ function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
                         <input value={form.chequeNumber} onChange={e => setForm(f => ({ ...f, chequeNumber: e.target.value }))}
                           placeholder={form.paymentMethod === 'CHEQUE' ? 'CHQ-001' : 'REF-001'} className={inputClass} />
                       </div>
+                    </div>
+                  )}
+
+                  {/* Live Bank Balance Status Banner */}
+                  {selectedBank && (form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && (
+                    <div>
+                      {isInsufficient ? (
+                        <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-500/40 text-xs text-rose-200 flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                          <div className="text-[11px]">
+                            <strong className="text-rose-300">Insufficient Funds:</strong> Available: Rs {bankBalance.toLocaleString()}, Required: Rs {numAmount.toLocaleString()}
+                          </div>
+                        </div>
+                      ) : numAmount > 0 ? (
+                        <div className="p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-xs text-emerald-200 flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 text-[11px]">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                            <span>Balance OK: Rs {bankBalance.toLocaleString()}</span>
+                          </div>
+                          <span className="text-[10px] text-emerald-400/90 font-mono">
+                            Remaining: Rs {(bankBalance - numAmount).toLocaleString()}
+                          </span>
+                        </div>
+                      ) : null}
                     </div>
                   )}
 

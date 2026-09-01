@@ -121,13 +121,22 @@ export const DonationForm = () => {
     }
   }, [id, form.paymentMethod, form.bankAccountId, bankAccounts]);
 
+  const selectedBank = useMemo(() => {
+    if (!form.bankAccountId) return null;
+    return bankAccounts.find(a => a.id === form.bankAccountId) || null;
+  }, [form.bankAccountId, bankAccounts]);
+
+  const bankBalance = selectedBank ? (selectedBank.currentBalance ?? selectedBank.balance ?? 0) : 0;
+  const numAmount = Number(form.amount || 0);
+  const isInsufficient = (form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && numAmount > 0 && numAmount > bankBalance;
+
   const handleSave = async (e) => {
     e.preventDefault();
     if (!form.donorName || !form.amount || !form.paymentMethod) {
       showToast('Please fill in all required fields.', 'warning'); return;
     }
     if (!/^[a-zA-Z\s.]{3,50}$/.test(form.donorName)) {
-      showToast('Donor Name must contain only letters, spaces and dots (3-50 characters).', 'warning'); return;
+      showToast('Recipient / Beneficiary Name must contain only letters, spaces and dots (3-50 characters).', 'warning'); return;
     }
     if (form.donorMobile && !/^((\+92|92|0)?3[0-9]{2}-?[0-9]{7})$/.test(form.donorMobile)) {
       showToast('Invalid Mobile Number. E.g. 0300-1234567', 'warning'); return;
@@ -138,8 +147,14 @@ export const DonationForm = () => {
     if (Number(form.amount) > 100000000) {
       showToast('Amount cannot exceed 100,000,000.', 'warning'); return;
     }
+    if (form.donationType === 'MONTHLY' && form.paymentMethod === 'CASH') {
+      showToast('Monthly donation disbursements must be paid from a Bank Account.', 'warning'); return;
+    }
     if ((form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && !form.bankAccountId) {
       showToast('Bank Account is required.', 'warning'); return;
+    }
+    if (isInsufficient) {
+      showToast(`Insufficient Bank Balance. Available: Rs ${bankBalance.toLocaleString()}, Required: Rs ${numAmount.toLocaleString()}`, 'error'); return;
     }
     if (form.paymentMethod === 'CHEQUE' && !form.chequeNumber) {
       showToast('Cheque number is required.', 'warning'); return;
@@ -155,10 +170,10 @@ export const DonationForm = () => {
     try {
       if (id) {
         await updateDonation(id, form);
-        showToast('Donation updated successfully!', 'success');
+        showToast('Disbursement updated successfully!', 'success');
       } else {
         await addDonation(form);
-        showToast('Donation logged successfully!', 'success');
+        showToast('Monthly Aid / Disbursement logged successfully!', 'success');
       }
       setTimeout(() => navigate('/donations'), 1200);
     } catch (err) {
@@ -434,13 +449,29 @@ export const DonationForm = () => {
               </div>
               <div className="p-5 space-y-4">
                 <div>
-                  <label className={labelClass}>Payment Method *</label>
-                  <select value={form.paymentMethod}
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className={labelClass}>Payment Method *</label>
+                    {form.donationType === 'MONTHLY' && (
+                      <span className="text-[11px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                        Bank Required for Monthly Aid
+                      </span>
+                    )}
+                  </div>
+                  <select
+                    value={form.paymentMethod}
+                    disabled={form.donationType === 'MONTHLY'}
                     onChange={e => setForm(f => ({ ...f, paymentMethod: e.target.value, bankAccountId: '', chequeNumber: '', donorBankName: '' }))}
-                    className={inputClass}>
-                    {['BANK', 'CASH', 'CHEQUE'].map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
+                    className={inputClass}
+                  >
+                    {form.donationType === 'MONTHLY' ? (
+                      ['BANK', 'CHEQUE'].map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))
+                    ) : (
+                      ['BANK', 'CASH', 'CHEQUE'].map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))
+                    )}
                   </select>
                 </div>
 
@@ -452,7 +483,9 @@ export const DonationForm = () => {
                         className={inputClass}>
                         <option value="">Select Bank Account</option>
                         {bankAccounts.map(a => (
-                          <option key={a.id} value={a.id}>{a.name || a.accountName} {a.code ? `(${a.code})` : ''}</option>
+                          <option key={a.id} value={a.id}>
+                            {a.name || a.accountName} {a.code ? `(${a.code})` : ''} • Bal: Rs {Number(a.currentBalance || 0).toLocaleString()}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -461,6 +494,38 @@ export const DonationForm = () => {
                       <input value={form.chequeNumber} onChange={e => setForm(f => ({ ...f, chequeNumber: e.target.value }))}
                         placeholder={form.paymentMethod === 'CHEQUE' ? 'CHQ-001' : 'REF-001'} className={inputClass} />
                     </div>
+                  </div>
+                )}
+
+                {/* Live Bank Balance Status Banner */}
+                {selectedBank && (form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && (
+                  <div>
+                    {isInsufficient ? (
+                      <div className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-500/40 text-xs text-rose-200 flex items-center gap-3 shadow-inner">
+                        <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+                        <div>
+                          <div className="font-bold text-rose-300">Insufficient Bank Balance!</div>
+                          <div className="text-[11px] text-rose-300/90 mt-0.5">
+                            Selected Bank ({selectedBank.name || selectedBank.accountName}) has <strong>Rs {bankBalance.toLocaleString()}</strong> available, but disbursement requires <strong>Rs {numAmount.toLocaleString()}</strong>.
+                          </div>
+                        </div>
+                      </div>
+                    ) : numAmount > 0 ? (
+                      <div className="p-3.5 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-xs text-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-inner">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span>Bank Balance Verified: <strong>Rs {bankBalance.toLocaleString()}</strong> available in {selectedBank.name || selectedBank.accountName}</span>
+                        </div>
+                        <span className="text-[11px] text-emerald-400/90 font-mono bg-emerald-900/40 px-2.5 py-1 rounded-lg border border-emerald-500/30">
+                          Remaining: Rs {(bankBalance - numAmount).toLocaleString()}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+                        <span>Selected Bank Available Balance:</span>
+                        <strong className="text-amber-400 font-mono">Rs {bankBalance.toLocaleString()}</strong>
+                      </div>
+                    )}
                   </div>
                 )}
 

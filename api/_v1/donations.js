@@ -205,6 +205,14 @@ var donations_default = makeHandler(async (req, res) => {
       return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
     }
     const parsedAmount = amountCheck.amount;
+    if (donationType === "MONTHLY") {
+      if (paymentMethod === "CASH") {
+        return res.status(400).json({ error: { message: "Monthly donation disbursements must be paid from a Bank Account. Please select Bank as the payment method.", status: 400 } });
+      }
+      if (!bankAccountId) {
+        return res.status(400).json({ error: { message: "Bank account is required for Monthly donation disbursements.", status: 400 } });
+      }
+    }
     if (paymentMethod === "BANK" || paymentMethod === "CHEQUE") {
       if (!bankAccountId) {
         return res.status(400).json({ error: { message: "Bank account is required for Bank/Cheque payment methods", status: 400 } });
