@@ -358,8 +358,8 @@ var donations_default = makeHandler(async (req, res) => {
   }
   if (method === "DELETE") {
     const isPermanent = req.query.permanent === "true" || req.query.action === "permanent_delete" || req.body?.permanent === true;
-    if (isPermanent && !await isSuperAdmin(req)) {
-      return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can permanently delete records", status: 403 } });
+    if (isPermanent && !await isAdminOrAbove(req)) {
+      return res.status(403).json({ error: { message: "Forbidden: Only Admin or Super Admin can permanently delete records", status: 403 } });
     }
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
     if (!idsRaw) {

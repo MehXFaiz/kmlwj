@@ -255,8 +255,8 @@ var zakat_cards_default = makeHandler(async (req, res) => {
   }
   if (method === "DELETE") {
     const isPermanent = req.query.permanent === "true" || req.query.action === "permanent_delete" || req.body?.permanent === true;
-    if (isPermanent && !await isSuperAdmin(req)) {
-      return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can permanently delete records", status: 403 } });
+    if (isPermanent && !await isAdminOrAbove(req)) {
+      return res.status(403).json({ error: { message: "Forbidden: Only Admin or Super Admin can permanently delete records", status: 403 } });
     }
     const targetId = id || req.body?.id;
     if (!targetId) return res.status(400).json({ error: { message: "Card ID is required", status: 400 } });

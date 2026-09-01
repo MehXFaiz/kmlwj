@@ -169,8 +169,8 @@ var income_categories_default = makeHandler(async (req, res) => {
     }
     const isPermanent = req.query.permanent === "true" || req.query.action === "permanent_delete" || req.body?.permanent === true;
     if (isPermanent) {
-      if (!await isSuperAdmin(req)) {
-        return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can permanently delete records", status: 403 } });
+      if (!isAdminOrSuperAdmin) {
+        return res.status(403).json({ error: { message: "Forbidden: Only Admin or Super Admin can permanently delete records", status: 403 } });
       }
       await prisma.incomeCategory.delete({ where: { id } });
       await logAudit(req.user.id, "Permanent Delete Income Category", "Add Income", existing, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
