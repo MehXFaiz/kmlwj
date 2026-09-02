@@ -13,10 +13,12 @@ export const canUserEditOrDelete = (isPrivileged, permissions = [], module = nul
   return checkPerm(permissions, isPrivileged, module, 'update') || checkPerm(permissions, isPrivileged, module, 'delete');
 };
 
-export const canUserPostToLedger = (isPrivileged, permissions = [], module = null) => {
+export const canUserPostToLedger = (isPrivileged, permissions = [], module = null, role = null) => {
   if (isPrivileged === true) return true;
-  if (!module) return false;
-  return checkPerm(permissions, isPrivileged, module, 'post');
+  const roleName = typeof role === 'string' ? role : (role?.name || '');
+  if (roleName === 'Super Admin' || roleName === 'Admin' || roleName === 'Accountant' || roleName?.toLowerCase().includes('accountant')) return true;
+  if (!module) return true;
+  return checkPerm(permissions, isPrivileged, module, 'post', role);
 };
 
 export const useAuthStore = create((set, get) => {
@@ -64,13 +66,13 @@ export const useAuthStore = create((set, get) => {
 
       // Two-argument form: hasPermission(module, action)
       if (action !== undefined) {
-        return checkPerm(state.permissionsList, state.isPrivileged, moduleOrPerm, action);
+        return checkPerm(state.permissionsList, state.isPrivileged, moduleOrPerm, action, state.role || state.user?.role);
       }
 
       // Single argument: dot-notation string like 'donations.view'
       if (typeof moduleOrPerm === 'string' && moduleOrPerm.includes('.')) {
         const [mod, act] = moduleOrPerm.split('.');
-        return checkPerm(state.permissionsList, state.isPrivileged, mod, act);
+        return checkPerm(state.permissionsList, state.isPrivileged, mod, act, state.role || state.user?.role);
       }
 
 
@@ -111,8 +113,11 @@ export const useAuthStore = create((set, get) => {
 
     checkCanPostToLedger: (moduleKey) => {
       const state = get();
+      const roleName = state.role || state.user?.role || '';
+      const isAccountant = roleName === 'Accountant' || roleName?.toLowerCase?.().includes('accountant');
+      if (state.isPrivileged || isAccountant) return true;
       if (moduleKey) return state.hasPermission(moduleKey, 'post');
-      return state.isPrivileged;
+      return state.canPostToLedger;
     },
 
     clearError: () => set({ error: null }),
@@ -150,6 +155,9 @@ export const useAuthStore = create((set, get) => {
           themePreference: userRecord.themePreference || payload.themePreference || 'system',
         };
 
+        const isAccountant = roleName === 'Accountant' || roleObj?.name === 'Accountant' || roleName?.toLowerCase?.().includes('accountant');
+        const canPost = privileged || isAccountant || permsList.some(p => p.action === 'post') || rawPerms.includes('POST_JOURNAL') || rawPerms.includes('POST_LEDGER') || rawPerms.includes('ledger.post');
+
         set({
           user: normalizedUser,
           role: roleName,
@@ -160,7 +168,7 @@ export const useAuthStore = create((set, get) => {
           rawPermissions: rawPerms,
           modulePermissions: modPerms,
           canEditOrDelete: privileged,
-          canPostToLedger: privileged,
+          canPostToLedger: canPost,
           isAuthenticated: true,
           loading: false,
         });
@@ -218,6 +226,9 @@ export const useAuthStore = create((set, get) => {
           themePreference: userRecord.themePreference || payload.themePreference || 'system',
         };
 
+        const isAccountant = roleName === 'Accountant' || roleObj?.name === 'Accountant' || roleName?.toLowerCase?.().includes('accountant');
+        const canPost = privileged || isAccountant || permsList.some(p => p.action === 'post') || rawPerms.includes('POST_JOURNAL') || rawPerms.includes('POST_LEDGER') || rawPerms.includes('ledger.post');
+
         set({
           user: normalizedUser,
           role: roleName,
@@ -228,7 +239,7 @@ export const useAuthStore = create((set, get) => {
           rawPermissions: rawPerms,
           modulePermissions: modPerms,
           canEditOrDelete: privileged,
-          canPostToLedger: privileged,
+          canPostToLedger: canPost,
           isAuthenticated: true,
           loading: false,
         });

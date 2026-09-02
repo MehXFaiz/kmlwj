@@ -6,12 +6,13 @@ import { PlusCircle, Search, X, CheckCircle2, TrendingUp, Building2, Banknote, P
 import { paymentMethodLabel } from '../constants/paymentMethods';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolver';
+import { formatDateDDMMYYYY, getLocalDateString } from '../utils/dateUtils';
 
 function IncomeModal({ isOpen, onClose, onSave, revenueHeads, accounts }) {
-  const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], revenueHeadId: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
+  const [form, setForm] = useState({ date: getLocalDateString(new Date()), revenueHeadId: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
 
   useEffect(() => {
-    if (isOpen) setForm({ date: new Date().toISOString().split('T')[0], revenueHeadId: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
+    if (isOpen) setForm({ date: getLocalDateString(new Date()), revenueHeadId: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -188,7 +189,7 @@ export const Income = () => {
                 {filteredIncomes.map((inc) => (
                   <tr key={inc.id} className="hover:bg-slate-800/20 transition-colors">
                     <td className="py-3 px-4 text-xs text-slate-400 whitespace-nowrap">
-                      {new Date(inc.date).toLocaleDateString()}
+                      {formatDateDDMMYYYY(inc.date)}
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">

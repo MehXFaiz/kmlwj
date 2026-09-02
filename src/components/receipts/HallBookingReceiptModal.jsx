@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import logoImg from '../../assets/logo.png';
+import { formatDateDDMMYYYY, getDayNameUrdu, getDayNameEnglish } from '../../utils/dateUtils';
 
 const numberToWordsPKR = (num) => {
   if (!num || isNaN(num) || Number(num) === 0) return 'Zero Rupees Only';
@@ -52,32 +53,6 @@ const numberToWordsPKR = (num) => {
   if (hundredRem > 0) str += threeDigitsToWords(hundredRem);
 
   return str.replace(/\s+/g, ' ').trim() + ' Rupees Only';
-};
-
-const formatDateDDMMYYYY = (dateVal) => {
-  if (!dateVal) return '—';
-  const d = new Date(dateVal);
-  if (isNaN(d)) return '—';
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const year = d.getFullYear();
-  return `${day}/${month}/${year}`;
-};
-
-const getDayNameUrdu = (dateVal) => {
-  if (!dateVal) return '';
-  const d = new Date(dateVal);
-  if (isNaN(d)) return '';
-  const daysUrdu = ['اتوار', 'پیر', 'منگل', 'بدھ', 'جمعرات', 'جمعہ', 'ہفتہ'];
-  return daysUrdu[d.getDay()];
-};
-
-const getDayNameEnglish = (dateVal) => {
-  if (!dateVal) return '';
-  const d = new Date(dateVal);
-  if (isNaN(d)) return '';
-  const daysEnglish = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  return daysEnglish[d.getDay()];
 };
 
 const format12HourTime = (timeVal) => {

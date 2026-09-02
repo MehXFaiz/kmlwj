@@ -14,11 +14,116 @@ import { pageActionsClass } from '../components/common/responsive';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { paymentMethodLabel } from '../constants/paymentMethods';
+import { formatDateDDMMYYYY, getLocalDateString } from '../utils/dateUtils';
 
+<<<<<<< HEAD
 function BeneficiaryBreakdownModal({ donation, isOpen, onClose }) {
   if (!isOpen || !donation) return null;
   const beneficiaries = donation.beneficiaries || [];
   const isZakat = String(donation.donationType).toUpperCase().includes('ZAKAT');
+=======
+// Replace null DB values with '' so controlled inputs stay controlled
+const nullsToEmpty = (obj) =>
+  Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === null ? '' : v]));
+
+const DEFAULT_DONATION = { donorName: '', donorMobile: '', donationType: 'ZAKAT', amount: '', paymentMethod: 'BANK', bankAccountId: '', chequeNumber: '', donorBankName: '', remarks: '', customDonationType: '', date: getLocalDateString(new Date()) };
+
+function DonationModal({ isOpen, onClose, onSave, initial, accounts }) {
+  const [form, setForm] = useState(
+    initial ? nullsToEmpty(initial) : DEFAULT_DONATION
+  );
+
+  const bankAccounts = useMemo(() => {
+    return (accounts || []).filter(a => {
+      if (a.isLocked || a.isDeleted) return false;
+      const nameLower = (a.name || a.accountName || '').toLowerCase();
+      const detailLower = (a.detailType || '').toLowerCase();
+      if (detailLower === 'bank') return true;
+      if (a.code === '1010101' || a.code === '1010102' || a.glCode === '1010101' || a.glCode === '1010102') return true;
+      if (nameLower.includes('bank') || nameLower.includes('nbp') || nameLower.includes('mcb') || nameLower.includes('hbl') || nameLower.includes('ubl') || nameLower.includes('habib') || nameLower.includes('allied') || nameLower.includes('faysal') || nameLower.includes('alfalah') || nameLower.includes('meezan') || nameLower.includes('soneri') || nameLower.includes('askari') || nameLower.includes('js bank') || nameLower.includes('bop') || nameLower.includes('dubai islamic')) {
+        return true;
+      }
+      return false;
+    });
+  }, [accounts]);
+
+  useEffect(() => {
+    if (isOpen) {
+      const baseForm = initial ? nullsToEmpty({
+        ...initial,
+        date: initial.createdAt ? new Date(initial.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+      }) : {
+        ...DEFAULT_DONATION,
+        bankAccountId: bankAccounts[0]?.id || ''
+      };
+      setForm(baseForm);
+    }
+  }, [isOpen, initial, bankAccounts]);
+
+  useEffect(() => {
+    if (!initial && (form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && !form.bankAccountId && bankAccounts.length > 0) {
+      setForm(f => ({ ...f, bankAccountId: bankAccounts[0].id }));
+    }
+  }, [initial, form.paymentMethod, form.bankAccountId, bankAccounts]);
+
+  const selectedBank = useMemo(() => {
+    if (!form.bankAccountId) return null;
+    return bankAccounts.find(a => a.id === form.bankAccountId) || null;
+  }, [form.bankAccountId, bankAccounts]);
+
+  const bankBalance = selectedBank ? (selectedBank.currentBalance ?? selectedBank.balance ?? 0) : 0;
+  const numAmount = Number(form.amount || 0);
+  const isInsufficient = (form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && numAmount > 0 && numAmount > bankBalance;
+
+  if (!isOpen) return null;
+
+  const handleSave = () => {
+    if (!form.donorName || !form.amount || !form.paymentMethod) {
+      showToast('Please fill in all required fields.', 'warning');
+      return;
+    }
+    if (!/^[a-zA-Z\s.]{3,50}$/.test(form.donorName)) {
+      showToast('Recipient / Beneficiary Name must contain only letters, spaces and dots (3-50 characters).', 'warning');
+      return;
+    }
+    if (form.donorMobile && !/^((\+92|92|0)?3[0-9]{2}-?[0-9]{7})$/.test(form.donorMobile)) {
+      showToast('Invalid Mobile Number. E.g. 0300-1234567', 'warning');
+      return;
+    }
+    if (!/^[1-9]\d*(\.\d{1,2})?$/.test(form.amount)) {
+      showToast('Amount must be a positive number with up to 2 decimal places.', 'warning');
+      return;
+    }
+    if (form.donationType === 'MONTHLY' && form.paymentMethod === 'CASH') {
+      showToast('Monthly donation disbursements must be paid from a Bank Account.', 'warning');
+      return;
+    }
+    if ((form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && !form.bankAccountId) {
+      showToast('Bank Account is required.', 'warning');
+      return;
+    }
+    if (isInsufficient) {
+      showToast(`Insufficient Bank Balance. Available: Rs ${bankBalance.toLocaleString()}, Required: Rs ${numAmount.toLocaleString()}`, 'error');
+      return;
+    }
+    if (form.paymentMethod === 'CHEQUE' && !form.chequeNumber) {
+      showToast('Cheque number is required.', 'warning');
+      return;
+    }
+    if (form.paymentMethod === 'CHEQUE' && form.chequeNumber && !/^[0-9]{6,20}$/.test(form.chequeNumber)) {
+      showToast('Cheque number must be between 6 and 20 digits.', 'warning');
+      return;
+    }
+    if (form.donationType === 'CUSTOM' && !form.customDonationType?.trim()) {
+      showToast('Custom Donation / Aid Type is required when "Custom" is selected.', 'warning');
+      return;
+    }
+    onSave({ ...form });
+  };
+
+  const inputClass = 'w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 transition-all font-medium';
+  const labelClass = 'block text-xs font-semibold text-slate-400 mb-1.5';
+>>>>>>> febbad100121eaf83047003e34ac7932fa78c2c9
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -56,8 +161,188 @@ function BeneficiaryBreakdownModal({ donation, isOpen, onClose }) {
                   Rs. {Number(b.amount || 0).toLocaleString()}
                 </span>
               </div>
+<<<<<<< HEAD
             ))
           )}
+=======
+            </div>
+
+            {/* Right: Form Cards */}
+            <div className="sm:col-span-8 space-y-4">
+
+              {/* Card 01: Donor Details */}
+              <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
+                  <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">01</span>
+                  <h4 className="text-sm font-semibold text-slate-200">Recipient & Amount</h4>
+                </div>
+                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelClass}>Recipient / Person Name *</label>
+                    <input type="text" value={form.donorName} onChange={e => setForm(f => ({ ...f, donorName: e.target.value }))}
+                      placeholder="E.g. Muhammad Ali" className={inputClass} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Recipient Mobile</label>
+                    <input type="text" value={form.donorMobile} onChange={e => setForm(f => ({ ...f, donorMobile: e.target.value }))}
+                      placeholder="E.g. 0300-1234567" className={inputClass} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Donation / Aid Type *</label>
+                    <select
+                      value={form.donationType}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setForm(f => ({ ...f, donationType: val, customDonationType: val !== 'CUSTOM' ? '' : f.customDonationType }));
+                      }}
+                      className={inputClass}>
+                      {DONATION_TYPES.map(t => (
+                        <option key={t.value} value={t.value}>{t.label}</option>
+                      ))}
+                    </select>
+                    {form.donationType === 'CUSTOM' && (
+                      <div className="mt-2">
+                        <input
+                          type="text"
+                          required
+                          value={form.customDonationType || ''}
+                          onChange={e => setForm(f => ({ ...f, customDonationType: e.target.value }))}
+                          placeholder="Enter Donation / Aid Type"
+                          className={`${inputClass} border-amber-500/50`}
+                        />
+                        <p className="text-[11px] text-slate-500 mt-1">e.g. Water Filter Assistance</p>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className={labelClass}>Amount (PKR) *</label>
+                    <input type="number" min="0" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+                      placeholder="10000" className={inputClass} />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className={labelClass}>Donation Date *</label>
+                    <input type="date" value={form.date || ''} onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+                      className={inputClass} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 02: Payment */}
+              <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
+                  <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">02</span>
+                  <h4 className="text-sm font-semibold text-slate-200">Payment & Bank Source</h4>
+                </div>
+                <div className="p-4 space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className={labelClass}>Payment Method *</label>
+                      {form.donationType === 'MONTHLY' && (
+                        <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                          Bank Required for Monthly Aid
+                        </span>
+                      )}
+                    </div>
+                    <select
+                      value={form.paymentMethod}
+                      disabled={form.donationType === 'MONTHLY'}
+                      onChange={e => setForm(f => ({ ...f, paymentMethod: e.target.value, bankAccountId: '', chequeNumber: '', donorBankName: '' }))}
+                      className={inputClass}
+                    >
+                      {form.donationType === 'MONTHLY' ? (
+                        ['BANK', 'CHEQUE'].map(t => (
+                          <option key={t} value={t}>{t}</option>
+                        ))
+                      ) : (
+                        ['BANK', 'CASH', 'CHEQUE'].map(t => (
+                          <option key={t} value={t}>{t}</option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+
+                  {(form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className={labelClass}>Bank Account *</label>
+                        <select value={form.bankAccountId} onChange={e => setForm(f => ({ ...f, bankAccountId: e.target.value }))}
+                          className={inputClass}>
+                          <option value="">Select Bank Account</option>
+                          {bankAccounts.map(a => (
+                            <option key={a.id} value={a.id}>
+                              {a.accountName || a.name} {a.glCode || a.code ? `(${a.glCode || a.code})` : ''} • Bal: Rs {Number(a.currentBalance || 0).toLocaleString()}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelClass}>{form.paymentMethod === 'CHEQUE' ? 'Cheque Number *' : 'Reference / Slip Number'}</label>
+                        <input value={form.chequeNumber} onChange={e => setForm(f => ({ ...f, chequeNumber: e.target.value }))}
+                          placeholder={form.paymentMethod === 'CHEQUE' ? 'CHQ-001' : 'REF-001'} className={inputClass} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Live Bank Balance Status Banner */}
+                  {selectedBank && (form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && (
+                    <div>
+                      {isInsufficient ? (
+                        <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-500/40 text-xs text-rose-200 flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                          <div className="text-[11px]">
+                            <strong className="text-rose-300">Insufficient Funds:</strong> Available: Rs {bankBalance.toLocaleString()}, Required: Rs {numAmount.toLocaleString()}
+                          </div>
+                        </div>
+                      ) : numAmount > 0 ? (
+                        <div className="p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-xs text-emerald-200 flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 text-[11px]">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                            <span>Balance OK: Rs {bankBalance.toLocaleString()}</span>
+                          </div>
+                          <span className="text-[10px] text-emerald-400/90 font-mono">
+                            Remaining: Rs {(bankBalance - numAmount).toLocaleString()}
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+
+                  {/* Accounting Impact Preview */}
+                  <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs space-y-1">
+                    <div className="font-semibold text-slate-400">GL Accounting Entry:</div>
+                    <div className="flex items-center justify-between text-emerald-400 font-mono">
+                      <span>DR: Donation Expense</span>
+                      <span>Rs {Number(form.amount || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-blue-400 font-mono">
+                      <span>CR: {form.paymentMethod === 'CASH' ? 'Cash in Hand (1010103)' : (bankAccounts.find(a => a.id === form.bankAccountId)?.accountName || bankAccounts.find(a => a.id === form.bankAccountId)?.name || 'Selected Bank Account')}</span>
+                      <span>Rs {Number(form.amount || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  {(form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && (
+                    <div>
+                      <label className={labelClass}>Donor Bank (Pakistani Banks)</label>
+                      <select value={form.donorBankName} onChange={e => setForm(f => ({ ...f, donorBankName: e.target.value }))} className={inputClass}>
+                        <option value="">Select Bank (Optional)</option>
+                        {['National Bank of Pakistan (NBP)', 'United Bank Limited (UBL)', 'MCB Bank', 'Allied Bank Limited (ABL)', 'Bank Alfalah', 'Standard Chartered Bank', 'Askari Bank', 'Bank AL Habib', 'Faysal Bank', 'Soneri Bank', 'Bank of Punjab (BOP)', 'JS Bank', 'Dubai Islamic Bank', 'Al Baraka Bank', 'Bank Islami', 'Sindh Bank', 'Habib Metropolitan Bank', 'First Women Bank', 'Samba Bank', 'Silkbank', 'Summit Bank'].map(b => (
+                          <option key={b} value={b}>{b}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className={labelClass}>Remarks</label>
+                    <textarea value={form.remarks} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))}
+                      className={`${inputClass} h-20 resize-none`} />
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+>>>>>>> febbad100121eaf83047003e34ac7932fa78c2c9
         </div>
 
         <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs font-bold">
@@ -559,8 +844,63 @@ export const Donations = () => {
                     </div>
                   </div>
                 </div>
+<<<<<<< HEAD
               );
             })}
+=======
+
+                {/* Card Footer: Date & Action Icons */}
+                <div className="flex items-center justify-between gap-2 pt-3.5 border-t border-slate-800/80">
+                  <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" /> {formatDateDDMMYYYY(d.createdAt || d.date)}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {canPrint && (
+                      <button
+                        type="button"
+                        onClick={() => setPrintDonation(d)}
+                        className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                        title="Print Voucher Slip"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {d.status === 'PENDING' && canPost && (
+                      <button
+                        type="button"
+                        onClick={() => setApproveId(d.id)}
+                        className="px-3 py-1.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-bold text-xs transition-all cursor-pointer shadow-sm"
+                        title="Post to Ledger"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Post
+                      </button>
+                    )}
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/donations/edit/${d.id}`)}
+                        className="w-8 h-8 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                        title="Edit Aid Disbursement"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        type="button"
+                        onClick={() => setDeleteId(d.id)}
+                        className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                        title="Delete Disbursement"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                </div>
+              </div>
+            ))}
+>>>>>>> febbad100121eaf83047003e34ac7932fa78c2c9
           </div>
         )}
       </div>

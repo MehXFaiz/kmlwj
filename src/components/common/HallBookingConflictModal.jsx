@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle, Calendar, X, ArrowRight } from 'lucide-react';
+import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 
 export default function HallBookingConflictModal({ isOpen, onClose, onChooseAnotherDate, conflictInfo }) {
   if (!isOpen) return null;
@@ -54,14 +55,7 @@ export default function HallBookingConflictModal({ isOpen, onClose, onChooseAnot
                 <span className="text-slate-400">Reserved Date:</span>
                 <span className="font-bold text-red-400 flex items-center gap-1">
                   <Calendar className="h-3 w-3 inline" />
-                  {conflictInfo.bookingDate ? (() => {
-                    const d = new Date(conflictInfo.bookingDate);
-                    if (isNaN(d.getTime())) return 'N/A';
-                    const day = String(d.getDate()).padStart(2, '0');
-                    const month = String(d.getMonth() + 1).padStart(2, '0');
-                    const year = d.getFullYear();
-                    return `${day}/${month}/${year}`;
-                  })() : 'N/A'}
+                  {formatDateDDMMYYYY(conflictInfo.bookingDate)}
                 </span>
               </div>
               {conflictInfo.bookedBy && (

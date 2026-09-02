@@ -10,16 +10,7 @@ import { showToast, ToastPlaceholder } from '../components/ui/Toast';
 import { handleDeleteError } from '../utils/deleteHandler';
 import { MobileOnly, DesktopOnly } from '../components/common/responsive';
 import logoImg from '../assets/logo.png';
-
-const formatDateDDMMYYYY = (dateVal) => {
-  if (!dateVal) return '—';
-  const d = new Date(dateVal);
-  if (isNaN(d)) return '—';
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const year = d.getFullYear();
-  return `${day}/${month}/${year}`;
-};
+import { formatDateDDMMYYYY } from '../utils/dateUtils';
 
 const getBalanceSuffix = (balance, isDebitNormal) => {
   if (!balance) return '';

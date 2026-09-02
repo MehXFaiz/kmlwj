@@ -8,6 +8,7 @@ import {
 import { showToast } from '../components/ui/Toast';
 import { handleDeleteError } from '../utils/deleteHandler';
 import { useAuthStore } from '../store/authStore';
+import { formatDateDDMMYYYY } from '../utils/dateUtils';
 
 export const Members = () => {
   const navigate = useNavigate();
@@ -263,7 +264,7 @@ export const Members = () => {
                 {/* Actions */}
                 <div className="flex items-center justify-between gap-2 mt-4 pt-3.5 border-t border-slate-800">
                   <span className="text-[10px] font-semibold text-slate-500 uppercase">
-                    DOI: {m.doi || (m.createdAt ? new Date(m.createdAt).toLocaleDateString() : 'N/A')}
+                    DOI: {m.doi ? formatDateDDMMYYYY(m.doi) : (m.createdAt ? formatDateDDMMYYYY(m.createdAt) : 'N/A')}
                   </span>
                   <div className="flex items-center gap-1.5">
                     <Link

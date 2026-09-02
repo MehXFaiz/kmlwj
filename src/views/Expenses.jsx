@@ -12,10 +12,11 @@ import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolver';
 import { PhoneInput } from '../components/ui/PhoneInput';
 import { CNICInput } from '../components/ui/CNICInput';
+import { formatDateDDMMYYYY, getLocalDateString, formatDateToInput } from '../utils/dateUtils';
 
 function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editingExpense }) {
   const { journals } = useJournalStore();
-  const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], expenseHeadId: '', paidTo: '', fatherName: '', cnic: '', mobile: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
+  const [form, setForm] = useState({ date: getLocalDateString(new Date()), expenseHeadId: '', paidTo: '', fatherName: '', cnic: '', mobile: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
   const [subType, setSubType] = useState('Repair');
   const [customSubType, setCustomSubType] = useState('');
   const [selectedHallName, setSelectedHallName] = useState('Bagh-e-Hajiani Garden');
@@ -96,7 +97,7 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
         }
         
         setForm({
-          date: editingExpense.date ? new Date(editingExpense.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          date: formatDateToInput(editingExpense.date || new Date()),
           expenseHeadId: editingExpense.expenseHeadId || '',
           paidTo: editingExpense.paidTo || '',
           fatherName: editingExpense.fatherName || '',
@@ -112,7 +113,7 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
         setCustomSubType(initialCustomSubType);
         setSelectedHallName(initialHallName);
       } else {
-        setForm({ date: new Date().toISOString().split('T')[0], expenseHeadId: '', paidTo: '', fatherName: '', cnic: '', mobile: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
+        setForm({ date: getLocalDateString(new Date()), expenseHeadId: '', paidTo: '', fatherName: '', cnic: '', mobile: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
         setSubType('Repair');
         setCustomSubType('');
         setSelectedHallName('Bagh-e-Hajiani Garden');
@@ -455,7 +456,7 @@ export const Expenses = () => {
                 {filteredExpenses.map((exp) => (
                   <tr key={exp.id} className="group hover:bg-slate-800/20 transition-colors">
                     <td className="py-3 px-4 text-xs text-slate-400 whitespace-nowrap">
-                      {new Date(exp.date).toLocaleDateString()}
+                      {formatDateDDMMYYYY(exp.date)}
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">

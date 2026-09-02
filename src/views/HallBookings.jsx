@@ -11,6 +11,7 @@ import { handleDeleteError } from '../utils/deleteHandler';
 import { HallBookingReceiptModal } from '../components/receipts/HallBookingReceiptModal';
 import { HallBookingGLModal } from '../components/receipts/HallBookingGLModal';
 import HallBookingCalendar from '../components/common/HallBookingCalendar';
+import { formatDateDDMMYYYY } from '../utils/dateUtils';
 
 const formatHallName = (booking) => {
   if (!booking) return 'N/A';
@@ -22,16 +23,6 @@ const formatHallName = (booking) => {
   if (dashMatch && dashMatch[1]) raw = dashMatch[1].trim();
   if (/bagh/i.test(raw) || /hajiani/i.test(raw) || /hajiyani/i.test(raw)) return 'Bagh-e-Hajiani Kareema';
   return raw;
-};
-
-const formatDateDDMMYYYY = (dateVal) => {
-  if (!dateVal) return 'N/A';
-  const d = new Date(dateVal);
-  if (isNaN(d.getTime())) return 'N/A';
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const year = d.getFullYear();
-  return `${day}/${month}/${year}`;
 };
 
 export const HallBookings = () => {

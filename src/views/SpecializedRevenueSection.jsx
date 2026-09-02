@@ -13,6 +13,7 @@ import { handleDeleteError } from '../utils/deleteHandler';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolver';
 import { paymentMethodLabel } from '../constants/paymentMethods';
+import { formatDateDDMMYYYY } from '../utils/dateUtils';
 
 export const SpecializedRevenueSection = ({
   category = 'Zakat',
@@ -330,7 +331,7 @@ export const SpecializedRevenueSection = ({
                                 <Calendar className="w-3.5 h-3.5 text-amber-400" /> {dateLabel}
                               </span>
                               <span className="font-medium text-slate-200 text-xs">
-                                {item.eventDate ? new Date(item.eventDate).toLocaleDateString() : '—'}
+                                {item.eventDate ? formatDateDDMMYYYY(item.eventDate) : '—'}
                               </span>
                             </div>
 
@@ -485,7 +486,7 @@ export const SpecializedRevenueSection = ({
                         <td className="px-6 py-4 font-mono text-xs text-slate-300">{item.subTitle || '—'}</td>
                       )}
                       <td className="px-6 py-4">
-                        <div className="font-medium">{item.eventDate ? new Date(item.eventDate).toLocaleDateString() : '—'}</div>
+                        <div className="font-medium">{item.eventDate ? formatDateDDMMYYYY(item.eventDate) : '—'}</div>
                       </td>
                       {showQty && <td className="px-6 py-4 font-bold text-slate-300">{item.quantity || 1}</td>}
                       {showRate && <td className="px-6 py-4 text-slate-400">Rs. {item.rate?.toLocaleString() || '—'}</td>}

@@ -17,6 +17,7 @@ import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolve
 import { useConfirm } from '../components/ui/ConfirmationModal';
 import { DONATION_TYPES, donationTypeDisplay } from '../constants/donationTypes';
 import { paymentMethodLabel } from '../constants/paymentMethods';
+import { formatDateDDMMYYYY } from '../utils/dateUtils';
 
 const PAYMENT_METHODS = ['CASH', 'BANK', 'CHEQUE', 'ONLINE'];
 
@@ -478,7 +479,7 @@ export const DonationsReceived = ({ defaultType = null, titleOverride = null }) 
                 {/* Card Footer: Date & Action Icons */}
                 <div className="flex items-center justify-between gap-2 pt-3.5 border-t border-slate-800/80">
                   <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-slate-400" /> {d.receiptDate ? new Date(d.receiptDate).toLocaleDateString() : '7/7/2026'}
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" /> {formatDateDDMMYYYY(d.receiptDate || d.createdAt)}
                   </span>
                   <div className="flex items-center gap-2">
                     <button

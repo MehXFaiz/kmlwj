@@ -426,10 +426,12 @@ var hall_bookings_default = makeHandler(async (req, res) => {
           select: { receiptNo: true }
         });
         const receiptNo = (lastBooking?.receiptNo || 0) + 1;
+        const bookingDateOnlyStr = bookingDate ? typeof bookingDate === "string" && bookingDate.includes("T") ? bookingDate.split("T")[0] : typeof bookingDate === "string" ? bookingDate : new Date(bookingDate).toISOString().split("T")[0] : null;
+        const refundDateOnlyStr = req.body.refundDate ? typeof req.body.refundDate === "string" && req.body.refundDate.includes("T") ? req.body.refundDate.split("T")[0] : typeof req.body.refundDate === "string" ? req.body.refundDate : new Date(req.body.refundDate).toISOString().split("T")[0] : null;
         const newBooking = await tx.hallBooking.create({
           data: {
             receiptNo,
-            bookingDate: bookingDate ? new Date(bookingDate) : void 0,
+            bookingDate: bookingDateOnlyStr ? /* @__PURE__ */ new Date(`${bookingDateOnlyStr}T00:00:00.000Z`) : void 0,
             bookerName,
             fatherHusbandName: fatherHusbandName || null,
             address: address || null,
@@ -448,7 +450,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
             receivedAmount: parsedReceivedAmount,
             remainingAmount: calculatedRemainingAmount,
             refundAmount: req.body.refundAmount != null ? parseFloat(req.body.refundAmount) : 0,
-            refundDate: req.body.refundDate ? new Date(req.body.refundDate) : null,
+            refundDate: refundDateOnlyStr ? /* @__PURE__ */ new Date(`${refundDateOnlyStr}T00:00:00.000Z`) : null,
             refundReason: req.body.refundReason || null,
             paymentMethod,
             bankAccountId: bankAccountId || null,
@@ -739,10 +741,12 @@ var hall_bookings_default = makeHandler(async (req, res) => {
           }
         }
         const finalStatus = targetStatus === "Cancelled" || targetStatus === "Refunded" ? targetStatus : wasPosted && newJournalEntryId ? "POSTED" : "Confirmed";
+        const bookingDateOnlyStr = bookingDate ? typeof bookingDate === "string" && bookingDate.includes("T") ? bookingDate.split("T")[0] : typeof bookingDate === "string" ? bookingDate : new Date(bookingDate).toISOString().split("T")[0] : null;
+        const refundDateOnlyStr = req.body.refundDate ? typeof req.body.refundDate === "string" && req.body.refundDate.includes("T") ? req.body.refundDate.split("T")[0] : typeof req.body.refundDate === "string" ? req.body.refundDate : new Date(req.body.refundDate).toISOString().split("T")[0] : null;
         return await tx.hallBooking.update({
           where: { id },
           data: {
-            bookingDate: bookingDate ? new Date(bookingDate) : void 0,
+            bookingDate: bookingDateOnlyStr ? /* @__PURE__ */ new Date(`${bookingDateOnlyStr}T00:00:00.000Z`) : void 0,
             bookerName,
             fatherHusbandName: fatherHusbandName || null,
             address: address || null,
@@ -761,7 +765,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
             receivedAmount: parsedReceivedAmount,
             remainingAmount: calculatedRemainingAmount,
             refundAmount: req.body.refundAmount != null ? parseFloat(req.body.refundAmount) : 0,
-            refundDate: req.body.refundDate ? new Date(req.body.refundDate) : null,
+            refundDate: refundDateOnlyStr ? /* @__PURE__ */ new Date(`${refundDateOnlyStr}T00:00:00.000Z`) : null,
             refundReason: req.body.refundReason || null,
             paymentMethod,
             bankAccountId: bankAccountId || null,

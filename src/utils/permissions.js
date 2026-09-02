@@ -72,6 +72,14 @@ export function hasPermission(permissions, isPrivileged, module, action = 'view'
   if (isSuper) return true;
   if (!module) return false;
 
+  const roleName = typeof role === 'string' ? role : (role?.name || '');
+  const isAccountant = roleName === 'Accountant' || roleName?.toLowerCase?.().includes('accountant');
+
+  // Accountant has full access to post across modules
+  if (action === 'post' && isAccountant) {
+    return true;
+  }
+
   // Rule: Non-privileged roles (Accountant, Data Entry, etc.) are strictly forbidden from edit or delete
   if ((action === 'update' || action === 'delete') && !isPrivileged) {
     return false;

@@ -6,6 +6,7 @@ import { pageActionsClass } from '../components/common/responsive';
 import { DONATION_TYPES, donationTypeDisplay } from '../constants/donationTypes';
 import { paymentMethodLabel } from '../constants/paymentMethods';
 import { showToast } from '../components/ui/Toast';
+import { formatDateDDMMYYYY } from '../utils/dateUtils';
 
 function ImportModal({ isOpen, onClose, onImportSuccess }) {
   const { addDonation } = useDonationStore();
@@ -380,7 +381,7 @@ export const DonationReports = () => {
         Number(d.amount) || 0,
         csvCell(d.paymentMethod ? paymentMethodLabel(d.paymentMethod) : ''),
         csvCell(d.status || 'PENDING'),
-        csvCell(new Date(d.createdAt).toLocaleDateString()),
+        csvCell(formatDateDDMMYYYY(d.createdAt)),
       ].join(',')
     ).join("\n");
     const blob = new Blob([header + csv], { type: 'text/csv;charset=utf-8;' });
@@ -617,7 +618,7 @@ export const DonationReports = () => {
                 <div className="pt-3.5 border-t border-slate-800/80 flex items-center justify-between gap-2 text-xs text-slate-500 relative z-10 print:border-gray-300 print:text-black">
                   <span className="flex items-center gap-1.5 font-medium">
                     <Calendar className="w-3.5 h-3.5 text-slate-400 print:text-black" />
-                    {d.createdAt ? new Date(d.createdAt).toLocaleDateString() : 'N/A'}
+                    {formatDateDDMMYYYY(d.createdAt)}
                   </span>
                   {d.remarks && (
                     <span className="truncate max-w-[160px] text-slate-400 italic font-normal" title={d.remarks}>
@@ -658,7 +659,7 @@ export const DonationReports = () => {
                     <td className="px-4 py-3.5 text-sm font-bold text-emerald-400 print:text-black">PKR {(Number(d.amount) || 0).toLocaleString()}</td>
                     <td className="px-4 py-3.5 text-xs text-slate-400 print:text-black">{paymentMethodLabel(d.paymentMethod)}</td>
                     <td className="px-4 py-3.5 text-xs text-slate-400 print:text-black">{d.status || 'PENDING'}</td>
-                    <td className="px-4 py-3.5 text-xs text-slate-400 print:text-black">{new Date(d.createdAt).toLocaleDateString()}</td>
+                    <td className="px-4 py-3.5 text-xs text-slate-400 print:text-black">{formatDateDDMMYYYY(d.createdAt)}</td>
                   </tr>
                 ))}
                 {filtered.length === 0 && (

@@ -86,6 +86,20 @@ export async function enforceRestrictedRolePolicy(
     return true;
   }
 
+  // Allow Accountant role for PUT/PATCH if permitted or performing accounting status/posting
+  if (method === 'PUT' || method === 'PATCH') {
+    const userRole = (req.user as any)?.role || '';
+    const isAccountant = userRole === 'Accountant' || userRole.toLowerCase().includes('accountant');
+    if (isAccountant) {
+      if (requiredPermission) {
+        const hasPerm = await checkPermission(req, requiredPermission);
+        if (hasPerm) return true;
+      } else {
+        return true;
+      }
+    }
+  }
+
   // Non-privileged roles are strictly forbidden from EDIT (PUT/PATCH) and DELETE
   const message =
     method === 'DELETE'
@@ -124,6 +138,15 @@ export function enforceRestrictedRolePolicyMiddleware(
       if (privileged) {
         next();
         return;
+      }
+
+      if (method === 'PUT' || method === 'PATCH') {
+        const userRole = (req.user as any)?.role || '';
+        const isAccountant = userRole === 'Accountant' || userRole.toLowerCase().includes('accountant');
+        if (isAccountant) {
+          next();
+          return;
+        }
       }
 
       const message =

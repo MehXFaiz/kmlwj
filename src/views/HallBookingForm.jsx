@@ -13,6 +13,7 @@ import api from '../services/api';
 import { sanitizeInputValue } from '../utils/validation';
 import HallBookingConflictModal from '../components/common/HallBookingConflictModal';
 import HallBookingCalendar from '../components/common/HallBookingCalendar';
+import { getLocalDateString, formatDateToInput, formatDateDDMMYYYY } from '../utils/dateUtils';
 
 const getNormalizedHallName = (name) => {
   if (!name) return null;
@@ -22,16 +23,6 @@ const getNormalizedHallName = (name) => {
   if (n.includes('zikarya') || n.includes('zikriya') || n.includes('zakaria') || n.includes('zakriya')) return 'Zikarya Hall';
   if (n.includes('annexy') || n.includes('anexy') || n.includes('gosha') || n.includes('anxy')) return 'Annexy Hall';
   return null;
-};
-
-const formatDateDDMMYYYY = (dateVal) => {
-  if (!dateVal) return 'N/A';
-  const d = new Date(dateVal);
-  if (isNaN(d.getTime())) return 'N/A';
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const year = d.getFullYear();
-  return `${day}/${month}/${year}`;
 };
 
 export const HallBookingForm = () => {
@@ -54,7 +45,7 @@ export const HallBookingForm = () => {
       fatherHusbandName: '',
       mobile: '',
       address: '',
-      bookingDate: new Date().toISOString().split('T')[0],
+      bookingDate: getLocalDateString(new Date()),
       programDate: '',
       programType: '',
       functionType: '',
@@ -76,7 +67,7 @@ export const HallBookingForm = () => {
       remarks: '',
       status: 'Confirmed',
       refundAmount: '',
-      refundDate: new Date().toISOString().split('T')[0],
+      refundDate: getLocalDateString(new Date()),
       refundReason: ''
     }
   });
@@ -130,8 +121,8 @@ export const HallBookingForm = () => {
       try {
         const booking = await fetchBookingById(id);
         if (booking) {
-          const formattedDate = booking.programDate ? new Date(booking.programDate).toISOString().split('T')[0] : '';
-          const formattedBookingDate = booking.bookingDate ? new Date(booking.bookingDate).toISOString().split('T')[0] : (booking.createdAt ? new Date(booking.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+          const formattedDate = formatDateToInput(booking.programDate);
+          const formattedBookingDate = formatDateToInput(booking.bookingDate || booking.createdAt || new Date());
           let resolvedHallId = booking.hallId || '';
           if (resolvedHallId && flatAccounts) {
             const acc = flatAccounts.find(a => a.id === resolvedHallId);
@@ -170,7 +161,7 @@ export const HallBookingForm = () => {
             remarks: booking.remarks || '',
             status: booking.status || 'Confirmed',
             refundAmount: booking.refundAmount != null ? String(booking.refundAmount) : '',
-            refundDate: booking.refundDate ? new Date(booking.refundDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            refundDate: formatDateToInput(booking.refundDate || new Date()),
             refundReason: booking.refundReason || ''
           });
         }
@@ -218,13 +209,13 @@ export const HallBookingForm = () => {
     (a.code === '1010101' || a.code === '1010102' || a.name.toLowerCase().includes('national bank') || a.name.toLowerCase().includes('nbp-zakat'))
   );
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalDateString(new Date());
   const activeBookings = (bookings || [])
     .filter(b => b.id !== id && b.status !== 'Cancelled' && b.status !== 'Rejected')
     .filter(b => {
       if (!b.programDate) return false;
       if (showAllDates) return true;
-      const bDate = new Date(b.programDate).toISOString().split('T')[0];
+      const bDate = formatDateToInput(b.programDate);
       return bDate >= todayStr;
     })
     .filter(b => !hallId || b.hallId === hallId || b.hallAccount?.id === hallId || b.hallAccount?.accountId === hallId)
@@ -233,8 +224,8 @@ export const HallBookingForm = () => {
   const conflictBooking = (bookings || []).find(b => {
     if (b.id === id || b.isDeleted || b.status === 'Cancelled' || b.status === 'Rejected') return false;
     if (!b.programDate || !programDate) return false;
-    const bDate = new Date(b.programDate).toISOString().split('T')[0];
-    const targetDate = programDate.includes('T') ? programDate.split('T')[0] : programDate;
+    const bDate = formatDateToInput(b.programDate);
+    const targetDate = formatDateToInput(programDate);
     if (bDate !== targetDate) return false;
     if (hallId && b.hallId !== hallId && b.hallAccount?.id !== hallId && b.hallAccount?.accountId !== hallId) return false;
     if (b.timings === timings || b.timings === 'Full Day' || timings === 'Full Day' || !timings || !b.timings) return true;
@@ -481,8 +472,8 @@ export const HallBookingForm = () => {
                 ) : (
                   <div className="grid grid-cols-1 gap-2.5 max-h-[400px] overflow-y-auto pr-1">
                     {activeBookings.map((b) => {
-                      const bDateStr = b.programDate ? new Date(b.programDate).toISOString().split('T')[0] : '';
-                      const isConflict = bDateStr && programDate && bDateStr === programDate &&
+                      const bDateStr = formatDateToInput(b.programDate);
+                      const isConflict = bDateStr && programDate && bDateStr === formatDateToInput(programDate) &&
                         (!hallId || b.hallId === hallId || b.hallAccount?.id === hallId || b.hallAccount?.accountId === hallId) &&
                         (!timings || timings === 'Full Day' || b.timings === 'Full Day' || b.timings === timings);
 
