@@ -29,9 +29,22 @@ export const useDashboardStore = create((set, get) => ({
   // them against each other must check these first.
   statsParams: null,
   tbParams: null,
+  summary: null,
+  summaryLoading: false,
   // Incremented on every invalidateAll — watched by Reports, TrialBalanceSheet,
   // and any other view that needs to auto-refresh after a mutation.
   version: 0,
+
+  fetchSummary: async (params = null) => {
+    const currentParams = params !== null ? params : (get().statsParams ?? get().lastParams);
+    set({ summaryLoading: true, error: null });
+    try {
+      const data = await dashboardService.getSummary(currentParams);
+      set({ summary: data, summaryLoading: false });
+    } catch (err) {
+      set({ error: err.message || 'Failed to fetch dashboard summary', summaryLoading: false });
+    }
+  },
 
   fetchStats: async (params = null) => {
     const currentParams = params !== null ? params : (get().statsParams ?? get().lastParams);
@@ -42,7 +55,7 @@ export const useDashboardStore = create((set, get) => ({
       // A newer fetchStats started while this one was in flight — discard this
       // response instead of letting stale numbers overwrite fresher ones.
       if (requestId !== statsRequestId) return;
-      set((s) => ({ stats: data, statsParams: currentParams, statsLoading: false, loading: s.tbLoading }));
+      set((s) => ({ stats: data, summary: data?.summary ?? s.summary, statsParams: currentParams, statsLoading: false, loading: s.tbLoading }));
     } catch (err) {
       if (requestId !== statsRequestId) return;
       set((s) => ({ error: err.message || 'Failed to fetch dashboard statistics', statsLoading: false, loading: s.tbLoading }));

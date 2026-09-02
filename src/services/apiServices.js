@@ -68,6 +68,10 @@ export const dashboardService = {
     const qs = new URLSearchParams(params).toString();
     return api.get(`/api/v1/dashboard/stats${qs ? `?${qs}` : ''}`).then((r) => r.data.data);
   },
+  getSummary: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return api.get(`/api/v1/dashboard/summary${qs ? `?${qs}` : ''}`).then((r) => r.data.data);
+  },
 };
 
 export const auditService = {

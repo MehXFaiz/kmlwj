@@ -2,7 +2,6 @@ import { useMemo, useEffect, useRef, useState, useCallback, startTransition, mem
 import { useNavigate } from 'react-router-dom';
 import { useCoaStore } from '../store/coaStore';
 import { useDashboardStore } from '../store/dashboardStore';
-import { useJournalStore, calculateAccountBalances } from '../store/journalStore';
 import {
   ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell,
   BarChart, Bar, XAxis, YAxis, Tooltip as ChartTooltip, CartesianGrid,
@@ -124,9 +123,9 @@ function KpiCard({ title, value, prefix = '', suffix = '', decimals = 0, icon: I
 /* ─────────────────────────────────────────────
    Stat Card — premium redesign
 ───────────────────────────────────────────── */
-function StatCard({ title, value, icon: Icon, iconBg, iconColor, trend, trendLabel, trendColor, accentBar, delay = 0, subLabel }) {
+function StatCard({ title, value, loading = false, icon: Icon, iconBg, iconColor, trend, trendLabel, trendColor, accentBar, delay = 0, subLabel }) {
   const [visible, setVisible] = useState(false);
-  const animated = useAnimatedCounter(visible ? value : 0, 1100, 'Rs ', '', 2);
+  const animated = useAnimatedCounter(visible ? (value ?? 0) : 0, 1100, 'Rs ', '', 2);
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), delay);
@@ -151,19 +150,28 @@ function StatCard({ title, value, icon: Icon, iconBg, iconColor, trend, trendLab
             <Icon className={`h-3.5 w-3.5 ${iconColor}`} />
           </div>
         </div>
-        <p className="text-xl sm:text-2xl font-extrabold font-mono text-slate-100 leading-none tracking-tight tabular-nums">
-          {animated}
-        </p>
-        {trendLabel && (
-          <div className={`flex items-center gap-1 mt-2.5 text-[10px] font-bold uppercase tracking-wider ${trendColor}`}>
-            {trend === 'up'      && <ArrowUpRight   className="h-3 w-3" />}
-            {trend === 'down'    && <ArrowDownRight  className="h-3 w-3" />}
-            {trend === 'neutral' && <Activity         className="h-3 w-3" />}
-            <span>{trendLabel}</span>
+        {loading ? (
+          <div className="space-y-2 py-1">
+            <div className="h-6 w-28 bg-slate-800/80 rounded animate-pulse" />
+            <div className="h-3 w-16 bg-slate-800/50 rounded animate-pulse" />
           </div>
-        )}
-        {subLabel && (
-          <p className="mt-1 text-[10px] font-medium text-slate-600 tracking-wide">{subLabel}</p>
+        ) : (
+          <>
+            <p className="text-xl sm:text-2xl font-extrabold font-mono text-slate-100 leading-none tracking-tight tabular-nums">
+              {animated}
+            </p>
+            {trendLabel && (
+              <div className={`flex items-center gap-1 mt-2.5 text-[10px] font-bold uppercase tracking-wider ${trendColor}`}>
+                {trend === 'up'      && <ArrowUpRight   className="h-3 w-3" />}
+                {trend === 'down'    && <ArrowDownRight  className="h-3 w-3" />}
+                {trend === 'neutral' && <Activity         className="h-3 w-3" />}
+                <span>{trendLabel}</span>
+              </div>
+            )}
+            {subLabel && (
+              <p className="mt-1 text-[10px] font-medium text-slate-600 tracking-wide">{subLabel}</p>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -366,12 +374,21 @@ export const Dashboard = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { accounts, fetchAccounts, selectedSubsidiary, fiscalYear, loading: coaLoading } = useCoaStore();
-  const { journals, auditLogs, fetchJournals, isLoading: journalsLoading } = useJournalStore();
-  const { stats: dbStats, tbReport, statsParams, tbParams, fetchStats, fetchTbReport, statsLoading, tbLoading } = useDashboardStore();
+  const {
+    stats: dbStats,
+    tbReport,
+    statsParams,
+    tbParams,
+    fetchStats,
+    fetchTbReport,
+    statsLoading,
+    tbLoading,
+    error: dashboardError
+  } = useDashboardStore();
   const [refreshKey, setRefreshKey] = useState(0);
 
   const statsBusy = statsLoading || tbLoading;
-  const isRefreshing = statsBusy || coaLoading || journalsLoading;
+  const isRefreshing = statsBusy || coaLoading;
   const reportParams = useMemo(() => ({
     startDate: `${fiscalYear}-01-01`,
     endDate: `${fiscalYear}-12-31`,
@@ -381,31 +398,9 @@ export const Dashboard = () => {
     fetchAccounts();
     fetchStats(reportParams);
     fetchTbReport(reportParams);
-    if (fetchJournals) fetchJournals(selectedSubsidiary);
-  }, [fetchAccounts, fetchStats, fetchTbReport, fetchJournals, selectedSubsidiary, reportParams]);
+  }, [fetchAccounts, fetchStats, fetchTbReport, reportParams]);
 
   // Consistency & Reconciliation Check across Posted Ledger.
-  //
-  // The two totals come from two SEPARATE HTTP requests, so comparing them is
-  // only valid when both describe the same ledger at the same instant. Three
-  // conditions must hold, and all three are load-bearing:
-  //
-  //   1. Neither request is still in flight.
-  //   2. Both cover the same reporting period, and that period is this view's
-  //      (`stats`/`tbReport` live in a store shared with TrialBalanceSheet,
-  //      which loads an all-time trial balance by default).
-  //   3. Both responses carry the SAME `ledgerVersion` — the fingerprint of the
-  //      posted ledger they were each computed from (AccountingService
-  //      .computeWithLedgerVersion). Conditions 1 and 2 are NOT sufficient on
-  //      their own: two requests that both completed, for the same period, can
-  //      still straddle a write that landed between them, and the resulting
-  //      skew is indistinguishable from a real discrepancy without this stamp.
-  //      A response whose ledger changed mid-computation reports `null`, which
-  //      never compares equal — that cycle is skipped and the next clean pair
-  //      is reconciled instead.
-  //
-  // A genuine mismatch — both halves fresh, same period, same ledger version,
-  // different totals — still raises the alert exactly as before.
   useEffect(() => {
     if (statsLoading || tbLoading) return; // Do not compare while network requests are in flight
     if (!dbStats?.summary || !tbReport?.entries) return;
@@ -429,8 +424,6 @@ export const Dashboard = () => {
     const expDiff = Math.abs(tbExpense - dashExpense);
 
     if (!sameLedger) {
-      // Not a discrepancy — the two responses simply observed different ledger
-      // states. Logged, not alerted, so the skew stays visible while debugging.
       console.info(
         `[Reconciliation] Skipped: responses describe different ledger states `
         + `(stats=${dbStats.ledgerVersion ?? 'straddled-a-write'}, trialBalance=${tbReport.ledgerVersion ?? 'straddled-a-write'}). `
@@ -441,23 +434,6 @@ export const Dashboard = () => {
 
     if (revDiff > 1 || expDiff > 1) {
       console.error(`[Accounting Mismatch] Dashboard vs Trial Balance discrepancy! Revenue Diff: PKR ${revDiff}, Expense Diff: PKR ${expDiff}`);
-      console.error('[Accounting Mismatch] Reconciliation inputs', {
-        reportPeriod: periodOf(reportParams),
-        startDate: reportParams.startDate,
-        endDate: reportParams.endDate,
-        financialYear: fiscalYear,
-        ledgerVersion: dbStats.ledgerVersion,
-        dashboard: { totalRevenue: dashRevenue, totalExpense: dashExpense, period: dbStats.reportPeriod },
-        trialBalance: { totalRevenue: tbRevenue, totalExpense: tbExpense, period: tbReport.reportPeriod },
-        revenueAccounts: revenueEntries.map(e => ({
-          id: e.id, glCode: e.glCode, accountName: e.accountName, accountType: e.accountType,
-          debit: Number(e.debit || 0), credit: Number(e.credit || 0), net: Number(e.credit || 0) - Number(e.debit || 0),
-        })),
-        expenseAccounts: expenseEntries.map(e => ({
-          id: e.id, glCode: e.glCode, accountName: e.accountName, accountType: e.accountType,
-          debit: Number(e.debit || 0), credit: Number(e.credit || 0), net: Number(e.debit || 0) - Number(e.credit || 0),
-        })),
-      });
       showToast(`Accounting Reconciliation Alert: Dashboard and Trial Balance mismatch! (Revenue diff: PKR ${revDiff.toLocaleString()}, Expense diff: PKR ${expDiff.toLocaleString()})`, 'error');
     }
   }, [dbStats, tbReport, statsParams, tbParams, statsLoading, tbLoading, reportParams, fiscalYear]);
@@ -465,99 +441,68 @@ export const Dashboard = () => {
   const handleRefresh = useCallback(() => {
     fetchAccounts();
     fetchStats(reportParams);
-    // Refresh the trial balance alongside the stats so both stay scoped to
-    // this view's fiscal year — otherwise a refresh leaves tbReport on
-    // whatever period another view (e.g. TrialBalanceSheet) last loaded.
     fetchTbReport(reportParams);
-    if (fetchJournals) fetchJournals(selectedSubsidiary);
     setRefreshKey(k => k + 1);
-  }, [fetchAccounts, fetchStats, fetchTbReport, fetchJournals, selectedSubsidiary, reportParams]);
+  }, [fetchAccounts, fetchStats, fetchTbReport, reportParams]);
 
-  // Live balances
-  const { rollupBalances, localBalances } = useMemo(
-    () => calculateAccountBalances(accounts, journals, selectedSubsidiary),
-    [accounts, journals, selectedSubsidiary, refreshKey]
-  );
-
-  // Financial stats
+  // Financial stats derived 100% directly from database summary
   const stats = useMemo(() => {
-    if (dbStats?.summary) {
-      const netIncome = (dbStats.summary.totalRevenue || 0) - (dbStats.summary.totalExpense || 0);
+    const summary = dbStats?.summary;
+    if (!summary) {
       return {
-        ...dbStats.summary,
-        assets: dbStats.summary.totalAssets || 0,
-        liabilities: dbStats.summary.totalLiabilities || 0,
-        equity: dbStats.summary.totalEquity || 0,
-        baseEquity: dbStats.summary.baseEquity || 0,
-        revenue: dbStats.summary.totalRevenue || 0,
-        expenses: dbStats.summary.totalExpense || 0,
-        // Do NOT clamp to 0 — overdrafts and losses must be visible
-        cashBalance: dbStats.summary.cashBalance || 0,
-        bankBalance: dbStats.summary.bankBalance || 0,
-        monthlyDonations: dbStats.summary.monthlyDonations ?? dbStats.monthlyDonations ?? 0,
-        monthlyZakat: dbStats.summary.monthlyZakat ?? dbStats.monthlyZakat ?? 0,
-        currentMonthName: dbStats.summary.currentMonthName ?? dbStats.currentMonthName ?? 'Current Month',
-        donationsPaid: dbStats.summary.donationsPaid ?? dbStats.donationsPaid ?? 0,
-        donationsPaidFromBank: dbStats.summary.donationsPaidFromBank ?? dbStats.donationsPaidFromBank ?? 0,
-        totalDonationsPaid: dbStats.summary.totalDonationsPaid ?? dbStats.totalDonationsPaid ?? 0,
-        totalZakatPaid: dbStats.summary.totalZakatPaid ?? dbStats.totalZakatPaid ?? 0,
-        // As of the fiscal year's start — reconciles against Cash in Hand:
-        // Opening Cash + this period's Net Surplus should explain the closing
-        // balance, instead of Cash in Hand looking disconnected from Net Surplus.
-        openingCashBalance: dbStats.summary.openingCashBalance ?? (dbStats.summary.cashBalance || 0),
-        openingBankBalance: dbStats.summary.openingBankBalance ?? (dbStats.summary.bankBalance || 0),
-        netAssets: dbStats.summary.netAssets ?? ((dbStats.summary.totalAssets || 0) - (dbStats.summary.totalLiabilities || 0)),
-        netIncome,
-        grossMargin: dbStats.summary.totalRevenue > 0 ? (netIncome / dbStats.summary.totalRevenue * 100) : 0,
-        isEquationBalanced: dbStats.summary.isEquationBalanced ?? true,
+        assets: 0,
+        liabilities: 0,
+        equity: 0,
+        baseEquity: 0,
+        revenue: 0,
+        expenses: 0,
+        cashBalance: 0,
+        bankBalance: 0,
+        monthlyDonations: 0,
+        monthlyZakat: 0,
+        currentMonthName: 'Current Month',
+        donationsPaid: 0,
+        totalDonationsPaid: 0,
+        totalZakatPaid: 0,
+        openingCashBalance: 0,
+        openingBankBalance: 0,
+        netAssets: 0,
+        netIncome: 0,
+        grossMargin: 0,
+        isEquationBalanced: true,
       };
     }
 
-    let assets = 0, liabilities = 0, equity = 0, revenue = 0, expenses = 0;
-    let cashBalance = 0;
-    let bankBalance = 0;
-    accounts.forEach((acc) => {
-      const bal = acc.currentBalance !== undefined ? Number(acc.currentBalance) || 0 : (localBalances?.[acc.code] || 0);
-      const type = (acc.type || '').toUpperCase();
-      const detailType = (acc.detailType || '').toLowerCase();
-      const nameLower = (acc.name || '').toLowerCase();
-      const isLeaf = !accounts.some(a => a.parentCode === acc.code);
+    const netIncome = Number(summary.netIncome ?? summary.netResult ?? ((summary.totalRevenue || 0) - (summary.totalExpense || 0)));
+    const revenue = Number(summary.totalRevenue ?? summary.income ?? 0);
+    const expenses = Number(summary.totalExpense ?? summary.expenses ?? 0);
+    const assets = Number(summary.totalAssets || 0);
+    const liabilities = Number(summary.totalLiabilities || 0);
+    const totalEquityWithNetIncome = Number(summary.totalEquity || 0);
 
-      if (isLeaf) {
-        if (type === 'ASSET' || type === 'ASSETS') {
-          assets += bal;
-          if (detailType === 'bank' || nameLower.includes('bank') || nameLower.includes('al-habib') || nameLower.includes('nbp') || nameLower.includes('national bank') || nameLower.includes('mcb') || nameLower.includes('ubl') || nameLower.includes('allied') || nameLower.includes('faysal')) {
-            bankBalance += bal;
-          } else if (detailType === 'cash' || nameLower.includes('cash') || nameLower.includes('till') || nameLower.includes('petty') || nameLower.includes('hand')) {
-            cashBalance += bal;
-          }
-        } else if (type === 'LIABILITY' || type === 'LIABILITIES') {
-          liabilities += (bal < 0 ? Math.abs(bal) : bal);
-        } else if (type === 'EQUITY') {
-          equity += (bal < 0 ? Math.abs(bal) : bal);
-        } else if (type === 'REVENUE' || type === 'INCOME') {
-          revenue += (bal < 0 ? Math.abs(bal) : bal);
-        } else if (type === 'EXPENSE' || type === 'EXPENSES') {
-          expenses += bal;
-        }
-      }
-    });
-
-    const netIncome = revenue - expenses;
-    const totalEquityWithNetIncome = equity + netIncome;
     return {
-      assets, liabilities, netAssets: assets - liabilities, equity: totalEquityWithNetIncome, baseEquity: equity, revenue, expenses,
-      // Do NOT clamp to 0 — overdrafts and losses must be visible
-      cashBalance, bankBalance,
-      // This fallback path has no period scoping (client-side cumulative
-      // balances only) — opening === closing here, same as the "no date
-      // filter" case in getFinancialSummary.
-      openingCashBalance: cashBalance, openingBankBalance: bankBalance,
+      assets,
+      liabilities,
+      equity: totalEquityWithNetIncome,
+      baseEquity: Number(summary.baseEquity || (totalEquityWithNetIncome - netIncome)),
+      revenue,
+      expenses,
+      cashBalance: Number(summary.cashBalance ?? summary.cashInHand ?? 0),
+      bankBalance: Number(summary.bankBalance || 0),
+      monthlyDonations: Number(summary.monthlyDonations ?? dbStats.monthlyDonations ?? 0),
+      monthlyZakat: Number(summary.monthlyZakat ?? dbStats.monthlyZakat ?? 0),
+      currentMonthName: summary.currentMonthName ?? dbStats.currentMonthName ?? 'Current Month',
+      donationsPaid: Number(summary.donationsPaid ?? summary.donations ?? 0),
+      totalDonationsPaid: Number(summary.totalDonationsPaid || 0),
+      totalZakatPaid: Number(summary.totalZakatPaid || 0),
+      openingCashBalance: Number(summary.openingCashBalance ?? summary.cashBalance ?? 0),
+      openingBankBalance: Number(summary.openingBankBalance ?? summary.bankBalance ?? 0),
+      netAssets: Number(summary.netAssets ?? (assets - liabilities)),
       netIncome,
       grossMargin: revenue > 0 ? (netIncome / revenue * 100) : 0,
-      isEquationBalanced: Math.abs(assets - (liabilities + totalEquityWithNetIncome)) < 0.01,
+      isEquationBalanced: summary.isEquationBalanced ?? (Math.abs(assets - (liabilities + totalEquityWithNetIncome)) < 0.01),
     };
-  }, [accounts, localBalances, dbStats]);
+  }, [dbStats]);
 
   // Account counts
   const acctStats = useMemo(() => {
@@ -595,20 +540,13 @@ export const Dashboard = () => {
     if (dbStats?.recentTransactions && dbStats.recentTransactions.length > 0) {
       return dbStats.recentTransactions;
     }
-    return (journals || []).slice(0, 6).map(je => ({
-      id: je.voucherNo || je.id?.slice?.(0, 8) || je.id,
-      dbId: je.dbId || je.id,
-      date: je.postingDate ? new Date(je.postingDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : je.date || '',
-      reference: je.reference || je.description || 'Journal Entry',
-      amount: je.lines ? je.lines.reduce((s, l) => s + (Number(l.debit) || 0), 0) : je.amount || 0,
-      status: je.status || 'Posted'
-    }));
-  }, [dbStats, journals]);
+    return [];
+  }, [dbStats]);
 
   const recentActivity = useMemo(() => {
     if (dbStats && dbStats.recentActivities) return dbStats.recentActivities;
-    return (auditLogs || []).slice(0, 8);
-  }, [dbStats, auditLogs]);
+    return [];
+  }, [dbStats]);
 
   const typeColors = {
     Asset: { bg: 'bg-blue-500', dot: 'bg-blue-500', bar: 'bg-blue-500' },
@@ -617,6 +555,8 @@ export const Dashboard = () => {
     Revenue: { bg: 'bg-emerald-500', dot: 'bg-emerald-400', bar: 'bg-emerald-500' },
     Expense: { bg: 'bg-red-500', dot: 'bg-red-400', bar: 'bg-red-500' },
   };
+
+  const isCardLoading = statsLoading && !dbStats;
 
   return (
     <div className="space-y-6 pb-10">
@@ -636,15 +576,32 @@ export const Dashboard = () => {
         <button
           onClick={handleRefresh}
           disabled={isRefreshing}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 hover:border-slate-700 text-slate-500 hover:text-slate-200 transition-all text-xs font-semibold self-start sm:self-auto disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 transition-all text-xs font-semibold self-start sm:self-auto disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin text-brand-400' : ''}`} />
           {isRefreshing ? 'Refreshing...' : 'Refresh'}
         </button>
       </div>
 
-
-
+      {/* ── Error Banner & Retry ── */}
+      {dashboardError && (
+        <div className="rounded-xl border border-red-900/60 bg-red-950/40 p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 text-red-400 shrink-0" />
+            <div>
+              <p className="text-sm font-bold text-red-200">Unable to load dashboard data</p>
+              <p className="text-xs text-red-400/80 mt-0.5">{dashboardError}</p>
+            </div>
+          </div>
+          <button
+            onClick={handleRefresh}
+            className="px-3.5 py-1.5 rounded-lg bg-red-900/60 hover:bg-red-800/80 border border-red-700/50 text-xs font-semibold text-red-100 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* ── Financial KPI Cards ── premium redesign ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-3 sm:gap-4">
@@ -653,6 +610,7 @@ export const Dashboard = () => {
             // Total Income (Gross Revenue from General Ledger)
             title: t('dashboard.totalIncome', { year: fiscalYear || 2026 }),
             value: stats.revenue || 0,
+            loading: isCardLoading,
             icon: TrendingUp,
             iconColor: 'text-emerald-400',
             iconBg: 'bg-emerald-500/10 border-emerald-500/20',
@@ -665,6 +623,7 @@ export const Dashboard = () => {
           {
             title: t('dashboard.totalSpent', { year: fiscalYear || 2026 }),
             value: stats.expenses || 0,
+            loading: isCardLoading,
             icon: TrendingDown,
             iconColor: 'text-red-400',
             iconBg: 'bg-red-500/10 border-red-500/20',
@@ -677,6 +636,7 @@ export const Dashboard = () => {
           {
             title: 'Monthly Donations',
             value: stats.monthlyDonations || 0,
+            loading: isCardLoading,
             icon: Heart,
             iconColor: 'text-amber-400',
             iconBg: 'bg-amber-500/10 border-amber-500/20',
@@ -690,6 +650,7 @@ export const Dashboard = () => {
           {
             title: 'Monthly Zakat',
             value: stats.monthlyZakat || 0,
+            loading: isCardLoading,
             icon: Sparkles,
             iconColor: 'text-emerald-400',
             iconBg: 'bg-emerald-500/10 border-emerald-500/20',
@@ -701,17 +662,12 @@ export const Dashboard = () => {
             delay: 210,
           },
           {
-            // Show cash-in-hand; if whole income was received in cash, display that
             title: t('dashboard.cashInHand'),
-            value: (() => {
-              const cashReceived = stats.hallBookingReceivedCash || 0;
-              const revenue = stats.revenue || 0;
-              if (cashReceived > 0 && cashReceived === revenue) return cashReceived;
-              return stats.cashBalance || 0;
-            })(),
+            value: stats.cashBalance || 0,
+            loading: isCardLoading,
             icon: Banknote,
-            iconColor: ((stats.hallBookingReceivedCash || 0) > 0 && (stats.hallBookingReceivedCash === (stats.revenue || 0))) ? 'text-emerald-400' : ((stats.cashBalance || 0) < 0 ? 'text-red-400' : 'text-blue-400'),
-            iconBg: ((stats.hallBookingReceivedCash || 0) > 0 && (stats.hallBookingReceivedCash === (stats.revenue || 0))) ? 'bg-emerald-500/10 border-emerald-500/20' : ((stats.cashBalance || 0) < 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-blue-500/10 border-blue-500/20'),
+            iconColor: (stats.cashBalance || 0) < 0 ? 'text-red-400' : 'text-blue-400',
+            iconBg: (stats.cashBalance || 0) < 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-blue-500/10 border-blue-500/20',
             trend: (stats.cashBalance || 0) < 0 ? 'down' : 'neutral',
             trendLabel: (stats.cashBalance || 0) < 0 ? 'Overdraft' : t('dashboard.availableCash'),
             trendColor: (stats.cashBalance || 0) < 0 ? 'text-red-400' : 'text-slate-400',
@@ -719,9 +675,9 @@ export const Dashboard = () => {
             delay: 280,
           },
           {
-            // BUG FIX: Show actual bank balance (not clamped); overdraft shows as negative
             title: t('dashboard.bankBalance'),
             value: stats.bankBalance || 0,
+            loading: isCardLoading,
             icon: Layers,
             iconColor: (stats.bankBalance || 0) < 0 ? 'text-red-400' : 'text-violet-400',
             iconBg: (stats.bankBalance || 0) < 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-violet-500/10 border-violet-500/20',
@@ -734,6 +690,7 @@ export const Dashboard = () => {
           {
             title: t('dashboard.netAfterExpenses', { year: fiscalYear || 2026 }),
             value: stats.netIncome || 0,
+            loading: isCardLoading,
             icon: Wallet,
             iconColor: (stats.netIncome || 0) < 0 ? 'text-red-400' : 'text-emerald-400',
             iconBg: (stats.netIncome || 0) < 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20',
