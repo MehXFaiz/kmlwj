@@ -276,16 +276,16 @@ export const Donations = () => {
         <div>
           <h1 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight flex items-center gap-2.5">
             <Heart className="w-6 h-6 text-amber-500" />
-            <span>Monthly Aid & Donation Disbursements</span>
+            <span>Donation Distribution</span>
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Monthly bank-deducted welfare postings with automated General Ledger double-entry
+            Monthly bank-deducted welfare disbursements with automated General Ledger double-entry
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <Link
-            to="/donations/new"
+            to="/donation-distribution/new"
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold text-xs sm:text-sm shadow-xl shadow-amber-500/20 active:scale-95 transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
@@ -557,7 +557,7 @@ export const Donations = () => {
                     )}
 
                     <Link
-                      to={`/donations/edit/${d.id}`}
+                      to={`/donation-distribution/edit/${d.id}`}
                       className="p-2 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors"
                       title="Edit"
                     >

@@ -301,7 +301,7 @@ export const DonationForm = () => {
           'success'
         );
       }
-      setTimeout(() => navigate('/donations'), 1000);
+      setTimeout(() => navigate('/donation-distribution'), 1000);
     } catch (err) {
       const errMsg = err?.response?.data?.error?.message || err.message || 'Failed to post monthly donation';
       showToast(errMsg, 'error');
@@ -322,7 +322,7 @@ export const DonationForm = () => {
       <div className="flex items-center justify-between gap-4 flex-wrap border-b border-slate-800 pb-5">
         <div className="flex items-center gap-3">
           <Link
-            to="/donations"
+            to="/donation-distribution"
             className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700 transition-colors"
           >
             <ChevronLeft className="w-5 h-5" />

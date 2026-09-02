@@ -91,6 +91,15 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
 
   const isPathActive = (path) => {
     if (path === '/') return location.pathname === '/';
+    if (path === '/donation-distribution') {
+      return location.pathname === '/donation-distribution' ||
+             location.pathname.startsWith('/donation-distribution/') ||
+             location.pathname === '/donations' ||
+             location.pathname.startsWith('/donations/');
+    }
+    if (path === '/zakat') {
+      return location.pathname === '/zakat' || location.pathname.startsWith('/zakat/');
+    }
     if (path.includes('?')) return (location.pathname + location.search) === path;
     return location.pathname.startsWith(path.split('?')[0]);
   };
@@ -191,7 +200,6 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
         { name: t('sidebar.hallBookings', 'Hall Bookings'), hint: t('sidebar.hallBookingsHint', 'Manage hall reservations'), icon: Calendar, path: '/hall-bookings', module: 'hallBookings' },
         { name: 'Monthly Donations (Inflow)', hint: 'Receive monthly donor contributions', icon: Calendar, path: '/monthly-donations', module: 'revenueCollections' },
         { name: 'General Donations (Inflow)', hint: 'Receive general & other donations', icon: Gift, path: '/general-donations', module: 'revenueCollections' },
-        { name: 'Zakat Collection (Inflow)', hint: 'Receive Zakat & post to ledger', icon: Coins, path: '/zakat', module: 'zakat' },
         { name: 'Donations Received', hint: 'All charitable inflow receipts', icon: Heart, path: '/donations-received', module: 'revenueCollections' },
         { name: 'Donors Directory', hint: 'Manage registered donors', icon: Users, path: '/donors', module: 'donors' },
         { name: t('sidebar.membershipFee', 'Membership Fee'), hint: 'Manage member fees and renewals', icon: Building, path: '/membership-fees', module: 'revenueCollections' },
@@ -209,11 +217,9 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
       title: t('sidebar.welfare', 'Welfare'),
       items: [
         { name: t('sidebar.peopleWeHelp', 'People We Help'), hint: t('sidebar.peopleWeHelpHint', 'Beneficiary list'), icon: Users, path: '/beneficiaries', module: 'beneficiaries' },
-        { name: 'Monthly Aid Disbursements', hint: 'Disburse monthly aid to beneficiaries', icon: Calendar, path: '/donations?aidType=MONTHLY', module: 'donations' },
-        { name: 'General Aid Disbursements', hint: 'Disburse general aid to beneficiaries', icon: Gift, path: '/donations?aidType=GENERAL_DONATION', module: 'donations' },
-        { name: 'Zakat Aid Disbursements', hint: 'Disburse Zakat aid to beneficiaries', icon: Coins, path: '/donations?aidType=ZAKAT', module: 'donations' },
+        { name: 'Zakat', hint: 'Manage Zakat contributions, donor records & ledger postings', icon: Coins, path: '/zakat', module: 'zakat' },
+        { name: 'Donation Distribution', hint: 'Monthly bank welfare disbursements & beneficiary allocations', icon: Heart, path: '/donation-distribution', module: 'donations' },
         { name: 'Monthly Financial Support Cards', hint: 'Issue & print bilingual financial support cards', icon: CreditCard, path: '/monthly-donation-cards', module: 'zakatCards' },
-        { name: 'Donations Given (Disbursements)', hint: 'All financial aid disbursements', icon: Heart, path: '/donations', module: 'donations' },
         { name: t('sidebar.donationReports', 'Donation Reports'), hint: t('sidebar.donationReportsHint', 'Monthly summaries'), icon: FileText, path: '/donation-reports', module: 'reports' },
       ],
     },

@@ -490,11 +490,9 @@ export const Dashboard = () => {
       cashBalance: Number(summary.cashBalance ?? summary.cashInHand ?? 0),
       bankBalance: Number(summary.bankBalance || 0),
       monthlyDonations: Number(summary.monthlyDonations ?? dbStats.monthlyDonations ?? 0),
-      monthlyZakat: Number(summary.monthlyZakat ?? dbStats.monthlyZakat ?? 0),
       currentMonthName: summary.currentMonthName ?? dbStats.currentMonthName ?? 'Current Month',
       donationsPaid: Number(summary.donationsPaid ?? summary.donations ?? 0),
       totalDonationsPaid: Number(summary.totalDonationsPaid || 0),
-      totalZakatPaid: Number(summary.totalZakatPaid || 0),
       openingCashBalance: Number(summary.openingCashBalance ?? summary.cashBalance ?? 0),
       openingBankBalance: Number(summary.openingBankBalance ?? summary.bankBalance ?? 0),
       netAssets: Number(summary.netAssets ?? (assets - liabilities)),
@@ -603,8 +601,8 @@ export const Dashboard = () => {
         </div>
       )}
 
-      {/* ── Financial KPI Cards ── premium redesign ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-3 sm:gap-4">
+      {/* ── Financial KPI Cards ── 6 Core Database-Driven Metrics ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-6 gap-3 sm:gap-4">
         {[
           {
             // Total Income (Gross Revenue from General Ledger)
@@ -648,20 +646,6 @@ export const Dashboard = () => {
             delay: 140,
           },
           {
-            title: 'Monthly Zakat',
-            value: stats.monthlyZakat || 0,
-            loading: isCardLoading,
-            icon: Sparkles,
-            iconColor: 'text-emerald-400',
-            iconBg: 'bg-emerald-500/10 border-emerald-500/20',
-            trend: 'neutral',
-            trendLabel: stats.currentMonthName || 'Current Month',
-            trendColor: 'text-emerald-400',
-            accentBar: 'from-emerald-500 to-emerald-400',
-            subLabel: `Zakat Disbursed (${stats.currentMonthName || 'Current Month'})`,
-            delay: 210,
-          },
-          {
             title: t('dashboard.cashInHand'),
             value: stats.cashBalance || 0,
             loading: isCardLoading,
@@ -672,7 +656,7 @@ export const Dashboard = () => {
             trendLabel: (stats.cashBalance || 0) < 0 ? 'Overdraft' : t('dashboard.availableCash'),
             trendColor: (stats.cashBalance || 0) < 0 ? 'text-red-400' : 'text-slate-400',
             accentBar: (stats.cashBalance || 0) < 0 ? 'from-red-500 to-red-400' : 'from-blue-500 to-blue-400',
-            delay: 280,
+            delay: 210,
           },
           {
             title: t('dashboard.bankBalance'),
@@ -685,7 +669,7 @@ export const Dashboard = () => {
             trendLabel: (stats.bankBalance || 0) < 0 ? 'Overdraft' : t('dashboard.inBankAccounts'),
             trendColor: (stats.bankBalance || 0) < 0 ? 'text-red-400' : 'text-slate-400',
             accentBar: (stats.bankBalance || 0) < 0 ? 'from-red-500 to-red-400' : 'from-violet-500 to-violet-400',
-            delay: 350,
+            delay: 280,
           },
           {
             title: t('dashboard.netAfterExpenses', { year: fiscalYear || 2026 }),
@@ -698,7 +682,7 @@ export const Dashboard = () => {
             trendLabel: (stats.netIncome || 0) < 0 ? t('dashboard.netLoss') : t('dashboard.netSurplus'),
             trendColor: (stats.netIncome || 0) < 0 ? 'text-red-400' : 'text-emerald-400',
             accentBar: (stats.netIncome || 0) < 0 ? 'from-red-500 to-red-400' : 'from-emerald-500 to-emerald-400',
-            delay: 420,
+            delay: 350,
           },
         ].map((card) => (
           <StatCard key={card.title} {...card} />

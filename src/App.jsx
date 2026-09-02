@@ -365,6 +365,21 @@ function App() {
                 <BeneficiaryForm />
               </RouteGuard>
             } />
+            <Route path="/donation-distribution" element={
+              <RouteGuard module="donations">
+                <Donations />
+              </RouteGuard>
+            } />
+            <Route path="/donation-distribution/new" element={
+              <RouteGuard module="donations" action="create">
+                <DonationForm />
+              </RouteGuard>
+            } />
+            <Route path="/donation-distribution/edit/:id" element={
+              <RouteGuard module="donations" action="update">
+                <DonationForm />
+              </RouteGuard>
+            } />
             <Route path="/donations" element={
               <RouteGuard module="donations">
                 <Donations />
