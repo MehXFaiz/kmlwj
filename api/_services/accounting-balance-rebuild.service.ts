@@ -91,6 +91,10 @@ export class AccountingBalanceRebuildService {
       let totalRevenue = new Prisma.Decimal(0);
       let totalExpense = new Prisma.Decimal(0);
 
+      let initialAssets = new Prisma.Decimal(0);
+      let initialLiabilities = new Prisma.Decimal(0);
+      let initialEquity = new Prisma.Decimal(0);
+
       let cashBalance = new Prisma.Decimal(0);
       let bankBalance = new Prisma.Decimal(0);
       let openingCashBalance = new Prisma.Decimal(0);
@@ -143,6 +147,7 @@ export class AccountingBalanceRebuildService {
             priorRetainedEarnings = priorRetainedEarnings.minus(prDebit.minus(prCredit));
           }
         } else if (typeName === 'ASSET' || typeName === 'ASSETS') {
+          initialAssets = initialAssets.plus(initBal);
           const cAgg = cumulativeMap.get(acc.id);
           const cDebit = cAgg?.debit ?? new Prisma.Decimal(0);
           const cCredit = cAgg?.credit ?? new Prisma.Decimal(0);
@@ -168,12 +173,14 @@ export class AccountingBalanceRebuildService {
             openingBankBalance = openingBankBalance.plus(openingAsset);
           }
         } else if (typeName === 'LIABILITY' || typeName === 'LIABILITIES') {
+          initialLiabilities = initialLiabilities.plus(initBal);
           const cAgg = cumulativeMap.get(acc.id);
           const cDebit = cAgg?.debit ?? new Prisma.Decimal(0);
           const cCredit = cAgg?.credit ?? new Prisma.Decimal(0);
           const closingLiab = initBal.plus(cCredit).minus(cDebit);
           totalLiabilities = totalLiabilities.plus(closingLiab);
         } else if (typeName === 'EQUITY') {
+          initialEquity = initialEquity.plus(initBal);
           const cAgg = cumulativeMap.get(acc.id);
           const cDebit = cAgg?.debit ?? new Prisma.Decimal(0);
           const cCredit = cAgg?.credit ?? new Prisma.Decimal(0);
@@ -182,9 +189,12 @@ export class AccountingBalanceRebuildService {
         }
       }
 
+      // Opening balance equity: Difference between opening assets and opening liabilities/equity
+      const openingBalanceEquity = initialAssets.minus(initialLiabilities).minus(initialEquity);
+      const baseEquity = totalEquity.plus(openingBalanceEquity);
       const netPeriodIncome = totalRevenue.minus(totalExpense);
       const totalRetainedEarnings = priorRetainedEarnings.plus(netPeriodIncome);
-      const totalEquityWithIncome = totalEquity.plus(totalRetainedEarnings);
+      const totalEquityWithIncome = baseEquity.plus(totalRetainedEarnings);
       const netAssets = totalAssets.minus(totalLiabilities);
       const isEquationBalanced = Math.abs(totalAssets.minus(totalLiabilities.plus(totalEquityWithIncome)).toNumber()) < 0.01;
 

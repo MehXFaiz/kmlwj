@@ -13,6 +13,17 @@ var balance_sheet_default = makeHandler(async (req, res) => {
       const equityFiltered = bs.equity.filter((eq) => eq.id !== "retained-earnings-net" && eq.id !== "retained-earnings-opening-diff");
       const netIncome = bs.netPeriodIncome;
       const openingRetainedEarnings = bs.openingRetainedEarnings;
+      const openingBalEquity = bs.equity.find((eq) => eq.id === "retained-earnings-opening-diff");
+      if (openingBalEquity && openingBalEquity.balance !== 0) {
+        equityFiltered.push({
+          id: "virtual-opening-balance-equity",
+          glCode: "-",
+          accountName: "Opening Balance Equity / Capital",
+          balance: Math.abs(openingBalEquity.balance),
+          isOpeningBalanceEquity: true,
+          sign: openingBalEquity.balance >= 0 ? 1 : -1
+        });
+      }
       if (openingRetainedEarnings !== 0) {
         equityFiltered.push({
           id: "virtual-opening-retained-earnings",

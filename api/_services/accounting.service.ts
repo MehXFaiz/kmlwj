@@ -2348,6 +2348,17 @@ export class AccountingService {
       totalEquity = totalEquity.plus(retainedEarnings);
     }
 
+    const unassignedOpeningEquity = totalAssets.minus(totalLiabilities.plus(totalEquity));
+    if (!unassignedOpeningEquity.isZero()) {
+      equity.push({
+        id: 'retained-earnings-opening-diff',
+        glCode: '3010198',
+        accountName: 'Opening Balance Equity / Capital',
+        balance: unassignedOpeningEquity.toNumber()
+      });
+      totalEquity = totalEquity.plus(unassignedOpeningEquity);
+    }
+
     return {
       assets,
       liabilities,
