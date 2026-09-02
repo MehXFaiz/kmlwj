@@ -107,11 +107,7 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
     // Clean up any test records for test months before running
     const priorTestRecords = await prisma.donation.findMany({
       where: {
-        OR: [
-          { disbursementMonth: { in: ['2026-09', '2026-10'] } },
-          { month: { in: ['September 2026', 'October 2026'] } },
-          { bankAccountId: { in: [bankAccount1.id, bankAccount2.id] } }
-        ]
+        disbursementMonth: { in: ['2026-09', '2026-10'] }
       }
     });
     for (const r of priorTestRecords) {
@@ -124,11 +120,7 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
     }
     await prisma.donation.deleteMany({
       where: {
-        OR: [
-          { disbursementMonth: { in: ['2026-09', '2026-10'] } },
-          { month: { in: ['September 2026', 'October 2026'] } },
-          { bankAccountId: { in: [bankAccount1.id, bankAccount2.id] } }
-        ]
+        disbursementMonth: { in: ['2026-09', '2026-10'] }
       }
     });
   }, 30000);
