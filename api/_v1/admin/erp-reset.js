@@ -10,7 +10,7 @@ var erp_reset_default = makeHandler(async (req, res) => {
     include: { role: true }
   });
   const roleName = user?.role?.name;
-  const isSuperAdmin = roleName === "Super Admin" || roleName === "SUPER ADMIN";
+  const isSuperAdmin = roleName?.toLowerCase() === "super admin" || user?.role?.isPrivileged === true;
   if (!isSuperAdmin) {
     return res.status(403).json({
       error: {

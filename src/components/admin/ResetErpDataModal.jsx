@@ -35,7 +35,8 @@ export const ResetErpDataModal = ({ isOpen, onClose, onSuccess }) => {
   const { resetAccounts } = useCoaStore();
   const { resetJournals } = useJournalStore();
 
-  const isSuperAdmin = user?.role === 'Super Admin' || user?.role === 'SUPER ADMIN';
+  const userRoleName = typeof user?.role === 'object' && user?.role !== null ? user.role.name : (user?.role || '');
+  const isSuperAdmin = userRoleName?.toLowerCase() === 'super admin' || user?.isPrivileged === true;
 
   // Tabs: 'reset' | 'history'
   const [activeTab, setActiveTab] = useState('reset');
@@ -111,7 +112,9 @@ export const ResetErpDataModal = ({ isOpen, onClose, onSuccess }) => {
     fetchPreview(mode);
   };
 
-  const isConfirmationMatched = confirmationText.trim() === 'RESET ERP';
+  const normalizedConfirmation = confirmationText.trim().toUpperCase();
+  const isConfirmationMatched = normalizedConfirmation === 'RESET ERP' || normalizedConfirmation === 'RESET ERP DATA';
+  const isEmailDetected = confirmationText.includes('@');
   const canSubmit = isConfirmationMatched && password.length >= 1 && !isExecuting && isSuperAdmin;
 
   const progressStepsList = [
@@ -577,23 +580,85 @@ export const ResetErpDataModal = ({ isOpen, onClose, onSuccess }) => {
 
                 {/* Security Verification Inputs */}
                 <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-                  <h4 className="font-bold text-slate-200 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                    <Lock className="h-3.5 w-3.5 text-rose-400" /> Super Admin Confirmation Security
-                  </h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-slate-200 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                      <Lock className="h-3.5 w-3.5 text-rose-400" /> Super Admin Confirmation Security
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmationText('RESET ERP')}
+                      className="text-[10px] text-rose-300 hover:text-rose-200 bg-rose-950/60 hover:bg-rose-900/80 px-2.5 py-1 rounded-lg border border-rose-800/70 font-bold cursor-pointer transition-all flex items-center gap-1 shadow-sm"
+                    >
+                      <Check className="h-3 w-3 text-rose-400" />
+                      <span>Fill &quot;RESET ERP&quot;</span>
+                    </button>
+                  </div>
 
-                  <div className="space-y-2">
+                  {/* Hidden dummy input to deter aggressive browser credential manager autofill */}
+                  <input
+                    type="text"
+                    name="prevent_browser_autofill_username"
+                    style={{ position: 'absolute', opacity: 0, height: 0, width: 0, zIndex: -1 }}
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    autoComplete="off"
+                  />
+
+                  <div className="space-y-2.5">
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                        Type <span className="text-rose-400 font-mono font-bold">RESET ERP</span> to confirm:
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="RESET ERP"
-                        value={confirmationText}
-                        onChange={(e) => setConfirmationText(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-rose-500/70"
-                        required
-                      />
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[11px] font-semibold text-slate-300">
+                          Type <span className="text-rose-400 font-mono font-bold">RESET ERP</span> to confirm:
+                        </label>
+                        {isConfirmationMatched ? (
+                          <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1 bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-800/40">
+                            <CheckCircle2 className="h-3 w-3" /> Confirmation Matched
+                          </span>
+                        ) : isEmailDetected ? (
+                          <span className="text-[10px] text-amber-400 font-bold flex items-center gap-1 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-800/40">
+                            <AlertTriangle className="h-3 w-3" /> Email Detected (Not RESET ERP)
+                          </span>
+                        ) : confirmationText.length > 0 ? (
+                          <span className="text-[10px] text-rose-400 font-bold flex items-center gap-1 bg-rose-950/40 px-2 py-0.5 rounded border border-rose-800/40">
+                            <X className="h-3 w-3" /> Mismatch
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <div className="relative">
+                        <input
+                          type="text"
+                          name="erp_reset_security_confirmation_token"
+                          id="erp_reset_security_confirmation_token"
+                          autoComplete="off"
+                          autoCorrect="off"
+                          autoCapitalize="characters"
+                          spellCheck="false"
+                          data-lpignore="true"
+                          data-1p-ignore="true"
+                          data-form-type="other"
+                          placeholder="RESET ERP"
+                          value={confirmationText}
+                          onChange={(e) => setConfirmationText(e.target.value)}
+                          className={`w-full px-3 py-2 rounded-xl bg-slate-900 border text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none transition-all ${
+                            isConfirmationMatched
+                              ? 'border-emerald-500/80 ring-1 ring-emerald-500/30'
+                              : isEmailDetected
+                              ? 'border-amber-500/80 ring-1 ring-amber-500/30'
+                              : confirmationText.length > 0
+                              ? 'border-rose-500/80 ring-1 ring-rose-500/30'
+                              : 'border-slate-800 focus:border-rose-500/70'
+                          }`}
+                          required
+                        />
+                      </div>
+
+                      {isEmailDetected && (
+                        <p className="text-[10px] text-amber-400/90 mt-1.5 flex items-center gap-1.5">
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                          <span>Browser autofilled your email address. Click the <strong>Fill &quot;RESET ERP&quot;</strong> button above or type <strong>RESET ERP</strong>.</span>
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -602,6 +667,10 @@ export const ResetErpDataModal = ({ isOpen, onClose, onSuccess }) => {
                       </label>
                       <input
                         type="password"
+                        name="super_admin_security_reauth_password"
+                        id="super_admin_security_reauth_password"
+                        autoComplete="current-password"
+                        data-lpignore="true"
                         placeholder="Enter your Super Admin password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -621,28 +690,50 @@ export const ResetErpDataModal = ({ isOpen, onClose, onSuccess }) => {
                 )}
 
                 {/* Modal Footer Action Buttons */}
-                <div className="flex items-center justify-end gap-2.5 pt-1">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    disabled={isExecuting}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold cursor-pointer"
-                  >
-                    Cancel
-                  </button>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 border-t border-slate-900">
+                  <div className="text-[11px]">
+                    {!isSuperAdmin ? (
+                      <span className="text-red-400 flex items-center gap-1.5 font-medium">
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> Super Admin role required to reset
+                      </span>
+                    ) : !isConfirmationMatched ? (
+                      <span className="text-amber-400/90 flex items-center gap-1.5 font-medium">
+                        <Info className="h-3.5 w-3.5 shrink-0" /> Type &quot;RESET ERP&quot; (or click Fill) to enable button
+                      </span>
+                    ) : !password ? (
+                      <span className="text-slate-400 flex items-center gap-1.5 font-medium">
+                        <Info className="h-3.5 w-3.5 shrink-0" /> Enter your password to enable button
+                      </span>
+                    ) : (
+                      <span className="text-emerald-400 flex items-center gap-1.5 font-bold">
+                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> Ready to execute reset
+                      </span>
+                    )}
+                  </div>
 
-                  <button
-                    type="submit"
-                    disabled={!canSubmit}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all shadow-md ${
-                      canSubmit
-                        ? 'bg-rose-600 hover:bg-rose-500 text-white cursor-pointer shadow-rose-950/50'
-                        : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-                    }`}
-                  >
-                    <RotateCcw className="h-3.5 w-3.5" />
-                    <span>Confirm &amp; Reset ERP Data</span>
-                  </button>
+                  <div className="flex items-center gap-2.5 self-end sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      disabled={isExecuting}
+                      className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={!canSubmit}
+                      className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all shadow-md ${
+                        canSubmit
+                          ? 'bg-rose-600 hover:bg-rose-500 text-white cursor-pointer shadow-rose-950/50'
+                          : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                      }`}
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      <span>Confirm &amp; Reset ERP Data</span>
+                    </button>
+                  </div>
                 </div>
               </form>
             )}

@@ -23,8 +23,9 @@ var system_reset_default = makeHandler(async (req, res) => {
   if (!password) {
     return res.status(400).json({ error: { message: "Super Admin password re-authentication is required", status: 400 } });
   }
-  if (!confirmationText || confirmationText.trim() !== "RESET ERP DATA") {
-    return res.status(400).json({ error: { message: 'Invalid confirmation text. You must type "RESET ERP DATA" exactly.', status: 400 } });
+  const normalizedConfirmation = (confirmationText || "").trim().toUpperCase();
+  if (!normalizedConfirmation || normalizedConfirmation !== "RESET ERP DATA" && normalizedConfirmation !== "RESET ERP") {
+    return res.status(400).json({ error: { message: 'Invalid confirmation text. You must type "RESET ERP" to proceed.', status: 400 } });
   }
   const currentUser = await prisma.user.findUnique({
     where: { id: req.user.id }

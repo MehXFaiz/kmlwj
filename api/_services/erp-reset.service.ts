@@ -231,11 +231,11 @@ export class ErpResetService {
       );
     }
 
-    // 2. Strict Confirmation Text Check
-    const normalizedConfirmation = (params.confirmationText || '').trim();
-    if (normalizedConfirmation !== 'RESET ERP') {
+    // 2. Strict Confirmation Text Check (case-insensitive & trimmed)
+    const normalizedConfirmation = (params.confirmationText || '').trim().toUpperCase();
+    if (normalizedConfirmation !== 'RESET ERP' && normalizedConfirmation !== 'RESET ERP DATA') {
       throw Object.assign(
-        new Error('Invalid confirmation text. You must type "RESET ERP" exactly to proceed.'),
+        new Error('Invalid confirmation text. You must type "RESET ERP" to proceed.'),
         { status: 400, code: 'INVALID_CONFIRMATION' }
       );
     }
@@ -254,7 +254,7 @@ export class ErpResetService {
     }
 
     const roleName = adminUser.role?.name;
-    const isSuperAdmin = roleName === 'Super Admin' || roleName === 'SUPER ADMIN';
+    const isSuperAdmin = roleName?.toLowerCase() === 'super admin' || adminUser.role?.isPrivileged === true;
     if (!isSuperAdmin) {
       throw Object.assign(
         new Error('Forbidden: Only SUPER ADMIN has authorization to execute ERP Data Reset.'),
