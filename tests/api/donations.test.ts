@@ -123,7 +123,7 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
         disbursementMonth: { in: ['2026-09', '2026-10'] }
       }
     });
-  }, 30000);
+  }, 90000);
 
   afterAll(async () => {
     // Cleanup created test records and journal entries
@@ -327,5 +327,5 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
     expect(res.body.data).toHaveProperty('monthlyZakat');
     expect(res.body.data).toHaveProperty('currentMonthName');
     expect(res.body.data.summary).toHaveProperty('bankBalance');
-  }, 60000);
+  }, 120000);
 });

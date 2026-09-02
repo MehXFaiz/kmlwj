@@ -38,25 +38,28 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const startOfYear = new Date(`${chartYear}-01-01T00:00:00Z`);
   const endOfYear = new Date(`${chartYear + 1}-01-01T00:00:00Z`);
 
-  // Single source of truth: posted journal entry lines (same source as every
-  // financial report — see AccountingService.getPostedAggregates)
-  const postedLines = await prisma.journalEntryLine.findMany({
+  // Single source of truth: posted journal entry lines
+  const postedJournals = await prisma.journalEntry.findMany({
     where: {
-      journalEntry: {
-        status: 'Posted',
-        isDeleted: false,
-        postingDate: {
-          gte: startOfYear,
-          lt: endOfYear,
-        }
+      status: 'Posted',
+      isDeleted: false,
+      postingDate: {
+        gte: startOfYear,
+        lt: endOfYear,
       }
     },
-    include: {
-      account: {
-        include: { accountType: true }
-      },
-      journalEntry: {
-        select: { postingDate: true }
+    select: {
+      postingDate: true,
+      lines: {
+        select: {
+          debit: true,
+          credit: true,
+          account: {
+            select: {
+              accountType: { select: { name: true } }
+            }
+          }
+        }
       }
     }
   });
@@ -64,14 +67,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const monthlyData = months.map(month => ({ month, Revenue: 0, Expenses: 0 }));
 
-  for (const entry of postedLines) {
-    const monthIndex = entry.journalEntry.postingDate.getMonth();
-    const typeName = (entry.account?.accountType?.name || '').toUpperCase();
-
-    if (typeName === 'REVENUE' || typeName === 'INCOME') {
-      monthlyData[monthIndex].Revenue += (Number(entry.credit) || 0) - (Number(entry.debit) || 0);
-    } else if (typeName === 'EXPENSE' || typeName === 'EXPENSES') {
-      monthlyData[monthIndex].Expenses += (Number(entry.debit) || 0) - (Number(entry.credit) || 0);
+  for (const entry of postedJournals) {
+    const monthIndex = entry.postingDate ? entry.postingDate.getMonth() : 0;
+    for (const line of entry.lines) {
+      const typeName = (line.account?.accountType?.name || '').toUpperCase();
+      if (typeName === 'REVENUE' || typeName === 'INCOME') {
+        monthlyData[monthIndex].Revenue += (Number(line.credit) || 0) - (Number(line.debit) || 0);
+      } else if (typeName === 'EXPENSE' || typeName === 'EXPENSES') {
+        monthlyData[monthIndex].Expenses += (Number(line.debit) || 0) - (Number(line.credit) || 0);
+      }
     }
   }
 

@@ -413,22 +413,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: amountCheck.message, status: 400 } });
     }
     const parsedAmount = amountCheck.amount;
-<<<<<<< HEAD
 
     // Validate Bank Account
     if (paymentMethod === 'BANK' || paymentMethod === 'CHEQUE') {
-=======
-    if (donationType === 'MONTHLY') {
-      if (paymentMethod === 'CASH') {
-        return res.status(400).json({ error: { message: 'Monthly donation disbursements must be paid from a Bank Account. Please select Bank as the payment method.', status: 400 } });
-      }
-      if (!bankAccountId) {
-        return res.status(400).json({ error: { message: 'Bank account is required for Monthly donation disbursements.', status: 400 } });
-      }
-    }
-
-    if ((paymentMethod === 'BANK' || paymentMethod === 'CHEQUE')) {
->>>>>>> febbad100121eaf83047003e34ac7932fa78c2c9
       if (!bankAccountId) {
         return res.status(400).json({ error: { message: 'Bank Account is required for bank disbursement.', status: 400 } });
       }
