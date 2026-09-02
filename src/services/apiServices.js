@@ -166,4 +166,11 @@ export const pettyCashService = {
   getReconciliations: () => api.get('/api/v1/petty-cash?action=reconciliations').then((r) => r.data),
 };
 
+export const erpResetService = {
+  getPreview: (mode = 'TRANSACTIONS_ONLY') => api.get(`/api/v1/admin/erp-reset/preview?mode=${mode}`).then((r) => r.data),
+  execute: (data) => api.post('/api/v1/admin/erp-reset', data).then((r) => r.data),
+  getHistory: (limit = 20) => api.get(`/api/v1/admin/erp-reset/history?limit=${limit}`).then((r) => r.data),
+};
+
+
 

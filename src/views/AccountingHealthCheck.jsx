@@ -7,9 +7,10 @@ import { Badge } from '../components/ui/Badge';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { AiRepairPreviewModal } from '../components/common/AiRepairPreviewModal';
 import { AiRepairHistoryModal } from '../components/common/AiRepairHistoryModal';
+import { ResetErpDataModal } from '../components/admin/ResetErpDataModal';
 import {
   ShieldCheck, ShieldAlert, AlertTriangle, Info, RefreshCw, CheckCircle2, XCircle,
-  Sparkles, Wrench, History, Lock, Loader2,
+  Sparkles, Wrench, History, Lock, Loader2, RotateCcw,
 } from 'lucide-react';
 
 const severityStyles = {
@@ -40,6 +41,7 @@ const SectionHeader = ({ title, subtitle }) => (
 export const AccountingHealthCheck = () => {
   const user = useAuthStore((state) => state.user);
   const isAdminOrSuperAdmin = user?.role === 'Admin' || user?.role === 'Super Admin';
+  const isSuperAdmin = user?.role === 'Super Admin' || user?.role === 'SUPER ADMIN';
   const confirm = useConfirm();
 
   const [issues, setIssues] = useState([]);
@@ -52,6 +54,7 @@ export const AccountingHealthCheck = () => {
   const [previewIssue, setPreviewIssue] = useState(null);
   const [applyingRepair, setApplyingRepair] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [resetModalOpen, setResetModalOpen] = useState(false);
 
   const summarize = useCallback((list) => {
     setMeta({
@@ -252,6 +255,18 @@ export const AccountingHealthCheck = () => {
               <History className="h-3.5 w-3.5" />
               Repair History
             </button>
+
+            {isSuperAdmin && (
+              <button
+                onClick={() => setResetModalOpen(true)}
+                disabled={busy}
+                title="Delete transactional records and reset accounting calculations (Super Admin only)"
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-rose-800/60 bg-rose-950/40 hover:bg-rose-900/40 text-rose-300 hover:text-rose-100 transition-all text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Reset ERP Data
+              </button>
+            )}
           </div>
         </div>
 
@@ -398,6 +413,14 @@ export const AccountingHealthCheck = () => {
           isBusy={applyingRepair}
         />
         <AiRepairHistoryModal isOpen={historyOpen} onClose={() => setHistoryOpen(false)} />
+        <ResetErpDataModal
+          isOpen={resetModalOpen}
+          onClose={() => setResetModalOpen(false)}
+          onSuccess={() => {
+            runFullAudit();
+            fetchIssues();
+          }}
+        />
       </div>
     </DashboardLayout>
   );

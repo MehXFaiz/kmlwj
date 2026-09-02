@@ -920,19 +920,23 @@ export class AccountingService {
       });
     }
 
+    let updatedCount = 0;
     for (const acc of accounts) {
       const typeName = (acc.accountType?.name || 'ASSET').toUpperCase();
       const isNormalDebit = typeName === 'ASSET' || typeName === 'EXPENSE' || typeName === 'EXPENSES' || typeName === 'ASSETS';
       const sum = sumsByAccount.get(acc.id) || { debit: 0, credit: 0 };
       const movement = isNormalDebit ? (sum.debit - sum.credit) : (sum.credit - sum.debit);
       const newBalance = Number(acc.initialBalance || 0) + movement;
-      await tx.account.update({
-        where: { id: acc.id },
-        data: { currentBalance: newBalance },
-      });
+      if (Math.abs(Number(acc.currentBalance ?? 0) - newBalance) > 0.001) {
+        await tx.account.update({
+          where: { id: acc.id },
+          data: { currentBalance: newBalance },
+        });
+        updatedCount++;
+      }
     }
 
-    return accounts.length;
+    return updatedCount;
   }
 
   /**

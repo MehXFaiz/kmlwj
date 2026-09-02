@@ -105,7 +105,7 @@ export class AiReconciliationService {
               currentValue: issue.currentValue ?? null,
               expectedValue: issue.expectedValue ?? null,
               difference: issue.difference ?? null,
-              affectedRecords: issue.affectedRecords ?? Prisma.JsonNull,
+              affectedRecords: issue.affectedRecords ? (issue.affectedRecords as any) : undefined,
               lastSeenAt: now,
             },
           });
@@ -120,7 +120,7 @@ export class AiReconciliationService {
               currentValue: issue.currentValue ?? undefined,
               expectedValue: issue.expectedValue ?? undefined,
               difference: issue.difference ?? undefined,
-              affectedRecords: issue.affectedRecords ?? undefined,
+              affectedRecords: issue.affectedRecords ? (issue.affectedRecords as any) : undefined,
               status: 'OPEN',
               detectedAt: now,
               lastSeenAt: now,

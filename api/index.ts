@@ -59,6 +59,7 @@ import aiAccountingAutoRepairHandler from './_v1/ai-accounting/auto-repair.js';
 import aiAccountingRepairHandler from './_v1/ai-accounting/repair.js';
 import aiAccountingHistoryHandler from './_v1/ai-accounting/history.js';
 import systemResetHandler from './_v1/system-reset.js';
+import erpResetAdminHandler from './_v1/admin/erp-reset.js';
 import zakatCardsHandler from './_v1/zakat-cards.js';
 import incomeCategoriesHandler from './_v1/income-categories.js';
 import addIncomeHandler from './_v1/add-income.js';
@@ -344,8 +345,12 @@ app.post('/api/v1/ai-accounting/auto-repair', makeExpress(aiAccountingAutoRepair
 app.post('/api/v1/ai-accounting/repair', makeExpress(aiAccountingRepairHandler));
 app.get('/api/v1/ai-accounting/history', makeExpress(aiAccountingHistoryHandler));
 
-// System Reset Route
+// System Reset & ERP Reset Routes
 app.post('/api/v1/system-reset', makeExpress(systemResetHandler));
+app.get('/api/v1/admin/erp-reset/preview', makeExpress(erpResetAdminHandler));
+app.get('/api/v1/admin/erp-reset/history', makeExpress(erpResetAdminHandler));
+app.post('/api/v1/admin/erp-reset', makeExpress(erpResetAdminHandler));
+app.all('/api/v1/admin/erp-reset', makeExpress(erpResetAdminHandler));
 
 // Public Member Verification Route (no JWT — scanned from QR code)
 app.get('/api/v1/member/verify/:id', async (req: any, res: any) => {

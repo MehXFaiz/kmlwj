@@ -181,10 +181,10 @@ export class AccountingIntegrityService {
     const issues: IntegrityIssue[] = [];
 
     const prefixRules = [
-      { prefix: '1', expectedType: 'ASSET' },
-      { prefix: '2', expectedType: 'LIABILITY' },
-      { prefix: '3', expectedType: 'REVENUE' },
-      { prefix: '4', expectedType: 'EXPENSE' },
+      { prefix: '1', expectedTypes: ['ASSET'] },
+      { prefix: '2', expectedTypes: ['LIABILITY'] },
+      { prefix: '3', expectedTypes: ['REVENUE', 'EQUITY'] },
+      { prefix: '4', expectedTypes: ['EXPENSE'] },
     ];
 
     const accounts = await prisma.account.findMany({
@@ -207,11 +207,11 @@ export class AccountingIntegrityService {
                 name: account.accountName,
               },
             });
-          } else if (account.accountType.name.toUpperCase() !== rule.expectedType) {
+          } else if (!rule.expectedTypes.includes(account.accountType.name.toUpperCase())) {
             issues.push({
               type: 'wrong_account_type',
               severity: 'critical',
-              description: `Account ${account.glCode} - ${account.accountName} is type ${account.accountType.name} but should be ${rule.expectedType}`,
+              description: `Account ${account.glCode} - ${account.accountName} is type ${account.accountType.name} but should be ${rule.expectedTypes.join(' or ')}`,
               item: {
                 id: account.id,
                 glCode: account.glCode,
