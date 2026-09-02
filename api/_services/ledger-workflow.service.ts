@@ -15,25 +15,41 @@ export class LedgerConflictError extends Error {
 
 async function getExpenseAccountForDonation(donationType: string, tx: any) {
   const norm = (donationType || '').toUpperCase();
-  let code = '4071004'; // OTHER DONATION
-  if (norm.includes('MONTHLY') || norm.includes('RATION')) code = '4071001';
-  else if (norm.includes('MARRIAGE') || norm.includes('WEDDING') || norm.includes('SHADI')) code = '4071002';
-  else if (norm.includes('MEDICAL') || norm.includes('HEALTH') || norm.includes('TREATMENT') || norm.includes('HOSPITAL')) code = '4071003';
+  const isZakat = norm.includes('ZAKAT');
 
-  let acc = await tx.account.findUnique({
-    where: { glCode: code }
+  if (isZakat) {
+    let zakatAcc = await tx.account.findFirst({
+      where: {
+        accountType: { name: { equals: 'Expense', mode: 'insensitive' } },
+        accountName: { contains: 'Zakat', mode: 'insensitive' },
+        children: { none: {} },
+        isLocked: false,
+        isDeleted: false
+      },
+      orderBy: { glCode: 'asc' }
+    });
+    if (zakatAcc) return zakatAcc;
+  }
+
+  const primaryCode = isZakat ? '4060104' : (norm.includes('MONTHLY') || norm.includes('RATION') || norm.includes('DONATION') ? '4060101' : (norm.includes('MARRIAGE') ? '4060102' : (norm.includes('MEDICAL') ? '4060103' : '4060101')));
+
+  let acc = await tx.account.findFirst({
+    where: {
+      OR: [{ glCode: primaryCode }, { glCode: isZakat ? '4071004' : '4071001' }],
+      isLocked: false,
+      isDeleted: false
+    }
   });
-  if (acc && !acc.isLocked && !acc.isDeleted) return acc;
+  if (acc) return acc;
 
   acc = await tx.account.findFirst({
     where: {
       accountType: { name: { equals: 'Expense', mode: 'insensitive' } },
       NOT: { accountName: { contains: 'Salary', mode: 'insensitive' } },
       OR: [
-        { accountName: { contains: donationType, mode: 'insensitive' } },
+        { accountName: { contains: isZakat ? 'Zakat' : 'Donation', mode: 'insensitive' } },
         { accountName: { contains: 'Aid', mode: 'insensitive' } },
-        { accountName: { contains: 'Welfare', mode: 'insensitive' } },
-        { accountName: { contains: 'Donation', mode: 'insensitive' } }
+        { accountName: { contains: 'Welfare', mode: 'insensitive' } }
       ],
       children: { none: {} },
       isLocked: false,
@@ -41,19 +57,18 @@ async function getExpenseAccountForDonation(donationType: string, tx: any) {
     },
     orderBy: { glCode: 'asc' }
   });
+  if (acc) return acc;
 
-  if (!acc) {
-    acc = await tx.account.findFirst({
-      where: {
-        accountType: { name: { equals: 'Expense', mode: 'insensitive' } },
-        NOT: { accountName: { contains: 'Salary', mode: 'insensitive' } },
-        children: { none: {} },
-        isLocked: false,
-        isDeleted: false
-      },
-      orderBy: { glCode: 'asc' }
-    });
-  }
+  acc = await tx.account.findFirst({
+    where: {
+      accountType: { name: { equals: 'Expense', mode: 'insensitive' } },
+      NOT: { accountName: { contains: 'Salary', mode: 'insensitive' } },
+      children: { none: {} },
+      isLocked: false,
+      isDeleted: false
+    },
+    orderBy: { glCode: 'asc' }
+  });
 
   return acc;
 }
@@ -402,34 +417,65 @@ export class LedgerWorkflowService {
           throw new Error(`Donation Expense account not found in Chart of Accounts for ${record.donationType}`);
         }
 
-        const postingResult = await AccountingService.postTransaction(tx, {
-          voucherType: 'PV',
-          reference: `DON-${record.id.substring(0, 8)}`,
-          description: `Disbursement: ${record.donationType} Aid to ${record.beneficiary?.name || record.donorName || 'Beneficiary'}`,
-          module: 'Donations',
-          postedBy: userId,
-          lines: [
-            {
-              accountId: expenseAccount.id,
-              debit: Number(record.amount),
-              credit: 0,
-              description: `Debit Expense: ${record.donationType} Aid for ${record.beneficiary?.name || record.donorName || 'Beneficiary'}`
-            },
-            {
-              accountId: cashOrBankAccountId,
-              debit: 0,
-              credit: Number(record.amount),
-              description: `Credit ${record.paymentMethod === 'CASH' ? 'Cash' : 'Bank'} Account`
+        const isZakat = String(record.donationType || '').toUpperCase().includes('ZAKAT');
+        const displayCategory = isZakat ? 'Zakat' : 'Donation';
+        const dateObj = record.createdAt ? new Date(record.createdAt) : new Date();
+        const year = dateObj.getFullYear();
+        const monthIdx = dateObj.getMonth();
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const disbursementMonth = record.disbursementMonth || `${year}-${String(monthIdx + 1).padStart(2, '0')}`;
+        const monthLabel = record.month || `${monthNames[monthIdx]} ${year}`;
+
+        // Check Monthly Duplicate before posting
+        if (cashOrBankAccountId && record.paymentMethod !== 'CASH') {
+          const typeFilter = isZakat
+            ? { donationType: 'ZAKAT' as any }
+            : { donationType: { in: ['MONTHLY', 'GENERAL_DONATION', 'CUSTOM'] } };
+
+          const duplicate = await tx.donation.findFirst({
+            where: {
+              id: { not: record.id },
+              isDeleted: false,
+              status: { in: ['APPROVED', 'DISBURSED'] as any },
+              bankAccountId: cashOrBankAccountId,
+              disbursementMonth,
+              ...typeFilter
             }
-          ],
+          });
+
+          if (duplicate) {
+            throw new LedgerConflictError(`Monthly ${displayCategory} for ${monthLabel} has already been posted for this bank account.`);
+          }
+        }
+
+        const voucherNo = record.voucherNo || `MDON-${disbursementMonth.replace('-', '')}-${record.id.slice(0, 4).toUpperCase()}`;
+
+        const postingResult = await AccountingService.postPayment(tx, {
+          amount: Number(record.amount),
+          cashOrBankAccountId,
+          expenseAccountId: expenseAccount.id,
+          reference: voucherNo,
+          description: `Monthly ${displayCategory} Disbursement - ${monthLabel}${record.remarks ? ` (${record.remarks})` : ''}`,
+          module: 'Donations',
+          voucherType: record.paymentMethod === 'CASH' ? 'CP' : 'BP',
+          postingDate: record.createdAt,
+          postedBy: userId,
           ipAddress,
           userAgent
         });
 
         const updatedRecord = await tx.donation.update({
           where: { id: recordId },
-          data: { status: 'APPROVED' },
-          include: { beneficiary: true, bankAccount: true, createdBy: true }
+          data: {
+            status: 'APPROVED',
+            journalEntryId: postingResult.journalEntry.id,
+            voucherNo,
+            month: record.month || monthLabel,
+            disbursementMonth,
+            postedAt: new Date(),
+            postedById: userId,
+          },
+          include: { beneficiary: true, bankAccount: true, createdBy: true, journalEntry: { select: { id: true, voucherNo: true, status: true, postingDate: true } } }
         });
 
         await logAudit({
@@ -921,6 +967,44 @@ export class LedgerWorkflowService {
         });
 
         await logAudit(userId, 'Revert Posting', 'Simple Expense', record, updatedRecord, ipAddress, userAgent);
+
+        return updatedRecord;
+      }
+
+      if (normModule.includes('donation') || normModule.includes('welfare') || normModule.includes('zakat')) {
+        const record = await tx.donation.findUnique({
+          where: { id: recordId },
+          include: { beneficiary: true, bankAccount: true }
+        });
+
+        if (!record) throw new Error('Donation record not found');
+        if (record.status !== 'APPROVED' || !record.journalEntryId) {
+          throw new Error('Transaction is not currently posted to the General Ledger.');
+        }
+
+        try {
+          await AccountingService.deleteJournalEntry(tx, record.journalEntryId, userId, reason || 'Posting Reverted by User');
+        } catch (err) {
+          console.warn('deleteJournalEntry error during revert:', err);
+        }
+
+        const updatedRecord = await tx.donation.update({
+          where: { id: recordId },
+          data: {
+            status: 'REVERTED' as any,
+            journalEntryId: null,
+            revertedAt: new Date(),
+            revertedById: userId,
+            revertReason: reason ? reason.trim() : null
+          },
+          include: {
+            beneficiary: true,
+            bankAccount: true,
+            createdBy: { select: { id: true, fullName: true, email: true } }
+          }
+        });
+
+        await logAudit(userId, 'Revert Posting', 'Donation', record, updatedRecord, ipAddress, userAgent);
 
         return updatedRecord;
       }

@@ -15,7 +15,7 @@ import {
   RefreshCw, Download, Bell, ChevronRight, CheckCircle2,
   AlertTriangle, Clock, Users, PieChart as PieIcon,
   Calendar, PlusCircle, MinusCircle, CheckSquare, Heart,
-  ArrowRight, Wallet, RepeatIcon, Receipt,
+  ArrowRight, Wallet, RepeatIcon, Receipt, Sparkles,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { showToast } from '../components/ui/Toast';
@@ -494,9 +494,13 @@ export const Dashboard = () => {
         // Do NOT clamp to 0 — overdrafts and losses must be visible
         cashBalance: dbStats.summary.cashBalance || 0,
         bankBalance: dbStats.summary.bankBalance || 0,
+        monthlyDonations: dbStats.summary.monthlyDonations ?? dbStats.monthlyDonations ?? 0,
+        monthlyZakat: dbStats.summary.monthlyZakat ?? dbStats.monthlyZakat ?? 0,
+        currentMonthName: dbStats.summary.currentMonthName ?? dbStats.currentMonthName ?? 'Current Month',
         donationsPaid: dbStats.summary.donationsPaid ?? dbStats.donationsPaid ?? 0,
         donationsPaidFromBank: dbStats.summary.donationsPaidFromBank ?? dbStats.donationsPaidFromBank ?? 0,
         totalDonationsPaid: dbStats.summary.totalDonationsPaid ?? dbStats.totalDonationsPaid ?? 0,
+        totalZakatPaid: dbStats.summary.totalZakatPaid ?? dbStats.totalZakatPaid ?? 0,
         // As of the fiscal year's start — reconciles against Cash in Hand:
         // Opening Cash + this period's Net Surplus should explain the closing
         // balance, instead of Cash in Hand looking disconnected from Net Surplus.
@@ -643,7 +647,7 @@ export const Dashboard = () => {
 
 
       {/* ── Financial KPI Cards ── premium redesign ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-3 sm:gap-4">
         {[
           {
             // Total Income (Gross Revenue from General Ledger)
@@ -668,20 +672,33 @@ export const Dashboard = () => {
             trendLabel: t('dashboard.moneyPaidOut'),
             trendColor: 'text-red-400',
             accentBar: 'from-red-500 to-red-400',
-            delay: 80,
+            delay: 70,
           },
           {
-            title: t('dashboard.donationsPaid', { year: fiscalYear || 2026 }) || `Donations Paid (FY ${fiscalYear || 2026})`,
-            value: stats.donationsPaid ?? dbStats?.summary?.donationsPaid ?? dbStats?.donationsPaid ?? 0,
+            title: 'Monthly Donations',
+            value: stats.monthlyDonations || 0,
             icon: Heart,
             iconColor: 'text-amber-400',
             iconBg: 'bg-amber-500/10 border-amber-500/20',
             trend: 'neutral',
-            trendLabel: t('dashboard.totalDonationsPaid') || 'Disbursed / Paid',
+            trendLabel: stats.currentMonthName || 'Current Month',
             trendColor: 'text-amber-400',
             accentBar: 'from-amber-500 to-amber-400',
-            subLabel: t('dashboard.amountAllocatedFromBank') || 'Amount allocated from Bank',
-            delay: 160,
+            subLabel: `Disbursed (${stats.currentMonthName || 'Current Month'})`,
+            delay: 140,
+          },
+          {
+            title: 'Monthly Zakat',
+            value: stats.monthlyZakat || 0,
+            icon: Sparkles,
+            iconColor: 'text-emerald-400',
+            iconBg: 'bg-emerald-500/10 border-emerald-500/20',
+            trend: 'neutral',
+            trendLabel: stats.currentMonthName || 'Current Month',
+            trendColor: 'text-emerald-400',
+            accentBar: 'from-emerald-500 to-emerald-400',
+            subLabel: `Zakat Disbursed (${stats.currentMonthName || 'Current Month'})`,
+            delay: 210,
           },
           {
             // Show cash-in-hand; if whole income was received in cash, display that
@@ -699,7 +716,7 @@ export const Dashboard = () => {
             trendLabel: (stats.cashBalance || 0) < 0 ? 'Overdraft' : t('dashboard.availableCash'),
             trendColor: (stats.cashBalance || 0) < 0 ? 'text-red-400' : 'text-slate-400',
             accentBar: (stats.cashBalance || 0) < 0 ? 'from-red-500 to-red-400' : 'from-blue-500 to-blue-400',
-            delay: 240,
+            delay: 280,
           },
           {
             // BUG FIX: Show actual bank balance (not clamped); overdraft shows as negative
@@ -712,7 +729,7 @@ export const Dashboard = () => {
             trendLabel: (stats.bankBalance || 0) < 0 ? 'Overdraft' : t('dashboard.inBankAccounts'),
             trendColor: (stats.bankBalance || 0) < 0 ? 'text-red-400' : 'text-slate-400',
             accentBar: (stats.bankBalance || 0) < 0 ? 'from-red-500 to-red-400' : 'from-violet-500 to-violet-400',
-            delay: 320,
+            delay: 350,
           },
           {
             title: t('dashboard.netAfterExpenses', { year: fiscalYear || 2026 }),
@@ -724,7 +741,7 @@ export const Dashboard = () => {
             trendLabel: (stats.netIncome || 0) < 0 ? t('dashboard.netLoss') : t('dashboard.netSurplus'),
             trendColor: (stats.netIncome || 0) < 0 ? 'text-red-400' : 'text-emerald-400',
             accentBar: (stats.netIncome || 0) < 0 ? 'from-red-500 to-red-400' : 'from-emerald-500 to-emerald-400',
-            delay: 400,
+            delay: 420,
           },
         ].map((card) => (
           <StatCard key={card.title} {...card} />

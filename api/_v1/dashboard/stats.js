@@ -56,9 +56,6 @@ var stats_default = makeHandler(async (req, res) => {
       monthlyData[monthIndex].Expenses += (Number(entry.debit) || 0) - (Number(entry.credit) || 0);
     }
   }
-  await AccountingService.ensureLeafPostingsAndBalances(prisma).catch((err) => {
-    console.error("Error in ensureLeafPostingsAndBalances:", err);
-  });
   const { result: summaryResult, ledgerVersion } = await AccountingService.computeWithLedgerVersion(
     () => AccountingService.getFinancialSummary(startDate, endDate)
   );
@@ -96,17 +93,54 @@ var stats_default = makeHandler(async (req, res) => {
       voucherType: je.voucherType || "JV"
     };
   });
-  const startOfMonth = new Date(currentYear, (/* @__PURE__ */ new Date()).getMonth(), 1);
+  const currentMonthIdx = (/* @__PURE__ */ new Date()).getMonth();
+  const currentMonthKey = `${currentYear}-${String(currentMonthIdx + 1).padStart(2, "0")}`;
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const currentMonthName = `${monthNames[currentMonthIdx]} ${currentYear}`;
+  const startOfMonth = new Date(currentYear, currentMonthIdx, 1);
+  const endOfMonth = new Date(currentYear, currentMonthIdx + 1, 1);
   const pendingDonations = await prisma.donation.count({
     where: { status: "PENDING", isDeleted: false }
   });
+  const nonZakatTypes = ["MONTHLY", "GENERAL_DONATION", "CUSTOM", "MARRIAGE", "MEDICAL", "EMERGENCY", "EDUCATION"];
+  const monthlyDonationsRaw = await prisma.donation.aggregate({
+    _sum: { amount: true },
+    _count: true,
+    where: {
+      status: "APPROVED",
+      isDeleted: false,
+      donationType: { in: nonZakatTypes },
+      OR: [
+        { disbursementMonth: currentMonthKey },
+        { createdAt: { gte: startOfMonth, lt: endOfMonth } }
+      ]
+    }
+  });
+  const monthlyDonations = Number(monthlyDonationsRaw._sum.amount || 0);
+  const monthlyZakatRaw = await prisma.donation.aggregate({
+    _sum: { amount: true },
+    _count: true,
+    where: {
+      status: "APPROVED",
+      isDeleted: false,
+      donationType: "ZAKAT",
+      OR: [
+        { disbursementMonth: currentMonthKey },
+        { createdAt: { gte: startOfMonth, lt: endOfMonth } }
+      ]
+    }
+  });
+  const monthlyZakat = Number(monthlyZakatRaw._sum.amount || 0);
   const donationsThisMonthRaw = await prisma.donation.aggregate({
     _sum: { amount: true },
     _count: true,
     where: {
       status: "APPROVED",
       isDeleted: false,
-      createdAt: { gte: startOfMonth }
+      OR: [
+        { disbursementMonth: currentMonthKey },
+        { createdAt: { gte: startOfMonth, lt: endOfMonth } }
+      ]
     }
   });
   const hallBookingsThisMonth = await prisma.hallBooking.count({
@@ -167,7 +201,17 @@ var stats_default = makeHandler(async (req, res) => {
     _sum: { amount: true },
     where: donationTotalWhere
   });
-  const totalDonationsPaid = Number(donationsTotalRaw._sum.amount || 0);
+  const totalDisbursementsPaid = Number(donationsTotalRaw._sum.amount || 0);
+  const totalDonationsPaidRaw = await prisma.donation.aggregate({
+    _sum: { amount: true },
+    where: { ...donationTotalWhere, donationType: { in: nonZakatTypes } }
+  });
+  const totalDonationsOnlyPaid = Number(totalDonationsPaidRaw._sum.amount || 0);
+  const totalZakatPaidRaw = await prisma.donation.aggregate({
+    _sum: { amount: true },
+    where: { ...donationTotalWhere, donationType: "ZAKAT" }
+  });
+  const totalZakatOnlyPaid = Number(totalZakatPaidRaw._sum.amount || 0);
   const donationBankWhere = { status: "APPROVED", isDeleted: false, paymentMethod: { in: ["BANK", "CHEQUE", "ONLINE"] } };
   if (startDate) donationBankWhere.createdAt = { ...donationBankWhere.createdAt || {}, gte: new Date(startDate) };
   if (endDate) donationBankWhere.createdAt = { ...donationBankWhere.createdAt || {}, lte: new Date(endDate) };
@@ -189,9 +233,15 @@ var stats_default = makeHandler(async (req, res) => {
       monthlyData,
       recentActivities,
       pendingDonations,
-      donationsPaid: totalDonationsPaid,
+      currentMonthName,
+      currentMonthKey,
+      monthlyDonations,
+      monthlyZakat,
+      donationsPaid: totalDisbursementsPaid,
       donationsPaidFromBank,
-      totalDonationsPaid,
+      totalDonationsPaid: totalDonationsOnlyPaid,
+      totalZakatPaid: totalZakatOnlyPaid,
+      totalDisbursementsPaid,
       donationsThisMonth: donationsThisMonthRaw._count,
       donationsAmountThisMonth: donationsThisMonthRaw._sum.amount || 0,
       hallBookingsThisMonth,
@@ -213,9 +263,13 @@ var stats_default = makeHandler(async (req, res) => {
         openingCashBalance,
         openingBankBalance,
         netIncome,
-        donationsPaid: totalDonationsPaid,
+        donationsPaid: totalDisbursementsPaid,
         donationsPaidFromBank,
-        totalDonationsPaid,
+        monthlyDonations,
+        monthlyZakat,
+        currentMonthName,
+        totalDonationsPaid: totalDonationsOnlyPaid,
+        totalZakatPaid: totalZakatOnlyPaid,
         isEquationBalanced
       },
       recentTransactions

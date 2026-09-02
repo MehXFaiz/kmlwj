@@ -7,22 +7,30 @@ export const useDonationStore = create((set, get) => ({
   loading: false,
   error: null,
 
-  fetchDonations: async () => {
+  fetchDonations: async (params) => {
     set({ loading: true });
     try {
-      const data = await donationService.getAll();
+      const data = await donationService.getAll(params);
       set({ donations: data.data || [], loading: false, error: null });
     } catch (err) {
       set({ error: err.message, loading: false });
     }
   },
 
+  checkDuplicate: async (disbursementMonth, donationType, bankAccountId) => {
+    try {
+      return await donationService.checkDuplicate(disbursementMonth, donationType, bankAccountId);
+    } catch (err) {
+      return { isDuplicate: false };
+    }
+  },
+
   addDonation: async (data) => {
     try {
       const res = await donationService.create(data);
-      // refetch to get beneficiary details attached correctly, or just refetch whole list
       await get().fetchDonations();
       useDashboardStore.getState().invalidateAll();
+      return res;
     } catch (err) {
       set({ error: err.message });
       throw err;
@@ -31,9 +39,10 @@ export const useDonationStore = create((set, get) => ({
 
   updateDonation: async (id, data) => {
     try {
-      await donationService.update(id, data);
+      const res = await donationService.update(id, data);
       await get().fetchDonations();
       useDashboardStore.getState().invalidateAll();
+      return res;
     } catch (err) {
       set({ error: err.message });
       throw err;
@@ -42,9 +51,22 @@ export const useDonationStore = create((set, get) => ({
 
   approveDonation: async (id) => {
     try {
-      await donationService.approve(id);
+      const res = await donationService.approve(id);
       await get().fetchDonations();
       useDashboardStore.getState().invalidateAll();
+      return res;
+    } catch (err) {
+      set({ error: err.message });
+      throw err;
+    }
+  },
+
+  revertDonation: async (id, reason) => {
+    try {
+      const res = await donationService.revert(id, reason);
+      await get().fetchDonations();
+      useDashboardStore.getState().invalidateAll();
+      return res;
     } catch (err) {
       set({ error: err.message });
       throw err;
@@ -53,9 +75,10 @@ export const useDonationStore = create((set, get) => ({
 
   deleteDonation: async (id) => {
     try {
-      await donationService.delete(id);
+      const res = await donationService.delete(id);
       await get().fetchDonations();
       useDashboardStore.getState().invalidateAll();
+      return res;
     } catch (err) {
       set({ error: err.message });
       throw err;

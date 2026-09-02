@@ -234,6 +234,7 @@ model JournalEntry {
   hallBooking       HallBooking?       @relation("HallBookingJournalEntry")
   revenueCollection RevenueCollection? @relation("RevenueCollectionJournalEntry")
   donationReceived  DonationReceived?  @relation("DonationReceivedJournalEntry")
+  donation          Donation?          @relation("DonationJournalEntry")
   zakatCard         ZakatCard?         @relation("ZakatCardJournalEntry")
   addIncomeRecord   AddIncomeRecord?   @relation("AddIncomeJournalEntry")
   pettyCashTransaction PettyCashTransaction? @relation("PettyCashJournalEntry")
@@ -296,6 +297,8 @@ enum DonationStatus {
   PENDING
   APPROVED
   CANCELLED
+  DISBURSED
+  REVERTED
 }
 
 model Beneficiary {
@@ -340,8 +343,13 @@ model Beneficiary {
 
 model Donation {
   id                 String         @id @default(uuid()) @map("_id")
+  month              String?        // e.g. "September 2026"
+  disbursementMonth  String?        // e.g. "2026-09" (ISO YYYY-MM for indexing & duplicate check)
+  financialYear      String?        // e.g. "2026" or "2026-2027"
+  voucherNo          String?
   beneficiaryId      String?
   beneficiary        Beneficiary?   @relation(fields: [beneficiaryId], references: [id])
+  beneficiaries      Json?          // Array of [{ id?: string, name: string, cnic?: string, amount: number, remarks?: string }]
   donorName          String?
   donorMobile        String?
   donationType       DonationType
@@ -353,7 +361,14 @@ model Donation {
   chequeNumber       String?
   donorBankName      String?
   remarks            String?
+  journalEntryId     String?        @unique
+  journalEntry       JournalEntry?  @relation("DonationJournalEntry", fields: [journalEntryId], references: [id])
   status             DonationStatus @default(PENDING)
+  postedAt           DateTime?
+  postedById         String?
+  revertedAt         DateTime?
+  revertedById       String?
+  revertReason       String?
   createdById        String?
   createdBy          User?          @relation("DonationCreatedBy", fields: [createdById], references: [id])
   isDeleted          Boolean        @default(false)
@@ -365,6 +380,8 @@ model Donation {
   @@index([isDeleted])
   @@index([bankAccountId])
   @@index([beneficiaryId])
+  @@index([disbursementMonth, donationType, bankAccountId, status, isDeleted])
+  @@index([status, isDeleted])
   @@index([createdAt])
 }
 

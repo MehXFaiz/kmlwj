@@ -77,15 +77,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   // Migrate any accidentally posted header lines to leaf accounts and recalculate
   // balances. This is a WRITER, so it must finish before the summary is read —
-  // firing it un-awaited let it re-point journal lines and rewrite balances
-  // *while* this very response was being computed, so the totals returned here
-  // could describe a ledger state that no longer existed by the time the client
-  // received them (and never matched what /reports/trial-balance, which awaits
-  // its own healer, computed for the same period).
-  await AccountingService.ensureLeafPostingsAndBalances(prisma).catch((err) => {
-    console.error("Error in ensureLeafPostingsAndBalances:", err);
-  });
-
   // Calculate live financial summary using AccountingService, stamped with the
   // ledger version it was computed from so the client can tell a genuine
   // Dashboard-vs-Trial-Balance discrepancy apart from two responses that simply
@@ -137,11 +128,49 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   });
 
   // 1. New Business KPIs
-  const startOfMonth = new Date(currentYear, new Date().getMonth(), 1);
+  const currentMonthIdx = new Date().getMonth();
+  const currentMonthKey = `${currentYear}-${String(currentMonthIdx + 1).padStart(2, '0')}`;
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const currentMonthName = `${monthNames[currentMonthIdx]} ${currentYear}`;
+  const startOfMonth = new Date(currentYear, currentMonthIdx, 1);
+  const endOfMonth = new Date(currentYear, currentMonthIdx + 1, 1);
   
   const pendingDonations = await prisma.donation.count({
     where: { status: 'PENDING', isDeleted: false }
   });
+
+  // Monthly Donations (excluding Zakat) for current month
+  const nonZakatTypes = ['MONTHLY', 'GENERAL_DONATION', 'CUSTOM', 'MARRIAGE', 'MEDICAL', 'EMERGENCY', 'EDUCATION'] as any;
+  const monthlyDonationsRaw = await prisma.donation.aggregate({
+    _sum: { amount: true },
+    _count: true,
+    where: {
+      status: 'APPROVED',
+      isDeleted: false,
+      donationType: { in: nonZakatTypes },
+      OR: [
+        { disbursementMonth: currentMonthKey },
+        { createdAt: { gte: startOfMonth, lt: endOfMonth } }
+      ]
+    }
+  });
+  const monthlyDonations = Number(monthlyDonationsRaw._sum.amount || 0);
+
+  // Monthly Zakat for current month
+  const monthlyZakatRaw = await prisma.donation.aggregate({
+    _sum: { amount: true },
+    _count: true,
+    where: {
+      status: 'APPROVED',
+      isDeleted: false,
+      donationType: 'ZAKAT',
+      OR: [
+        { disbursementMonth: currentMonthKey },
+        { createdAt: { gte: startOfMonth, lt: endOfMonth } }
+      ]
+    }
+  });
+  const monthlyZakat = Number(monthlyZakatRaw._sum.amount || 0);
 
   const donationsThisMonthRaw = await prisma.donation.aggregate({
     _sum: { amount: true },
@@ -149,7 +178,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     where: {
       status: 'APPROVED',
       isDeleted: false,
-      createdAt: { gte: startOfMonth }
+      OR: [
+        { disbursementMonth: currentMonthKey },
+        { createdAt: { gte: startOfMonth, lt: endOfMonth } }
+      ]
     }
   });
   
@@ -179,8 +211,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     where: hbCashWhere
   });
   const totalHallBookingReceivedCash = Number(hallBookingReceivedCashRaw._sum.receivedAmount || 0);
-
-  
 
   const outstandingInvoices = await prisma.invoice.count({
     where: { status: { in: ['ISSUED', 'OVERDUE'] }, isDeleted: false }
@@ -228,7 +258,20 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     _sum: { amount: true },
     where: donationTotalWhere
   });
-  const totalDonationsPaid = Number(donationsTotalRaw._sum.amount || 0);
+  const totalDisbursementsPaid = Number(donationsTotalRaw._sum.amount || 0);
+
+  // Split into Donations vs Zakat for the period
+  const totalDonationsPaidRaw = await prisma.donation.aggregate({
+    _sum: { amount: true },
+    where: { ...donationTotalWhere, donationType: { in: nonZakatTypes } }
+  });
+  const totalDonationsOnlyPaid = Number(totalDonationsPaidRaw._sum.amount || 0);
+
+  const totalZakatPaidRaw = await prisma.donation.aggregate({
+    _sum: { amount: true },
+    where: { ...donationTotalWhere, donationType: 'ZAKAT' }
+  });
+  const totalZakatOnlyPaid = Number(totalZakatPaidRaw._sum.amount || 0);
 
   const donationBankWhere: any = { status: 'APPROVED', isDeleted: false, paymentMethod: { in: ['BANK', 'CHEQUE', 'ONLINE'] } };
   if (startDate) donationBankWhere.createdAt = { ...(donationBankWhere.createdAt || {}), gte: new Date(startDate) };
@@ -253,9 +296,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       monthlyData,
       recentActivities,
       pendingDonations,
-      donationsPaid: totalDonationsPaid,
+      currentMonthName,
+      currentMonthKey,
+      monthlyDonations,
+      monthlyZakat,
+      donationsPaid: totalDisbursementsPaid,
       donationsPaidFromBank,
-      totalDonationsPaid,
+      totalDonationsPaid: totalDonationsOnlyPaid,
+      totalZakatPaid: totalZakatOnlyPaid,
+      totalDisbursementsPaid,
       donationsThisMonth: donationsThisMonthRaw._count,
       donationsAmountThisMonth: donationsThisMonthRaw._sum.amount || 0,
       hallBookingsThisMonth,
@@ -277,9 +326,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         openingCashBalance,
         openingBankBalance,
         netIncome,
-        donationsPaid: totalDonationsPaid,
+        donationsPaid: totalDisbursementsPaid,
         donationsPaidFromBank,
-        totalDonationsPaid,
+        monthlyDonations,
+        monthlyZakat,
+        currentMonthName,
+        totalDonationsPaid: totalDonationsOnlyPaid,
+        totalZakatPaid: totalZakatOnlyPaid,
         isEquationBalanced
       },
       recentTransactions

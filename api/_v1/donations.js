@@ -8,27 +8,94 @@ import { validateAmount } from "../_utils/amount.js";
 import { isWithinMaxLength, maxLengthError } from "../_utils/text-length.js";
 import { PERMS } from "../_constants/permissions.js";
 import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from "../_utils/soft-delete.js";
-function generateVoucherNumber() {
-  const date = /* @__PURE__ */ new Date();
-  const year = date.getFullYear().toString().slice(-2);
-  const month = (date.getMonth() + 1).toString().padStart(2, "0");
-  const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `JV-${year}${month}-${randomStr}`;
-}
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function isValidBeneficiaryId(beneficiaryId) {
   return typeof beneficiaryId === "string" && UUID_RE.test(beneficiaryId);
 }
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December"
+];
+function normalizeMonthAndYear(inputMonth, inputDate, inputDisbursementMonth) {
+  let dateObj = /* @__PURE__ */ new Date();
+  const candidateMonthKey = inputDisbursementMonth || (inputMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(inputMonth.trim()) ? inputMonth : void 0);
+  if (candidateMonthKey && /^\d{4}-(0[1-9]|1[0-2])$/.test(candidateMonthKey.trim())) {
+    const [y, m] = candidateMonthKey.trim().split("-").map(Number);
+    dateObj = new Date(Date.UTC(y, m - 1, 1, 12, 0, 0));
+  } else if (inputMonth && typeof inputMonth === "string") {
+    const parts = inputMonth.trim().split(/\s+/);
+    if (parts.length === 2) {
+      const monthIdx2 = MONTH_NAMES.findIndex((m) => m.toLowerCase() === parts[0].toLowerCase());
+      const yr = Number(parts[1]);
+      if (monthIdx2 !== -1 && !isNaN(yr) && yr > 2e3 && yr < 2100) {
+        dateObj = new Date(Date.UTC(yr, monthIdx2, 1, 12, 0, 0));
+      }
+    }
+  } else if (inputDate) {
+    const parsed = new Date(inputDate);
+    if (!isNaN(parsed.getTime())) {
+      dateObj = parsed;
+    }
+  }
+  const year = dateObj.getFullYear();
+  const monthIdx = dateObj.getMonth();
+  const disbursementMonth = `${year}-${String(monthIdx + 1).padStart(2, "0")}`;
+  const monthLabel = `${MONTH_NAMES[monthIdx]} ${year}`;
+  const financialYear = `${year}`;
+  return { disbursementMonth, monthLabel, financialYear, dateObj };
+}
+function normalizeDonationType(rawType) {
+  const norm = (rawType || "").toUpperCase().trim();
+  if (norm === "ZAKAT" || norm.includes("ZAKAT")) {
+    return { enumType: "ZAKAT", isZakat: true, displayCategory: "Zakat" };
+  }
+  if (norm === "MONTHLY" || norm === "DONATION" || norm === "GENERAL_DONATION") {
+    return { enumType: "MONTHLY", isZakat: false, displayCategory: "Donation" };
+  }
+  return { enumType: rawType || "MONTHLY", isZakat: false, displayCategory: "Donation" };
+}
 async function getExpenseAccountForDonation(donationType, tx) {
+  const { isZakat } = normalizeDonationType(donationType);
+  if (isZakat) {
+    let zakatAcc = await tx.account.findFirst({
+      where: {
+        accountType: { name: { equals: "Expense", mode: "insensitive" } },
+        accountName: { contains: "Zakat", mode: "insensitive" },
+        children: { none: {} },
+        isLocked: false,
+        isDeleted: false
+      },
+      orderBy: { glCode: "asc" }
+    });
+    if (zakatAcc) return zakatAcc;
+  }
+  const primaryCode = isZakat ? "4060104" : "4060101";
   let acc = await tx.account.findFirst({
+    where: {
+      glCode: primaryCode,
+      isLocked: false,
+      isDeleted: false
+    }
+  });
+  if (acc) return acc;
+  acc = await tx.account.findFirst({
     where: {
       accountType: { name: { equals: "Expense", mode: "insensitive" } },
       NOT: { accountName: { contains: "Salary", mode: "insensitive" } },
       OR: [
-        { accountName: { contains: donationType, mode: "insensitive" } },
+        { accountName: { contains: isZakat ? "Zakat" : "Donation", mode: "insensitive" } },
         { accountName: { contains: "Aid", mode: "insensitive" } },
-        { accountName: { contains: "Welfare", mode: "insensitive" } },
-        { accountName: { contains: "Donation", mode: "insensitive" } }
+        { accountName: { contains: "Welfare", mode: "insensitive" } }
       ],
       children: { none: {} },
       isLocked: false,
@@ -36,28 +103,17 @@ async function getExpenseAccountForDonation(donationType, tx) {
     },
     orderBy: { glCode: "asc" }
   });
-  if (!acc) {
-    acc = await tx.account.findFirst({
-      where: {
-        accountType: { name: { equals: "Expense", mode: "insensitive" } },
-        NOT: { accountName: { contains: "Salary", mode: "insensitive" } },
-        children: { none: {} },
-        isLocked: false,
-        isDeleted: false
-      },
-      orderBy: { glCode: "asc" }
-    });
-  }
-  if (!acc) {
-    acc = await tx.account.findFirst({
-      where: {
-        accountType: { name: { equals: "Expense", mode: "insensitive" } },
-        isLocked: false,
-        isDeleted: false
-      },
-      orderBy: { glCode: "asc" }
-    });
-  }
+  if (acc) return acc;
+  acc = await tx.account.findFirst({
+    where: {
+      accountType: { name: { equals: "Expense", mode: "insensitive" } },
+      NOT: { accountName: { contains: "Salary", mode: "insensitive" } },
+      children: { none: {} },
+      isLocked: false,
+      isDeleted: false
+    },
+    orderBy: { glCode: "asc" }
+  });
   return acc;
 }
 var donations_default = makeHandler(async (req, res) => {
@@ -67,17 +123,57 @@ var donations_default = makeHandler(async (req, res) => {
   const action = req.query.action || req.body?.action;
   if (method === "GET") {
     if (!await verifyPermission(req, res, ["donations.view", PERMS.VIEW_DONATIONS])) return;
-    const { limit = "100", page = "1" } = req.query;
+    if (action === "check-duplicate") {
+      const { disbursementMonth, donationType = "DONATION", bankAccountId } = req.query;
+      if (!disbursementMonth || !bankAccountId) {
+        return res.status(200).json({ status: 200, isDuplicate: false });
+      }
+      const { enumType, displayCategory, isZakat } = normalizeDonationType(donationType);
+      const typeFilter = isZakat ? { donationType: "ZAKAT" } : { donationType: { in: ["MONTHLY", "GENERAL_DONATION", "CUSTOM"] } };
+      const existingPosting = await prisma.donation.findFirst({
+        where: {
+          isDeleted: false,
+          status: { in: ["APPROVED", "DISBURSED"] },
+          bankAccountId: String(bankAccountId),
+          disbursementMonth: String(disbursementMonth).trim(),
+          ...typeFilter
+        },
+        include: {
+          bankAccount: { select: { id: true, accountName: true, glCode: true } }
+        }
+      });
+      if (existingPosting) {
+        const { monthLabel } = normalizeMonthAndYear(existingPosting.disbursementMonth || disbursementMonth);
+        return res.status(200).json({
+          status: 200,
+          isDuplicate: true,
+          message: `Monthly ${displayCategory} for ${monthLabel} has already been posted for this bank account.`,
+          data: existingPosting
+        });
+      }
+      return res.status(200).json({ status: 200, isDuplicate: false });
+    }
+    const { limit = "100", page = "1", month: queryMonth, type: queryType } = req.query;
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
     const skip = (pageNum - 1) * limitNum;
     const whereClause = getDeletedFilter(req.query);
+    if (queryMonth) {
+      whereClause.disbursementMonth = String(queryMonth).trim();
+    }
+    if (queryType) {
+      const { enumType } = normalizeDonationType(queryType);
+      whereClause.donationType = enumType;
+    }
     const [donations, total] = await Promise.all([
       prisma.donation.findMany({
         where: whereClause,
         include: {
           beneficiary: true,
           bankAccount: true,
+          journalEntry: {
+            select: { id: true, voucherNo: true, status: true, postingDate: true }
+          },
           createdBy: { select: { id: true, fullName: true, email: true } }
         },
         orderBy: { createdAt: "desc" },
@@ -86,119 +182,157 @@ var donations_default = makeHandler(async (req, res) => {
       }),
       prisma.donation.count({ where: whereClause })
     ]);
-    return res.status(200).json({ status: 200, data: donations, meta: { total, page: pageNum, limit: limitNum } });
+    return res.status(200).json({
+      status: 200,
+      data: donations,
+      meta: { total, page: pageNum, limit: limitNum }
+    });
   }
-  if (!await enforceRestrictedRolePolicy(req, res, method === "DELETE" ? ["donations.delete", PERMS.DELETE_DONATION] : ["donations.update", PERMS.UPDATE_DONATION])) return;
-  if (method === "PUT" || method === "POST" || method === "PATCH") {
-    if (action === "restore") {
-      if (!await isSuperAdmin(req)) {
-        return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can restore records", status: 403 } });
-      }
-      const id = req.query.id || req.body?.id;
-      if (!id) {
-        return res.status(400).json({ error: { message: "Donation ID is required", status: 400 } });
-      }
-      const existing = await prisma.donation.findUnique({ where: { id } });
-      if (!existing) {
-        return res.status(404).json({ error: { message: "Donation not found", status: 404 } });
-      }
-      const restored = await prisma.$transaction(async (tx) => {
-        const updated = await tx.donation.update({
-          where: { id },
-          data: { isDeleted: false, deletedAt: null, deletedBy: null }
-        });
-        if (updated.status === "APPROVED") {
-          const ref = `DON-${updated.id.substring(0, 8)}`;
-          const je = await tx.journalEntry.findFirst({ where: { reference: ref, isDeleted: true } });
-          if (je) {
-            try {
-              await tx.journalEntry.update({
-                where: { id: je.id },
-                data: { isDeleted: false, deletedAt: null, deletedBy: null }
-              });
-              await AccountingService.recalculateBalancesForJournalEntry(tx, je.id);
-            } catch (e) {
-            }
-          }
-        }
-        return updated;
-      });
-      await logAudit(req.user.id, "Restore Donation", "DONATION", existing, restored, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-      return res.status(200).json({ status: 200, message: "Donation restored successfully", data: restored });
+  if (!await enforceRestrictedRolePolicy(
+    req,
+    res,
+    method === "DELETE" ? ["donations.delete", PERMS.DELETE_DONATION] : ["donations.update", PERMS.UPDATE_DONATION, "donations.create", PERMS.CREATE_DONATION]
+  )) return;
+  if (action === "restore") {
+    if (!await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can restore records", status: 403 } });
     }
+    const id = req.query.id || req.body?.id;
+    if (!id) return res.status(400).json({ error: { message: "Donation ID is required", status: 400 } });
+    const existing = await prisma.donation.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: { message: "Donation not found", status: 404 } });
+    const restored = await prisma.$transaction(async (tx) => {
+      const updated = await tx.donation.update({
+        where: { id },
+        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+      });
+      if (updated.status === "APPROVED" && updated.journalEntryId) {
+        try {
+          await tx.journalEntry.update({
+            where: { id: updated.journalEntryId },
+            data: { isDeleted: false, deletedAt: null, deletedBy: null }
+          });
+          await AccountingService.recalculateBalancesForJournalEntry(tx, updated.journalEntryId);
+        } catch (e) {
+        }
+      }
+      return updated;
+    });
+    await logAudit(req.user.id, "Restore Donation", "DONATION", existing, restored, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    return res.status(200).json({ status: 200, message: "Donation restored successfully", data: restored });
   }
   if (method === "POST") {
     if (action === "approve") {
       if (!await verifyPermission(req, res, ["donations.post", PERMS.POST_LEDGER])) return;
       const { id } = req.body;
       if (!id) return res.status(400).json({ error: { message: "Donation ID is required", status: 400 } });
-      const donation = await prisma.donation.findUnique({ where: { id }, include: { beneficiary: true } });
-      if (!donation) return res.status(404).json({ error: { message: "Donation not found", status: 404 } });
+      const donation = await prisma.donation.findUnique({
+        where: { id },
+        include: { beneficiary: true, bankAccount: true }
+      });
+      if (!donation) return res.status(404).json({ error: { message: "Donation record not found", status: 404 } });
       if (donation.status === "APPROVED") {
         return res.status(409).json({
-          error: {
-            message: "Transaction has already been posted to the General Ledger.",
-            status: 409
-          }
+          error: { message: "Transaction has already been posted to the General Ledger.", status: 409 }
         });
       }
+      const { disbursementMonth: disbursementMonth2, monthLabel: monthLabel2 } = normalizeMonthAndYear(donation.disbursementMonth || void 0, donation.createdAt);
+      const { enumType: enumType2, isZakat: isZakat2, displayCategory: displayCategory2 } = normalizeDonationType(donation.donationType);
       let cashOrBankAccountId = null;
       if (donation.paymentMethod === "CASH") {
-        const cashAccount = await prisma.account.findFirst({
-          where: {
-            OR: [
-              { accountName: { equals: "Cash in Hand", mode: "insensitive" } },
-              { accountName: { contains: "Cash in Hand", mode: "insensitive" } },
-              { accountName: { contains: "Cash", mode: "insensitive" } }
-            ],
-            isLocked: false,
-            children: { none: {} },
-            accountLevel: { in: ["SUBSIDIARY", "GL"] }
-          },
-          orderBy: { glCode: "asc" }
-        });
-        if (!cashAccount) return res.status(400).json({ error: { message: "Cash account not found in Chart of Accounts", status: 400 } });
+        const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
         cashOrBankAccountId = cashAccount.id;
       } else {
-        if (!donation.bankAccountId) return res.status(400).json({ error: { message: "Bank account is required for BANK/CHEQUE payments", status: 400 } });
+        if (!donation.bankAccountId) {
+          return res.status(400).json({ error: { message: "Bank account is required for BANK/CHEQUE payments", status: 400 } });
+        }
         cashOrBankAccountId = donation.bankAccountId;
       }
-      const result = await prisma.$transaction(async (tx) => {
-        const approvedDonation = await tx.donation.update({
-          where: { id },
-          data: { status: "APPROVED" }
+      if (cashOrBankAccountId && donation.paymentMethod !== "CASH") {
+        const typeFilter = isZakat2 ? { donationType: "ZAKAT" } : { donationType: { in: ["MONTHLY", "GENERAL_DONATION", "CUSTOM"] } };
+        const duplicate = await prisma.donation.findFirst({
+          where: {
+            id: { not: donation.id },
+            isDeleted: false,
+            status: { in: ["APPROVED", "DISBURSED"] },
+            bankAccountId: cashOrBankAccountId,
+            disbursementMonth: disbursementMonth2,
+            ...typeFilter
+          }
         });
+        if (duplicate) {
+          return res.status(409).json({
+            error: {
+              message: `Monthly ${displayCategory2} for ${monthLabel2} has already been posted for this bank account.`,
+              status: 409
+            }
+          });
+        }
+      }
+      const result = await prisma.$transaction(async (tx) => {
         const expenseAccount = await getExpenseAccountForDonation(donation.donationType, tx);
         if (!expenseAccount) {
           throw new Error(`Donation Expense account not found in Chart of Accounts for ${donation.donationType}`);
         }
+        const voucherNo = donation.voucherNo || `MDON-${disbursementMonth2.replace("-", "")}-${donation.id.slice(0, 4).toUpperCase()}`;
         const postingResult = await AccountingService.postPayment(tx, {
-          amount: donation.amount,
+          amount: Number(donation.amount),
           cashOrBankAccountId,
           expenseAccountId: expenseAccount.id,
-          reference: `DON-${donation.id.substring(0, 8)}`,
-          description: `Donation Given / Disbursement to ${donation.donorName || "Beneficiary"} - ${donation.donationType === "CUSTOM" ? donation.customDonationType || "Custom" : donation.donationType}`,
-          module: "Donations Given",
+          reference: voucherNo,
+          description: `Monthly ${displayCategory2} Disbursement - ${monthLabel2}${donation.remarks ? ` (${donation.remarks})` : ""}`,
+          module: "Donations",
           voucherType: donation.paymentMethod === "CASH" ? "CP" : "BP",
           postingDate: donation.createdAt,
           postedBy: req.user.id,
           ipAddress: req.headers["x-forwarded-for"],
           userAgent: req.headers["user-agent"]
         });
+        const approvedDonation = await tx.donation.update({
+          where: { id },
+          data: {
+            status: "APPROVED",
+            journalEntryId: postingResult.journalEntry.id,
+            voucherNo,
+            month: donation.month || monthLabel2,
+            disbursementMonth: disbursementMonth2,
+            postedAt: /* @__PURE__ */ new Date(),
+            postedById: req.user.id
+          },
+          include: { beneficiary: true, bankAccount: true, journalEntry: { select: { id: true, voucherNo: true, status: true, postingDate: true } } }
+        });
         return { approvedDonation, journalEntry: postingResult.journalEntry };
-      }, {
-        timeout: 15e3
-      });
+      }, { timeout: 15e3 });
       await logAudit(req.user.id, "POST_TO_LEDGER", "DONATION", donation, result.approvedDonation, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-      return res.status(200).json({ status: 200, data: result.approvedDonation, message: "Donation approved and journal entries created successfully" });
+      return res.status(200).json({
+        status: 200,
+        data: result.approvedDonation,
+        message: `${monthLabel2} monthly ${displayCategory2} of Rs. ${Number(donation.amount).toLocaleString()} posted successfully.`
+      });
     }
     if (!await verifyPermission(req, res, ["donations.create", PERMS.CREATE_DONATION])) return;
-    const { beneficiaryId, donorName, donorMobile, donationType, customDonationType, amount, paymentMethod = "BANK", bankAccountId, chequeNumber, donorBankName, remarks, date } = req.body;
-    if (!donorName || !donationType || !amount || !paymentMethod) {
-      return res.status(400).json({ error: { message: "Missing required fields", status: 400 } });
-    }
-    if (donationType === "CUSTOM" && (!customDonationType || !String(customDonationType).trim())) {
-      return res.status(400).json({ error: { message: 'Custom Donation / Aid Type is required when "Custom" is selected.', status: 400 } });
+    const {
+      month: rawMonth,
+      disbursementMonth: rawDisbursementMonth,
+      date,
+      donationType: rawDonationType = "DONATION",
+      customDonationType,
+      amount,
+      paymentMethod = "BANK",
+      bankAccountId,
+      chequeNumber,
+      donorBankName,
+      donorName: rawDonorName,
+      donorMobile,
+      beneficiaryId,
+      beneficiaries,
+      remarks,
+      status: requestedStatus = "APPROVED"
+    } = req.body;
+    const { enumType, isZakat, displayCategory } = normalizeDonationType(rawDonationType);
+    const { disbursementMonth, monthLabel, financialYear, dateObj } = normalizeMonthAndYear(rawMonth, date, rawDisbursementMonth);
+    if (!amount) {
+      return res.status(400).json({ error: { message: "Donation Amount is required.", status: 400 } });
     }
     const amountCheck = validateAmount(amount);
     if (!amountCheck.valid) {
@@ -207,44 +341,48 @@ var donations_default = makeHandler(async (req, res) => {
     const parsedAmount = amountCheck.amount;
     if (paymentMethod === "BANK" || paymentMethod === "CHEQUE") {
       if (!bankAccountId) {
-        return res.status(400).json({ error: { message: "Bank account is required for Bank/Cheque payment methods", status: 400 } });
+        return res.status(400).json({ error: { message: "Bank Account is required for bank disbursement.", status: 400 } });
       }
       const bankAcc = await prisma.account.findFirst({
         where: { id: bankAccountId, isDeleted: false, isLocked: false }
       });
       if (!bankAcc) {
-        return res.status(400).json({ error: { message: "Selected bank account was not found or is inactive", status: 400 } });
+        return res.status(400).json({ error: { message: "Selected bank account was not found or is inactive in Chart of Accounts.", status: 400 } });
       }
     }
-    if (paymentMethod === "CHEQUE" && !chequeNumber) {
-      return res.status(400).json({ error: { message: "Cheque number is required for Cheque payment method", status: 400 } });
+    if (beneficiaryId && !isValidBeneficiaryId(beneficiaryId)) {
+      return res.status(400).json({ error: { message: "Selected recipient is invalid. Please select from People We Help.", status: 400 } });
+    }
+    let beneficiariesJson = null;
+    if (Array.isArray(beneficiaries) && beneficiaries.length > 0) {
+      let sumAllocated = 0;
+      beneficiariesJson = beneficiaries.map((b) => {
+        const itemAmt = Number(b.amount) || 0;
+        sumAllocated += itemAmt;
+        return {
+          id: b.id || b.beneficiaryId || null,
+          name: String(b.name || b.recipientName || "Beneficiary").trim(),
+          cnic: b.cnic || null,
+          mobile: b.mobile || null,
+          amount: itemAmt,
+          remarks: b.remarks || null
+        };
+      });
+      if (Math.abs(sumAllocated - parsedAmount) > 1) {
+        return res.status(400).json({
+          error: {
+            message: `The sum of beneficiary allocations (Rs. ${sumAllocated.toLocaleString()}) does not match the total disbursement amount (Rs. ${parsedAmount.toLocaleString()}).`,
+            status: 400
+          }
+        });
+      }
     }
     if (!isWithinMaxLength(remarks, 1e3)) return res.status(400).json({ error: maxLengthError("Remarks", 1e3) });
     if (!isWithinMaxLength(donorBankName, 100)) return res.status(400).json({ error: maxLengthError("Donor bank name", 100) });
     if (!isWithinMaxLength(chequeNumber, 30)) return res.status(400).json({ error: maxLengthError("Cheque number", 30) });
-    if (beneficiaryId && !isValidBeneficiaryId(beneficiaryId)) {
-      return res.status(400).json({ error: { message: "Selected recipient is invalid or out of date. Please re-select the recipient from People We Help and try again.", status: 400 } });
-    }
-    const creationDate = date && !isNaN(new Date(date).getTime()) ? new Date(date) : /* @__PURE__ */ new Date();
+    const donorName = rawDonorName && rawDonorName.trim() ? rawDonorName.trim() : `Monthly ${displayCategory} Disbursement - ${monthLabel}`;
+    const isDirectPost = requestedStatus === "APPROVED" || requestedStatus === "POSTED";
     const newDonation = await prisma.$transaction(async (tx) => {
-      const createdDonation = await tx.donation.create({
-        data: {
-          beneficiaryId: beneficiaryId || null,
-          donorName,
-          donorMobile: donorMobile || null,
-          donationType,
-          customDonationType: donationType === "CUSTOM" ? customDonationType || null : null,
-          amount: parsedAmount,
-          paymentMethod,
-          bankAccountId: paymentMethod === "BANK" || paymentMethod === "CHEQUE" ? bankAccountId || null : null,
-          chequeNumber: chequeNumber || null,
-          donorBankName: donorBankName || null,
-          remarks: remarks || null,
-          status: "APPROVED",
-          createdAt: creationDate,
-          createdById: req.user.id
-        }
-      });
       let cashOrBankAccountId = null;
       if (paymentMethod === "CASH") {
         const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
@@ -252,49 +390,117 @@ var donations_default = makeHandler(async (req, res) => {
       } else {
         cashOrBankAccountId = bankAccountId || null;
       }
-      if (cashOrBankAccountId) {
-        const expenseAccount = await getExpenseAccountForDonation(donationType, tx);
-        if (expenseAccount) {
-          await AccountingService.postPayment(tx, {
-            amount: parsedAmount,
-            cashOrBankAccountId,
-            expenseAccountId: expenseAccount.id,
-            reference: `DON-${createdDonation.id.substring(0, 8)}`,
-            description: `Donation Given / Disbursement to ${donorName || "Beneficiary"} - ${donationType === "CUSTOM" ? customDonationType || "Custom" : donationType}`,
-            module: "Donations Given",
-            voucherType: paymentMethod === "CASH" ? "CP" : "BP",
-            postingDate: creationDate,
-            postedBy: req.user.id,
-            ipAddress: req.headers["x-forwarded-for"],
-            userAgent: req.headers["user-agent"]
-          });
+      if (isDirectPost && cashOrBankAccountId && paymentMethod !== "CASH") {
+        const typeFilter = isZakat ? { donationType: "ZAKAT" } : { donationType: { in: ["MONTHLY", "GENERAL_DONATION", "CUSTOM"] } };
+        const existingDuplicate = await tx.donation.findFirst({
+          where: {
+            isDeleted: false,
+            status: { in: ["APPROVED", "DISBURSED"] },
+            bankAccountId: cashOrBankAccountId,
+            disbursementMonth,
+            ...typeFilter
+          }
+        });
+        if (existingDuplicate) {
+          throw new Error(`DUPLICATE_MONTHLY_POSTING:Monthly ${displayCategory} for ${monthLabel} has already been posted for this bank account.`);
         }
       }
+      const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const voucherNo = `MDON-${disbursementMonth.replace("-", "")}-${randomStr}`;
+      let journalEntryId = null;
+      if (isDirectPost && cashOrBankAccountId) {
+        const expenseAccount = await getExpenseAccountForDonation(enumType, tx);
+        if (!expenseAccount) {
+          throw new Error(`Donation Expense account not found in Chart of Accounts for ${enumType}`);
+        }
+        const postingResult = await AccountingService.postPayment(tx, {
+          amount: parsedAmount,
+          cashOrBankAccountId,
+          expenseAccountId: expenseAccount.id,
+          reference: voucherNo,
+          description: `Monthly ${displayCategory} Disbursement - ${monthLabel}${remarks ? ` (${remarks})` : ""}`,
+          module: "Donations",
+          voucherType: paymentMethod === "CASH" ? "CP" : "BP",
+          postingDate: dateObj,
+          postedBy: req.user.id,
+          ipAddress: req.headers["x-forwarded-for"],
+          userAgent: req.headers["user-agent"]
+        });
+        journalEntryId = postingResult.journalEntry.id;
+      }
+      const createdDonation = await tx.donation.create({
+        data: {
+          month: monthLabel,
+          disbursementMonth,
+          financialYear,
+          voucherNo,
+          beneficiaryId: beneficiaryId || null,
+          beneficiaries: beneficiariesJson,
+          donorName,
+          donorMobile: donorMobile || null,
+          donationType: enumType,
+          customDonationType: enumType === "CUSTOM" ? customDonationType || null : null,
+          amount: parsedAmount,
+          paymentMethod,
+          bankAccountId: paymentMethod === "BANK" || paymentMethod === "CHEQUE" ? bankAccountId || null : null,
+          chequeNumber: chequeNumber || null,
+          donorBankName: donorBankName || null,
+          remarks: remarks || null,
+          journalEntryId,
+          status: isDirectPost ? "APPROVED" : "PENDING",
+          postedAt: isDirectPost ? /* @__PURE__ */ new Date() : null,
+          postedById: isDirectPost ? req.user.id : null,
+          createdAt: dateObj,
+          createdById: req.user.id
+        },
+        include: {
+          beneficiary: true,
+          bankAccount: true,
+          journalEntry: { select: { id: true, voucherNo: true, status: true, postingDate: true } },
+          createdBy: { select: { id: true, fullName: true, email: true } }
+        }
+      });
       return createdDonation;
     }, {
-      timeout: 15e3
+      timeout: 2e4
+    }).catch((err) => {
+      if (err.message && err.message.startsWith("DUPLICATE_MONTHLY_POSTING:")) {
+        const msg = err.message.replace("DUPLICATE_MONTHLY_POSTING:", "");
+        return res.status(409).json({ error: { message: msg, status: 409 } });
+      }
+      throw err;
     });
-    await logAudit(req.user.id, "Create Donation", "DONATION", null, newDonation, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    return res.status(201).json({ status: 201, data: newDonation });
+    if (!newDonation) return;
+    await logAudit(req.user.id, "Create Monthly Donation", "DONATION", null, newDonation, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+    return res.status(201).json({
+      status: 201,
+      data: newDonation,
+      message: `${monthLabel} monthly ${displayCategory} of Rs. ${parsedAmount.toLocaleString()} posted successfully.`
+    });
   }
   if (method === "PUT" || method === "PATCH") {
-    const id = req.query.id;
+    const id = req.query.id || req.body?.id;
     if (!id) return res.status(400).json({ error: { message: "Donation ID is required", status: 400 } });
     const existingDonation = await prisma.donation.findUnique({ where: { id } });
-    if (!existingDonation) return res.status(404).json({ error: { message: "Donation not found", status: 404 } });
-    const { beneficiaryId, donorName, donorMobile, donationType, customDonationType, amount, paymentMethod, bankAccountId, chequeNumber, donorBankName, remarks, status } = req.body;
-    const effectiveDonationType = donationType !== void 0 ? donationType : existingDonation.donationType;
-    if (effectiveDonationType === "CUSTOM") {
-      const effectiveCustomType = customDonationType !== void 0 ? customDonationType : existingDonation.customDonationType;
-      if (!effectiveCustomType || !String(effectiveCustomType).trim()) {
-        return res.status(400).json({ error: { message: 'Custom Donation / Aid Type is required when "Custom" is selected.', status: 400 } });
-      }
-    }
-    const targetBeneficiaryId = beneficiaryId !== void 0 ? beneficiaryId : existingDonation.beneficiaryId;
-    const targetStatus = status !== void 0 ? status : existingDonation.status;
-    if (!isWithinMaxLength(remarks, 1e3)) return res.status(400).json({ error: maxLengthError("Remarks", 1e3) });
-    if (!isWithinMaxLength(donorBankName, 100)) return res.status(400).json({ error: maxLengthError("Donor bank name", 100) });
-    if (!isWithinMaxLength(chequeNumber, 30)) return res.status(400).json({ error: maxLengthError("Cheque number", 30) });
+    if (!existingDonation) return res.status(404).json({ error: { message: "Donation record not found", status: 404 } });
+    const {
+      month: rawMonth,
+      disbursementMonth: rawDisbursementMonth,
+      date,
+      donationType: rawDonationType,
+      customDonationType,
+      amount,
+      paymentMethod,
+      bankAccountId,
+      chequeNumber,
+      donorBankName,
+      donorName,
+      donorMobile,
+      beneficiaryId,
+      beneficiaries,
+      remarks,
+      status
+    } = req.body;
     let parsedAmount;
     if (amount !== void 0) {
       const amountCheck = validateAmount(amount);
@@ -303,69 +509,112 @@ var donations_default = makeHandler(async (req, res) => {
       }
       parsedAmount = amountCheck.amount;
     }
-    if (targetBeneficiaryId && !isValidBeneficiaryId(targetBeneficiaryId)) {
-      return res.status(400).json({ error: { message: "Selected recipient is invalid or out of date. Please re-select the recipient from People We Help and try again.", status: 400 } });
-    }
+    const { enumType, isZakat, displayCategory } = normalizeDonationType(rawDonationType || existingDonation.donationType);
+    const { disbursementMonth, monthLabel, financialYear, dateObj } = normalizeMonthAndYear(
+      rawMonth || existingDonation.disbursementMonth || void 0,
+      date || existingDonation.createdAt,
+      rawDisbursementMonth
+    );
+    const targetBankAccountId = bankAccountId !== void 0 ? bankAccountId || null : existingDonation.bankAccountId;
+    const targetStatus = status !== void 0 ? status : existingDonation.status;
+    const isApproved = targetStatus === "APPROVED";
     const updatedDonation = await prisma.$transaction(async (tx) => {
-      if (existingDonation.status === "APPROVED") {
-        const ref = `DON-${existingDonation.id.substring(0, 8)}`;
-        const je = await tx.journalEntry.findFirst({ where: { reference: ref } });
-        if (je) {
-          try {
-            await AccountingService.deleteJournalEntry(tx, je.id, req.user.id, "Donation Updated");
-          } catch (e) {
+      if (existingDonation.status === "APPROVED" && existingDonation.journalEntryId) {
+        try {
+          await AccountingService.deleteJournalEntry(tx, existingDonation.journalEntryId, req.user.id, "Donation Updated");
+        } catch (e) {
+        }
+      }
+      if (isApproved && targetBankAccountId && paymentMethod !== "CASH") {
+        const typeFilter = isZakat ? { donationType: "ZAKAT" } : { donationType: { in: ["MONTHLY", "GENERAL_DONATION", "CUSTOM"] } };
+        const existingDuplicate = await tx.donation.findFirst({
+          where: {
+            id: { not: existingDonation.id },
+            isDeleted: false,
+            status: { in: ["APPROVED", "DISBURSED"] },
+            bankAccountId: targetBankAccountId,
+            disbursementMonth,
+            ...typeFilter
+          }
+        });
+        if (existingDuplicate) {
+          throw new Error(`DUPLICATE_MONTHLY_POSTING:Monthly ${displayCategory} for ${monthLabel} has already been posted for this bank account.`);
+        }
+      }
+      const effectiveAmount = parsedAmount !== void 0 ? parsedAmount : existingDonation.amount;
+      const effectivePaymentMethod = paymentMethod || existingDonation.paymentMethod;
+      const voucherNo = existingDonation.voucherNo || `MDON-${disbursementMonth.replace("-", "")}-${existingDonation.id.slice(0, 4).toUpperCase()}`;
+      let journalEntryId = null;
+      if (isApproved) {
+        let cashOrBankAccountId = null;
+        if (effectivePaymentMethod === "CASH") {
+          const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
+          cashOrBankAccountId = cashAccount.id;
+        } else {
+          cashOrBankAccountId = targetBankAccountId;
+        }
+        if (cashOrBankAccountId) {
+          const expenseAccount = await getExpenseAccountForDonation(enumType, tx);
+          if (expenseAccount) {
+            const postingResult = await AccountingService.postPayment(tx, {
+              amount: effectiveAmount,
+              cashOrBankAccountId,
+              expenseAccountId: expenseAccount.id,
+              reference: voucherNo,
+              description: `Monthly ${displayCategory} Disbursement - ${monthLabel}${remarks ? ` (${remarks})` : ""}`,
+              module: "Donations",
+              voucherType: effectivePaymentMethod === "CASH" ? "CP" : "BP",
+              postingDate: dateObj,
+              postedBy: req.user.id,
+              ipAddress: req.headers["x-forwarded-for"],
+              userAgent: req.headers["user-agent"]
+            });
+            journalEntryId = postingResult.journalEntry.id;
           }
         }
       }
       const updated = await tx.donation.update({
         where: { id },
         data: {
+          month: monthLabel,
+          disbursementMonth,
+          financialYear,
+          voucherNo,
           beneficiaryId: beneficiaryId !== void 0 ? beneficiaryId || null : void 0,
+          beneficiaries: beneficiaries !== void 0 ? beneficiaries : void 0,
           donorName: donorName || void 0,
           donorMobile: donorMobile !== void 0 ? donorMobile || null : void 0,
-          donationType: donationType || void 0,
-          customDonationType: donationType !== void 0 ? donationType === "CUSTOM" ? customDonationType || null : null : customDonationType !== void 0 ? existingDonation.donationType === "CUSTOM" ? customDonationType : null : void 0,
+          donationType: enumType,
+          customDonationType: enumType === "CUSTOM" ? customDonationType || null : null,
           amount: parsedAmount !== void 0 ? parsedAmount : void 0,
           paymentMethod: paymentMethod || void 0,
-          bankAccountId: bankAccountId !== void 0 ? bankAccountId || null : void 0,
+          bankAccountId: targetBankAccountId,
           chequeNumber: chequeNumber !== void 0 ? chequeNumber || null : void 0,
           donorBankName: donorBankName !== void 0 ? donorBankName || null : void 0,
           remarks: remarks !== void 0 ? remarks || null : void 0,
-          status: status || void 0
+          journalEntryId,
+          status: status || void 0,
+          postedAt: isApproved ? existingDonation.postedAt || /* @__PURE__ */ new Date() : null,
+          postedById: isApproved ? existingDonation.postedById || req.user.id : null
+        },
+        include: {
+          beneficiary: true,
+          bankAccount: true,
+          journalEntry: { select: { id: true, voucherNo: true, status: true, postingDate: true } },
+          createdBy: { select: { id: true, fullName: true, email: true } }
         }
       });
-      const finalStatus = updated.status || "APPROVED";
-      if (finalStatus === "APPROVED") {
-        let cashOrBankAccountId = null;
-        if (updated.paymentMethod === "CASH") {
-          const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
-          cashOrBankAccountId = cashAccount.id;
-        } else {
-          cashOrBankAccountId = updated.bankAccountId || null;
-        }
-        if (cashOrBankAccountId) {
-          const expenseAccount = await getExpenseAccountForDonation(updated.donationType, tx);
-          if (expenseAccount) {
-            await AccountingService.postPayment(tx, {
-              amount: Number(updated.amount),
-              cashOrBankAccountId,
-              expenseAccountId: expenseAccount.id,
-              reference: `DON-${updated.id.substring(0, 8)}`,
-              description: `Donation Given / Disbursement to ${updated.donorName || "Beneficiary"} - ${updated.donationType === "CUSTOM" ? updated.customDonationType || "Custom" : updated.donationType}`,
-              module: "Donations Given",
-              voucherType: updated.paymentMethod === "CASH" ? "CP" : "BP",
-              postingDate: updated.createdAt,
-              postedBy: req.user.id,
-              ipAddress: req.headers["x-forwarded-for"],
-              userAgent: req.headers["user-agent"]
-            });
-          }
-        }
-      }
       return updated;
     }, {
-      timeout: 15e3
+      timeout: 2e4
+    }).catch((err) => {
+      if (err.message && err.message.startsWith("DUPLICATE_MONTHLY_POSTING:")) {
+        const msg = err.message.replace("DUPLICATE_MONTHLY_POSTING:", "");
+        return res.status(409).json({ error: { message: msg, status: 409 } });
+      }
+      throw err;
     });
+    if (!updatedDonation) return;
     await logAudit(req.user.id, "Update Donation", "DONATION", existingDonation, updatedDonation, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     return res.status(200).json({ status: 200, data: updatedDonation });
   }
@@ -391,24 +640,18 @@ var donations_default = makeHandler(async (req, res) => {
           throw new Error("No records found to delete");
         }
         for (const donation of donations) {
-          if (donation.status === "APPROVED") {
-            const ref = `DON-${donation.id.substring(0, 8)}`;
-            const je = await tx.journalEntry.findFirst({
-              where: { reference: ref }
-            });
-            if (je) {
-              try {
-                if (isPermanent) {
-                  await AccountingService.deleteJournalEntry(tx, je.id, req.user.id, "Donation Permanently Deleted");
-                } else {
-                  await tx.journalEntry.update({
-                    where: { id: je.id },
-                    data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
-                  });
-                  await AccountingService.recalculateBalancesForJournalEntry(tx, je.id);
-                }
-              } catch (e) {
+          if (donation.status === "APPROVED" && donation.journalEntryId) {
+            try {
+              if (isPermanent) {
+                await AccountingService.deleteJournalEntry(tx, donation.journalEntryId, req.user.id, "Donation Permanently Deleted");
+              } else {
+                await tx.journalEntry.update({
+                  where: { id: donation.journalEntryId },
+                  data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
+                });
+                await AccountingService.recalculateBalancesForJournalEntry(tx, donation.journalEntryId);
               }
+            } catch (e) {
             }
           }
         }
@@ -424,7 +667,7 @@ var donations_default = makeHandler(async (req, res) => {
         }
         return donations;
       }, {
-        timeout: 15e3
+        timeout: 2e4
       });
       await logAudit(
         req.user.id,
@@ -437,7 +680,7 @@ var donations_default = makeHandler(async (req, res) => {
       );
       return res.status(200).json({
         status: 200,
-        message: `${deletedDonations.length} donation(s) deleted successfully`,
+        message: `${deletedDonations.length} donation disbursement(s) deleted successfully`,
         data: deletedDonations
       });
     } catch (err) {

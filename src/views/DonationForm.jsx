@@ -1,41 +1,56 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useDonationStore } from '../store/donationStore';
 import { useCoaStore } from '../store/coaStore';
 import { useBeneficiaryStore } from '../store/beneficiaryStore';
-import { beneficiaryService } from '../services/beneficiaryService';
-import { Heart, ChevronLeft, Save, ShieldCheck, CheckCircle2, Users, UserCheck, Sparkles, AlertCircle, Camera, Loader2, Upload } from 'lucide-react';
+import {
+  Heart, ChevronLeft, Save, ShieldCheck, CheckCircle2,
+  Users, UserCheck, Sparkles, AlertCircle, Plus, Trash2,
+  Building, Calendar, Banknote, FileText, AlertTriangle, Loader2
+} from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
-import { DONATION_TYPES } from '../constants/donationTypes';
 
-const nullsToEmpty = (obj) =>
-  Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === null ? '' : v]));
-
-const DEFAULT_DONATION = {
-  beneficiaryId: '',
-  donorName: '', donorMobile: '', donationType: 'ZAKAT', amount: '',
-  paymentMethod: 'BANK', bankAccountId: '', chequeNumber: '', donorBankName: '', remarks: '',
-  customDonationType: '', date: new Date().toISOString().split('T')[0]
-};
-
-const PAKISTANI_BANKS = [
-  'National Bank of Pakistan (NBP)', 'United Bank Limited (UBL)', 'MCB Bank',
-  'Allied Bank Limited (ABL)', 'Bank Alfalah', 'Standard Chartered Bank', 'Askari Bank',
-  'Bank AL Habib', 'Faysal Bank', 'Soneri Bank', 'Bank of Punjab (BOP)', 'JS Bank',
-  'Dubai Islamic Bank', 'Al Baraka Bank', 'Bank Islami', 'Sindh Bank',
-  'Habib Metropolitan Bank', 'First Women Bank', 'Samba Bank', 'Silkbank', 'Summit Bank'
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
 ];
+
+function getMonthLabel(yyyyMm) {
+  if (!yyyyMm || !/^\d{4}-(0[1-9]|1[0-2])$/.test(yyyyMm)) {
+    const now = new Date();
+    return `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
+  }
+  const [y, m] = yyyyMm.split('-').map(Number);
+  return `${MONTH_NAMES[m - 1]} ${y}`;
+}
+
+const getCurrentYyyyMm = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
 
 export const DonationForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { donations, fetchDonations, addDonation, updateDonation } = useDonationStore();
+  const { donations, fetchDonations, addDonation, updateDonation, checkDuplicate } = useDonationStore();
   const { flatAccounts, fetchAccountsList } = useCoaStore();
   const { beneficiaries, fetchBeneficiaries } = useBeneficiaryStore();
 
-  const [form, setForm] = useState(DEFAULT_DONATION);
+  const [donationType, setDonationType] = useState('DONATION'); // 'DONATION' | 'ZAKAT'
+  const [disbursementMonth, setDisbursementMonth] = useState(getCurrentYyyyMm());
+  const [amount, setAmount] = useState('');
+  const [bankAccountId, setBankAccountId] = useState('');
+  const [remarks, setRemarks] = useState('');
+  const [referenceNo, setReferenceNo] = useState('');
+
+  // Beneficiary distribution mode
+  const [beneficiaryMode, setBeneficiaryMode] = useState('none'); // 'none' | 'single' | 'multiple'
+  const [singleBeneficiaryId, setSingleBeneficiaryId] = useState('');
+  const [multiBeneficiaries, setMultiBeneficiaries] = useState([]);
+
   const [loading, setLoading] = useState(false);
-  const [isCustom, setIsCustom] = useState(false);
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
+  const [duplicateMessage, setDuplicateMessage] = useState(null);
 
   useEffect(() => {
     fetchDonations();
@@ -43,474 +58,782 @@ export const DonationForm = () => {
     fetchBeneficiaries();
   }, [fetchDonations, fetchAccountsList, fetchBeneficiaries]);
 
-  useEffect(() => {
-    if (id && donations.length > 0) {
-      const existing = donations.find(d => d.id === id);
-      if (existing) {
-        setForm(nullsToEmpty({
-          ...existing,
-          customDonationType: existing.customDonationType || '',
-          date: existing.createdAt ? new Date(existing.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-        }));
-        setIsCustom(!existing.beneficiaryId && !!existing.donorName);
-      }
-    }
-  }, [id, donations]);
-
-  const selectedBeneficiary = useMemo(() => {
-    if (!form.beneficiaryId) return null;
-    return beneficiaries.find(b => b.id === form.beneficiaryId) || null;
-  }, [form.beneficiaryId, beneficiaries]);
-
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [photoProgress, setPhotoProgress] = useState(null);
-  const fileInputRef = useRef(null);
-
-  const handleUploadRecipientPhoto = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file || !selectedBeneficiary) return;
-    e.target.value = '';
-
-    const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      showToast('Please choose a valid image file (JPEG, PNG, WEBP).', 'warning');
-      return;
-    }
-    if (file.size > 8 * 1024 * 1024) {
-      showToast('Image is too large. Maximum size is 8MB.', 'warning');
-      return;
-    }
-
-    setUploadingPhoto(true);
-    setPhotoProgress(0);
-
-    try {
-      const urls = await beneficiaryService.uploadFile('photo', file, (pct) => setPhotoProgress(pct));
-      const newPhotoUrl = urls?.photoUrl || urls?.url;
-      if (newPhotoUrl) {
-        await beneficiaryService.update(selectedBeneficiary.id, { photoUrl: newPhotoUrl });
-        await fetchBeneficiaries();
-        showToast('Recipient photo uploaded & updated successfully!', 'success');
-      }
-    } catch (err) {
-      showToast(err?.message || 'Failed to upload photo', 'error');
-    } finally {
-      setUploadingPhoto(false);
-      setTimeout(() => setPhotoProgress(null), 800);
-    }
-  };
-
+  // Filter valid active bank accounts from Chart of Accounts
   const bankAccounts = useMemo(() => {
     return flatAccounts.filter(a => {
       if (a.isLocked || a.isDeleted) return false;
       const nameLower = (a.name || a.accountName || '').toLowerCase();
       const detailLower = (a.detailType || '').toLowerCase();
       if (detailLower === 'bank') return true;
-      if (a.code === '1010101' || a.code === '1010102') return true;
-      if (nameLower.includes('bank') || nameLower.includes('nbp') || nameLower.includes('mcb') || nameLower.includes('hbl') || nameLower.includes('ubl') || nameLower.includes('habib') || nameLower.includes('allied') || nameLower.includes('faysal') || nameLower.includes('alfalah') || nameLower.includes('meezan') || nameLower.includes('soneri') || nameLower.includes('askari') || nameLower.includes('js bank') || nameLower.includes('bop') || nameLower.includes('dubai islamic')) {
+      if (a.code === '1010101' || a.code === '1010102' || a.glCode === '1010101' || a.glCode === '1010102') return true;
+      if (
+        nameLower.includes('bank') || nameLower.includes('nbp') || nameLower.includes('mcb') ||
+        nameLower.includes('hbl') || nameLower.includes('ubl') || nameLower.includes('habib') ||
+        nameLower.includes('allied') || nameLower.includes('faysal') || nameLower.includes('alfalah') ||
+        nameLower.includes('meezan') || nameLower.includes('soneri') || nameLower.includes('askari') ||
+        nameLower.includes('js bank') || nameLower.includes('bop') || nameLower.includes('dubai islamic')
+      ) {
         return true;
       }
       return false;
     });
   }, [flatAccounts]);
 
-  // Auto-select first bank account when bank payment is active and none is selected
+  // Auto-select first bank account if none selected
   useEffect(() => {
-    if (!id && (form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && !form.bankAccountId && bankAccounts.length > 0) {
-      setForm(f => ({ ...f, bankAccountId: bankAccounts[0].id }));
+    if (!id && !bankAccountId && bankAccounts.length > 0) {
+      setBankAccountId(bankAccounts[0].id);
     }
-  }, [id, form.paymentMethod, form.bankAccountId, bankAccounts]);
+  }, [id, bankAccountId, bankAccounts]);
+
+  // Load existing donation when in edit mode
+  useEffect(() => {
+    if (id && donations.length > 0) {
+      const existing = donations.find(d => d.id === id);
+      if (existing) {
+        const isZakat = String(existing.donationType).toUpperCase().includes('ZAKAT');
+        setDonationType(isZakat ? 'ZAKAT' : 'DONATION');
+        if (existing.disbursementMonth) {
+          setDisbursementMonth(existing.disbursementMonth);
+        } else if (existing.createdAt) {
+          const d = new Date(existing.createdAt);
+          setDisbursementMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+        }
+        setAmount(String(existing.amount || ''));
+        setBankAccountId(existing.bankAccountId || '');
+        setRemarks(existing.remarks || '');
+        setReferenceNo(existing.voucherNo || existing.chequeNumber || '');
+
+        if (Array.isArray(existing.beneficiaries) && existing.beneficiaries.length > 0) {
+          setBeneficiaryMode('multiple');
+          setMultiBeneficiaries(existing.beneficiaries);
+        } else if (existing.beneficiaryId) {
+          setBeneficiaryMode('single');
+          setSingleBeneficiaryId(existing.beneficiaryId);
+        } else {
+          setBeneficiaryMode('none');
+        }
+      }
+    }
+  }, [id, donations]);
+
+  // Selected Bank details
+  const selectedBank = useMemo(() => {
+    return bankAccounts.find(a => a.id === bankAccountId) || null;
+  }, [bankAccounts, bankAccountId]);
+
+  // Selected single beneficiary details
+  const selectedBeneficiary = useMemo(() => {
+    if (!singleBeneficiaryId) return null;
+    return beneficiaries.find(b => b.id === singleBeneficiaryId) || null;
+  }, [singleBeneficiaryId, beneficiaries]);
+
+  // Multi-beneficiary total calculation
+  const multiBeneficiariesTotal = useMemo(() => {
+    return multiBeneficiaries.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  }, [multiBeneficiaries]);
+
+  // Live Server & Local Duplicate Check
+  const verifyDuplicate = useCallback(async () => {
+    if (!disbursementMonth || !bankAccountId) {
+      setDuplicateMessage(null);
+      return;
+    }
+
+    const monthLabel = getMonthLabel(disbursementMonth);
+    const displayType = donationType === 'ZAKAT' ? 'Zakat' : 'donation';
+
+    // 1. Check local store records
+    const localDuplicate = donations.find(d => {
+      if (d.id === id || d.isDeleted) return false;
+      if (d.status !== 'APPROVED' && d.status !== 'POSTED') return false;
+      if (d.bankAccountId !== bankAccountId) return false;
+      const isZakat = String(d.donationType).toUpperCase().includes('ZAKAT');
+      if (donationType === 'ZAKAT' && !isZakat) return false;
+      if (donationType === 'DONATION' && isZakat) return false;
+
+      let recordMonth = d.disbursementMonth;
+      if (!recordMonth && d.createdAt) {
+        const cd = new Date(d.createdAt);
+        recordMonth = `${cd.getFullYear()}-${String(cd.getMonth() + 1).padStart(2, '0')}`;
+      }
+      return recordMonth === disbursementMonth;
+    });
+
+    if (localDuplicate) {
+      setDuplicateMessage(`Monthly ${displayType} for ${monthLabel} has already been posted for this bank account.`);
+      return;
+    }
+
+    // 2. Query server for remote verification
+    setCheckingDuplicate(true);
+    try {
+      const res = await checkDuplicate(disbursementMonth, donationType, bankAccountId);
+      if (res?.isDuplicate && res.data?.id !== id) {
+        setDuplicateMessage(res.message || `Monthly ${displayType} for ${monthLabel} has already been posted for this bank account.`);
+      } else {
+        setDuplicateMessage(null);
+      }
+    } catch {
+      // Ignore network hiccup
+    } finally {
+      setCheckingDuplicate(false);
+    }
+  }, [disbursementMonth, donationType, bankAccountId, donations, id, checkDuplicate]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      verifyDuplicate();
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [verifyDuplicate]);
+
+  // Quick Amount setter
+  const handleQuickAmount = (val) => {
+    setAmount(String(val));
+  };
+
+  // Add Beneficiary row in multi-mode
+  const handleAddBeneficiaryRow = () => {
+    setMultiBeneficiaries(prev => [
+      ...prev,
+      { id: '', name: '', cnic: '', amount: '', remarks: '' }
+    ]);
+  };
+
+  const handleUpdateBeneficiaryRow = (index, field, value) => {
+    setMultiBeneficiaries(prev => {
+      const updated = [...prev];
+      if (field === 'beneficiaryId') {
+        const b = beneficiaries.find(item => item.id === value);
+        if (b) {
+          updated[index] = {
+            ...updated[index],
+            id: b.id,
+            name: b.name,
+            cnic: b.cnic || '',
+            mobile: b.mobile || ''
+          };
+        } else {
+          updated[index] = { ...updated[index], id: '', name: value };
+        }
+      } else {
+        updated[index] = { ...updated[index], [field]: value };
+      }
+      return updated;
+    });
+  };
+
+  const handleRemoveBeneficiaryRow = (index) => {
+    setMultiBeneficiaries(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Auto-sync total amount from multi-beneficiary allocation
+  const handleSyncAmountFromMulti = () => {
+    if (multiBeneficiariesTotal > 0) {
+      setAmount(String(multiBeneficiariesTotal));
+      showToast(`Total amount updated to Rs. ${multiBeneficiariesTotal.toLocaleString()}`, 'info');
+    }
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!form.donorName || !form.amount || !form.paymentMethod) {
-      showToast('Please fill in all required fields.', 'warning'); return;
+
+    if (!disbursementMonth) {
+      showToast('Please select a disbursement month.', 'warning');
+      return;
     }
-    if (!/^[a-zA-Z\s.]{3,50}$/.test(form.donorName)) {
-      showToast('Donor Name must contain only letters, spaces and dots (3-50 characters).', 'warning'); return;
+    if (!amount || Number(amount) <= 0) {
+      showToast('Please enter a valid disbursement amount greater than 0.', 'warning');
+      return;
     }
-    if (form.donorMobile && !/^((\+92|92|0)?3[0-9]{2}-?[0-9]{7})$/.test(form.donorMobile)) {
-      showToast('Invalid Mobile Number. E.g. 0300-1234567', 'warning'); return;
+    if (!bankAccountId) {
+      showToast('Please select a bank account to disburse funds from.', 'warning');
+      return;
     }
-    if (!/^[1-9]\d*(\.\d{1,2})?$/.test(form.amount)) {
-      showToast('Amount must be a positive number with up to 2 decimal places.', 'warning'); return;
+
+    if (duplicateMessage) {
+      showToast(duplicateMessage, 'error');
+      return;
     }
-    if (Number(form.amount) > 100000000) {
-      showToast('Amount cannot exceed 100,000,000.', 'warning'); return;
+
+    // Beneficiary checks
+    let payloadBeneficiaries = null;
+    let payloadBeneficiaryId = null;
+
+    if (beneficiaryMode === 'single' && singleBeneficiaryId) {
+      payloadBeneficiaryId = singleBeneficiaryId;
+    } else if (beneficiaryMode === 'multiple' && multiBeneficiaries.length > 0) {
+      if (Math.abs(multiBeneficiariesTotal - Number(amount)) > 1) {
+        showToast(
+          `The sum of beneficiary allocations (Rs. ${multiBeneficiariesTotal.toLocaleString()}) does not match the total disbursement amount (Rs. ${Number(amount).toLocaleString()}).`,
+          'warning'
+        );
+        return;
+      }
+      payloadBeneficiaries = multiBeneficiaries.filter(b => b.name && Number(b.amount) > 0);
     }
-    if ((form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && !form.bankAccountId) {
-      showToast('Bank Account is required.', 'warning'); return;
-    }
-    if (form.paymentMethod === 'CHEQUE' && !form.chequeNumber) {
-      showToast('Cheque number is required.', 'warning'); return;
-    }
-    if (form.paymentMethod === 'CHEQUE' && form.chequeNumber && !/^[0-9]{6,20}$/.test(form.chequeNumber)) {
-      showToast('Cheque number must be between 6 and 20 digits.', 'warning'); return;
-    }
-    if (form.donationType === 'CUSTOM' && !form.customDonationType?.trim()) {
-      showToast('Custom Donation / Aid Type is required when "Custom" is selected.', 'warning'); return;
-    }
+
+    const monthLabel = getMonthLabel(disbursementMonth);
+    const displayCategory = donationType === 'ZAKAT' ? 'Zakat' : 'Donation';
+
+    const payload = {
+      month: monthLabel,
+      disbursementMonth,
+      donationType,
+      amount: Number(amount),
+      paymentMethod: 'BANK',
+      bankAccountId,
+      beneficiaryId: payloadBeneficiaryId,
+      beneficiaries: payloadBeneficiaries,
+      remarks: remarks ? remarks.trim() : null,
+      chequeNumber: referenceNo ? referenceNo.trim() : null,
+      status: 'APPROVED'
+    };
 
     setLoading(true);
     try {
       if (id) {
-        await updateDonation(id, form);
-        showToast('Donation updated successfully!', 'success');
+        await updateDonation(id, payload);
+        showToast(`${monthLabel} monthly ${displayCategory} updated successfully!`, 'success');
       } else {
-        await addDonation(form);
-        showToast('Donation logged successfully!', 'success');
+        const res = await addDonation(payload);
+        showToast(
+          res?.message || `${monthLabel} monthly ${displayCategory} of Rs. ${Number(amount).toLocaleString()} posted successfully.`,
+          'success'
+        );
       }
-      setTimeout(() => navigate('/donations'), 1200);
+      setTimeout(() => navigate('/donations'), 1000);
     } catch (err) {
-      showToast(err?.response?.data?.error?.message || err.message || 'Failed to save donation', 'error');
+      const errMsg = err?.response?.data?.error?.message || err.message || 'Failed to post monthly donation';
+      showToast(errMsg, 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const inputClass = 'w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 transition-all font-medium';
-  const labelClass = 'block text-xs font-semibold text-slate-400 mb-1.5';
+  const inputClass = 'w-full px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 transition-all font-medium';
+  const labelClass = 'block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5';
+
+  const monthLabel = getMonthLabel(disbursementMonth);
+  const displayCategory = donationType === 'ZAKAT' ? 'Zakat' : 'Donation';
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="space-y-6 pb-12">
+      {/* Top Header */}
+      <div className="flex items-center justify-between gap-4 flex-wrap border-b border-slate-800 pb-5">
         <div className="flex items-center gap-3">
-          <Link to="/donations" className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700 transition-colors">
-            <ChevronLeft className="w-4 h-4" />
+          <Link
+            to="/donations"
+            className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700 transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-slate-100">
-              {id ? 'Edit Welfare Aid / Disbursement' : 'Log New Aid / Donation Disbursement'}
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">
+              {id ? 'Edit Monthly Disbursement' : 'Monthly Donation / Aid Disbursement'}
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">Record financial assistance and aid distributed to People We Help</p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Execute monthly welfare disbursements with automatic bank deduction and duplicate prevention
+            </p>
           </div>
         </div>
-        <span className="text-xs font-semibold text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20">
-          {id ? 'Editing Disbursement' : 'New Disbursement'}
-        </span>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-amber-400 bg-amber-500/10 px-3.5 py-1.5 rounded-full border border-amber-500/20 flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5" />
+            <span>{monthLabel}</span>
+          </span>
+        </div>
       </div>
 
       <form onSubmit={handleSave}>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-          {/* Left: Info Panel */}
-          <div className="lg:col-span-4 space-y-5">
-            <div className="bg-amber-500/5 rounded-2xl border border-amber-500/20 p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <ShieldCheck className="w-4 h-4 text-amber-400" />
-                <h3 className="text-sm font-semibold text-amber-300">Donation Info</h3>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-                    <Heart className="w-3.5 h-3.5 text-amber-400" />
-                  </div>
-                  <span className="text-xs font-semibold text-slate-300">Tracks Welfare Disbursement Outflow</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
-                  </div>
-                  <span className="text-xs font-semibold text-slate-300">Posts to General Ledger</span>
+          {/* Left Column: Form Controls */}
+          <div className="lg:col-span-8 space-y-6">
+
+            {/* Duplicate Prevention Alert Banner */}
+            {duplicateMessage && (
+              <div className="p-4 rounded-2xl bg-red-950/40 border border-red-500/40 flex items-start gap-3.5 text-red-300 shadow-xl animate-in fade-in duration-200">
+                <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-bold text-red-200">Duplicate Monthly Posting Prevented</h4>
+                  <p className="text-xs text-red-300/90 mt-1 leading-relaxed">{duplicateMessage}</p>
+                  <p className="text-[11px] text-red-400/80 mt-1 font-medium">
+                    The system prevents double bank deduction for the same month, category, and bank account. Choose another month or bank account.
+                  </p>
                 </div>
               </div>
-              <div className="border-t border-amber-500/20 my-4" />
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Fields marked with <span className="text-red-400 font-bold">*</span> are mandatory. You can auto-fill recipient details by selecting from <strong className="text-slate-300">People We Help</strong>.
-              </p>
-            </div>
-          </div>
+            )}
 
-          {/* Right: Form Cards */}
-          <div className="lg:col-span-8 space-y-5">
-
-            {/* Card 01: Beneficiary & Amount */}
-            <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
-                <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">01</span>
-                <h3 className="text-sm font-semibold text-slate-200">Recipient & Amount (Beneficiary Aid)</h3>
+            {/* Card 01: Category & Period */}
+            <div className="bg-slate-900/90 rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-800/40">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 font-extrabold text-xs flex items-center justify-center">01</span>
+                  <h3 className="text-sm font-bold text-slate-200">Disbursement Category & Monthly Period</h3>
+                </div>
+                {checkingDuplicate && (
+                  <span className="flex items-center gap-1.5 text-[11px] text-amber-400 font-medium">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Checking monthly duplicate...
+                  </span>
+                )}
               </div>
-              <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                
-                {/* Main Recipient Dropdown (People We Help) */}
-                <div className="sm:col-span-2 bg-gradient-to-r from-slate-950/80 via-slate-900/80 to-slate-950/80 p-4 rounded-xl border border-amber-500/30 shadow-inner">
-                  <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                    <label className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <Users className="w-4 h-4 text-amber-400 shrink-0" /> Recipient / Beneficiary Name (People We Help) *
-                    </label>
-                    <Link to="/beneficiaries/new" target="_blank" className="text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 hover:underline">
-                      + Register New Beneficiary
-                    </Link>
+
+              <div className="p-5 space-y-5">
+                {/* 1. Donation / Aid Type Toggle */}
+                <div>
+                  <label className={labelClass}>1. Donation / Aid Type *</label>
+                  <div className="grid grid-cols-2 gap-3 max-w-md">
+                    <button
+                      type="button"
+                      onClick={() => setDonationType('DONATION')}
+                      className={`flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl border text-sm font-bold transition-all cursor-pointer ${
+                        donationType === 'DONATION'
+                          ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-lg shadow-amber-500/20'
+                          : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:bg-slate-800/80 hover:border-slate-700'
+                      }`}
+                    >
+                      <Heart className="w-4 h-4" />
+                      <span>General / Monthly Donation</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setDonationType('ZAKAT')}
+                      className={`flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl border text-sm font-bold transition-all cursor-pointer ${
+                        donationType === 'ZAKAT'
+                          ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-lg shadow-emerald-500/20'
+                          : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:bg-slate-800/80 hover:border-slate-700'
+                      }`}
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      <span>Zakat Disbursement</span>
+                    </button>
                   </div>
-                  <select
-                    required
-                    value={isCustom ? 'Custom / Other Recipient' : (form.beneficiaryId || '')}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === 'Custom / Other Recipient') {
-                        setIsCustom(true);
-                        setForm(f => ({
-                          ...f,
-                          beneficiaryId: '',
-                          donorName: 'Custom / Other Recipient',
-                          donorMobile: '',
-                        }));
-                      } else if (val === '') {
-                        setIsCustom(false);
-                        setForm(f => ({
-                          ...f,
-                          beneficiaryId: '',
-                          donorName: '',
-                          donorMobile: '',
-                        }));
-                      } else {
-                        setIsCustom(false);
-                        const b = beneficiaries.find(item => item.id === val);
-                        if (b) {
-                          setForm(f => ({
-                            ...f,
-                            beneficiaryId: b.id,
-                            donorName: b.name || '',
-                            donorMobile: b.mobile || '',
-                            remarks: f.remarks ? `${f.remarks} (Beneficiary CNIC: ${b.cnic || 'N/A'})` : `Beneficiary CNIC: ${b.cnic || 'N/A'}`
-                          }));
-                          showToast(`Selected beneficiary: ${b.name}`, 'success');
-                        }
-                      }
-                    }}
-                    className="w-full px-3.5 py-3 rounded-xl bg-slate-900 border border-amber-500/40 text-sm font-bold text-slate-100 focus:outline-none focus:border-amber-500 transition-all cursor-pointer shadow-md"
-                  >
-                    <option value="">-- Select Recipient from People We Help (Dropdown) --</option>
-                    {beneficiaries.map(b => (
-                      <option key={b.id} value={b.id} className="bg-slate-900 text-slate-200 py-1 font-semibold">
-                        {b.name} {b.mobile ? `• Ph: ${b.mobile}` : ''} {b.cnic ? `• CNIC: ${b.cnic}` : ''}
-                      </option>
-                    ))}
-                    <option value="Custom / Other Recipient" className="bg-slate-900 text-amber-400 font-bold">
-                      ➕ Other / Custom Recipient (Not in list)...
-                    </option>
-                  </select>
-                  {isCustom && (
+                  <p className="text-[11px] text-slate-500 mt-2">
+                    Donation and Zakat are maintained as separate categories with independent monthly tracking and GL heads.
+                  </p>
+                </div>
+
+                {/* 2. Month Selector */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-800/60">
+                  <div>
+                    <label className={labelClass}>2. Disbursement Month *</label>
                     <input
-                      type="text"
+                      type="month"
                       required
-                      placeholder="Type custom recipient name here..."
-                      value={form.donorName === 'Custom / Other Recipient' ? '' : form.donorName}
-                      onChange={e => setForm(f => ({ ...f, donorName: e.target.value }))}
-                      className="w-full mt-3 px-3.5 py-2.5 rounded-xl bg-slate-950/90 border border-amber-500 text-sm font-semibold text-amber-300 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      value={disbursementMonth}
+                      onChange={(e) => setDisbursementMonth(e.target.value)}
+                      className={`${inputClass} text-base font-bold text-amber-400 cursor-pointer`}
                     />
-                  )}
-                  {selectedBeneficiary && (
-                    <div className="mt-3.5 p-3.5 rounded-xl bg-slate-950/90 border border-amber-500/40 flex flex-col sm:flex-row items-center sm:items-start gap-4 shadow-lg">
-                      {/* Profile Picture Frame with Interactive Click-to-Upload */}
-                      <div className="relative group shrink-0">
-                        <div
-                          onClick={() => !uploadingPhoto && fileInputRef.current?.click()}
-                          title="Click to upload or change recipient photo"
-                          className={`relative w-20 h-24 sm:w-24 sm:h-28 rounded-xl border-2 border-dashed
-                            ${uploadingPhoto ? 'cursor-wait border-amber-400' : 'cursor-pointer border-amber-500/60 hover:border-amber-400'}
-                            overflow-hidden bg-slate-900 flex flex-col items-center justify-center shadow-lg transition-all`}
-                        >
-                          {selectedBeneficiary.photoUrl ? (
-                            <>
-                              <img
-                                src={selectedBeneficiary.photoUrl}
-                                alt={selectedBeneficiary.name}
-                                className="w-full h-full object-cover group-hover:opacity-40 transition-opacity"
-                              />
-                              <div className="absolute inset-0 bg-slate-950/75 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity p-1 text-center">
-                                <Camera className="w-5 h-5 text-amber-400 mb-1" />
-                                <span className="text-[9.5px] font-bold text-amber-300">Change Photo</span>
-                              </div>
-                            </>
-                          ) : (
-                            <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center group-hover:text-amber-300 transition-colors">
-                              <Camera className="w-7 h-7 text-amber-400 mb-1 group-hover:scale-110 transition-transform" />
-                              <span className="text-[9.5px] font-bold text-amber-400">Upload Photo</span>
-                            </div>
-                          )}
-
-                          {uploadingPhoto && (
-                            <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center gap-1.5 z-20">
-                              <Loader2 className="w-5 h-5 text-amber-400 animate-spin" />
-                              <span className="text-[10px] font-bold text-amber-300">{photoProgress ?? 0}%</span>
-                            </div>
-                          )}
-                        </div>
-
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/jpeg,image/png,image/gif,image/webp"
-                          onChange={handleUploadRecipientPhoto}
-                          className="hidden"
-                          disabled={uploadingPhoto}
-                        />
-                      </div>
-
-                      {/* Recipient Data & Badges */}
-                      <div className="flex-1 min-w-0 w-full">
-                        <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <div className="flex items-center gap-2">
-                            <UserCheck className="w-4 h-4 text-emerald-400" />
-                            <h4 className="text-base font-bold text-slate-100 truncate">{selectedBeneficiary.name}</h4>
-                          </div>
-                          <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
-                            Registered Recipient Profile
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 mt-2.5 text-xs text-slate-300 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
-                          <div><span className="text-slate-500 font-semibold">CNIC:</span> <strong className="text-slate-200">{selectedBeneficiary.cnic || '—'}</strong></div>
-                          <div><span className="text-slate-500 font-semibold">Mobile:</span> <strong className="text-slate-200">{selectedBeneficiary.mobile || '—'}</strong></div>
-                          <div><span className="text-slate-500 font-semibold">Gham Name:</span> <strong className="text-amber-300">{selectedBeneficiary.gham || selectedBeneficiary.ghamName || '—'}</strong></div>
-                          <div><span className="text-slate-500 font-semibold">Address:</span> <strong className="text-slate-200 truncate">{selectedBeneficiary.address || '—'}</strong></div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-1.5 mt-2 text-[11px] text-slate-400">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                    <span>Select from your registered welfare beneficiaries to automatically populate contact details below.</span>
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Active Period: <strong className="text-slate-300">{monthLabel}</strong>
+                    </p>
                   </div>
-                </div>
 
-                <div>
-                  <label className={labelClass}>Recipient Mobile</label>
-                  <input type="text" value={form.donorMobile} onChange={e => setForm(f => ({ ...f, donorMobile: e.target.value }))}
-                    placeholder="E.g. 0300-1234567" className={inputClass} />
-                </div>
-                <div>
-                  <label className={labelClass}>Donation / Aid Type *</label>
-                  <select
-                    value={form.donationType}
-                    onChange={e => {
-                      const val = e.target.value;
-                      setForm(f => ({
-                        ...f,
-                        donationType: val,
-                        customDonationType: val !== 'CUSTOM' ? '' : f.customDonationType
-                      }));
-                    }}
-                    className={inputClass}>
-                    {DONATION_TYPES.map(t => (
-                      <option key={t.value} value={t.value}>{t.label}</option>
-                    ))}
-                  </select>
-                  {form.donationType === 'CUSTOM' && (
-                    <div className="mt-2">
+                  {/* 3. Donation Amount */}
+                  <div>
+                    <label className={labelClass}>3. Total Disbursement Amount (PKR) *</label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-500">Rs</span>
                       <input
-                        type="text"
+                        type="number"
                         required
-                        value={form.customDonationType || ''}
-                        onChange={e => setForm(f => ({ ...f, customDonationType: e.target.value }))}
-                        placeholder="Enter Donation / Aid Type"
-                        className={`${inputClass} border-amber-500/50 focus:border-amber-400`}
+                        min="1"
+                        step="any"
+                        placeholder="100,000"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        className={`${inputClass} pl-10 text-base font-extrabold font-mono text-slate-50`}
                       />
-                      <p className="text-[11px] text-slate-500 mt-1">Describe the specific type of aid (e.g. Water Filter Assistance)</p>
                     </div>
-                  )}
-                </div>
-                <div>
-                  <label className={labelClass}>Amount (PKR) *</label>
-                  <input type="number" min="0" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
-                    placeholder="10000" className={inputClass} />
-                </div>
-                <div>
-                  <label className={labelClass}>Donation Date *</label>
-                  <input type="date" value={form.date || ''} onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                    className={inputClass} />
+                    {/* Quick Amount Pills */}
+                    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase">Quick:</span>
+                      {[25000, 50000, 100000, 200000, 500000].map(val => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => handleQuickAmount(val)}
+                          className="px-2 py-0.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-semibold border border-slate-700/60 transition-all cursor-pointer"
+                        >
+                          {(val / 1000).toFixed(0)}k
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Card 02: Payment Details */}
-            <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
-                <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">02</span>
-                <h3 className="text-sm font-semibold text-slate-200">Payment & Bank Source</h3>
+            {/* Card 02: Bank Account (Single Bank Deduction) */}
+            <div className="bg-slate-900/90 rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-800/40">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 font-extrabold text-xs flex items-center justify-center">02</span>
+                  <h3 className="text-sm font-bold text-slate-200">Bank Account (Single Deduction Source)</h3>
+                </div>
+                <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                  Deducted ONCE for Monthly Total
+                </span>
               </div>
+
               <div className="p-5 space-y-4">
                 <div>
-                  <label className={labelClass}>Payment Method *</label>
-                  <select value={form.paymentMethod}
-                    onChange={e => setForm(f => ({ ...f, paymentMethod: e.target.value, bankAccountId: '', chequeNumber: '', donorBankName: '' }))}
-                    className={inputClass}>
-                    {['BANK', 'CASH', 'CHEQUE'].map(t => (
-                      <option key={t} value={t}>{t}</option>
+                  <label className={labelClass}>4. Selected Bank Account *</label>
+                  <select
+                    required
+                    value={bankAccountId}
+                    onChange={(e) => setBankAccountId(e.target.value)}
+                    className={`${inputClass} text-sm font-bold text-slate-100 cursor-pointer`}
+                  >
+                    <option value="">-- Select Bank Account --</option>
+                    {bankAccounts.map(a => (
+                      <option key={a.id} value={a.id} className="bg-slate-900 text-slate-200 py-1">
+                        {a.accountName || a.name} {a.glCode || a.code ? `(${a.glCode || a.code})` : ''} — Current Bal: Rs. {(a.currentBalance || 0).toLocaleString()}
+                      </option>
                     ))}
                   </select>
                 </div>
 
-                {(form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {selectedBank && (
+                  <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                      <label className={labelClass}>Bank Account *</label>
-                      <select value={form.bankAccountId} onChange={e => setForm(f => ({ ...f, bankAccountId: e.target.value }))}
-                        className={inputClass}>
-                        <option value="">Select Bank Account</option>
-                        {bankAccounts.map(a => (
-                          <option key={a.id} value={a.id}>{a.name || a.accountName} {a.code ? `(${a.code})` : ''}</option>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase">GL Code</span>
+                      <p className="text-xs font-mono font-bold text-amber-400 mt-0.5">{selectedBank.glCode || selectedBank.code || '—'}</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase">Bank Name</span>
+                      <p className="text-xs font-semibold text-slate-200 mt-0.5 truncate">{selectedBank.accountName || selectedBank.name}</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase">Current Ledger Balance</span>
+                      <p className="text-xs font-mono font-bold text-emerald-400 mt-0.5">
+                        Rs. {Number(selectedBank.currentBalance || 0).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div>
+                    <label className={labelClass}>7. Reference / Voucher Number (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. CHQ-9901 or REF-01"
+                      value={referenceNo}
+                      onChange={(e) => setReferenceNo(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>6. Remarks / Narration (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="Optional notes for this monthly disbursement..."
+                      value={remarks}
+                      onChange={(e) => setRemarks(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 03: Beneficiaries Distribution (Optional) */}
+            <div className="bg-slate-900/90 rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-800/40">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 font-extrabold text-xs flex items-center justify-center">03</span>
+                  <h3 className="text-sm font-bold text-slate-200">5. Beneficiaries & Distribution (Optional)</h3>
+                </div>
+                <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                  {[
+                    { key: 'none', label: 'Lump Sum' },
+                    { key: 'single', label: 'Single Recipient' },
+                    { key: 'multiple', label: 'Multi-Beneficiary Batch' }
+                  ].map(m => (
+                    <button
+                      key={m.key}
+                      type="button"
+                      onClick={() => setBeneficiaryMode(m.key)}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        beneficiaryMode === m.key
+                          ? 'bg-amber-500 text-slate-950 shadow'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-5">
+                {beneficiaryMode === 'none' && (
+                  <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 text-xs text-slate-400 flex items-center gap-3">
+                    <Building className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>
+                      Recording as general monthly {displayCategory} fund disbursement without individual beneficiary attachments.
+                    </span>
+                  </div>
+                )}
+
+                {beneficiaryMode === 'single' && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className={labelClass}>Select Recipient from People We Help</label>
+                      <select
+                        value={singleBeneficiaryId}
+                        onChange={(e) => setSingleBeneficiaryId(e.target.value)}
+                        className={`${inputClass} text-sm font-bold`}
+                      >
+                        <option value="">-- Choose Registered Beneficiary --</option>
+                        {beneficiaries.map(b => (
+                          <option key={b.id} value={b.id}>
+                            {b.name} {b.cnic ? `• CNIC: ${b.cnic}` : ''} {b.mobile ? `• Ph: ${b.mobile}` : ''} {b.gham ? `• Gham: ${b.gham}` : ''}
+                          </option>
                         ))}
                       </select>
                     </div>
-                    <div>
-                      <label className={labelClass}>{form.paymentMethod === 'CHEQUE' ? 'Cheque Number *' : 'Reference / Slip Number'}</label>
-                      <input value={form.chequeNumber} onChange={e => setForm(f => ({ ...f, chequeNumber: e.target.value }))}
-                        placeholder={form.paymentMethod === 'CHEQUE' ? 'CHQ-001' : 'REF-001'} className={inputClass} />
+
+                    {selectedBeneficiary && (
+                      <div className="p-4 rounded-xl bg-slate-950/80 border border-amber-500/30 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                        <div>
+                          <span className="text-slate-500 font-semibold">Name:</span>
+                          <p className="text-slate-100 font-bold mt-0.5">{selectedBeneficiary.name}</p>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 font-semibold">CNIC:</span>
+                          <p className="text-slate-100 font-mono font-bold mt-0.5">{selectedBeneficiary.cnic || '—'}</p>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 font-semibold">Gham / Area:</span>
+                          <p className="text-amber-300 font-semibold mt-0.5">{selectedBeneficiary.gham || selectedBeneficiary.area || '—'}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {beneficiaryMode === 'multiple' && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Beneficiary Allocation Breakdown</h4>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Bank is deducted once for the total. Allocate individual portions below.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddBeneficiaryRow}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-bold transition-all cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add Beneficiary Row
+                      </button>
                     </div>
+
+                    {multiBeneficiaries.length === 0 ? (
+                      <div className="p-6 text-center border-2 border-dashed border-slate-800 rounded-xl">
+                        <Users className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                        <p className="text-xs text-slate-400 font-semibold">No beneficiaries added yet</p>
+                        <button
+                          type="button"
+                          onClick={handleAddBeneficiaryRow}
+                          className="mt-2 text-xs font-bold text-amber-400 hover:underline"
+                        >
+                          + Click here to add the first beneficiary
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {multiBeneficiaries.map((row, idx) => (
+                          <div key={idx} className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+                            <div className="sm:col-span-5">
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Beneficiary Name / Selection</label>
+                              <select
+                                value={row.id || ''}
+                                onChange={(e) => handleUpdateBeneficiaryRow(idx, 'beneficiaryId', e.target.value)}
+                                className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-amber-500"
+                              >
+                                <option value="">-- Choose from List --</option>
+                                {beneficiaries.map(b => (
+                                  <option key={b.id} value={b.id}>{b.name} ({b.cnic || b.mobile || 'No CNIC'})</option>
+                                ))}
+                              </select>
+                              {!row.id && (
+                                <input
+                                  type="text"
+                                  placeholder="Or type custom recipient name..."
+                                  value={row.name}
+                                  onChange={(e) => handleUpdateBeneficiaryRow(idx, 'name', e.target.value)}
+                                  className="w-full mt-1.5 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-200"
+                                />
+                              )}
+                            </div>
+
+                            <div className="sm:col-span-4">
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Portion Amount (PKR)</label>
+                              <input
+                                type="number"
+                                min="1"
+                                placeholder="30,000"
+                                value={row.amount}
+                                onChange={(e) => handleUpdateBeneficiaryRow(idx, 'amount', e.target.value)}
+                                className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-mono font-bold text-slate-100 focus:outline-none focus:border-amber-500"
+                              />
+                            </div>
+
+                            <div className="sm:col-span-2">
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Remarks</label>
+                              <input
+                                type="text"
+                                placeholder="e.g. Ration"
+                                value={row.remarks || ''}
+                                onChange={(e) => handleUpdateBeneficiaryRow(idx, 'remarks', e.target.value)}
+                                className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300"
+                              />
+                            </div>
+
+                            <div className="sm:col-span-1 flex justify-end pt-4 sm:pt-0">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveBeneficiaryRow(idx)}
+                                className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/20 transition-colors"
+                                title="Remove recipient"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Multi-beneficiary reconciliation summary */}
+                        <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between flex-wrap gap-2 text-xs">
+                          <div>
+                            <span className="text-slate-400 font-semibold">Allocated Total: </span>
+                            <strong className="font-mono font-bold text-amber-400">Rs. {multiBeneficiariesTotal.toLocaleString()}</strong>
+                            <span className="text-slate-500 ml-2">across {multiBeneficiaries.length} recipient(s)</span>
+                          </div>
+                          {Number(amount) > 0 && Math.abs(multiBeneficiariesTotal - Number(amount)) > 0 && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-red-400 font-semibold">
+                                Difference: Rs. {Math.abs(multiBeneficiariesTotal - Number(amount)).toLocaleString()}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={handleSyncAmountFromMulti}
+                                className="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[11px] font-bold hover:bg-amber-500/20"
+                              >
+                                Set Batch Total to Rs. {multiBeneficiariesTotal.toLocaleString()}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
-
-                {(form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE') && (
-                  <div>
-                    <label className={labelClass}>Recipient / Donor Bank (Pakistani Banks)</label>
-                    <select value={form.donorBankName} onChange={e => setForm(f => ({ ...f, donorBankName: e.target.value }))}
-                      className={inputClass}>
-                      <option value="">Select Bank (Optional)</option>
-                      {PAKISTANI_BANKS.map(b => (
-                        <option key={b} value={b}>{b}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {/* Accounting Impact Preview */}
-                <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs space-y-1.5">
-                  <div className="font-semibold text-slate-400">General Ledger Accounting Entry:</div>
-                  <div className="flex items-center justify-between text-emerald-400 font-mono">
-                    <span>DR: Donation Expense Account ({form.donationType || 'General'})</span>
-                    <span>Rs {Number(form.amount || 0).toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-blue-400 font-mono">
-                    <span>CR: {form.paymentMethod === 'CASH' ? 'Cash in Hand (1010103)' : (bankAccounts.find(a => a.id === form.bankAccountId)?.name || bankAccounts.find(a => a.id === form.bankAccountId)?.accountName || 'Selected Bank Account')}</span>
-                    <span>Rs {Number(form.amount || 0).toLocaleString()}</span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className={labelClass}>Remarks</label>
-                  <textarea value={form.remarks} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))}
-                    className={`${inputClass} h-24 resize-none`} placeholder="Optional notes..." />
-                </div>
               </div>
             </div>
 
-            {/* Submit Bar */}
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <Link to="/donations" className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">
-                Cancel
-              </Link>
-              <button type="submit" disabled={loading}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold transition-all shadow-lg shadow-amber-600/25 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
-                <Save className="w-4 h-4" />
-                <span>{loading ? 'Saving...' : (id ? 'Update Donation' : 'Log Donation')}</span>
-              </button>
+          </div>
+
+          {/* Right Column: Accounting Impact & Summary Panel */}
+          <div className="lg:col-span-4 space-y-5">
+
+            {/* Accounting Entry Preview Card */}
+            <div className="bg-slate-900/90 rounded-2xl border border-slate-800 shadow-xl p-5 space-y-4">
+              <div className="flex items-center gap-2 pb-3 border-b border-slate-800">
+                <ShieldCheck className="w-5 h-5 text-amber-400" />
+                <h3 className="text-sm font-bold text-slate-100">Accounting Ledger Impact</h3>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <p className="text-slate-400 leading-relaxed">
+                  Upon posting, the General Ledger creates <strong>exactly ONE</strong> accounting transaction:
+                </p>
+
+                <div className="p-3.5 rounded-xl bg-slate-950/90 border border-slate-800 space-y-2.5 font-mono">
+                  <div className="flex items-start justify-between gap-2 text-emerald-400">
+                    <div>
+                      <span className="font-bold">DEBIT:</span>
+                      <p className="text-[11px] text-emerald-300/80 mt-0.5">
+                        {donationType === 'ZAKAT' ? 'Zakat Expense A/c (4060104)' : 'Monthly Donation Expense (4060101)'}
+                      </p>
+                    </div>
+                    <span className="font-bold text-sm">Rs. {Number(amount || 0).toLocaleString()}</span>
+                  </div>
+
+                  <div className="border-t border-slate-800/80 pt-2 flex items-start justify-between gap-2 text-blue-400">
+                    <div>
+                      <span className="font-bold">CREDIT:</span>
+                      <p className="text-[11px] text-blue-300/80 mt-0.5 truncate max-w-[170px]">
+                        {selectedBank ? (selectedBank.accountName || selectedBank.name) : 'Selected Bank Account'}
+                      </p>
+                    </div>
+                    <span className="font-bold text-sm">Rs. {Number(amount || 0).toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-[11px] text-slate-400 space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-300">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Strict Single Monthly Deduction</span>
+                  </div>
+                  <p>
+                    Regardless of recipient count, the bank account is credited only once for the batch total. Duplicate monthly postings for this bank account are locked.
+                  </p>
+                </div>
+              </div>
+
+              {/* Summary Stats */}
+              <div className="border-t border-slate-800 pt-4 space-y-2 text-xs">
+                <div className="flex justify-between text-slate-400">
+                  <span>Period:</span>
+                  <strong className="text-slate-200">{monthLabel}</strong>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Category:</span>
+                  <strong className={donationType === 'ZAKAT' ? 'text-emerald-400' : 'text-amber-400'}>
+                    {displayCategory}
+                  </strong>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Bank Deduction:</span>
+                  <strong className="text-slate-100 font-mono">
+                    Rs. {Number(amount || 0).toLocaleString()}
+                  </strong>
+                </div>
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="pt-3 border-t border-slate-800 space-y-2.5">
+                <button
+                  type="submit"
+                  disabled={loading || !!duplicateMessage}
+                  className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold text-sm shadow-xl shadow-amber-500/20 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>
+                    {loading ? 'Posting to Ledger...' : (id ? 'Update Monthly Posting' : `Post ${monthLabel} ${displayCategory}`)}
+                  </span>
+                </button>
+
+                <Link
+                  to="/donations"
+                  className="w-full flex items-center justify-center py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 font-semibold text-xs border border-slate-700/60 transition-colors"
+                >
+                  Cancel and Return
+                </Link>
+              </div>
             </div>
 
           </div>
+
         </div>
       </form>
     </div>
