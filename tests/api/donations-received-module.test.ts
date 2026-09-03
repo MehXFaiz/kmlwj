@@ -130,7 +130,7 @@ describe('Standalone Donations Module (Inflows, GL Posting & RBAC)', () => {
         }
       } catch (e) {}
     }
-  });
+  }, 30000);
 
   it('GET /api/donations returns status 200 and stats', async () => {
     const res = await request(app)

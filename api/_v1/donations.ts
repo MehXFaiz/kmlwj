@@ -186,18 +186,56 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(200).json({ status: 200, isDuplicate: false });
     }
 
-    const { limit = '100', page = '1', month: queryMonth, type: queryType } = req.query as any;
+    const {
+      limit = '500',
+      page = '1',
+      month: queryMonth,
+      type: queryType,
+      beneficiaryId,
+      paymentMethod,
+      status: queryStatus,
+      startDate,
+      endDate,
+      search
+    } = req.query as any;
+
     const pageNum = parseInt(page) || 1;
-    const limitNum = parseInt(limit) || 100;
+    const limitNum = parseInt(limit) || 500;
     const skip = (pageNum - 1) * limitNum;
     const whereClause: any = getDeletedFilter(req.query);
 
     if (queryMonth) {
       whereClause.disbursementMonth = String(queryMonth).trim();
     }
-    if (queryType) {
+    if (queryType && queryType !== 'All' && queryType !== 'ALL') {
       const { enumType } = normalizeDonationType(queryType);
       whereClause.donationType = enumType;
+    }
+    if (beneficiaryId && beneficiaryId !== 'All' && beneficiaryId !== 'ALL') {
+      whereClause.beneficiaryId = String(beneficiaryId);
+    }
+    if (paymentMethod && paymentMethod !== 'All' && paymentMethod !== 'ALL') {
+      whereClause.paymentMethod = String(paymentMethod).toUpperCase();
+    }
+    if (queryStatus && queryStatus !== 'All' && queryStatus !== 'ALL') {
+      whereClause.status = String(queryStatus).toUpperCase();
+    }
+    if (startDate || endDate) {
+      whereClause.createdAt = {};
+      if (startDate) whereClause.createdAt.gte = new Date(startDate);
+      if (endDate) whereClause.createdAt.lte = new Date(`${endDate}T23:59:59.999Z`);
+    }
+    if (search && typeof search === 'string' && search.trim()) {
+      const q = search.trim();
+      whereClause.OR = [
+        { voucherNo: { contains: q, mode: 'insensitive' } },
+        { donorName: { contains: q, mode: 'insensitive' } },
+        { remarks: { contains: q, mode: 'insensitive' } },
+        { customDonationType: { contains: q, mode: 'insensitive' } },
+        { beneficiary: { name: { contains: q, mode: 'insensitive' } } },
+        { beneficiary: { cnic: { contains: q, mode: 'insensitive' } } },
+        { beneficiary: { mobile: { contains: q, mode: 'insensitive' } } },
+      ];
     }
 
     const [donations, total] = await Promise.all([
