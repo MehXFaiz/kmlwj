@@ -226,10 +226,25 @@ app.put('/api/v1/donors', makeExpress(donorsHandler));
 app.delete('/api/v1/donors', makeExpress(donorsHandler));
 
 app.get('/api/v1/donations-received', makeExpress(donationsReceivedHandler));
+app.get('/api/v1/donations-received/:id', makeExpress(donationsReceivedHandler));
 app.post('/api/v1/donations-received', makeExpress(donationsReceivedHandler));
 app.put('/api/v1/donations-received', makeExpress(donationsReceivedHandler));
+app.put('/api/v1/donations-received/:id', makeExpress(donationsReceivedHandler));
 app.patch('/api/v1/donations-received', makeExpress(donationsReceivedHandler));
+app.patch('/api/v1/donations-received/:id', makeExpress(donationsReceivedHandler));
 app.delete('/api/v1/donations-received', makeExpress(donationsReceivedHandler));
+app.delete('/api/v1/donations-received/:id', makeExpress(donationsReceivedHandler));
+
+// Standalone Donations API endpoints (/api/donations)
+app.get('/api/donations', makeExpress(donationsReceivedHandler));
+app.get('/api/donations/:id', makeExpress(donationsReceivedHandler));
+app.post('/api/donations', makeExpress(donationsReceivedHandler));
+app.put('/api/donations', makeExpress(donationsReceivedHandler));
+app.put('/api/donations/:id', makeExpress(donationsReceivedHandler));
+app.patch('/api/donations', makeExpress(donationsReceivedHandler));
+app.patch('/api/donations/:id', makeExpress(donationsReceivedHandler));
+app.delete('/api/donations', makeExpress(donationsReceivedHandler));
+app.delete('/api/donations/:id', makeExpress(donationsReceivedHandler));
 
 // Revenue Collection Routes (Zakat, Fitra, Membership Fee, Bus Booking)
 app.get('/api/v1/revenue-collections', makeExpress(revenueCollectionsHandler));

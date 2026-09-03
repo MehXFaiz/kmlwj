@@ -37,20 +37,55 @@ var donations_received_default = makeHandler(async (req, res) => {
   if (!authenticated || !req.user) return;
   if (!await enforceRestrictedRolePolicy(req, res)) return;
   const { method } = req;
-  const id = req.query.id;
+  const id = req.params?.id || req.query.id || req.body?.id;
   const action = req.query.action || req.body?.action;
   if (method === "GET") {
-    if (!await verifyPermission(req, res, PERMS.VIEW_DONATIONS_RECEIVED)) return;
+    if (!await verifyPermission(req, res, [PERMS.VIEW_DONATIONS_RECEIVED, "donations.view"])) return;
+    if (id && action !== "check-duplicate") {
+      const singleDonation = await prisma.donationReceived.findFirst({
+        where: { id, isDeleted: false },
+        include: {
+          donor: true,
+          cashAccount: true,
+          bankAccount: true,
+          journalEntry: true,
+          createdBy: { select: { id: true, fullName: true, email: true } }
+        }
+      });
+      if (!singleDonation) {
+        return res.status(404).json({ error: { message: "Donation record not found", status: 404 } });
+      }
+      return res.status(200).json({ status: 200, data: singleDonation });
+    }
     const search = req.query.search || "";
     const status = req.query.status;
     const donationType = req.query.donationType;
     const paymentMethod = req.query.paymentMethod;
     const donorId = req.query.donorId;
+    const startDate = req.query.startDate;
+    const endDate = req.query.endDate;
+    const date = req.query.date;
     const whereClause = { ...getDeletedFilter(req.query) };
-    if (status) whereClause.status = status;
-    if (donationType) whereClause.donationType = donationType;
-    if (paymentMethod) whereClause.paymentMethod = paymentMethod;
-    if (donorId) whereClause.donorId = donorId;
+    if (status && status !== "ALL") whereClause.status = status;
+    if (donationType && donationType !== "ALL") whereClause.donationType = donationType;
+    if (paymentMethod && paymentMethod !== "ALL") whereClause.paymentMethod = paymentMethod;
+    if (donorId && donorId !== "ALL") whereClause.donorId = donorId;
+    if (startDate || endDate) {
+      whereClause.receiptDate = {};
+      if (startDate) whereClause.receiptDate.gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        whereClause.receiptDate.lte = end;
+      }
+    } else if (date) {
+      const d = new Date(date);
+      const start = new Date(d);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(d);
+      end.setHours(23, 59, 59, 999);
+      whereClause.receiptDate = { gte: start, lte: end };
+    }
     if (search) {
       whereClause.OR = [
         { receiptNo: { contains: search, mode: "insensitive" } },
@@ -58,13 +93,19 @@ var donations_received_default = makeHandler(async (req, res) => {
         { chequeNo: { contains: search, mode: "insensitive" } },
         { narration: { contains: search, mode: "insensitive" } },
         { customDonationType: { contains: search, mode: "insensitive" } },
-        { donor: { fullName: { contains: search, mode: "insensitive" } } }
+        { donor: { fullName: { contains: search, mode: "insensitive" } } },
+        { donor: { mobile: { contains: search, mode: "insensitive" } } },
+        { donor: { donorCode: { contains: search, mode: "insensitive" } } }
       ];
     }
     const { limit = "100", page = "1" } = req.query;
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
     const skip = (pageNum - 1) * limitNum;
+    const currentYear = (/* @__PURE__ */ new Date()).getFullYear();
+    const currentMonthIdx = (/* @__PURE__ */ new Date()).getMonth();
+    const startOfMonth = new Date(currentYear, currentMonthIdx, 1);
+    const endOfMonth = new Date(currentYear, currentMonthIdx + 1, 1);
     const [donations, total] = await Promise.all([
       prisma.donationReceived.findMany({
         where: whereClause,
@@ -81,7 +122,7 @@ var donations_received_default = makeHandler(async (req, res) => {
       }),
       prisma.donationReceived.count({ where: whereClause })
     ]);
-    const [totalAgg, cashAgg] = await Promise.all([
+    const [totalAgg, cashAgg, bankAgg, chequeAgg, monthAgg] = await Promise.all([
       prisma.donationReceived.aggregate({
         where: { ...whereClause, status: "POSTED" },
         _sum: { amount: true }
@@ -89,11 +130,29 @@ var donations_received_default = makeHandler(async (req, res) => {
       prisma.donationReceived.aggregate({
         where: { ...whereClause, status: "POSTED", paymentMethod: "CASH" },
         _sum: { amount: true }
+      }),
+      prisma.donationReceived.aggregate({
+        where: { ...whereClause, status: "POSTED", paymentMethod: { in: ["BANK", "ONLINE"] } },
+        _sum: { amount: true }
+      }),
+      prisma.donationReceived.aggregate({
+        where: { ...whereClause, status: "POSTED", paymentMethod: "CHEQUE" },
+        _sum: { amount: true }
+      }),
+      prisma.donationReceived.aggregate({
+        where: {
+          ...whereClause,
+          status: "POSTED",
+          receiptDate: { gte: startOfMonth, lt: endOfMonth }
+        },
+        _sum: { amount: true }
       })
     ]);
     const totalAmount = totalAgg._sum.amount || 0;
     const cashAmount = cashAgg._sum.amount || 0;
-    const bankAmount = totalAmount - cashAmount;
+    const bankAmount = bankAgg._sum.amount || 0;
+    const chequeAmount = chequeAgg._sum.amount || 0;
+    const currentMonthAmount = monthAgg._sum.amount || 0;
     return res.status(200).json({
       status: 200,
       data: donations,
@@ -102,6 +161,8 @@ var donations_received_default = makeHandler(async (req, res) => {
         totalAmount,
         cashAmount,
         bankAmount,
+        chequeAmount,
+        currentMonthAmount,
         totalReceipts: total
       }
     });
@@ -136,9 +197,10 @@ var donations_received_default = makeHandler(async (req, res) => {
     }
   }
   if (method === "POST") {
-    if (!await verifyPermission(req, res, PERMS.CREATE_DONATION_RECEIVED)) return;
+    if (!await verifyPermission(req, res, [PERMS.CREATE_DONATION_RECEIVED, "donations.create"])) return;
     const {
-      receiptDate,
+      receiptDate: rawReceiptDate,
+      donationDate: rawDonationDate,
       donorId,
       donationType,
       customDonationType,
@@ -146,12 +208,19 @@ var donations_received_default = makeHandler(async (req, res) => {
       paymentMethod,
       cashAccountId,
       bankAccountId,
-      chequeNo,
+      chequeNo: rawChequeNo,
+      chequeNumber: rawChequeNumber,
       chequeDate,
-      referenceNo,
-      narration,
+      referenceNo: rawReferenceNo,
+      referenceNumber: rawReferenceNumber,
+      narration: rawNarration,
+      notes: rawNotes,
       status
     } = req.body;
+    const receiptDate = rawReceiptDate || rawDonationDate || /* @__PURE__ */ new Date();
+    const chequeNo = rawChequeNo || rawChequeNumber || null;
+    const referenceNo = rawReferenceNo || rawReferenceNumber || null;
+    const narration = rawNarration || rawNotes || null;
     if (!donorId || !donationType || amount === void 0 || !paymentMethod) {
       return res.status(400).json({ error: { message: "Missing required fields (donorId, donationType, amount, paymentMethod)", status: 400 } });
     }
@@ -211,21 +280,21 @@ var donations_received_default = makeHandler(async (req, res) => {
           const receiptNo = await nextReceiptNo(tx);
           let journalEntryId = null;
           if (txStatus === "POSTED") {
-            const isGeneralDonation = donationType === "CUSTOM" || donationType === "GENERAL_DONATION";
+            const isGeneralDonation = donationType === "CUSTOM" || donationType === "GENERAL_DONATION" || donationType === "DONATION";
             const generalDonationAccount = isGeneralDonation ? await AccountingService.ensureGeneralDonationAccount(tx) : null;
             const postingResult = await AccountingService.postReceipt(tx, {
               amount: parsedAmount,
               cashOrBankAccountId: debitAccountId,
               incomeAccountId: generalDonationAccount ? generalDonationAccount.id : void 0,
               incomeAccountKeyword: generalDonationAccount ? void 0 : donationType,
-              reference: receiptNo,
+              reference: `DONATION-${receiptNo}`,
               description: narration || `Received ${donationType === "CUSTOM" ? customDonationType : donationType} from ${donor.fullName} (${donor.donorCode})`,
               module: "Donations Received",
               postedBy: req.user.id,
-              postingDate: receiptDate || /* @__PURE__ */ new Date(),
+              postingDate: receiptDate ? new Date(receiptDate) : /* @__PURE__ */ new Date(),
               ipAddress: req.headers["x-forwarded-for"],
               userAgent: req.headers["user-agent"],
-              voucherType: "BR"
+              voucherType: paymentMethod === "CASH" ? "CR" : "BR"
             });
             if (postingResult && postingResult.journalEntry) {
               journalEntryId = postingResult.journalEntry.id;
@@ -271,14 +340,37 @@ var donations_received_default = makeHandler(async (req, res) => {
     return res.status(201).json({ status: 201, data: result });
   }
   if (method === "PUT" || method === "PATCH") {
-    if (!await verifyPermission(req, res, PERMS.RECORD_INCOME)) return;
-    if (!id) return res.status(400).json({ error: { message: "Receipt ID is required", status: 400 } });
+    if (!await verifyPermission(req, res, [PERMS.RECORD_INCOME, "donations.update"])) return;
+    const targetId = id || req.query.id || req.body?.id;
+    if (!targetId) return res.status(400).json({ error: { message: "Receipt ID is required", status: 400 } });
     const existing = await prisma.donationReceived.findUnique({
-      where: { id },
+      where: { id: targetId },
       include: { donor: true }
     });
     if (!existing) return res.status(404).json({ error: { message: "Donation receipt not found", status: 404 } });
-    const { status, narration, referenceNo, chequeNo, chequeDate, amount, donorId, donationType, customDonationType, paymentMethod, receiptDate, cashAccountId, bankAccountId } = req.body;
+    const {
+      status,
+      narration: rawNarration,
+      notes: rawNotes,
+      referenceNo: rawReferenceNo,
+      referenceNumber: rawReferenceNumber,
+      chequeNo: rawChequeNo,
+      chequeNumber: rawChequeNumber,
+      chequeDate,
+      amount,
+      donorId,
+      donationType,
+      customDonationType,
+      paymentMethod,
+      receiptDate: rawReceiptDate,
+      donationDate: rawDonationDate,
+      cashAccountId,
+      bankAccountId
+    } = req.body;
+    const narration = rawNarration !== void 0 ? rawNarration : rawNotes;
+    const referenceNo = rawReferenceNo !== void 0 ? rawReferenceNo : rawReferenceNumber;
+    const chequeNo = rawChequeNo !== void 0 ? rawChequeNo : rawChequeNumber;
+    const receiptDate = rawReceiptDate !== void 0 ? rawReceiptDate : rawDonationDate;
     const finalDonationType = donationType !== void 0 ? donationType : existing.donationType;
     const finalCustomType = customDonationType !== void 0 ? customDonationType : existing.customDonationType;
     if (finalDonationType === "CUSTOM" && (!finalCustomType || !finalCustomType.trim())) {
@@ -319,21 +411,21 @@ var donations_received_default = makeHandler(async (req, res) => {
           const updatedCustomType = customDonationType !== void 0 ? customDonationType : existing.customDonationType;
           const updatedNarration = narration !== void 0 ? narration : existing.narration;
           const updatedDate = receiptDate !== void 0 ? new Date(receiptDate) : existing.receiptDate;
-          const isGeneralDonation = updatedType === "CUSTOM" || updatedType === "GENERAL_DONATION";
+          const isGeneralDonation = updatedType === "CUSTOM" || updatedType === "GENERAL_DONATION" || updatedType === "DONATION";
           const generalDonationAccount = isGeneralDonation ? await AccountingService.ensureGeneralDonationAccount(tx) : null;
           const postingResult = await AccountingService.postReceipt(tx, {
             amount: updatedAmount,
             cashOrBankAccountId: debitAccountId,
             incomeAccountId: generalDonationAccount ? generalDonationAccount.id : void 0,
             incomeAccountKeyword: generalDonationAccount ? void 0 : updatedType,
-            reference: existing.receiptNo,
+            reference: `DONATION-${existing.receiptNo}`,
             description: updatedNarration || `Received ${updatedType === "CUSTOM" ? updatedCustomType : updatedType} from ${existing.donor.fullName}`,
             module: "Donations Received",
             postedBy: req.user.id,
             postingDate: updatedDate,
             ipAddress: req.headers["x-forwarded-for"],
             userAgent: req.headers["user-agent"],
-            voucherType: "BR"
+            voucherType: currentMethod === "CASH" ? "CR" : "BR"
           });
           if (postingResult && postingResult.journalEntry) {
             journalEntryId = postingResult.journalEntry.id;
@@ -349,7 +441,7 @@ var donations_received_default = makeHandler(async (req, res) => {
         }
       }
       const updated = await tx.donationReceived.update({
-        where: { id },
+        where: { id: targetId },
         data: {
           status: newStatus,
           journalEntryId,
@@ -383,8 +475,8 @@ var donations_received_default = makeHandler(async (req, res) => {
     if (isPermanent && !await isAdminOrAbove(req)) {
       return res.status(403).json({ error: { message: "Forbidden: Only Admin or Super Admin can permanently delete records", status: 403 } });
     }
-    if (!await verifyPermission(req, res, PERMS.RECORD_INCOME)) return;
-    const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
+    if (!await verifyPermission(req, res, [PERMS.RECORD_INCOME, "donations.delete"])) return;
+    const idsRaw = req.params?.id || req.body?.ids || req.body?.id || req.query.ids || req.query.id;
     if (!idsRaw) {
       return res.status(400).json({ error: { message: "Receipt ID(s) required", status: 400 } });
     }
@@ -423,7 +515,7 @@ var donations_received_default = makeHandler(async (req, res) => {
       }
     });
     for (const item of existingItems) {
-      await logAudit(req.user.id, "Delete Donation Received", "DONATION_RECEIVED", item, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      await logAudit(req.user.id, isPermanent ? "Permanent Delete Donation Received" : "Soft Delete Donation Received", "DONATION_RECEIVED", item, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     }
     return res.status(200).json({ status: 200, message: `${existingItems.length} donation receipt(s) deleted successfully` });
   }

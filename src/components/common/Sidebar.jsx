@@ -91,11 +91,12 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
 
   const isPathActive = (path) => {
     if (path === '/') return location.pathname === '/';
+    if (path === '/donations') {
+      return location.pathname === '/donations' || location.pathname.startsWith('/donations/');
+    }
     if (path === '/donation-distribution') {
       return location.pathname === '/donation-distribution' ||
-             location.pathname.startsWith('/donation-distribution/') ||
-             location.pathname === '/donations' ||
-             location.pathname.startsWith('/donations/');
+             location.pathname.startsWith('/donation-distribution/');
     }
     if (path === '/zakat') {
       return location.pathname === '/zakat' || location.pathname.startsWith('/zakat/');
@@ -198,9 +199,10 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
         { name: 'Add Income', hint: 'Log & manage extra income entries', icon: PlusCircle, path: '/add-income', module: 'revenue' },
         { name: 'Opening Balances', hint: 'Set up financial-year opening balances', icon: Scale, path: '/opening-balances', module: 'openingBalances' },
         { name: t('sidebar.hallBookings', 'Hall Bookings'), hint: t('sidebar.hallBookingsHint', 'Manage hall reservations'), icon: Calendar, path: '/hall-bookings', module: 'hallBookings' },
+        { name: 'Donations', hint: 'Receive & manage charitable donations and receipts', icon: Heart, path: '/donations', module: 'revenueCollections' },
         { name: 'Monthly Donations (Inflow)', hint: 'Receive monthly donor contributions', icon: Calendar, path: '/monthly-donations', module: 'revenueCollections' },
         { name: 'General Donations (Inflow)', hint: 'Receive general & other donations', icon: Gift, path: '/general-donations', module: 'revenueCollections' },
-        { name: 'Donations Received', hint: 'All charitable inflow receipts', icon: Heart, path: '/donations-received', module: 'revenueCollections' },
+        { name: 'Donations Received', hint: 'All charitable inflow receipts', icon: Receipt, path: '/donations-received', module: 'revenueCollections' },
         { name: 'Donors Directory', hint: 'Manage registered donors', icon: Users, path: '/donors', module: 'donors' },
         { name: t('sidebar.membershipFee', 'Membership Fee'), hint: 'Manage member fees and renewals', icon: Building, path: '/membership-fees', module: 'revenueCollections' },
         { name: t('sidebar.busBooking', 'Bus Booking'), hint: 'Manage bus reservations and trips', icon: Bus, path: '/bus-bookings', module: 'revenueCollections' },

@@ -39,6 +39,8 @@ const Beneficiaries = lazy(() => import('./views/Beneficiaries').then(m => ({ de
 const BeneficiaryForm = lazy(() => import('./views/BeneficiaryForm').then(m => ({ default: m.BeneficiaryForm })));
 const Donations = lazy(() => import('./views/Donations').then(m => ({ default: m.Donations })));
 const DonationForm = lazy(() => import('./views/DonationForm').then(m => ({ default: m.DonationForm })));
+const DonationsList = lazy(() => import('./views/DonationsList').then(m => ({ default: m.DonationsList })));
+const DonationEntryForm = lazy(() => import('./views/DonationEntryForm').then(m => ({ default: m.DonationEntryForm })));
 const Donors = lazy(() => import('./views/Donors').then(m => ({ default: m.Donors })));
 const DonationsReceived = lazy(() => import('./views/DonationsReceived').then(m => ({ default: m.DonationsReceived })));
 const DonationReports = lazy(() => import('./views/DonationReports').then(m => ({ default: m.DonationReports })));
@@ -365,6 +367,7 @@ function App() {
                 <BeneficiaryForm />
               </RouteGuard>
             } />
+            {/* Donation Distribution (Welfare Disbursements) */}
             <Route path="/donation-distribution" element={
               <RouteGuard module="donations">
                 <Donations />
@@ -380,21 +383,25 @@ function App() {
                 <DonationForm />
               </RouteGuard>
             } />
+
+            {/* Standalone Donations (Charitable Inflows & Receipts) */}
             <Route path="/donations" element={
-              <RouteGuard module="donations">
-                <Donations />
+              <RouteGuard module="revenueCollections">
+                <DonationsList />
               </RouteGuard>
             } />
             <Route path="/donations/new" element={
-              <RouteGuard module="donations" action="create">
-                <DonationForm />
+              <RouteGuard module="revenueCollections" action="create">
+                <DonationEntryForm />
               </RouteGuard>
             } />
             <Route path="/donations/edit/:id" element={
-              <RouteGuard module="donations" action="update">
-                <DonationForm />
+              <RouteGuard module="revenueCollections" action="update">
+                <DonationEntryForm />
               </RouteGuard>
             } />
+
+            {/* Donors Directory */}
             <Route path="/donors" element={
               <RouteGuard module="donors">
                 <Donors />
@@ -410,9 +417,21 @@ function App() {
                 <DonorForm />
               </RouteGuard>
             } />
+
+            {/* Donations Received Inflow Route */}
             <Route path="/donations-received" element={
               <RouteGuard module="revenueCollections">
-                <DonationsReceived />
+                <DonationsList />
+              </RouteGuard>
+            } />
+            <Route path="/donations-received/new" element={
+              <RouteGuard module="revenueCollections" action="create">
+                <DonationEntryForm />
+              </RouteGuard>
+            } />
+            <Route path="/donations-received/edit/:id" element={
+              <RouteGuard module="revenueCollections" action="update">
+                <DonationEntryForm />
               </RouteGuard>
             } />
             <Route path="/monthly-donations" element={

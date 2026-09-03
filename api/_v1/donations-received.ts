@@ -44,23 +44,64 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   if (!await enforceRestrictedRolePolicy(req, res)) return;
 
   const { method } = req;
-  const id = req.query.id as string;
+  const id = (req.params?.id || req.query.id || req.body?.id) as string;
   const action = (req.query.action || req.body?.action) as string;
 
   if (method === 'GET') {
-    if (!await verifyPermission(req, res, PERMS.VIEW_DONATIONS_RECEIVED)) return;
+    if (!await verifyPermission(req, res, [PERMS.VIEW_DONATIONS_RECEIVED, 'donations.view'])) return;
+
+    // Single record lookup by ID (e.g. GET /api/donations/:id or GET /api/donations?id=...)
+    if (id && action !== 'check-duplicate') {
+      const singleDonation = await prisma.donationReceived.findFirst({
+        where: { id, isDeleted: false },
+        include: {
+          donor: true,
+          cashAccount: true,
+          bankAccount: true,
+          journalEntry: true,
+          createdBy: { select: { id: true, fullName: true, email: true } }
+        }
+      });
+
+      if (!singleDonation) {
+        return res.status(404).json({ error: { message: 'Donation record not found', status: 404 } });
+      }
+
+      return res.status(200).json({ status: 200, data: singleDonation });
+    }
 
     const search = (req.query.search as string) || '';
     const status = req.query.status as string;
     const donationType = req.query.donationType as string;
     const paymentMethod = req.query.paymentMethod as string;
     const donorId = req.query.donorId as string;
+    const startDate = req.query.startDate as string;
+    const endDate = req.query.endDate as string;
+    const date = req.query.date as string;
 
     const whereClause: any = { ...getDeletedFilter(req.query) };
-    if (status) whereClause.status = status;
-    if (donationType) whereClause.donationType = donationType;
-    if (paymentMethod) whereClause.paymentMethod = paymentMethod;
-    if (donorId) whereClause.donorId = donorId;
+    if (status && status !== 'ALL') whereClause.status = status;
+    if (donationType && donationType !== 'ALL') whereClause.donationType = donationType;
+    if (paymentMethod && paymentMethod !== 'ALL') whereClause.paymentMethod = paymentMethod;
+    if (donorId && donorId !== 'ALL') whereClause.donorId = donorId;
+
+    if (startDate || endDate) {
+      whereClause.receiptDate = {};
+      if (startDate) whereClause.receiptDate.gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        whereClause.receiptDate.lte = end;
+      }
+    } else if (date) {
+      const d = new Date(date);
+      const start = new Date(d);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(d);
+      end.setHours(23, 59, 59, 999);
+      whereClause.receiptDate = { gte: start, lte: end };
+    }
+
     if (search) {
       whereClause.OR = [
         { receiptNo: { contains: search, mode: 'insensitive' } },
@@ -69,6 +110,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         { narration: { contains: search, mode: 'insensitive' } },
         { customDonationType: { contains: search, mode: 'insensitive' } },
         { donor: { fullName: { contains: search, mode: 'insensitive' } } },
+        { donor: { mobile: { contains: search, mode: 'insensitive' } } },
+        { donor: { donorCode: { contains: search, mode: 'insensitive' } } },
       ];
     }
 
@@ -76,6 +119,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
     const skip = (pageNum - 1) * limitNum;
+
+    const currentYear = new Date().getFullYear();
+    const currentMonthIdx = new Date().getMonth();
+    const startOfMonth = new Date(currentYear, currentMonthIdx, 1);
+    const endOfMonth = new Date(currentYear, currentMonthIdx + 1, 1);
 
     const [donations, total] = await Promise.all([
       prisma.donationReceived.findMany({
@@ -94,7 +142,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       prisma.donationReceived.count({ where: whereClause })
     ]);
 
-    const [totalAgg, cashAgg] = await Promise.all([
+    const [totalAgg, cashAgg, bankAgg, chequeAgg, monthAgg] = await Promise.all([
       prisma.donationReceived.aggregate({
         where: { ...whereClause, status: 'POSTED' },
         _sum: { amount: true }
@@ -102,12 +150,30 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       prisma.donationReceived.aggregate({
         where: { ...whereClause, status: 'POSTED', paymentMethod: 'CASH' },
         _sum: { amount: true }
+      }),
+      prisma.donationReceived.aggregate({
+        where: { ...whereClause, status: 'POSTED', paymentMethod: { in: ['BANK', 'ONLINE'] } },
+        _sum: { amount: true }
+      }),
+      prisma.donationReceived.aggregate({
+        where: { ...whereClause, status: 'POSTED', paymentMethod: 'CHEQUE' },
+        _sum: { amount: true }
+      }),
+      prisma.donationReceived.aggregate({
+        where: {
+          ...whereClause,
+          status: 'POSTED',
+          receiptDate: { gte: startOfMonth, lt: endOfMonth }
+        },
+        _sum: { amount: true }
       })
     ]);
 
     const totalAmount = totalAgg._sum.amount || 0;
     const cashAmount = cashAgg._sum.amount || 0;
-    const bankAmount = totalAmount - cashAmount;
+    const bankAmount = bankAgg._sum.amount || 0;
+    const chequeAmount = chequeAgg._sum.amount || 0;
+    const currentMonthAmount = monthAgg._sum.amount || 0;
 
     return res.status(200).json({
       status: 200,
@@ -117,6 +183,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         totalAmount,
         cashAmount,
         bankAmount,
+        chequeAmount,
+        currentMonthAmount,
         totalReceipts: total,
       }
     });
@@ -155,10 +223,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   }
 
   if (method === 'POST') {
-    if (!await verifyPermission(req, res, PERMS.CREATE_DONATION_RECEIVED)) return;
+    if (!await verifyPermission(req, res, [PERMS.CREATE_DONATION_RECEIVED, 'donations.create'])) return;
 
     const {
-      receiptDate,
+      receiptDate: rawReceiptDate,
+      donationDate: rawDonationDate,
       donorId,
       donationType,
       customDonationType,
@@ -166,12 +235,20 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       paymentMethod,
       cashAccountId,
       bankAccountId,
-      chequeNo,
+      chequeNo: rawChequeNo,
+      chequeNumber: rawChequeNumber,
       chequeDate,
-      referenceNo,
-      narration,
+      referenceNo: rawReferenceNo,
+      referenceNumber: rawReferenceNumber,
+      narration: rawNarration,
+      notes: rawNotes,
       status
     } = req.body;
+
+    const receiptDate = rawReceiptDate || rawDonationDate || new Date();
+    const chequeNo = rawChequeNo || rawChequeNumber || null;
+    const referenceNo = rawReferenceNo || rawReferenceNumber || null;
+    const narration = rawNarration || rawNotes || null;
 
     if (!donorId || !donationType || amount === undefined || !paymentMethod) {
       return res.status(400).json({ error: { message: 'Missing required fields (donorId, donationType, amount, paymentMethod)', status: 400 } });
@@ -220,12 +297,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const year = new Date().getFullYear();
     const receiptPrefix = `REC-${year}-`;
 
-    // SQA fix: receiptNo previously derived from `count()`, read outside any
-    // transaction — two concurrent submissions can read the same count before
-    // either commits, generating the same number. The second create() then
-    // throws an unhandled unique-constraint error. Generation now uses the
-    // max existing numeric suffix (not count, so a deleted receipt can't cause
-    // number reuse) and the whole transaction retries on a rare collision.
     async function nextReceiptNo(tx: any): Promise<string> {
       const existing = await tx.donationReceived.findMany({
         where: { receiptNo: { startsWith: receiptPrefix } },
@@ -248,12 +319,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           let journalEntryId: string | null = null;
 
           if (txStatus === 'POSTED') {
-            // GENERAL_DONATION and CUSTOM both post to the 'General Donation' revenue
-            // account. Resolve it via the same ensure-or-create getter used for the
-            // Cash in Hand account, rather than the fragile keyword fallback in
-            // resolveAccount(), so a Chart of Accounts missing this leaf account never
-            // surfaces as an "Account not found" error to the user.
-            const isGeneralDonation = donationType === 'CUSTOM' || donationType === 'GENERAL_DONATION';
+            const isGeneralDonation = donationType === 'CUSTOM' || donationType === 'GENERAL_DONATION' || donationType === 'DONATION';
             const generalDonationAccount = isGeneralDonation
               ? await AccountingService.ensureGeneralDonationAccount(tx)
               : null;
@@ -262,14 +328,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
               cashOrBankAccountId: debitAccountId!,
               incomeAccountId: generalDonationAccount ? generalDonationAccount.id : undefined,
               incomeAccountKeyword: generalDonationAccount ? undefined : donationType,
-              reference: receiptNo,
+              reference: `DONATION-${receiptNo}`,
               description: narration || `Received ${donationType === 'CUSTOM' ? customDonationType : donationType} from ${donor.fullName} (${donor.donorCode})`,
               module: 'Donations Received',
               postedBy: req.user!.id,
-              postingDate: receiptDate || new Date(),
+              postingDate: receiptDate ? new Date(receiptDate) : new Date(),
               ipAddress: req.headers['x-forwarded-for'] as string,
               userAgent: req.headers['user-agent'] as string,
-              voucherType: 'BR'
+              voucherType: paymentMethod === 'CASH' ? 'CR' : 'BR'
             });
             if (postingResult && postingResult.journalEntry) {
               journalEntryId = postingResult.journalEntry.id;
@@ -317,21 +383,44 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     await logAudit(req.user.id, 'Create Donation Received', 'DONATION_RECEIVED', null, result, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-
     return res.status(201).json({ status: 201, data: result });
   }
 
   if (method === 'PUT' || method === 'PATCH') {
-    if (!await verifyPermission(req, res, PERMS.RECORD_INCOME)) return;
-    if (!id) return res.status(400).json({ error: { message: 'Receipt ID is required', status: 400 } });
+    if (!await verifyPermission(req, res, [PERMS.RECORD_INCOME, 'donations.update'])) return;
+    const targetId = id || req.query.id || req.body?.id;
+    if (!targetId) return res.status(400).json({ error: { message: 'Receipt ID is required', status: 400 } });
 
     const existing = await prisma.donationReceived.findUnique({
-      where: { id },
+      where: { id: targetId },
       include: { donor: true }
     });
     if (!existing) return res.status(404).json({ error: { message: 'Donation receipt not found', status: 404 } });
 
-    const { status, narration, referenceNo, chequeNo, chequeDate, amount, donorId, donationType, customDonationType, paymentMethod, receiptDate, cashAccountId, bankAccountId } = req.body;
+    const {
+      status,
+      narration: rawNarration,
+      notes: rawNotes,
+      referenceNo: rawReferenceNo,
+      referenceNumber: rawReferenceNumber,
+      chequeNo: rawChequeNo,
+      chequeNumber: rawChequeNumber,
+      chequeDate,
+      amount,
+      donorId,
+      donationType,
+      customDonationType,
+      paymentMethod,
+      receiptDate: rawReceiptDate,
+      donationDate: rawDonationDate,
+      cashAccountId,
+      bankAccountId
+    } = req.body;
+
+    const narration = rawNarration !== undefined ? rawNarration : rawNotes;
+    const referenceNo = rawReferenceNo !== undefined ? rawReferenceNo : rawReferenceNumber;
+    const chequeNo = rawChequeNo !== undefined ? rawChequeNo : rawChequeNumber;
+    const receiptDate = rawReceiptDate !== undefined ? rawReceiptDate : rawDonationDate;
 
     const finalDonationType = donationType !== undefined ? donationType : existing.donationType;
     const finalCustomType = customDonationType !== undefined ? customDonationType : existing.customDonationType;
@@ -343,8 +432,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if (!isWithinMaxLength(referenceNo, 100)) return res.status(400).json({ error: maxLengthError('Reference number', 100) });
     if (!isWithinMaxLength(chequeNo, 30)) return res.status(400).json({ error: maxLengthError('Cheque number', 30) });
 
-    // SQA fix: previously `parseFloat(amount)`/`Number(amount)` with no
-    // isNaN/upper-bound check, both here and in the update payload below.
     let parsedAmount: number | undefined;
     if (amount !== undefined) {
       const amountCheck = validateAmount(amount);
@@ -382,7 +469,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           const updatedNarration = narration !== undefined ? narration : existing.narration;
           const updatedDate = receiptDate !== undefined ? new Date(receiptDate) : existing.receiptDate;
 
-          const isGeneralDonation = updatedType === 'CUSTOM' || updatedType === 'GENERAL_DONATION';
+          const isGeneralDonation = updatedType === 'CUSTOM' || updatedType === 'GENERAL_DONATION' || updatedType === 'DONATION';
           const generalDonationAccount = isGeneralDonation
             ? await AccountingService.ensureGeneralDonationAccount(tx)
             : null;
@@ -391,14 +478,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             cashOrBankAccountId: debitAccountId,
             incomeAccountId: generalDonationAccount ? generalDonationAccount.id : undefined,
             incomeAccountKeyword: generalDonationAccount ? undefined : updatedType,
-            reference: existing.receiptNo,
+            reference: `DONATION-${existing.receiptNo}`,
             description: updatedNarration || `Received ${updatedType === 'CUSTOM' ? updatedCustomType : updatedType} from ${existing.donor.fullName}`,
             module: 'Donations Received',
             postedBy: req.user!.id,
             postingDate: updatedDate,
             ipAddress: req.headers['x-forwarded-for'] as string,
             userAgent: req.headers['user-agent'] as string,
-            voucherType: 'BR'
+            voucherType: currentMethod === 'CASH' ? 'CR' : 'BR'
           });
           if (postingResult && postingResult.journalEntry) {
             journalEntryId = postingResult.journalEntry.id;
@@ -416,7 +503,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       }
 
       const updated = await tx.donationReceived.update({
-        where: { id },
+        where: { id: targetId },
         data: {
           status: newStatus,
           journalEntryId,
@@ -458,9 +545,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(403).json({ error: { message: 'Forbidden: Only Admin or Super Admin can permanently delete records', status: 403 } });
     }
 
-    if (!await verifyPermission(req, res, PERMS.RECORD_INCOME)) return;
+    if (!await verifyPermission(req, res, [PERMS.RECORD_INCOME, 'donations.delete'])) return;
 
-    const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
+    const idsRaw = req.params?.id || req.body?.ids || req.body?.id || req.query.ids || req.query.id;
     if (!idsRaw) {
       return res.status(400).json({ error: { message: 'Receipt ID(s) required', status: 400 } });
     }
@@ -489,9 +576,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
                 where: { id: item.journalEntryId },
                 data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user!.id }
               });
-              // The cached Account.currentBalance must follow the ledger: this entry
-              // just moved in/out of POSTED_JOURNAL_FILTER, so rebuild every account
-              // it touches or the balance keeps the deleted transaction's impact.
               await AccountingService.recalculateBalancesForJournalEntry(tx, item.journalEntryId);
             }
           } catch (e) {
@@ -510,7 +594,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     });
 
     for (const item of existingItems) {
-      await logAudit(req.user.id, 'Delete Donation Received', 'DONATION_RECEIVED', item, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      await logAudit(req.user.id, isPermanent ? 'Permanent Delete Donation Received' : 'Soft Delete Donation Received', 'DONATION_RECEIVED', item, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
     }
 
 

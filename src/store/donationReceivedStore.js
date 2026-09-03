@@ -4,10 +4,13 @@ import { useDashboardStore } from './dashboardStore';
 
 export const useDonationReceivedStore = create((set, get) => ({
   donations: [],
+  meta: { total: 0, page: 1, limit: 100 },
   stats: {
     totalAmount: 0,
     cashAmount: 0,
     bankAmount: 0,
+    chequeAmount: 0,
+    currentMonthAmount: 0,
     totalReceipts: 0,
   },
   loading: false,
@@ -19,7 +22,8 @@ export const useDonationReceivedStore = create((set, get) => ({
       const data = await donationReceivedService.getAll(params);
       set({
         donations: data.data || [],
-        stats: data.stats || { totalAmount: 0, cashAmount: 0, bankAmount: 0, totalReceipts: 0 },
+        meta: data.meta || { total: data.data?.length || 0, page: 1, limit: 100 },
+        stats: data.stats || { totalAmount: 0, cashAmount: 0, bankAmount: 0, chequeAmount: 0, currentMonthAmount: 0, totalReceipts: 0 },
         loading: false,
         error: null
       });
@@ -32,6 +36,20 @@ export const useDonationReceivedStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const res = await donationReceivedService.create(data);
+      await get().fetchDonations();
+      set({ loading: false });
+      useDashboardStore.getState().invalidateAll();
+      return res;
+    } catch (err) {
+      set({ error: err.response?.data?.error?.message || err.message, loading: false });
+      throw err;
+    }
+  },
+
+  updateDonation: async (id, data) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await donationReceivedService.update(id, data);
       await get().fetchDonations();
       set({ loading: false });
       useDashboardStore.getState().invalidateAll();

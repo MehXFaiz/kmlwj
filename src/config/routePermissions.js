@@ -51,10 +51,15 @@ export const ROUTE_PERMISSIONS = {
   '/beneficiaries/new': { module: 'beneficiaries', action: 'create' },
   '/beneficiaries/edit/:id': { module: 'beneficiaries', action: 'update' },
 
-  // Donations Given
-  '/donations': { module: 'donations', action: 'view' },
-  '/donations/new': { module: 'donations', action: 'create' },
-  '/donations/edit/:id': { module: 'donations', action: 'update' },
+  // Donations (Inflows / Receipts)
+  '/donations': { module: 'revenueCollections', action: 'view' },
+  '/donations/new': { module: 'revenueCollections', action: 'create' },
+  '/donations/edit/:id': { module: 'revenueCollections', action: 'update' },
+
+  // Donation Distribution (Welfare Outflows)
+  '/donation-distribution': { module: 'donations', action: 'view' },
+  '/donation-distribution/new': { module: 'donations', action: 'create' },
+  '/donation-distribution/edit/:id': { module: 'donations', action: 'update' },
 
   // Donors
   '/donors': { module: 'donors', action: 'view' },

@@ -287,6 +287,53 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   });
   const donationsPaidFromBank = Number(donationsBankRaw._sum.amount || 0);
 
+  // ── Donations Received (Income / Inflows) ──────────────────────────────────
+  const donRecWhere: any = { isDeleted: false, status: 'POSTED' };
+  if (startDate) donRecWhere.receiptDate = { ...(donRecWhere.receiptDate || {}), gte: new Date(startDate) };
+  if (endDate) donRecWhere.receiptDate = { ...(donRecWhere.receiptDate || {}), lte: new Date(endDate) };
+
+  const [
+    donRecTotalAgg,
+    donRecCashAgg,
+    donRecBankAgg,
+    donRecChequeAgg,
+    donRecMonthAgg,
+  ] = await Promise.all([
+    prisma.donationReceived.aggregate({
+      where: donRecWhere,
+      _sum: { amount: true },
+      _count: true,
+    }),
+    prisma.donationReceived.aggregate({
+      where: { ...donRecWhere, paymentMethod: 'CASH' },
+      _sum: { amount: true },
+    }),
+    prisma.donationReceived.aggregate({
+      where: { ...donRecWhere, paymentMethod: { in: ['BANK', 'ONLINE'] } },
+      _sum: { amount: true },
+    }),
+    prisma.donationReceived.aggregate({
+      where: { ...donRecWhere, paymentMethod: 'CHEQUE' },
+      _sum: { amount: true },
+    }),
+    prisma.donationReceived.aggregate({
+      where: {
+        isDeleted: false,
+        status: 'POSTED',
+        receiptDate: { gte: startOfMonth, lt: endOfMonth },
+      },
+      _sum: { amount: true },
+      _count: true,
+    }),
+  ]);
+
+  const totalDonationsReceived = Number(donRecTotalAgg._sum.amount || 0);
+  const totalDonationsCount = donRecTotalAgg._count || 0;
+  const cashDonationsReceived = Number(donRecCashAgg._sum.amount || 0);
+  const bankDonationsReceived = Number(donRecBankAgg._sum.amount || 0);
+  const chequeDonationsReceived = Number(donRecChequeAgg._sum.amount || 0);
+  const currentMonthDonationsReceived = Number(donRecMonthAgg._sum.amount || 0);
+
   return res.status(200).json({
     status: 200,
     data: {
@@ -311,6 +358,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       totalDisbursementsPaid,
       donationsThisMonth: donationsThisMonthRaw._count,
       donationsAmountThisMonth: donationsThisMonthRaw._sum.amount || 0,
+      totalDonationsReceived,
+      totalDonationsCount,
+      cashDonationsReceived,
+      bankDonationsReceived,
+      chequeDonationsReceived,
+      currentMonthDonationsReceived,
       hallBookingsThisMonth,
       outstandingInvoices,
       pendingApprovalsList,
@@ -337,6 +390,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         donationsPaidFromBank,
         monthlyDonations,
         monthlyZakat,
+        totalDonationsReceived,
+        totalDonationsCount,
+        cashDonationsReceived,
+        bankDonationsReceived,
+        chequeDonationsReceived,
+        currentMonthDonationsReceived,
         currentMonthName,
         totalDonationsPaid: totalDonationsOnlyPaid,
         totalZakatPaid: totalZakatOnlyPaid,
