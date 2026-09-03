@@ -30,7 +30,7 @@ import { useDonorStore } from '../store/donorStore';
 import { useAuthStore } from '../store/authStore';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolver';
-import { showToast } from '../utils/toast';
+import { showToast } from '../components/ui/Toast';
 
 const DONATION_TYPES = [
   { value: 'ALL', label: 'All Donation Types' },

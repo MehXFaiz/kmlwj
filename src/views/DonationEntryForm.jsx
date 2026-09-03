@@ -23,7 +23,7 @@ import { useDonationReceivedStore } from '../store/donationReceivedStore';
 import { useDonorStore } from '../store/donorStore';
 import { useCoaStore } from '../store/coaStore';
 import { useAuthStore } from '../store/authStore';
-import { showToast } from '../utils/toast';
+import { showToast } from '../components/ui/Toast';
 import { donationReceivedService } from '../services/donationReceivedService';
 
 const DONATION_TYPES = [
@@ -236,13 +236,12 @@ export const DonationEntryForm = () => {
         mobile: quickDonorData.mobile?.trim() || null,
         cnic: quickDonorData.cnic?.trim() || null,
         address: quickDonorData.address?.trim() || null,
-        donorType: quickDonorData.donorType,
-        status: 'ACTIVE',
+        isActive: true,
       });
 
       showToast(`Donor "${newDonor.fullName}" registered successfully.`, 'success');
       setShowQuickDonorModal(false);
-      setQuickDonorData({ fullName: '', mobile: '', cnic: '', address: '', donorType: 'INDIVIDUAL' });
+      setQuickDonorData({ fullName: '', mobile: '', cnic: '', address: '' });
 
       // Automatically select the new donor
       if (newDonor?.id) {

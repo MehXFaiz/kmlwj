@@ -370,7 +370,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           });
 
           return newReceipt;
-        });
+        }, { maxWait: 15000, timeout: 30000 });
         break;
       } catch (err: any) {
         if (isUniqueViolation(err) && attempt < 5 &&
@@ -531,10 +531,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       });
 
       return updated;
-    });
+    }, { maxWait: 15000, timeout: 30000 });
 
     await logAudit(req.user.id, 'Update Donation Received', 'DONATION_RECEIVED', existing, result, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
-
 
     return res.status(200).json({ status: 200, data: result });
   }
@@ -591,7 +590,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           });
         }
       }
-    });
+    }, { maxWait: 15000, timeout: 30000 });
 
     for (const item of existingItems) {
       await logAudit(req.user.id, isPermanent ? 'Permanent Delete Donation Received' : 'Soft Delete Donation Received', 'DONATION_RECEIVED', item, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);

@@ -327,7 +327,7 @@ var donations_received_default = makeHandler(async (req, res) => {
             }
           });
           return newReceipt;
-        });
+        }, { maxWait: 15e3, timeout: 3e4 });
         break;
       } catch (err) {
         if (isUniqueViolation(err) && attempt < 5 && err.meta?.target?.includes("receiptNo")) {
@@ -466,7 +466,7 @@ var donations_received_default = makeHandler(async (req, res) => {
         }
       });
       return updated;
-    });
+    }, { maxWait: 15e3, timeout: 3e4 });
     await logAudit(req.user.id, "Update Donation Received", "DONATION_RECEIVED", existing, result, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     return res.status(200).json({ status: 200, data: result });
   }
@@ -513,7 +513,7 @@ var donations_received_default = makeHandler(async (req, res) => {
           });
         }
       }
-    });
+    }, { maxWait: 15e3, timeout: 3e4 });
     for (const item of existingItems) {
       await logAudit(req.user.id, isPermanent ? "Permanent Delete Donation Received" : "Soft Delete Donation Received", "DONATION_RECEIVED", item, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     }
