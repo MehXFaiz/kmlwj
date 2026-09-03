@@ -199,7 +199,6 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
         { name: 'Add Income', hint: 'Log & manage extra income entries', icon: PlusCircle, path: '/add-income', module: 'revenue' },
         { name: 'Opening Balances', hint: 'Set up financial-year opening balances', icon: Scale, path: '/opening-balances', module: 'openingBalances' },
         { name: t('sidebar.hallBookings', 'Hall Bookings'), hint: t('sidebar.hallBookingsHint', 'Manage hall reservations'), icon: Calendar, path: '/hall-bookings', module: 'hallBookings' },
-        { name: 'Donations', hint: 'Receive & manage charitable donations and receipts', icon: Heart, path: '/donations', module: 'revenueCollections' },
         { name: 'Monthly Donations (Inflow)', hint: 'Receive monthly donor contributions', icon: Calendar, path: '/monthly-donations', module: 'revenueCollections' },
         { name: 'General Donations (Inflow)', hint: 'Receive general & other donations', icon: Gift, path: '/general-donations', module: 'revenueCollections' },
         { name: 'Donations Received', hint: 'All charitable inflow receipts', icon: Receipt, path: '/donations-received', module: 'revenueCollections' },
@@ -219,6 +218,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
       title: t('sidebar.welfare', 'Welfare'),
       items: [
         { name: t('sidebar.peopleWeHelp', 'People We Help'), hint: t('sidebar.peopleWeHelpHint', 'Beneficiary list'), icon: Users, path: '/beneficiaries', module: 'beneficiaries' },
+        { name: 'Donations', hint: 'Receive & manage charitable donations and receipts', icon: Heart, path: '/donations', module: 'revenueCollections' },
         { name: 'Zakat', hint: 'Manage Zakat contributions, donor records & ledger postings', icon: Coins, path: '/zakat', module: 'zakat' },
         { name: 'Donation Distribution', hint: 'Monthly bank welfare disbursements & beneficiary allocations', icon: Heart, path: '/donation-distribution', module: 'donations' },
         { name: 'Monthly Financial Support Cards', hint: 'Issue & print bilingual financial support cards', icon: CreditCard, path: '/monthly-donation-cards', module: 'zakatCards' },
