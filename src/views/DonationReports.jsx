@@ -27,346 +27,96 @@ import {
   Building,
   DollarSign,
   ShieldCheck,
-  Eye
+  Eye,
+  Printer,
+  Wallet,
+  Receipt,
+  Hash
 } from 'lucide-react';
 import { useDonationStore } from '../store/donationStore';
 import { useDonationReceivedStore } from '../store/donationReceivedStore';
+import { useDonorStore } from '../store/donorStore';
 import { useBeneficiaryStore } from '../store/beneficiaryStore';
+import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
+import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolver';
 import { DONATION_TYPES, donationTypeDisplay } from '../constants/donationTypes';
 import { paymentMethodLabel } from '../constants/paymentMethods';
 import { showToast } from '../components/ui/Toast';
 import { formatDateDDMMYYYY } from '../utils/dateUtils';
 
-// ── Import CSV Modal ────────────────────────────────────────────────────────
-function ImportModal({ isOpen, onClose, onImportSuccess }) {
-  const { addDonation } = useDonationStore();
-  const fileInputRef = useRef(null);
-  const [parsedRows, setParsedRows] = useState([]);
-  const [isImporting, setIsImporting] = useState(false);
-  const [fileName, setFileName] = useState('');
+const INFLOW_DONATION_TYPES = [
+  { value: 'ALL', label: 'All Donation Types' },
+  { value: 'GENERAL_DONATION', label: 'General Donation' },
+  { value: 'MONTHLY', label: 'Monthly Donation' },
+  { value: 'MARRIAGE', label: 'Marriage Donation' },
+  { value: 'MEDICAL', label: 'Medical Donation' },
+  { value: 'EDUCATION', label: 'Education Donation' },
+  { value: 'CUSTOM', label: 'Other / Custom Donation' },
+];
 
-  if (!isOpen) return null;
+const PAYMENT_METHODS = [
+  { value: 'ALL', label: 'All Payment Methods' },
+  { value: 'CASH', label: 'Cash' },
+  { value: 'BANK', label: 'Bank' },
+  { value: 'CHEQUE', label: 'Cheque' },
+];
 
-  const downloadSampleCSV = () => {
-    const csvContent =
-      "Beneficiary Name,Donation Type,Amount,Payment Method,Beneficiary Mobile,CNIC,Remarks\n" +
-      "Muhammad Ali,MONTHLY,5000,CASH,03001234567,42101-1234567-1,Monthly Family Aid\n" +
-      "Fatima Zahra,MEDICAL,7500,BANK,03219876543,42101-9876543-2,Hospital Treatment Support\n" +
-      "Usman Ghani,RATION,10000,CASH,03335554433,42101-5554433-3,Ramadan Ration Package";
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'Sample_Welfare_Donations_Import.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setFileName(file.name);
-
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const text = evt.target?.result || '';
-        const lines = text.split(/\r\n|\n/).filter((line) => line.trim().length > 0);
-        if (lines.length <= 1) {
-          showToast('CSV file is empty or has no data rows.', 'warning');
-          return;
-        }
-
-        const parseLine = (line) => {
-          const result = [];
-          let current = '';
-          let inQuotes = false;
-          for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            if (char === '"') {
-              if (inQuotes && line[i + 1] === '"') {
-                current += '"';
-                i++;
-              } else {
-                inQuotes = !inQuotes;
-              }
-            } else if (char === ',' && !inQuotes) {
-              result.push(current.trim());
-              current = '';
-            } else {
-              current += char;
-            }
-          }
-          result.push(current.trim());
-          return result;
-        };
-
-        const rawHeaders = parseLine(lines[0]).map((h) => h.toLowerCase().replace(/['"]/g, '').trim());
-
-        const findValue = (rowValues, possibleKeys) => {
-          for (const key of possibleKeys) {
-            const idx = rawHeaders.findIndex((h) => h.includes(key));
-            if (idx !== -1 && rowValues[idx] !== undefined) {
-              return rowValues[idx].replace(/^["']|["']$/g, '').trim();
-            }
-          }
-          return '';
-        };
-
-        const rows = [];
-        for (let i = 1; i < lines.length; i++) {
-          const vals = parseLine(lines[i]);
-          if (vals.length === 0 || vals.every((v) => !v)) continue;
-
-          const name = findValue(vals, ['beneficiary', 'recipient', 'name', 'payee', 'donor']);
-          const typeRaw = findValue(vals, ['type', 'category', 'head', 'aid']).toUpperCase();
-          const amountRaw = findValue(vals, ['amount', 'pkr', 'rs', 'val']);
-          const methodRaw = findValue(vals, ['method', 'payment', 'mode']).toUpperCase();
-          const mobile = findValue(vals, ['mobile', 'phone', 'contact']);
-          const cnic = findValue(vals, ['cnic', 'nic', 'id']);
-          const remarks = findValue(vals, ['remark', 'note', 'desc', 'narration']);
-
-          const amountNum = parseFloat(amountRaw.replace(/[^0-9.]/g, '')) || 0;
-          const method = ['BANK', 'CHEQUE', 'ONLINE'].includes(methodRaw) ? methodRaw : 'CASH';
-
-          let donationType = 'MONTHLY';
-          if (typeRaw.includes('ZAKAT')) donationType = 'ZAKAT';
-          else if (typeRaw.includes('MEDICAL')) donationType = 'MEDICAL';
-          else if (typeRaw.includes('MARRIAGE')) donationType = 'MARRIAGE';
-          else if (typeRaw.includes('RATION')) donationType = 'RATION';
-          else if (typeRaw.includes('EDUCATION')) donationType = 'EDUCATION';
-          else if (typeRaw.includes('GENERAL')) donationType = 'GENERAL_DONATION';
-
-          const isValid = Boolean(name && amountNum > 0);
-
-          rows.push({
-            id: i,
-            donorName: name || 'Welfare Aid Recipient',
-            donationType,
-            amount: amountNum,
-            paymentMethod: method,
-            donorMobile: mobile,
-            donorCnic: cnic,
-            remarks: remarks || 'Imported via CSV',
-            isValid,
-            error: !name ? 'Missing Name' : amountNum <= 0 ? 'Invalid Amount' : ''
-          });
-        }
-
-        setParsedRows(rows);
-        if (rows.length === 0) {
-          showToast('No valid data rows found in CSV file.', 'warning');
-        }
-      } catch (err) {
-        showToast('Error parsing CSV file: ' + err.message, 'error');
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  const handleImportSubmit = async () => {
-    const validRows = parsedRows.filter((r) => r.isValid);
-    if (validRows.length === 0) {
-      showToast('No valid records to import.', 'warning');
-      return;
-    }
-
-    setIsImporting(true);
-    let successCount = 0;
-    try {
-      for (const row of validRows) {
-        await addDonation({
-          donorName: row.donorName,
-          donationType: row.donationType,
-          amount: String(row.amount),
-          paymentMethod: row.paymentMethod,
-          donorMobile: row.donorMobile,
-          donorCnic: row.donorCnic,
-          remarks: row.remarks
-        });
-        successCount++;
-      }
-      showToast(`Successfully imported ${successCount} donation records!`, 'success');
-      onImportSuccess();
-      onClose();
-    } catch (e) {
-      showToast(`Imported ${successCount} records before encountering an error: ${e.message}`, 'error');
-    } finally {
-      setIsImporting(false);
-    }
-  };
-
-  const validCount = parsedRows.filter((r) => r.isValid).length;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-fadeIn">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-        <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-cyan-50 dark:bg-cyan-950/50 border border-cyan-200 dark:border-cyan-900 text-cyan-600 dark:text-cyan-400">
-              <Upload className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                Import Welfare Records (CSV)
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Upload CSV spreadsheet to import welfare donation entries in bulk
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="p-5 overflow-y-auto space-y-4">
-          <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
-            <div className="text-slate-600 dark:text-slate-300">
-              <span className="font-semibold text-slate-800 dark:text-slate-200">Need standard CSV format?</span> Download template file to see column structure.
-            </div>
-            <button
-              onClick={downloadSampleCSV}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-cyan-600 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-500/30 text-xs font-bold transition-all shrink-0 cursor-pointer shadow-xs"
-            >
-              <FileSpreadsheet className="h-3.5 w-3.5" /> Sample CSV
-            </button>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wider">
-              Select CSV File
-            </label>
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept=".csv,text/csv"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full py-6 border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-cyan-500 rounded-xl bg-slate-50/50 dark:bg-slate-950/40 hover:bg-slate-100/50 dark:hover:bg-slate-950/70 transition-all flex flex-col items-center justify-center gap-2 text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-300 cursor-pointer group"
-            >
-              <FileSpreadsheet className="h-8 w-8 text-slate-400 dark:text-slate-500 group-hover:text-cyan-500 transition-all" />
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                {fileName ? fileName : 'Click to select CSV file'}
-              </span>
-              <span className="text-[11px] text-slate-400">
-                Supports .CSV files exported from Excel, Google Sheets, or Bank Disbursal Records
-              </span>
-            </button>
-          </div>
-
-          {parsedRows.length > 0 && (
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-slate-700 dark:text-slate-300">File Preview</span>
-                <span className="text-slate-500 dark:text-slate-400">
-                  Total: <strong className="text-slate-900 dark:text-white">{parsedRows.length}</strong> | Ready: <strong className="text-emerald-600 dark:text-emerald-400">{validCount}</strong>
-                </span>
-              </div>
-
-              <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/60">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 sticky top-0">
-                    <tr>
-                      <th className="p-2.5">Beneficiary</th>
-                      <th className="p-2.5">Aid Type</th>
-                      <th className="p-2.5">Amount</th>
-                      <th className="p-2.5">Method</th>
-                      <th className="p-2.5 text-right">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium text-slate-700 dark:text-slate-300">
-                    {parsedRows.map((row) => (
-                      <tr
-                        key={row.id}
-                        className={row.isValid ? 'hover:bg-slate-50 dark:hover:bg-slate-800/30' : 'bg-rose-50/40 dark:bg-rose-950/20'}
-                      >
-                        <td className="p-2.5 font-bold text-slate-900 dark:text-slate-200">{row.donorName}</td>
-                        <td className="p-2.5">{row.donationType}</td>
-                        <td className="p-2.5 font-bold text-emerald-600 dark:text-emerald-400">
-                          Rs {row.amount.toLocaleString()}
-                        </td>
-                        <td className="p-2.5">{row.paymentMethod}</td>
-                        <td className="p-2.5 text-right font-bold">
-                          {row.isValid ? (
-                            <span className="text-emerald-600 dark:text-emerald-400 text-[10px] bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 px-2 py-0.5 rounded-full">
-                              Valid
-                            </span>
-                          ) : (
-                            <span className="text-rose-600 dark:text-rose-400 text-[10px] bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 px-2 py-0.5 rounded-full">
-                              {row.error}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/80 flex items-center justify-end gap-3">
-          <button
-            onClick={onClose}
-            disabled={isImporting}
-            className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleImportSubmit}
-            disabled={isImporting || validCount === 0}
-            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold transition-all shadow-md cursor-pointer"
-          >
-            <Upload className="h-4 w-4" /> {isImporting ? 'Importing Records...' : `Import ${validCount} Records`}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+const STATUSES = [
+  { value: 'ALL', label: 'All Statuses' },
+  { value: 'POSTED', label: 'Posted' },
+  { value: 'DRAFT', label: 'Draft' },
+  { value: 'CANCELLED', label: 'Cancelled' },
+];
 
 // ── Main DonationReports Component ──────────────────────────────────────────
 export const DonationReports = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const { donations, fetchDonations, loading: loadingDonations } = useDonationStore();
-  const { donations: receivedDonations, fetchDonations: fetchReceivedDonations } = useDonationReceivedStore();
+  // Inflow store (Donations Received from Donors)
+  const {
+    donations: receivedDonations,
+    stats: receivedStats,
+    loading: loadingReceived,
+    fetchDonations: fetchReceivedDonations,
+  } = useDonationReceivedStore();
+
+  // Outflow store (Welfare Distributed to Beneficiaries)
+  const {
+    donations: distributedDonations,
+    loading: loadingDistributed,
+    fetchDonations: fetchDistributedDonations,
+  } = useDonationStore();
+
+  const { donors, fetchDonors } = useDonorStore();
   const { beneficiaries, fetchBeneficiaries } = useBeneficiaryStore();
 
-  // Active Tab: 'disbursements' (Welfare Outflow), 'beneficiary_summary' (Person-wise aid history), 'received' (Inflow)
-  const [activeTab, setActiveTab] = useState('disbursements');
+  // Active Tab: 'received' (Default: Inflows/Receipts as requested), 'donor_summary', 'distributed', 'beneficiary_summary'
+  const [activeTab, setActiveTab] = useState('received');
 
   // Filters State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedDonor, setSelectedDonor] = useState('ALL');
+  const [selectedBeneficiary, setSelectedBeneficiary] = useState('ALL');
+  const [selectedType, setSelectedType] = useState('ALL');
+  const [selectedMethod, setSelectedMethod] = useState('ALL');
+  const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [datePreset, setDatePreset] = useState('ALL');
-  const [filterType, setFilterType] = useState('All');
-  const [filterBeneficiary, setFilterBeneficiary] = useState('All');
-  const [filterMethod, setFilterMethod] = useState('All');
-  const [filterStatus, setFilterStatus] = useState('All');
-  const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('table'); // Default to clean table
-  const [showImportModal, setShowImportModal] = useState(false);
 
-  // Selected Beneficiary History Drawer
-  const [historyBeneficiary, setHistoryBeneficiary] = useState(null);
+  // Slip Modal & History Drawers State
+  const [selectedReceiptForSlip, setSelectedReceiptForSlip] = useState(null);
+  const [selectedDonorHistory, setSelectedDonorHistory] = useState(null);
+  const [selectedBeneficiaryHistory, setSelectedBeneficiaryHistory] = useState(null);
 
+  // Initial Data Load
   useEffect(() => {
-    fetchDonations({ limit: 1000 });
     fetchReceivedDonations({ limit: 1000 });
+    fetchDistributedDonations({ limit: 1000 });
+    fetchDonors();
     fetchBeneficiaries();
-  }, [fetchDonations, fetchReceivedDonations, fetchBeneficiaries]);
+  }, [fetchReceivedDonations, fetchDistributedDonations, fetchDonors, fetchBeneficiaries]);
 
   // Handle Date Presets
   const handleDatePreset = (preset) => {
@@ -395,143 +145,127 @@ export const DonationReports = () => {
 
   const handleClearFilters = () => {
     setSearchTerm('');
-    setFilterType('All');
-    setFilterBeneficiary('All');
-    setFilterMethod('All');
-    setFilterStatus('All');
+    setSelectedDonor('ALL');
+    setSelectedBeneficiary('ALL');
+    setSelectedType('ALL');
+    setSelectedMethod('ALL');
+    setSelectedStatus('ALL');
     setDateRange({ start: '', end: '' });
     setDatePreset('ALL');
   };
 
   const hasActiveFilters =
     Boolean(searchTerm) ||
-    filterType !== 'All' ||
-    filterBeneficiary !== 'All' ||
-    filterMethod !== 'All' ||
-    filterStatus !== 'All' ||
+    selectedDonor !== 'ALL' ||
+    selectedBeneficiary !== 'ALL' ||
+    selectedType !== 'ALL' ||
+    selectedMethod !== 'ALL' ||
+    selectedStatus !== 'ALL' ||
     Boolean(dateRange.start) ||
     Boolean(dateRange.end);
 
-  // Helper: Get Beneficiary Info from Record
-  const getBeneficiaryDetails = (d) => {
-    let name = d.beneficiary?.name || d.donorName;
-    let mobile = d.beneficiary?.mobile || d.donorMobile || '';
-    let cnic = d.beneficiary?.cnic || d.donorCnic || '';
-    let fatherName = d.beneficiary?.fatherName || '';
-    let address = d.beneficiary?.address || '';
-
-    if (!name && d.beneficiaryId) {
-      const found = beneficiaries.find((b) => String(b.id) === String(d.beneficiaryId));
-      if (found) {
-        name = found.name;
-        mobile = found.mobile || mobile;
-        cnic = found.cnic || cnic;
-        fatherName = found.fatherName || fatherName;
-        address = found.address || address;
-      }
-    }
-
-    return {
-      name: name || 'Welfare Aid Recipient',
-      mobile,
-      cnic,
-      fatherName,
-      address,
-      beneficiaryId: d.beneficiaryId || null,
-    };
-  };
-
-  // Filtered Welfare Disbursements (Outflow)
-  const filteredDisbursements = useMemo(() => {
-    return donations.filter((d) => {
-      const ben = getBeneficiaryDetails(d);
-
+  // ── Filtered Donations Received (Inflows) ──────────────────────────────────
+  const filteredReceivedDonations = useMemo(() => {
+    return receivedDonations.filter((d) => {
+      // Search
       if (searchTerm) {
         const q = searchTerm.toLowerCase().trim();
+        const receiptNo = (d.receiptNo || '').toLowerCase();
+        const donorName = (d.donor?.fullName || 'walk-in donor').toLowerCase();
+        const donorCode = (d.donor?.donorCode || '').toLowerCase();
+        const mobile = (d.donor?.mobile || '').toLowerCase();
+        const cnic = (d.donor?.cnic || '').toLowerCase();
+        const type = (d.donationType || '').toLowerCase();
+        const customType = (d.customDonationType || '').toLowerCase();
+        const method = (d.paymentMethod || '').toLowerCase();
+        const refNo = (d.referenceNo || '').toLowerCase();
+        const chequeNo = (d.chequeNo || '').toLowerCase();
+        const narration = (d.narration || '').toLowerCase();
+        const createdBy = (d.createdBy?.fullName || '').toLowerCase();
+        const amt = String(d.amount || '');
+
         const matches =
-          ben.name.toLowerCase().includes(q) ||
-          ben.fatherName.toLowerCase().includes(q) ||
-          ben.mobile.toLowerCase().includes(q) ||
-          ben.cnic.toLowerCase().includes(q) ||
-          (d.donationType || '').toLowerCase().includes(q) ||
-          (d.customDonationType || '').toLowerCase().includes(q) ||
-          (d.paymentMethod || '').toLowerCase().includes(q) ||
-          (d.voucherNo || d.id || '').toLowerCase().includes(q) ||
-          (d.remarks || '').toLowerCase().includes(q) ||
-          (d.month || '').toLowerCase().includes(q) ||
-          String(d.amount || '').includes(q);
+          receiptNo.includes(q) ||
+          donorName.includes(q) ||
+          donorCode.includes(q) ||
+          mobile.includes(q) ||
+          cnic.includes(q) ||
+          type.includes(q) ||
+          customType.includes(q) ||
+          method.includes(q) ||
+          refNo.includes(q) ||
+          chequeNo.includes(q) ||
+          narration.includes(q) ||
+          createdBy.includes(q) ||
+          amt.includes(q);
 
         if (!matches) return false;
       }
 
-      if (filterType !== 'All' && d.donationType !== filterType) return false;
-      if (filterBeneficiary !== 'All') {
-        const targetId = String(filterBeneficiary);
-        if (String(d.beneficiaryId) !== targetId && ben.name !== beneficiaries.find((b) => String(b.id) === targetId)?.name) {
-          return false;
-        }
-      }
-      if (filterMethod !== 'All' && d.paymentMethod !== filterMethod) return false;
-      if (filterStatus !== 'All') {
-        const s = (d.status || 'PENDING').toUpperCase();
-        if (filterStatus === 'APPROVED' && s !== 'APPROVED' && s !== 'DISBURSED' && s !== 'POSTED') return false;
-        if (filterStatus === 'PENDING' && s !== 'PENDING') return false;
+      if (selectedDonor !== 'ALL' && d.donorId !== selectedDonor) return false;
+
+      if (selectedType !== 'ALL') {
+        if (d.donationType !== selectedType) return false;
       }
 
-      // Date Range Filter
-      const dDate = new Date(d.createdAt).getTime();
+      if (selectedMethod !== 'ALL') {
+        const m = (d.paymentMethod || 'CASH').toUpperCase();
+        if (selectedMethod === 'BANK' && m !== 'BANK' && m !== 'ONLINE') return false;
+        if (selectedMethod !== 'BANK' && m !== selectedMethod) return false;
+      }
+
+      if (selectedStatus !== 'ALL') {
+        const s = (d.status || 'POSTED').toUpperCase();
+        if (s !== selectedStatus) return false;
+      }
+
+      // Date Range
+      const dDate = new Date(d.receiptDate || d.createdAt).getTime();
       if (dateRange.start && dDate < new Date(dateRange.start).getTime()) return false;
       if (dateRange.end && dDate > new Date(dateRange.end).getTime() + 86400000) return false;
 
       return true;
     });
-  }, [donations, searchTerm, filterType, filterBeneficiary, filterMethod, filterStatus, dateRange, beneficiaries]);
+  }, [receivedDonations, searchTerm, selectedDonor, selectedType, selectedMethod, selectedStatus, dateRange]);
 
-  // Aggregated Beneficiary Summary ("Kis ko kb or kitni donation di gayi hai")
-  const beneficiarySummaryList = useMemo(() => {
+  // ── Donor-wise Cumulative Summary ──────────────────────────────────────────
+  const donorSummaryList = useMemo(() => {
     const map = new Map();
 
-    donations.forEach((d) => {
-      const ben = getBeneficiaryDetails(d);
-      const key = ben.beneficiaryId || ben.cnic || ben.name;
+    receivedDonations.forEach((d) => {
+      const donorKey = d.donorId || d.donor?.fullName || 'Walk-in Donor';
+      const donorName = d.donor?.fullName || 'Walk-in Donor';
+      const donorCode = d.donor?.donorCode || '-';
+      const mobile = d.donor?.mobile || '-';
+      const cnic = d.donor?.cnic || '-';
 
-      if (!map.has(key)) {
-        map.set(key, {
-          id: ben.beneficiaryId || key,
-          name: ben.name,
-          fatherName: ben.fatherName,
-          cnic: ben.cnic,
-          mobile: ben.mobile,
-          address: ben.address,
+      if (!map.has(donorKey)) {
+        map.set(donorKey, {
+          id: donorKey,
+          name: donorName,
+          code: donorCode,
+          mobile,
+          cnic,
           totalAmount: 0,
-          disbursementsCount: 0,
-          aidTypes: new Set(),
-          lastDisbursementDate: d.createdAt,
-          transactions: [],
+          receiptsCount: 0,
+          types: new Set(),
+          lastDonationDate: d.receiptDate || d.createdAt,
+          receipts: [],
         });
       }
 
-      const item = map.get(key);
+      const item = map.get(donorKey);
       const amt = Number(d.amount) || 0;
       item.totalAmount += amt;
-      item.disbursementsCount += 1;
-      item.aidTypes.add(donationTypeDisplay(d.donationType, d.customDonationType) || 'Monthly Aid');
+      item.receiptsCount += 1;
+      const typeLabel = d.donationType === 'CUSTOM' ? d.customDonationType || 'Custom' : d.donationType?.replace('_', ' ') || 'General';
+      item.types.add(typeLabel);
 
-      if (new Date(d.createdAt) > new Date(item.lastDisbursementDate)) {
-        item.lastDisbursementDate = d.createdAt;
+      if (new Date(d.receiptDate || d.createdAt) > new Date(item.lastDonationDate)) {
+        item.lastDonationDate = d.receiptDate || d.createdAt;
       }
 
-      item.transactions.push({
-        id: d.id,
-        amount: amt,
-        date: d.createdAt,
-        month: d.month || d.disbursementMonth,
-        type: donationTypeDisplay(d.donationType, d.customDonationType) || 'Monthly Aid',
-        paymentMethod: d.paymentMethod,
-        voucherNo: d.voucherNo,
-        status: d.status,
-        remarks: d.remarks,
-      });
+      item.receipts.push(d);
     });
 
     let list = Array.from(map.values());
@@ -539,27 +273,42 @@ export const DonationReports = () => {
     if (searchTerm) {
       const q = searchTerm.toLowerCase().trim();
       list = list.filter(
-        (b) =>
-          b.name.toLowerCase().includes(q) ||
-          b.fatherName.toLowerCase().includes(q) ||
-          b.cnic.toLowerCase().includes(q) ||
-          b.mobile.toLowerCase().includes(q)
+        (dn) =>
+          dn.name.toLowerCase().includes(q) ||
+          dn.code.toLowerCase().includes(q) ||
+          dn.mobile.toLowerCase().includes(q) ||
+          dn.cnic.toLowerCase().includes(q)
       );
     }
 
     return list.sort((a, b) => b.totalAmount - a.totalAmount);
-  }, [donations, beneficiaries, searchTerm]);
+  }, [receivedDonations, searchTerm]);
 
-  // Overall Totals & Statistics
-  const totalDisbursedAmount = filteredDisbursements.reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
-  const totalBeneficiariesCount = beneficiarySummaryList.length;
+  // ── Calculated Inflow Metrics ──────────────────────────────────────────────
+  const totalReceivedAmount = filteredReceivedDonations.reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
+  const totalReceivedCount = filteredReceivedDonations.length;
 
   const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  const currentMonthDisbursed = donations
-    .filter((d) => new Date(d.createdAt) >= currentMonthStart)
+  const currentMonthReceived = receivedDonations
+    .filter((d) => new Date(d.receiptDate || d.createdAt) >= currentMonthStart)
     .reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
 
-  // Export Excel / CSV
+  const totalCashReceived = receivedDonations
+    .filter((d) => d.paymentMethod === 'CASH')
+    .reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
+
+  const totalBankAndChequeReceived = receivedDonations
+    .filter((d) => d.paymentMethod === 'BANK' || d.paymentMethod === 'CHEQUE' || d.paymentMethod === 'ONLINE')
+    .reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
+
+  // Format Helper for Donation Type
+  const formatDonationType = (type, customType) => {
+    if (type === 'CUSTOM') return customType || 'Custom';
+    const found = INFLOW_DONATION_TYPES.find((t) => t.value === type);
+    return found ? found.label.replace(' Donation', '') : type || 'General';
+  };
+
+  // ── Export to Excel (CSV) ──────────────────────────────────────────────────
   const csvCell = (value) => {
     let str = String(value ?? '');
     if (/^[=+\-@]/.test(str)) str = `'${str}`;
@@ -567,19 +316,19 @@ export const DonationReports = () => {
   };
 
   const handleExportExcel = () => {
-    if (activeTab === 'beneficiary_summary') {
-      const header = 'Beneficiary Name,Father Name,CNIC,Mobile,Total Aid Received (PKR),Times Helped,Aid Categories,Last Aid Date\n';
-      const csv = beneficiarySummaryList
-        .map((b) =>
+    if (activeTab === 'donor_summary') {
+      const header = 'Donor Name,Donor Code,Mobile,CNIC,Total Donated (PKR),Total Receipts,Donation Types,Last Donation Date\n';
+      const csv = donorSummaryList
+        .map((dn) =>
           [
-            csvCell(b.name),
-            csvCell(b.fatherName || '-'),
-            csvCell(b.cnic || '-'),
-            csvCell(b.mobile || '-'),
-            b.totalAmount || 0,
-            b.disbursementsCount || 0,
-            csvCell(Array.from(b.aidTypes).join('; ')),
-            csvCell(formatDateDDMMYYYY(b.lastDisbursementDate)),
+            csvCell(dn.name),
+            csvCell(dn.code),
+            csvCell(dn.mobile),
+            csvCell(dn.cnic),
+            dn.totalAmount || 0,
+            dn.receiptsCount || 0,
+            csvCell(Array.from(dn.types).join('; ')),
+            csvCell(formatDateDDMMYYYY(dn.lastDonationDate)),
           ].join(',')
         )
         .join('\n');
@@ -588,43 +337,43 @@ export const DonationReports = () => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
-      link.setAttribute('download', `Beneficiary_Welfare_Summary_${new Date().toISOString().split('T')[0]}.csv`);
+      link.setAttribute('download', `Donors_Summary_Report_${new Date().toISOString().split('T')[0]}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      showToast('Exported Beneficiary Summary to CSV successfully.', 'success');
+      showToast('Exported Donors Summary to CSV successfully.', 'success');
       return;
     }
 
-    const header = 'Voucher #,Beneficiary Name,Father Name,CNIC,Mobile,Aid Type,Amount (PKR),Payment Method,Disbursement Date,Status,Remarks\n';
-    const csv = filteredDisbursements
-      .map((d) => {
-        const ben = getBeneficiaryDetails(d);
-        return [
-          csvCell(d.voucherNo || `DON-${d.id?.slice(0, 6)}`),
-          csvCell(ben.name),
-          csvCell(ben.fatherName || '-'),
-          csvCell(ben.cnic || '-'),
-          csvCell(ben.mobile || '-'),
-          csvCell(donationTypeDisplay(d.donationType, d.customDonationType) || 'MONTHLY'),
-          Number(d.amount) || 0,
-          csvCell(d.paymentMethod ? paymentMethodLabel(d.paymentMethod) : 'CASH'),
-          csvCell(formatDateDDMMYYYY(d.createdAt)),
-          csvCell(d.status || 'APPROVED'),
-          csvCell(d.remarks || '-'),
-        ].join(',');
-      })
+    // Default: Inflows / Receipts Export
+    const header = 'Receipt #,Donor Name,Donor Code,Mobile,CNIC,Donation Type,Amount (PKR),Payment Method,Bank Account,Date,Status,Reference #,Created By\n';
+    const csv = filteredReceivedDonations
+      .map((d) => [
+        csvCell(d.receiptNo || `REC-${d.id?.slice(0, 6)}`),
+        csvCell(d.donor?.fullName || 'Walk-in Donor'),
+        csvCell(d.donor?.donorCode || '-'),
+        csvCell(d.donor?.mobile || '-'),
+        csvCell(d.donor?.cnic || '-'),
+        csvCell(formatDonationType(d.donationType, d.customDonationType)),
+        Number(d.amount) || 0,
+        csvCell(d.paymentMethod || 'CASH'),
+        csvCell(d.bankAccount?.accountName || '-'),
+        csvCell(formatDateDDMMYYYY(d.receiptDate || d.createdAt)),
+        csvCell(d.status || 'POSTED'),
+        csvCell(d.referenceNo || d.chequeNo || '-'),
+        csvCell(d.createdBy?.fullName || 'System User'),
+      ].join(','))
       .join('\n');
 
     const blob = new Blob([header + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `Donation_Disbursements_Report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `Donations_Received_Report_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast('Exported Donation Report to CSV successfully.', 'success');
+    showToast('Exported Donation Receipts to CSV successfully.', 'success');
   };
 
   const handlePrint = () => {
@@ -633,35 +382,31 @@ export const DonationReports = () => {
 
   return (
     <div className="space-y-6 pb-16 print:bg-white print:text-black">
-      {/* ── Import CSV Modal ── */}
-      <ImportModal
-        isOpen={showImportModal}
-        onClose={() => setShowImportModal(false)}
-        onImportSuccess={() => fetchDonations({ limit: 1000 })}
-      />
-
       {/* ── Page Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200 dark:border-cyan-900/50 px-2.5 py-0.5 rounded-full">
-              <FileText className="h-3 w-3" /> Welfare & Donation Analytics
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 px-2.5 py-0.5 rounded-full">
+              <Heart className="w-3 h-3" /> Charitable Inflows
             </span>
           </div>
           <h1 className="text-2xl font-extrabold text-slate-900 dark:text-slate-50 tracking-tight">
             Donation Reports
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Track who received welfare aid, disbursement history, amounts, dates & donor receipts
+            Record donation receipts, dynamic donor contributions & automated General Ledger postings
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
           <button
-            onClick={() => setShowImportModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all shadow-xs cursor-pointer"
+            onClick={() => fetchReceivedDonations({ limit: 1000 })}
+            disabled={loadingReceived}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+            title="Refresh records"
           >
-            <Upload className="h-3.5 w-3.5 text-cyan-500" /> Import CSV
+            <RefreshCw className={`w-3.5 h-3.5 ${loadingReceived ? 'animate-spin text-emerald-500' : ''}`} />
+            <span>Refresh</span>
           </button>
 
           <button
@@ -675,129 +420,132 @@ export const DonationReports = () => {
             onClick={handlePrint}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold transition-all shadow-md cursor-pointer"
           >
-            <FileText className="h-3.5 w-3.5" /> Print / PDF
+            <Printer className="h-3.5 w-3.5" /> Print / PDF
           </button>
 
           <button
-            onClick={() => navigate('/donation-distribution/new')}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md cursor-pointer"
+            onClick={() => navigate('/donations/new')}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md hover:shadow-lg shadow-emerald-600/20 active:scale-[0.98] cursor-pointer"
           >
-            <Plus className="h-3.5 w-3.5" /> Record Welfare Aid
+            <Plus className="w-4 h-4" />
+            <span>New Donation</span>
           </button>
         </div>
       </div>
 
-      {/* ── Top Summary KPI Cards ── */}
+      {/* ── Top Summary KPI Cards (Exact data and styling as in screenshot) ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-4">
-        {/* Total Welfare Distributed */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 p-4.5 shadow-xs relative overflow-hidden">
+        {/* Total Donations */}
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 p-4.5 shadow-xs relative overflow-hidden group">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Total Welfare Given</span>
-            <div className="p-2 rounded-xl bg-cyan-50 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400 border border-cyan-100 dark:border-cyan-900/50">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Total Donations</span>
+            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/50">
               <Heart className="w-4 h-4" />
             </div>
           </div>
           <div className="space-y-0.5">
             <div className="text-2xl font-black text-slate-900 dark:text-slate-50 tracking-tight">
-              Rs {totalDisbursedAmount.toLocaleString()}
+              Rs {(receivedStats?.totalAmount ?? totalReceivedAmount).toLocaleString()}
             </div>
-            <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-              <strong className="text-cyan-600 dark:text-cyan-400">{filteredDisbursements.length}</strong> welfare aid vouchers
-            </div>
-          </div>
-          <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-cyan-500 to-blue-500 opacity-80" />
-        </div>
-
-        {/* Unique Beneficiaries Supported */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 p-4.5 shadow-xs relative overflow-hidden">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Beneficiaries Helped</span>
-            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/50">
-              <Users className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="space-y-0.5">
-            <div className="text-2xl font-black text-slate-900 dark:text-slate-50 tracking-tight">
-              {totalBeneficiariesCount}
-            </div>
-            <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-              Unique individuals supported
+            <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                {receivedStats?.totalReceipts ?? totalReceivedCount}
+              </span> receipts recorded
             </div>
           </div>
           <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-400 opacity-80" />
         </div>
 
-        {/* Current Month Aid */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 p-4.5 shadow-xs relative overflow-hidden">
+        {/* Monthly Donations */}
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 p-4.5 shadow-xs relative overflow-hidden group">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Current Month Aid</span>
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Monthly Donations (Inflow)</span>
             <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/50">
               <Calendar className="w-4 h-4" />
             </div>
           </div>
           <div className="space-y-0.5">
             <div className="text-2xl font-black text-slate-900 dark:text-slate-50 tracking-tight">
-              Rs {currentMonthDisbursed.toLocaleString()}
+              Rs {(receivedStats?.currentMonthAmount ?? currentMonthReceived).toLocaleString()}
             </div>
             <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-              Disbursed this month
+              Collected this month
             </div>
           </div>
           <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-amber-500 to-orange-400 opacity-80" />
         </div>
 
-        {/* Average Aid per Beneficiary */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 p-4.5 shadow-xs relative overflow-hidden">
+        {/* Cash in Hand */}
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 p-4.5 shadow-xs relative overflow-hidden group">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Average Aid / Person</span>
-            <div className="p-2 rounded-xl bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400 border border-violet-100 dark:border-violet-900/50">
-              <DollarSign className="w-4 h-4" />
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Cash In Hand</span>
+            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50">
+              <Wallet className="w-4 h-4" />
             </div>
           </div>
           <div className="space-y-0.5">
             <div className="text-2xl font-black text-slate-900 dark:text-slate-50 tracking-tight">
-              Rs {totalBeneficiariesCount > 0 ? Math.round(totalDisbursedAmount / totalBeneficiariesCount).toLocaleString() : '0'}
+              Rs {(receivedStats?.cashAmount ?? totalCashReceived).toLocaleString()}
             </div>
             <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-              Lifetime average per recipient
+              Cash receipts deposited
+            </div>
+          </div>
+          <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-400 opacity-80" />
+        </div>
+
+        {/* Bank & Cheques */}
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 p-4.5 shadow-xs relative overflow-hidden group">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Bank & Cheques</span>
+            <div className="p-2 rounded-xl bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400 border border-violet-100 dark:border-violet-900/50">
+              <Building className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="space-y-0.5">
+            <div className="text-2xl font-black text-slate-900 dark:text-slate-50 tracking-tight">
+              Rs {(((receivedStats?.bankAmount ?? 0) + (receivedStats?.chequeAmount ?? 0)) || totalBankAndChequeReceived).toLocaleString()}
+            </div>
+            <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+              Bank: Rs {(receivedStats?.bankAmount || 0).toLocaleString()} &middot; Cheque: Rs {(receivedStats?.chequeAmount || 0).toLocaleString()}
             </div>
           </div>
           <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-violet-500 to-purple-400 opacity-80" />
         </div>
       </div>
 
-      {/* ── Report Perspective Navigation Tabs ── */}
+      {/* ── Navigation Tabs ── */}
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 print:hidden">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setActiveTab('disbursements')}
+            onClick={() => setActiveTab('received')}
             className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer ${
-              activeTab === 'disbursements'
-                ? 'border-cyan-500 text-cyan-600 dark:text-cyan-400'
+              activeTab === 'received'
+                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            Welfare Disbursements ({filteredDisbursements.length})
+            Donation Receipts ({filteredReceivedDonations.length})
           </button>
           <button
-            onClick={() => setActiveTab('beneficiary_summary')}
+            onClick={() => setActiveTab('donor_summary')}
             className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer ${
-              activeTab === 'beneficiary_summary'
-                ? 'border-cyan-500 text-cyan-600 dark:text-cyan-400'
+              activeTab === 'donor_summary'
+                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            Person-wise Aid Summary ({beneficiarySummaryList.length})
+            Donor-wise Summary ({donorSummaryList.length})
           </button>
         </div>
 
-        {activeTab === 'disbursements' && (
+        {activeTab === 'received' && (
           <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl">
             <button
               type="button"
               onClick={() => setViewMode('table')}
               className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                viewMode === 'table' ? 'bg-white dark:bg-slate-900 text-cyan-600 dark:text-cyan-400 shadow-xs' : 'text-slate-400'
+                viewMode === 'table' ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs' : 'text-slate-400'
               }`}
               title="Table View"
             >
@@ -807,7 +555,7 @@ export const DonationReports = () => {
               type="button"
               onClick={() => setViewMode('cards')}
               className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                viewMode === 'cards' ? 'bg-white dark:bg-slate-900 text-cyan-600 dark:text-cyan-400 shadow-xs' : 'text-slate-400'
+                viewMode === 'cards' ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs' : 'text-slate-400'
               }`}
               title="Cards View"
             >
@@ -817,7 +565,7 @@ export const DonationReports = () => {
         )}
       </div>
 
-      {/* ── Filter Bar ── */}
+      {/* ── Filter Bar (Matches the layout shown in screenshot) ── */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 p-4 shadow-xs space-y-3 print:hidden">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Search Input */}
@@ -827,8 +575,8 @@ export const DonationReports = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by Beneficiary Name, CNIC, Phone, Voucher #..."
-              className="w-full pl-9 pr-8 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all"
+              placeholder="Search by receipt #, donor, phone, cheque #..."
+              className="w-full pl-9 pr-8 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
             />
             {searchTerm && (
               <button
@@ -840,31 +588,30 @@ export const DonationReports = () => {
             )}
           </div>
 
-          {/* Beneficiary Filter */}
+          {/* Donor Filter */}
           <div>
             <select
-              value={filterBeneficiary}
-              onChange={(e) => setFilterBeneficiary(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all cursor-pointer"
+              value={selectedDonor}
+              onChange={(e) => setSelectedDonor(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer"
             >
-              <option value="All">All Beneficiaries</option>
-              {beneficiaries.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name} ({b.cnic || b.mobile || 'Beneficiary'})
+              <option value="ALL">All Donors</option>
+              {donors.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.fullName} ({d.donorCode || d.mobile || 'Donor'})
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Aid Type Filter */}
+          {/* Donation Type Filter */}
           <div>
             <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all cursor-pointer"
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer"
             >
-              <option value="All">All Aid Types</option>
-              {DONATION_TYPES.map((t) => (
+              {INFLOW_DONATION_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>
                   {t.label}
                 </option>
@@ -875,29 +622,27 @@ export const DonationReports = () => {
           {/* Payment Method Filter */}
           <div>
             <select
-              value={filterMethod}
-              onChange={(e) => setFilterMethod(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all cursor-pointer"
+              value={selectedMethod}
+              onChange={(e) => setSelectedMethod(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer"
             >
-              <option value="All">All Payment Methods</option>
-              {['CASH', 'BANK', 'CHEQUE'].map((m) => (
-                <option key={m} value={m}>
-                  {m}
+              {PAYMENT_METHODS.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
                 </option>
               ))}
             </select>
           </div>
         </div>
 
-        {/* Date Presets and Range */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+        {/* Second Row: Period Presets, Date Pickers & Status Filter */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[11px] font-semibold text-slate-400 mr-1">Period:</span>
             {[
               { id: 'ALL', label: 'All Time' },
               { id: 'TODAY', label: 'Today' },
               { id: 'THIS_MONTH', label: 'This Month' },
-              { id: 'LAST_MONTH', label: 'Last Month' },
               { id: 'THIS_YEAR', label: 'This Year' },
             ].map((p) => (
               <button
@@ -905,7 +650,7 @@ export const DonationReports = () => {
                 onClick={() => handleDatePreset(p.id)}
                 className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-all cursor-pointer ${
                   datePreset === p.id
-                    ? 'bg-cyan-600 text-white shadow-xs'
+                    ? 'bg-emerald-600 text-white shadow-xs'
                     : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                 }`}
               >
@@ -938,13 +683,15 @@ export const DonationReports = () => {
 
           <div className="flex items-center gap-2">
             <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
               className="px-2.5 py-1 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 text-slate-700 dark:text-slate-300 cursor-pointer"
             >
-              <option value="All">All Statuses</option>
-              <option value="APPROVED">Disbursed / Approved</option>
-              <option value="PENDING">Pending</option>
+              {STATUSES.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
             </select>
 
             {hasActiveFilters && (
@@ -960,124 +707,183 @@ export const DonationReports = () => {
         </div>
       </div>
 
-      {/* ── TAB 1: ALL WELFARE DISBURSEMENTS ── */}
-      {activeTab === 'disbursements' && (
+      {/* ── TAB 1: DONATIONS RECEIVED (Exact Table from Screenshot) ── */}
+      {activeTab === 'received' && (
         <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 shadow-xs overflow-hidden">
-          {loadingDonations && donations.length === 0 ? (
+          {loadingReceived && receivedDonations.length === 0 ? (
             <div className="p-12 text-center">
-              <RefreshCw className="w-6 h-6 animate-spin text-cyan-500 mx-auto mb-3" />
-              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Loading donation reports...</p>
+              <RefreshCw className="w-6 h-6 animate-spin text-emerald-500 mx-auto mb-3" />
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Loading donation receipts...</p>
             </div>
-          ) : filteredDisbursements.length === 0 ? (
+          ) : filteredReceivedDonations.length === 0 ? (
             <div className="p-12 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-100 dark:border-cyan-900/40 flex items-center justify-center text-cyan-500 mx-auto mb-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/40 flex items-center justify-center text-emerald-500 mx-auto mb-3">
                 <Heart className="w-6 h-6" />
               </div>
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">No welfare donation records found</h3>
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">No donation records found</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
                 {hasActiveFilters
                   ? 'Try adjusting your search criteria or date filters to find matching records.'
-                  : 'Start recording welfare aid disbursements given to beneficiaries.'}
+                  : 'Get started by recording your first charitable donation receipt.'}
               </p>
               {!hasActiveFilters && (
-                <div className="mt-4 flex items-center justify-center gap-2">
-                  <button
-                    onClick={() => navigate('/donation-distribution/new')}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
-                  >
-                    <Plus className="w-4 h-4" /> Record First Aid
-                  </button>
-                  <button
-                    onClick={() => setShowImportModal(true)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all shadow-xs cursor-pointer"
-                  >
-                    <Upload className="w-4 h-4" /> Import CSV
-                  </button>
-                </div>
+                <button
+                  onClick={() => navigate('/donations/new')}
+                  className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" /> Record First Donation
+                </button>
               )}
             </div>
           ) : viewMode === 'table' ? (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[950px]">
+              <table className="w-full text-left border-collapse min-w-[900px]">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                    <th className="py-3 px-4">Voucher #</th>
-                    <th className="py-3 px-4">Beneficiary / Recipient (Kis Ko)</th>
-                    <th className="py-3 px-4">Aid Type</th>
-                    <th className="py-3 px-4">Amount (Kitni)</th>
+                    <th className="py-3 px-4">Receipt #</th>
+                    <th className="py-3 px-4">Donor Details</th>
+                    <th className="py-3 px-4">Type</th>
+                    <th className="py-3 px-4">Amount</th>
                     <th className="py-3 px-4">Payment Method</th>
-                    <th className="py-3 px-4">Date (Kb)</th>
+                    <th className="py-3 px-4">Date</th>
                     <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4">Remarks</th>
+                    <th className="py-3 px-4">Created By</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
-                  {filteredDisbursements.map((d) => {
-                    const ben = getBeneficiaryDetails(d);
-                    const isApproved = d.status === 'APPROVED' || d.status === 'DISBURSED' || d.status === 'POSTED';
+                  {filteredReceivedDonations.map((d) => {
+                    const isPosted = d.status === 'POSTED';
                     const isCash = d.paymentMethod === 'CASH';
+                    const isBank = d.paymentMethod === 'BANK' || d.paymentMethod === 'ONLINE';
+                    const isCheque = d.paymentMethod === 'CHEQUE';
 
                     return (
-                      <tr key={d.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group">
-                        <td className="py-3 px-4 font-mono font-bold text-cyan-600 dark:text-cyan-400">
-                          {d.voucherNo || `DON-${d.id.slice(0, 6).toUpperCase()}`}
-                        </td>
+                      <tr
+                        key={d.id}
+                        className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group"
+                      >
+                        {/* Receipt No */}
                         <td className="py-3 px-4">
-                          <div className="font-bold text-slate-900 dark:text-slate-100">{ben.name}</div>
-                          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-                            {ben.fatherName && <span>S/o {ben.fatherName}</span>}
-                            {ben.cnic && (
-                              <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.2 rounded text-[10px]">
-                                {ben.cnic}
-                              </span>
-                            )}
-                            {ben.mobile && (
-                              <span className="flex items-center gap-0.5">
-                                <Phone className="w-2.5 h-2.5" />
-                                {ben.mobile}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800">
-                            {donationTypeDisplay(d.donationType, d.customDonationType) || 'MONTHLY'}
+                          <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                            {d.receiptNo || `REC-${d.id.slice(0, 6).toUpperCase()}`}
                           </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
-                            Rs {Number(d.amount || 0).toLocaleString()}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-700 dark:text-slate-300">
-                            {isCash ? <Banknote className="w-3.5 h-3.5 text-emerald-500" /> : <Building className="w-3.5 h-3.5 text-blue-500" />}
-                            {paymentMethodLabel(d.paymentMethod)}
-                          </span>
-                          {d.bankAccount && (
-                            <div className="text-[10px] text-slate-400 truncate max-w-[130px]">
-                              {d.bankAccount.accountName}
+                          {d.referenceNo && (
+                            <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                              Ref: {d.referenceNo}
                             </div>
                           )}
                         </td>
-                        <td className="py-3 px-4 whitespace-nowrap text-slate-600 dark:text-slate-300">
-                          {formatDateDDMMYYYY(d.createdAt)}
-                          {d.month && <div className="text-[10px] text-slate-400">{d.month}</div>}
+
+                        {/* Donor Details */}
+                        <td className="py-3 px-4">
+                          <div className="font-semibold text-slate-900 dark:text-slate-100">
+                            {d.donor?.fullName || 'Walk-in Donor'}
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                            {d.donor?.donorCode && (
+                              <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.2 rounded text-[10px]">
+                                {d.donor.donorCode}
+                              </span>
+                            )}
+                            {d.donor?.mobile && (
+                              <span className="flex items-center gap-0.5">
+                                <Phone className="w-2.5 h-2.5" />
+                                {d.donor.mobile}
+                              </span>
+                            )}
+                          </div>
                         </td>
+
+                        {/* Donation Type */}
+                        <td className="py-3 px-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                            {formatDonationType(d.donationType, d.customDonationType)}
+                          </span>
+                        </td>
+
+                        {/* Amount */}
+                        <td className="py-3 px-4">
+                          <div className="font-bold font-mono text-slate-900 dark:text-slate-50 text-sm">
+                            Rs {Number(d.amount || 0).toLocaleString()}
+                          </div>
+                        </td>
+
+                        {/* Payment Method */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-1.5">
+                            {isCash && (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                                <Wallet className="w-3 h-3" /> Cash in Hand
+                              </span>
+                            )}
+                            {isBank && (
+                              <div>
+                                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 dark:text-blue-400">
+                                  <Building className="w-3 h-3" /> Bank Account
+                                </span>
+                                {d.bankAccount && (
+                                  <div className="text-[10px] text-slate-400 truncate max-w-[140px]">
+                                    {d.bankAccount.accountName}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {isCheque && (
+                              <div>
+                                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-violet-600 dark:text-violet-400">
+                                  <CreditCard className="w-3 h-3" /> Cheque
+                                </span>
+                                {d.chequeNo && (
+                                  <div className="text-[10px] text-slate-400 font-mono">
+                                    #{d.chequeNo}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Date */}
+                        <td className="py-3 px-4 whitespace-nowrap text-slate-600 dark:text-slate-300">
+                          {d.receiptDate ? new Date(d.receiptDate).toLocaleDateString() : '-'}
+                        </td>
+
+                        {/* Status */}
                         <td className="py-3 px-4">
                           <span
                             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                              isApproved
+                              isPosted
                                 ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+                                : d.status === 'CANCELLED'
+                                ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800'
                                 : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800'
                             }`}
                           >
-                            {isApproved ? <CheckCircle2 className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
-                            {d.status || 'APPROVED'}
+                            {isPosted && <CheckCircle2 className="w-2.5 h-2.5" />}
+                            {d.status || 'POSTED'}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-slate-500 dark:text-slate-400 text-[11px] max-w-[180px] truncate">
-                          {d.remarks || '-'}
+
+                        {/* Created By */}
+                        <td className="py-3 px-4 text-slate-500 dark:text-slate-400 text-[11px]">
+                          <div>{d.createdBy?.fullName || 'System User'}</div>
+                          <div className="text-[9px] text-slate-400">
+                            {d.createdAt ? new Date(d.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                          </div>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => setSelectedReceiptForSlip(d)}
+                              className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 transition-colors cursor-pointer"
+                              title="Print Donation Receipt Slip"
+                            >
+                              <Printer className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1086,54 +892,65 @@ export const DonationReports = () => {
               </table>
             </div>
           ) : (
+            /* Cards View */
             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredDisbursements.map((d) => {
-                const ben = getBeneficiaryDetails(d);
-                const isApproved = d.status === 'APPROVED' || d.status === 'DISBURSED' || d.status === 'POSTED';
-
+              {filteredReceivedDonations.map((d) => {
+                const isPosted = d.status === 'POSTED';
                 return (
                   <div
                     key={d.id}
-                    className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 hover:border-cyan-500/40 transition-all space-y-3"
+                    className="p-4.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs space-y-3 hover:border-emerald-500/40 transition-all"
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <div className="font-bold text-slate-900 dark:text-slate-100">{ben.name}</div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                          {ben.mobile || ben.cnic || 'Welfare Aid Recipient'}
+                        <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                          {d.receiptNo || `REC-${d.id.slice(0, 6)}`}
+                        </span>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-0.5">
+                          {d.donor?.fullName || 'Walk-in Donor'}
+                        </h4>
+                        <div className="text-[11px] text-slate-400">
+                          {d.donor?.mobile || d.donor?.donorCode || 'Donor'}
                         </div>
                       </div>
+
                       <span
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                          isApproved
+                          isPosted
                             ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200'
                             : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200'
                         }`}
                       >
-                        {d.status || 'APPROVED'}
+                        {d.status || 'POSTED'}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800 flex items-center justify-between">
                       <div>
                         <span className="text-[10px] font-bold text-slate-400 uppercase">Amount</span>
-                        <div className="text-base font-black font-mono text-emerald-600 dark:text-emerald-400">
+                        <div className="text-base font-black font-mono text-slate-900 dark:text-slate-50">
                           Rs {Number(d.amount || 0).toLocaleString()}
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">Aid Category</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">Type</span>
                         <div className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                          {donationTypeDisplay(d.donationType, d.customDonationType)}
+                          {formatDonationType(d.donationType, d.customDonationType)}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
                       <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" /> {formatDateDDMMYYYY(d.createdAt)}
+                        <Calendar className="w-3 h-3" />
+                        {d.receiptDate ? new Date(d.receiptDate).toLocaleDateString() : '-'}
                       </span>
-                      <span className="font-mono text-slate-400">{d.voucherNo || d.id.slice(0, 8)}</span>
+                      <button
+                        onClick={() => setSelectedReceiptForSlip(d)}
+                        className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Printer className="w-3 h-3" /> Slip
+                      </button>
                     </div>
                   </div>
                 );
@@ -1143,58 +960,51 @@ export const DonationReports = () => {
         </div>
       )}
 
-      {/* ── TAB 2: BENEFICIARY-WISE AID SUMMARY (KIS KO KUL KITNI AID DI) ── */}
-      {activeTab === 'beneficiary_summary' && (
+      {/* ── TAB 2: DONOR-WISE CUMULATIVE CONTRIBUTIONS ── */}
+      {activeTab === 'donor_summary' && (
         <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 shadow-xs overflow-hidden">
-          {beneficiarySummaryList.length === 0 ? (
+          {donorSummaryList.length === 0 ? (
             <div className="p-12 text-center">
               <Users className="w-10 h-10 text-slate-400 mx-auto mb-2" />
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">No beneficiary summary records</h3>
-              <p className="text-xs text-slate-500 mt-1">Beneficiary summary appears here as welfare aid is recorded.</p>
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">No donor summary records</h3>
+              <p className="text-xs text-slate-500 mt-1">Donor cumulative summary appears here as donations are recorded.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[900px]">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                    <th className="py-3 px-4">Beneficiary Name (Kis Ko)</th>
-                    <th className="py-3 px-4">CNIC / Mobile</th>
-                    <th className="py-3 px-4">Total Aid Received (Kul Rakam)</th>
-                    <th className="py-3 px-4">Times Helped</th>
-                    <th className="py-3 px-4">Aid Categories</th>
-                    <th className="py-3 px-4">Last Aid Date (Aakhri Bar)</th>
+                    <th className="py-3 px-4">Donor Name</th>
+                    <th className="py-3 px-4">Donor Code / Contact</th>
+                    <th className="py-3 px-4">Total Donated (Lifetime)</th>
+                    <th className="py-3 px-4">Total Receipts</th>
+                    <th className="py-3 px-4">Donation Types</th>
+                    <th className="py-3 px-4">Last Donation Date</th>
                     <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
-                  {beneficiarySummaryList.map((ben) => (
-                    <tr key={ben.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group">
+                  {donorSummaryList.map((dn) => (
+                    <tr key={dn.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group">
+                      <td className="py-3 px-4 font-bold text-slate-900 dark:text-slate-100">{dn.name}</td>
                       <td className="py-3 px-4">
-                        <div className="font-bold text-slate-900 dark:text-slate-100">{ben.name}</div>
-                        {ben.fatherName && <div className="text-[11px] text-slate-400">S/o {ben.fatherName}</div>}
+                        <div className="font-mono text-slate-700 dark:text-slate-300 font-semibold">{dn.code}</div>
+                        {dn.mobile && <div className="text-[11px] text-slate-400">{dn.mobile}</div>}
                       </td>
-                      <td className="py-3 px-4">
-                        {ben.cnic && (
-                          <div className="font-mono text-slate-700 dark:text-slate-300 font-semibold">{ben.cnic}</div>
-                        )}
-                        {ben.mobile && <div className="text-[11px] text-slate-400">{ben.mobile}</div>}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="font-mono font-black text-emerald-600 dark:text-emerald-400 text-sm">
-                          Rs {ben.totalAmount.toLocaleString()}
-                        </div>
+                      <td className="py-3 px-4 font-mono font-black text-emerald-600 dark:text-emerald-400 text-sm">
+                        Rs {dn.totalAmount.toLocaleString()}
                       </td>
                       <td className="py-3 px-4">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                          {ben.disbursementsCount} time{ben.disbursementsCount > 1 ? 's' : ''}
+                          {dn.receiptsCount} receipt{dn.receiptsCount > 1 ? 's' : ''}
                         </span>
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex flex-wrap gap-1 max-w-[220px]">
-                          {Array.from(ben.aidTypes).map((t) => (
+                          {Array.from(dn.types).map((t) => (
                             <span
                               key={t}
-                              className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-900"
+                              className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900"
                             >
                               {t}
                             </span>
@@ -1202,15 +1012,15 @@ export const DonationReports = () => {
                         </div>
                       </td>
                       <td className="py-3 px-4 whitespace-nowrap text-slate-600 dark:text-slate-300">
-                        {formatDateDDMMYYYY(ben.lastDisbursementDate)}
+                        {formatDateDDMMYYYY(dn.lastDonationDate)}
                       </td>
                       <td className="py-3 px-4 text-right">
                         <button
-                          onClick={() => setHistoryBeneficiary(ben)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-cyan-50 dark:bg-cyan-950/50 hover:bg-cyan-100 text-cyan-600 dark:text-cyan-400 text-xs font-bold transition-all cursor-pointer"
+                          onClick={() => setSelectedDonorHistory(dn)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 text-emerald-600 dark:text-emerald-400 text-xs font-bold transition-all cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
-                          <span>View History</span>
+                          <span>View Receipts</span>
                         </button>
                       </td>
                     </tr>
@@ -1222,26 +1032,34 @@ export const DonationReports = () => {
         </div>
       )}
 
-      {/* ── Beneficiary Aid History Modal ── */}
-      {historyBeneficiary && (
+      {/* ── Print Voucher / Receipt Slip Modal ── */}
+      {selectedReceiptForSlip && (
+        <DonationSlipWrapper
+          donation={selectedReceiptForSlip}
+          onClose={() => setSelectedReceiptForSlip(null)}
+        />
+      )}
+
+      {/* ── Donor History Modal ── */}
+      {selectedDonorHistory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
             <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-cyan-50 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-900">
-                  <User className="h-5 w-5" />
+                <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900">
+                  <Heart className="h-5 w-5" />
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                    {historyBeneficiary.name} — Aid History
+                    {selectedDonorHistory.name} — Donation History
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    CNIC: {historyBeneficiary.cnic || 'N/A'} &middot; Mobile: {historyBeneficiary.mobile || 'N/A'}
+                    Code: {selectedDonorHistory.code} &middot; Contact: {selectedDonorHistory.mobile}
                   </p>
                 </div>
               </div>
               <button
-                onClick={() => setHistoryBeneficiary(null)}
+                onClick={() => setSelectedDonorHistory(null)}
                 className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
                 <X className="h-5 w-5" />
@@ -1251,15 +1069,15 @@ export const DonationReports = () => {
             <div className="p-5 overflow-y-auto space-y-4">
               <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
                 <div>
-                  <div className="text-[10px] font-bold text-slate-400 uppercase">Total Lifetime Aid</div>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase">Total Lifetime Contributions</div>
                   <div className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">
-                    Rs {historyBeneficiary.totalAmount.toLocaleString()}
+                    Rs {selectedDonorHistory.totalAmount.toLocaleString()}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] font-bold text-slate-400 uppercase">Total Disbursals</div>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase">Total Receipts</div>
                   <div className="text-lg font-bold text-slate-800 dark:text-slate-200">
-                    {historyBeneficiary.disbursementsCount} record{historyBeneficiary.disbursementsCount > 1 ? 's' : ''}
+                    {selectedDonorHistory.receiptsCount} donation{selectedDonorHistory.receiptsCount > 1 ? 's' : ''}
                   </div>
                 </div>
               </div>
@@ -1268,23 +1086,29 @@ export const DonationReports = () => {
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">
                     <tr>
+                      <th className="p-2.5">Receipt #</th>
                       <th className="p-2.5">Date</th>
-                      <th className="p-2.5">Category</th>
+                      <th className="p-2.5">Type</th>
                       <th className="p-2.5">Amount</th>
                       <th className="p-2.5">Method</th>
-                      <th className="p-2.5">Voucher #</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium text-slate-700 dark:text-slate-300">
-                    {historyBeneficiary.transactions.map((tx, idx) => (
-                      <tr key={tx.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                        <td className="p-2.5 whitespace-nowrap">{formatDateDDMMYYYY(tx.date)}</td>
-                        <td className="p-2.5 font-semibold text-cyan-600 dark:text-cyan-400">{tx.type}</td>
-                        <td className="p-2.5 font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                          Rs {tx.amount.toLocaleString()}
+                    {selectedDonorHistory.receipts.map((r, idx) => (
+                      <tr key={r.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                        <td className="p-2.5 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                          {r.receiptNo || `REC-${r.id.slice(0, 6)}`}
                         </td>
-                        <td className="p-2.5">{tx.paymentMethod}</td>
-                        <td className="p-2.5 font-mono text-slate-400">{tx.voucherNo || '-'}</td>
+                        <td className="p-2.5 whitespace-nowrap">
+                          {formatDateDDMMYYYY(r.receiptDate || r.createdAt)}
+                        </td>
+                        <td className="p-2.5 font-semibold text-slate-700 dark:text-slate-300">
+                          {formatDonationType(r.donationType, r.customDonationType)}
+                        </td>
+                        <td className="p-2.5 font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                          Rs {Number(r.amount || 0).toLocaleString()}
+                        </td>
+                        <td className="p-2.5">{r.paymentMethod}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1294,7 +1118,7 @@ export const DonationReports = () => {
 
             <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/80 flex items-center justify-end">
               <button
-                onClick={() => setHistoryBeneficiary(null)}
+                onClick={() => setSelectedDonorHistory(null)}
                 className="px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 rounded-xl cursor-pointer"
               >
                 Close
@@ -1306,5 +1130,36 @@ export const DonationReports = () => {
     </div>
   );
 };
+
+// Slip Wrapper Helper Component
+function DonationSlipWrapper({ donation, onClose }) {
+  const rec = resolveVoucherRecipientDetails(donation);
+  const typeLabel = donation.donationType === 'CUSTOM'
+    ? donation.customDonationType || 'General Donation'
+    : donation.donationType?.replace('_', ' ') || 'General Donation';
+
+  return (
+    <VoucherSlipModal
+      isOpen={true}
+      onClose={onClose}
+      title={`${typeLabel.toUpperCase()} RECEIPT`}
+      voucherNo={donation.receiptNo || donation.id?.slice(0, 8)?.toUpperCase()}
+      fileNo={donation.donor?.donorCode || donation.donor?.cnic || ''}
+      date={donation.receiptDate || donation.createdAt}
+      name={donation.donor?.fullName || rec.name || 'Donor'}
+      cnic={donation.donor?.cnic || rec.cnic || ''}
+      mobile={donation.donor?.mobile || rec.mobile || ''}
+      address={donation.donor?.address || rec.address || ''}
+      paymentMethod={donation.paymentMethod}
+      accountName="Donation Income A/c"
+      particulars={`Charitable Donation Received - ${typeLabel}${donation.narration ? ` (${donation.narration})` : ''}${donation.chequeNo ? ` [Cheque #${donation.chequeNo}]` : ''}`}
+      amount={donation.amount}
+      preparedBy={donation.createdBy?.fullName || 'Operator'}
+      payeeLabel="Receiver's Sign"
+      partyLabel="Donor's Sign"
+      type="CREDIT"
+    />
+  );
+}
 
 export default DonationReports;
