@@ -23,6 +23,7 @@ import { useDonationReceivedStore } from '../store/donationReceivedStore';
 import { useDonorStore } from '../store/donorStore';
 import { useCoaStore } from '../store/coaStore';
 import { useAuthStore } from '../store/authStore';
+import { isGenuineBankAccount } from '../utils/accountFilters';
 import { showToast } from '../components/ui/Toast';
 import { donationReceivedService } from '../services/donationReceivedService';
 
@@ -129,11 +130,7 @@ export const DonationEntryForm = () => {
 
   // Filter Bank Accounts from Chart of Accounts
   const bankAccounts = useMemo(() => {
-    return accounts.filter((a) => {
-      const typeMatches = a.type === 'Asset' || a.accountType?.name === 'ASSET';
-      const isBank = a.detailType === 'Bank' || a.accountName?.toLowerCase().includes('bank') || a.glCode?.startsWith('1010101') || a.glCode?.startsWith('1010102');
-      return typeMatches && isBank && !a.isLocked;
-    });
+    return accounts.filter(isGenuineBankAccount);
   }, [accounts]);
 
   // Auto-fill mobile when donor is selected

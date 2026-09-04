@@ -8,6 +8,7 @@ import {
   DollarSign, Building, Bus, Users, ChevronLeft, CheckCircle, AlertCircle, Save, Search, ChevronDown
 } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
+import { isGenuineBankAccount } from '../utils/accountFilters';
 
 export const SpecializedRevenueForm = ({
   category = 'Membership Fee',
@@ -141,11 +142,7 @@ export const SpecializedRevenueForm = ({
   }, [id, collections, isMembershipFee]);
 
   const bankAccounts = useMemo(() => {
-    return flatAccounts.filter(a =>
-      (a.name || a.accountName || '').toLowerCase().includes('bank') ||
-      (a.type || '').toLowerCase().includes('bank') ||
-      (a.name || a.accountName || '').toLowerCase().includes('cheque')
-    );
+    return flatAccounts.filter(isGenuineBankAccount);
   }, [flatAccounts]);
 
   const filteredMembersList = useMemo(() => {

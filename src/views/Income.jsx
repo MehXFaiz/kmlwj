@@ -7,6 +7,7 @@ import { paymentMethodLabel } from '../constants/paymentMethods';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolver';
 import { formatDateDDMMYYYY, getLocalDateString } from '../utils/dateUtils';
+import { isGenuineBankAccount } from '../utils/accountFilters';
 
 function IncomeModal({ isOpen, onClose, onSave, revenueHeads, accounts }) {
   const [form, setForm] = useState({ date: getLocalDateString(new Date()), revenueHeadId: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
@@ -23,11 +24,7 @@ function IncomeModal({ isOpen, onClose, onSave, revenueHeads, accounts }) {
     onClose();
   };
 
-  const bankAccounts = accounts.filter(a =>
-    a.type === 'Asset' &&
-    !a.children?.length &&
-    (a.code === '1010101' || a.code === '1010102' || (a.name || '').toLowerCase().includes('national bank') || (a.name || '').toLowerCase().includes('nbp-zakat'))
-  );
+  const bankAccounts = (accounts || []).filter(isGenuineBankAccount);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

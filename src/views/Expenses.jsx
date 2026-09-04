@@ -13,6 +13,7 @@ import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolve
 import { PhoneInput } from '../components/ui/PhoneInput';
 import { CNICInput } from '../components/ui/CNICInput';
 import { formatDateDDMMYYYY, getLocalDateString, formatDateToInput } from '../utils/dateUtils';
+import { isGenuineBankAccount } from '../utils/accountFilters';
 
 function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editingExpense }) {
   const { journals } = useJournalStore();
@@ -184,11 +185,7 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
     onClose();
   };
 
-  const bankAccounts = accounts.filter(a =>
-    a.type === 'Asset' &&
-    !a.children?.length &&
-    (a.code === '1010101' || a.code === '1010102' || (a.name || '').toLowerCase().includes('national bank') || (a.name || '').toLowerCase().includes('nbp-zakat'))
-  );
+  const bankAccounts = (accounts || []).filter(isGenuineBankAccount);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

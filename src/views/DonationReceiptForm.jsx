@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
 import { DONATION_TYPES } from '../constants/donationTypes';
+import { isGenuineBankAccount, isGenuineCashAccount } from '../utils/accountFilters';
 
 const PAYMENT_METHODS = ['CASH', 'BANK', 'CHEQUE', 'ONLINE'];
 
@@ -169,17 +170,11 @@ export const DonationReceiptForm = () => {
   }, [fetchDonations, fetchDonors, fetchAccountsList]);
 
   const cashAccounts = useMemo(() => {
-    return flatAccounts.filter(a =>
-      (a.name || a.accountName || '').toLowerCase().includes('cash') ||
-      (a.type || '').toLowerCase().includes('cash')
-    );
+    return flatAccounts.filter(isGenuineCashAccount);
   }, [flatAccounts]);
 
   const bankAccounts = useMemo(() => {
-    return flatAccounts.filter(a =>
-      !a.isLocked && !a.isDeleted &&
-      (a.code === '1010101' || a.code === '1010102' || (a.name || a.accountName || '').toLowerCase().includes('national bank') || (a.name || a.accountName || '').toLowerCase().includes('nbp-zakat'))
-    );
+    return flatAccounts.filter(isGenuineBankAccount);
   }, [flatAccounts]);
 
   // Set defaults once dependencies load if it's a new form

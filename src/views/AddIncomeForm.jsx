@@ -5,6 +5,7 @@ import { useCoaStore } from '../store/coaStore';
 import { useAuthStore } from '../store/authStore';
 import { addIncomeService } from '../services/addIncomeService';
 import { showToast } from '../components/ui/Toast';
+import { isGenuineBankAccount } from '../utils/accountFilters';
 import { Modal } from '../components/ui/Modal';
 import { Card } from '../components/ui/Card';
 import {
@@ -214,18 +215,9 @@ export const AddIncomeForm = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [form]);
 
-  // Filter Bank Accounts from CoA (only National Bank of Pakistan & NBP-Zakat Account)
+  // Filter Bank Accounts from CoA (only genuine active bank accounts)
   const bankAccounts = useMemo(() => {
-    return flatAccounts.filter(acc =>
-      (acc.type === 'Asset' || acc.accountType?.name === 'Asset') &&
-      !acc.isLocked &&
-      (
-        acc.code === '1010101' ||
-        acc.code === '1010102' ||
-        (acc.name || '').toLowerCase().includes('national bank') ||
-        (acc.name || '').toLowerCase().includes('nbp-zakat')
-      )
-    );
+    return flatAccounts.filter(isGenuineBankAccount);
   }, [flatAccounts]);
 
   // Display Name of Selected Category & Subcategory for Accounting Preview

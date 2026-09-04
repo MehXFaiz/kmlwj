@@ -1405,11 +1405,15 @@ export class AccountingService {
     return byDetail ?? 'otherAssets';
   }
 
-  static isBankAccount(name: string, detailType: string): boolean {
+  static isBankAccount(name: string, detailType: string, typeName?: string): boolean {
+    const typeUpper = (typeName || '').toUpperCase();
+    if (typeUpper && typeUpper !== 'ASSET') return false;
     const nameLower = (name || '').toLowerCase();
-    if (nameLower.includes('bank') || nameLower.includes('al-habib') || nameLower.includes('nbp') || nameLower.includes('national bank') || nameLower.includes('mcb') || nameLower.includes('ubl') || nameLower.includes('allied') || nameLower.includes('faysal')) return true;
+    if (nameLower.includes('charge') || nameLower.includes('fee') || nameLower.includes('expense') || nameLower.includes('test')) return false;
     const detailLower = (detailType || '').toLowerCase();
+    if (detailLower === 'header') return false;
     if (detailLower === 'bank') return true;
+    if (nameLower.includes('bank') || nameLower.includes('al-habib') || nameLower.includes('nbp') || nameLower.includes('national bank') || nameLower.includes('mcb') || nameLower.includes('ubl') || nameLower.includes('allied') || nameLower.includes('faysal') || nameLower.includes('meezan') || nameLower.includes('habib')) return true;
     return false;
   }
 

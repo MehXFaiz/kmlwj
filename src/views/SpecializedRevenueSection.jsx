@@ -14,6 +14,7 @@ import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolver';
 import { paymentMethodLabel } from '../constants/paymentMethods';
 import { formatDateDDMMYYYY } from '../utils/dateUtils';
+import { isGenuineBankAccount } from '../utils/accountFilters';
 
 export const SpecializedRevenueSection = ({
   category = 'Zakat',
@@ -60,7 +61,7 @@ export const SpecializedRevenueSection = ({
   }, [category]);
 
   const bankAccounts = useMemo(() => {
-    return flatAccounts.filter(a => (a.name || '').toLowerCase().includes('bank') || (a.type || '').toLowerCase().includes('bank'));
+    return flatAccounts.filter(isGenuineBankAccount);
   }, [flatAccounts]);
 
   const handlePost = async (id) => {

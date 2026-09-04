@@ -5,6 +5,7 @@ import { useBankVoucherStore } from '../store/bankVoucherStore';
 import { useJournalStore, validateSufficientFunds } from '../store/journalStore';
 import { ChevronLeft, Save, TrendingDown, TrendingUp, Info } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
+import { isGenuineBankAccount, isGenuineCashAccount } from '../utils/accountFilters';
 
 export const BankVoucherForm = () => {
   const navigate = useNavigate();
@@ -26,21 +27,9 @@ export const BankVoucherForm = () => {
     fetchJournals('Global', 1, 1000);
   }, [fetchAccountsList, fetchJournals]);
 
-  // Asset accounts for bank selection (authorized banks + cash)
+  // Asset accounts for bank/cash voucher selection (authorized banks + cash)
   const bankAccounts = useMemo(() => {
-    return flatAccounts.filter(acc =>
-      acc.type === 'Asset' &&
-      acc.detailType !== 'Header' &&
-      !acc.isLocked && !acc.isDeleted &&
-      (
-        acc.code === '1010101' ||
-        acc.code === '1010102' ||
-        acc.code === '1010103' ||
-        (acc.name || '').toLowerCase().includes('national bank') ||
-        (acc.name || '').toLowerCase().includes('nbp-zakat') ||
-        (acc.name || '').toLowerCase().includes('cash in hand')
-      )
-    );
+    return flatAccounts.filter(acc => isGenuineBankAccount(acc) || isGenuineCashAccount(acc));
   }, [flatAccounts]);
 
   // Offset accounts based on type

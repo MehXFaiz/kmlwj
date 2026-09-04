@@ -5,6 +5,7 @@ import { useBankVoucherStore } from '../store/bankVoucherStore';
 import { ChevronLeft, Save, Sparkles, RefreshCw, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { showToast } from '../components/ui/Toast';
+import { isGenuineBankAccount, isGenuineCashAccount } from '../utils/accountFilters';
 
 export const TransferForm = () => {
   const { t } = useTranslation();
@@ -24,13 +25,9 @@ export const TransferForm = () => {
     fetchAccountsList();
   }, [fetchAccountsList]);
 
-  // Asset accounts containing 'bank' or 'cash'
+  // Asset accounts (authorized banks and cash accounts)
   const bankAccounts = useMemo(() => {
-    return flatAccounts.filter(acc =>
-      acc.type === 'Asset' &&
-      acc.level === 'SUBSIDIARY' &&
-      (acc.detailType === 'Cash' || (acc.name || '').toLowerCase().includes('bank') || (acc.name || '').toLowerCase().includes('cash'))
-    );
+    return flatAccounts.filter(acc => isGenuineBankAccount(acc) || isGenuineCashAccount(acc));
   }, [flatAccounts]);
 
   // Set default values for bank accounts

@@ -5,6 +5,7 @@ import { useBankVoucherStore } from '../store/bankVoucherStore';
 import { useJournalStore, validateSufficientFunds } from '../store/journalStore';
 import { ChevronLeft, Save, Sparkles, CheckCircle2, ArrowRightLeft } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
+import { isGenuineBankAccount, isGenuineCashAccount } from '../utils/accountFilters';
 import { useTranslation } from 'react-i18next';
 import { PhoneInput } from '../components/ui/PhoneInput';
 import { CNICInput } from '../components/ui/CNICInput';
@@ -107,27 +108,13 @@ export const ExpenseEntryForm = () => {
 
   // 3. Authorized Bank and Cash accounts:
   // Bank accounts strictly restricted to:
-  // - 1010101: National Bank of Pakistan
-  // - 1010102: NBP-Zakat Account
+  // Authorized Asset Bank Accounts
   const authorizedBankAccounts = useMemo(() => {
-    return (flatAccounts || []).filter(acc => {
-      if (acc.isDeleted || acc.isLocked) return false;
-      const isAsset = acc.type === 'Asset' || (acc.accountType?.name || '').toUpperCase() === 'ASSET';
-      if (!isAsset) return false;
-      return (
-        acc.code === '1010101' ||
-        acc.code === '1010102' ||
-        (acc.name || '').toLowerCase().includes('national bank') ||
-        (acc.name || '').toLowerCase().includes('nbp-zakat')
-      );
-    });
+    return (flatAccounts || []).filter(isGenuineBankAccount);
   }, [flatAccounts]);
 
   const cashInHandAccount = useMemo(() => {
-    return (flatAccounts || []).find(acc =>
-      !acc.isDeleted &&
-      (acc.code === '1010103' || (acc.name || '').toLowerCase().includes('cash in hand'))
-    );
+    return (flatAccounts || []).find(isGenuineCashAccount);
   }, [flatAccounts]);
 
   // Set default bank or cash account

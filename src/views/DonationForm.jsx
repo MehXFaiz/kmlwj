@@ -9,6 +9,7 @@ import {
   Banknote, AlertTriangle, Loader2
 } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
+import { isGenuineBankAccount } from '../utils/accountFilters';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -60,23 +61,7 @@ export const DonationForm = () => {
 
   // Filter valid active bank accounts from Chart of Accounts
   const bankAccounts = useMemo(() => {
-    return flatAccounts.filter(a => {
-      if (a.isLocked || a.isDeleted) return false;
-      const nameLower = (a.name || a.accountName || '').toLowerCase();
-      const detailLower = (a.detailType || '').toLowerCase();
-      if (detailLower === 'bank') return true;
-      if (a.code === '1010101' || a.code === '1010102' || a.glCode === '1010101' || a.glCode === '1010102') return true;
-      if (
-        nameLower.includes('bank') || nameLower.includes('nbp') || nameLower.includes('mcb') ||
-        nameLower.includes('hbl') || nameLower.includes('ubl') || nameLower.includes('habib') ||
-        nameLower.includes('allied') || nameLower.includes('faysal') || nameLower.includes('alfalah') ||
-        nameLower.includes('meezan') || nameLower.includes('soneri') || nameLower.includes('askari') ||
-        nameLower.includes('js bank') || nameLower.includes('bop') || nameLower.includes('dubai islamic')
-      ) {
-        return true;
-      }
-      return false;
-    });
+    return flatAccounts.filter(isGenuineBankAccount);
   }, [flatAccounts]);
 
   // Auto-select first bank account if none selected
@@ -486,7 +471,7 @@ export const DonationForm = () => {
                     <option value="">-- Select Bank Account --</option>
                     {bankAccounts.map(a => (
                       <option key={a.id} value={a.id} className="bg-slate-900 text-slate-200 py-1">
-                        {a.accountName || a.name} {a.glCode || a.code ? `(${a.glCode || a.code})` : ''} — Current Bal: Rs. {(a.currentBalance || 0).toLocaleString()}
+                        {a.accountName || a.name} {a.glCode || a.code ? `(${a.glCode || a.code})` : ''}
                       </option>
                     ))}
                   </select>

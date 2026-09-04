@@ -11,6 +11,7 @@ import { showToast } from '../components/ui/Toast';
 import { HallBookingReceiptModal } from '../components/receipts/HallBookingReceiptModal';
 import api from '../services/api';
 import { sanitizeInputValue } from '../utils/validation';
+import { isGenuineBankAccount } from '../utils/accountFilters';
 import HallBookingConflictModal from '../components/common/HallBookingConflictModal';
 import HallBookingCalendar from '../components/common/HallBookingCalendar';
 import { getLocalDateString, formatDateToInput, formatDateDDMMYYYY } from '../utils/dateUtils';
@@ -204,10 +205,7 @@ export const HallBookingForm = () => {
     });
   }, [flatAccounts]);
 
-  const bankAccounts = flatAccounts.filter(a =>
-    (a.type === 'Asset' || a.accountTypeName === 'ASSET') &&
-    (a.code === '1010101' || a.code === '1010102' || a.name.toLowerCase().includes('national bank') || a.name.toLowerCase().includes('nbp-zakat'))
-  );
+  const bankAccounts = flatAccounts.filter(isGenuineBankAccount);
 
   const todayStr = getLocalDateString(new Date());
   const activeBookings = (bookings || [])
