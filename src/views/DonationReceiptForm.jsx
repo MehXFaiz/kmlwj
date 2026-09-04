@@ -12,7 +12,13 @@ import { showToast } from '../components/ui/Toast';
 import { DONATION_TYPES } from '../constants/donationTypes';
 import { isGenuineBankAccount, isGenuineCashAccount } from '../utils/accountFilters';
 
-const PAYMENT_METHODS = ['CASH', 'BANK', 'CHEQUE', 'ONLINE'];
+const PAYMENT_METHODS = [
+  { value: 'DONATION_FUND', label: 'Donation Fund Pool' },
+  { value: 'CASH', label: 'Cash' },
+  { value: 'BANK', label: 'Bank Transfer' },
+  { value: 'CHEQUE', label: 'Cheque' },
+  { value: 'ONLINE', label: 'Online Transfer' }
+];
 
 const nullsToEmpty = (obj) =>
   Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === null ? '' : v]));
@@ -267,7 +273,7 @@ export const DonationReceiptForm = () => {
       setToast({ type: 'error', message: 'No Cash account available in Chart of Accounts' });
       return;
     }
-    if (form.paymentMethod !== 'CASH' && !form.bankAccountId && bankAccounts.length === 0) {
+    if ((form.paymentMethod === 'BANK' || form.paymentMethod === 'CHEQUE' || form.paymentMethod === 'ONLINE') && !form.bankAccountId && bankAccounts.length === 0) {
       setToast({ type: 'error', message: 'No Bank account available in Chart of Accounts' });
       return;
     }
@@ -527,12 +533,17 @@ export const DonationReceiptForm = () => {
                   <label className={labelClass}>Payment Method *</label>
                   <select required value={form.paymentMethod} onChange={e => setForm({ ...form, paymentMethod: e.target.value })} className={inputClass}>
                     {PAYMENT_METHODS.map(m => (
-                      <option key={m} value={m}>{m}</option>
+                      <option key={m.value} value={m.value}>{m.label}</option>
                     ))}
                   </select>
                 </div>
 
-                {form.paymentMethod === 'CASH' ? (
+                {form.paymentMethod === 'DONATION_FUND' ? (
+                  <div className="sm:col-span-1 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex flex-col justify-center">
+                    <span className="font-bold">Donation Fund Pool</span>
+                    <span className="text-[11px] text-emerald-400/80 mt-0.5">Records directly into General Donation Pool (3020408).</span>
+                  </div>
+                ) : form.paymentMethod === 'CASH' ? (
                   <div>
                     <label className={labelClass}>Cash Account *</label>
                     <select required value={form.cashAccountId} onChange={e => setForm({ ...form, cashAccountId: e.target.value })} className={inputClass}>

@@ -239,10 +239,13 @@ var donations_received_default = makeHandler(async (req, res) => {
     if (!donor) {
       return res.status(404).json({ error: { message: "Selected donor not found", status: 404 } });
     }
-    let debitAccountId = null;
+    let debitAccountId2 = null;
     if (paymentMethod === "CASH") {
       const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
-      debitAccountId = cashAccount.id;
+      debitAccountId2 = cashAccount.id;
+    } else if (paymentMethod === "DONATION_FUND") {
+      const fundAccount = await AccountingService.ensureGeneralDonationAccount(prisma);
+      debitAccountId2 = fundAccount.id;
     } else {
       if (!bankAccountId) {
         const defaultBank = await prisma.account.findFirst({
@@ -254,9 +257,9 @@ var donations_received_default = makeHandler(async (req, res) => {
           orderBy: { glCode: "asc" }
         });
         if (!defaultBank) return res.status(400).json({ error: { message: "Bank account is required for Bank/Cheque/Online payments", status: 400 } });
-        debitAccountId = defaultBank.id;
+        debitAccountId2 = defaultBank.id;
       } else {
-        debitAccountId = bankAccountId;
+        debitAccountId2 = bankAccountId;
       }
     }
     const year = (/* @__PURE__ */ new Date()).getFullYear();
@@ -284,7 +287,7 @@ var donations_received_default = makeHandler(async (req, res) => {
             const generalDonationAccount = isGeneralDonation ? await AccountingService.ensureGeneralDonationAccount(tx) : null;
             const postingResult = await AccountingService.postReceipt(tx, {
               amount: parsedAmount,
-              cashOrBankAccountId: debitAccountId,
+              cashOrBankAccountId: debitAccountId2,
               incomeAccountId: generalDonationAccount ? generalDonationAccount.id : void 0,
               incomeAccountKeyword: generalDonationAccount ? void 0 : donationType,
               reference: `DONATION-${receiptNo}`,
@@ -294,7 +297,7 @@ var donations_received_default = makeHandler(async (req, res) => {
               postingDate: receiptDate ? new Date(receiptDate) : /* @__PURE__ */ new Date(),
               ipAddress: req.headers["x-forwarded-for"],
               userAgent: req.headers["user-agent"],
-              voucherType: paymentMethod === "CASH" ? "CR" : "BR"
+              voucherType: paymentMethod === "CASH" ? "CR" : paymentMethod === "DONATION_FUND" ? "JV" : "BR"
             });
             if (postingResult && postingResult.journalEntry) {
               journalEntryId = postingResult.journalEntry.id;
@@ -309,8 +312,8 @@ var donations_received_default = makeHandler(async (req, res) => {
               customDonationType: donationType === "CUSTOM" ? customDonationType : null,
               amount: parsedAmount,
               paymentMethod,
-              cashAccountId: paymentMethod === "CASH" ? debitAccountId : null,
-              bankAccountId: paymentMethod !== "CASH" ? debitAccountId : null,
+              cashAccountId: paymentMethod === "CASH" ? debitAccountId2 : null,
+              bankAccountId: paymentMethod !== "CASH" && paymentMethod !== "DONATION_FUND" ? debitAccountId2 : null,
               chequeNo: chequeNo || null,
               chequeDate: chequeDate ? new Date(chequeDate) : null,
               referenceNo: referenceNo || null,
@@ -397,15 +400,18 @@ var donations_received_default = makeHandler(async (req, res) => {
           } catch (e) {
           }
         }
-        let debitAccountId = null;
-        const currentMethod = paymentMethod !== void 0 ? paymentMethod : existing.paymentMethod;
-        if (currentMethod === "CASH") {
+        let debitAccountId2 = null;
+        const currentMethod2 = paymentMethod !== void 0 ? paymentMethod : existing.paymentMethod;
+        if (currentMethod2 === "CASH") {
           const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
-          debitAccountId = cashAccount.id;
+          debitAccountId2 = cashAccount.id;
+        } else if (currentMethod2 === "DONATION_FUND") {
+          const fundAccount = await AccountingService.ensureGeneralDonationAccount(tx);
+          debitAccountId2 = fundAccount.id;
         } else {
-          debitAccountId = bankAccountId !== void 0 ? bankAccountId : existing.bankAccountId || existing.cashAccountId;
+          debitAccountId2 = bankAccountId !== void 0 ? bankAccountId : existing.bankAccountId || existing.cashAccountId;
         }
-        if (debitAccountId) {
+        if (debitAccountId2) {
           const updatedAmount = parsedAmount !== void 0 ? parsedAmount : existing.amount;
           const updatedType = donationType !== void 0 ? donationType : existing.donationType;
           const updatedCustomType = customDonationType !== void 0 ? customDonationType : existing.customDonationType;
@@ -415,7 +421,7 @@ var donations_received_default = makeHandler(async (req, res) => {
           const generalDonationAccount = isGeneralDonation ? await AccountingService.ensureGeneralDonationAccount(tx) : null;
           const postingResult = await AccountingService.postReceipt(tx, {
             amount: updatedAmount,
-            cashOrBankAccountId: debitAccountId,
+            cashOrBankAccountId: debitAccountId2,
             incomeAccountId: generalDonationAccount ? generalDonationAccount.id : void 0,
             incomeAccountKeyword: generalDonationAccount ? void 0 : updatedType,
             reference: `DONATION-${existing.receiptNo}`,
@@ -425,7 +431,7 @@ var donations_received_default = makeHandler(async (req, res) => {
             postingDate: updatedDate,
             ipAddress: req.headers["x-forwarded-for"],
             userAgent: req.headers["user-agent"],
-            voucherType: currentMethod === "CASH" ? "CR" : "BR"
+            voucherType: currentMethod2 === "CASH" ? "CR" : currentMethod2 === "DONATION_FUND" ? "JV" : "BR"
           });
           if (postingResult && postingResult.journalEntry) {
             journalEntryId = postingResult.journalEntry.id;
@@ -455,8 +461,8 @@ var donations_received_default = makeHandler(async (req, res) => {
           customDonationType: donationType !== void 0 ? donationType === "CUSTOM" ? customDonationType : null : customDonationType !== void 0 ? existing.donationType === "CUSTOM" ? customDonationType : null : void 0,
           paymentMethod: paymentMethod !== void 0 ? paymentMethod : void 0,
           receiptDate: receiptDate !== void 0 ? receiptDate ? new Date(receiptDate) : void 0 : void 0,
-          cashAccountId: cashAccountId !== void 0 ? cashAccountId || null : void 0,
-          bankAccountId: bankAccountId !== void 0 ? bankAccountId || null : void 0
+          cashAccountId: currentMethod === "CASH" ? debitAccountId : cashAccountId !== void 0 ? cashAccountId || null : existing.cashAccountId,
+          bankAccountId: currentMethod !== "CASH" && currentMethod !== "DONATION_FUND" ? bankAccountId !== void 0 ? bankAccountId || null : existing.bankAccountId : null
         },
         include: {
           donor: true,

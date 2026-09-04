@@ -1,13 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useDonationStore } from '../store/donationStore';
-import { useDonationReceivedStore } from '../store/donationReceivedStore';
 import { useCoaStore } from '../store/coaStore';
 import { useBeneficiaryStore } from '../store/beneficiaryStore';
 import {
   Heart, ChevronLeft, Save, ShieldCheck, CheckCircle2,
   Users, Sparkles, Plus, Trash2, Building, Calendar,
-  Banknote, AlertTriangle, Loader2, Layers, ArrowDownLeft
+  Banknote, AlertTriangle, Loader2
 } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
 import { isGenuineBankAccount } from '../utils/accountFilters';
@@ -35,14 +34,12 @@ export const DonationForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { donations, fetchDonations, addDonation, updateDonation, checkDuplicate } = useDonationStore();
-  const { donations: receivedDonations, fetchDonations: fetchReceivedDonations } = useDonationReceivedStore();
   const { flatAccounts, fetchAccountsList } = useCoaStore();
   const { beneficiaries, fetchBeneficiaries } = useBeneficiaryStore();
 
   const [donationType, setDonationType] = useState('DONATION'); // 'DONATION' | 'ZAKAT'
   const [disbursementMonth, setDisbursementMonth] = useState(getCurrentYyyyMm());
   const [amount, setAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('DONATION_FUND'); // 'DONATION_FUND' | 'BANK' | 'CASH'
   const [bankAccountId, setBankAccountId] = useState('');
   const [remarks, setRemarks] = useState('');
   const [referenceNo, setReferenceNo] = useState('');
@@ -60,13 +57,19 @@ export const DonationForm = () => {
     fetchDonations();
     fetchAccountsList();
     fetchBeneficiaries();
-    fetchReceivedDonations();
-  }, [fetchDonations, fetchAccountsList, fetchBeneficiaries, fetchReceivedDonations]);
+  }, [fetchDonations, fetchAccountsList, fetchBeneficiaries]);
 
   // Filter valid active bank accounts from Chart of Accounts
   const bankAccounts = useMemo(() => {
     return flatAccounts.filter(isGenuineBankAccount);
   }, [flatAccounts]);
+
+  // Auto-select first genuine bank account if none selected
+  useEffect(() => {
+    if (!id && !bankAccountId && bankAccounts.length > 0) {
+      setBankAccountId(bankAccounts[0].id);
+    }
+  }, [id, bankAccountId, bankAccounts]);
 
   // Load existing donation when in edit mode
   useEffect(() => {
@@ -82,9 +85,6 @@ export const DonationForm = () => {
           setDisbursementMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
         }
         setAmount(String(existing.amount || ''));
-
-        const pm = existing.paymentMethod || (existing.bankAccountId ? 'BANK' : 'DONATION_FUND');
-        setPaymentMethod(pm);
         setBankAccountId(existing.bankAccountId || '');
         setRemarks(existing.remarks || '');
         setReferenceNo(existing.voucherNo || existing.chequeNumber || '');
@@ -104,44 +104,8 @@ export const DonationForm = () => {
 
   // Selected Bank details
   const selectedBank = useMemo(() => {
-    if (paymentMethod !== 'BANK') return null;
     return bankAccounts.find(a => a.id === bankAccountId) || null;
-  }, [bankAccounts, bankAccountId, paymentMethod]);
-
-  // Calculate Live Available Donation Fund Pool
-  const fundPoolStats = useMemo(() => {
-    const isZakat = donationType === 'ZAKAT';
-
-    // Received donations (approved/received/posted, not deleted)
-    const matchingReceived = (receivedDonations || []).filter(d => {
-      if (d.isDeleted) return false;
-      const dType = String(d.donationType || '').toUpperCase();
-      const recIsZakat = dType.includes('ZAKAT');
-      return isZakat ? recIsZakat : !recIsZakat;
-    });
-
-    const totalReceived = matchingReceived.reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
-
-    // Disbursed donations (approved/posted, not deleted, not reverted)
-    const matchingDisbursed = (donations || []).filter(d => {
-      if (d.id === id || d.isDeleted) return false;
-      if (d.status !== 'APPROVED' && d.status !== 'POSTED') return false;
-      const dType = String(d.donationType || '').toUpperCase();
-      const disbIsZakat = dType.includes('ZAKAT');
-      return isZakat ? disbIsZakat : !disbIsZakat;
-    });
-
-    const totalDisbursed = matchingDisbursed.reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
-    const availableBalance = Math.max(0, totalReceived - totalDisbursed);
-
-    return {
-      totalReceived,
-      totalDisbursed,
-      availableBalance,
-      receivedCount: matchingReceived.length,
-      disbursedCount: matchingDisbursed.length
-    };
-  }, [donationType, receivedDonations, donations, id]);
+  }, [bankAccounts, bankAccountId]);
 
   // Selected single beneficiary details
   const selectedBeneficiary = useMemo(() => {
@@ -156,11 +120,7 @@ export const DonationForm = () => {
 
   // Live Server & Local Duplicate Check
   const verifyDuplicate = useCallback(async () => {
-    if (!disbursementMonth) {
-      setDuplicateMessage(null);
-      return;
-    }
-    if (paymentMethod === 'BANK' && !bankAccountId) {
+    if (!disbursementMonth || !bankAccountId) {
       setDuplicateMessage(null);
       return;
     }
@@ -172,19 +132,11 @@ export const DonationForm = () => {
     const localDuplicate = donations.find(d => {
       if (d.id === id || d.isDeleted) return false;
       if (d.status !== 'APPROVED' && d.status !== 'POSTED') return false;
+      if (d.bankAccountId !== bankAccountId) return false;
 
       const isZakat = String(d.donationType).toUpperCase().includes('ZAKAT');
       if (donationType === 'ZAKAT' && !isZakat) return false;
       if (donationType === 'DONATION' && isZakat) return false;
-
-      if (paymentMethod === 'BANK') {
-        if (d.bankAccountId !== bankAccountId) return false;
-      } else if (paymentMethod === 'CASH') {
-        if (d.paymentMethod !== 'CASH') return false;
-      } else {
-        // DONATION_FUND
-        if (d.paymentMethod !== 'DONATION_FUND' && d.bankAccountId) return false;
-      }
 
       let recordMonth = d.disbursementMonth;
       if (!recordMonth && d.createdAt) {
@@ -195,17 +147,16 @@ export const DonationForm = () => {
     });
 
     if (localDuplicate) {
-      const sourceText = paymentMethod === 'BANK' ? 'this bank account' : (paymentMethod === 'CASH' ? 'Cash in Hand' : 'the donation fund pool');
-      setDuplicateMessage(`Monthly ${displayType} for ${monthLabel} has already been posted from ${sourceText}.`);
+      setDuplicateMessage(`Monthly ${displayType} for ${monthLabel} has already been posted for this bank account.`);
       return;
     }
 
     // 2. Query server for remote verification
     setCheckingDuplicate(true);
     try {
-      const res = await checkDuplicate(disbursementMonth, donationType, paymentMethod === 'BANK' ? bankAccountId : null);
+      const res = await checkDuplicate(disbursementMonth, donationType, bankAccountId);
       if (res?.isDuplicate && res.data?.id !== id) {
-        setDuplicateMessage(res.message || `Monthly ${displayType} for ${monthLabel} has already been posted.`);
+        setDuplicateMessage(res.message || `Monthly ${displayType} for ${monthLabel} has already been posted for this bank account.`);
       } else {
         setDuplicateMessage(null);
       }
@@ -214,7 +165,7 @@ export const DonationForm = () => {
     } finally {
       setCheckingDuplicate(false);
     }
-  }, [disbursementMonth, donationType, paymentMethod, bankAccountId, donations, id, checkDuplicate]);
+  }, [disbursementMonth, donationType, bankAccountId, donations, id, checkDuplicate]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -281,7 +232,7 @@ export const DonationForm = () => {
       showToast('Please enter a valid disbursement amount greater than 0.', 'warning');
       return;
     }
-    if (paymentMethod === 'BANK' && !bankAccountId) {
+    if (!bankAccountId) {
       showToast('Please select a bank account to disburse funds from.', 'warning');
       return;
     }
@@ -315,8 +266,8 @@ export const DonationForm = () => {
       disbursementMonth,
       donationType,
       amount: Number(amount),
-      paymentMethod,
-      bankAccountId: paymentMethod === 'BANK' ? bankAccountId : null,
+      paymentMethod: 'BANK',
+      bankAccountId,
       beneficiaryId: payloadBeneficiaryId,
       beneficiaries: payloadBeneficiaries,
       remarks: remarks ? remarks.trim() : null,
@@ -367,7 +318,7 @@ export const DonationForm = () => {
               {id ? 'Edit Monthly Disbursement' : 'Monthly Donation / Aid Disbursement'}
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">
-              Execute monthly welfare disbursements with direct Donation Fund Pool deduction or bank ledger option
+              Execute monthly welfare disbursements with automatic bank deduction and duplicate prevention
             </p>
           </div>
         </div>
@@ -497,209 +448,68 @@ export const DonationForm = () => {
               </div>
             </div>
 
-            {/* Card 02: Deduction Source (Fund Pool vs Bank vs Cash) */}
+            {/* Card 02: Bank Account (Single Bank Deduction) */}
             <div className="bg-slate-900/90 rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
               <div className="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-800/40">
                 <div className="flex items-center gap-2.5">
                   <span className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 font-extrabold text-xs flex items-center justify-center">02</span>
-                  <h3 className="text-sm font-bold text-slate-200">Deduction Source (Donation Fund Pool / Bank / Cash)</h3>
+                  <h3 className="text-sm font-bold text-slate-200">Bank Account (Single Deduction Source)</h3>
                 </div>
-                <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
-                  paymentMethod === 'DONATION_FUND'
-                    ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
-                    : paymentMethod === 'BANK'
-                    ? 'text-blue-400 bg-blue-500/10 border-blue-500/20'
-                    : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-                }`}>
-                  {paymentMethod === 'DONATION_FUND' ? 'Direct Fund Pool' : paymentMethod === 'BANK' ? 'Bank Ledger' : 'Cash Ledger'}
+                <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                  Deducted ONCE for Monthly Total
                 </span>
               </div>
 
-              <div className="p-5 space-y-5">
+              <div className="p-5 space-y-4">
                 <div>
-                  <label className={labelClass}>4. Select Deduction Source *</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPaymentMethod('DONATION_FUND');
-                        setBankAccountId('');
-                      }}
-                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                        paymentMethod === 'DONATION_FUND'
-                          ? 'bg-amber-500/10 border-amber-500 text-slate-100 shadow-lg shadow-amber-500/10'
-                          : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:bg-slate-800/80 hover:text-slate-200'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Layers className={`w-4 h-4 ${paymentMethod === 'DONATION_FUND' ? 'text-amber-400' : 'text-slate-500'}`} />
-                        <span className="text-xs font-bold">Donation Fund Pool</span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 mt-1">
-                        Deduct directly from Donations Received (Recommended)
-                      </p>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('BANK')}
-                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                        paymentMethod === 'BANK'
-                          ? 'bg-blue-500/10 border-blue-500 text-slate-100 shadow-lg shadow-blue-500/10'
-                          : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:bg-slate-800/80 hover:text-slate-200'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Building className={`w-4 h-4 ${paymentMethod === 'BANK' ? 'text-blue-400' : 'text-slate-500'}`} />
-                        <span className="text-xs font-bold">Bank Account</span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 mt-1">
-                        Deduct from specific Bank ledger balance
-                      </p>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPaymentMethod('CASH');
-                        setBankAccountId('');
-                      }}
-                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                        paymentMethod === 'CASH'
-                          ? 'bg-emerald-500/10 border-emerald-500 text-slate-100 shadow-lg shadow-emerald-500/10'
-                          : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:bg-slate-800/80 hover:text-slate-200'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Banknote className={`w-4 h-4 ${paymentMethod === 'CASH' ? 'text-emerald-400' : 'text-slate-500'}`} />
-                        <span className="text-xs font-bold">Cash in Hand</span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 mt-1">
-                        Deduct from Cash in Hand account (1010201)
-                      </p>
-                    </button>
-                  </div>
+                  <label className={labelClass}>4. Selected Bank Account *</label>
+                  <select
+                    required
+                    value={bankAccountId}
+                    onChange={(e) => setBankAccountId(e.target.value)}
+                    className={`${inputClass} text-sm font-bold text-slate-100 cursor-pointer`}
+                  >
+                    <option value="">-- Select Bank Account --</option>
+                    {bankAccounts.map(a => (
+                      <option key={a.id} value={a.id} className="bg-slate-900 text-slate-200 py-1">
+                        {a.accountName || a.name} {a.glCode || a.code ? `(${a.glCode || a.code})` : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
-                {/* Option 1: Live Donation Fund Pool Details */}
-                {paymentMethod === 'DONATION_FUND' && (
-                  <div className="p-4 rounded-xl bg-slate-950/90 border border-amber-500/30 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <ArrowDownLeft className="w-4 h-4 text-amber-400" />
-                        <span className="text-xs font-bold text-slate-200">
-                          Live {displayCategory} Fund Pool (Donations Received)
-                        </span>
-                      </div>
-                      <span className="text-[11px] font-mono font-bold text-amber-400">
-                        GL Head: {donationType === 'ZAKAT' ? 'Zakat Fund' : 'General Donation (3020408)'}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-800">
-                      <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">Available Fund Pool</span>
-                        <p className="text-sm font-mono font-black text-emerald-400 mt-0.5">
-                          Rs. {fundPoolStats.availableBalance.toLocaleString()}
-                        </p>
-                      </div>
-
-                      <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">Total Received to Date</span>
-                        <p className="text-sm font-mono font-bold text-slate-200 mt-0.5">
-                          Rs. {fundPoolStats.totalReceived.toLocaleString()}
-                        </p>
-                        <span className="text-[10px] text-slate-500">{fundPoolStats.receivedCount} receipt(s)</span>
-                      </div>
-
-                      <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">Total Aid Disbursed</span>
-                        <p className="text-sm font-mono font-bold text-amber-400 mt-0.5">
-                          Rs. {fundPoolStats.totalDisbursed.toLocaleString()}
-                        </p>
-                        <span className="text-[10px] text-slate-500">{fundPoolStats.disbursedCount} batch(es)</span>
-                      </div>
-                    </div>
-
-                    {Number(amount) > fundPoolStats.availableBalance && fundPoolStats.availableBalance > 0 && (
-                      <div className="text-[11px] text-amber-400/90 flex items-center gap-1.5 pt-1">
-                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                        <span>Disbursement amount exceeds currently recorded received pool.</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Option 2: Bank Account Dropdown */}
-                {paymentMethod === 'BANK' && (
-                  <div className="space-y-4">
+                {selectedBank && (
+                  <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                      <label className={labelClass}>Select Disbursing Bank Account *</label>
-                      <select
-                        required
-                        value={bankAccountId}
-                        onChange={(e) => setBankAccountId(e.target.value)}
-                        className={`${inputClass} text-sm font-bold text-slate-100 cursor-pointer`}
-                      >
-                        <option value="">-- Select Bank Account --</option>
-                        {bankAccounts.map(a => (
-                          <option key={a.id} value={a.id} className="bg-slate-900 text-slate-200 py-1">
-                            {a.accountName || a.name} {a.glCode || a.code ? `(${a.glCode || a.code})` : ''}
-                          </option>
-                        ))}
-                      </select>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase">GL Code</span>
+                      <p className="text-xs font-mono font-bold text-amber-400 mt-0.5">{selectedBank.glCode || selectedBank.code || '—'}</p>
                     </div>
-
-                    {selectedBank && (
-                      <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                          <span className="text-[10px] font-bold text-slate-500 uppercase">GL Code</span>
-                          <p className="text-xs font-mono font-bold text-amber-400 mt-0.5">{selectedBank.glCode || selectedBank.code || '—'}</p>
-                        </div>
-                        <div>
-                          <span className="text-[10px] font-bold text-slate-500 uppercase">Bank Name</span>
-                          <p className="text-xs font-semibold text-slate-200 mt-0.5 truncate">{selectedBank.accountName || selectedBank.name}</p>
-                        </div>
-                        <div>
-                          <span className="text-[10px] font-bold text-slate-500 uppercase">Current Ledger Balance</span>
-                          <p className="text-xs font-mono font-bold text-emerald-400 mt-0.5">
-                            Rs. {Number(selectedBank.currentBalance || 0).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                    )}
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase">Bank Name</span>
+                      <p className="text-xs font-semibold text-slate-200 mt-0.5 truncate">{selectedBank.accountName || selectedBank.name}</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase">Current Ledger Balance</span>
+                      <p className="text-xs font-mono font-bold text-emerald-400 mt-0.5">
+                        Rs. {Number(selectedBank.currentBalance || 0).toLocaleString()}
+                      </p>
+                    </div>
                   </div>
                 )}
 
-                {/* Option 3: Cash in Hand Info */}
-                {paymentMethod === 'CASH' && (
-                  <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <Banknote className="w-5 h-5 text-emerald-400" />
-                      <div>
-                        <h4 className="text-xs font-bold text-slate-200">Cash in Hand Ledger</h4>
-                        <p className="text-[11px] text-slate-400">Account Code: 1010201 &middot; Deducts from Physical Cash Box</p>
-                      </div>
-                    </div>
-                    <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                      Cash Payment
-                    </span>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-800/60">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                   <div>
-                    <label className={labelClass}>Reference / Voucher Number (Optional)</label>
+                    <label className={labelClass}>7. Reference / Voucher Number (Optional)</label>
                     <input
                       type="text"
-                      placeholder="e.g. REF-01 or CHQ-9901"
+                      placeholder="e.g. CHQ-9901 or REF-01"
                       value={referenceNo}
                       onChange={(e) => setReferenceNo(e.target.value)}
                       className={inputClass}
                     />
                   </div>
                   <div>
-                    <label className={labelClass}>Remarks / Narration (Optional)</label>
+                    <label className={labelClass}>6. Remarks / Narration (Optional)</label>
                     <input
                       type="text"
                       placeholder="Optional notes for this monthly disbursement..."
@@ -794,7 +604,7 @@ export const DonationForm = () => {
                       <div>
                         <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Beneficiary Allocation Breakdown</h4>
                         <p className="text-[11px] text-slate-500 mt-0.5">
-                          Deduction is posted once for the monthly total. Allocate individual portions below.
+                          Bank is deducted once for the total. Allocate individual portions below.
                         </p>
                       </div>
                       <button
@@ -941,11 +751,7 @@ export const DonationForm = () => {
                     <div>
                       <span className="font-bold">CREDIT:</span>
                       <p className="text-[11px] text-blue-300/80 mt-0.5 truncate max-w-[170px]">
-                        {paymentMethod === 'DONATION_FUND'
-                          ? (donationType === 'ZAKAT' ? 'Zakat Fund Account' : 'General Donation A/c (3020408)')
-                          : paymentMethod === 'BANK'
-                          ? (selectedBank ? (selectedBank.accountName || selectedBank.name) : 'Selected Bank Account')
-                          : 'Cash in Hand (1010201)'}
+                        {selectedBank ? (selectedBank.accountName || selectedBank.name) : 'Selected Bank Account'}
                       </p>
                     </div>
                     <span className="font-bold text-sm">Rs. {Number(amount || 0).toLocaleString()}</span>
@@ -955,14 +761,10 @@ export const DonationForm = () => {
                 <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-[11px] text-slate-400 space-y-1.5">
                   <div className="flex items-center gap-1.5 font-bold text-amber-300">
                     <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>
-                      {paymentMethod === 'DONATION_FUND' ? 'Direct Fund Pool Deduction' : 'Single Monthly Deduction'}
-                    </span>
+                    <span>Strict Single Monthly Deduction</span>
                   </div>
                   <p>
-                    {paymentMethod === 'DONATION_FUND'
-                      ? 'Deducted directly from Donations Received without touching Bank or Cash ledgers.'
-                      : 'Deducted once for the batch total from the chosen account. Duplicate monthly postings are locked.'}
+                    Regardless of recipient count, the bank account is credited only once for the batch total. Duplicate monthly postings for this bank account are locked.
                   </p>
                 </div>
               </div>
@@ -980,13 +782,7 @@ export const DonationForm = () => {
                   </strong>
                 </div>
                 <div className="flex justify-between text-slate-400">
-                  <span>Deduction Source:</span>
-                  <strong className="text-amber-300">
-                    {paymentMethod === 'DONATION_FUND' ? 'Donation Fund Pool' : paymentMethod === 'BANK' ? 'Bank Account' : 'Cash in Hand'}
-                  </strong>
-                </div>
-                <div className="flex justify-between text-slate-400">
-                  <span>Total Amount:</span>
+                  <span>Bank Deduction:</span>
                   <strong className="text-slate-100 font-mono">
                     Rs. {Number(amount || 0).toLocaleString()}
                   </strong>

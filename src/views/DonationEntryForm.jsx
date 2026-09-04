@@ -11,6 +11,7 @@ import {
   Building,
   CreditCard,
   Wallet,
+  Layers,
   Calendar,
   FileText,
   AlertCircle,
@@ -20,6 +21,7 @@ import {
   X
 } from 'lucide-react';
 import { useDonationReceivedStore } from '../store/donationReceivedStore';
+import { useDonationStore } from '../store/donationStore';
 import { useDonorStore } from '../store/donorStore';
 import { useCoaStore } from '../store/coaStore';
 import { useAuthStore } from '../store/authStore';
@@ -37,6 +39,7 @@ const DONATION_TYPES = [
 ];
 
 const PAYMENT_METHODS = [
+  { value: 'DONATION_FUND', label: 'Donation Fund Pool', icon: Layers, description: 'Direct Charitable Fund Pool (3020408)' },
   { value: 'CASH', label: 'Cash (Cash in Hand)', icon: Wallet, description: 'Debits Cash in Hand GL Account' },
   { value: 'BANK', label: 'Bank Transfer / Online', icon: Building, description: 'Debits Selected Bank GL Account' },
   { value: 'CHEQUE', label: 'Cheque', icon: CreditCard, description: 'Requires Cheque # & Bank Account' },
@@ -48,7 +51,8 @@ export const DonationEntryForm = () => {
   const { id } = useParams();
   const isEditing = Boolean(id);
 
-  const { addDonation, updateDonation } = useDonationReceivedStore();
+  const { donations: receivedDonations, fetchDonations: fetchReceivedDonations, addDonation, updateDonation } = useDonationReceivedStore();
+  const { donations: disbursedDonations, fetchDonations: fetchDisbursedDonations } = useDonationStore();
   const { donors, fetchDonors, addDonor } = useDonorStore();
   const { accounts, fetchAccounts } = useCoaStore();
   const user = useAuthStore((state) => state.user);
@@ -60,7 +64,7 @@ export const DonationEntryForm = () => {
     donationType: 'GENERAL_DONATION',
     customDonationType: '',
     amount: '',
-    paymentMethod: 'CASH',
+    paymentMethod: 'DONATION_FUND',
     bankAccountId: '',
     chequeNo: '',
     chequeDate: '',
@@ -87,11 +91,29 @@ export const DonationEntryForm = () => {
   const [isAddingDonor, setIsAddingDonor] = useState(false);
   const [quickDonorError, setQuickDonorError] = useState('');
 
-  // Initial Load: Donors & Accounts
+  // Initial Load: Donors, Accounts & Fund History
   useEffect(() => {
     fetchDonors();
     fetchAccounts();
-  }, [fetchDonors, fetchAccounts]);
+    fetchReceivedDonations();
+    fetchDisbursedDonations();
+  }, [fetchDonors, fetchAccounts, fetchReceivedDonations, fetchDisbursedDonations]);
+
+  // Live Fund Pool Balance & Metrics
+  const fundPoolMetrics = useMemo(() => {
+    const totalReceived = (receivedDonations || [])
+      .filter((d) => d.status === 'POSTED')
+      .reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
+    const totalDisbursed = (disbursedDonations || [])
+      .filter((d) => d.status === 'POSTED' || d.status === 'APPROVED')
+      .reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
+    const availablePool = totalReceived - totalDisbursed;
+    return {
+      totalReceived,
+      totalDisbursed,
+      availablePool,
+    };
+  }, [receivedDonations, disbursedDonations]);
 
   // Load existing donation if editing
   useEffect(() => {
@@ -192,7 +214,7 @@ export const DonationEntryForm = () => {
         customDonationType: formData.donationType === 'CUSTOM' ? formData.customDonationType.trim() : null,
         amount: parseFloat(formData.amount),
         paymentMethod: formData.paymentMethod,
-        bankAccountId: (formData.paymentMethod !== 'CASH') ? (formData.bankAccountId || null) : null,
+        bankAccountId: (formData.paymentMethod === 'BANK' || formData.paymentMethod === 'CHEQUE') ? (formData.bankAccountId || null) : null,
         chequeNo: formData.paymentMethod === 'CHEQUE' ? (formData.chequeNo.trim() || null) : null,
         chequeDate: formData.paymentMethod === 'CHEQUE' && formData.chequeDate ? formData.chequeDate : null,
         receiptDate: formData.donationDate,
@@ -459,7 +481,7 @@ export const DonationEntryForm = () => {
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                   Payment Method <span className="text-rose-500">*</span>
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   {PAYMENT_METHODS.map((m) => {
                     const Icon = m.icon;
                     const isSelected = formData.paymentMethod === m.value;
@@ -491,6 +513,58 @@ export const DonationEntryForm = () => {
                   })}
                 </div>
               </div>
+
+              {/* Live Donation Fund Pool Card (when DONATION_FUND is selected) */}
+              {formData.paymentMethod === 'DONATION_FUND' && (
+                <div className="p-4 rounded-xl border border-emerald-200/80 dark:border-emerald-800/60 bg-emerald-50/40 dark:bg-emerald-950/30 space-y-3 animate-fadeIn">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                        <Layers className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                          Direct Donation Fund Pool Allocation
+                        </span>
+                        <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono font-bold border border-emerald-500/20">
+                          General Donation Head: 3020408
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                    <div className="p-3 rounded-lg bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800">
+                      <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        Available Pool Balance
+                      </div>
+                      <div className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
+                        Rs {fundPoolMetrics.availablePool.toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="p-3 rounded-lg bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800">
+                      <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        Total Donations Received
+                      </div>
+                      <div className="text-sm font-bold text-slate-700 dark:text-slate-300 font-mono mt-0.5">
+                        Rs {fundPoolMetrics.totalReceived.toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="p-3 rounded-lg bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800">
+                      <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        Total Aid Disbursed
+                      </div>
+                      <div className="text-sm font-bold text-slate-700 dark:text-slate-300 font-mono mt-0.5">
+                        Rs {fundPoolMetrics.totalDisbursed.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    This donation is recorded directly into the charitable welfare Donation Fund Pool without requiring bank or cheque details.
+                  </p>
+                </div>
+              )}
 
               {/* Bank Account Selection (for Bank / Cheque) */}
               {(formData.paymentMethod === 'BANK' || formData.paymentMethod === 'CHEQUE') && (

@@ -277,6 +277,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if (paymentMethod === 'CASH') {
       const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
       debitAccountId = cashAccount.id;
+    } else if (paymentMethod === 'DONATION_FUND') {
+      const fundAccount = await AccountingService.ensureGeneralDonationAccount(prisma);
+      debitAccountId = fundAccount.id;
     } else {
       if (!bankAccountId) {
         const defaultBank = await prisma.account.findFirst({
@@ -335,7 +338,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
               postingDate: receiptDate ? new Date(receiptDate) : new Date(),
               ipAddress: req.headers['x-forwarded-for'] as string,
               userAgent: req.headers['user-agent'] as string,
-              voucherType: paymentMethod === 'CASH' ? 'CR' : 'BR'
+              voucherType: paymentMethod === 'CASH' ? 'CR' : (paymentMethod === 'DONATION_FUND' ? 'JV' : 'BR')
             });
             if (postingResult && postingResult.journalEntry) {
               journalEntryId = postingResult.journalEntry.id;
@@ -352,7 +355,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
               amount: parsedAmount,
               paymentMethod,
               cashAccountId: paymentMethod === 'CASH' ? debitAccountId : null,
-              bankAccountId: paymentMethod !== 'CASH' ? debitAccountId : null,
+              bankAccountId: (paymentMethod !== 'CASH' && paymentMethod !== 'DONATION_FUND') ? debitAccountId : null,
               chequeNo: chequeNo || null,
               chequeDate: chequeDate ? new Date(chequeDate) : null,
               referenceNo: referenceNo || null,
@@ -458,6 +461,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         if (currentMethod === 'CASH') {
           const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
           debitAccountId = cashAccount.id;
+        } else if (currentMethod === 'DONATION_FUND') {
+          const fundAccount = await AccountingService.ensureGeneralDonationAccount(tx);
+          debitAccountId = fundAccount.id;
         } else {
           debitAccountId = bankAccountId !== undefined ? bankAccountId : (existing.bankAccountId || existing.cashAccountId);
         }
@@ -485,7 +491,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             postingDate: updatedDate,
             ipAddress: req.headers['x-forwarded-for'] as string,
             userAgent: req.headers['user-agent'] as string,
-            voucherType: currentMethod === 'CASH' ? 'CR' : 'BR'
+            voucherType: currentMethod === 'CASH' ? 'CR' : (currentMethod === 'DONATION_FUND' ? 'JV' : 'BR')
           });
           if (postingResult && postingResult.journalEntry) {
             journalEntryId = postingResult.journalEntry.id;
@@ -519,8 +525,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             : (customDonationType !== undefined ? (existing.donationType === 'CUSTOM' ? customDonationType : null) : undefined),
           paymentMethod: paymentMethod !== undefined ? paymentMethod : undefined,
           receiptDate: receiptDate !== undefined ? (receiptDate ? new Date(receiptDate) : undefined) : undefined,
-          cashAccountId: cashAccountId !== undefined ? (cashAccountId || null) : undefined,
-          bankAccountId: bankAccountId !== undefined ? (bankAccountId || null) : undefined,
+          cashAccountId: currentMethod === 'CASH' ? debitAccountId : (cashAccountId !== undefined ? (cashAccountId || null) : existing.cashAccountId),
+          bankAccountId: (currentMethod !== 'CASH' && currentMethod !== 'DONATION_FUND') ? (bankAccountId !== undefined ? (bankAccountId || null) : existing.bankAccountId) : null,
         },
         include: {
           donor: true,
