@@ -9,6 +9,7 @@
 //   CHEQUE → "Cheque"
 //   ONLINE → "Online Transfer"
 export const PAYMENT_METHODS = [
+  { value: 'DONATION_FUND', label: 'Donation Fund Pool' },
   { value: 'CASH', label: 'Cash' },
   { value: 'BANK', label: 'Bank Transfer' },
   { value: 'CHEQUE', label: 'Cheque' },

@@ -409,9 +409,9 @@ export const Donations = () => {
         <EmptyState
           icon={Heart}
           title="No Monthly Disbursements Found"
-          description="Log a new monthly disbursement from a bank account to view postings and generate accounting entries."
+          description="Log a new monthly disbursement from a donation fund pool or bank account to view postings and generate accounting entries."
           actionText="Log Monthly Disbursement"
-          actionUrl="/donations/new"
+          actionUrl="/donation-distribution/new"
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -420,7 +420,9 @@ export const Donations = () => {
             const isApproved = d.status === 'APPROVED' || d.status === 'POSTED';
             const isReverted = d.status === 'REVERTED';
             const beneficiaries = Array.isArray(d.beneficiaries) ? d.beneficiaries : [];
-            const bankName = d.bankAccount?.accountName || d.donorBankName || 'Bank Account';
+            const isFundPool = d.paymentMethod === 'DONATION_FUND' || (!d.bankAccountId && d.paymentMethod !== 'CASH');
+            const isCash = d.paymentMethod === 'CASH';
+            const sourceName = isFundPool ? 'Donation Fund Pool' : isCash ? 'Cash in Hand' : (d.bankAccount?.accountName || d.donorBankName || 'Bank Account');
 
             return (
               <div
@@ -475,10 +477,16 @@ export const Donations = () => {
                   <div className="py-3.5 space-y-2.5 text-xs text-slate-300">
                     <div className="flex items-center justify-between text-slate-400">
                       <span className="flex items-center gap-1.5">
-                        <Building className="w-3.5 h-3.5 text-slate-500" /> Bank Account:
+                        {isFundPool ? (
+                          <Layers className="w-3.5 h-3.5 text-amber-400" />
+                        ) : isCash ? (
+                          <Banknote className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : (
+                          <Building className="w-3.5 h-3.5 text-blue-400" />
+                        )} Source:
                       </span>
-                      <strong className="text-slate-200 font-semibold truncate max-w-[170px]">
-                        {bankName}
+                      <strong className={`font-semibold truncate max-w-[170px] ${isFundPool ? 'text-amber-300' : isCash ? 'text-emerald-300' : 'text-slate-200'}`}>
+                        {sourceName}
                       </strong>
                     </div>
 
@@ -598,39 +606,48 @@ export const Donations = () => {
       />
 
       {/* Voucher Slip Modal */}
-      {printDonation && (
-        <VoucherSlipModal
-          isOpen={!!printDonation}
-          onClose={() => setPrintDonation(null)}
-          voucher={{
-            voucherNo: printDonation.voucherNo || `DON-${printDonation.id?.slice(0, 6)}`,
-            postingDate: printDonation.createdAt,
-            voucherType: 'PV',
-            subsidiary: 'DONATIONS',
-            reference: printDonation.month || printDonation.disbursementMonth,
-            description: `${printDonation.month || 'Monthly'} ${printDonation.donationType} Disbursement`,
-            postedBy: 'Accounting System',
-            lines: [
-              {
-                account: {
-                  code: printDonation.donationType === 'ZAKAT' ? '4060104' : '4060101',
-                  name: printDonation.donationType === 'ZAKAT' ? 'Zakat Expense' : 'Monthly Donations Expense'
+      {printDonation && (() => {
+        const isZakat = String(printDonation.donationType).toUpperCase().includes('ZAKAT');
+        const isFundPool = printDonation.paymentMethod === 'DONATION_FUND' || (!printDonation.bankAccountId && printDonation.paymentMethod !== 'CASH');
+        const isCash = printDonation.paymentMethod === 'CASH';
+
+        const creditCode = isFundPool ? (isZakat ? '3020409' : '3020408') : isCash ? '1010201' : (printDonation.bankAccount?.glCode || '1010101');
+        const creditName = isFundPool ? (isZakat ? 'Zakat Fund' : 'General Donation Account') : isCash ? 'Cash in Hand' : (printDonation.bankAccount?.accountName || 'Bank Account');
+
+        return (
+          <VoucherSlipModal
+            isOpen={!!printDonation}
+            onClose={() => setPrintDonation(null)}
+            voucher={{
+              voucherNo: printDonation.voucherNo || `DON-${printDonation.id?.slice(0, 6)}`,
+              postingDate: printDonation.createdAt,
+              voucherType: isFundPool ? 'JV' : (isCash ? 'CP' : 'BP'),
+              subsidiary: 'DONATIONS',
+              reference: printDonation.month || printDonation.disbursementMonth,
+              description: `${printDonation.month || 'Monthly'} ${isZakat ? 'Zakat' : 'Donation'} Disbursement`,
+              postedBy: 'Accounting System',
+              lines: [
+                {
+                  account: {
+                    code: isZakat ? '4060104' : '4060101',
+                    name: isZakat ? 'Zakat Expense' : 'Monthly Donations Expense'
+                  },
+                  debit: printDonation.amount,
+                  credit: 0
                 },
-                debit: printDonation.amount,
-                credit: 0
-              },
-              {
-                account: {
-                  code: printDonation.bankAccount?.glCode || '1010101',
-                  name: printDonation.bankAccount?.accountName || 'Bank Account'
-                },
-                debit: 0,
-                credit: printDonation.amount
-              }
-            ]
-          }}
-        />
-      )}
+                {
+                  account: {
+                    code: creditCode,
+                    name: creditName
+                  },
+                  debit: 0,
+                  credit: printDonation.amount
+                }
+              ]
+            }}
+          />
+        );
+      })()}
 
       {/* Delete Confirmation Modal */}
       {deleteId && (

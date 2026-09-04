@@ -125,19 +125,24 @@ var donations_default = makeHandler(async (req, res) => {
     if (!await verifyPermission(req, res, ["donations.view", PERMS.VIEW_DONATIONS])) return;
     if (action === "check-duplicate") {
       const { disbursementMonth, donationType = "DONATION", bankAccountId } = req.query;
-      if (!disbursementMonth || !bankAccountId) {
+      if (!disbursementMonth) {
         return res.status(200).json({ status: 200, isDuplicate: false });
       }
       const { enumType, displayCategory, isZakat } = normalizeDonationType(donationType);
       const typeFilter = isZakat ? { donationType: "ZAKAT" } : { donationType: { in: ["MONTHLY", "GENERAL_DONATION", "CUSTOM"] } };
+      const whereClause2 = {
+        isDeleted: false,
+        status: { in: ["APPROVED", "DISBURSED"] },
+        disbursementMonth: String(disbursementMonth).trim(),
+        ...typeFilter
+      };
+      if (bankAccountId) {
+        whereClause2.bankAccountId = String(bankAccountId);
+      } else {
+        whereClause2.bankAccountId = null;
+      }
       const existingPosting = await prisma.donation.findFirst({
-        where: {
-          isDeleted: false,
-          status: { in: ["APPROVED", "DISBURSED"] },
-          bankAccountId: String(bankAccountId),
-          disbursementMonth: String(disbursementMonth).trim(),
-          ...typeFilter
-        },
+        where: whereClause2,
         include: {
           bankAccount: { select: { id: true, accountName: true, glCode: true } }
         }
@@ -279,32 +284,27 @@ var donations_default = makeHandler(async (req, res) => {
       if (donation.paymentMethod === "CASH") {
         const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
         cashOrBankAccountId = cashAccount.id;
-      } else {
-        if (!donation.bankAccountId) {
-          return res.status(400).json({ error: { message: "Bank account is required for BANK/CHEQUE payments", status: 400 } });
-        }
-        cashOrBankAccountId = donation.bankAccountId;
+      } else if (donation.paymentMethod === "BANK" || donation.paymentMethod === "CHEQUE") {
+        cashOrBankAccountId = donation.bankAccountId || null;
       }
-      if (cashOrBankAccountId && donation.paymentMethod !== "CASH") {
-        const typeFilter = isZakat2 ? { donationType: "ZAKAT" } : { donationType: { in: ["MONTHLY", "GENERAL_DONATION", "CUSTOM"] } };
-        const duplicate = await prisma.donation.findFirst({
-          where: {
-            id: { not: donation.id },
-            isDeleted: false,
-            status: { in: ["APPROVED", "DISBURSED"] },
-            bankAccountId: cashOrBankAccountId,
-            disbursementMonth: disbursementMonth2,
-            ...typeFilter
+      const typeFilter = isZakat2 ? { donationType: "ZAKAT" } : { donationType: { in: ["MONTHLY", "GENERAL_DONATION", "CUSTOM"] } };
+      const duplicate = await prisma.donation.findFirst({
+        where: {
+          id: { not: donation.id },
+          isDeleted: false,
+          status: { in: ["APPROVED", "DISBURSED"] },
+          bankAccountId: cashOrBankAccountId || null,
+          disbursementMonth: disbursementMonth2,
+          ...typeFilter
+        }
+      });
+      if (duplicate) {
+        return res.status(409).json({
+          error: {
+            message: `Monthly ${displayCategory2} for ${monthLabel2} has already been posted.`,
+            status: 409
           }
         });
-        if (duplicate) {
-          return res.status(409).json({
-            error: {
-              message: `Monthly ${displayCategory2} for ${monthLabel2} has already been posted for this bank account.`,
-              status: 409
-            }
-          });
-        }
       }
       const result = await prisma.$transaction(async (tx) => {
         const expenseAccount = await getExpenseAccountForDonation(donation.donationType, tx);
@@ -312,24 +312,56 @@ var donations_default = makeHandler(async (req, res) => {
           throw new Error(`Donation Expense account not found in Chart of Accounts for ${donation.donationType}`);
         }
         const voucherNo = donation.voucherNo || `MDON-${disbursementMonth2.replace("-", "")}-${donation.id.slice(0, 4).toUpperCase()}`;
-        const postingResult = await AccountingService.postPayment(tx, {
-          amount: Number(donation.amount),
-          cashOrBankAccountId,
-          expenseAccountId: expenseAccount.id,
-          reference: voucherNo,
-          description: `Monthly ${displayCategory2} Disbursement - ${monthLabel2}${donation.remarks ? ` (${donation.remarks})` : ""}`,
-          module: "Donations",
-          voucherType: donation.paymentMethod === "CASH" ? "CP" : "BP",
-          postingDate: donation.createdAt,
-          postedBy: req.user.id,
-          ipAddress: req.headers["x-forwarded-for"],
-          userAgent: req.headers["user-agent"]
-        });
+        let journalEntryId = null;
+        if (cashOrBankAccountId) {
+          const postingResult = await AccountingService.postPayment(tx, {
+            amount: Number(donation.amount),
+            cashOrBankAccountId,
+            expenseAccountId: expenseAccount.id,
+            reference: voucherNo,
+            description: `Monthly ${displayCategory2} Disbursement - ${monthLabel2}${donation.remarks ? ` (${donation.remarks})` : ""}`,
+            module: "Donations",
+            voucherType: donation.paymentMethod === "CASH" ? "CP" : "BP",
+            postingDate: donation.createdAt,
+            postedBy: req.user.id,
+            ipAddress: req.headers["x-forwarded-for"],
+            userAgent: req.headers["user-agent"]
+          });
+          journalEntryId = postingResult.journalEntry.id;
+        } else {
+          const donationFundAccount = isZakat2 ? await tx.account.findFirst({ where: { accountName: { contains: "Zakat", mode: "insensitive" }, accountType: { name: { in: ["Revenue", "REVENUE"] } }, isDeleted: false } }) || await AccountingService.ensureGeneralDonationAccount(tx) : await AccountingService.ensureGeneralDonationAccount(tx);
+          const postingResult = await AccountingService.postTransaction(tx, {
+            reference: voucherNo,
+            voucherNo,
+            description: `Monthly ${displayCategory2} Disbursement from Donation Fund - ${monthLabel2}${donation.remarks ? ` (${donation.remarks})` : ""}`,
+            module: "Donations",
+            voucherType: "JV",
+            postedBy: req.user.id,
+            postingDate: donation.createdAt || /* @__PURE__ */ new Date(),
+            ipAddress: req.headers["x-forwarded-for"],
+            userAgent: req.headers["user-agent"],
+            lines: [
+              {
+                accountId: expenseAccount.id,
+                debit: Number(donation.amount),
+                credit: 0,
+                description: `Monthly ${displayCategory2} Aid Expense`
+              },
+              {
+                accountId: donationFundAccount.id,
+                debit: 0,
+                credit: Number(donation.amount),
+                description: `Deducted from ${displayCategory2} Fund Pool`
+              }
+            ]
+          });
+          journalEntryId = postingResult.journalEntry.id;
+        }
         const approvedDonation = await tx.donation.update({
           where: { id },
           data: {
             status: "APPROVED",
-            journalEntryId: postingResult.journalEntry.id,
+            journalEntryId,
             voucherNo,
             month: donation.month || monthLabel2,
             disbursementMonth: disbursementMonth2,
@@ -338,7 +370,7 @@ var donations_default = makeHandler(async (req, res) => {
           },
           include: { beneficiary: true, bankAccount: true, journalEntry: { select: { id: true, voucherNo: true, status: true, postingDate: true } } }
         });
-        return { approvedDonation, journalEntry: postingResult.journalEntry };
+        return { approvedDonation };
       }, { timeout: 15e3 });
       await logAudit(req.user.id, "POST_TO_LEDGER", "DONATION", donation, result.approvedDonation, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({
@@ -377,14 +409,13 @@ var donations_default = makeHandler(async (req, res) => {
     }
     const parsedAmount = amountCheck.amount;
     if (paymentMethod === "BANK" || paymentMethod === "CHEQUE") {
-      if (!bankAccountId) {
-        return res.status(400).json({ error: { message: "Bank Account is required for bank disbursement.", status: 400 } });
-      }
-      const bankAcc = await prisma.account.findFirst({
-        where: { id: bankAccountId, isDeleted: false, isLocked: false }
-      });
-      if (!bankAcc) {
-        return res.status(400).json({ error: { message: "Selected bank account was not found or is inactive in Chart of Accounts.", status: 400 } });
+      if (bankAccountId) {
+        const bankAcc = await prisma.account.findFirst({
+          where: { id: bankAccountId, isDeleted: false, isLocked: false }
+        });
+        if (!bankAcc) {
+          return res.status(400).json({ error: { message: "Selected bank account was not found or is inactive in Chart of Accounts.", status: 400 } });
+        }
       }
     }
     if (beneficiaryId && !isValidBeneficiaryId(beneficiaryId)) {
@@ -424,46 +455,76 @@ var donations_default = makeHandler(async (req, res) => {
       if (paymentMethod === "CASH") {
         const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
         cashOrBankAccountId = cashAccount.id;
-      } else {
+      } else if (paymentMethod === "BANK" || paymentMethod === "CHEQUE") {
         cashOrBankAccountId = bankAccountId || null;
       }
-      if (isDirectPost && cashOrBankAccountId && paymentMethod !== "CASH") {
+      if (isDirectPost) {
         const typeFilter = isZakat ? { donationType: "ZAKAT" } : { donationType: { in: ["MONTHLY", "GENERAL_DONATION", "CUSTOM"] } };
         const existingDuplicate = await tx.donation.findFirst({
           where: {
             isDeleted: false,
             status: { in: ["APPROVED", "DISBURSED"] },
-            bankAccountId: cashOrBankAccountId,
+            bankAccountId: cashOrBankAccountId || null,
             disbursementMonth,
             ...typeFilter
           }
         });
         if (existingDuplicate) {
-          throw new Error(`DUPLICATE_MONTHLY_POSTING:Monthly ${displayCategory} for ${monthLabel} has already been posted for this bank account.`);
+          throw new Error(`DUPLICATE_MONTHLY_POSTING:Monthly ${displayCategory} for ${monthLabel} has already been posted.`);
         }
       }
       const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
       const voucherNo = `MDON-${disbursementMonth.replace("-", "")}-${randomStr}`;
       let journalEntryId = null;
-      if (isDirectPost && cashOrBankAccountId) {
+      if (isDirectPost) {
         const expenseAccount = await getExpenseAccountForDonation(enumType, tx);
         if (!expenseAccount) {
           throw new Error(`Donation Expense account not found in Chart of Accounts for ${enumType}`);
         }
-        const postingResult = await AccountingService.postPayment(tx, {
-          amount: parsedAmount,
-          cashOrBankAccountId,
-          expenseAccountId: expenseAccount.id,
-          reference: voucherNo,
-          description: `Monthly ${displayCategory} Disbursement - ${monthLabel}${remarks ? ` (${remarks})` : ""}`,
-          module: "Donations",
-          voucherType: paymentMethod === "CASH" ? "CP" : "BP",
-          postingDate: dateObj,
-          postedBy: req.user.id,
-          ipAddress: req.headers["x-forwarded-for"],
-          userAgent: req.headers["user-agent"]
-        });
-        journalEntryId = postingResult.journalEntry.id;
+        if (cashOrBankAccountId) {
+          const postingResult = await AccountingService.postPayment(tx, {
+            amount: parsedAmount,
+            cashOrBankAccountId,
+            expenseAccountId: expenseAccount.id,
+            reference: voucherNo,
+            description: `Monthly ${displayCategory} Disbursement - ${monthLabel}${remarks ? ` (${remarks})` : ""}`,
+            module: "Donations",
+            voucherType: paymentMethod === "CASH" ? "CP" : "BP",
+            postingDate: dateObj,
+            postedBy: req.user.id,
+            ipAddress: req.headers["x-forwarded-for"],
+            userAgent: req.headers["user-agent"]
+          });
+          journalEntryId = postingResult.journalEntry.id;
+        } else {
+          const donationFundAccount = isZakat ? await tx.account.findFirst({ where: { accountName: { contains: "Zakat", mode: "insensitive" }, accountType: { name: { in: ["Revenue", "REVENUE"] } }, isDeleted: false } }) || await AccountingService.ensureGeneralDonationAccount(tx) : await AccountingService.ensureGeneralDonationAccount(tx);
+          const postingResult = await AccountingService.postTransaction(tx, {
+            reference: voucherNo,
+            voucherNo,
+            description: `Monthly ${displayCategory} Disbursement from Donation Fund - ${monthLabel}${remarks ? ` (${remarks})` : ""}`,
+            module: "Donations",
+            voucherType: "JV",
+            postedBy: req.user.id,
+            postingDate: dateObj,
+            ipAddress: req.headers["x-forwarded-for"],
+            userAgent: req.headers["user-agent"],
+            lines: [
+              {
+                accountId: expenseAccount.id,
+                debit: parsedAmount,
+                credit: 0,
+                description: `Monthly ${displayCategory} Aid Expense`
+              },
+              {
+                accountId: donationFundAccount.id,
+                debit: 0,
+                credit: parsedAmount,
+                description: `Deducted from ${displayCategory} Fund Pool`
+              }
+            ]
+          });
+          journalEntryId = postingResult.journalEntry.id;
+        }
       }
       const createdDonation = await tx.donation.create({
         data: {
@@ -562,20 +623,20 @@ var donations_default = makeHandler(async (req, res) => {
         } catch (e) {
         }
       }
-      if (isApproved && targetBankAccountId && paymentMethod !== "CASH") {
+      if (isApproved) {
         const typeFilter = isZakat ? { donationType: "ZAKAT" } : { donationType: { in: ["MONTHLY", "GENERAL_DONATION", "CUSTOM"] } };
         const existingDuplicate = await tx.donation.findFirst({
           where: {
             id: { not: existingDonation.id },
             isDeleted: false,
             status: { in: ["APPROVED", "DISBURSED"] },
-            bankAccountId: targetBankAccountId,
+            bankAccountId: targetBankAccountId || null,
             disbursementMonth,
             ...typeFilter
           }
         });
         if (existingDuplicate) {
-          throw new Error(`DUPLICATE_MONTHLY_POSTING:Monthly ${displayCategory} for ${monthLabel} has already been posted for this bank account.`);
+          throw new Error(`DUPLICATE_MONTHLY_POSTING:Monthly ${displayCategory} for ${monthLabel} has already been posted.`);
         }
       }
       const effectiveAmount = parsedAmount !== void 0 ? parsedAmount : existingDonation.amount;
@@ -587,12 +648,12 @@ var donations_default = makeHandler(async (req, res) => {
         if (effectivePaymentMethod === "CASH") {
           const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
           cashOrBankAccountId = cashAccount.id;
-        } else {
-          cashOrBankAccountId = targetBankAccountId;
+        } else if (effectivePaymentMethod === "BANK" || effectivePaymentMethod === "CHEQUE") {
+          cashOrBankAccountId = targetBankAccountId || null;
         }
-        if (cashOrBankAccountId) {
-          const expenseAccount = await getExpenseAccountForDonation(enumType, tx);
-          if (expenseAccount) {
+        const expenseAccount = await getExpenseAccountForDonation(enumType, tx);
+        if (expenseAccount) {
+          if (cashOrBankAccountId) {
             const postingResult = await AccountingService.postPayment(tx, {
               amount: effectiveAmount,
               cashOrBankAccountId,
@@ -605,6 +666,34 @@ var donations_default = makeHandler(async (req, res) => {
               postedBy: req.user.id,
               ipAddress: req.headers["x-forwarded-for"],
               userAgent: req.headers["user-agent"]
+            });
+            journalEntryId = postingResult.journalEntry.id;
+          } else {
+            const donationFundAccount = isZakat ? await tx.account.findFirst({ where: { accountName: { contains: "Zakat", mode: "insensitive" }, accountType: { name: { in: ["Revenue", "REVENUE"] } }, isDeleted: false } }) || await AccountingService.ensureGeneralDonationAccount(tx) : await AccountingService.ensureGeneralDonationAccount(tx);
+            const postingResult = await AccountingService.postTransaction(tx, {
+              reference: voucherNo,
+              voucherNo,
+              description: `Monthly ${displayCategory} Disbursement from Donation Fund - ${monthLabel}${remarks ? ` (${remarks})` : ""}`,
+              module: "Donations",
+              voucherType: "JV",
+              postedBy: req.user.id,
+              postingDate: dateObj,
+              ipAddress: req.headers["x-forwarded-for"],
+              userAgent: req.headers["user-agent"],
+              lines: [
+                {
+                  accountId: expenseAccount.id,
+                  debit: effectiveAmount,
+                  credit: 0,
+                  description: `Monthly ${displayCategory} Aid Expense`
+                },
+                {
+                  accountId: donationFundAccount.id,
+                  debit: 0,
+                  credit: effectiveAmount,
+                  description: `Deducted from ${displayCategory} Fund Pool`
+                }
+              ]
             });
             journalEntryId = postingResult.journalEntry.id;
           }
