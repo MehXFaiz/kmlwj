@@ -9,12 +9,24 @@ import App from './App.jsx'
 document.documentElement.classList.remove('light');
 document.documentElement.classList.add('dark');
 
-// Global fallback for chunk load errors
+// Global fallback for chunk load errors with loop guard
 window.addEventListener('unhandledrejection', (event) => {
   const msg = event.reason?.message || '';
   if (msg.includes('Failed to fetch dynamically imported module') || msg.includes('Importing a module script failed')) {
     event.preventDefault();
-    window.location.reload();
+    try {
+      const key = 'chunk_reload_timestamp';
+      const lastReload = parseInt(sessionStorage.getItem(key) || '0', 10);
+      const now = Date.now();
+      if (now - lastReload > 20000) {
+        sessionStorage.setItem(key, String(now));
+        window.location.reload();
+      } else {
+        console.warn('Chunk load error reload loop prevented.');
+      }
+    } catch (e) {
+      window.location.reload();
+    }
   }
 });
 

@@ -20,7 +20,11 @@ export const RouteGuard = ({ module, action = 'view', requiredPerms, children })
   let allowed = false;
 
   if (module) {
-    allowed = hasPermission(module, action);
+    if (Array.isArray(module)) {
+      allowed = module.some((m) => hasPermission(m, action));
+    } else {
+      allowed = hasPermission(module, action);
+    }
   } else if (requiredPerms && requiredPerms.length > 0) {
     allowed = requiredPerms.some((p) => hasPermission(p));
   } else {

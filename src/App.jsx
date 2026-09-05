@@ -89,11 +89,11 @@ const Signup = lazy(() => import('./views/Signup').then(m => ({ default: m.Signu
 const ForgotPassword = lazy(() => import('./views/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
 const ResetPassword = lazy(() => import('./views/ResetPassword').then(m => ({ default: m.ResetPassword })));
 
-// Error Boundary for Chunk Load Errors (new deployments)
+// Error Boundary for Chunk Load Errors (new deployments) with infinite reload loop protection
 class ChunkErrorBoundary extends Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, autoReloaded: false };
   }
 
   static getDerivedStateFromError(error) {
@@ -108,7 +108,17 @@ class ChunkErrorBoundary extends Component {
       error?.message?.includes('Importing a module script failed');
       
     if (isChunkLoadError) {
-      window.location.reload();
+      try {
+        const key = 'chunk_reload_timestamp';
+        const lastReload = parseInt(sessionStorage.getItem(key) || '0', 10);
+        const now = Date.now();
+        if (now - lastReload > 20000) {
+          sessionStorage.setItem(key, String(now));
+          window.location.reload();
+          return;
+        }
+      } catch (e) {}
+      this.setState({ autoReloaded: true });
     }
   }
 
@@ -116,14 +126,40 @@ class ChunkErrorBoundary extends Component {
     if (this.state.hasError) {
       const isChunkLoadError = 
         this.state.error?.name === 'ChunkLoadError' || 
-        this.state.error?.message?.includes('Failed to fetch dynamically imported module');
+        this.state.error?.message?.includes('Failed to fetch dynamically imported module') ||
+        this.state.error?.message?.includes('Importing a module script failed');
         
-      if (isChunkLoadError) {
+      if (isChunkLoadError && !this.state.autoReloaded) {
         return (
           <div className="flex flex-col items-center justify-center h-screen w-screen bg-slate-950 text-center px-4">
             <div className="h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mb-4" />
             <h3 className="text-lg font-bold text-slate-200">Applying latest updates...</h3>
             <p className="text-sm text-slate-500 mt-2">Loading the newest version of the application.</p>
+          </div>
+        );
+      }
+
+      if (isChunkLoadError && this.state.autoReloaded) {
+        return (
+          <div className="flex flex-col items-center justify-center h-screen w-screen bg-slate-950 text-center px-4">
+            <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full shadow-2xl space-y-4">
+              <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+                <BookOpen className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-bold text-slate-100">Update Available</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                A newer version of this module has been deployed. Please click below to refresh and load the latest updates.
+              </p>
+              <button
+                onClick={() => {
+                  try { sessionStorage.removeItem('chunk_reload_timestamp'); } catch (e) {}
+                  window.location.reload();
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold transition-all cursor-pointer"
+              >
+                Refresh Application
+              </button>
+            </div>
           </div>
         );
       }
@@ -386,17 +422,17 @@ function App() {
 
             {/* Standalone Donations (Charitable Inflows & Receipts) */}
             <Route path="/donations" element={
-              <RouteGuard module="revenueCollections">
+              <RouteGuard module={['revenueCollections', 'donations']}>
                 <DonationsList />
               </RouteGuard>
             } />
             <Route path="/donations/new" element={
-              <RouteGuard module="revenueCollections" action="create">
+              <RouteGuard module={['revenueCollections', 'donations']} action="create">
                 <DonationEntryForm />
               </RouteGuard>
             } />
             <Route path="/donations/edit/:id" element={
-              <RouteGuard module="revenueCollections" action="update">
+              <RouteGuard module={['revenueCollections', 'donations']} action="update">
                 <DonationEntryForm />
               </RouteGuard>
             } />

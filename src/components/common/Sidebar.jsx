@@ -178,6 +178,9 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
     if (!item.module && !item.perms) return true; // e.g. Dashboard
     if (isPrivileged || user?.role === 'Super Admin' || user?.role?.name === 'Super Admin') return true;
     if (item.module) {
+      if (Array.isArray(item.module)) {
+        return item.module.some(m => hasPermission(m, item.action || 'view'));
+      }
       return hasPermission(item.module, item.action || 'view');
     }
     if (item.perms && item.perms.length > 0) {
@@ -218,7 +221,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
       title: t('sidebar.welfare', 'Welfare'),
       items: [
         { name: t('sidebar.peopleWeHelp', 'People We Help'), hint: t('sidebar.peopleWeHelpHint', 'Beneficiary list'), icon: Users, path: '/beneficiaries', module: 'beneficiaries' },
-        { name: 'Donations', hint: 'Receive & manage charitable donations and receipts', icon: Heart, path: '/donations', module: 'revenueCollections' },
+        { name: 'Donations', hint: 'Receive & manage charitable donations and receipts', icon: Heart, path: '/donations', module: ['revenueCollections', 'donations'] },
         { name: 'Zakat', hint: 'Manage Zakat contributions, donor records & ledger postings', icon: Coins, path: '/zakat', module: 'zakat' },
         { name: 'Donation Distribution', hint: 'Monthly bank welfare disbursements & beneficiary allocations', icon: Heart, path: '/donation-distribution', module: 'donations' },
         { name: 'Monthly Financial Support Cards', hint: 'Issue & print bilingual financial support cards', icon: CreditCard, path: '/monthly-donation-cards', module: 'zakatCards' },
