@@ -274,12 +274,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     let debitAccountId = null;
-    if (paymentMethod === 'CASH') {
+    if (paymentMethod === 'CASH' || paymentMethod === 'DONATION_FUND') {
       const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
       debitAccountId = cashAccount.id;
-    } else if (paymentMethod === 'DONATION_FUND') {
-      const fundAccount = await AccountingService.ensureGeneralDonationAccount(prisma);
-      debitAccountId = fundAccount.id;
     } else {
       if (!bankAccountId) {
         const defaultBank = await prisma.account.findFirst({
@@ -338,7 +335,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
               postingDate: receiptDate ? new Date(receiptDate) : new Date(),
               ipAddress: req.headers['x-forwarded-for'] as string,
               userAgent: req.headers['user-agent'] as string,
-              voucherType: paymentMethod === 'CASH' ? 'CR' : (paymentMethod === 'DONATION_FUND' ? 'JV' : 'BR')
+              voucherType: (paymentMethod === 'CASH' || paymentMethod === 'DONATION_FUND') ? 'CR' : 'BR'
             });
             if (postingResult && postingResult.journalEntry) {
               journalEntryId = postingResult.journalEntry.id;
@@ -354,7 +351,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
               customDonationType: donationType === 'CUSTOM' ? customDonationType : null,
               amount: parsedAmount,
               paymentMethod,
-              cashAccountId: paymentMethod === 'CASH' ? debitAccountId : null,
+              cashAccountId: (paymentMethod === 'CASH' || paymentMethod === 'DONATION_FUND') ? debitAccountId : null,
               bankAccountId: (paymentMethod !== 'CASH' && paymentMethod !== 'DONATION_FUND') ? debitAccountId : null,
               chequeNo: chequeNo || null,
               chequeDate: chequeDate ? new Date(chequeDate) : null,
@@ -452,18 +449,16 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       if (newStatus === 'POSTED') {
         if (existing.journalEntryId) {
           try {
+            await tx.donationReceived.update({ where: { id: targetId }, data: { journalEntryId: null } });
             await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user!.id, 'Donation Receipt Updated');
           } catch (e) {}
         }
 
         let debitAccountId: string | null = null;
         const currentMethod = paymentMethod !== undefined ? paymentMethod : existing.paymentMethod;
-        if (currentMethod === 'CASH') {
+        if (currentMethod === 'CASH' || currentMethod === 'DONATION_FUND') {
           const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
           debitAccountId = cashAccount.id;
-        } else if (currentMethod === 'DONATION_FUND') {
-          const fundAccount = await AccountingService.ensureGeneralDonationAccount(tx);
-          debitAccountId = fundAccount.id;
         } else {
           debitAccountId = bankAccountId !== undefined ? bankAccountId : (existing.bankAccountId || existing.cashAccountId);
         }
@@ -491,7 +486,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             postingDate: updatedDate,
             ipAddress: req.headers['x-forwarded-for'] as string,
             userAgent: req.headers['user-agent'] as string,
-            voucherType: currentMethod === 'CASH' ? 'CR' : (currentMethod === 'DONATION_FUND' ? 'JV' : 'BR')
+            voucherType: (currentMethod === 'CASH' || currentMethod === 'DONATION_FUND') ? 'CR' : 'BR'
           });
           if (postingResult && postingResult.journalEntry) {
             journalEntryId = postingResult.journalEntry.id;
@@ -502,7 +497,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       else if (existing.status === 'POSTED' && newStatus !== 'POSTED') {
         if (existing.journalEntryId) {
           try {
-            await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user!.id, `Donation Receipt status changed to ${newStatus}`);
+            const oldJeId = existing.journalEntryId;
+            await tx.donationReceived.update({ where: { id: targetId }, data: { journalEntryId: null } });
+            await AccountingService.deleteJournalEntry(tx, oldJeId, req.user!.id, `Donation Receipt status changed to ${newStatus}`);
             journalEntryId = null;
           } catch (e) {}
         }
@@ -525,7 +522,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             : (customDonationType !== undefined ? (existing.donationType === 'CUSTOM' ? customDonationType : null) : undefined),
           paymentMethod: paymentMethod !== undefined ? paymentMethod : undefined,
           receiptDate: receiptDate !== undefined ? (receiptDate ? new Date(receiptDate) : undefined) : undefined,
-          cashAccountId: currentMethod === 'CASH' ? debitAccountId : (cashAccountId !== undefined ? (cashAccountId || null) : existing.cashAccountId),
+          cashAccountId: (currentMethod === 'CASH' || currentMethod === 'DONATION_FUND') ? debitAccountId : (cashAccountId !== undefined ? (cashAccountId || null) : existing.cashAccountId),
           bankAccountId: (currentMethod !== 'CASH' && currentMethod !== 'DONATION_FUND') ? (bankAccountId !== undefined ? (bankAccountId || null) : existing.bankAccountId) : null,
         },
         include: {
@@ -572,24 +569,27 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     await prisma.$transaction(async (tx) => {
       for (const item of existingItems) {
-        if (item.journalEntryId) {
-          try {
-            if (isPermanent) {
+        if (isPermanent) {
+          await tx.donationReceived.delete({ where: { id: item.id } });
+          if (item.journalEntryId) {
+            try {
               await AccountingService.deleteJournalEntry(tx, item.journalEntryId, req.user!.id, 'Donation Receipt Permanently Deleted');
-            } else {
+            } catch (e) {
+              // Ignore
+            }
+          }
+        } else {
+          if (item.journalEntryId) {
+            try {
               await tx.journalEntry.update({
                 where: { id: item.journalEntryId },
                 data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user!.id }
               });
               await AccountingService.recalculateBalancesForJournalEntry(tx, item.journalEntryId);
+            } catch (e) {
+              // Ignore
             }
-          } catch (e) {
-            // Ignore
           }
-        }
-        if (isPermanent) {
-          await tx.donationReceived.delete({ where: { id: item.id } });
-        } else {
           await tx.donationReceived.update({
             where: { id: item.id },
             data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user!.id }

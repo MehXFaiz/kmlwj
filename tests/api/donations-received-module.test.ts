@@ -122,11 +122,12 @@ describe('Standalone Donations Module (Inflows, GL Posting & RBAC)', () => {
       try {
         const item = await prisma.donationReceived.findUnique({ where: { id } });
         if (item) {
-          if (item.journalEntryId) {
-            await prisma.journalEntryLine.deleteMany({ where: { journalEntryId: item.journalEntryId } }).catch(() => {});
-            await prisma.journalEntry.delete({ where: { id: item.journalEntryId } }).catch(() => {});
-          }
+          const jeId = item.journalEntryId;
           await prisma.donationReceived.delete({ where: { id } }).catch(() => {});
+          if (jeId) {
+            await prisma.journalEntryLine.deleteMany({ where: { journalEntryId: jeId } }).catch(() => {});
+            await prisma.journalEntry.delete({ where: { id: jeId } }).catch(() => {});
+          }
         }
       } catch (e) {}
     }
@@ -218,6 +219,47 @@ describe('Standalone Donations Module (Inflows, GL Posting & RBAC)', () => {
     const debitLine = journal?.lines.find(l => l.accountId === bankAccount.id);
     expect(debitLine).toBeDefined();
     expect(Number(debitLine?.debit)).toBe(amount);
+  }, 25000);
+
+  it('POST /api/donations creates Donation Fund Pool donation, debits Cash in Hand, credits General Donation', async () => {
+    const amount = 2000;
+    const res = await request(app)
+      .post('/api/donations')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        donorId: testDonor.id,
+        donationType: 'GENERAL_DONATION',
+        amount,
+        paymentMethod: 'DONATION_FUND',
+        donationDate: new Date().toISOString().split('T')[0],
+        narration: 'Direct Donation Fund Pool receipt',
+        status: 'POSTED'
+      });
+
+    expect(res.status).toBe(201);
+    const donation = res.body.data;
+    expect(donation).toBeDefined();
+    expect(donation.paymentMethod).toBe('DONATION_FUND');
+    expect(donation.journalEntryId).toBeDefined();
+    createdDonationIds.push(donation.id);
+
+    const journal = await prisma.journalEntry.findUnique({
+      where: { id: donation.journalEntryId },
+      include: { lines: true }
+    });
+
+    expect(journal).toBeDefined();
+    expect(journal?.lines.length).toBe(2);
+
+    // Check Debit Cash in Hand (Asset)
+    const debitLine = journal?.lines.find(l => Number(l.debit) > 0);
+    expect(debitLine).toBeDefined();
+    expect(Number(debitLine?.debit)).toBe(amount);
+
+    // Check Credit General Donation (Revenue)
+    const creditLine = journal?.lines.find(l => Number(l.credit) > 0);
+    expect(creditLine).toBeDefined();
+    expect(Number(creditLine?.credit)).toBe(amount);
   }, 25000);
 
   it('POST /api/donations validates required fields and amount > 0', async () => {

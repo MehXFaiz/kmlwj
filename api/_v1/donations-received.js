@@ -240,12 +240,9 @@ var donations_received_default = makeHandler(async (req, res) => {
       return res.status(404).json({ error: { message: "Selected donor not found", status: 404 } });
     }
     let debitAccountId2 = null;
-    if (paymentMethod === "CASH") {
+    if (paymentMethod === "CASH" || paymentMethod === "DONATION_FUND") {
       const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
       debitAccountId2 = cashAccount.id;
-    } else if (paymentMethod === "DONATION_FUND") {
-      const fundAccount = await AccountingService.ensureGeneralDonationAccount(prisma);
-      debitAccountId2 = fundAccount.id;
     } else {
       if (!bankAccountId) {
         const defaultBank = await prisma.account.findFirst({
@@ -297,7 +294,7 @@ var donations_received_default = makeHandler(async (req, res) => {
               postingDate: receiptDate ? new Date(receiptDate) : /* @__PURE__ */ new Date(),
               ipAddress: req.headers["x-forwarded-for"],
               userAgent: req.headers["user-agent"],
-              voucherType: paymentMethod === "CASH" ? "CR" : paymentMethod === "DONATION_FUND" ? "JV" : "BR"
+              voucherType: paymentMethod === "CASH" || paymentMethod === "DONATION_FUND" ? "CR" : "BR"
             });
             if (postingResult && postingResult.journalEntry) {
               journalEntryId = postingResult.journalEntry.id;
@@ -312,7 +309,7 @@ var donations_received_default = makeHandler(async (req, res) => {
               customDonationType: donationType === "CUSTOM" ? customDonationType : null,
               amount: parsedAmount,
               paymentMethod,
-              cashAccountId: paymentMethod === "CASH" ? debitAccountId2 : null,
+              cashAccountId: paymentMethod === "CASH" || paymentMethod === "DONATION_FUND" ? debitAccountId2 : null,
               bankAccountId: paymentMethod !== "CASH" && paymentMethod !== "DONATION_FUND" ? debitAccountId2 : null,
               chequeNo: chequeNo || null,
               chequeDate: chequeDate ? new Date(chequeDate) : null,
@@ -396,18 +393,16 @@ var donations_received_default = makeHandler(async (req, res) => {
       if (newStatus === "POSTED") {
         if (existing.journalEntryId) {
           try {
+            await tx.donationReceived.update({ where: { id: targetId }, data: { journalEntryId: null } });
             await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user.id, "Donation Receipt Updated");
           } catch (e) {
           }
         }
         let debitAccountId2 = null;
         const currentMethod2 = paymentMethod !== void 0 ? paymentMethod : existing.paymentMethod;
-        if (currentMethod2 === "CASH") {
+        if (currentMethod2 === "CASH" || currentMethod2 === "DONATION_FUND") {
           const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
           debitAccountId2 = cashAccount.id;
-        } else if (currentMethod2 === "DONATION_FUND") {
-          const fundAccount = await AccountingService.ensureGeneralDonationAccount(tx);
-          debitAccountId2 = fundAccount.id;
         } else {
           debitAccountId2 = bankAccountId !== void 0 ? bankAccountId : existing.bankAccountId || existing.cashAccountId;
         }
@@ -431,7 +426,7 @@ var donations_received_default = makeHandler(async (req, res) => {
             postingDate: updatedDate,
             ipAddress: req.headers["x-forwarded-for"],
             userAgent: req.headers["user-agent"],
-            voucherType: currentMethod2 === "CASH" ? "CR" : currentMethod2 === "DONATION_FUND" ? "JV" : "BR"
+            voucherType: currentMethod2 === "CASH" || currentMethod2 === "DONATION_FUND" ? "CR" : "BR"
           });
           if (postingResult && postingResult.journalEntry) {
             journalEntryId = postingResult.journalEntry.id;
@@ -440,7 +435,9 @@ var donations_received_default = makeHandler(async (req, res) => {
       } else if (existing.status === "POSTED" && newStatus !== "POSTED") {
         if (existing.journalEntryId) {
           try {
-            await AccountingService.deleteJournalEntry(tx, existing.journalEntryId, req.user.id, `Donation Receipt status changed to ${newStatus}`);
+            const oldJeId = existing.journalEntryId;
+            await tx.donationReceived.update({ where: { id: targetId }, data: { journalEntryId: null } });
+            await AccountingService.deleteJournalEntry(tx, oldJeId, req.user.id, `Donation Receipt status changed to ${newStatus}`);
             journalEntryId = null;
           } catch (e) {
           }
@@ -461,7 +458,7 @@ var donations_received_default = makeHandler(async (req, res) => {
           customDonationType: donationType !== void 0 ? donationType === "CUSTOM" ? customDonationType : null : customDonationType !== void 0 ? existing.donationType === "CUSTOM" ? customDonationType : null : void 0,
           paymentMethod: paymentMethod !== void 0 ? paymentMethod : void 0,
           receiptDate: receiptDate !== void 0 ? receiptDate ? new Date(receiptDate) : void 0 : void 0,
-          cashAccountId: currentMethod === "CASH" ? debitAccountId : cashAccountId !== void 0 ? cashAccountId || null : existing.cashAccountId,
+          cashAccountId: currentMethod === "CASH" || currentMethod === "DONATION_FUND" ? debitAccountId : cashAccountId !== void 0 ? cashAccountId || null : existing.cashAccountId,
           bankAccountId: currentMethod !== "CASH" && currentMethod !== "DONATION_FUND" ? bankAccountId !== void 0 ? bankAccountId || null : existing.bankAccountId : null
         },
         include: {
@@ -496,23 +493,25 @@ var donations_received_default = makeHandler(async (req, res) => {
     }
     await prisma.$transaction(async (tx) => {
       for (const item of existingItems) {
-        if (item.journalEntryId) {
-          try {
-            if (isPermanent) {
+        if (isPermanent) {
+          await tx.donationReceived.delete({ where: { id: item.id } });
+          if (item.journalEntryId) {
+            try {
               await AccountingService.deleteJournalEntry(tx, item.journalEntryId, req.user.id, "Donation Receipt Permanently Deleted");
-            } else {
+            } catch (e) {
+            }
+          }
+        } else {
+          if (item.journalEntryId) {
+            try {
               await tx.journalEntry.update({
                 where: { id: item.journalEntryId },
                 data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
               });
               await AccountingService.recalculateBalancesForJournalEntry(tx, item.journalEntryId);
+            } catch (e) {
             }
-          } catch (e) {
           }
-        }
-        if (isPermanent) {
-          await tx.donationReceived.delete({ where: { id: item.id } });
-        } else {
           await tx.donationReceived.update({
             where: { id: item.id },
             data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }

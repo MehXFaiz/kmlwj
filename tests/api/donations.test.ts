@@ -32,8 +32,17 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
       where: {
         isDeleted: false,
         isLocked: false,
+        children: { none: {} },
         accountTypeId: bankAssetType?.id,
-        OR: [{ detailType: 'Bank' }, { glCode: '1010101' }, { accountName: { contains: 'Bank', mode: 'insensitive' } }]
+        glCode: '1010101'
+      }
+    }) || await prisma.account.findFirst({
+      where: {
+        isDeleted: false,
+        isLocked: false,
+        children: { none: {} },
+        accountTypeId: bankAssetType?.id,
+        detailType: 'Bank'
       }
     });
 
@@ -64,8 +73,18 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
         id: { not: bankAccount1.id },
         isDeleted: false,
         isLocked: false,
+        children: { none: {} },
         accountTypeId: bankAssetType?.id,
-        OR: [{ detailType: 'Bank' }, { glCode: '1010102' }, { accountName: { contains: 'Bank', mode: 'insensitive' } }]
+        glCode: '1010102'
+      }
+    }) || await prisma.account.findFirst({
+      where: {
+        id: { not: bankAccount1.id },
+        isDeleted: false,
+        isLocked: false,
+        children: { none: {} },
+        accountTypeId: bankAssetType?.id,
+        detailType: 'Bank'
       }
     });
 
