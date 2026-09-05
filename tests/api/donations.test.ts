@@ -32,6 +32,7 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
       where: {
         isDeleted: false,
         isLocked: false,
+        accountTypeId: bankAssetType?.id,
         OR: [{ detailType: 'Bank' }, { glCode: '1010101' }, { accountName: { contains: 'Bank', mode: 'insensitive' } }]
       }
     });
@@ -63,6 +64,7 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
         id: { not: bankAccount1.id },
         isDeleted: false,
         isLocked: false,
+        accountTypeId: bankAssetType?.id,
         OR: [{ detailType: 'Bank' }, { glCode: '1010102' }, { accountName: { contains: 'Bank', mode: 'insensitive' } }]
       }
     });
