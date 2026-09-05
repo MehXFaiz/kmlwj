@@ -353,7 +353,17 @@ var stats_default = makeHandler(async (req, res) => {
         currentMonthName,
         totalDonationsPaid: totalDonationsOnlyPaid,
         totalZakatPaid: totalZakatOnlyPaid,
-        isEquationBalanced
+        isEquationBalanced,
+        // 13 Unified Core Financial Metrics
+        incomeYtd: totalRevenue,
+        expensesYtd: totalExpense,
+        hallBookingIncome: Number(summaryResult.hallBookingIncome || 0),
+        donationIncome: Number(summaryResult.donationIncome || 0),
+        zakatIncome: Number(summaryResult.zakatIncome || 0),
+        otherIncome: Number(summaryResult.otherIncome || 0),
+        donationDistribution: Number(summaryResult.donationDistribution || 0),
+        zakatDistribution: Number(summaryResult.zakatDistribution || 0),
+        otherExpenses: Number(summaryResult.otherExpenses || 0)
       },
       recentTransactions
     }

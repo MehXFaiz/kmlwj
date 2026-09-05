@@ -939,22 +939,15 @@ export class AccountingService {
     return updatedCount;
   }
 
+  static async syncAllModulesToLedger(prismaClient?: any) {
+    return AccountingSyncService.syncAllModulesToLedger(prismaClient);
+  }
+
   /**
    * Recalculates balances for all GL accounts in the system to ensure Trial Balance,
    * Balance Sheet, and Income Statement remain 100% accurate.
    */
   static async recalculateAllBalances(txObj?: any): Promise<{ updated: number }> {
-    // Set-based rebuild: one UPDATE ... FROM statement recomputes every posting
-    // account from the posted ledger.
-    //
-    // The previous implementation looped per account issuing findUnique +
-    // aggregate + update — three network round trips each. Against a hosted
-    // Postgres that blew past the transaction timeout well before it finished
-    // the chart of accounts, so the rebuild utility could never actually
-    // complete. Doing it in a single statement is both atomic and O(1) round
-    // trips, and applies the identical formula as recalculateAccountBalance:
-    //   debit-normal  (ASSET/EXPENSE): initial + debits - credits
-    //   credit-normal (everything else): initial + credits - debits
     const runInTx = async (tx: any) => ({
       updated: await AccountingService.rebuildBalanceCache(tx)
     });

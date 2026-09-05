@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../_prisma.js';
 import { logger } from '../_utils/logger.js';
 import { AccountingService, POSTED_JOURNAL_FILTER, classifyError, errDetails, type RepairItem } from './accounting.service.js';
+import { AccountingSyncService } from './accounting-sync.service.js';
 
 export interface IntegrityIssue {
   type: string;
@@ -663,6 +664,19 @@ export class AccountingIntegrityService {
         actionsTaken.push(`✘ Journal line #${line.id.slice(0, 8)} — Reason: Orphan Account Reference, repair failed: ${reason}`);
         skippedItems.push({ id: line.id, reason });
       }
+    }
+
+    // Step 5.5 — Synchronize all operational module records (Hall Bookings, Donations, etc.) to General Ledger
+    try {
+      const syncResult = await AccountingSyncService.syncAllModulesToLedger(prisma);
+      actionsTaken.push(`Synchronized ${syncResult.hallBookingsSynced} Hall Bookings and ${syncResult.donationsReceivedSynced} Donations Received to General Ledger`);
+      if (syncResult.orphanJEsDeleted > 0) {
+        actionsTaken.push(`Cleaned up ${syncResult.orphanJEsDeleted} empty journal entry headers`);
+      }
+    } catch (err: any) {
+      logger.error({ err: errDetails(err) }, 'Auto-repair: module ledger sync failed');
+      const reason = classifyError(err);
+      actionsTaken.push(`✘ Module sync — Reason: ${reason}`);
     }
 
     // Step 6 — Recalculate stored account balances directly from posted

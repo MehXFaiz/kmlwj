@@ -26,6 +26,17 @@ export interface DashboardSummaryResponse {
     startDate: string | null;
     endDate: string | null;
   };
+
+  // 13 Unified Core Financial Metrics
+  incomeYtd: number;
+  expensesYtd: number;
+  hallBookingIncome: number;
+  donationIncome: number;
+  zakatIncome: number;
+  otherIncome: number;
+  donationDistribution: number;
+  zakatDistribution: number;
+  otherExpenses: number;
 }
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
@@ -66,39 +77,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const netResult = Number(summaryResult.netPeriodIncome ?? (totalRevenue - totalExpense));
   const isEquationBalanced = summaryResult.isEquationBalanced ?? (Math.abs(totalAssets - (totalLiabilities + totalEquity)) < 0.01);
 
-  // 3. Current calendar month boundary for monthly donations received
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonthIdx = now.getMonth();
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  const currentMonthName = `${monthNames[currentMonthIdx]} ${currentYear}`;
-  const startOfMonth = new Date(currentYear, currentMonthIdx, 1);
-  const endOfMonth = new Date(currentYear, currentMonthIdx + 1, 1);
+  // 3. Month & Period Aggregates
+  const monthlyDonations = Number(summaryResult.monthlyDonations || 0);
+  const monthlyZakat = Number(summaryResult.monthlyZakat || 0);
+  const currentMonthName = summaryResult.currentMonthName || 'Current Month';
 
-  // 4. Monthly Donations RECEIVED during current calendar month (Single Source: DonationReceived)
-  const monthlyDonationsReceivedRaw = await prisma.donationReceived.aggregate({
-    _sum: { amount: true },
-    where: {
-      isDeleted: false,
-      status: 'POSTED',
-      receiptDate: { gte: startOfMonth, lt: endOfMonth }
-    }
-  });
-  const monthlyDonations = Number(monthlyDonationsReceivedRaw._sum.amount || 0);
-
-  // 5. Monthly Zakat RECEIVED during current calendar month
-  const monthlyZakatReceivedRaw = await prisma.donationReceived.aggregate({
-    _sum: { amount: true },
-    where: {
-      isDeleted: false,
-      status: 'POSTED',
-      donationType: 'ZAKAT',
-      receiptDate: { gte: startOfMonth, lt: endOfMonth }
-    }
-  });
-  const monthlyZakat = Number(monthlyZakatReceivedRaw._sum.amount || 0);
-
-  // 6. Total donations received in requested reporting period
+  // 4. Total donations received in requested reporting period
   const donRecPeriodWhere: any = { isDeleted: false, status: 'POSTED' };
   if (effectiveStartDate) donRecPeriodWhere.receiptDate = { ...(donRecPeriodWhere.receiptDate || {}), gte: new Date(effectiveStartDate) };
   if (effectiveEndDate) {
@@ -113,7 +97,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   });
   const totalDonationsReceived = Number(donationsReceivedPeriodRaw._sum.amount || 0);
 
-  // 7. Total aid/welfare donations disbursed in requested period (Disbursements to Beneficiaries)
+  // 5. Total aid/welfare donations disbursed in requested period
   const donationDisbPeriodWhere: any = { status: 'APPROVED', isDeleted: false };
   if (effectiveStartDate) donationDisbPeriodWhere.createdAt = { ...(donationDisbPeriodWhere.createdAt || {}), gte: new Date(effectiveStartDate) };
   if (effectiveEndDate) {
@@ -148,7 +132,18 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     reportPeriod: {
       startDate: effectiveStartDate ?? null,
       endDate: effectiveEndDate ?? null,
-    }
+    },
+
+    // 13 Unified Core Financial Metrics
+    incomeYtd: totalRevenue,
+    expensesYtd: totalExpense,
+    hallBookingIncome: Number(summaryResult.hallBookingIncome || 0),
+    donationIncome: Number(summaryResult.donationIncome || 0),
+    zakatIncome: Number(summaryResult.zakatIncome || 0),
+    otherIncome: Number(summaryResult.otherIncome || 0),
+    donationDistribution: Number(summaryResult.donationDistribution || 0),
+    zakatDistribution: Number(summaryResult.zakatDistribution || 0),
+    otherExpenses: Number(summaryResult.otherExpenses || 0),
   };
 
   return res.status(200).json({

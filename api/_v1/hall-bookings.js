@@ -428,7 +428,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         const receiptNo = (lastBooking?.receiptNo || 0) + 1;
         const bookingDateOnlyStr = bookingDate ? typeof bookingDate === "string" && bookingDate.includes("T") ? bookingDate.split("T")[0] : typeof bookingDate === "string" ? bookingDate : new Date(bookingDate).toISOString().split("T")[0] : null;
         const refundDateOnlyStr = req.body.refundDate ? typeof req.body.refundDate === "string" && req.body.refundDate.includes("T") ? req.body.refundDate.split("T")[0] : typeof req.body.refundDate === "string" ? req.body.refundDate : new Date(req.body.refundDate).toISOString().split("T")[0] : null;
-        const newBooking = await tx.hallBooking.create({
+        let newBooking = await tx.hallBooking.create({
           data: {
             receiptNo,
             bookingDate: bookingDateOnlyStr ? /* @__PURE__ */ new Date(`${bookingDateOnlyStr}T00:00:00.000Z`) : void 0,
@@ -465,6 +465,48 @@ var hall_bookings_default = makeHandler(async (req, res) => {
             journalEntry: true
           }
         });
+        if (newBooking.status === "POSTED" && calculatedNetAmount > 0) {
+          const lines = [];
+          if (parsedReceivedAmount > 0) {
+            lines.push({
+              accountId: debitAccountId,
+              debit: parsedReceivedAmount,
+              credit: 0,
+              description: `Receipt: Hall Booking Receipt for ${bookerName} - ${newBooking.hallAccount?.accountName || "Selected Hall"}`
+            });
+          }
+          if (calculatedRemainingAmount > 0) {
+            const arAccount = await AccountingService.getOrCreateAccountsReceivable(tx);
+            lines.push({
+              accountId: arAccount.id,
+              debit: calculatedRemainingAmount,
+              credit: 0,
+              description: `Outstanding Receivable: Hall Booking Receipt for ${bookerName} - ${newBooking.hallAccount?.accountName || "Selected Hall"}`
+            });
+          }
+          lines.push({
+            accountId: hallId,
+            debit: 0,
+            credit: calculatedNetAmount,
+            description: `Revenue: Hall Booking Receipt for ${bookerName} - ${newBooking.hallAccount?.accountName || "Selected Hall"}`
+          });
+          const postingResult = await AccountingService.postTransaction(tx, {
+            voucherType: "BR",
+            postingDate: newBooking.bookingDate || /* @__PURE__ */ new Date(),
+            reference: `HB-${newBooking.receiptNo}`,
+            description: `Hall Booking Receipt for ${bookerName} - ${newBooking.hallAccount?.accountName || "Selected Hall"}`,
+            module: "Hall Booking",
+            postedBy: req.user.id,
+            lines,
+            ipAddress: req.headers["x-forwarded-for"],
+            userAgent: req.headers["user-agent"]
+          });
+          newBooking = await tx.hallBooking.update({
+            where: { id: newBooking.id },
+            data: { journalEntryId: postingResult.journalEntry.id },
+            include: { hallAccount: true, journalEntry: true }
+          });
+        }
         return newBooking;
       }, { maxWait: 15e3, timeout: 3e4 });
       await logAudit(req.user.id, "Create & Post Hall Booking", "REVENUE", null, result, req.headers["x-forwarded-for"], req.headers["user-agent"]);

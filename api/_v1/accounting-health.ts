@@ -45,7 +45,18 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   if (req.method === 'POST') {
     if (!await verifyPermission(req, res, PERMS.UPDATE_ACCOUNT)) return;
 
+    const action = (req.query?.action || req.body?.action) as string;
+
     try {
+      if (action === 'sync-all' || action === 'sync' || action === 'sync-modules') {
+        const syncResult = await AccountingService.syncAllModulesToLedger(prisma);
+        return res.status(200).json({
+          status: 200,
+          message: 'All operational modules synchronized to General Ledger successfully',
+          data: syncResult
+        });
+      }
+
       const repairResult = await AccountingIntegrityService.repairAll();
 
       return res.status(200).json({

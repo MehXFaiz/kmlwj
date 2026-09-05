@@ -29,32 +29,9 @@ var summary_default = makeHandler(async (req, res) => {
   const bankBalance = Number(summaryResult.bankBalance || 0);
   const netResult = Number(summaryResult.netPeriodIncome ?? totalRevenue - totalExpense);
   const isEquationBalanced = summaryResult.isEquationBalanced ?? Math.abs(totalAssets - (totalLiabilities + totalEquity)) < 0.01;
-  const now = /* @__PURE__ */ new Date();
-  const currentYear = now.getFullYear();
-  const currentMonthIdx = now.getMonth();
-  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  const currentMonthName = `${monthNames[currentMonthIdx]} ${currentYear}`;
-  const startOfMonth = new Date(currentYear, currentMonthIdx, 1);
-  const endOfMonth = new Date(currentYear, currentMonthIdx + 1, 1);
-  const monthlyDonationsReceivedRaw = await prisma.donationReceived.aggregate({
-    _sum: { amount: true },
-    where: {
-      isDeleted: false,
-      status: "POSTED",
-      receiptDate: { gte: startOfMonth, lt: endOfMonth }
-    }
-  });
-  const monthlyDonations = Number(monthlyDonationsReceivedRaw._sum.amount || 0);
-  const monthlyZakatReceivedRaw = await prisma.donationReceived.aggregate({
-    _sum: { amount: true },
-    where: {
-      isDeleted: false,
-      status: "POSTED",
-      donationType: "ZAKAT",
-      receiptDate: { gte: startOfMonth, lt: endOfMonth }
-    }
-  });
-  const monthlyZakat = Number(monthlyZakatReceivedRaw._sum.amount || 0);
+  const monthlyDonations = Number(summaryResult.monthlyDonations || 0);
+  const monthlyZakat = Number(summaryResult.monthlyZakat || 0);
+  const currentMonthName = summaryResult.currentMonthName || "Current Month";
   const donRecPeriodWhere = { isDeleted: false, status: "POSTED" };
   if (effectiveStartDate) donRecPeriodWhere.receiptDate = { ...donRecPeriodWhere.receiptDate || {}, gte: new Date(effectiveStartDate) };
   if (effectiveEndDate) {
@@ -99,7 +76,17 @@ var summary_default = makeHandler(async (req, res) => {
     reportPeriod: {
       startDate: effectiveStartDate ?? null,
       endDate: effectiveEndDate ?? null
-    }
+    },
+    // 13 Unified Core Financial Metrics
+    incomeYtd: totalRevenue,
+    expensesYtd: totalExpense,
+    hallBookingIncome: Number(summaryResult.hallBookingIncome || 0),
+    donationIncome: Number(summaryResult.donationIncome || 0),
+    zakatIncome: Number(summaryResult.zakatIncome || 0),
+    otherIncome: Number(summaryResult.otherIncome || 0),
+    donationDistribution: Number(summaryResult.donationDistribution || 0),
+    zakatDistribution: Number(summaryResult.zakatDistribution || 0),
+    otherExpenses: Number(summaryResult.otherExpenses || 0)
   };
   return res.status(200).json({
     status: 200,

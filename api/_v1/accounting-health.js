@@ -2,7 +2,8 @@ import { makeHandler } from "../_utils/handler.js";
 import { logger } from "../_utils/logger.js";
 import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
 import { AccountingIntegrityService } from "../_services/accounting-integrity.service.js";
-import { classifyError, errDetails } from "../_services/accounting.service.js";
+import { AccountingService, classifyError, errDetails } from "../_services/accounting.service.js";
+import { prisma } from "../_prisma.js";
 import { PERMS } from "../_constants/permissions.js";
 var accounting_health_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
@@ -26,7 +27,16 @@ var accounting_health_default = makeHandler(async (req, res) => {
   }
   if (req.method === "POST") {
     if (!await verifyPermission(req, res, PERMS.UPDATE_ACCOUNT)) return;
+    const action = req.query?.action || req.body?.action;
     try {
+      if (action === "sync-all" || action === "sync" || action === "sync-modules") {
+        const syncResult = await AccountingService.syncAllModulesToLedger(prisma);
+        return res.status(200).json({
+          status: 200,
+          message: "All operational modules synchronized to General Ledger successfully",
+          data: syncResult
+        });
+      }
       const repairResult = await AccountingIntegrityService.repairAll();
       return res.status(200).json({
         status: 200,

@@ -46,6 +46,7 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
       }
     });
 
+    origBank1Init = 0;
     if (!bankAccount1) {
       bankAccount1 = await prisma.account.create({
         data: {
@@ -59,9 +60,7 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
           initialBalance: 10000000,
         }
       });
-      origBank1Init = 0;
     } else {
-      origBank1Init = Number(bankAccount1.initialBalance || 0);
       await prisma.account.update({
         where: { id: bankAccount1.id },
         data: { initialBalance: 10000000, currentBalance: 10000000 }
@@ -88,6 +87,7 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
       }
     });
 
+    origBank2Init = 0;
     if (!bankAccount2) {
       bankAccount2 = await prisma.account.create({
         data: {
@@ -101,9 +101,7 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
           initialBalance: 5000000,
         }
       });
-      origBank2Init = 0;
     } else {
-      origBank2Init = Number(bankAccount2.initialBalance || 0);
       await prisma.account.update({
         where: { id: bankAccount2.id },
         data: { initialBalance: 5000000, currentBalance: 5000000 }
@@ -370,4 +368,47 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
     expect(res.body.data).toHaveProperty('currentMonthName');
     expect(res.body.data.summary).toHaveProperty('bankBalance');
   }, 120000);
+
+  afterAll(async () => {
+    // 1. Clean up test donations and their journal entries
+    if (createdDonationIds.length > 0) {
+      const donRecords = await prisma.donation.findMany({
+        where: { id: { in: createdDonationIds } },
+        select: { id: true, journalEntryId: true }
+      });
+      const jeIds = donRecords.map(d => d.journalEntryId).filter(Boolean) as string[];
+
+      await prisma.donation.deleteMany({
+        where: { id: { in: createdDonationIds } }
+      });
+
+      if (jeIds.length > 0) {
+        await prisma.journalEntryLine.deleteMany({
+          where: { journalEntryId: { in: jeIds } }
+        });
+        await prisma.journalEntry.deleteMany({
+          where: { id: { in: jeIds } }
+        });
+      }
+    }
+
+    // 2. Restore bank account initial balances
+    if (bankAccount1) {
+      await prisma.account.update({
+        where: { id: bankAccount1.id },
+        data: { initialBalance: origBank1Init }
+      });
+    }
+    if (bankAccount2) {
+      await prisma.account.update({
+        where: { id: bankAccount2.id },
+        data: { initialBalance: origBank2Init }
+      });
+    }
+
+    // 3. Recalculate all balances to clean state
+    await AccountingService.recalculateAllBalances(prisma);
+    await prisma.$disconnect();
+  });
 });
+
