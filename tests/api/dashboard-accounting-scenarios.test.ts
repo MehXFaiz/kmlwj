@@ -19,7 +19,7 @@ describe('7 Live Accounting & Dashboard Verification Scenarios', () => {
 
   beforeAll(async () => {
     adminUser = await prisma.user.findFirst({
-      where: { role: { name: { in: ['admin', 'super admin', 'administrator'], mode: 'insensitive' } } }
+      where: { role: { name: { in: ['admin', 'super admin', 'administrator', 'Super Admin', 'Admin'] } } }
     });
     const subId = adminUser ? adminUser.id : 'admin-user-id';
     const email = adminUser ? adminUser.email : 'admin@erp.com';
@@ -294,36 +294,42 @@ describe('7 Live Accounting & Dashboard Verification Scenarios', () => {
 
   it('Scenario 7: Monthly Donations KPI counts only current month donations received', async () => {
     const now = new Date();
-    const currentMonthDonation = await prisma.donationReceived.create({
-      data: {
-        receiptNo: `REC-CURR-${Date.now()}`,
-        receiptDate: now,
+    const currRes = await request(app)
+      .post('/api/donations')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
         donorId: testDonor.id,
-        createdById: adminUser.id,
         donationType: 'GENERAL_DONATION',
-        paymentMethod: 'CASH',
         amount: 7500,
-        status: 'POSTED',
-        narration: 'Scenario 7 Current Month Received'
-      }
-    });
-    createdDonationReceivedIds.push(currentMonthDonation.id);
+        paymentMethod: 'CASH',
+        donationDate: now.toISOString().split('T')[0],
+        narration: 'Scenario 7 Current Month Received',
+        status: 'POSTED'
+      });
+
+    expect(currRes.status).toBe(201);
+    if (currRes.body.data?.id) {
+      createdDonationReceivedIds.push(currRes.body.data.id);
+    }
 
     const pastDate = new Date(now.getFullYear(), now.getMonth() - 2, 15);
-    const pastMonthDonation = await prisma.donationReceived.create({
-      data: {
-        receiptNo: `REC-PAST-${Date.now()}`,
-        receiptDate: pastDate,
+    const pastRes = await request(app)
+      .post('/api/donations')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
         donorId: testDonor.id,
-        createdById: adminUser.id,
         donationType: 'GENERAL_DONATION',
-        paymentMethod: 'BANK',
         amount: 50000,
-        status: 'POSTED',
-        narration: 'Scenario 7 Past Month Received'
-      }
-    });
-    createdDonationReceivedIds.push(pastMonthDonation.id);
+        paymentMethod: 'BANK',
+        donationDate: pastDate.toISOString().split('T')[0],
+        narration: 'Scenario 7 Past Month Received',
+        status: 'POSTED'
+      });
+
+    expect(pastRes.status).toBe(201);
+    if (pastRes.body.data?.id) {
+      createdDonationReceivedIds.push(pastRes.body.data.id);
+    }
 
     const res = await request(app)
       .get('/api/v1/dashboard/summary')
@@ -335,10 +341,18 @@ describe('7 Live Accounting & Dashboard Verification Scenarios', () => {
   }, 30000);
 
   afterAll(async () => {
-    if (createdDonationReceivedIds.length > 0) {
-      await prisma.donationReceived.deleteMany({
-        where: { id: { in: createdDonationReceivedIds } }
-      });
+    for (const id of createdDonationReceivedIds) {
+      try {
+        const item = await prisma.donationReceived.findUnique({ where: { id } });
+        if (item) {
+          const jeId = item.journalEntryId;
+          await prisma.donationReceived.delete({ where: { id } }).catch(() => {});
+          if (jeId) {
+            await prisma.journalEntryLine.deleteMany({ where: { journalEntryId: jeId } }).catch(() => {});
+            await prisma.journalEntry.delete({ where: { id: jeId } }).catch(() => {});
+          }
+        }
+      } catch (e) {}
     }
 
     if (createdVoucherNos.length > 0) {
@@ -349,7 +363,7 @@ describe('7 Live Accounting & Dashboard Verification Scenarios', () => {
         await prisma.journalEntryLine.deleteMany({ where: { journalEntryId: je.id } });
         await prisma.journalEntry.delete({ where: { id: je.id } });
       }
-      await AccountingService.recalculateAllBalances(prisma);
     }
+    await AccountingService.recalculateAllBalances(prisma);
   }, 30000);
 });
