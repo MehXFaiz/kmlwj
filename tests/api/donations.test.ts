@@ -9,6 +9,8 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
   let token: string;
   let bankAccount1: any;
   let bankAccount2: any;
+  let origBank1Init = 0;
+  let origBank2Init = 0;
   let createdDonationIds: string[] = [];
   const secret = process.env.JWT_SECRET || 'super_secret_jwt_sign_key_123_abc';
 
@@ -47,7 +49,9 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
           initialBalance: 10000000,
         }
       });
+      origBank1Init = 0;
     } else {
+      origBank1Init = Number(bankAccount1.initialBalance || 0);
       await prisma.account.update({
         where: { id: bankAccount1.id },
         data: { initialBalance: 10000000, currentBalance: 10000000 }
@@ -76,7 +80,9 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
           initialBalance: 5000000,
         }
       });
+      origBank2Init = 0;
     } else {
+      origBank2Init = Number(bankAccount2.initialBalance || 0);
       await prisma.account.update({
         where: { id: bankAccount2.id },
         data: { initialBalance: 5000000, currentBalance: 5000000 }
@@ -143,6 +149,21 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
         where: { id: { in: createdDonationIds } }
       });
     }
+
+    // Restore original account initial balances
+    if (bankAccount1) {
+      await prisma.account.update({
+        where: { id: bankAccount1.id },
+        data: { initialBalance: origBank1Init }
+      });
+    }
+    if (bankAccount2) {
+      await prisma.account.update({
+        where: { id: bankAccount2.id },
+        data: { initialBalance: origBank2Init }
+      });
+    }
+    await AccountingService.recalculateAllBalances(prisma);
   }, 30000);
 
   it('1. should post a monthly donation from bank account and create single GL entry', async () => {

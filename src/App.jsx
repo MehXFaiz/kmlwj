@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense, useEffect, Component } from 'react';
+import React, { useState, Suspense, useEffect, Component } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { BookOpen } from 'lucide-react';
 import { SplashScreen } from './components/common/SplashScreen';
@@ -7,87 +7,88 @@ import { Topbar } from './components/common/Topbar';
 import { useAuthStore } from './store/authStore';
 import { ToastContainer } from './components/ui/Toast';
 import { UpdateBanner } from './components/common/UpdateBanner';
+import { lazyWithRetry } from './utils/lazyWithRetry';
 
-// Lazy-loaded views for code splitting
+// Lazy-loaded views with automatic retry on network/decoding glitch
 // ConfirmationModal pulls in framer-motion (a sizable dependency); it's always
 // mounted but only ever visually renders after a user action, so it's split
 // out of the eager main bundle the same way the routes below are.
-const ConfirmationModal = lazy(() => import('./components/ui/ConfirmationModal').then(m => ({ default: m.ConfirmationModal })));
-const Dashboard = lazy(() => import('./views/Dashboard').then(m => ({ default: m.Dashboard })));
-const ChartOfAccounts = lazy(() => import('./views/ChartOfAccounts').then(m => ({ default: m.ChartOfAccounts })));
-const GeneralLedger = lazy(() => import('./views/GeneralLedger').then(m => ({ default: m.GeneralLedger })));
-const JournalEntries = lazy(() => import('./views/JournalEntries').then(m => ({ default: m.JournalEntries })));
-const AuditTrail = lazy(() => import('./views/AuditTrail').then(m => ({ default: m.AuditTrail })));
-const Settings = lazy(() => import('./views/Settings').then(m => ({ default: m.Settings })));
-const AccountingHealthCheck = lazy(() => import('./views/AccountingHealthCheck').then(m => ({ default: m.AccountingHealthCheck })));
-const Profile = lazy(() => import('./views/Profile').then(m => ({ default: m.Profile })));
-const MyAccount = lazy(() => import('./views/MyAccount').then(m => ({ default: m.MyAccount })));
-const RevenueHeads = lazy(() => import('./views/RevenueHeads').then(m => ({ default: m.RevenueHeads })));
-const IncomeCategoryMapping = lazy(() => import('./views/IncomeCategoryMapping').then(m => ({ default: m.IncomeCategoryMapping })));
-const ExpenseHeads = lazy(() => import('./views/ExpenseHeads').then(m => ({ default: m.ExpenseHeads })));
-const ReservedCodes = lazy(() => import('./views/ReservedCodes').then(m => ({ default: m.ReservedCodes })));
-const UsersRoles = lazy(() => import('./views/UsersRoles').then(m => ({ default: m.UsersRoles })));
-const Reports = lazy(() => import('./views/Reports').then(m => ({ default: m.Reports })));
-const TrialBalanceSheet = lazy(() => import('./views/TrialBalanceSheet').then(m => ({ default: m.TrialBalanceSheet })));
-const HallBookings = lazy(() => import('./views/HallBookings').then(m => ({ default: m.HallBookings })));
-const HallBookingForm = lazy(() => import('./views/HallBookingForm').then(m => ({ default: m.HallBookingForm })));
-const OpeningBalances = lazy(() => import('./views/OpeningBalances').then(m => ({ default: m.OpeningBalances })));
-const YearEndClosing = lazy(() => import('./views/YearEndClosing').then(m => ({ default: m.YearEndClosing })));
+const ConfirmationModal = lazyWithRetry(() => import('./components/ui/ConfirmationModal').then(m => ({ default: m.ConfirmationModal })));
+const Dashboard = lazyWithRetry(() => import('./views/Dashboard').then(m => ({ default: m.Dashboard })));
+const ChartOfAccounts = lazyWithRetry(() => import('./views/ChartOfAccounts').then(m => ({ default: m.ChartOfAccounts })));
+const GeneralLedger = lazyWithRetry(() => import('./views/GeneralLedger').then(m => ({ default: m.GeneralLedger })));
+const JournalEntries = lazyWithRetry(() => import('./views/JournalEntries').then(m => ({ default: m.JournalEntries })));
+const AuditTrail = lazyWithRetry(() => import('./views/AuditTrail').then(m => ({ default: m.AuditTrail })));
+const Settings = lazyWithRetry(() => import('./views/Settings').then(m => ({ default: m.Settings })));
+const AccountingHealthCheck = lazyWithRetry(() => import('./views/AccountingHealthCheck').then(m => ({ default: m.AccountingHealthCheck })));
+const Profile = lazyWithRetry(() => import('./views/Profile').then(m => ({ default: m.Profile })));
+const MyAccount = lazyWithRetry(() => import('./views/MyAccount').then(m => ({ default: m.MyAccount })));
+const RevenueHeads = lazyWithRetry(() => import('./views/RevenueHeads').then(m => ({ default: m.RevenueHeads })));
+const IncomeCategoryMapping = lazyWithRetry(() => import('./views/IncomeCategoryMapping').then(m => ({ default: m.IncomeCategoryMapping })));
+const ExpenseHeads = lazyWithRetry(() => import('./views/ExpenseHeads').then(m => ({ default: m.ExpenseHeads })));
+const ReservedCodes = lazyWithRetry(() => import('./views/ReservedCodes').then(m => ({ default: m.ReservedCodes })));
+const UsersRoles = lazyWithRetry(() => import('./views/UsersRoles').then(m => ({ default: m.UsersRoles })));
+const Reports = lazyWithRetry(() => import('./views/Reports').then(m => ({ default: m.Reports })));
+const TrialBalanceSheet = lazyWithRetry(() => import('./views/TrialBalanceSheet').then(m => ({ default: m.TrialBalanceSheet })));
+const HallBookings = lazyWithRetry(() => import('./views/HallBookings').then(m => ({ default: m.HallBookings })));
+const HallBookingForm = lazyWithRetry(() => import('./views/HallBookingForm').then(m => ({ default: m.HallBookingForm })));
+const OpeningBalances = lazyWithRetry(() => import('./views/OpeningBalances').then(m => ({ default: m.OpeningBalances })));
+const YearEndClosing = lazyWithRetry(() => import('./views/YearEndClosing').then(m => ({ default: m.YearEndClosing })));
 
 // Donation Module Views
-const Beneficiaries = lazy(() => import('./views/Beneficiaries').then(m => ({ default: m.Beneficiaries })));
-const BeneficiaryForm = lazy(() => import('./views/BeneficiaryForm').then(m => ({ default: m.BeneficiaryForm })));
-const Donations = lazy(() => import('./views/Donations').then(m => ({ default: m.Donations })));
-const DonationForm = lazy(() => import('./views/DonationForm').then(m => ({ default: m.DonationForm })));
-const DonationsList = lazy(() => import('./views/DonationsList').then(m => ({ default: m.DonationsList })));
-const DonationEntryForm = lazy(() => import('./views/DonationEntryForm').then(m => ({ default: m.DonationEntryForm })));
-const Donors = lazy(() => import('./views/Donors').then(m => ({ default: m.Donors })));
-const DonationsReceived = lazy(() => import('./views/DonationsReceived').then(m => ({ default: m.DonationsReceived })));
-const DonationReports = lazy(() => import('./views/DonationReports').then(m => ({ default: m.DonationReports })));
-const Invoices = lazy(() => import('./views/Invoices').then(m => ({ default: m.Invoices })));
+const Beneficiaries = lazyWithRetry(() => import('./views/Beneficiaries').then(m => ({ default: m.Beneficiaries })));
+const BeneficiaryForm = lazyWithRetry(() => import('./views/BeneficiaryForm').then(m => ({ default: m.BeneficiaryForm })));
+const Donations = lazyWithRetry(() => import('./views/Donations').then(m => ({ default: m.Donations })));
+const DonationForm = lazyWithRetry(() => import('./views/DonationForm').then(m => ({ default: m.DonationForm })));
+const DonationsList = lazyWithRetry(() => import('./views/DonationsList').then(m => ({ default: m.DonationsList })));
+const DonationEntryForm = lazyWithRetry(() => import('./views/DonationEntryForm').then(m => ({ default: m.DonationEntryForm })));
+const Donors = lazyWithRetry(() => import('./views/Donors').then(m => ({ default: m.Donors })));
+const DonationsReceived = lazyWithRetry(() => import('./views/DonationsReceived').then(m => ({ default: m.DonationsReceived })));
+const DonationReports = lazyWithRetry(() => import('./views/DonationReports').then(m => ({ default: m.DonationReports })));
+const Invoices = lazyWithRetry(() => import('./views/Invoices').then(m => ({ default: m.Invoices })));
 
 // Operation Module Views
-const AddIncome = lazy(() => import('./views/AddIncome').then(m => ({ default: m.AddIncome })));
-const Income = lazy(() => import('./views/Income').then(m => ({ default: m.Income })));
-const Expenses = lazy(() => import('./views/Expenses').then(m => ({ default: m.Expenses })));
+const AddIncome = lazyWithRetry(() => import('./views/AddIncome').then(m => ({ default: m.AddIncome })));
+const Income = lazyWithRetry(() => import('./views/Income').then(m => ({ default: m.Income })));
+const Expenses = lazyWithRetry(() => import('./views/Expenses').then(m => ({ default: m.Expenses })));
 
-const DonorForm = lazy(() => import('./views/DonorForm').then(m => ({ default: m.DonorForm })));
-const DonationReceiptForm = lazy(() => import('./views/DonationReceiptForm').then(m => ({ default: m.DonationReceiptForm })));
+const DonorForm = lazyWithRetry(() => import('./views/DonorForm').then(m => ({ default: m.DonorForm })));
+const DonationReceiptForm = lazyWithRetry(() => import('./views/DonationReceiptForm').then(m => ({ default: m.DonationReceiptForm })));
 
 // Categorized Revenue Views
-const MembershipFeeSection = lazy(() => import('./views/CategorizedRevenues').then(m => ({ default: m.MembershipFeeSection })));
-const BusBookingSection = lazy(() => import('./views/CategorizedRevenues').then(m => ({ default: m.BusBookingSection })));
-const ZakatSection = lazy(() => import('./views/CategorizedRevenues').then(m => ({ default: m.ZakatSection })));
-const FitraSection = lazy(() => import('./views/CategorizedRevenues').then(m => ({ default: m.FitraSection })));
-const SpecializedRevenueForm = lazy(() => import('./views/SpecializedRevenueForm').then(m => ({ default: m.SpecializedRevenueForm })));
+const MembershipFeeSection = lazyWithRetry(() => import('./views/CategorizedRevenues').then(m => ({ default: m.MembershipFeeSection })));
+const BusBookingSection = lazyWithRetry(() => import('./views/CategorizedRevenues').then(m => ({ default: m.BusBookingSection })));
+const ZakatSection = lazyWithRetry(() => import('./views/CategorizedRevenues').then(m => ({ default: m.ZakatSection })));
+const FitraSection = lazyWithRetry(() => import('./views/CategorizedRevenues').then(m => ({ default: m.FitraSection })));
+const SpecializedRevenueForm = lazyWithRetry(() => import('./views/SpecializedRevenueForm').then(m => ({ default: m.SpecializedRevenueForm })));
 
 // Invoice Module Views
-const Customers = lazy(() => import('./views/Customers').then(m => ({ default: m.Customers })));
-const CustomerForm = lazy(() => import('./views/CustomerForm').then(m => ({ default: m.CustomerForm })));
-const InvoiceForm = lazy(() => import('./views/InvoiceForm').then(m => ({ default: m.InvoiceForm })));
-const InvoiceDetail = lazy(() => import('./views/InvoiceDetail').then(m => ({ default: m.InvoiceDetail })));
-const Members = lazy(() => import('./views/Members').then(m => ({ default: m.Members })));
-const MemberDetails = lazy(() => import('./views/MemberDetails').then(m => ({ default: m.MemberDetails })));
-const MemberForm = lazy(() => import('./views/MemberForm').then(m => ({ default: m.MemberForm })));
-const MembershipCards = lazy(() => import('./views/MembershipCards').then(m => ({ default: m.MembershipCards })));
-const ZakatCards = lazy(() => import('./views/ZakatCards').then(m => ({ default: m.ZakatCards })));
-const MonthlyDonationCards = lazy(() => import('./views/MonthlyDonationCards').then(m => ({ default: m.MonthlyDonationCards })));
-const MemberVerify = lazy(() => import('./views/MemberVerify').then(m => ({ default: m.MemberVerify })));
-const ZakatCardVerify = lazy(() => import('./views/ZakatCardVerify'));
+const Customers = lazyWithRetry(() => import('./views/Customers').then(m => ({ default: m.Customers })));
+const CustomerForm = lazyWithRetry(() => import('./views/CustomerForm').then(m => ({ default: m.CustomerForm })));
+const InvoiceForm = lazyWithRetry(() => import('./views/InvoiceForm').then(m => ({ default: m.InvoiceForm })));
+const InvoiceDetail = lazyWithRetry(() => import('./views/InvoiceDetail').then(m => ({ default: m.InvoiceDetail })));
+const Members = lazyWithRetry(() => import('./views/Members').then(m => ({ default: m.Members })));
+const MemberDetails = lazyWithRetry(() => import('./views/MemberDetails').then(m => ({ default: m.MemberDetails })));
+const MemberForm = lazyWithRetry(() => import('./views/MemberForm').then(m => ({ default: m.MemberForm })));
+const MembershipCards = lazyWithRetry(() => import('./views/MembershipCards').then(m => ({ default: m.MembershipCards })));
+const ZakatCards = lazyWithRetry(() => import('./views/ZakatCards').then(m => ({ default: m.ZakatCards })));
+const MonthlyDonationCards = lazyWithRetry(() => import('./views/MonthlyDonationCards').then(m => ({ default: m.MonthlyDonationCards })));
+const MemberVerify = lazyWithRetry(() => import('./views/MemberVerify').then(m => ({ default: m.MemberVerify })));
+const ZakatCardVerify = lazyWithRetry(() => import('./views/ZakatCardVerify'));
 
 // Bank Voucher Module Views
-const BankVouchers = lazy(() => import('./views/BankVouchers').then(m => ({ default: m.BankVouchers })));
-const BankVoucherForm = lazy(() => import('./views/BankVoucherForm').then(m => ({ default: m.BankVoucherForm })));
-const RevenueEntryForm = lazy(() => import('./views/RevenueEntryForm').then(m => ({ default: m.RevenueEntryForm })));
-const ExpenseEntryForm = lazy(() => import('./views/ExpenseEntryForm').then(m => ({ default: m.ExpenseEntryForm })));
-const TransferForm = lazy(() => import('./views/TransferForm').then(m => ({ default: m.TransferForm })));
-const PettyCash = lazy(() => import('./views/PettyCash').then(m => ({ default: m.PettyCash })));
+const BankVouchers = lazyWithRetry(() => import('./views/BankVouchers').then(m => ({ default: m.BankVouchers })));
+const BankVoucherForm = lazyWithRetry(() => import('./views/BankVoucherForm').then(m => ({ default: m.BankVoucherForm })));
+const RevenueEntryForm = lazyWithRetry(() => import('./views/RevenueEntryForm').then(m => ({ default: m.RevenueEntryForm })));
+const ExpenseEntryForm = lazyWithRetry(() => import('./views/ExpenseEntryForm').then(m => ({ default: m.ExpenseEntryForm })));
+const TransferForm = lazyWithRetry(() => import('./views/TransferForm').then(m => ({ default: m.TransferForm })));
+const PettyCash = lazyWithRetry(() => import('./views/PettyCash').then(m => ({ default: m.PettyCash })));
 
 // Auth Views (also lazy-loaded)
-const Login = lazy(() => import('./views/Login').then(m => ({ default: m.Login })));
-const Signup = lazy(() => import('./views/Signup').then(m => ({ default: m.Signup })));
-const ForgotPassword = lazy(() => import('./views/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
-const ResetPassword = lazy(() => import('./views/ResetPassword').then(m => ({ default: m.ResetPassword })));
+const Login = lazyWithRetry(() => import('./views/Login').then(m => ({ default: m.Login })));
+const Signup = lazyWithRetry(() => import('./views/Signup').then(m => ({ default: m.Signup })));
+const ForgotPassword = lazyWithRetry(() => import('./views/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
+const ResetPassword = lazyWithRetry(() => import('./views/ResetPassword').then(m => ({ default: m.ResetPassword })));
 
 // Error Boundary for Chunk Load Errors (new deployments) with infinite reload loop protection
 class ChunkErrorBoundary extends Component {
@@ -102,17 +103,20 @@ class ChunkErrorBoundary extends Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('App Error Boundary Caught:', error, errorInfo);
+    const errorMsg = error?.message || (typeof error === 'string' ? error : '') || '';
     const isChunkLoadError = 
       error?.name === 'ChunkLoadError' || 
-      error?.message?.includes('Failed to fetch dynamically imported module') || 
-      error?.message?.includes('Importing a module script failed');
+      errorMsg.includes('Failed to fetch dynamically imported module') || 
+      errorMsg.includes('Importing a module script failed') ||
+      errorMsg.includes('ERR_CONTENT_DECODING_FAILED') ||
+      errorMsg.includes('error loading dynamically imported module');
       
     if (isChunkLoadError) {
       try {
         const key = 'chunk_reload_timestamp';
         const lastReload = parseInt(sessionStorage.getItem(key) || '0', 10);
         const now = Date.now();
-        if (now - lastReload > 20000) {
+        if (now - lastReload > 15000) {
           sessionStorage.setItem(key, String(now));
           window.location.reload();
           return;
@@ -124,10 +128,13 @@ class ChunkErrorBoundary extends Component {
 
   render() {
     if (this.state.hasError) {
+      const errorMsg = this.state.error?.message || (typeof this.state.error === 'string' ? this.state.error : '') || '';
       const isChunkLoadError = 
         this.state.error?.name === 'ChunkLoadError' || 
-        this.state.error?.message?.includes('Failed to fetch dynamically imported module') ||
-        this.state.error?.message?.includes('Importing a module script failed');
+        errorMsg.includes('Failed to fetch dynamically imported module') ||
+        errorMsg.includes('Importing a module script failed') ||
+        errorMsg.includes('ERR_CONTENT_DECODING_FAILED') ||
+        errorMsg.includes('error loading dynamically imported module');
         
       if (isChunkLoadError && !this.state.autoReloaded) {
         return (

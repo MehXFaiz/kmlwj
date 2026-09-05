@@ -9,24 +9,39 @@ import App from './App.jsx'
 document.documentElement.classList.remove('light');
 document.documentElement.classList.add('dark');
 
-// Global fallback for chunk load errors with loop guard
-window.addEventListener('unhandledrejection', (event) => {
-  const msg = event.reason?.message || '';
-  if (msg.includes('Failed to fetch dynamically imported module') || msg.includes('Importing a module script failed')) {
-    event.preventDefault();
-    try {
-      const key = 'chunk_reload_timestamp';
-      const lastReload = parseInt(sessionStorage.getItem(key) || '0', 10);
-      const now = Date.now();
-      if (now - lastReload > 20000) {
-        sessionStorage.setItem(key, String(now));
-        window.location.reload();
-      } else {
-        console.warn('Chunk load error reload loop prevented.');
-      }
-    } catch (e) {
+// Global fallback for chunk/preload/decoding load errors with loop guard
+function handleChunkLoadRecovery() {
+  try {
+    const key = 'chunk_reload_timestamp';
+    const lastReload = parseInt(sessionStorage.getItem(key) || '0', 10);
+    const now = Date.now();
+    if (now - lastReload > 15000) {
+      sessionStorage.setItem(key, String(now));
       window.location.reload();
+    } else {
+      console.warn('Chunk load error reload loop prevented.');
     }
+  } catch (e) {
+    window.location.reload();
+  }
+}
+
+// Vite native preload error event (emitted on dynamic chunk fetch failures)
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault();
+  handleChunkLoadRecovery();
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  const msg = event.reason?.message || (typeof event.reason === 'string' ? event.reason : '') || '';
+  if (
+    msg.includes('Failed to fetch dynamically imported module') ||
+    msg.includes('Importing a module script failed') ||
+    msg.includes('ERR_CONTENT_DECODING_FAILED') ||
+    msg.includes('error loading dynamically imported module')
+  ) {
+    event.preventDefault();
+    handleChunkLoadRecovery();
   }
 });
 

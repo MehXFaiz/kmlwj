@@ -642,7 +642,7 @@ export const Dashboard = () => {
             trendLabel: stats.currentMonthName || 'Current Month',
             trendColor: 'text-amber-400',
             accentBar: 'from-amber-500 to-amber-400',
-            subLabel: `Disbursed (${stats.currentMonthName || 'Current Month'})`,
+            subLabel: `Received (${stats.currentMonthName || 'Current Month'})`,
             delay: 140,
           },
           {

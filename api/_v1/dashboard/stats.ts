@@ -143,9 +143,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     where: { status: 'PENDING', isDeleted: false }
   });
 
-  // Monthly Donations (excluding Zakat) for current month
+  // Monthly Disbursements (excluding Zakat) for current month (Aid given out)
   const nonZakatTypes = ['MONTHLY', 'GENERAL_DONATION', 'CUSTOM', 'MARRIAGE', 'MEDICAL', 'EMERGENCY', 'EDUCATION'] as any;
-  const monthlyDonationsRaw = await prisma.donation.aggregate({
+  const monthlyDisbursementsRaw = await prisma.donation.aggregate({
     _sum: { amount: true },
     _count: true,
     where: {
@@ -158,10 +158,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       ]
     }
   });
-  const monthlyDonations = Number(monthlyDonationsRaw._sum.amount || 0);
+  const monthlyDonationsDisbursed = Number(monthlyDisbursementsRaw._sum.amount || 0);
 
-  // Monthly Zakat for current month
-  const monthlyZakatRaw = await prisma.donation.aggregate({
+  // Monthly Zakat Disbursed for current month (Aid given out)
+  const monthlyZakatDisbursedRaw = await prisma.donation.aggregate({
     _sum: { amount: true },
     _count: true,
     where: {
@@ -174,7 +174,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       ]
     }
   });
-  const monthlyZakat = Number(monthlyZakatRaw._sum.amount || 0);
+  const monthlyZakatDisbursed = Number(monthlyZakatDisbursedRaw._sum.amount || 0);
 
   const donationsThisMonthRaw = await prisma.donation.aggregate({
     _sum: { amount: true },
@@ -298,6 +298,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     donRecBankAgg,
     donRecChequeAgg,
     donRecMonthAgg,
+    donRecZakatMonthAgg,
   ] = await Promise.all([
     prisma.donationReceived.aggregate({
       where: donRecWhere,
@@ -325,6 +326,16 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       _sum: { amount: true },
       _count: true,
     }),
+    prisma.donationReceived.aggregate({
+      where: {
+        isDeleted: false,
+        status: 'POSTED',
+        donationType: 'ZAKAT',
+        receiptDate: { gte: startOfMonth, lt: endOfMonth },
+      },
+      _sum: { amount: true },
+      _count: true,
+    }),
   ]);
 
   const totalDonationsReceived = Number(donRecTotalAgg._sum.amount || 0);
@@ -333,6 +344,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const bankDonationsReceived = Number(donRecBankAgg._sum.amount || 0);
   const chequeDonationsReceived = Number(donRecChequeAgg._sum.amount || 0);
   const currentMonthDonationsReceived = Number(donRecMonthAgg._sum.amount || 0);
+  const currentMonthZakatReceived = Number(donRecZakatMonthAgg._sum.amount || 0);
+  const monthlyDonations = currentMonthDonationsReceived;
+  const monthlyZakat = currentMonthZakatReceived;
 
   return res.status(200).json({
     status: 200,
@@ -351,6 +365,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       currentMonthKey,
       monthlyDonations,
       monthlyZakat,
+      monthlyDonationsDisbursed,
+      monthlyZakatDisbursed,
       donationsPaid: totalDisbursementsPaid,
       donationsPaidFromBank,
       totalDonationsPaid: totalDonationsOnlyPaid,
@@ -372,6 +388,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         income: totalRevenue,
         expenses: totalExpense,
         donations: totalDisbursementsPaid,
+        donationDisbursed: totalDisbursementsPaid,
         cashInHand: cashBalance,
         bankBalance,
         netResult: netIncome,
@@ -390,6 +407,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         donationsPaidFromBank,
         monthlyDonations,
         monthlyZakat,
+        monthlyDonationsDisbursed,
+        monthlyZakatDisbursed,
         totalDonationsReceived,
         totalDonationsCount,
         cashDonationsReceived,

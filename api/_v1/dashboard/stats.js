@@ -109,7 +109,7 @@ var stats_default = makeHandler(async (req, res) => {
     where: { status: "PENDING", isDeleted: false }
   });
   const nonZakatTypes = ["MONTHLY", "GENERAL_DONATION", "CUSTOM", "MARRIAGE", "MEDICAL", "EMERGENCY", "EDUCATION"];
-  const monthlyDonationsRaw = await prisma.donation.aggregate({
+  const monthlyDisbursementsRaw = await prisma.donation.aggregate({
     _sum: { amount: true },
     _count: true,
     where: {
@@ -122,8 +122,8 @@ var stats_default = makeHandler(async (req, res) => {
       ]
     }
   });
-  const monthlyDonations = Number(monthlyDonationsRaw._sum.amount || 0);
-  const monthlyZakatRaw = await prisma.donation.aggregate({
+  const monthlyDonationsDisbursed = Number(monthlyDisbursementsRaw._sum.amount || 0);
+  const monthlyZakatDisbursedRaw = await prisma.donation.aggregate({
     _sum: { amount: true },
     _count: true,
     where: {
@@ -136,7 +136,7 @@ var stats_default = makeHandler(async (req, res) => {
       ]
     }
   });
-  const monthlyZakat = Number(monthlyZakatRaw._sum.amount || 0);
+  const monthlyZakatDisbursed = Number(monthlyZakatDisbursedRaw._sum.amount || 0);
   const donationsThisMonthRaw = await prisma.donation.aggregate({
     _sum: { amount: true },
     _count: true,
@@ -234,7 +234,8 @@ var stats_default = makeHandler(async (req, res) => {
     donRecCashAgg,
     donRecBankAgg,
     donRecChequeAgg,
-    donRecMonthAgg
+    donRecMonthAgg,
+    donRecZakatMonthAgg
   ] = await Promise.all([
     prisma.donationReceived.aggregate({
       where: donRecWhere,
@@ -261,6 +262,16 @@ var stats_default = makeHandler(async (req, res) => {
       },
       _sum: { amount: true },
       _count: true
+    }),
+    prisma.donationReceived.aggregate({
+      where: {
+        isDeleted: false,
+        status: "POSTED",
+        donationType: "ZAKAT",
+        receiptDate: { gte: startOfMonth, lt: endOfMonth }
+      },
+      _sum: { amount: true },
+      _count: true
     })
   ]);
   const totalDonationsReceived = Number(donRecTotalAgg._sum.amount || 0);
@@ -269,6 +280,9 @@ var stats_default = makeHandler(async (req, res) => {
   const bankDonationsReceived = Number(donRecBankAgg._sum.amount || 0);
   const chequeDonationsReceived = Number(donRecChequeAgg._sum.amount || 0);
   const currentMonthDonationsReceived = Number(donRecMonthAgg._sum.amount || 0);
+  const currentMonthZakatReceived = Number(donRecZakatMonthAgg._sum.amount || 0);
+  const monthlyDonations = currentMonthDonationsReceived;
+  const monthlyZakat = currentMonthZakatReceived;
   return res.status(200).json({
     status: 200,
     data: {
@@ -286,6 +300,8 @@ var stats_default = makeHandler(async (req, res) => {
       currentMonthKey,
       monthlyDonations,
       monthlyZakat,
+      monthlyDonationsDisbursed,
+      monthlyZakatDisbursed,
       donationsPaid: totalDisbursementsPaid,
       donationsPaidFromBank,
       totalDonationsPaid: totalDonationsOnlyPaid,
@@ -307,6 +323,7 @@ var stats_default = makeHandler(async (req, res) => {
         income: totalRevenue,
         expenses: totalExpense,
         donations: totalDisbursementsPaid,
+        donationDisbursed: totalDisbursementsPaid,
         cashInHand: cashBalance,
         bankBalance,
         netResult: netIncome,
@@ -325,6 +342,8 @@ var stats_default = makeHandler(async (req, res) => {
         donationsPaidFromBank,
         monthlyDonations,
         monthlyZakat,
+        monthlyDonationsDisbursed,
+        monthlyZakatDisbursed,
         totalDonationsReceived,
         totalDonationsCount,
         cashDonationsReceived,

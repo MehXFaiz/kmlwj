@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import app from '../../api/index';
@@ -11,6 +11,7 @@ describe('Dashboard Data Architecture & Summary API', () => {
   let bankAccount: any;
   let incomeAccount: any;
   let expenseAccount: any;
+  const createdVoucherNos: string[] = [];
   const secret = process.env.JWT_SECRET || 'super_secret_jwt_sign_key_123_abc';
 
   beforeAll(async () => {
@@ -126,6 +127,7 @@ describe('Dashboard Data Architecture & Summary API', () => {
 
     if (incomeAccount && cashAccount) {
       const testVoucherNo = `TEST-INC-${Date.now()}`;
+      createdVoucherNos.push(testVoucherNo);
       await AccountingService.postTransaction(prisma, {
         voucherNo: testVoucherNo,
         postingDate: new Date('2026-06-15T10:00:00Z'),
@@ -167,6 +169,7 @@ describe('Dashboard Data Architecture & Summary API', () => {
 
     if (expenseAccount && cashAccount) {
       const testVoucherNo = `TEST-EXP-${Date.now()}`;
+      createdVoucherNos.push(testVoucherNo);
       await AccountingService.postTransaction(prisma, {
         voucherNo: testVoucherNo,
         postingDate: new Date('2026-07-15T10:00:00Z'),
@@ -195,6 +198,19 @@ describe('Dashboard Data Architecture & Summary API', () => {
 
       expect(afterRes.body.data.expenses).toBe(initialExpense + 2500);
       expect(afterRes.body.data.netResult).toBe(initialNet - 2500);
+    }
+  }, 30000);
+
+  afterAll(async () => {
+    if (createdVoucherNos.length > 0) {
+      const jes = await prisma.journalEntry.findMany({
+        where: { voucherNo: { in: createdVoucherNos } }
+      });
+      for (const je of jes) {
+        await prisma.journalEntryLine.deleteMany({ where: { journalEntryId: je.id } });
+        await prisma.journalEntry.delete({ where: { id: je.id } });
+      }
+      await AccountingService.recalculateAllBalances(prisma);
     }
   }, 30000);
 });

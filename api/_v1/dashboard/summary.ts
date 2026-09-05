@@ -9,11 +9,14 @@ export interface DashboardSummaryResponse {
   income: number;
   expenses: number;
   donations: number;
+  donationDisbursed: number;
+  totalDonationsReceived: number;
   cashInHand: number;
   bankBalance: number;
   netResult: number;
   monthlyDonations: number;
   monthlyZakat: number;
+  currentMonthName: string;
   totalAssets: number;
   totalLiabilities: number;
   totalEquity: number;
@@ -63,69 +66,80 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const netResult = Number(summaryResult.netPeriodIncome ?? (totalRevenue - totalExpense));
   const isEquationBalanced = summaryResult.isEquationBalanced ?? (Math.abs(totalAssets - (totalLiabilities + totalEquity)) < 0.01);
 
-  // 3. Current month key for monthly disbursement KPIs
+  // 3. Current calendar month boundary for monthly donations received
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonthIdx = now.getMonth();
-  const currentMonthKey = `${currentYear}-${String(currentMonthIdx + 1).padStart(2, '0')}`;
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const currentMonthName = `${monthNames[currentMonthIdx]} ${currentYear}`;
   const startOfMonth = new Date(currentYear, currentMonthIdx, 1);
   const endOfMonth = new Date(currentYear, currentMonthIdx + 1, 1);
 
-  // 4. Monthly Donations (Non-Zakat) from actual database records
-  const nonZakatTypes = ['MONTHLY', 'GENERAL_DONATION', 'CUSTOM', 'MARRIAGE', 'MEDICAL', 'EMERGENCY', 'EDUCATION'] as any;
-  const monthlyDonationsRaw = await prisma.donation.aggregate({
+  // 4. Monthly Donations RECEIVED during current calendar month (Single Source: DonationReceived)
+  const monthlyDonationsReceivedRaw = await prisma.donationReceived.aggregate({
     _sum: { amount: true },
     where: {
-      status: 'APPROVED',
       isDeleted: false,
-      donationType: { in: nonZakatTypes },
-      OR: [
-        { disbursementMonth: currentMonthKey },
-        { createdAt: { gte: startOfMonth, lt: endOfMonth } }
-      ]
+      status: 'POSTED',
+      receiptDate: { gte: startOfMonth, lt: endOfMonth }
     }
   });
-  const monthlyDonations = Number(monthlyDonationsRaw._sum.amount || 0);
+  const monthlyDonations = Number(monthlyDonationsReceivedRaw._sum.amount || 0);
 
-  // 5. Monthly Zakat from actual database records
-  const monthlyZakatRaw = await prisma.donation.aggregate({
+  // 5. Monthly Zakat RECEIVED during current calendar month
+  const monthlyZakatReceivedRaw = await prisma.donationReceived.aggregate({
     _sum: { amount: true },
     where: {
-      status: 'APPROVED',
       isDeleted: false,
+      status: 'POSTED',
       donationType: 'ZAKAT',
-      OR: [
-        { disbursementMonth: currentMonthKey },
-        { createdAt: { gte: startOfMonth, lt: endOfMonth } }
-      ]
+      receiptDate: { gte: startOfMonth, lt: endOfMonth }
     }
   });
-  const monthlyZakat = Number(monthlyZakatRaw._sum.amount || 0);
+  const monthlyZakat = Number(monthlyZakatReceivedRaw._sum.amount || 0);
 
-  // 6. Total approved donations in requested period
-  const donationPeriodWhere: any = { status: 'APPROVED', isDeleted: false };
-  if (effectiveStartDate) donationPeriodWhere.createdAt = { ...(donationPeriodWhere.createdAt || {}), gte: new Date(effectiveStartDate) };
+  // 6. Total donations received in requested reporting period
+  const donRecPeriodWhere: any = { isDeleted: false, status: 'POSTED' };
+  if (effectiveStartDate) donRecPeriodWhere.receiptDate = { ...(donRecPeriodWhere.receiptDate || {}), gte: new Date(effectiveStartDate) };
   if (effectiveEndDate) {
     const end = new Date(effectiveEndDate);
     end.setHours(23, 59, 59, 999);
-    donationPeriodWhere.createdAt = { ...(donationPeriodWhere.createdAt || {}), lte: end };
+    donRecPeriodWhere.receiptDate = { ...(donRecPeriodWhere.receiptDate || {}), lte: end };
   }
 
-  const donationsPeriodRaw = await prisma.donation.aggregate({
+  const donationsReceivedPeriodRaw = await prisma.donationReceived.aggregate({
     _sum: { amount: true },
-    where: donationPeriodWhere
+    where: donRecPeriodWhere
   });
-  const totalDonations = Number(donationsPeriodRaw._sum.amount || 0);
+  const totalDonationsReceived = Number(donationsReceivedPeriodRaw._sum.amount || 0);
+
+  // 7. Total aid/welfare donations disbursed in requested period (Disbursements to Beneficiaries)
+  const donationDisbPeriodWhere: any = { status: 'APPROVED', isDeleted: false };
+  if (effectiveStartDate) donationDisbPeriodWhere.createdAt = { ...(donationDisbPeriodWhere.createdAt || {}), gte: new Date(effectiveStartDate) };
+  if (effectiveEndDate) {
+    const end = new Date(effectiveEndDate);
+    end.setHours(23, 59, 59, 999);
+    donationDisbPeriodWhere.createdAt = { ...(donationDisbPeriodWhere.createdAt || {}), lte: end };
+  }
+
+  const donationsDisbPeriodRaw = await prisma.donation.aggregate({
+    _sum: { amount: true },
+    where: donationDisbPeriodWhere
+  });
+  const totalDonationsDisbursed = Number(donationsDisbPeriodRaw._sum.amount || 0);
 
   const payload: DashboardSummaryResponse = {
     income: totalRevenue,
     expenses: totalExpense,
-    donations: totalDonations,
+    donations: totalDonationsDisbursed,
+    donationDisbursed: totalDonationsDisbursed,
+    totalDonationsReceived: totalDonationsReceived,
     cashInHand: cashBalance,
     bankBalance: bankBalance,
     netResult: netResult,
     monthlyDonations: monthlyDonations,
     monthlyZakat: monthlyZakat,
+    currentMonthName: currentMonthName,
     totalAssets: totalAssets,
     totalLiabilities: totalLiabilities,
     totalEquity: totalEquity,

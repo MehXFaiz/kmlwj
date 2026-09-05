@@ -32,57 +32,65 @@ var summary_default = makeHandler(async (req, res) => {
   const now = /* @__PURE__ */ new Date();
   const currentYear = now.getFullYear();
   const currentMonthIdx = now.getMonth();
-  const currentMonthKey = `${currentYear}-${String(currentMonthIdx + 1).padStart(2, "0")}`;
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const currentMonthName = `${monthNames[currentMonthIdx]} ${currentYear}`;
   const startOfMonth = new Date(currentYear, currentMonthIdx, 1);
   const endOfMonth = new Date(currentYear, currentMonthIdx + 1, 1);
-  const nonZakatTypes = ["MONTHLY", "GENERAL_DONATION", "CUSTOM", "MARRIAGE", "MEDICAL", "EMERGENCY", "EDUCATION"];
-  const monthlyDonationsRaw = await prisma.donation.aggregate({
+  const monthlyDonationsReceivedRaw = await prisma.donationReceived.aggregate({
     _sum: { amount: true },
     where: {
-      status: "APPROVED",
       isDeleted: false,
-      donationType: { in: nonZakatTypes },
-      OR: [
-        { disbursementMonth: currentMonthKey },
-        { createdAt: { gte: startOfMonth, lt: endOfMonth } }
-      ]
+      status: "POSTED",
+      receiptDate: { gte: startOfMonth, lt: endOfMonth }
     }
   });
-  const monthlyDonations = Number(monthlyDonationsRaw._sum.amount || 0);
-  const monthlyZakatRaw = await prisma.donation.aggregate({
+  const monthlyDonations = Number(monthlyDonationsReceivedRaw._sum.amount || 0);
+  const monthlyZakatReceivedRaw = await prisma.donationReceived.aggregate({
     _sum: { amount: true },
     where: {
-      status: "APPROVED",
       isDeleted: false,
+      status: "POSTED",
       donationType: "ZAKAT",
-      OR: [
-        { disbursementMonth: currentMonthKey },
-        { createdAt: { gte: startOfMonth, lt: endOfMonth } }
-      ]
+      receiptDate: { gte: startOfMonth, lt: endOfMonth }
     }
   });
-  const monthlyZakat = Number(monthlyZakatRaw._sum.amount || 0);
-  const donationPeriodWhere = { status: "APPROVED", isDeleted: false };
-  if (effectiveStartDate) donationPeriodWhere.createdAt = { ...donationPeriodWhere.createdAt || {}, gte: new Date(effectiveStartDate) };
+  const monthlyZakat = Number(monthlyZakatReceivedRaw._sum.amount || 0);
+  const donRecPeriodWhere = { isDeleted: false, status: "POSTED" };
+  if (effectiveStartDate) donRecPeriodWhere.receiptDate = { ...donRecPeriodWhere.receiptDate || {}, gte: new Date(effectiveStartDate) };
   if (effectiveEndDate) {
     const end = new Date(effectiveEndDate);
     end.setHours(23, 59, 59, 999);
-    donationPeriodWhere.createdAt = { ...donationPeriodWhere.createdAt || {}, lte: end };
+    donRecPeriodWhere.receiptDate = { ...donRecPeriodWhere.receiptDate || {}, lte: end };
   }
-  const donationsPeriodRaw = await prisma.donation.aggregate({
+  const donationsReceivedPeriodRaw = await prisma.donationReceived.aggregate({
     _sum: { amount: true },
-    where: donationPeriodWhere
+    where: donRecPeriodWhere
   });
-  const totalDonations = Number(donationsPeriodRaw._sum.amount || 0);
+  const totalDonationsReceived = Number(donationsReceivedPeriodRaw._sum.amount || 0);
+  const donationDisbPeriodWhere = { status: "APPROVED", isDeleted: false };
+  if (effectiveStartDate) donationDisbPeriodWhere.createdAt = { ...donationDisbPeriodWhere.createdAt || {}, gte: new Date(effectiveStartDate) };
+  if (effectiveEndDate) {
+    const end = new Date(effectiveEndDate);
+    end.setHours(23, 59, 59, 999);
+    donationDisbPeriodWhere.createdAt = { ...donationDisbPeriodWhere.createdAt || {}, lte: end };
+  }
+  const donationsDisbPeriodRaw = await prisma.donation.aggregate({
+    _sum: { amount: true },
+    where: donationDisbPeriodWhere
+  });
+  const totalDonationsDisbursed = Number(donationsDisbPeriodRaw._sum.amount || 0);
   const payload = {
     income: totalRevenue,
     expenses: totalExpense,
-    donations: totalDonations,
+    donations: totalDonationsDisbursed,
+    donationDisbursed: totalDonationsDisbursed,
+    totalDonationsReceived,
     cashInHand: cashBalance,
     bankBalance,
     netResult,
     monthlyDonations,
     monthlyZakat,
+    currentMonthName,
     totalAssets,
     totalLiabilities,
     totalEquity,
