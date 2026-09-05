@@ -18,31 +18,6 @@ describe('7 Live Accounting & Dashboard Verification Scenarios', () => {
   const secret = process.env.JWT_SECRET || 'super_secret_jwt_sign_key_123_abc';
 
   beforeAll(async () => {
-    // Ensure pristine initial state
-    await prisma.account.updateMany({
-      where: { glCode: { in: ['1010102', '4080103'] } },
-      data: { initialBalance: 0 }
-    });
-
-    const oldTestJes = await prisma.journalEntry.findMany({
-      where: {
-        OR: [
-          { voucherNo: { startsWith: 'SCEN' } },
-          { voucherNo: { startsWith: 'CR-TEST' } },
-          { reference: { contains: 'Scenario' } }
-        ]
-      },
-      select: { id: true }
-    });
-    if (oldTestJes.length > 0) {
-      const oldIds = oldTestJes.map(j => j.id);
-      await prisma.journalEntryLine.deleteMany({ where: { journalEntryId: { in: oldIds } } });
-      await prisma.donationReceived.deleteMany({ where: { journalEntryId: { in: oldIds } } });
-      await prisma.journalEntry.deleteMany({ where: { id: { in: oldIds } } });
-    }
-
-    await AccountingService.syncAllModulesToLedger(prisma);
-
     adminUser = await prisma.user.findFirst({
       where: { role: { name: { in: ['admin', 'super admin', 'administrator'], mode: 'insensitive' } } }
     });
@@ -76,10 +51,9 @@ describe('7 Live Accounting & Dashboard Verification Scenarios', () => {
       where: {
         isDeleted: false,
         isLocked: false,
-        accountLevel: 'GL',
+        children: { none: {} },
         accountTypeId: assetType?.id,
         OR: [
-          { glCode: '1010101' },
           { detailType: { in: ['Bank', 'bank'] } },
           { accountName: { contains: 'bank', mode: 'insensitive' } }
         ]
@@ -90,10 +64,9 @@ describe('7 Live Accounting & Dashboard Verification Scenarios', () => {
       where: {
         isDeleted: false,
         isLocked: false,
-        accountLevel: 'GL',
+        children: { none: {} },
         accountTypeId: assetType?.id,
         OR: [
-          { glCode: '1010103' },
           { detailType: { in: ['Cash', 'cash'] } },
           { accountName: { contains: 'cash', mode: 'insensitive' } }
         ]
@@ -104,14 +77,14 @@ describe('7 Live Accounting & Dashboard Verification Scenarios', () => {
       where: {
         isDeleted: false,
         accountTypeId: revenueType?.id,
-        accountLevel: 'GL',
+        children: { none: {} },
         accountName: { contains: 'donation', mode: 'insensitive' }
       }
     }) || await prisma.account.findFirst({
       where: {
         isDeleted: false,
         accountTypeId: revenueType?.id,
-        accountLevel: 'GL'
+        children: { none: {} }
       }
     });
 
@@ -119,17 +92,17 @@ describe('7 Live Accounting & Dashboard Verification Scenarios', () => {
       where: {
         isDeleted: false,
         accountTypeId: expenseType?.id,
-        accountLevel: 'GL',
+        children: { none: {} },
         accountName: { contains: 'donation', mode: 'insensitive' }
       }
     }) || await prisma.account.findFirst({
       where: {
         isDeleted: false,
         accountTypeId: expenseType?.id,
-        accountLevel: 'GL'
+        children: { none: {} }
       }
     });
-  }, 90000);
+  }, 30000);
 
   it('Scenario 1: Cash donation Rs 10,000 increases Cash in Hand & Income, Bank unchanged', async () => {
     const beforeRes = await request(app)
@@ -321,27 +294,6 @@ describe('7 Live Accounting & Dashboard Verification Scenarios', () => {
 
   it('Scenario 7: Monthly Donations KPI counts only current month donations received', async () => {
     const now = new Date();
-    const vNo1 = `CR-TEST-CURR-${Date.now()}`;
-    createdVoucherNos.push(vNo1);
-    const je1 = await prisma.journalEntry.create({
-      data: {
-        voucherNo: vNo1,
-        voucherType: 'CR',
-        postingDate: now,
-        subsidiary: 'Global',
-        reference: 'Scenario 7 Current',
-        description: 'Scenario 7 Current Month',
-        postedBy: adminUser.id,
-        status: 'Posted',
-        lines: {
-          create: [
-            { accountId: cashAccount.id, debit: 7500, credit: 0, description: 'Cash' },
-            { accountId: donationIncomeAccount.id, debit: 0, credit: 7500, description: 'Donation Income' }
-          ]
-        }
-      }
-    });
-
     const currentMonthDonation = await prisma.donationReceived.create({
       data: {
         receiptNo: `REC-CURR-${Date.now()}`,
@@ -352,34 +304,12 @@ describe('7 Live Accounting & Dashboard Verification Scenarios', () => {
         paymentMethod: 'CASH',
         amount: 7500,
         status: 'POSTED',
-        journalEntryId: je1.id,
         narration: 'Scenario 7 Current Month Received'
       }
     });
     createdDonationReceivedIds.push(currentMonthDonation.id);
 
     const pastDate = new Date(now.getFullYear(), now.getMonth() - 2, 15);
-    const vNo2 = `CR-TEST-PAST-${Date.now()}`;
-    createdVoucherNos.push(vNo2);
-    const je2 = await prisma.journalEntry.create({
-      data: {
-        voucherNo: vNo2,
-        voucherType: 'CR',
-        postingDate: pastDate,
-        subsidiary: 'Global',
-        reference: 'Scenario 7 Past',
-        description: 'Scenario 7 Past Month',
-        postedBy: adminUser.id,
-        status: 'Posted',
-        lines: {
-          create: [
-            { accountId: bankAccount?.id || cashAccount.id, debit: 50000, credit: 0, description: 'Bank' },
-            { accountId: donationIncomeAccount.id, debit: 0, credit: 50000, description: 'Donation Income' }
-          ]
-        }
-      }
-    });
-
     const pastMonthDonation = await prisma.donationReceived.create({
       data: {
         receiptNo: `REC-PAST-${Date.now()}`,
@@ -390,7 +320,6 @@ describe('7 Live Accounting & Dashboard Verification Scenarios', () => {
         paymentMethod: 'BANK',
         amount: 50000,
         status: 'POSTED',
-        journalEntryId: je2.id,
         narration: 'Scenario 7 Past Month Received'
       }
     });
@@ -414,16 +343,13 @@ describe('7 Live Accounting & Dashboard Verification Scenarios', () => {
 
     if (createdVoucherNos.length > 0) {
       const jes = await prisma.journalEntry.findMany({
-        where: { voucherNo: { in: createdVoucherNos } },
-        select: { id: true }
+        where: { voucherNo: { in: createdVoucherNos } }
       });
-      const jeIds = jes.map(j => j.id);
-      if (jeIds.length > 0) {
-        await prisma.journalEntryLine.deleteMany({ where: { journalEntryId: { in: jeIds } } });
-        await prisma.journalEntry.deleteMany({ where: { id: { in: jeIds } } });
+      for (const je of jes) {
+        await prisma.journalEntryLine.deleteMany({ where: { journalEntryId: je.id } });
+        await prisma.journalEntry.delete({ where: { id: je.id } });
       }
+      await AccountingService.recalculateAllBalances(prisma);
     }
-
-    await AccountingService.syncAllModulesToLedger(prisma);
-  }, 90000);
+  }, 30000);
 });
