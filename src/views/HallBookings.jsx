@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Search, Printer, Download, AlertTriangle, CheckCircle, X, Trash2, Edit2, CheckCircle2, Calendar, Table as TableIcon, LayoutGrid, Building2, Phone, DollarSign, FileText, Clock, RotateCcw } from 'lucide-react';
+import { Plus, Search, Printer, Download, Upload, AlertTriangle, CheckCircle, X, Trash2, Edit2, CheckCircle2, Calendar, Table as TableIcon, LayoutGrid, Building2, Phone, DollarSign, FileText, Clock, RotateCcw } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useHallBookingStore } from '../store/hallBookingStore';
 import { useCoaStore } from '../store/coaStore';
@@ -27,6 +27,17 @@ const formatHallName = (booking) => {
   return raw;
 };
 
+const parseImportedDate = (value) => {
+  if (!value) return '';
+  if (typeof value === 'number') {
+    const parsed = XLSX.SSF.parse_date_code(value);
+    if (!parsed) return '';
+    return `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`;
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10);
+};
+
 export const HallBookings = () => {
   const { t, i18n } = useTranslation();
   const { bookings, loading, fetchBookings, postBooking, revertBooking, deleteBooking, bulkDeleteBookings } = useHallBookingStore();
@@ -45,6 +56,8 @@ export const HallBookings = () => {
   const [selectedIds, setSelectedIds] = useState([]);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const importInputRef = useRef(null);
 
   useEffect(() => {
     fetchAccountsList();
@@ -233,6 +246,67 @@ export const HallBookings = () => {
     showToast('Exported hall bookings to Excel', 'success');
   };
 
+  const handleImport = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+      const hallByName = new Map(hallOptions.map(hall => [hall.name.toLowerCase(), hall.id]));
+      let imported = 0;
+      let failed = 0;
+
+      for (const row of rows) {
+        const hallName = String(row.Hall || '').trim();
+        const hallId = hallByName.get(hallName.toLowerCase());
+        const amount = Number(row['Hall Charges'] || 0);
+        const programDate = parseImportedDate(row['Program Date']);
+        const bookingDate = parseImportedDate(row['Booking Date']) || new Date().toISOString().slice(0, 10);
+
+        if (!row['Booker Name'] || !programDate || !hallId || !amount) {
+          failed += 1;
+          continue;
+        }
+
+        try {
+          const discount = Number(row.Discount || 0);
+          const netAmount = Math.max(0, amount - discount);
+          const receivedAmount = Number(row.Received || 0);
+          await addBooking({
+            bookingDate,
+            bookerName: String(row['Booker Name']).trim(),
+            mobile: String(row.Mobile || '').trim(),
+            programDate,
+            hallId,
+            timings: String(row.Timings || 'Evening').trim(),
+            amount,
+            hallCharges: amount,
+            discount,
+            netAmount,
+            receivedAmount,
+            remainingAmount: Math.max(0, netAmount - receivedAmount),
+            paymentMethod: 'CASH',
+            status: 'Confirmed',
+          });
+          imported += 1;
+        } catch {
+          failed += 1;
+        }
+      }
+
+      if (imported > 0) await fetchBookings({ ...dateRange, ...(selectedHallId ? { hallId: selectedHallId } : {}) });
+      showToast(`Imported ${imported} booking(s)${failed ? `, skipped ${failed} row(s)` : ''}`, failed ? 'warning' : 'success');
+    } catch (error) {
+      showToast(error.message || 'Failed to import hall bookings', 'error');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   return (
     <DashboardLayout breadcrumbs={['Revenue', t('tables.hallBookings.title')]}>
       <div className="space-y-6">
@@ -250,6 +324,16 @@ export const HallBookings = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <input ref={importInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleImport} className="hidden" />
+            <button
+              type="button"
+              onClick={() => importInputRef.current?.click()}
+              disabled={isImporting}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold border border-slate-700 transition-all disabled:opacity-50"
+              title="Import hall bookings from Excel"
+            >
+              <Upload className="h-4 w-4" /> {isImporting ? 'Importing...' : 'Import Excel'}
+            </button>
             <button
               type="button"
               onClick={handleExport}
