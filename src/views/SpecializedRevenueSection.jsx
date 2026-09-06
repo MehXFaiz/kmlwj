@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Search, Printer, AlertTriangle, CheckCircle, Trash2, X, DollarSign, Calendar, Users, Building, Edit2, CheckCircle2, ChevronDown, LayoutGrid, Table as TableIcon, MapPin, Tag, Phone, Bus, Heart, User, Hash, RotateCcw } from 'lucide-react';
+import { Plus, Search, Printer, Download, Upload, AlertTriangle, CheckCircle, Trash2, X, DollarSign, Calendar, Users, Building, Edit2, CheckCircle2, ChevronDown, LayoutGrid, Table as TableIcon, MapPin, Tag, Phone, Bus, Heart, User, Hash, RotateCcw } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { useRevenueCollectionStore } from '../store/revenueCollectionStore';
 import { useAuthStore } from '../store/authStore';
 import { useConfirmStore } from '../store/confirmStore';
@@ -46,6 +47,8 @@ export const SpecializedRevenueSection = ({
   const [selectedIds, setSelectedIds] = useState([]);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const importInputRef = useRef(null);
 
   const getBasePath = () => {
     if (category === 'Bus Booking') return '/bus-bookings';
@@ -168,6 +171,124 @@ export const SpecializedRevenueSection = ({
     return filtered.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
   }, [filtered]);
 
+  const handleExport = () => {
+    if (filtered.length === 0) {
+      showToast('No membership fees available to export', 'info');
+      return;
+    }
+
+    const exportData = filtered.map((item, index) => ({
+      'S.No': index + 1,
+      'Receipt No': item.receiptNo || '',
+      'Member Name': item.title || '',
+      'Membership ID / CNIC': item.subTitle || '',
+      'Mobile': item.mobile || '',
+      'Fee Date': item.eventDate ? new Date(item.eventDate).toLocaleDateString('en-GB') : '',
+      'Fee Rate': Number(item.rate || 0),
+      'Quantity': Number(item.quantity || 1),
+      'Total Amount': Number(item.amount || 0),
+      'Payment Method': item.paymentMethod || 'CASH',
+      'Status': item.status || '',
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Membership Fees');
+    XLSX.writeFile(workbook, `Membership_Fees_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast('Exported membership fees to Excel', 'success');
+  };
+
+  const parseImportedDate = (value) => {
+    if (!value) return new Date().toISOString().slice(0, 10);
+    if (typeof value === 'number') {
+      const parsed = XLSX.SSF.parse_date_code(value);
+      if (parsed) return `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`;
+    }
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10);
+  };
+
+  const handleImport = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+      let imported = 0;
+      let failed = 0;
+
+      for (const row of rows) {
+        const title = String(row['Member Name'] || '').trim();
+        const amount = Number(row['Total Amount'] || 0);
+        const feeDate = parseImportedDate(row['Fee Date']);
+        if (!title || !amount || !feeDate) {
+          failed += 1;
+          continue;
+        }
+
+        try {
+          await addCollection({
+            category: 'Membership Fee',
+            title,
+            subTitle: String(row['Membership ID / CNIC'] || '').trim(),
+            mobile: String(row.Mobile || '').trim(),
+            eventDate: feeDate,
+            quantity: Number(row.Quantity || 1),
+            rate: Number(row['Fee Rate'] || amount),
+            amount,
+            paymentMethod: String(row['Payment Method'] || 'CASH').trim(),
+            remarks: '',
+            postImmediately: false,
+          });
+          imported += 1;
+        } catch {
+          failed += 1;
+        }
+      }
+
+      if (imported > 0) await fetchCollections(category);
+      showToast(`Imported ${imported} membership fee(s)${failed ? `, skipped ${failed} row(s)` : ''}`, failed ? 'warning' : 'success');
+    } catch (error) {
+      showToast(error.message || 'Failed to import membership fees', 'error');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handlePrint = () => {
+    if (filtered.length === 0) {
+      showToast('No membership fees available to print', 'info');
+      return;
+    }
+    const printWindow = window.open('', '_blank', 'width=1200,height=800');
+    if (!printWindow) {
+      showToast('Please allow pop-ups to print membership fees', 'warning');
+      return;
+    }
+    const escapeHtml = (value) => String(value ?? '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    const rows = filtered.map((item, index) => `
+      <tr><td>${index + 1}</td><td>${escapeHtml(item.receiptNo)}</td><td>${escapeHtml(item.title)}</td>
+      <td>${escapeHtml(item.subTitle)}</td><td>${escapeHtml(item.mobile)}</td>
+      <td>${escapeHtml(item.eventDate ? new Date(item.eventDate).toLocaleDateString('en-GB') : '')}</td>
+      <td>Rs. ${Number(item.amount || 0).toLocaleString()}</td><td>${escapeHtml(item.status)}</td></tr>`).join('');
+    printWindow.document.write(`<!doctype html><html><head><title>Membership Fees</title><style>
+      body{font-family:Arial,sans-serif;color:#111;margin:24px}h1{font-size:20px;margin:0 0 4px}p{color:#555;font-size:12px;margin:0 0 16px}
+      table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #bbb;padding:7px 6px;text-align:left}th{background:#eee}
+      @media print{body{margin:10mm}}
+    </style></head><body><h1>Membership Fees</h1>
+      <p>Printed on ${escapeHtml(new Date().toLocaleString('en-GB'))} | Total amount: Rs. ${totalAmount.toLocaleString()}</p>
+      <table><thead><tr><th>#</th><th>Receipt No</th><th>Member Name</th><th>Membership ID / CNIC</th><th>Mobile</th><th>Fee Date</th><th>Total Amount</th><th>Status</th></tr></thead>
+      <tbody>${rows}</tbody></table></body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.onload = () => { printWindow.print(); printWindow.close(); };
+  };
+
   return (
     <DashboardLayout breadcrumbs={['Revenue & Collections', title]}>
       <div className="space-y-6">
@@ -177,6 +298,26 @@ export const SpecializedRevenueSection = ({
             <p className="text-sm text-slate-400 mt-1">{desc}</p>
           </div>
           <div className="flex items-center gap-3">
+            {isMembershipFee && (
+              <>
+                <input ref={importInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleImport} className="hidden" />
+                <button type="button" onClick={() => importInputRef.current?.click()} disabled={isImporting}
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold border border-slate-700 transition-all disabled:opacity-50"
+                  title="Import membership fees from Excel">
+                  <Upload className="h-4 w-4" /> {isImporting ? 'Importing...' : 'Import Excel'}
+                </button>
+                <button type="button" onClick={handleExport}
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold border border-slate-700 transition-all"
+                  title="Export membership fees to Excel">
+                  <Download className="h-4 w-4" /> Export Excel
+                </button>
+                <button type="button" onClick={handlePrint}
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold shadow-lg shadow-amber-900/20 transition-all"
+                  title="Print membership fees">
+                  <Printer className="h-4 w-4" /> Print
+                </button>
+              </>
+            )}
             {canEditOrDelete && selectedIds.length > 0 && (
               <button
                 type="button"
