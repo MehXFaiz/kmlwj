@@ -21,6 +21,7 @@ async function roleGrantsSecurityPermission(roleName: string): Promise<boolean> 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
+  const actorHoldsSystemSettings = (await loadPermissions(req)).has(PERMS.SYSTEM_SETTINGS);
 
   const { method } = req;
   const id = req.query.id as string;
