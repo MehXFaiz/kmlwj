@@ -305,7 +305,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     await prisma.$transaction(async (tx) => {
       if (isPermanent) {
         await tx.familyRelationship.deleteMany({
-          where: { OR: [{ memberId: { in: ids } }, { relativeMemberId: { in: ids } }] }
+          where: { OR: [{ memberId: { in: ids } }, { relatedMemberId: { in: ids } }] }
         });
         await tx.zakatCard.deleteMany({
           where: { memberId: { in: ids } }
