@@ -420,10 +420,10 @@ export const HallBookings = () => {
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
-                              <Clock className="w-3.5 h-3.5 text-amber-400" /> PROGRAM DATE
+                              <Clock className="w-3.5 h-3.5 text-amber-400" /> BOOKING DATE
                             </span>
                             <span className="font-semibold text-slate-100 text-xs">
-                              {formatDateDDMMYYYY(booking.programDate)}
+                              {formatDateDDMMYYYY(booking.createdAt)}
                               {booking.timings && <span className="text-slate-400 font-normal ml-1.5">({booking.timings})</span>}
                             </span>
                           </div>
@@ -433,7 +433,7 @@ export const HallBookings = () => {
                       {/* Card Footer: Date & Action Icons */}
                       <div className="flex flex-col gap-3 pt-3.5 border-t border-slate-800/80">
                         <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5 text-slate-400" /> {formatDateDDMMYYYY(booking.programDate)}
+                          <Calendar className="w-3.5 h-3.5 text-slate-400" /> {formatDateDDMMYYYY(booking.createdAt)}
                         </span>
                         <div className="flex items-center justify-end gap-2 w-full">
                           <button
@@ -518,7 +518,7 @@ export const HallBookings = () => {
                     )}
                     <th className="px-6 py-4">{t('receipt.receiptNo')}</th>
                     <th className="px-6 py-4">{t('receipt.bookerName')}</th>
-                    <th className="px-6 py-4">{t('receipt.programDate')}</th>
+                    <th className="px-6 py-4">Booking Date</th>
                     <th className="px-6 py-4">{t('receipt.hall')}</th>
                     <th className="px-6 py-4">Hall Charges</th>
                     <th className="px-6 py-4">Discount</th>
@@ -547,7 +547,7 @@ export const HallBookings = () => {
                         <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">{booking.mobile || 'N/A'}</div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="font-medium">{formatDateDDMMYYYY(booking.programDate)}</div>
+                        <div className="font-medium">{formatDateDDMMYYYY(booking.createdAt)}</div>
                         <div className="text-xs text-slate-500">{booking.timings || 'Any time'}</div>
                       </td>
                       <td className="px-6 py-4">
