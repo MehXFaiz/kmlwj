@@ -60,6 +60,13 @@ export const HallBookings = () => {
       const nextMonth = new Date(Date.UTC(year, month, 1));
       return { startDate: `${selectedMonth}-01`, endDate: nextMonth.toISOString().slice(0, 10) };
     }
+    if (period === '3months' || period === '6months') {
+      const monthCount = period === '3months' ? 3 : 6;
+      const currentMonth = new Date();
+      const start = new Date(Date.UTC(currentMonth.getFullYear(), currentMonth.getMonth() - monthCount + 1, 1));
+      const end = new Date(Date.UTC(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+      return { startDate: start.toISOString().slice(0, 10), endDate: end.toISOString().slice(0, 10) };
+    }
     return {};
   }, [period, selectedMonth, selectedDay]);
 
@@ -241,6 +248,8 @@ export const HallBookings = () => {
                 <select value={period} onChange={e => setPeriod(e.target.value)} className="rounded-lg bg-slate-950/70 border border-slate-800 px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-amber-500/50">
                   <option value="all">All dates</option>
                   <option value="month">Monthly income</option>
+                  <option value="3months">Last 3 months income</option>
+                  <option value="6months">Last 6 months income</option>
                   <option value="day">Daily income</option>
                 </select>
                 {period === 'month' && <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="rounded-lg bg-slate-950/70 border border-slate-800 px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-amber-500/50" />}
