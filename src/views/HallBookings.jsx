@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, Search, Printer, AlertTriangle, CheckCircle, X, Trash2, Edit2, CheckCircle2, Calendar, Table as TableIcon, LayoutGrid, Building2, Phone, DollarSign, FileText, Clock, RotateCcw } from 'lucide-react';
 import { useHallBookingStore } from '../store/hallBookingStore';
+import { useCoaStore } from '../store/coaStore';
 import { useAuthStore } from '../store/authStore';
 import { useConfirmStore } from '../store/confirmStore';
 import { DashboardLayout } from '../layouts/DashboardLayout';
@@ -28,20 +29,53 @@ const formatHallName = (booking) => {
 export const HallBookings = () => {
   const { t, i18n } = useTranslation();
   const { bookings, loading, fetchBookings, postBooking, revertBooking, deleteBooking, bulkDeleteBookings } = useHallBookingStore();
+  const { flatAccounts, fetchAccountsList } = useCoaStore();
   const { canEditOrDelete } = useAuthStore();
   const canPostToLedger = useAuthStore((s) => s.canPostToLedger);
   const [search, setSearch] = useState('');
   const [printItem, setPrintItem] = useState(null);
   const [glItem, setGlItem] = useState(null);
   const [viewMode, setViewMode] = useState('cards');
+  const [period, setPeriod] = useState('all');
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [selectedDay, setSelectedDay] = useState('');
+  const [selectedHallId, setSelectedHallId] = useState('');
 
   const [selectedIds, setSelectedIds] = useState([]);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    fetchBookings();
-  }, []);
+    fetchAccountsList();
+  }, [fetchAccountsList]);
+
+  const dateRange = useMemo(() => {
+    if (period === 'day' && selectedDay) {
+      const nextDay = new Date(`${selectedDay}T00:00:00`);
+      nextDay.setDate(nextDay.getDate() + 1);
+      return { startDate: selectedDay, endDate: nextDay.toISOString().slice(0, 10) };
+    }
+    if (period === 'month' && selectedMonth) {
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const nextMonth = new Date(Date.UTC(year, month, 1));
+      return { startDate: `${selectedMonth}-01`, endDate: nextMonth.toISOString().slice(0, 10) };
+    }
+    return {};
+  }, [period, selectedMonth, selectedDay]);
+
+  useEffect(() => {
+    fetchBookings({ ...dateRange, ...(selectedHallId ? { hallId: selectedHallId } : {}) });
+    setSelectedIds([]);
+  }, [dateRange, selectedHallId, fetchBookings]);
+
+  const hallOptions = useMemo(() => {
+    const seen = new Set();
+    return (flatAccounts || [])
+      .filter(account => account.type === 'Revenue' || account.accountTypeName === 'REVENUE' || account.accountTypeName === 'Revenue')
+      .map(account => ({ id: account.id, name: formatHallName(account.name || account.accountName) }))
+      .filter(account => account.name !== 'N/A' && !seen.has(account.name) && seen.add(account.name))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [flatAccounts]);
 
   const handlePost = async (idOrBooking) => {
     const booking = typeof idOrBooking === 'object' 
@@ -172,7 +206,7 @@ export const HallBookings = () => {
                 <p className="text-sm text-slate-400 mt-1">{t('tables.hallBookings.desc')}</p>
               </div>
               <div className="ml-3 px-3 py-2 rounded-lg bg-slate-800/40 border border-slate-700">
-                <p className="text-[11px] text-slate-400">Total Hall Income</p>
+                <p className="text-[11px] text-slate-400">Filtered Hall Income</p>
                 <p className="text-lg font-bold text-emerald-300">Rs {((bookings || []).reduce((s, b) => s + (Number(b.netAmount || 0)), 0)).toLocaleString()}</p>
               </div>
             </div>
@@ -202,6 +236,19 @@ export const HallBookings = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('tables.hallBookings.searchPlaceholder')}
                   className="w-full pl-9 pr-4 py-2 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-colors" />
+              </div>
+              <div className="flex flex-wrap items-center gap-2 w-full">
+                <select value={period} onChange={e => setPeriod(e.target.value)} className="rounded-lg bg-slate-950/70 border border-slate-800 px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-amber-500/50">
+                  <option value="all">All dates</option>
+                  <option value="month">Monthly income</option>
+                  <option value="day">Daily income</option>
+                </select>
+                {period === 'month' && <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="rounded-lg bg-slate-950/70 border border-slate-800 px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-amber-500/50" />}
+                {period === 'day' && <input type="date" value={selectedDay} onChange={e => setSelectedDay(e.target.value)} className="rounded-lg bg-slate-950/70 border border-slate-800 px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-amber-500/50" />}
+                <select value={selectedHallId} onChange={e => setSelectedHallId(e.target.value)} className="min-w-[180px] rounded-lg bg-slate-950/70 border border-slate-800 px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-amber-500/50">
+                  <option value="">All halls</option>
+                  {hallOptions.map(hall => <option key={hall.id} value={hall.id}>{hall.name}</option>)}
+                </select>
               </div>
               <div className="flex items-center bg-slate-950/80 rounded-xl p-1 border border-slate-800">
                 <button

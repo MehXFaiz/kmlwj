@@ -180,11 +180,25 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       if (!booking) return res.status(404).json({ error: { message: 'Booking not found', status: 404 } });
       return res.status(200).json({ status: 200, data: booking });
     }
-    const { limit = '100', page = '1' } = req.query as any;
+    const { limit = '100', page = '1', startDate, endDate, hallId } = req.query as Record<string, string | undefined>;
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
     const skip = (pageNum - 1) * limitNum;
-    const whereClause = getDeletedFilter(req.query);
+    const whereClause: any = getDeletedFilter(req.query);
+    if (hallId) whereClause.hallId = hallId;
+    if (startDate || endDate) {
+      whereClause.programDate = {};
+      if (startDate) {
+        const start = new Date(`${startDate}T00:00:00.000Z`);
+        if (isNaN(start.getTime())) return res.status(400).json({ error: { message: 'Invalid startDate format', status: 400 } });
+        whereClause.programDate.gte = start;
+      }
+      if (endDate) {
+        const end = new Date(`${endDate}T00:00:00.000Z`);
+        if (isNaN(end.getTime())) return res.status(400).json({ error: { message: 'Invalid endDate format', status: 400 } });
+        whereClause.programDate.lt = end;
+      }
+    }
 
     const [bookings, total] = await Promise.all([
       prisma.hallBooking.findMany({
