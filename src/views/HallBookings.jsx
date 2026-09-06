@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Search, Printer, AlertTriangle, CheckCircle, X, Trash2, Edit2, CheckCircle2, Calendar, Table as TableIcon, LayoutGrid, Building2, Phone, DollarSign, FileText, Clock, RotateCcw } from 'lucide-react';
+import { Plus, Search, Printer, Download, AlertTriangle, CheckCircle, X, Trash2, Edit2, CheckCircle2, Calendar, Table as TableIcon, LayoutGrid, Building2, Phone, DollarSign, FileText, Clock, RotateCcw } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { useHallBookingStore } from '../store/hallBookingStore';
 import { useCoaStore } from '../store/coaStore';
 import { useAuthStore } from '../store/authStore';
@@ -202,6 +203,36 @@ export const HallBookings = () => {
     });
   }, [bookings, search]);
 
+  const handleExport = () => {
+    if (filtered.length === 0) {
+      showToast('No hall bookings available to export', 'info');
+      return;
+    }
+
+    const exportData = filtered.map((booking, index) => ({
+      'S.No': index + 1,
+      'Receipt No': booking.receiptNo || '',
+      'Booker Name': booking.bookerName || '',
+      'Mobile': booking.mobile || '',
+      'Booking Date': booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : '',
+      'Program Date': booking.programDate ? new Date(booking.programDate).toLocaleDateString('en-GB') : '',
+      'Hall': formatHallName(booking),
+      'Timings': booking.timings || '',
+      'Hall Charges': Number(booking.hallCharges ?? booking.amount ?? 0),
+      'Discount': Number(booking.discount || 0),
+      'Net Amount': Number(booking.netAmount ?? ((booking.hallCharges ?? booking.amount ?? 0) - (booking.discount || 0))),
+      'Received': Number(booking.receivedAmount || 0),
+      'Remaining': Number(booking.remainingAmount || 0),
+      'Status': booking.status || '',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Hall Bookings');
+    XLSX.writeFile(workbook, `Hall_Bookings_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast('Exported hall bookings to Excel', 'success');
+  };
+
   return (
     <DashboardLayout breadcrumbs={['Revenue', t('tables.hallBookings.title')]}>
       <div className="space-y-6">
@@ -219,6 +250,14 @@ export const HallBookings = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleExport}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold border border-slate-700 transition-all"
+              title="Export filtered hall bookings to Excel"
+            >
+              <Download className="h-4 w-4" /> Export Excel
+            </button>
             {canEditOrDelete && selectedIds.length > 0 && (
               <button
                 type="button"
