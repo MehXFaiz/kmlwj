@@ -246,6 +246,61 @@ export const HallBookings = () => {
     showToast('Exported hall bookings to Excel', 'success');
   };
 
+  const handlePrint = () => {
+    if (filtered.length === 0) {
+      showToast('No hall bookings available to print', 'info');
+      return;
+    }
+
+    const printWindow = window.open('', '_blank', 'width=1200,height=800');
+    if (!printWindow) {
+      showToast('Please allow pop-ups to print hall bookings', 'warning');
+      return;
+    }
+
+    const escapeHtml = (value) => String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+    const money = (value) => `Rs. ${Math.round(Number(value || 0)).toLocaleString()}`;
+    const rows = filtered.map((booking, index) => `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${escapeHtml(booking.receiptNo)}</td>
+        <td>${escapeHtml(booking.bookerName)}</td>
+        <td>${escapeHtml(booking.mobile)}</td>
+        <td>${escapeHtml(booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : '')}</td>
+        <td>${escapeHtml(formatHallName(booking))}</td>
+        <td>${money(booking.netAmount ?? ((booking.hallCharges ?? booking.amount ?? 0) - (booking.discount || 0)))}</td>
+        <td>${money(booking.receivedAmount)}</td>
+        <td>${money(booking.remainingAmount)}</td>
+        <td>${escapeHtml(booking.status)}</td>
+      </tr>`).join('');
+
+    printWindow.document.write(`<!doctype html><html><head><title>Hall Bookings</title>
+      <style>
+        body { font-family: Arial, sans-serif; color: #111; margin: 24px; }
+        h1 { font-size: 20px; margin: 0 0 4px; }
+        p { color: #555; margin: 0 0 16px; font-size: 12px; }
+        table { border-collapse: collapse; width: 100%; font-size: 11px; }
+        th, td { border: 1px solid #bbb; padding: 7px 6px; text-align: left; }
+        th { background: #eee; font-weight: 700; }
+        @media print { body { margin: 10mm; } }
+      </style></head><body>
+      <h1>Hall Bookings</h1>
+      <p>Printed on ${escapeHtml(new Date().toLocaleString('en-GB'))} | Total bookings: ${filtered.length}</p>
+      <table><thead><tr><th>#</th><th>Receipt No</th><th>Booker Name</th><th>Mobile</th><th>Booking Date</th><th>Hall</th><th>Net Amount</th><th>Received</th><th>Remaining</th><th>Status</th></tr></thead>
+      <tbody>${rows}</tbody></table></body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.onload = () => {
+      printWindow.print();
+      printWindow.close();
+    };
+  };
+
   const handleImport = async (event) => {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -341,6 +396,14 @@ export const HallBookings = () => {
               title="Export filtered hall bookings to Excel"
             >
               <Download className="h-4 w-4" /> Export Excel
+            </button>
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold shadow-lg shadow-amber-900/20 transition-all"
+              title="Print filtered hall bookings"
+            >
+              <Printer className="h-4 w-4" /> Print
             </button>
             {canEditOrDelete && selectedIds.length > 0 && (
               <button
