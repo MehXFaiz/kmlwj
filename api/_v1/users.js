@@ -2,6 +2,7 @@ import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth, verifyPermission } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
+import { loadPermissions } from "../_services/permission.service.js";
 import { PERMS, SECURITY_PERMISSIONS } from "../_constants/permissions.js";
 import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from "../_utils/soft-delete.js";
 import bcrypt from "bcryptjs";
@@ -17,6 +18,7 @@ async function roleGrantsSecurityPermission(roleName) {
 var users_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
+  const actorHoldsSystemSettings = (await loadPermissions(req)).has(PERMS.SYSTEM_SETTINGS);
   const { method } = req;
   const id = req.query.id;
   const action = req.query.action || req.body?.action;

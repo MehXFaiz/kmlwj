@@ -7,10 +7,11 @@ export const useHallBookingStore = create((set, get) => ({
   loading: false,
   error: null,
 
-  fetchBookings: async () => {
+  fetchBookings: async (params = {}) => {
     set({ loading: true, error: null });
     try {
-      const response = await api.get('/api/v1/hall-bookings');
+      const query = new URLSearchParams({ limit: '1000', ...params }).toString();
+      const response = await api.get(`/api/v1/hall-bookings?${query}`);
       set({ bookings: response.data.data, loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });

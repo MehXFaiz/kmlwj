@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Search, Printer, AlertTriangle, CheckCircle, X, Trash2, Edit2, CheckCircle2, Calendar, Table as TableIcon, LayoutGrid, Building2, Phone, DollarSign, FileText, Clock, RotateCcw } from 'lucide-react';
+import { Plus, Search, Printer, Download, Upload, AlertTriangle, CheckCircle, X, Trash2, Edit2, CheckCircle2, Calendar, Table as TableIcon, LayoutGrid, Building2, Phone, DollarSign, FileText, Clock, RotateCcw } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { useHallBookingStore } from '../store/hallBookingStore';
+import { useCoaStore } from '../store/coaStore';
 import { useAuthStore } from '../store/authStore';
 import { useConfirmStore } from '../store/confirmStore';
 import { DashboardLayout } from '../layouts/DashboardLayout';
@@ -25,23 +27,76 @@ const formatHallName = (booking) => {
   return raw;
 };
 
+const parseImportedDate = (value) => {
+  if (!value) return '';
+  if (typeof value === 'number') {
+    const parsed = XLSX.SSF.parse_date_code(value);
+    if (!parsed) return '';
+    return `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`;
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10);
+};
+
 export const HallBookings = () => {
   const { t, i18n } = useTranslation();
   const { bookings, loading, fetchBookings, postBooking, revertBooking, deleteBooking, bulkDeleteBookings } = useHallBookingStore();
+  const { flatAccounts, fetchAccountsList } = useCoaStore();
   const { canEditOrDelete } = useAuthStore();
   const canPostToLedger = useAuthStore((s) => s.canPostToLedger);
   const [search, setSearch] = useState('');
   const [printItem, setPrintItem] = useState(null);
   const [glItem, setGlItem] = useState(null);
   const [viewMode, setViewMode] = useState('cards');
+  const [period, setPeriod] = useState('all');
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [selectedDay, setSelectedDay] = useState('');
+  const [selectedHallId, setSelectedHallId] = useState('');
 
   const [selectedIds, setSelectedIds] = useState([]);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const importInputRef = useRef(null);
 
   useEffect(() => {
-    fetchBookings();
-  }, []);
+    fetchAccountsList();
+  }, [fetchAccountsList]);
+
+  const dateRange = useMemo(() => {
+    if (period === 'day' && selectedDay) {
+      const nextDay = new Date(`${selectedDay}T00:00:00`);
+      nextDay.setDate(nextDay.getDate() + 1);
+      return { startDate: selectedDay, endDate: nextDay.toISOString().slice(0, 10) };
+    }
+    if (period === 'month' && selectedMonth) {
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const nextMonth = new Date(Date.UTC(year, month, 1));
+      return { startDate: `${selectedMonth}-01`, endDate: nextMonth.toISOString().slice(0, 10) };
+    }
+    if (period === '3months' || period === '6months') {
+      const monthCount = period === '3months' ? 3 : 6;
+      const currentMonth = new Date();
+      const start = new Date(Date.UTC(currentMonth.getFullYear(), currentMonth.getMonth() - monthCount + 1, 1));
+      const end = new Date(Date.UTC(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+      return { startDate: start.toISOString().slice(0, 10), endDate: end.toISOString().slice(0, 10) };
+    }
+    return {};
+  }, [period, selectedMonth, selectedDay]);
+
+  useEffect(() => {
+    fetchBookings({ ...dateRange, ...(selectedHallId ? { hallId: selectedHallId } : {}) });
+    setSelectedIds([]);
+  }, [dateRange, selectedHallId, fetchBookings]);
+
+  const hallOptions = useMemo(() => {
+    const seen = new Set();
+    return (flatAccounts || [])
+      .filter(account => account.type === 'Revenue' || account.accountTypeName === 'REVENUE' || account.accountTypeName === 'Revenue')
+      .map(account => ({ id: account.id, name: formatHallName(account.name || account.accountName) }))
+      .filter(account => account.name !== 'N/A' && !seen.has(account.name) && seen.add(account.name))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [flatAccounts]);
 
   const handlePost = async (idOrBooking) => {
     const booking = typeof idOrBooking === 'object' 
@@ -161,6 +216,152 @@ export const HallBookings = () => {
     });
   }, [bookings, search]);
 
+  const handleExport = () => {
+    if (filtered.length === 0) {
+      showToast('No hall bookings available to export', 'info');
+      return;
+    }
+
+    const exportData = filtered.map((booking, index) => ({
+      'S.No': index + 1,
+      'Receipt No': booking.receiptNo || '',
+      'Booker Name': booking.bookerName || '',
+      'Mobile': booking.mobile || '',
+      'Booking Date': booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : '',
+      'Program Date': booking.programDate ? new Date(booking.programDate).toLocaleDateString('en-GB') : '',
+      'Hall': formatHallName(booking),
+      'Timings': booking.timings || '',
+      'Hall Charges': Number(booking.hallCharges ?? booking.amount ?? 0),
+      'Discount': Number(booking.discount || 0),
+      'Net Amount': Number(booking.netAmount ?? ((booking.hallCharges ?? booking.amount ?? 0) - (booking.discount || 0))),
+      'Received': Number(booking.receivedAmount || 0),
+      'Remaining': Number(booking.remainingAmount || 0),
+      'Status': booking.status || '',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Hall Bookings');
+    XLSX.writeFile(workbook, `Hall_Bookings_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast('Exported hall bookings to Excel', 'success');
+  };
+
+  const handlePrint = () => {
+    if (filtered.length === 0) {
+      showToast('No hall bookings available to print', 'info');
+      return;
+    }
+
+    const printWindow = window.open('', '_blank', 'width=1200,height=800');
+    if (!printWindow) {
+      showToast('Please allow pop-ups to print hall bookings', 'warning');
+      return;
+    }
+
+    const escapeHtml = (value) => String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+    const money = (value) => `Rs. ${Math.round(Number(value || 0)).toLocaleString()}`;
+    const rows = filtered.map((booking, index) => `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${escapeHtml(booking.receiptNo)}</td>
+        <td>${escapeHtml(booking.bookerName)}</td>
+        <td>${escapeHtml(booking.mobile)}</td>
+        <td>${escapeHtml(booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : '')}</td>
+        <td>${escapeHtml(formatHallName(booking))}</td>
+        <td>${money(booking.netAmount ?? ((booking.hallCharges ?? booking.amount ?? 0) - (booking.discount || 0)))}</td>
+        <td>${money(booking.receivedAmount)}</td>
+        <td>${money(booking.remainingAmount)}</td>
+        <td>${escapeHtml(booking.status)}</td>
+      </tr>`).join('');
+
+    printWindow.document.write(`<!doctype html><html><head><title>Hall Bookings</title>
+      <style>
+        body { font-family: Arial, sans-serif; color: #111; margin: 24px; }
+        h1 { font-size: 20px; margin: 0 0 4px; }
+        p { color: #555; margin: 0 0 16px; font-size: 12px; }
+        table { border-collapse: collapse; width: 100%; font-size: 11px; }
+        th, td { border: 1px solid #bbb; padding: 7px 6px; text-align: left; }
+        th { background: #eee; font-weight: 700; }
+        @media print { body { margin: 10mm; } }
+      </style></head><body>
+      <h1>Hall Bookings</h1>
+      <p>Printed on ${escapeHtml(new Date().toLocaleString('en-GB'))} | Total bookings: ${filtered.length}</p>
+      <table><thead><tr><th>#</th><th>Receipt No</th><th>Booker Name</th><th>Mobile</th><th>Booking Date</th><th>Hall</th><th>Net Amount</th><th>Received</th><th>Remaining</th><th>Status</th></tr></thead>
+      <tbody>${rows}</tbody></table></body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.onload = () => {
+      printWindow.print();
+      printWindow.close();
+    };
+  };
+
+  const handleImport = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+      const hallByName = new Map(hallOptions.map(hall => [hall.name.toLowerCase(), hall.id]));
+      let imported = 0;
+      let failed = 0;
+
+      for (const row of rows) {
+        const hallName = String(row.Hall || '').trim();
+        const hallId = hallByName.get(hallName.toLowerCase());
+        const amount = Number(row['Hall Charges'] || 0);
+        const programDate = parseImportedDate(row['Program Date']);
+        const bookingDate = parseImportedDate(row['Booking Date']) || new Date().toISOString().slice(0, 10);
+
+        if (!row['Booker Name'] || !programDate || !hallId || !amount) {
+          failed += 1;
+          continue;
+        }
+
+        try {
+          const discount = Number(row.Discount || 0);
+          const netAmount = Math.max(0, amount - discount);
+          const receivedAmount = Number(row.Received || 0);
+          await addBooking({
+            bookingDate,
+            bookerName: String(row['Booker Name']).trim(),
+            mobile: String(row.Mobile || '').trim(),
+            programDate,
+            hallId,
+            timings: String(row.Timings || 'Evening').trim(),
+            amount,
+            hallCharges: amount,
+            discount,
+            netAmount,
+            receivedAmount,
+            remainingAmount: Math.max(0, netAmount - receivedAmount),
+            paymentMethod: 'CASH',
+            status: 'Confirmed',
+          });
+          imported += 1;
+        } catch {
+          failed += 1;
+        }
+      }
+
+      if (imported > 0) await fetchBookings({ ...dateRange, ...(selectedHallId ? { hallId: selectedHallId } : {}) });
+      showToast(`Imported ${imported} booking(s)${failed ? `, skipped ${failed} row(s)` : ''}`, failed ? 'warning' : 'success');
+    } catch (error) {
+      showToast(error.message || 'Failed to import hall bookings', 'error');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   return (
     <DashboardLayout breadcrumbs={['Revenue', t('tables.hallBookings.title')]}>
       <div className="space-y-6">
@@ -172,12 +373,38 @@ export const HallBookings = () => {
                 <p className="text-sm text-slate-400 mt-1">{t('tables.hallBookings.desc')}</p>
               </div>
               <div className="ml-3 px-3 py-2 rounded-lg bg-slate-800/40 border border-slate-700">
-                <p className="text-[11px] text-slate-400">Total Hall Income</p>
+                <p className="text-[11px] text-slate-400">Filtered Hall Income</p>
                 <p className="text-lg font-bold text-emerald-300">Rs {((bookings || []).reduce((s, b) => s + (Number(b.netAmount || 0)), 0)).toLocaleString()}</p>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <input ref={importInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleImport} className="hidden" />
+            <button
+              type="button"
+              onClick={() => importInputRef.current?.click()}
+              disabled={isImporting}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold border border-slate-700 transition-all disabled:opacity-50"
+              title="Import hall bookings from Excel"
+            >
+              <Upload className="h-4 w-4" /> {isImporting ? 'Importing...' : 'Import Excel'}
+            </button>
+            <button
+              type="button"
+              onClick={handleExport}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold border border-slate-700 transition-all"
+              title="Export filtered hall bookings to Excel"
+            >
+              <Download className="h-4 w-4" /> Export Excel
+            </button>
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold shadow-lg shadow-amber-900/20 transition-all"
+              title="Print filtered hall bookings"
+            >
+              <Printer className="h-4 w-4" /> Print
+            </button>
             {canEditOrDelete && selectedIds.length > 0 && (
               <button
                 type="button"
@@ -202,6 +429,21 @@ export const HallBookings = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('tables.hallBookings.searchPlaceholder')}
                   className="w-full pl-9 pr-4 py-2 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-colors" />
+              </div>
+              <div className="flex flex-wrap items-center gap-2 w-full">
+                <select value={period} onChange={e => setPeriod(e.target.value)} className="rounded-lg bg-slate-950/70 border border-slate-800 px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-amber-500/50">
+                  <option value="all">All dates</option>
+                  <option value="month">Monthly income</option>
+                  <option value="3months">Last 3 months income</option>
+                  <option value="6months">Last 6 months income</option>
+                  <option value="day">Daily income</option>
+                </select>
+                {period === 'month' && <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="rounded-lg bg-slate-950/70 border border-slate-800 px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-amber-500/50" />}
+                {period === 'day' && <input type="date" value={selectedDay} onChange={e => setSelectedDay(e.target.value)} className="rounded-lg bg-slate-950/70 border border-slate-800 px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-amber-500/50" />}
+                <select value={selectedHallId} onChange={e => setSelectedHallId(e.target.value)} className="min-w-[180px] rounded-lg bg-slate-950/70 border border-slate-800 px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-amber-500/50">
+                  <option value="">All halls</option>
+                  {hallOptions.map(hall => <option key={hall.id} value={hall.id}>{hall.name}</option>)}
+                </select>
               </div>
               <div className="flex items-center bg-slate-950/80 rounded-xl p-1 border border-slate-800">
                 <button
@@ -364,10 +606,10 @@ export const HallBookings = () => {
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
-                              <Clock className="w-3.5 h-3.5 text-amber-400" /> PROGRAM DATE
+                              <Clock className="w-3.5 h-3.5 text-amber-400" /> BOOKING DATE
                             </span>
                             <span className="font-semibold text-slate-100 text-xs">
-                              {formatDateDDMMYYYY(booking.programDate)}
+                              {formatDateDDMMYYYY(booking.createdAt)}
                               {booking.timings && <span className="text-slate-400 font-normal ml-1.5">({booking.timings})</span>}
                             </span>
                           </div>
@@ -377,7 +619,7 @@ export const HallBookings = () => {
                       {/* Card Footer: Date & Action Icons */}
                       <div className="flex flex-col gap-3 pt-3.5 border-t border-slate-800/80">
                         <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5 text-slate-400" /> {formatDateDDMMYYYY(booking.programDate)}
+                          <Calendar className="w-3.5 h-3.5 text-slate-400" /> {formatDateDDMMYYYY(booking.createdAt)}
                         </span>
                         <div className="flex items-center justify-end gap-2 w-full">
                           <button
@@ -462,7 +704,7 @@ export const HallBookings = () => {
                     )}
                     <th className="px-6 py-4">{t('receipt.receiptNo')}</th>
                     <th className="px-6 py-4">{t('receipt.bookerName')}</th>
-                    <th className="px-6 py-4">{t('receipt.programDate')}</th>
+                    <th className="px-6 py-4">Booking Date</th>
                     <th className="px-6 py-4">{t('receipt.hall')}</th>
                     <th className="px-6 py-4">Hall Charges</th>
                     <th className="px-6 py-4">Discount</th>
@@ -491,7 +733,7 @@ export const HallBookings = () => {
                         <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">{booking.mobile || 'N/A'}</div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="font-medium">{formatDateDDMMYYYY(booking.programDate)}</div>
+                        <div className="font-medium">{formatDateDDMMYYYY(booking.createdAt)}</div>
                         <div className="text-xs text-slate-500">{booking.timings || 'Any time'}</div>
                       </td>
                       <td className="px-6 py-4">

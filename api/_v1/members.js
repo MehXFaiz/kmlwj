@@ -291,7 +291,7 @@ var members_default = makeHandler(async (req, res) => {
     await prisma.$transaction(async (tx) => {
       if (isPermanent) {
         await tx.familyRelationship.deleteMany({
-          where: { OR: [{ memberId: { in: ids } }, { relativeMemberId: { in: ids } }] }
+          where: { OR: [{ memberId: { in: ids } }, { relatedMemberId: { in: ids } }] }
         });
         await tx.zakatCard.deleteMany({
           where: { memberId: { in: ids } }

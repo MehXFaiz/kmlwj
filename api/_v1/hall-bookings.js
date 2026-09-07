@@ -55,11 +55,11 @@ var hall_bookings_default = makeHandler(async (req, res) => {
   const action = req.query.action;
   if (method === "GET") {
     if (req.url?.includes("/check-availability") || action === "check-availability") {
-      const hallId = req.query.hallId;
+      const hallId2 = req.query.hallId;
       const dateParam = req.query.bookingDate || req.query.programDate;
       const excludeId = req.query.excludeId;
       const requestedTimings = req.query.timings;
-      if (!hallId || !dateParam) {
+      if (!hallId2 || !dateParam) {
         return res.status(400).json({ error: { message: "hallId and bookingDate (or programDate) are required parameters", status: 400 } });
       }
       const dateOnlyStr = typeof dateParam === "string" && dateParam.includes("T") ? dateParam.split("T")[0] : typeof dateParam === "string" ? dateParam : new Date(dateParam).toISOString().split("T")[0];
@@ -71,7 +71,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
       const sameDayBookings = await prisma.hallBooking.findMany({
         where: {
           isDeleted: false,
-          hallId,
+          hallId: hallId2,
           programDate: {
             gte: startOfDay,
             lte: endOfDay
@@ -132,11 +132,25 @@ var hall_bookings_default = makeHandler(async (req, res) => {
       if (!booking) return res.status(404).json({ error: { message: "Booking not found", status: 404 } });
       return res.status(200).json({ status: 200, data: booking });
     }
-    const { limit = "100", page = "1" } = req.query;
+    const { limit = "100", page = "1", startDate, endDate, hallId } = req.query;
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 100;
     const skip = (pageNum - 1) * limitNum;
     const whereClause = getDeletedFilter(req.query);
+    if (hallId) whereClause.hallId = hallId;
+    if (startDate || endDate) {
+      whereClause.programDate = {};
+      if (startDate) {
+        const start = /* @__PURE__ */ new Date(`${startDate}T00:00:00.000Z`);
+        if (isNaN(start.getTime())) return res.status(400).json({ error: { message: "Invalid startDate format", status: 400 } });
+        whereClause.programDate.gte = start;
+      }
+      if (endDate) {
+        const end = /* @__PURE__ */ new Date(`${endDate}T00:00:00.000Z`);
+        if (isNaN(end.getTime())) return res.status(400).json({ error: { message: "Invalid endDate format", status: 400 } });
+        whereClause.programDate.lt = end;
+      }
+    }
     const [bookings, total] = await Promise.all([
       prisma.hallBooking.findMany({
         where: whereClause,
