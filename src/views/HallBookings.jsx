@@ -227,7 +227,7 @@ export const HallBookings = () => {
       'Receipt No': booking.receiptNo || '',
       'Booker Name': booking.bookerName || '',
       'Mobile': booking.mobile || '',
-      'Booking Date': booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : '',
+      'Booking Date': booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString('en-GB') : '',
       'Program Date': booking.programDate ? new Date(booking.programDate).toLocaleDateString('en-GB') : '',
       'Hall': formatHallName(booking),
       'Timings': booking.timings || '',

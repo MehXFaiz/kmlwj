@@ -187,16 +187,16 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const whereClause: any = getDeletedFilter(req.query);
     if (hallId) whereClause.hallId = hallId;
     if (startDate || endDate) {
-      whereClause.programDate = {};
+      whereClause.bookingDate = {};
       if (startDate) {
         const start = new Date(`${startDate}T00:00:00.000Z`);
         if (isNaN(start.getTime())) return res.status(400).json({ error: { message: 'Invalid startDate format', status: 400 } });
-        whereClause.programDate.gte = start;
+        whereClause.bookingDate.gte = start;
       }
       if (endDate) {
         const end = new Date(`${endDate}T00:00:00.000Z`);
         if (isNaN(end.getTime())) return res.status(400).json({ error: { message: 'Invalid endDate format', status: 400 } });
-        whereClause.programDate.lt = end;
+        whereClause.bookingDate.lt = end;
       }
     }
 
