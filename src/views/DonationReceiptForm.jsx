@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom';
 import { useDonationReceivedStore } from '../store/donationReceivedStore';
 import { useDonorStore } from '../store/donorStore';
+import { useBeneficiaryStore } from '../store/beneficiaryStore';
 import { useCoaStore } from '../store/coaStore';
 import { PhoneInput } from '../components/ui/PhoneInput';
 import { CNICInput } from '../components/ui/CNICInput';
@@ -144,6 +145,7 @@ export const DonationReceiptForm = () => {
 
   const { donations, fetchDonations, addDonation, updateDonationStatus } = useDonationReceivedStore();
   const { donors, fetchDonors } = useDonorStore();
+  const { beneficiaries, fetchBeneficiaries } = useBeneficiaryStore();
   const { flatAccounts, fetchAccountsList } = useCoaStore();
 
   const [toast, setToast] = useState(null);
@@ -172,8 +174,9 @@ export const DonationReceiptForm = () => {
   useEffect(() => {
     fetchDonations();
     fetchDonors();
+    fetchBeneficiaries();
     fetchAccountsList();
-  }, [fetchDonations, fetchDonors, fetchAccountsList]);
+  }, [fetchDonations, fetchDonors, fetchBeneficiaries, fetchAccountsList]);
 
   const cashAccounts = useMemo(() => {
     return flatAccounts.filter(isGenuineCashAccount);
@@ -203,14 +206,18 @@ export const DonationReceiptForm = () => {
     }
   }, [id, donors, cashAccounts, bankAccounts]);
 
-  const handleDonorSelect = (donorId) => {
-    const selected = donors.find(d => d.id === donorId);
+  const handleDonorSelect = (selectedId) => {
+    const selectedDonor = donors.find(d => d.id === selectedId);
+    const selectedBen = beneficiaries.find(b => b.id === selectedId);
+    const selected = selectedDonor || selectedBen;
     setForm(prev => ({
       ...prev,
-      donorId,
+      donorId: selectedId,
       fatherName: selected?.fatherName || prev.fatherName || '',
       gham: selected?.gham || prev.gham || '',
-      address: selected?.address || prev.address || ''
+      address: selected?.address || prev.address || '',
+      phone: selected?.mobile || prev.phone || '',
+      cnic: selected?.cnic || prev.cnic || ''
     }));
   };
 
@@ -413,7 +420,7 @@ export const DonationReceiptForm = () => {
 
                 <div className="sm:col-span-2">
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-semibold text-slate-400">Donor *</label>
+                    <label className="block text-xs font-semibold text-slate-400">Donor / Person *</label>
                     <button type="button" onClick={() => setQuickDonorOpen(true)} className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
                       <UserPlus className="h-3.5 w-3.5" /> + Quick Add Donor
                     </button>
@@ -424,12 +431,25 @@ export const DonationReceiptForm = () => {
                     onChange={e => handleDonorSelect(e.target.value)}
                     className={inputClass}
                   >
-                    <option value="">-- Select Donor --</option>
-                    {donors.map(d => (
-                      <option key={d.id} value={d.id}>
-                        {d.fullName} ({d.donorCode}){d.cnic ? ` - CNIC: ${d.cnic}` : ''}
-                      </option>
-                    ))}
+                    <option value="">-- Select Person (People We Help / Donor) --</option>
+                    {beneficiaries && beneficiaries.filter(b => !b.isDeleted).length > 0 && (
+                      <optgroup label="People We Help (مستحقین)">
+                        {beneficiaries.filter(b => !b.isDeleted).map(b => (
+                          <option key={`ben-${b.id}`} value={b.id}>
+                            {b.name} &middot; {b.cnic || b.mobile || 'Beneficiary'} {b.fatherName ? `(s/o, d/o ${b.fatherName})` : ''}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {donors && donors.filter(d => !d.isDeleted).length > 0 && (
+                      <optgroup label="Registered Donors (عطیہ دہندگان)">
+                        {donors.filter(d => !d.isDeleted).map(d => (
+                          <option key={d.id} value={d.id}>
+                            {d.fullName} ({d.donorCode}){d.cnic ? ` - CNIC: ${d.cnic}` : ''}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
                   </select>
                 </div>
 

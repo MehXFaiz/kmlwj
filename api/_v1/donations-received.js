@@ -32,6 +32,45 @@ function donationTitleFragment(donationType, customType) {
 function isUniqueViolation(err) {
   return err?.code === "P2002";
 }
+async function resolveDonorOrBeneficiary(idOrBeneficiaryId) {
+  if (!idOrBeneficiaryId) return null;
+  let donor = await prisma.donor.findUnique({ where: { id: idOrBeneficiaryId } });
+  if (donor) return donor;
+  const beneficiary = await prisma.beneficiary.findFirst({
+    where: { id: idOrBeneficiaryId, isDeleted: false }
+  });
+  if (!beneficiary) return null;
+  let linkedDonor = beneficiary.cnic ? await prisma.donor.findFirst({ where: { cnic: beneficiary.cnic, isDeleted: false } }) : null;
+  if (!linkedDonor && beneficiary.mobile) {
+    linkedDonor = await prisma.donor.findFirst({
+      where: { fullName: beneficiary.name, mobile: beneficiary.mobile, isDeleted: false }
+    });
+  }
+  if (!linkedDonor) {
+    const DONOR_CODE_PREFIX = "DNR-";
+    const existingDonors = await prisma.donor.findMany({
+      where: { donorCode: { startsWith: DONOR_CODE_PREFIX } },
+      select: { donorCode: true }
+    });
+    const maxNum = existingDonors.reduce((max, d) => {
+      const n = parseInt(d.donorCode.slice(DONOR_CODE_PREFIX.length), 10);
+      return Number.isFinite(n) && n > max ? n : max;
+    }, 0);
+    const donorCode = `${DONOR_CODE_PREFIX}${String(maxNum + 1).padStart(4, "0")}`;
+    linkedDonor = await prisma.donor.create({
+      data: {
+        donorCode,
+        fullName: beneficiary.name,
+        fatherName: beneficiary.fatherName,
+        mobile: beneficiary.mobile,
+        cnic: beneficiary.cnic,
+        address: beneficiary.address,
+        city: beneficiary.town || null
+      }
+    });
+  }
+  return linkedDonor;
+}
 var donations_received_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -69,7 +108,10 @@ var donations_received_default = makeHandler(async (req, res) => {
     if (status && status !== "ALL") whereClause.status = status;
     if (donationType && donationType !== "ALL") whereClause.donationType = donationType;
     if (paymentMethod && paymentMethod !== "ALL") whereClause.paymentMethod = paymentMethod;
-    if (donorId && donorId !== "ALL") whereClause.donorId = donorId;
+    if (donorId && donorId !== "ALL") {
+      const resolved = await resolveDonorOrBeneficiary(donorId);
+      whereClause.donorId = resolved ? resolved.id : donorId;
+    }
     if (startDate || endDate) {
       whereClause.receiptDate = {};
       if (startDate) whereClause.receiptDate.gte = new Date(startDate);
@@ -235,10 +277,11 @@ var donations_received_default = makeHandler(async (req, res) => {
     if (!isWithinMaxLength(referenceNo, 100)) return res.status(400).json({ error: maxLengthError("Reference number", 100) });
     if (!isWithinMaxLength(chequeNo, 30)) return res.status(400).json({ error: maxLengthError("Cheque number", 30) });
     const parsedAmount = amountCheck.amount;
-    const donor = await prisma.donor.findUnique({ where: { id: donorId } });
+    const donor = await resolveDonorOrBeneficiary(donorId);
     if (!donor) {
-      return res.status(404).json({ error: { message: "Selected donor not found", status: 404 } });
+      return res.status(404).json({ error: { message: "Selected donor / beneficiary not found", status: 404 } });
     }
+    const resolvedDonorId = donor.id;
     let debitAccountId2 = null;
     if (paymentMethod === "CASH" || paymentMethod === "DONATION_FUND") {
       const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
@@ -304,7 +347,7 @@ var donations_received_default = makeHandler(async (req, res) => {
             data: {
               receiptNo,
               receiptDate: receiptDate ? new Date(receiptDate) : /* @__PURE__ */ new Date(),
-              donorId,
+              donorId: resolvedDonorId,
               donationType,
               customDonationType: donationType === "CUSTOM" ? customDonationType : null,
               amount: parsedAmount,
@@ -387,6 +430,16 @@ var donations_received_default = makeHandler(async (req, res) => {
       }
       parsedAmount = amountCheck.amount;
     }
+    let resolvedDonorId = donorId;
+    let resolvedDonor = existing.donor;
+    if (donorId !== void 0) {
+      const donor = await resolveDonorOrBeneficiary(donorId);
+      if (!donor) {
+        return res.status(404).json({ error: { message: "Selected donor / beneficiary not found", status: 404 } });
+      }
+      resolvedDonorId = donor.id;
+      resolvedDonor = donor;
+    }
     const result = await prisma.$transaction(async (tx) => {
       let journalEntryId = existing.journalEntryId;
       let newStatus = status !== void 0 ? status : existing.status;
@@ -420,7 +473,7 @@ var donations_received_default = makeHandler(async (req, res) => {
             incomeAccountId: generalDonationAccount ? generalDonationAccount.id : void 0,
             incomeAccountKeyword: generalDonationAccount ? void 0 : updatedType,
             reference: `DONATION-${existing.receiptNo}`,
-            description: updatedNarration || `Received ${updatedType === "CUSTOM" ? updatedCustomType : updatedType} from ${existing.donor.fullName}`,
+            description: updatedNarration || `Received ${updatedType === "CUSTOM" ? updatedCustomType : updatedType} from ${resolvedDonor?.fullName || existing.donor?.fullName || "Donor"}`,
             module: "Donations Received",
             postedBy: req.user.id,
             postingDate: updatedDate,
@@ -453,7 +506,7 @@ var donations_received_default = makeHandler(async (req, res) => {
           chequeNo: chequeNo !== void 0 ? chequeNo || null : void 0,
           chequeDate: chequeDate !== void 0 ? chequeDate ? new Date(chequeDate) : null : void 0,
           amount: parsedAmount !== void 0 ? parsedAmount : void 0,
-          donorId: donorId !== void 0 ? donorId : void 0,
+          donorId: resolvedDonorId !== void 0 ? resolvedDonorId : void 0,
           donationType: donationType !== void 0 ? donationType : void 0,
           customDonationType: donationType !== void 0 ? donationType === "CUSTOM" ? customDonationType : null : customDonationType !== void 0 ? existing.donationType === "CUSTOM" ? customDonationType : null : void 0,
           paymentMethod: paymentMethod !== void 0 ? paymentMethod : void 0,

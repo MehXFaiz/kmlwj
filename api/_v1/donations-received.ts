@@ -36,6 +36,57 @@ function isUniqueViolation(err: any): boolean {
   return err?.code === 'P2002';
 }
 
+async function resolveDonorOrBeneficiary(idOrBeneficiaryId: string): Promise<any> {
+  if (!idOrBeneficiaryId) return null;
+
+  let donor = await prisma.donor.findUnique({ where: { id: idOrBeneficiaryId } });
+  if (donor) return donor;
+
+  const beneficiary = await prisma.beneficiary.findFirst({
+    where: { id: idOrBeneficiaryId, isDeleted: false }
+  });
+
+  if (!beneficiary) return null;
+
+  // Check if donor already exists by CNIC or exact Name + Mobile
+  let linkedDonor = beneficiary.cnic
+    ? await prisma.donor.findFirst({ where: { cnic: beneficiary.cnic, isDeleted: false } })
+    : null;
+
+  if (!linkedDonor && beneficiary.mobile) {
+    linkedDonor = await prisma.donor.findFirst({
+      where: { fullName: beneficiary.name, mobile: beneficiary.mobile, isDeleted: false }
+    });
+  }
+
+  if (!linkedDonor) {
+    const DONOR_CODE_PREFIX = 'DNR-';
+    const existingDonors = await prisma.donor.findMany({
+      where: { donorCode: { startsWith: DONOR_CODE_PREFIX } },
+      select: { donorCode: true },
+    });
+    const maxNum = existingDonors.reduce((max: number, d: { donorCode: string }) => {
+      const n = parseInt(d.donorCode.slice(DONOR_CODE_PREFIX.length), 10);
+      return Number.isFinite(n) && n > max ? n : max;
+    }, 0);
+    const donorCode = `${DONOR_CODE_PREFIX}${String(maxNum + 1).padStart(4, '0')}`;
+
+    linkedDonor = await prisma.donor.create({
+      data: {
+        donorCode,
+        fullName: beneficiary.name,
+        fatherName: beneficiary.fatherName,
+        mobile: beneficiary.mobile,
+        cnic: beneficiary.cnic,
+        address: beneficiary.address,
+        city: beneficiary.town || null,
+      }
+    });
+  }
+
+  return linkedDonor;
+}
+
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -83,7 +134,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if (status && status !== 'ALL') whereClause.status = status;
     if (donationType && donationType !== 'ALL') whereClause.donationType = donationType;
     if (paymentMethod && paymentMethod !== 'ALL') whereClause.paymentMethod = paymentMethod;
-    if (donorId && donorId !== 'ALL') whereClause.donorId = donorId;
+    if (donorId && donorId !== 'ALL') {
+      const resolved = await resolveDonorOrBeneficiary(donorId);
+      whereClause.donorId = resolved ? resolved.id : donorId;
+    }
 
     if (startDate || endDate) {
       whereClause.receiptDate = {};
@@ -268,10 +322,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if (!isWithinMaxLength(chequeNo, 30)) return res.status(400).json({ error: maxLengthError('Cheque number', 30) });
     const parsedAmount = amountCheck.amount;
 
-    const donor = await prisma.donor.findUnique({ where: { id: donorId } });
+    const donor = await resolveDonorOrBeneficiary(donorId);
     if (!donor) {
-      return res.status(404).json({ error: { message: 'Selected donor not found', status: 404 } });
+      return res.status(404).json({ error: { message: 'Selected donor / beneficiary not found', status: 404 } });
     }
+    const resolvedDonorId = donor.id;
 
     let debitAccountId = null;
     if (paymentMethod === 'CASH' || paymentMethod === 'DONATION_FUND') {
@@ -346,7 +401,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             data: {
               receiptNo,
               receiptDate: receiptDate ? new Date(receiptDate) : new Date(),
-              donorId,
+              donorId: resolvedDonorId,
               donationType,
               customDonationType: donationType === 'CUSTOM' ? customDonationType : null,
               amount: parsedAmount,
@@ -441,6 +496,17 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       parsedAmount = amountCheck.amount;
     }
 
+    let resolvedDonorId = donorId;
+    let resolvedDonor = existing.donor;
+    if (donorId !== undefined) {
+      const donor = await resolveDonorOrBeneficiary(donorId);
+      if (!donor) {
+        return res.status(404).json({ error: { message: 'Selected donor / beneficiary not found', status: 404 } });
+      }
+      resolvedDonorId = donor.id;
+      resolvedDonor = donor;
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       let journalEntryId = existing.journalEntryId;
       let newStatus = status !== undefined ? status : existing.status;
@@ -480,7 +546,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             incomeAccountId: generalDonationAccount ? generalDonationAccount.id : undefined,
             incomeAccountKeyword: generalDonationAccount ? undefined : updatedType,
             reference: `DONATION-${existing.receiptNo}`,
-            description: updatedNarration || `Received ${updatedType === 'CUSTOM' ? updatedCustomType : updatedType} from ${existing.donor.fullName}`,
+            description: updatedNarration || `Received ${updatedType === 'CUSTOM' ? updatedCustomType : updatedType} from ${resolvedDonor?.fullName || existing.donor?.fullName || 'Donor'}`,
             module: 'Donations Received',
             postedBy: req.user!.id,
             postingDate: updatedDate,
@@ -515,7 +581,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           chequeNo: chequeNo !== undefined ? (chequeNo || null) : undefined,
           chequeDate: chequeDate !== undefined ? (chequeDate ? new Date(chequeDate) : null) : undefined,
           amount: parsedAmount !== undefined ? parsedAmount : undefined,
-          donorId: donorId !== undefined ? donorId : undefined,
+          donorId: resolvedDonorId !== undefined ? resolvedDonorId : undefined,
           donationType: donationType !== undefined ? donationType : undefined,
           customDonationType: donationType !== undefined
             ? (donationType === 'CUSTOM' ? customDonationType : null)

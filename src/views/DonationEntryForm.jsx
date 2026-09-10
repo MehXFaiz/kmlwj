@@ -7,6 +7,7 @@ import {
   Save,
   RefreshCw,
   User,
+  Users,
   Plus,
   Building,
   CreditCard,
@@ -23,6 +24,7 @@ import {
 import { useDonationReceivedStore } from '../store/donationReceivedStore';
 import { useDonationStore } from '../store/donationStore';
 import { useDonorStore } from '../store/donorStore';
+import { useBeneficiaryStore } from '../store/beneficiaryStore';
 import { useCoaStore } from '../store/coaStore';
 import { useAuthStore } from '../store/authStore';
 import { isGenuineBankAccount } from '../utils/accountFilters';
@@ -54,6 +56,7 @@ export const DonationEntryForm = () => {
   const { donations: receivedDonations, fetchDonations: fetchReceivedDonations, addDonation, updateDonation } = useDonationReceivedStore();
   const { donations: disbursedDonations, fetchDonations: fetchDisbursedDonations } = useDonationStore();
   const { donors, fetchDonors, addDonor } = useDonorStore();
+  const { beneficiaries, fetchBeneficiaries } = useBeneficiaryStore();
   const { accounts, fetchAccounts } = useCoaStore();
   const user = useAuthStore((state) => state.user);
   const isPrivileged = useAuthStore((state) => state.isPrivileged);
@@ -91,13 +94,14 @@ export const DonationEntryForm = () => {
   const [isAddingDonor, setIsAddingDonor] = useState(false);
   const [quickDonorError, setQuickDonorError] = useState('');
 
-  // Initial Load: Donors, Accounts & Fund History
+  // Initial Load: Donors, Beneficiaries, Accounts & Fund History
   useEffect(() => {
     fetchDonors();
+    fetchBeneficiaries();
     fetchAccounts();
     fetchReceivedDonations();
     fetchDisbursedDonations();
-  }, [fetchDonors, fetchAccounts, fetchReceivedDonations, fetchDisbursedDonations]);
+  }, [fetchDonors, fetchBeneficiaries, fetchAccounts, fetchReceivedDonations, fetchDisbursedDonations]);
 
   // Live Fund Pool Balance & Metrics
   const fundPoolMetrics = useMemo(() => {
@@ -155,13 +159,32 @@ export const DonationEntryForm = () => {
     return accounts.filter(isGenuineBankAccount);
   }, [accounts]);
 
-  // Auto-fill mobile when donor is selected
+  // Selected Person (Donor or Beneficiary from People We Help)
+  const selectedPerson = useMemo(() => {
+    if (!formData.donorId) return null;
+    const directBen = (beneficiaries || []).find((b) => b.id === formData.donorId);
+    if (directBen) return { ...directBen, isBeneficiary: true };
+    const directDonor = (donors || []).find((d) => d.id === formData.donorId);
+    if (directDonor) {
+      const linkedBen = (beneficiaries || []).find(
+        (b) => (b.cnic && b.cnic === directDonor.cnic) || (b.name?.toLowerCase() === directDonor.fullName?.toLowerCase() && b.mobile === directDonor.mobile)
+      );
+      if (linkedBen) return { ...linkedBen, isBeneficiary: true, donorCode: directDonor.donorCode };
+      return { ...directDonor, isBeneficiary: false };
+    }
+    return null;
+  }, [formData.donorId, beneficiaries, donors]);
+
+  // Auto-fill mobile when donor or beneficiary is selected
   const handleDonorChange = (selectedId) => {
-    const selected = donors.find((d) => d.id === selectedId);
+    const selectedDonor = (donors || []).find((d) => d.id === selectedId);
+    const selectedBen = (beneficiaries || []).find((b) => b.id === selectedId);
+    const person = selectedDonor || selectedBen;
+
     setFormData((prev) => ({
       ...prev,
       donorId: selectedId,
-      mobile: selected?.mobile || prev.mobile,
+      mobile: person?.mobile || prev.mobile,
     }));
     if (formErrors.donorId) {
       setFormErrors((prev) => ({ ...prev, donorId: null }));
@@ -171,7 +194,7 @@ export const DonationEntryForm = () => {
   // Validation
   const validate = () => {
     const errors = {};
-    if (!formData.donorId) errors.donorId = 'Please select a donor.';
+    if (!formData.donorId) errors.donorId = 'Please select a donor or person from People We Help.';
     if (!formData.donationType) errors.donationType = 'Please select a donation type.';
     if (formData.donationType === 'CUSTOM' && !formData.customDonationType?.trim()) {
       errors.customDonationType = 'Please specify custom donation type.';
@@ -326,11 +349,11 @@ export const DonationEntryForm = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Donor Select with Quick Add Button */}
+              {/* Donor / Beneficiary Select with Quick Add Button */}
               <div className="space-y-1.5 md:col-span-2">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Donor <span className="text-rose-500">*</span>
+                    Donor / Person <span className="text-rose-500">*</span>
                   </label>
                   <button
                     type="button"
@@ -350,15 +373,48 @@ export const DonationEntryForm = () => {
                       : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50'
                   } text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer`}
                 >
-                  <option value="">-- Select Donor from Database --</option>
-                  {donors.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.fullName} &middot; {d.donorCode || 'No Code'} &middot; {d.mobile || d.cnic || 'Donor'}
-                    </option>
-                  ))}
+                  <option value="">-- Select Person (People We Help / Donor) --</option>
+                  {beneficiaries && beneficiaries.filter((b) => !b.isDeleted).length > 0 && (
+                    <optgroup label="People We Help (مستحقین)">
+                      {beneficiaries
+                        .filter((b) => !b.isDeleted)
+                        .map((b) => (
+                          <option key={`ben-${b.id}`} value={b.id}>
+                            {b.name} &middot; {b.cnic || b.mobile || 'Beneficiary'} {b.fatherName ? `(s/o, d/o ${b.fatherName})` : ''}
+                          </option>
+                        ))}
+                    </optgroup>
+                  )}
+                  {donors && donors.filter((d) => !d.isDeleted).length > 0 && (
+                    <optgroup label="Registered Donors (عطیہ دہندگان)">
+                      {donors
+                        .filter((d) => !d.isDeleted)
+                        .map((d) => (
+                          <option key={`dnr-${d.id}`} value={d.id}>
+                            {d.fullName} &middot; {d.donorCode || 'No Code'} &middot; {d.mobile || d.cnic || 'Donor'}
+                          </option>
+                        ))}
+                    </optgroup>
+                  )}
                 </select>
                 {formErrors.donorId && (
                   <p className="text-[11px] text-rose-500 font-medium">{formErrors.donorId}</p>
+                )}
+                {selectedPerson && selectedPerson.isBeneficiary && (
+                  <div className="mt-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 flex items-center justify-between animate-fadeIn">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-bold text-slate-100">{selectedPerson.name}</span>
+                        {selectedPerson.fatherName && <span className="text-slate-400">&middot; S/O {selectedPerson.fatherName}</span>}
+                        {selectedPerson.cnic && <span className="font-mono text-emerald-300">&middot; CNIC: {selectedPerson.cnic}</span>}
+                        {selectedPerson.address && <span className="text-slate-400">&middot; {selectedPerson.address}</span>}
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 shrink-0">
+                      People We Help
+                    </span>
+                  </div>
                 )}
               </div>
 

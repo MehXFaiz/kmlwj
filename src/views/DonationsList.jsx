@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useDonationReceivedStore } from '../store/donationReceivedStore';
 import { useDonorStore } from '../store/donorStore';
+import { useBeneficiaryStore } from '../store/beneficiaryStore';
 import { useAuthStore } from '../store/authStore';
 import { VoucherSlipModal } from '../components/common/VoucherSlipModal';
 import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolver';
@@ -71,6 +72,7 @@ export const DonationsList = () => {
   } = useDonationReceivedStore();
 
   const { donors, fetchDonors } = useDonorStore();
+  const { beneficiaries, fetchBeneficiaries } = useBeneficiaryStore();
   const user = useAuthStore((state) => state.user);
   const isPrivileged = useAuthStore((state) => state.isPrivileged);
   const hasPermission = useAuthStore((state) => state.hasPermission);
@@ -97,7 +99,8 @@ export const DonationsList = () => {
   // Initial Data Load
   useEffect(() => {
     fetchDonors();
-  }, [fetchDonors]);
+    fetchBeneficiaries();
+  }, [fetchDonors, fetchBeneficiaries]);
 
   const loadData = useCallback(() => {
     const params = {};
@@ -340,12 +343,29 @@ export const DonationsList = () => {
               onChange={(e) => setSelectedDonor(e.target.value)}
               className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer"
             >
-              <option value="ALL">All Donors</option>
-              {donors.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.fullName} ({d.donorCode || d.mobile || 'Donor'})
-                </option>
-              ))}
+              <option value="ALL">All Donors & People We Help</option>
+              {beneficiaries && beneficiaries.filter((b) => !b.isDeleted).length > 0 && (
+                <optgroup label="People We Help (مستحقین)">
+                  {beneficiaries
+                    .filter((b) => !b.isDeleted)
+                    .map((b) => (
+                      <option key={`ben-${b.id}`} value={b.id}>
+                        {b.name} ({b.cnic || b.mobile || 'Beneficiary'})
+                      </option>
+                    ))}
+                </optgroup>
+              )}
+              {donors && donors.filter((d) => !d.isDeleted).length > 0 && (
+                <optgroup label="Registered Donors (عطیہ دہندگان)">
+                  {donors
+                    .filter((d) => !d.isDeleted)
+                    .map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.fullName} ({d.donorCode || d.mobile || 'Donor'})
+                      </option>
+                    ))}
+                </optgroup>
+              )}
             </select>
           </div>
 
