@@ -221,6 +221,11 @@ var donors_default = makeHandler(async (req, res) => {
     if (existingDonors.length === 0) {
       return res.status(404).json({ error: { message: "No donors found to delete", status: 404 } });
     }
+    if (isPermanent && existingDonors.some((d) => d.donations.length > 0)) {
+      return res.status(409).json({
+        error: { message: "Cannot permanently delete donors with donation receipts. Use a soft delete instead.", status: 409 }
+      });
+    }
     await prisma.$transaction(async (tx) => {
       if (isPermanent) {
         await tx.donor.deleteMany({ where: { id: { in: ids } } });

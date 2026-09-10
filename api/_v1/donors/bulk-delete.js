@@ -41,8 +41,9 @@ var bulk_delete_default = makeHandler(async (req, res) => {
       select: { id: true, donorCode: true, fullName: true }
     });
     if (targets.length === 0) return { deleted: 0, donors: targets };
-    const result = await tx.donor.deleteMany({
-      where: { id: { in: targets.map((t) => t.id) } }
+    const result = await tx.donor.updateMany({
+      where: { id: { in: targets.map((t) => t.id) } },
+      data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
     });
     return { deleted: result.count, donors: targets };
   });

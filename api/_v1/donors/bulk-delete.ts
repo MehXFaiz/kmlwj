@@ -68,8 +68,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     if (targets.length === 0) return { deleted: 0, donors: targets };
 
-    const result = await tx.donor.deleteMany({
+    const result = await tx.donor.updateMany({
       where: { id: { in: targets.map(t => t.id) } },
+      data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user!.id },
     });
 
     return { deleted: result.count, donors: targets };
