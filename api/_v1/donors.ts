@@ -260,14 +260,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(404).json({ error: { message: 'No donors found to delete', status: 404 } });
     }
 
-    if (isPermanent && existingDonors.some(d => d.donations.length > 0)) {
-      return res.status(409).json({
-        error: { message: 'Cannot permanently delete donors with donation receipts. Use a soft delete instead.', status: 409 },
-      });
-    }
+    const hasDonationReceipts = existingDonors.some(d => d.donations.length > 0);
+    const shouldPermanentlyDelete = isPermanent && !hasDonationReceipts;
 
     await prisma.$transaction(async (tx) => {
-      if (isPermanent) {
+      if (shouldPermanentlyDelete) {
         await tx.donor.deleteMany({ where: { id: { in: ids } } });
       } else {
         await tx.donor.updateMany({
@@ -278,7 +275,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     });
 
     for (const d of existingDonors) {
-      await logAudit(req.user.id, isPermanent ? 'Permanent Delete Donor' : 'Delete Donor', 'DONOR', d, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
+      await logAudit(req.user.id, shouldPermanentlyDelete ? 'Permanent Delete Donor' : 'Delete Donor', 'DONOR', d, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
     }
 
 

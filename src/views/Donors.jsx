@@ -64,12 +64,12 @@ export const Donors = () => {
   const handleDelete = async (donor) => {
     await confirm({
       title: 'Delete Donor',
-      description: `Are you sure you want to permanently delete donor "${donor.fullName}"?`,
+      description: `Are you sure you want to delete donor "${donor.fullName}"?`,
       details: {
         'Donor Code': donor.donorCode,
         'Donor Name': donor.fullName,
         'CNIC': donor.cnic || '—',
-        'Warning': 'This will remove the donor and all their records from the system. This action cannot be undone.'
+        'Warning': 'Donors with donation receipts are archived so accounting history remains intact.'
       },
       type: 'error',
       confirmLabel: 'Delete',
