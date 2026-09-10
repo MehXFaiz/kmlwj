@@ -224,6 +224,70 @@ class AccountingSyncHub {
       }
     });
 
+    let donationPoolAccount = await db.account.findFirst({
+      where: {
+        OR: [
+          { glCode: '1010401' },
+          { accountName: { equals: 'Donation Pool', mode: 'insensitive' } }
+        ],
+        isDeleted: false,
+        children: { none: {} }
+      }
+    });
+
+    if (!donationPoolAccount) {
+      let parentPool = await db.account.findFirst({
+        where: {
+          OR: [
+            { glCode: '1010400' },
+            { accountName: { equals: 'Funds & Pools', mode: 'insensitive' } },
+            { accountName: { equals: 'Donation & Welfare Pools', mode: 'insensitive' } }
+          ],
+          isDeleted: false
+        }
+      });
+      const assetType = await db.accountType.findFirst({
+        where: { name: { in: ['Asset', 'Assets', 'ASSET', 'ASSETS'] } }
+      });
+      if (!parentPool) {
+        const currentAssets = await db.account.findFirst({
+          where: { OR: [{ glCode: '1010000' }, { accountName: { equals: 'Current Assets', mode: 'insensitive' } }] }
+        });
+        parentPool = await db.account.create({
+          data: {
+            glCode: '1010400',
+            accountName: 'Funds & Pools',
+            accountLevel: 'SUBSIDIARY',
+            parentId: currentAssets ? currentAssets.id : null,
+            accountTypeId: assetType ? assetType.id : null,
+            detailType: 'Header',
+            currency: 'PKR',
+            subsidiary: ['Global'],
+            initialBalance: 0,
+            currentBalance: 0,
+            isSystemDefined: true,
+            description: 'Special purpose funds and welfare pools'
+          }
+        });
+      }
+      donationPoolAccount = await db.account.create({
+        data: {
+          glCode: '1010401',
+          accountName: 'Donation Pool',
+          accountLevel: 'GL',
+          parentId: parentPool.id,
+          accountTypeId: assetType ? assetType.id : (parentPool ? parentPool.accountTypeId : null),
+          detailType: 'Donation Pool',
+          currency: 'PKR',
+          subsidiary: ['Global'],
+          initialBalance: 0,
+          currentBalance: 0,
+          isSystemDefined: true,
+          description: 'Dedicated Donation Pool / Donation Fund account for welfare allocations'
+        }
+      });
+    }
+
     // 3. Sync Hall Bookings (Total Net Amount to General Ledger)
     const hallBookings = await db.hallBooking.findMany({
       where: { isDeleted: false },
@@ -423,8 +487,9 @@ class AccountingSyncHub {
       const amount = Number(d.amount || 0);
       if (amount <= 0) continue;
 
-      let debitAccId = donationExpenseAccount?.id || generalDonationAccount.id;
-      if (d.donationType === 'ZAKAT' && zakatExpenseAccount) {
+      const isZakat = d.donationType === 'ZAKAT';
+      let debitAccId = donationPoolAccount.id;
+      if (isZakat && zakatExpenseAccount) {
         debitAccId = zakatExpenseAccount.id;
       }
 
@@ -434,8 +499,20 @@ class AccountingSyncHub {
       }
 
       const lines = [
-        { accountId: debitAccId, debit: amount, credit: 0, description: `Expense: Donation Disbursement (${d.donationType}) - ${d.voucherNumber || d.id.slice(0, 8)}` },
-        { accountId: creditAccId, debit: 0, credit: amount, description: `Payment: Donation Disbursement (${d.donationType}) - ${d.voucherNumber || d.id.slice(0, 8)}` }
+        {
+          accountId: debitAccId,
+          debit: amount,
+          credit: 0,
+          description: isZakat
+            ? `Expense: Zakat Disbursement - ${d.voucherNumber || d.voucherNo || d.id.slice(0, 8)}`
+            : `Monthly Donation Allocation to Donation Pool - ${d.voucherNumber || d.voucherNo || d.id.slice(0, 8)}`
+        },
+        {
+          accountId: creditAccId,
+          debit: 0,
+          credit: amount,
+          description: `Payment: Donation Disbursement (${d.donationType}) - ${d.voucherNumber || d.voucherNo || d.id.slice(0, 8)}`
+        }
       ];
 
       const postingDate = d.createdAt || new Date();

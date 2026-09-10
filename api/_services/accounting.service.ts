@@ -273,6 +273,90 @@ export class AccountingService {
     return donationAccount;
   }
 
+  /**
+   * Ensures a dedicated leaf 'Donation Pool' account exists and returns it.
+   * Monthly donation disbursements transfer funds from bank into this dedicated
+   * Donation Pool account rather than classifying them as an operating expense.
+   */
+  static async ensureDonationPoolAccount(tx: any) {
+    let poolAccount = await tx.account.findFirst({
+      where: {
+        OR: [
+          { accountName: { equals: 'Donation Pool', mode: 'insensitive' } },
+          { glCode: '1010401' }
+        ],
+        isDeleted: false,
+        children: { none: {} }
+      },
+      orderBy: { glCode: 'asc' }
+    });
+
+    if (poolAccount) return poolAccount;
+
+    // Ensure parent header 1010400 (Funds & Pools) under Current Assets (1010000)
+    let parentHeader = await tx.account.findFirst({
+      where: {
+        OR: [
+          { glCode: '1010400' },
+          { accountName: { equals: 'Funds & Pools', mode: 'insensitive' } },
+          { accountName: { equals: 'Donation & Welfare Pools', mode: 'insensitive' } }
+        ],
+        isDeleted: false
+      }
+    });
+
+    const assetType = await tx.accountType.findFirst({
+      where: { name: { in: ['Asset', 'Assets', 'ASSET', 'ASSETS'] } }
+    });
+
+    if (!parentHeader) {
+      const currentAssets = await tx.account.findFirst({
+        where: {
+          OR: [
+            { glCode: '1010000' },
+            { accountName: { equals: 'Current Assets', mode: 'insensitive' } }
+          ]
+        }
+      });
+
+      parentHeader = await tx.account.create({
+        data: {
+          glCode: '1010400',
+          accountName: 'Funds & Pools',
+          accountLevel: 'SUBSIDIARY',
+          parentId: currentAssets ? currentAssets.id : null,
+          accountTypeId: assetType ? assetType.id : null,
+          detailType: 'Header',
+          currency: 'PKR',
+          subsidiary: ['Global'],
+          initialBalance: 0,
+          currentBalance: 0,
+          isSystemDefined: true,
+          description: 'Special purpose funds and welfare pools'
+        }
+      });
+    }
+
+    poolAccount = await tx.account.create({
+      data: {
+        glCode: '1010401',
+        accountName: 'Donation Pool',
+        accountLevel: 'GL',
+        parentId: parentHeader.id,
+        accountTypeId: assetType ? assetType.id : (parentHeader ? parentHeader.accountTypeId : null),
+        detailType: 'Donation Pool',
+        currency: 'PKR',
+        subsidiary: ['Global'],
+        initialBalance: 0,
+        currentBalance: 0,
+        isSystemDefined: true,
+        description: 'Dedicated Donation Pool / Donation Fund account for welfare allocations'
+      }
+    });
+
+    return poolAccount;
+  }
+
   static async getOrCreateAccountsReceivable(tx: any) {
     let arAccount = await tx.account.findFirst({
       where: {

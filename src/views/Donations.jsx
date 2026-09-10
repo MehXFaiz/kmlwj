@@ -629,8 +629,8 @@ export const Donations = () => {
               lines: [
                 {
                   account: {
-                    code: isZakat ? '4060104' : '4060101',
-                    name: isZakat ? 'Zakat Expense' : 'Monthly Donations Expense'
+                    code: isZakat ? '4060104' : '1010401',
+                    name: isZakat ? 'Zakat Expense' : 'Donation Pool'
                   },
                   debit: printDonation.amount,
                   credit: 0

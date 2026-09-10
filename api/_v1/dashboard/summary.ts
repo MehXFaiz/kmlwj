@@ -13,6 +13,7 @@ export interface DashboardSummaryResponse {
   totalDonationsReceived: number;
   cashInHand: number;
   bankBalance: number;
+  donationPool: number;
   netResult: number;
   monthlyDonations: number;
   monthlyZakat: number;
@@ -120,6 +121,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     totalDonationsReceived: totalDonationsReceived,
     cashInHand: cashBalance,
     bankBalance: bankBalance,
+    donationPool: Number(summaryResult.donationPool || 0),
     netResult: netResult,
     monthlyDonations: monthlyDonations,
     monthlyZakat: monthlyZakat,

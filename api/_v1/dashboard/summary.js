@@ -64,6 +64,7 @@ var summary_default = makeHandler(async (req, res) => {
     totalDonationsReceived,
     cashInHand: cashBalance,
     bankBalance,
+    donationPool: Number(summaryResult.donationPool || 0),
     netResult,
     monthlyDonations,
     monthlyZakat,

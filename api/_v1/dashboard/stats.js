@@ -71,6 +71,7 @@ var stats_default = makeHandler(async (req, res) => {
   const totalExpense = summaryResult.totalExpense;
   const cashBalance = summaryResult.cashBalance;
   const bankBalance = summaryResult.bankBalance;
+  const donationPool = Number(summaryResult.donationPool || 0);
   const openingCashBalance = summaryResult.openingCashBalance ?? cashBalance;
   const openingBankBalance = summaryResult.openingBankBalance ?? bankBalance;
   const netAssets = summaryResult.netAssets ?? totalAssets - totalLiabilities;
@@ -302,6 +303,7 @@ var stats_default = makeHandler(async (req, res) => {
       monthlyZakat,
       monthlyDonationsDisbursed,
       monthlyZakatDisbursed,
+      donationPool,
       donationsPaid: totalDisbursementsPaid,
       donationsPaidFromBank,
       totalDonationsPaid: totalDonationsOnlyPaid,
@@ -326,6 +328,7 @@ var stats_default = makeHandler(async (req, res) => {
         donationDisbursed: totalDisbursementsPaid,
         cashInHand: cashBalance,
         bankBalance,
+        donationPool,
         netResult: netIncome,
         totalAssets,
         totalLiabilities,

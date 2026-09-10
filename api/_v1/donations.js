@@ -116,6 +116,105 @@ async function getExpenseAccountForDonation(donationType, tx) {
   });
   return acc;
 }
+async function postDonationDisbursement(tx, params) {
+  const {
+    amount,
+    cashOrBankAccountId,
+    isZakat,
+    displayCategory,
+    monthLabel,
+    remarks,
+    voucherNo,
+    voucherType,
+    postingDate,
+    userId,
+    ipAddress,
+    userAgent,
+    donationType
+  } = params;
+  if (cashOrBankAccountId) {
+    if (!isZakat) {
+      const donationPoolAccount = await AccountingService.ensureDonationPoolAccount(tx);
+      const postingResult = await AccountingService.postTransaction(tx, {
+        reference: voucherNo,
+        voucherNo,
+        description: `Monthly Donation Allocation to Donation Pool - ${monthLabel}${remarks ? ` (${remarks})` : ""}`,
+        module: "Donations",
+        voucherType,
+        postingDate,
+        postedBy: userId,
+        ipAddress,
+        userAgent,
+        lines: [
+          {
+            accountId: donationPoolAccount.id,
+            debit: amount,
+            credit: 0,
+            description: `Monthly Donation Allocation to Donation Pool - ${monthLabel}`
+          },
+          {
+            accountId: cashOrBankAccountId,
+            debit: 0,
+            credit: amount,
+            description: `Bank Deduction for Monthly Donation - ${monthLabel}`
+          }
+        ]
+      });
+      return postingResult.journalEntry.id;
+    } else {
+      const expenseAccount = await getExpenseAccountForDonation(donationType, tx);
+      if (!expenseAccount) {
+        throw new Error(`Zakat Expense account not found in Chart of Accounts for ${donationType}`);
+      }
+      const postingResult = await AccountingService.postPayment(tx, {
+        amount,
+        cashOrBankAccountId,
+        expenseAccountId: expenseAccount.id,
+        reference: voucherNo,
+        description: `Monthly ${displayCategory} Disbursement - ${monthLabel}${remarks ? ` (${remarks})` : ""}`,
+        module: "Donations",
+        voucherType,
+        postingDate,
+        postedBy: userId,
+        ipAddress,
+        userAgent
+      });
+      return postingResult.journalEntry.id;
+    }
+  } else {
+    const expenseAccount = await getExpenseAccountForDonation(donationType, tx);
+    if (!expenseAccount) {
+      throw new Error(`Expense account not found in Chart of Accounts for ${donationType}`);
+    }
+    const donationFundAccount = isZakat ? await tx.account.findFirst({ where: { accountName: { contains: "Zakat", mode: "insensitive" }, accountType: { name: { in: ["Revenue", "REVENUE"] } }, isDeleted: false } }) || await AccountingService.ensureGeneralDonationAccount(tx) : await AccountingService.ensureGeneralDonationAccount(tx);
+    const postingResult = await AccountingService.postTransaction(tx, {
+      reference: voucherNo,
+      voucherNo,
+      description: `Monthly ${displayCategory} Disbursement from Donation Fund - ${monthLabel}${remarks ? ` (${remarks})` : ""}`,
+      module: "Donations",
+      voucherType: "JV",
+      postedBy: userId,
+      postingDate,
+      ipAddress,
+      userAgent,
+      lines: [
+        {
+          accountId: expenseAccount.id,
+          debit: amount,
+          credit: 0,
+          description: `Monthly ${displayCategory} Aid Expense`
+        },
+        {
+          accountId: donationFundAccount.id,
+          debit: 0,
+          credit: amount,
+          description: `Deducted from ${displayCategory} Fund Pool`
+        }
+      ]
+    });
+    return postingResult.journalEntry.id;
+  }
+}
 var donations_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -307,56 +406,22 @@ var donations_default = makeHandler(async (req, res) => {
         });
       }
       const result = await prisma.$transaction(async (tx) => {
-        const expenseAccount = await getExpenseAccountForDonation(donation.donationType, tx);
-        if (!expenseAccount) {
-          throw new Error(`Donation Expense account not found in Chart of Accounts for ${donation.donationType}`);
-        }
         const voucherNo = donation.voucherNo || `MDON-${disbursementMonth2.replace("-", "")}-${donation.id.slice(0, 4).toUpperCase()}`;
-        let journalEntryId = null;
-        if (cashOrBankAccountId) {
-          const postingResult = await AccountingService.postPayment(tx, {
-            amount: Number(donation.amount),
-            cashOrBankAccountId,
-            expenseAccountId: expenseAccount.id,
-            reference: voucherNo,
-            description: `Monthly ${displayCategory2} Disbursement - ${monthLabel2}${donation.remarks ? ` (${donation.remarks})` : ""}`,
-            module: "Donations",
-            voucherType: donation.paymentMethod === "CASH" ? "CP" : "BP",
-            postingDate: donation.createdAt,
-            postedBy: req.user.id,
-            ipAddress: req.headers["x-forwarded-for"],
-            userAgent: req.headers["user-agent"]
-          });
-          journalEntryId = postingResult.journalEntry.id;
-        } else {
-          const donationFundAccount = isZakat2 ? await tx.account.findFirst({ where: { accountName: { contains: "Zakat", mode: "insensitive" }, accountType: { name: { in: ["Revenue", "REVENUE"] } }, isDeleted: false } }) || await AccountingService.ensureGeneralDonationAccount(tx) : await AccountingService.ensureGeneralDonationAccount(tx);
-          const postingResult = await AccountingService.postTransaction(tx, {
-            reference: voucherNo,
-            voucherNo,
-            description: `Monthly ${displayCategory2} Disbursement from Donation Fund - ${monthLabel2}${donation.remarks ? ` (${donation.remarks})` : ""}`,
-            module: "Donations",
-            voucherType: "JV",
-            postedBy: req.user.id,
-            postingDate: donation.createdAt || /* @__PURE__ */ new Date(),
-            ipAddress: req.headers["x-forwarded-for"],
-            userAgent: req.headers["user-agent"],
-            lines: [
-              {
-                accountId: expenseAccount.id,
-                debit: Number(donation.amount),
-                credit: 0,
-                description: `Monthly ${displayCategory2} Aid Expense`
-              },
-              {
-                accountId: donationFundAccount.id,
-                debit: 0,
-                credit: Number(donation.amount),
-                description: `Deducted from ${displayCategory2} Fund Pool`
-              }
-            ]
-          });
-          journalEntryId = postingResult.journalEntry.id;
-        }
+        const journalEntryId = await postDonationDisbursement(tx, {
+          amount: Number(donation.amount),
+          cashOrBankAccountId,
+          isZakat: isZakat2,
+          displayCategory: displayCategory2,
+          monthLabel: monthLabel2,
+          remarks: donation.remarks,
+          voucherNo,
+          voucherType: donation.paymentMethod === "CASH" ? "CP" : "BP",
+          postingDate: donation.createdAt || /* @__PURE__ */ new Date(),
+          userId: req.user.id,
+          ipAddress: req.headers["x-forwarded-for"],
+          userAgent: req.headers["user-agent"],
+          donationType: donation.donationType
+        });
         const approvedDonation = await tx.donation.update({
           where: { id },
           data: {
@@ -477,54 +542,21 @@ var donations_default = makeHandler(async (req, res) => {
       const voucherNo = `MDON-${disbursementMonth.replace("-", "")}-${randomStr}`;
       let journalEntryId = null;
       if (isDirectPost) {
-        const expenseAccount = await getExpenseAccountForDonation(enumType, tx);
-        if (!expenseAccount) {
-          throw new Error(`Donation Expense account not found in Chart of Accounts for ${enumType}`);
-        }
-        if (cashOrBankAccountId) {
-          const postingResult = await AccountingService.postPayment(tx, {
-            amount: parsedAmount,
-            cashOrBankAccountId,
-            expenseAccountId: expenseAccount.id,
-            reference: voucherNo,
-            description: `Monthly ${displayCategory} Disbursement - ${monthLabel}${remarks ? ` (${remarks})` : ""}`,
-            module: "Donations",
-            voucherType: paymentMethod === "CASH" ? "CP" : "BP",
-            postingDate: dateObj,
-            postedBy: req.user.id,
-            ipAddress: req.headers["x-forwarded-for"],
-            userAgent: req.headers["user-agent"]
-          });
-          journalEntryId = postingResult.journalEntry.id;
-        } else {
-          const donationFundAccount = isZakat ? await tx.account.findFirst({ where: { accountName: { contains: "Zakat", mode: "insensitive" }, accountType: { name: { in: ["Revenue", "REVENUE"] } }, isDeleted: false } }) || await AccountingService.ensureGeneralDonationAccount(tx) : await AccountingService.ensureGeneralDonationAccount(tx);
-          const postingResult = await AccountingService.postTransaction(tx, {
-            reference: voucherNo,
-            voucherNo,
-            description: `Monthly ${displayCategory} Disbursement from Donation Fund - ${monthLabel}${remarks ? ` (${remarks})` : ""}`,
-            module: "Donations",
-            voucherType: "JV",
-            postedBy: req.user.id,
-            postingDate: dateObj,
-            ipAddress: req.headers["x-forwarded-for"],
-            userAgent: req.headers["user-agent"],
-            lines: [
-              {
-                accountId: expenseAccount.id,
-                debit: parsedAmount,
-                credit: 0,
-                description: `Monthly ${displayCategory} Aid Expense`
-              },
-              {
-                accountId: donationFundAccount.id,
-                debit: 0,
-                credit: parsedAmount,
-                description: `Deducted from ${displayCategory} Fund Pool`
-              }
-            ]
-          });
-          journalEntryId = postingResult.journalEntry.id;
-        }
+        journalEntryId = await postDonationDisbursement(tx, {
+          amount: parsedAmount,
+          cashOrBankAccountId,
+          isZakat,
+          displayCategory,
+          monthLabel,
+          remarks,
+          voucherNo,
+          voucherType: paymentMethod === "CASH" ? "CP" : "BP",
+          postingDate: dateObj,
+          userId: req.user.id,
+          ipAddress: req.headers["x-forwarded-for"],
+          userAgent: req.headers["user-agent"],
+          donationType: enumType
+        });
       }
       const createdDonation = await tx.donation.create({
         data: {
@@ -651,53 +683,21 @@ var donations_default = makeHandler(async (req, res) => {
         } else if (effectivePaymentMethod === "BANK" || effectivePaymentMethod === "CHEQUE") {
           cashOrBankAccountId = targetBankAccountId || null;
         }
-        const expenseAccount = await getExpenseAccountForDonation(enumType, tx);
-        if (expenseAccount) {
-          if (cashOrBankAccountId) {
-            const postingResult = await AccountingService.postPayment(tx, {
-              amount: effectiveAmount,
-              cashOrBankAccountId,
-              expenseAccountId: expenseAccount.id,
-              reference: voucherNo,
-              description: `Monthly ${displayCategory} Disbursement - ${monthLabel}${remarks ? ` (${remarks})` : ""}`,
-              module: "Donations",
-              voucherType: effectivePaymentMethod === "CASH" ? "CP" : "BP",
-              postingDate: dateObj,
-              postedBy: req.user.id,
-              ipAddress: req.headers["x-forwarded-for"],
-              userAgent: req.headers["user-agent"]
-            });
-            journalEntryId = postingResult.journalEntry.id;
-          } else {
-            const donationFundAccount = isZakat ? await tx.account.findFirst({ where: { accountName: { contains: "Zakat", mode: "insensitive" }, accountType: { name: { in: ["Revenue", "REVENUE"] } }, isDeleted: false } }) || await AccountingService.ensureGeneralDonationAccount(tx) : await AccountingService.ensureGeneralDonationAccount(tx);
-            const postingResult = await AccountingService.postTransaction(tx, {
-              reference: voucherNo,
-              voucherNo,
-              description: `Monthly ${displayCategory} Disbursement from Donation Fund - ${monthLabel}${remarks ? ` (${remarks})` : ""}`,
-              module: "Donations",
-              voucherType: "JV",
-              postedBy: req.user.id,
-              postingDate: dateObj,
-              ipAddress: req.headers["x-forwarded-for"],
-              userAgent: req.headers["user-agent"],
-              lines: [
-                {
-                  accountId: expenseAccount.id,
-                  debit: effectiveAmount,
-                  credit: 0,
-                  description: `Monthly ${displayCategory} Aid Expense`
-                },
-                {
-                  accountId: donationFundAccount.id,
-                  debit: 0,
-                  credit: effectiveAmount,
-                  description: `Deducted from ${displayCategory} Fund Pool`
-                }
-              ]
-            });
-            journalEntryId = postingResult.journalEntry.id;
-          }
-        }
+        journalEntryId = await postDonationDisbursement(tx, {
+          amount: effectiveAmount,
+          cashOrBankAccountId,
+          isZakat,
+          displayCategory,
+          monthLabel,
+          remarks,
+          voucherNo,
+          voucherType: effectivePaymentMethod === "CASH" ? "CP" : "BP",
+          postingDate: dateObj,
+          userId: req.user.id,
+          ipAddress: req.headers["x-forwarded-for"],
+          userAgent: req.headers["user-agent"],
+          donationType: enumType
+        });
       }
       const updated = await tx.donation.update({
         where: { id },

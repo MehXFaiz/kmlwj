@@ -18,6 +18,7 @@ export interface FinancialSummaryTotals {
   cashReceipts: number;
   cashPayments: number;
   isEquationBalanced: boolean;
+  donationPool: number;
 
   // 13 Unified Core Financial Metrics
   incomeYtd: number;
@@ -124,6 +125,7 @@ export class AccountingBalanceRebuildService {
 
       let cashBalance = new Prisma.Decimal(0);
       let bankBalance = new Prisma.Decimal(0);
+      let donationPoolBalance = new Prisma.Decimal(0);
       let openingCashBalance = new Prisma.Decimal(0);
       let openingBankBalance = new Prisma.Decimal(0);
       let cashReceipts = new Prisma.Decimal(0);
@@ -214,6 +216,10 @@ export class AccountingBalanceRebuildService {
             bankBalance = bankBalance.plus(closingAsset);
             openingBankBalance = openingBankBalance.plus(openingAsset);
           }
+
+          if (code === '1010401' || nameLower === 'donation pool' || detailLower === 'donation pool') {
+            donationPoolBalance = donationPoolBalance.plus(closingAsset);
+          }
         } else if (typeName === 'LIABILITY' || typeName === 'LIABILITIES') {
           initialLiabilities = initialLiabilities.plus(initBal);
           const cAgg = cumulativeMap.get(acc.id);
@@ -283,6 +289,7 @@ export class AccountingBalanceRebuildService {
         cashReceipts: cashReceipts.toNumber(),
         cashPayments: cashPayments.toNumber(),
         isEquationBalanced,
+        donationPool: donationPoolBalance.toNumber(),
 
         // 13 Unified Core Financial Metrics
         incomeYtd: revenueNum,

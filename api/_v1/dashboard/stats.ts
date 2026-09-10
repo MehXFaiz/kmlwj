@@ -95,6 +95,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const totalExpense = summaryResult.totalExpense;
   const cashBalance = summaryResult.cashBalance;
   const bankBalance = summaryResult.bankBalance;
+  const donationPool = Number(summaryResult.donationPool || 0);
   // Opening balances (as of the fiscal year's start) — lets the Dashboard show
   // Cash in Hand as "Opening + this period's movement" instead of a single
   // cumulative figure with nothing to reconcile it against Net Surplus.
@@ -367,6 +368,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       monthlyZakat,
       monthlyDonationsDisbursed,
       monthlyZakatDisbursed,
+      donationPool,
       donationsPaid: totalDisbursementsPaid,
       donationsPaidFromBank,
       totalDonationsPaid: totalDonationsOnlyPaid,
@@ -391,6 +393,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         donationDisbursed: totalDisbursementsPaid,
         cashInHand: cashBalance,
         bankBalance,
+        donationPool,
         netResult: netIncome,
         totalAssets,
         totalLiabilities,

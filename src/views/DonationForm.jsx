@@ -741,7 +741,7 @@ export const DonationForm = () => {
                     <div>
                       <span className="font-bold">DEBIT:</span>
                       <p className="text-[11px] text-emerald-300/80 mt-0.5">
-                        {donationType === 'ZAKAT' ? 'Zakat Expense A/c (4060104)' : 'Monthly Donation Expense (4060101)'}
+                        {donationType === 'ZAKAT' ? 'Zakat Expense A/c (4060104)' : 'Donation Pool A/c (1010401)'}
                       </p>
                     </div>
                     <span className="font-bold text-sm">Rs. {Number(amount || 0).toLocaleString()}</span>
@@ -761,10 +761,10 @@ export const DonationForm = () => {
                 <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-[11px] text-slate-400 space-y-1.5">
                   <div className="flex items-center gap-1.5 font-bold text-amber-300">
                     <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Strict Single Monthly Deduction</span>
+                    <span>Dedicated Donation Pool Allocation</span>
                   </div>
                   <p>
-                    Regardless of recipient count, the bank account is credited only once for the batch total. Duplicate monthly postings for this bank account are locked.
+                    Bank is deducted once for the batch total and moved directly into the dedicated Donation Pool without inflating normal operating expenses.
                   </p>
                 </div>
               </div>
