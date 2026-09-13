@@ -51,7 +51,9 @@ export const AddIncomeForm = () => {
   const location = useLocation();
 
   const user = useAuthStore((state) => state.user);
+  const hasPermission = useAuthStore((state) => state.hasPermission);
   const isAdminOrSuperAdmin = user?.role === 'Admin' || user?.role === 'Super Admin';
+  const canSaveIncome = isAdminOrSuperAdmin || hasPermission('revenue', id ? 'update' : 'create');
 
   const {
     categories,
@@ -300,8 +302,8 @@ export const AddIncomeForm = () => {
 
   // Save Income Record (Save & Redirect, or Save & New)
   const handleSave = async (saveAndNew = false) => {
-    if (!isAdminOrSuperAdmin) {
-      showToast('Only Admin and Super Admin can save income entries', 'warning');
+    if (!canSaveIncome) {
+      showToast('You do not have permission to save income entries', 'warning');
       return;
     }
 
@@ -934,9 +936,9 @@ export const AddIncomeForm = () => {
                 <button
                   type="button"
                   onClick={() => handleSave(false)}
-                  disabled={submitting || !isAdminOrSuperAdmin}
+                  disabled={submitting || !canSaveIncome}
                   className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer ${
-                    isAdminOrSuperAdmin
+                    canSaveIncome
                       ? 'bg-brand-600 hover:bg-brand-500 text-white shadow-brand-950/40'
                       : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
                   }`}
@@ -949,7 +951,7 @@ export const AddIncomeForm = () => {
                   <button
                     type="button"
                     onClick={() => handleSave(true)}
-                    disabled={submitting || !isAdminOrSuperAdmin}
+                    disabled={submitting || !canSaveIncome}
                     className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-slate-700 transition-all cursor-pointer"
                   >
                     <Plus className="h-3.5 w-3.5 text-brand-400" />

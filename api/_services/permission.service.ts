@@ -380,6 +380,9 @@ export async function loadPermissions(req: AuthenticatedRequest): Promise<Set<st
   const roleName = user?.role?.name || (req.user as any)?.role || '';
   const isAccountant = roleName === 'Accountant' || roleName?.toLowerCase?.().includes('accountant');
   if (isAccountant) {
+    perms.add('revenue.view');
+    perms.add('revenue.create');
+    perms.add('revenue.update');
     perms.add('ledger.post');
     perms.add('POST_LEDGER');
     perms.add('POST_JOURNAL');
