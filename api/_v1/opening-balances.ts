@@ -122,12 +122,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     const hasPreviousYear = Boolean(previousFyRecord || previousBatchRecord);
 
-    // Fetch primary Balance Sheet accounts
+    // Opening setup supports all postable GL accounts. Revenue and Expense
+    // accounts are included as well so organizations can seed income-side
+    // opening balances; the POST path assigns their correct credit/debit side.
     const allBsAccounts = await prisma.account.findMany({
       where: {
         isDeleted: false,
         accountLevel: 'GL',
-        accountType: { name: { in: ['ASSET', 'ASSETS', 'LIABILITY', 'LIABILITIES', 'EQUITY'] } }
+        accountType: { name: { in: ['ASSET', 'ASSETS', 'LIABILITY', 'LIABILITIES', 'EQUITY', 'REVENUE', 'INCOME', 'EXPENSE', 'EXPENSES'] } }
       },
       include: { accountType: true },
       orderBy: { glCode: 'asc' }

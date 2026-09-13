@@ -111,7 +111,7 @@ var opening_balances_default = makeHandler(async (req, res) => {
       where: {
         isDeleted: false,
         accountLevel: "GL",
-        accountType: { name: { in: ["ASSET", "ASSETS", "LIABILITY", "LIABILITIES", "EQUITY"] } }
+        accountType: { name: { in: ["ASSET", "ASSETS", "LIABILITY", "LIABILITIES", "EQUITY", "REVENUE", "INCOME", "EXPENSE", "EXPENSES"] } }
       },
       include: { accountType: true },
       orderBy: { glCode: "asc" }
