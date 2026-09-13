@@ -77,7 +77,7 @@ export const TrialBalanceSheet = () => {
   const { tbReport, loading: isLoadingTb, fetchTbReport, version } = useDashboardStore();
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState('sheet'); // 'sheet' (Official Jammat 4-Column Statement), 'matrix' (Dual-Column), 'ledger' (Standard)
+  const [viewMode, setViewMode] = useState('sheet'); // 'sheet' (Official Jammat 4-Column Statement), 'matrix' (Dual-Column), 'ledger' (Standard), 'bank' (Bank Statement)
   
   // Date filter states.
   //
@@ -759,6 +759,14 @@ export const TrialBalanceSheet = () => {
     document.body.removeChild(link);
   };
 
+  const bankStatementEntries = Array.isArray(tbReport?.bankStatementEntries)
+    ? tbReport.bankStatementEntries
+    : [];
+  const bankStatementTotals = bankStatementEntries.reduce((totals, entry) => ({
+    debit: totals.debit + Number(entry.debit || 0),
+    credit: totals.credit + Number(entry.credit || 0),
+  }), { debit: 0, credit: 0 });
+
   return (
     <div className="space-y-6">
       {/* Print-Only Header Logo & Title */}
@@ -780,7 +788,7 @@ export const TrialBalanceSheet = () => {
 
         <div className="flex flex-wrap items-center gap-3">
           {/* View Switcher Toggle */}
-          <div className="grid grid-cols-3 w-full sm:w-auto sm:inline-flex rounded-lg bg-slate-900 border border-slate-800 p-0.5">
+          <div className="grid grid-cols-4 w-full sm:w-auto sm:inline-flex rounded-lg bg-slate-900 border border-slate-800 p-0.5">
             <button
               onClick={() => setViewMode('sheet')}
               className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${viewMode === 'sheet' ? 'bg-amber-500 text-slate-950 shadow-sm font-bold' : 'text-slate-400 hover:text-slate-200'}`}
@@ -804,6 +812,14 @@ export const TrialBalanceSheet = () => {
             >
               <List className="h-3.5 w-3.5 shrink-0" />
               <span>Standard Ledger</span>
+            </button>
+            <button
+              onClick={() => setViewMode('bank')}
+              className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${viewMode === 'bank' ? 'bg-cyan-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+              title="Bank Statement"
+            >
+              <FileText className="h-3.5 w-3.5 shrink-0" />
+              <span>Bank Statement</span>
             </button>
           </div>
 
@@ -870,6 +886,55 @@ export const TrialBalanceSheet = () => {
           </div>
         </CardContent>
       </Card>
+
+      {viewMode === 'bank' && (
+        <Card>
+          <CardContent className="p-0 overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-800 bg-slate-900/70">
+              <div>
+                <h3 className="font-bold text-sm text-slate-200 uppercase tracking-wider">Bank Statement</h3>
+                <p className="text-xs text-slate-500 mt-1">All posted bank account transactions for the selected date range.</p>
+              </div>
+              <span className="text-xs font-semibold text-cyan-400">{bankStatementEntries.length} transactions</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse min-w-[800px]">
+                <thead>
+                  <tr className="bg-slate-950 text-slate-400 font-bold border-b border-slate-800">
+                    <th className="py-3 px-4">Date</th>
+                    <th className="py-3 px-4">Bank Account</th>
+                    <th className="py-3 px-4">Voucher / Reference</th>
+                    <th className="py-3 px-4">Description</th>
+                    <th className="py-3 px-4 text-right">Debit (PKR)</th>
+                    <th className="py-3 px-4 text-right">Credit (PKR)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-900">
+                  {bankStatementEntries.length === 0 ? (
+                    <tr><td colSpan={6} className="py-10 text-center text-slate-500">No bank transactions found for this date range.</td></tr>
+                  ) : bankStatementEntries.map(entry => (
+                    <tr key={entry.id} className="hover:bg-slate-900/40">
+                      <td className="py-3 px-4 text-slate-300 whitespace-nowrap">{new Date(entry.postingDate).toLocaleDateString()}</td>
+                      <td className="py-3 px-4 text-slate-200 font-medium">{entry.accountName} <span className="text-slate-600">({entry.glCode})</span></td>
+                      <td className="py-3 px-4 text-amber-300">{entry.voucherNo}<div className="text-slate-500">{entry.reference}</div></td>
+                      <td className="py-3 px-4 text-slate-400">{entry.description || '-'}</td>
+                      <td className="py-3 px-4 text-right font-mono text-emerald-400">{formatMoney(entry.debit)}</td>
+                      <td className="py-3 px-4 text-right font-mono text-amber-400">{formatMoney(entry.credit)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-slate-900 border-t border-slate-700 font-bold">
+                    <td colSpan={4} className="py-3 px-4 text-right uppercase tracking-wider text-slate-300">Total Bank Transactions</td>
+                    <td className="py-3 px-4 text-right font-mono text-emerald-400">{formatMoney(bankStatementTotals.debit)}</td>
+                    <td className="py-3 px-4 text-right font-mono text-amber-400">{formatMoney(bankStatementTotals.credit)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* KPI Financial Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 print:grid-cols-5 print:gap-2">

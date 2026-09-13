@@ -49,6 +49,7 @@ var trial_balance_default = makeHandler(async (req, res) => {
             cashToBankTransfers: tb.cashToBankTransfers ?? 0,
             periodLabel: startDate && endDate ? `${startDate} to ${endDate}` : startDate ? `From ${startDate}` : endDate ? `Up to ${endDate}` : "All Time"
           },
+          bankStatementEntries: tb.bankStatementEntries ?? [],
           // Opening (as of startDate, or account inception if unset) and
           // Closing (as of endDate, or now if unset) balances for Cash in
           // Hand, every Bank, Advance & Loan, Receivable, and Other Assets.

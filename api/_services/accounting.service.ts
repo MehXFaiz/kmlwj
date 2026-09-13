@@ -2165,13 +2165,30 @@ export class AccountingService {
       include: { lines: { include: { account: true } } },
     });
     let cashToBankTransfers = new Prisma.Decimal(0);
+    const bankStatementEntries: any[] = [];
     for (const entry of transferEntries) {
       const cashCredit = entry.lines.find(line => line.account.glCode === '1010103' && Number(line.credit) > 0);
       const bankDebit = entry.lines.find(line => String(line.account.detailType || '').toLowerCase() === 'bank' && Number(line.debit) > 0);
       if (cashCredit && bankDebit) {
         cashToBankTransfers = cashToBankTransfers.plus(Math.min(Number(cashCredit.credit), Number(bankDebit.debit)));
       }
+      for (const line of entry.lines) {
+        if (String(line.account.detailType || '').toLowerCase() === 'bank') {
+          bankStatementEntries.push({
+            id: line.id,
+            postingDate: entry.postingDate,
+            voucherNo: entry.voucherNo,
+            reference: entry.reference,
+            description: line.description || entry.description || '',
+            accountName: line.account.accountName,
+            glCode: line.account.glCode,
+            debit: Number(line.debit || 0),
+            credit: Number(line.credit || 0),
+          });
+        }
+      }
     }
+    bankStatementEntries.sort((a, b) => new Date(a.postingDate).getTime() - new Date(b.postingDate).getTime());
 
     let totalDebit = new Prisma.Decimal(0);
     let totalCredit = new Prisma.Decimal(0);
@@ -2330,6 +2347,7 @@ export class AccountingService {
       totalCredit: totalCredit.toNumber(),
       difference: diff.toNumber(),
       cashToBankTransfers: cashToBankTransfers.toNumber(),
+      bankStatementEntries,
       openingBalances: serializeCategories(openingCats),
       closingBalances: serializeCategories(closingCats),
     };
