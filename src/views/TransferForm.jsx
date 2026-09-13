@@ -10,7 +10,7 @@ import { isGenuineBankAccount, isGenuineCashAccount } from '../utils/accountFilt
 export const TransferForm = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { flatAccounts, fetchAccountsList } = useCoaStore();
+  const { flatAccounts, treeAccounts, fetchAccountsList, fetchAccountsTree } = useCoaStore();
   const { addVoucher } = useBankVoucherStore();
 
   const [postingDate, setPostingDate] = useState(new Date().toISOString().split('T')[0]);
@@ -23,12 +23,29 @@ export const TransferForm = () => {
 
   useEffect(() => {
     fetchAccountsList();
-  }, [fetchAccountsList]);
+    fetchAccountsTree();
+  }, [fetchAccountsList, fetchAccountsTree]);
 
   // Asset accounts (authorized banks and cash accounts)
   const bankAccounts = useMemo(() => {
     return flatAccounts.filter(acc => isGenuineBankAccount(acc) || isGenuineCashAccount(acc));
   }, [flatAccounts]);
+
+  const cashInHandBalance = useMemo(() => {
+    const flatten = (accounts) => accounts.flatMap(account => [account, ...flatten(account.children || [])]);
+    const cashAccount = flatten(treeAccounts || []).find(account => account.code === '1010103');
+    return Math.max(0, Number(cashAccount?.currentBalance || 0));
+  }, [treeAccounts]);
+
+  const fillCashInHandAmount = () => {
+    const cashAccount = bankAccounts.find(account => account.code === '1010103');
+    const bankAccount = bankAccounts.find(account => isGenuineBankAccount(account));
+    if (cashInHandBalance > 0) {
+      setAmount(cashInHandBalance.toFixed(2));
+      if (cashAccount) setFromBankAccountId(cashAccount.id);
+      if (bankAccount) setToBankAccountId(bankAccount.id);
+    }
+  };
 
   // Set default values for bank accounts
   useEffect(() => {
@@ -257,6 +274,19 @@ export const TransferForm = () => {
                     pattern="^[1-9]\d*(\.\d{1,2})?$" title="Positive number with up to 2 decimal places"
                     className={inputClass}
                   />
+                  <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
+                    <span className="text-xs text-slate-400">
+                      Cash in Hand: <strong className="text-emerald-400">PKR {cashInHandBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={fillCashInHandAmount}
+                      disabled={!cashInHandBalance}
+                      className="shrink-0 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Transfer full cash
+                    </button>
+                  </div>
                 </div>
 
                 <div>
