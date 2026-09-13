@@ -19,6 +19,7 @@ import {
   Heart,
   Search,
   ArrowRight,
+  ArrowUpRight,
   HelpCircle,
   ChevronLeft,
   ChevronRight,
@@ -214,6 +215,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
       title: t('sidebar.moneyOut', 'Money Out'),
       items: [
         { name: t('sidebar.addExpenses', 'Add Expenses'), hint: 'Log & manage business expenses', icon: TrendingDown, path: '/bank-vouchers', module: 'expenses' },
+        { name: 'Transfer Funds', hint: 'Move money from Cash in Hand to a bank account', icon: ArrowUpRight, path: '/bank-vouchers/transfer/new', module: 'expenses', action: 'create' },
         { name: t('sidebar.pettyCash', 'Petty Cash'), hint: 'Imprest petty cash fund & operational expenses', icon: Wallet, path: '/petty-cash', module: 'expenses' },
       ],
     },
