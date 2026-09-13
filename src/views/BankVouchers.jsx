@@ -533,12 +533,12 @@ export const BankVouchers = () => {
   const location = useLocation();
 
   useEffect(() => {
-    fetchVouchers('BP,CP');
+    fetchVouchers('BP,CP,BT');
   }, [fetchVouchers, location.key]);
 
   const handleSaveEdit = async (updatedData) => {
     try {
-      await updateVoucher(updatedData.id, updatedData, 'BP,CP');
+      await updateVoucher(updatedData.id, updatedData, 'BP,CP,BT');
       showToast('Voucher updated successfully', 'success');
     } catch (err) {
       showToast(err?.response?.data?.error?.message || err.message || 'Failed to update voucher', 'error');
@@ -604,7 +604,7 @@ export const BankVouchers = () => {
       loadingLabel: 'Posting...',
       successMessage: 'Voucher has been posted successfully.',
       action: async () => {
-        await updateVoucherStatus(v.dbId, 'Posted', 'BP,CP');
+        await updateVoucherStatus(v.dbId, 'Posted', 'BP,CP,BT');
       }
     });
   };
@@ -623,7 +623,7 @@ export const BankVouchers = () => {
       loadingLabel: 'Voiding...',
       successMessage: 'Voucher has been voided successfully.',
       action: async () => {
-        await updateVoucherStatus(v.dbId, 'Cancelled', 'BP,CP');
+        await updateVoucherStatus(v.dbId, 'Cancelled', 'BP,CP,BT');
       }
     });
   };
@@ -642,7 +642,7 @@ export const BankVouchers = () => {
       loadingLabel: 'Deleting...',
       successMessage: 'Voucher has been deleted successfully.',
       action: async () => {
-        await deleteVoucher(v.dbId, 'BP,CP');
+        await deleteVoucher(v.dbId, 'BP,CP,BT');
       }
     });
   };
@@ -666,7 +666,7 @@ export const BankVouchers = () => {
     setIsDeleting(true);
     await new Promise(resolve => setTimeout(resolve, 15));
     try {
-      await bulkDeleteVouchers(selectedIds, 'BP,CP');
+      await bulkDeleteVouchers(selectedIds, 'BP,CP,BT');
       showToast(`${selectedIds.length} voucher(s) deleted successfully`, 'success');
       setSelectedIds([]);
     } catch (err) {

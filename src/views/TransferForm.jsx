@@ -140,7 +140,7 @@ export const TransferForm = () => {
         reference: depositSlipNumber.trim(),
         description: memo,
         status: 'Posted',
-        voucherType: 'JV', // Represented as Journal Entry
+        voucherType: 'BT',
         lines
       };
 
