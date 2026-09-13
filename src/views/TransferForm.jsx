@@ -15,6 +15,7 @@ export const TransferForm = () => {
 
   const [postingDate, setPostingDate] = useState(new Date().toISOString().split('T')[0]);
   const [reference, setReference] = useState('');
+  const [depositSlipNumber, setDepositSlipNumber] = useState('');
   const [description, setDescription] = useState('');
   const [fromBankAccountId, setFromBankAccountId] = useState('');
   const [toBankAccountId, setToBankAccountId] = useState('');
@@ -76,6 +77,11 @@ export const TransferForm = () => {
       return;
     }
 
+    if (!/^[a-zA-Z0-9\s.-]{3,30}$/.test(depositSlipNumber.trim())) {
+      showToast('Deposit slip number is required (3-30 letters, numbers, spaces, hyphens, or dots).', 'warning');
+      return;
+    }
+
     if (reference && !/^[a-zA-Z0-9\s.-]{3,30}$/.test(reference)) {
       showToast('Reference must contain only letters, numbers, spaces, hyphens, and dots (3-30 chars).', 'warning');
       return;
@@ -125,7 +131,7 @@ export const TransferForm = () => {
         voucherNo,
         postingDate: new Date(postingDate).toISOString(),
         subsidiary: 'Global',
-        reference: reference || 'Fund Transfer',
+        reference: depositSlipNumber.trim(),
         description: memo,
         status: 'Posted',
         voucherType: 'JV', // Represented as Journal Entry
@@ -262,7 +268,21 @@ export const TransferForm = () => {
                 </div>
 
                 <div>
-                  <label className={labelClass}>{t('forms.refChequeNumber')}</label>
+                  <label className={labelClass}>Deposit Slip Number *</label>
+                  <input
+                    value={depositSlipNumber}
+                    onChange={e => setDepositSlipNumber(e.target.value)}
+                    placeholder="e.g. NBP-DS-10294"
+                    pattern="^[a-zA-Z0-9\s.-]{3,30}$"
+                    title="Required: 3-30 letters, numbers, spaces, hyphens, or dots"
+                    className={inputClass}
+                    required
+                  />
+                  <p className="text-xs text-slate-600 mt-1.5">Required for bank deposit tracking</p>
+                </div>
+
+                <div>
+                  <label className={labelClass}>{t('forms.refChequeNumber')} (Optional)</label>
                   <input
                     value={reference}
                     onChange={e => setReference(e.target.value)}
