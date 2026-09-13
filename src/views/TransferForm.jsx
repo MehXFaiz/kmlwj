@@ -31,6 +31,15 @@ export const TransferForm = () => {
     return flatAccounts.filter(acc => isGenuineBankAccount(acc) || isGenuineCashAccount(acc));
   }, [flatAccounts]);
 
+  const mainBankAccount = useMemo(() => {
+    return bankAccounts.find(account => account.code === '1010101') ||
+      bankAccounts.find(account => {
+        const name = String(account.name || '').toLowerCase();
+        return name.includes('national bank') || name.includes('nbp');
+      }) ||
+      bankAccounts.find(account => !String(account.name || '').toLowerCase().includes('zakat'));
+  }, [bankAccounts]);
+
   const cashInHandBalance = useMemo(() => {
     const flatten = (accounts) => accounts.flatMap(account => [account, ...flatten(account.children || [])]);
     const cashAccount = flatten(treeAccounts || []).find(account => account.code === '1010103');
@@ -39,11 +48,10 @@ export const TransferForm = () => {
 
   const fillCashInHandAmount = () => {
     const cashAccount = bankAccounts.find(account => account.code === '1010103');
-    const bankAccount = bankAccounts.find(account => isGenuineBankAccount(account));
     if (cashInHandBalance > 0) {
       setAmount(cashInHandBalance.toFixed(2));
       if (cashAccount) setFromBankAccountId(cashAccount.id);
-      if (bankAccount) setToBankAccountId(bankAccount.id);
+      if (mainBankAccount) setToBankAccountId(mainBankAccount.id);
     }
   };
 
@@ -51,11 +59,11 @@ export const TransferForm = () => {
   useEffect(() => {
     if (bankAccounts.length > 1) {
       if (!fromBankAccountId) setFromBankAccountId(bankAccounts[0].id);
-      if (!toBankAccountId) setToBankAccountId(bankAccounts[1].id);
+      if (!toBankAccountId) setToBankAccountId((mainBankAccount || bankAccounts[1]).id);
     } else if (bankAccounts.length > 0) {
       if (!fromBankAccountId) setFromBankAccountId(bankAccounts[0].id);
     }
-  }, [bankAccounts, fromBankAccountId, toBankAccountId]);
+  }, [bankAccounts, fromBankAccountId, toBankAccountId, mainBankAccount]);
 
   const handleSave = async (e) => {
     e.preventDefault();
