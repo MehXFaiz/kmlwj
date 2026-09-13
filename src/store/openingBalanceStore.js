@@ -12,6 +12,7 @@ export const useOpeningBalanceStore = create((set, get) => ({
   openingDate: new Date().toISOString().split('T')[0],
   batch: null,
   accounts: {},
+  allAccounts: [],
 
   fetchOpeningBalances: async (dateStr) => {
     set({ loading: true, error: null });
@@ -24,6 +25,7 @@ export const useOpeningBalanceStore = create((set, get) => ({
         openingDate: data.openingDate,
         batch: data.batch,
         accounts: data.accounts || {},
+        allAccounts: data.allAccounts || Object.values(data.accounts || {}),
         loading: false
       });
       return data;
