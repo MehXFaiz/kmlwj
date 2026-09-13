@@ -110,20 +110,7 @@ var opening_balances_default = makeHandler(async (req, res) => {
     const allBsAccounts = await prisma.account.findMany({
       where: {
         isDeleted: false,
-        accountLevel: "GL",
-        accountType: {
-          OR: [
-            "ASSET",
-            "ASSETS",
-            "LIABILITY",
-            "LIABILITIES",
-            "EQUITY",
-            "REVENUE",
-            "INCOME",
-            "EXPENSE",
-            "EXPENSES"
-          ].map((name) => ({ name: { equals: name, mode: "insensitive" } }))
-        }
+        accountLevel: "GL"
       },
       include: { accountType: true },
       orderBy: { glCode: "asc" }
