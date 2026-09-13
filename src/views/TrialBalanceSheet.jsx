@@ -762,6 +762,8 @@ export const TrialBalanceSheet = () => {
   const bankStatementEntries = Array.isArray(tbReport?.bankStatementEntries)
     ? tbReport.bankStatementEntries
     : [];
+  const openingBankAccounts = tbReport?.openingBalances?.banks?.accounts || [];
+  const openingBankTotal = openingBankAccounts.reduce((total, account) => total + Number(account.balance || 0), 0);
   const bankStatementTotals = bankStatementEntries.reduce((totals, entry) => ({
     debit: totals.debit + Number(entry.debit || 0),
     credit: totals.credit + Number(entry.credit || 0),
@@ -896,6 +898,20 @@ export const TrialBalanceSheet = () => {
                 <p className="text-xs text-slate-500 mt-1">All posted bank account transactions for the selected date range.</p>
               </div>
               <span className="text-xs font-semibold text-cyan-400">{bankStatementEntries.length} transactions</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 border-b border-slate-800 bg-slate-950/40">
+              {openingBankAccounts.map(account => (
+                <div key={account.id || account.glCode} className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 truncate" title={account.name}>{account.name}</p>
+                  <p className="text-sm font-mono font-bold text-emerald-400 mt-1">{formatMoney(account.balance)}</p>
+                  <p className="text-[10px] text-slate-600">Opening Balance ({account.glCode})</p>
+                </div>
+              ))}
+              <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-cyan-400">Total Opening Balance</p>
+                <p className="text-sm font-mono font-bold text-cyan-300 mt-1">{formatMoney(openingBankTotal)}</p>
+                <p className="text-[10px] text-slate-600">All bank accounts</p>
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse min-w-[800px]">
