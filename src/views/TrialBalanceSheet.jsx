@@ -347,6 +347,7 @@ export const TrialBalanceSheet = () => {
     const netSurplus = totalInc - totalExp; // positive = surplus, negative = deficit
     const cashInHand = balanceSheetCategories.closing.cashInHand.total || 0;
     const bankBalance = balanceSheetCategories.closing.banks.total || 0;
+    const cashToBankTransfers = Number(tbReport?.summary?.cashToBankTransfers || 0);
     // Requirement 9: Closing Cash in Trial Balance = Cash in Hand + Bank Balance.
     const closingCash = cashInHand + bankBalance;
     return {
@@ -354,13 +355,14 @@ export const TrialBalanceSheet = () => {
       totalIncomes: totalInc,
       cashInHand,
       bankBalance,
+      cashToBankTransfers,
       closingCash,
       surplus: netSurplus,
       isDeficit: netSurplus < 0,
       finalExpensesTotal: totalExp + Math.max(0, netSurplus),
       finalIncomesTotal: totalInc
     };
-  }, [matrixData]);
+  }, [matrixData, tbReport, balanceSheetCategories]);
 
   const getRowStyle = (type) => {
     switch (type) {
@@ -870,7 +872,7 @@ export const TrialBalanceSheet = () => {
       </Card>
 
       {/* KPI Financial Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-4 print:gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 print:grid-cols-5 print:gap-2">
         <Card className="bg-slate-900/60 border-slate-800">
           <CardContent className="p-4">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Credit Side</p>
@@ -893,6 +895,15 @@ export const TrialBalanceSheet = () => {
             <p className="text-lg font-mono font-bold text-slate-200 mt-1">
               {formatMoney(matrixTotals.surplus)}
             </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-slate-900/60 border-slate-800">
+          <CardContent className="p-4">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Transferred to Bank</p>
+            <p className="text-lg font-mono font-bold text-cyan-400 mt-1">
+              {formatMoney(matrixTotals.cashToBankTransfers)}
+            </p>
+            <p className="text-[10px] text-slate-500 mt-1">Cash in Hand deposits</p>
           </CardContent>
         </Card>
         <Card className="bg-slate-900/60 border-slate-800">
@@ -1185,6 +1196,12 @@ export const TrialBalanceSheet = () => {
                   <td className="py-2.5 px-4 text-slate-400 uppercase tracking-wider font-semibold">Total Bank Balance</td>
                   <td className="py-2.5 px-4 text-right font-mono font-bold text-emerald-400 print:text-slate-900">
                     {formatMoney(matrixTotals.bankBalance)}
+                  </td>
+                </tr>
+                <tr className="border-b border-slate-800 print:border-slate-300">
+                  <td className="py-2.5 px-4 text-slate-400 uppercase tracking-wider font-semibold">Transferred to Bank (Cash Deposits)</td>
+                  <td className="py-2.5 px-4 text-right font-mono font-bold text-cyan-400 print:text-slate-900">
+                    {formatMoney(matrixTotals.cashToBankTransfers)}
                   </td>
                 </tr>
                 <tr className="border-b border-slate-800 print:border-slate-300">

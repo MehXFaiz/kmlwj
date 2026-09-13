@@ -2155,6 +2155,24 @@ export class AccountingService {
       ? await AccountingService.getPostedAggregates({ to: new Date(from.getTime() - 1) })
       : new Map<string, { debit: Prisma.Decimal; credit: Prisma.Decimal }>();
 
+    // Cash deposited into a bank is identified from the posted double-entry
+    // lines: Cash in Hand is credited and a bank account is debited.
+    const transferEntries = await prisma.journalEntry.findMany({
+      where: {
+        ...POSTED_JOURNAL_FILTER,
+        ...(from || to ? { postingDate: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } } : {}),
+      },
+      include: { lines: { include: { account: true } } },
+    });
+    let cashToBankTransfers = new Prisma.Decimal(0);
+    for (const entry of transferEntries) {
+      const cashCredit = entry.lines.find(line => line.account.glCode === '1010103' && Number(line.credit) > 0);
+      const bankDebit = entry.lines.find(line => String(line.account.detailType || '').toLowerCase() === 'bank' && Number(line.debit) > 0);
+      if (cashCredit && bankDebit) {
+        cashToBankTransfers = cashToBankTransfers.plus(Math.min(Number(cashCredit.credit), Number(bankDebit.debit)));
+      }
+    }
+
     let totalDebit = new Prisma.Decimal(0);
     let totalCredit = new Prisma.Decimal(0);
     let openingRetainedEarnings = new Prisma.Decimal(0);
@@ -2311,6 +2329,7 @@ export class AccountingService {
       totalDebit: totalDebit.toNumber(),
       totalCredit: totalCredit.toNumber(),
       difference: diff.toNumber(),
+      cashToBankTransfers: cashToBankTransfers.toNumber(),
       openingBalances: serializeCategories(openingCats),
       closingBalances: serializeCategories(closingCats),
     };
