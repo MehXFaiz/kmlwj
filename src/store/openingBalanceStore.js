@@ -34,12 +34,15 @@ export const useOpeningBalanceStore = create((set, get) => ({
     }
   },
 
-  saveOpeningBalances: async (openingDate, balances) => {
+  saveOpeningBalances: async (openingDate, balances, isAdjustment = false, reason = '', financialYear = '') => {
     set({ saving: true, error: null });
     try {
       const res = await api.post('/api/v1/opening-balances', {
         openingDate,
-        balances
+        balances,
+        financialYear,
+        isAdjustment,
+        reason
       });
 
       set({ saving: false });

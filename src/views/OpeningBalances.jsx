@@ -80,10 +80,10 @@ export function OpeningBalances() {
     }
 
     try {
-      await saveOpeningBalances(selectedDate, formBalances);
+      await saveOpeningBalances(selectedDate, formBalances, false, '', selectedFy);
       showToast.success(`Opening balances for ${selectedFy} saved successfully!`);
     } catch (err) {
-      // Error handled in store
+      showToast.error(err.response?.data?.error?.message || err.message || 'Failed to save opening balances');
     }
   };
 
@@ -95,7 +95,7 @@ export function OpeningBalances() {
 
     setAdjusting(true);
     try {
-      await saveOpeningBalances(selectedDate, formBalances, true, adjustReason);
+      await saveOpeningBalances(selectedDate, formBalances, true, adjustReason, selectedFy);
       showToast.success('Opening balance adjustment recorded with audit trail!');
       setIsAdjustModalOpen(false);
       setAdjustReason('');
