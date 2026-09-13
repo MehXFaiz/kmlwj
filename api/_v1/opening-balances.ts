@@ -129,7 +129,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       where: {
         isDeleted: false,
         accountLevel: 'GL',
-        accountType: { name: { in: ['ASSET', 'ASSETS', 'LIABILITY', 'LIABILITIES', 'EQUITY', 'REVENUE', 'INCOME', 'EXPENSE', 'EXPENSES'] } }
+        accountType: {
+          OR: [
+            'ASSET', 'ASSETS', 'LIABILITY', 'LIABILITIES', 'EQUITY',
+            'REVENUE', 'INCOME', 'EXPENSE', 'EXPENSES'
+          ].map(name => ({ name: { equals: name, mode: 'insensitive' as const } }))
+        }
       },
       include: { accountType: true },
       orderBy: { glCode: 'asc' }
