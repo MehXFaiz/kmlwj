@@ -58,14 +58,34 @@ var revenue_collections_default = makeHandler(async (req, res) => {
   const categoryFilter = req.query.category;
   if (method === "GET") {
     if (!await verifyPermission(req, res, ["revenueCollections.view", PERMS.VIEW_REVENUE_COLLECTIONS])) return;
+    const { limit = "1000", page = "1", startDate, endDate } = req.query;
+    const limitNum = parseInt(limit) || 1e3;
+    const pageNum = parseInt(page) || 1;
+    const skip = (pageNum - 1) * limitNum;
     const whereClause = {
       ...categoryFilter ? { category: categoryFilter } : {},
       ...getDeletedFilter(req.query)
     };
-    const { limit = "1000", page = "1" } = req.query;
-    const limitNum = parseInt(limit) || 1e3;
-    const pageNum = parseInt(page) || 1;
-    const skip = (pageNum - 1) * limitNum;
+    if (startDate || endDate) {
+      const eventDateCondition = {};
+      const createdAtCondition = {};
+      if (startDate) {
+        const start = /* @__PURE__ */ new Date(`${startDate}T00:00:00.000Z`);
+        if (isNaN(start.getTime())) return res.status(400).json({ error: { message: "Invalid startDate format", status: 400 } });
+        eventDateCondition.gte = start;
+        createdAtCondition.gte = start;
+      }
+      if (endDate) {
+        const end = /* @__PURE__ */ new Date(`${endDate}T00:00:00.000Z`);
+        if (isNaN(end.getTime())) return res.status(400).json({ error: { message: "Invalid endDate format", status: 400 } });
+        eventDateCondition.lt = end;
+        createdAtCondition.lt = end;
+      }
+      whereClause.OR = [
+        { eventDate: eventDateCondition },
+        { eventDate: null, createdAt: createdAtCondition }
+      ];
+    }
     const [collections, total] = await Promise.all([
       prisma.revenueCollection.findMany({
         where: whereClause,

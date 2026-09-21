@@ -80,16 +80,38 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     if (!await verifyPermission(req, res, ['revenueCollections.view', PERMS.VIEW_REVENUE_COLLECTIONS])) return;
 
 
+    const { limit = '1000', page = '1', startDate, endDate } = req.query as Record<string, string | undefined>;
+    const limitNum = parseInt(limit) || 1000;
+    const pageNum = parseInt(page) || 1;
+    const skip = (pageNum - 1) * limitNum;
+
     const whereClause: any = {
       ...(categoryFilter ? { category: categoryFilter } : {}),
       ...getDeletedFilter(req.query),
     };
-    // Bounded default instead of an unconditional full-table scan — 1000 comfortably
-    // covers current usage while capping worst-case query cost as the table grows.
-    const { limit = '1000', page = '1' } = req.query as any;
-    const limitNum = parseInt(limit) || 1000;
-    const pageNum = parseInt(page) || 1;
-    const skip = (pageNum - 1) * limitNum;
+
+    if (startDate || endDate) {
+      const eventDateCondition: any = {};
+      const createdAtCondition: any = {};
+
+      if (startDate) {
+        const start = new Date(`${startDate}T00:00:00.000Z`);
+        if (isNaN(start.getTime())) return res.status(400).json({ error: { message: 'Invalid startDate format', status: 400 } });
+        eventDateCondition.gte = start;
+        createdAtCondition.gte = start;
+      }
+      if (endDate) {
+        const end = new Date(`${endDate}T00:00:00.000Z`);
+        if (isNaN(end.getTime())) return res.status(400).json({ error: { message: 'Invalid endDate format', status: 400 } });
+        eventDateCondition.lt = end;
+        createdAtCondition.lt = end;
+      }
+
+      whereClause.OR = [
+        { eventDate: eventDateCondition },
+        { eventDate: null, createdAt: createdAtCondition }
+      ];
+    }
 
     const [collections, total] = await Promise.all([
       prisma.revenueCollection.findMany({

@@ -43,6 +43,9 @@ export const SpecializedRevenueSection = ({
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState('cards');
+  const [period, setPeriod] = useState('all');
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [selectedDay, setSelectedDay] = useState('');
   const [printItem, setPrintItem] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
@@ -57,11 +60,36 @@ export const SpecializedRevenueSection = ({
     return '/membership-fees';
   };
 
+  const dateRange = useMemo(() => {
+    if (period === 'day' && selectedDay) {
+      const [year, month, day] = selectedDay.split('-').map(Number);
+      const nextDay = new Date(Date.UTC(year, month - 1, day + 1));
+      return { startDate: selectedDay, endDate: nextDay.toISOString().slice(0, 10) };
+    }
+    if (period === 'month' && selectedMonth) {
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const nextMonth = new Date(Date.UTC(year, month, 1));
+      return { startDate: `${selectedMonth}-01`, endDate: nextMonth.toISOString().slice(0, 10) };
+    }
+    if (period === '3months' || period === '6months') {
+      const monthCount = period === '3months' ? 3 : 6;
+      const currentMonth = new Date();
+      const start = new Date(Date.UTC(currentMonth.getFullYear(), currentMonth.getMonth() - monthCount + 1, 1));
+      const end = new Date(Date.UTC(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+      return { startDate: start.toISOString().slice(0, 10), endDate: end.toISOString().slice(0, 10) };
+    }
+    return {};
+  }, [period, selectedMonth, selectedDay]);
+
   useEffect(() => {
-    fetchCollections(category);
+    fetchCollections(category, dateRange);
+    setSelectedIds([]);
+  }, [category, dateRange, fetchCollections]);
+
+  useEffect(() => {
     fetchAccountsList();
     if (isMembershipFee) fetchMembers();
-  }, [category]);
+  }, [isMembershipFee, fetchAccountsList, fetchMembers]);
 
   const bankAccounts = useMemo(() => {
     return flatAccounts.filter(isGenuineBankAccount);
@@ -159,13 +187,25 @@ export const SpecializedRevenueSection = ({
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return collections.filter(c => 
-      c.title?.toLowerCase().includes(q) ||
-      c.subTitle?.toLowerCase().includes(q) ||
-      c.mobile?.includes(search) ||
-      c.receiptNo?.toString().includes(search)
-    );
-  }, [collections, search]);
+    return collections.filter(c => {
+      const matchesSearch =
+        c.title?.toLowerCase().includes(q) ||
+        c.subTitle?.toLowerCase().includes(q) ||
+        c.mobile?.includes(search) ||
+        c.receiptNo?.toString().includes(search);
+      if (!matchesSearch) return false;
+
+      if (dateRange.startDate || dateRange.endDate) {
+        const rawDate = c.eventDate || c.createdAt;
+        if (!rawDate) return false;
+        const d = new Date(rawDate).toISOString().slice(0, 10);
+        if (dateRange.startDate && d < dateRange.startDate) return false;
+        if (dateRange.endDate && d >= dateRange.endDate) return false;
+      }
+
+      return true;
+    });
+  }, [collections, search, dateRange]);
 
   const totalAmount = useMemo(() => {
     return filtered.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
@@ -173,28 +213,33 @@ export const SpecializedRevenueSection = ({
 
   const handleExport = () => {
     if (filtered.length === 0) {
-      showToast('No membership fees available to export', 'info');
+      showToast(`No ${title.toLowerCase()} available to export`, 'info');
       return;
     }
 
-    const exportData = filtered.map((item, index) => ({
-      'S.No': index + 1,
-      'Receipt No': item.receiptNo || '',
-      'Member Name': item.title || '',
-      'Membership ID / CNIC': item.subTitle || '',
-      'Mobile': item.mobile || '',
-      'Fee Date': item.eventDate ? new Date(item.eventDate).toLocaleDateString('en-GB') : '',
-      'Fee Rate': Number(item.rate || 0),
-      'Quantity': Number(item.quantity || 1),
-      'Total Amount': Number(item.amount || 0),
-      'Payment Method': item.paymentMethod || 'CASH',
-      'Status': item.status || '',
-    }));
+    const exportData = filtered.map((item, index) => {
+      const row = {
+        'S.No': index + 1,
+        'Receipt No': item.receiptNo || '',
+        [titleLabel || 'Name']: item.title || '',
+      };
+      if (subTitleLabel) row[subTitleLabel] = item.subTitle || '';
+      if (showDest) row[destLabel || 'Destination'] = item.destination || '';
+      row['Mobile'] = item.mobile || '';
+      row[dateLabel || 'Date'] = item.eventDate ? new Date(item.eventDate).toLocaleDateString('en-GB') : '';
+      if (showQty) row[qtyLabel || 'Quantity'] = Number(item.quantity || 1);
+      if (showRate) row[rateLabel || 'Rate'] = Number(item.rate || 0);
+      row['Total Amount'] = Number(item.amount || 0);
+      row['Payment Method'] = item.paymentMethod || 'CASH';
+      row['Status'] = item.status || '';
+      return row;
+    });
+
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Membership Fees');
-    XLSX.writeFile(workbook, `Membership_Fees_${new Date().toISOString().split('T')[0]}.xlsx`);
-    showToast('Exported membership fees to Excel', 'success');
+    XLSX.utils.book_append_sheet(workbook, worksheet, title);
+    XLSX.writeFile(workbook, `${title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast(`Exported ${title.toLowerCase()} to Excel`, 'success');
   };
 
   const parseImportedDate = (value) => {
@@ -221,23 +266,44 @@ export const SpecializedRevenueSection = ({
       let failed = 0;
 
       for (const row of rows) {
-        const title = String(row['Member Name'] || '').trim();
-        const amount = Number(row['Total Amount'] || 0);
-        const feeDate = parseImportedDate(row['Fee Date']);
-        if (!title || !amount || !feeDate) {
+        const itemTitle = String(
+          row[titleLabel] ||
+          row['Booker Name'] ||
+          row['Member Name'] ||
+          row['Donor Name'] ||
+          row['Title'] ||
+          row['Name'] ||
+          ''
+        ).trim();
+        const amount = Number(row['Total Amount'] || row['Amount'] || 0);
+        const eventDateVal = parseImportedDate(
+          row[dateLabel] ||
+          row['Trip Date'] ||
+          row['Fee Date'] ||
+          row['Collection Date'] ||
+          row['Date']
+        );
+        if (!itemTitle || !amount || !eventDateVal) {
           failed += 1;
           continue;
         }
 
         try {
           await addCollection({
-            category: 'Membership Fee',
-            title,
-            subTitle: String(row['Membership ID / CNIC'] || '').trim(),
-            mobile: String(row.Mobile || '').trim(),
-            eventDate: feeDate,
-            quantity: Number(row.Quantity || 1),
-            rate: Number(row['Fee Rate'] || amount),
+            category,
+            title: itemTitle,
+            subTitle: String(
+              (subTitleLabel && row[subTitleLabel]) ||
+              row['Bus / Vehicle Number'] ||
+              row['Membership ID / CNIC'] ||
+              row['CNIC / ID'] ||
+              ''
+            ).trim(),
+            mobile: String(row.Mobile || row.Phone || '').trim(),
+            eventDate: eventDateVal,
+            quantity: Number((showQty && row[qtyLabel]) || row['Quantity'] || row['Head Count'] || 1),
+            rate: Number((showRate && row[rateLabel]) || row['Rate'] || row['Fee Rate'] || amount),
+            destination: String((showDest && row[destLabel]) || row['Trip Destination'] || row['Destination'] || '').trim(),
             amount,
             paymentMethod: String(row['Payment Method'] || 'CASH').trim(),
             remarks: '',
@@ -249,10 +315,10 @@ export const SpecializedRevenueSection = ({
         }
       }
 
-      if (imported > 0) await fetchCollections(category);
-      showToast(`Imported ${imported} membership fee(s)${failed ? `, skipped ${failed} row(s)` : ''}`, failed ? 'warning' : 'success');
+      if (imported > 0) await fetchCollections(category, dateRange);
+      showToast(`Imported ${imported} ${title.toLowerCase()} record(s)${failed ? `, skipped ${failed} row(s)` : ''}`, failed ? 'warning' : 'success');
     } catch (error) {
-      showToast(error.message || 'Failed to import membership fees', 'error');
+      showToast(error.message || `Failed to import ${title.toLowerCase()}`, 'error');
     } finally {
       setIsImporting(false);
     }
@@ -260,29 +326,47 @@ export const SpecializedRevenueSection = ({
 
   const handlePrint = () => {
     if (filtered.length === 0) {
-      showToast('No membership fees available to print', 'info');
+      showToast(`No ${title.toLowerCase()} available to print`, 'info');
       return;
     }
     const printWindow = window.open('', '_blank', 'width=1200,height=800');
     if (!printWindow) {
-      showToast('Please allow pop-ups to print membership fees', 'warning');
+      showToast(`Please allow pop-ups to print ${title.toLowerCase()}`, 'warning');
       return;
     }
     const escapeHtml = (value) => String(value ?? '')
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     const rows = filtered.map((item, index) => `
-      <tr><td>${index + 1}</td><td>${escapeHtml(item.receiptNo)}</td><td>${escapeHtml(item.title)}</td>
-      <td>${escapeHtml(item.subTitle)}</td><td>${escapeHtml(item.mobile)}</td>
-      <td>${escapeHtml(item.eventDate ? new Date(item.eventDate).toLocaleDateString('en-GB') : '')}</td>
-      <td>Rs. ${Number(item.amount || 0).toLocaleString()}</td><td>${escapeHtml(item.status)}</td></tr>`).join('');
-    printWindow.document.write(`<!doctype html><html><head><title>Membership Fees</title><style>
+      <tr>
+        <td>${index + 1}</td>
+        <td>${escapeHtml(item.receiptNo)}</td>
+        <td>${escapeHtml(item.title)}</td>
+        ${subTitleLabel ? `<td>${escapeHtml(item.subTitle)}</td>` : ''}
+        ${showDest ? `<td>${escapeHtml(item.destination)}</td>` : ''}
+        <td>${escapeHtml(item.mobile)}</td>
+        <td>${escapeHtml(item.eventDate ? new Date(item.eventDate).toLocaleDateString('en-GB') : '')}</td>
+        <td>Rs. ${Number(item.amount || 0).toLocaleString()}</td>
+        <td>${escapeHtml(item.status)}</td>
+      </tr>`).join('');
+
+    printWindow.document.write(`<!doctype html><html><head><title>${escapeHtml(title)}</title><style>
       body{font-family:Arial,sans-serif;color:#111;margin:24px}h1{font-size:20px;margin:0 0 4px}p{color:#555;font-size:12px;margin:0 0 16px}
       table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #bbb;padding:7px 6px;text-align:left}th{background:#eee}
       @media print{body{margin:10mm}}
-    </style></head><body><h1>Membership Fees</h1>
-      <p>Printed on ${escapeHtml(new Date().toLocaleString('en-GB'))} | Total amount: Rs. ${totalAmount.toLocaleString()}</p>
-      <table><thead><tr><th>#</th><th>Receipt No</th><th>Member Name</th><th>Membership ID / CNIC</th><th>Mobile</th><th>Fee Date</th><th>Total Amount</th><th>Status</th></tr></thead>
+    </style></head><body><h1>${escapeHtml(title)}</h1>
+      <p>Printed on ${escapeHtml(new Date().toLocaleString('en-GB'))} | Total amount: Rs. ${totalAmount.toLocaleString()} (${filtered.length} records)</p>
+      <table><thead><tr>
+        <th>#</th>
+        <th>Receipt No</th>
+        <th>${escapeHtml(titleLabel || 'Name')}</th>
+        ${subTitleLabel ? `<th>${escapeHtml(subTitleLabel)}</th>` : ''}
+        ${showDest ? `<th>${escapeHtml(destLabel || 'Destination')}</th>` : ''}
+        <th>Mobile</th>
+        <th>${escapeHtml(dateLabel || 'Date')}</th>
+        <th>Total Amount</th>
+        <th>Status</th>
+      </tr></thead>
       <tbody>${rows}</tbody></table></body></html>`);
     printWindow.document.close();
     printWindow.focus();
@@ -294,30 +378,34 @@ export const SpecializedRevenueSection = ({
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-extrabold text-slate-100 tracking-tight">{title}</h1>
-            <p className="text-sm text-slate-400 mt-1">{desc}</p>
+            <div className="flex items-center gap-3">
+              <div>
+                <h1 className="text-2xl font-extrabold text-slate-100 tracking-tight">{title}</h1>
+                <p className="text-sm text-slate-400 mt-1">{desc}</p>
+              </div>
+              <div className="ml-3 px-3 py-2 rounded-lg bg-slate-800/40 border border-slate-700">
+                <p className="text-[11px] text-slate-400">{period !== 'all' ? 'Filtered Income' : 'Total Income'}</p>
+                <p className="text-lg font-bold text-emerald-300">Rs. {totalAmount.toLocaleString()}</p>
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-3">
-            {isMembershipFee && (
-              <>
-                <input ref={importInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleImport} className="hidden" />
-                <button type="button" onClick={() => importInputRef.current?.click()} disabled={isImporting}
-                  className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold border border-slate-700 transition-all disabled:opacity-50"
-                  title="Import membership fees from Excel">
-                  <Upload className="h-4 w-4" /> {isImporting ? 'Importing...' : 'Import Excel'}
-                </button>
-                <button type="button" onClick={handleExport}
-                  className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold border border-slate-700 transition-all"
-                  title="Export membership fees to Excel">
-                  <Download className="h-4 w-4" /> Export Excel
-                </button>
-                <button type="button" onClick={handlePrint}
-                  className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold shadow-lg shadow-amber-900/20 transition-all"
-                  title="Print membership fees">
-                  <Printer className="h-4 w-4" /> Print
-                </button>
-              </>
-            )}
+            <input ref={importInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleImport} className="hidden" />
+            <button type="button" onClick={() => importInputRef.current?.click()} disabled={isImporting}
+              className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold border border-slate-700 transition-all disabled:opacity-50 cursor-pointer"
+              title={`Import ${title.toLowerCase()} from Excel`}>
+              <Upload className="h-4 w-4" /> {isImporting ? 'Importing...' : 'Import Excel'}
+            </button>
+            <button type="button" onClick={handleExport}
+              className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold border border-slate-700 transition-all cursor-pointer"
+              title={`Export ${title.toLowerCase()} to Excel`}>
+              <Download className="h-4 w-4" /> Export Excel
+            </button>
+            <button type="button" onClick={handlePrint}
+              className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold shadow-lg shadow-amber-900/20 transition-all cursor-pointer"
+              title={`Print ${title.toLowerCase()}`}>
+              <Printer className="h-4 w-4" /> Print
+            </button>
             {canEditOrDelete && selectedIds.length > 0 && (
               <button
                 type="button"
@@ -338,17 +426,56 @@ export const SpecializedRevenueSection = ({
         </div>
 
         <div className="w-full rounded-2xl border border-slate-800/60 bg-slate-900/50 backdrop-blur-xl overflow-hidden shadow-xl">
-          <div className="p-4 sm:p-5 border-b border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="relative max-w-md w-full sm:w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder={`Search ${title.toLowerCase()}...`}
-                className="w-full pl-9 pr-4 py-2 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-colors" />
-            </div>
-
-            <div className="flex items-center justify-between sm:justify-end gap-4 flex-wrap">
-              <div className="text-xs sm:text-sm font-bold text-slate-300">
-                Total Amount: <span className="text-emerald-400 font-extrabold">Rs. {totalAmount.toLocaleString()}</span> ({filtered.length} records)
+          <div className="p-4 sm:p-5 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-4">
+            <div className="relative max-w-md flex-1 min-w-[240px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder={`Search ${title.toLowerCase()}...`}
+                  className="w-full pl-9 pr-4 py-2 rounded-lg bg-slate-950/50 border border-slate-800 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-colors" />
               </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={period}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setPeriod(val);
+                    if (val === 'month' && !selectedMonth) {
+                      setSelectedMonth(new Date().toISOString().slice(0, 7));
+                    }
+                    if (val === 'day' && !selectedDay) {
+                      setSelectedDay(new Date().toISOString().slice(0, 10));
+                    }
+                  }}
+                  className="rounded-lg bg-slate-950/70 border border-slate-800 px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-amber-500/50"
+                >
+                  <option value="all">All dates</option>
+                  <option value="month">Monthly income</option>
+                  <option value="3months">Last 3 months income</option>
+                  <option value="6months">Last 6 months income</option>
+                  <option value="day">Daily income</option>
+                </select>
+                {period === 'month' && (
+                  <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="rounded-lg bg-slate-950/70 border border-slate-800 px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-amber-500/50"
+                  />
+                )}
+                {period === 'day' && (
+                  <input
+                    type="date"
+                    value={selectedDay}
+                    onChange={(e) => setSelectedDay(e.target.value)}
+                    className="rounded-lg bg-slate-950/70 border border-slate-800 px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-amber-500/50"
+                  />
+                )}
+              </div>
+
+              <div className="flex items-center justify-between sm:justify-end gap-4 flex-wrap">
+                <div className="text-xs sm:text-sm font-bold text-slate-300">
+                  Total Amount: <span className="text-emerald-400 font-extrabold">Rs. {totalAmount.toLocaleString()}</span> ({filtered.length} records)
+                </div>
               <div className="flex items-center bg-slate-950/80 p-1 rounded-xl border border-slate-800/80">
                 <button
                   type="button"

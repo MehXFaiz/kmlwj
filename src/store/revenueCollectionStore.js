@@ -6,11 +6,17 @@ export const useRevenueCollectionStore = create((set, get) => ({
   collections: [],
   loading: false,
   error: null,
+  currentCategory: null,
+  currentParams: {},
 
-  fetchCollections: async (category) => {
-    set({ loading: true, error: null });
+  fetchCollections: async (category, params = {}) => {
+    const activeCategory = category !== undefined ? category : get().currentCategory;
+    const activeParams = params !== undefined ? params : get().currentParams;
+    set({ loading: true, error: null, currentCategory: activeCategory, currentParams: activeParams });
     try {
-      const url = category ? `/api/v1/revenue-collections?category=${encodeURIComponent(category)}` : '/api/v1/revenue-collections';
+      const queryParams = new URLSearchParams({ limit: '1000', ...activeParams });
+      if (activeCategory) queryParams.set('category', activeCategory);
+      const url = `/api/v1/revenue-collections?${queryParams.toString()}`;
       const response = await api.get(url);
       set({ collections: response.data.data || [], loading: false });
     } catch (error) {
