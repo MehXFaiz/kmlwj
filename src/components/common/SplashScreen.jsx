@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
+import { useAuthStore } from '../../store/authStore';
 import logoImg from '../../assets/logo.png';
 
 /* ─────────────────────────────────────────────
@@ -171,16 +172,39 @@ const STEPS = [
   { label: 'System Ready',                      duration: 250 },
 ];
 
+const ACCOUNTANT_STEPS = [
+  { label: 'Authenticating Mr. ZAHID',          duration: 420 },
+  { label: 'Loading Accountant Workspace',      duration: 450 },
+  { label: 'Synchronizing General Ledger & COA', duration: 480 },
+  { label: 'Verifying Audit & Ledger Integrity', duration: 380 },
+  { label: 'Establishing Financial Session',    duration: 310 },
+  { label: 'Welcome Mr. ZAHID · System Ready',  duration: 250 },
+];
+
 /* ─────────────────────────────────────────────
    Main Splash Screen
 ───────────────────────────────────────────── */
 export function SplashScreen({ onComplete }) {
+  const user = useAuthStore((s) => s.user);
+  const role = useAuthStore((s) => s.role);
+
+  const roleName = typeof role === 'string' ? role : (role?.name || user?.role || user?.roleObj?.name || '');
+  const userFullName = user?.fullName || user?.name || '';
+  const userEmail = user?.email || '';
+
+  const isAccountant =
+    roleName.toLowerCase().includes('accountant') ||
+    userFullName.toLowerCase().includes('zahid') ||
+    userEmail.toLowerCase().includes('account');
+
+  const stepsToUse = useMemo(() => isAccountant ? ACCOUNTANT_STEPS : STEPS, [isAccountant]);
+
   const [logoVisible, setLogoVisible] = useState(false);
   const [titleVisible, setTitleVisible] = useState(false);
   const [barVisible, setBarVisible] = useState(false);
   const [progress, setProgress] = useState(0);
   const [stepIndex, setStepIndex] = useState(0);
-  const [stepLabel, setStepLabel] = useState(STEPS[0].label);
+  const [stepLabel, setStepLabel] = useState(stepsToUse[0].label);
   const [fadingOut, setFadingOut] = useState(false);
 
   useEffect(() => {
@@ -195,17 +219,17 @@ export function SplashScreen({ onComplete }) {
     let t4;
 
     const runStep = () => {
-      if (currentStep >= STEPS.length) {
+      if (currentStep >= stepsToUse.length) {
         setTimeout(() => {
           setFadingOut(true);
           setTimeout(() => onComplete?.(), 700);
         }, 300);
         return;
       }
-      const step = STEPS[currentStep];
+      const step = stepsToUse[currentStep];
       setStepLabel(step.label);
       setStepIndex(currentStep);
-      const targetProgress = Math.round(((currentStep + 1) / STEPS.length) * 100);
+      const targetProgress = Math.round(((currentStep + 1) / stepsToUse.length) * 100);
       const increment = (targetProgress - currentProgress) / (step.duration / 30);
 
       const tick = () => {
@@ -227,7 +251,7 @@ export function SplashScreen({ onComplete }) {
       clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
       clearTimeout(t4); clearTimeout(t5);
     };
-  }, [onComplete]);
+  }, [onComplete, stepsToUse]);
 
   return (
     <>
@@ -323,7 +347,7 @@ export function SplashScreen({ onComplete }) {
           {/* Floating badge */}
           <div
             style={{
-              marginBottom: 32,
+              marginBottom: isAccountant ? 20 : 32,
               opacity: titleVisible ? 1 : 0,
               transition: 'opacity 0.6s ease 0.4s',
               animation: 'splash-float-badge 3s ease-in-out infinite',
@@ -333,23 +357,24 @@ export function SplashScreen({ onComplete }) {
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
-              padding: '4px 14px',
+              padding: '5px 16px',
               borderRadius: 9999,
               fontSize: 10,
               fontWeight: 700,
               letterSpacing: '0.15em',
               textTransform: 'uppercase',
-              color: '#fdf8f5',
-              background: 'rgba(72,47,30,0.12)',
-              border: '1px solid rgba(72,47,30,0.25)',
+              color: isAccountant ? '#fbbf24' : '#fdf8f5',
+              background: isAccountant ? 'rgba(245,158,11,0.15)' : 'rgba(72,47,30,0.12)',
+              border: isAccountant ? '1px solid rgba(245,158,11,0.4)' : '1px solid rgba(72,47,30,0.25)',
+              boxShadow: isAccountant ? '0 0 20px rgba(245,158,11,0.25)' : 'none',
             }}>
               <span style={{
                 width: 6, height: 6, borderRadius: '50%',
-                background: '#34d399',
+                background: isAccountant ? '#fbbf24' : '#34d399',
                 animation: 'splash-blink 1.2s ease-in-out infinite',
                 display: 'inline-block',
               }} />
-              Enterprise Financial Suite v2.0
+              {isAccountant ? 'ACCOUNTANT PORTAL · KMLWJ' : 'Enterprise Financial Suite v2.0'}
             </span>
           </div>
 
@@ -357,7 +382,7 @@ export function SplashScreen({ onComplete }) {
           <LogoMark visible={logoVisible} />
 
           {/* Brand name */}
-          <div style={{ marginTop: 32, textAlign: 'center' }}>
+          <div style={{ marginTop: 28, textAlign: 'center' }}>
             <h1
               style={{
                 fontSize: 'clamp(28px, 8vw, 38px)',
@@ -377,8 +402,8 @@ export function SplashScreen({ onComplete }) {
             </h1>
             <div
               style={{
-                marginTop: 12,
-                fontSize: 'clamp(18px, 5vw, 22px)',
+                marginTop: 10,
+                fontSize: 'clamp(17px, 4.5vw, 21px)',
                 fontWeight: 600,
                 background: 'transparent',
                 color: '#eec1a6',
@@ -386,25 +411,70 @@ export function SplashScreen({ onComplete }) {
                 transform: titleVisible ? 'translateY(0)' : 'translateY(15px)',
                 transition: 'opacity 0.8s cubic-bezier(0.16,1,0.3,1) 0.4s, transform 0.8s cubic-bezier(0.16,1,0.3,1) 0.4s',
                 fontFamily: "'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif",
-                lineHeight: 2,
-                padding: '10px 0',
+                lineHeight: 1.8,
+                padding: '6px 0',
               }}
             >
               کچھی مسلم لوہارواڈھا ویلفیئر جماعت
             </div>
-            <p
-              style={{
-                marginTop: 12,
-                fontSize: 13,
-                color: 'rgba(238,193,166,0.8)',
-                letterSpacing: '0.04em',
-                fontWeight: 400,
-                opacity: titleVisible ? 1 : 0,
-                transition: 'opacity 0.8s ease 0.5s',
-              }}
-            >
-              Chart of Accounts · General Ledger · Journal Engine
-            </p>
+
+            {isAccountant ? (
+              <div
+                style={{
+                  marginTop: 14,
+                  padding: '10px 22px',
+                  borderRadius: 16,
+                  background: 'linear-gradient(135deg, rgba(245,158,11,0.18) 0%, rgba(217,119,6,0.1) 100%)',
+                  border: '1px solid rgba(245,158,11,0.45)',
+                  boxShadow: '0 4px 25px rgba(245,158,11,0.25), inset 0 1px 1px rgba(255,255,255,0.15)',
+                  opacity: titleVisible ? 1 : 0,
+                  transform: titleVisible ? 'scale(1)' : 'scale(0.92)',
+                  transition: 'all 0.7s cubic-bezier(0.16,1,0.3,1) 0.45s',
+                  display: 'inline-block',
+                  textAlign: 'center',
+                }}
+              >
+                <div style={{
+                  fontSize: 'clamp(19px, 5vw, 24px)',
+                  fontWeight: 900,
+                  color: '#fbbf24',
+                  letterSpacing: '0.02em',
+                  textShadow: '0 2px 14px rgba(245,158,11,0.4)',
+                }}>
+                  Welcome back Mr. ZAHID
+                </div>
+                <div style={{
+                  fontSize: 10,
+                  color: 'rgba(253,230,138,0.9)',
+                  fontWeight: 700,
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                  marginTop: 3,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}>
+                  <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#fbbf24', display: 'inline-block' }} />
+                  Senior Accountant · General Ledger Controller
+                  <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#fbbf24', display: 'inline-block' }} />
+                </div>
+              </div>
+            ) : (
+              <p
+                style={{
+                  marginTop: 12,
+                  fontSize: 13,
+                  color: 'rgba(238,193,166,0.8)',
+                  letterSpacing: '0.04em',
+                  fontWeight: 400,
+                  opacity: titleVisible ? 1 : 0,
+                  transition: 'opacity 0.8s ease 0.5s',
+                }}
+              >
+                Chart of Accounts · General Ledger · Journal Engine
+              </p>
+            )}
           </div>
 
           {/* Divider */}

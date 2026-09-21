@@ -5,6 +5,19 @@ dotenv.config();
 const prisma = new PrismaClient();
 
 async function main() {
+  await prisma.user.updateMany({
+    where: {
+      OR: [
+        { email: 'account@erp.com' },
+        { email: 'accountant@gmail.com' },
+        { role: { name: 'Accountant' } }
+      ]
+    },
+    data: {
+      fullName: 'Mr. ZAHID'
+    }
+  });
+
   const users = await prisma.user.findMany({
     select: {
       email: true,

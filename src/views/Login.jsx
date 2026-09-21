@@ -18,6 +18,7 @@ export const Login = () => {
       successMessage: state.successMessage,
       clearError: state.clearError,
       clearSuccess: state.clearSuccess,
+      triggerSplash: state.triggerSplash,
     }))
   );
 
@@ -60,6 +61,7 @@ export const Login = () => {
 
     const success = await login(email, password);
     if (success) {
+      triggerSplash();
       startTransition(() => {
         navigate('/', { replace: true });
       });

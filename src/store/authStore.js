@@ -57,6 +57,9 @@ export const useAuthStore = create((set, get) => {
     loading: false,
     error: null,
     successMessage: null,
+    showSplash: false,
+    triggerSplash: () => set({ showSplash: true }),
+    dismissSplash: () => set({ showSplash: false }),
 
     // Dynamic Permission Checker: hasPermission('donations', 'view') or hasPermission('donations', 'create')
     hasPermission: (moduleOrPerm, action) => {

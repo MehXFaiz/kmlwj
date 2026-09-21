@@ -249,6 +249,8 @@ const PermissionGuard = ({ requiredPerms, module, action = 'view', children }) =
 function App() {
   const [splashDone, setSplashDone] = useState(() => typeof window !== 'undefined' && !!window.navigator.webdriver);
   const restoreSession = useAuthStore((state) => state.restoreSession);
+  const showSplash = useAuthStore((state) => state.showSplash);
+  const dismissSplash = useAuthStore((state) => state.dismissSplash);
   const [restoring, setRestoring] = useState(true);
 
   useEffect(() => {
@@ -278,8 +280,16 @@ function App() {
         <ConfirmationModal />
       </Suspense>
 
-      {/* Splash screen — shown until loading sequence completes */}
-      {!splashDone && <SplashScreen onComplete={() => setSplashDone(true)} />}
+      {/* Splash screen — shown until loading sequence completes or triggered on login */}
+      {(!splashDone || showSplash) && (
+        <SplashScreen
+          key={showSplash ? 'login-splash' : 'init-splash'}
+          onComplete={() => {
+            setSplashDone(true);
+            dismissSplash();
+          }}
+        />
+      )}
 
       {/* Main ERP Shell */}
       <Router>

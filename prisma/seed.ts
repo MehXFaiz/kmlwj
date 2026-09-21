@@ -260,6 +260,26 @@ async function main() {
     },
   });
 
+  // Seed Accountant User (Mr. ZAHID)
+  console.log('Seeding Accountant User (Mr. ZAHID)...');
+  const accountantEmail = 'account@erp.com';
+  const hashedAccountantPassword = await bcrypt.hash('account123', 12);
+  await prisma.user.upsert({
+    where: { email: accountantEmail },
+    update: {
+      fullName: 'Mr. ZAHID',
+      roleId: seededRoles['Accountant'].id,
+      isActive: true,
+    },
+    create: {
+      fullName: 'Mr. ZAHID',
+      email: accountantEmail,
+      password: hashedAccountantPassword,
+      roleId: seededRoles['Accountant'].id,
+      isActive: true,
+    },
+  });
+
   // 5. Seed AccountTypes
   const accountTypesList = [
     { name: 'ASSET', description: 'Economic resources owned or controlled' },
