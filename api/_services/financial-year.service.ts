@@ -437,7 +437,11 @@ export class FinancialYearService {
       let totalOpeningDebit = new Prisma.Decimal(0);
       let totalOpeningCredit = new Prisma.Decimal(0);
 
+      const seenRolloverGls = new Set<string>();
       for (const acc of bsAccounts) {
+        const gl = String(acc.glCode || '').trim();
+        if (!gl || seenRolloverGls.has(gl)) continue;
+        seenRolloverGls.add(gl);
         const typeName = (acc.accountType?.name || 'ASSET').toUpperCase();
         const closingBal = AccountingService.naturalBalance(typeName, acc.initialBalance, cumulativeAggregates.get(acc.id));
 

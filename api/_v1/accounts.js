@@ -97,10 +97,11 @@ var accounts_default = makeHandler(async (req, res) => {
     if (!code || !name || !type) {
       return res.status(400).json({ error: { message: "Code, Name, and Type are required", status: 400 } });
     }
-    if (!/^\d{7}$/.test(code)) {
+    const cleanCode = String(code || "").trim();
+    if (!/^\d{7}$/.test(cleanCode)) {
       return res.status(400).json({ error: { message: "GL Code must be exactly 7 digits (e.g., 1000000)", status: 400 } });
     }
-    const codeExists = await prisma.account.findUnique({ where: { glCode: code } });
+    const codeExists = await prisma.account.findFirst({ where: { glCode: cleanCode } });
     if (codeExists) {
       return res.status(400).json({ error: { message: `Account code ${code} is already in use`, status: 400 } });
     }
@@ -138,7 +139,7 @@ var accounts_default = makeHandler(async (req, res) => {
     }
     const newAccount = await prisma.account.create({
       data: {
-        glCode: code,
+        glCode: cleanCode,
         accountName: name,
         accountLevel,
         parentId,
@@ -198,8 +199,15 @@ var accounts_default = makeHandler(async (req, res) => {
     }
     const { code, name, type, detailType, parentCode, currency, subsidiary, initialBalance, description, isLocked, isReserved } = req.body;
     if (code !== void 0) {
-      if (!/^\d{7}$/.test(code)) {
+      const cleanCode = String(code || "").trim();
+      if (!/^\d{7}$/.test(cleanCode)) {
         return res.status(400).json({ error: { message: "GL Code must be exactly 7 digits (e.g., 1000000)", status: 400 } });
+      }
+      if (cleanCode !== existingAccount.glCode) {
+        const codeExists = await prisma.account.findFirst({ where: { glCode: cleanCode } });
+        if (codeExists && codeExists.id !== id) {
+          return res.status(400).json({ error: { message: "Account code " + cleanCode + " is already in use", status: 400 } });
+        }
       }
       if (isReserved !== true && existingAccount.isReserved !== true) {
         const allReserved = await prisma.reservedCode.findMany({ where: { isActive: true } });
@@ -212,7 +220,7 @@ var accounts_default = makeHandler(async (req, res) => {
       }
     }
     const updateData = {};
-    if (code !== void 0) updateData.glCode = code;
+    if (code !== void 0) updateData.glCode = String(code || "").trim();
     if (name !== void 0) updateData.accountName = name;
     if (description !== void 0) updateData.description = description;
     if (currency !== void 0) updateData.currency = currency;

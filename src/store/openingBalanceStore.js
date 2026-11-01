@@ -20,12 +20,31 @@ export const useOpeningBalanceStore = create((set, get) => ({
       const url = dateStr ? `/api/v1/opening-balances?date=${dateStr}` : '/api/v1/opening-balances';
       const res = await api.get(url);
       const data = res.data.data;
+
+      // Deduplicate strictly by GL Code: Each account appears only ONCE
+      const rawAccounts = Array.isArray(data.allAccounts) && data.allAccounts.length > 0
+        ? data.allAccounts
+        : Object.values(data.accounts || {});
+
+      const seenGls = new Set();
+      const dedupedAccounts = [];
+      for (const a of rawAccounts) {
+        const gl = String(a.glCode || '').trim();
+        if (gl && !seenGls.has(gl)) {
+          seenGls.add(gl);
+          dedupedAccounts.push({
+            ...a,
+            glCode: gl
+          });
+        }
+      }
+
       set({
         financialYear: data.financialYear,
         openingDate: data.openingDate,
         batch: data.batch,
         accounts: data.accounts || {},
-        allAccounts: data.allAccounts || Object.values(data.accounts || {}),
+        allAccounts: dedupedAccounts,
         loading: false
       });
       return data;

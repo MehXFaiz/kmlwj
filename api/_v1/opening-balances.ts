@@ -90,7 +90,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(403).json({ error: { message: 'Forbidden: Insufficient permissions to view opening balances', status: 403 } });
     }
 
-
     const { date, financialYear: fyParam } = req.query as any;
     const selectedDate = date ? new Date(date) : new Date();
     const financialYear = fyParam ? (fyParam.startsWith('FY ') ? fyParam : `FY ${fyParam}`) : getFinancialYearFromDate(selectedDate);
@@ -137,8 +136,16 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     const primaryAccountsMap: Record<string, any> = {};
     const allAccountsList: any[] = [];
+    const seenGlCodes = new Set<string>();
 
     for (const acc of allBsAccounts) {
+      const glCode = String(acc.glCode || '').trim();
+      if (!glCode || seenGlCodes.has(glCode)) {
+        // Enforce: Each GL code appears strictly ONCE
+        continue;
+      }
+      seenGlCodes.add(glCode);
+
       const line = batch?.lines.find(l => l.accountId === acc.id || l.glCode === acc.glCode);
       const amt = line ? Number(line.amount) : Number(acc.initialBalance || 0);
 
@@ -196,7 +203,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(403).json({ error: { message: 'Forbidden: Only authorized administrators can save opening balances', status: 403 } });
     }
 
-
     const { openingDate, balances, isAdjustment, reason } = req.body || {};
 
     if (!openingDate || isNaN(Date.parse(openingDate))) {
@@ -229,15 +235,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     // Check if batch is auto-rolled and requires explicit adjustment
-    const existingBatch = await prisma.openingBalanceBatch.findUnique({
+    const preCheckBatch = await prisma.openingBalanceBatch.findUnique({
       where: { financialYear },
       include: { journalEntry: true }
     });
 
-    if (existingBatch?.isAutoRolled && !isAdjustment) {
+    if (preCheckBatch?.isAutoRolled && !isAdjustment) {
       return res.status(400).json({
         error: {
-          message: `Opening balances for ${financialYear} were automatically rolled forward from ${existingBatch.sourceFinancialYear}. Silent modification is not allowed. Please use the "Adjust Opening Balance" action with an explicit reason.`,
+          message: `Opening balances for ${financialYear} were automatically rolled forward from ${preCheckBatch.sourceFinancialYear}. Silent modification is not allowed. Please use the "Adjust Opening Balance" action with an explicit reason.`,
           status: 400
         }
       });
@@ -247,12 +253,23 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'An explicit adjustment reason (at least 5 characters) is required when modifying opening balances.', status: 400 } });
     }
 
+    // Deduplicate accounts strictly by GL code (Each GL code = One account entry)
+    const uniqueAccountsByGl = new Map<string, typeof accounts[0]>();
+    for (const acc of accounts) {
+      const gl = String(acc.glCode || '').trim();
+      if (!gl) continue;
+      if (!uniqueAccountsByGl.has(gl)) {
+        uniqueAccountsByGl.set(gl, acc);
+      }
+    }
+    const uniqueAccounts = Array.from(uniqueAccountsByGl.values());
+
     // Parse amounts
     const accountAmountPairs: { account: typeof accounts[0]; amount: Prisma.Decimal; debitCredit: string }[] = [];
     let totalDebit = new Prisma.Decimal(0);
     let totalCredit = new Prisma.Decimal(0);
 
-    for (const acc of accounts) {
+    for (const acc of uniqueAccounts) {
       const key = balances[acc.id] !== undefined ? acc.id : acc.glCode;
       const rawVal = balances[key] ?? 0;
       const numVal = Number(rawVal);
@@ -278,29 +295,32 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       const result = await prisma.$transaction(async (tx) => {
         const equityAccount = await getOrCreateOpeningEquityAccount(tx);
 
+        // Fetch batch inside transaction for strict isolation
+        const existingBatch = await tx.openingBalanceBatch.findUnique({
+          where: { financialYear },
+          include: {
+            lines: true,
+            journalEntry: true
+          }
+        });
+
         const oldValues = existingBatch ? {
           batchId: existingBatch.id,
           journalEntryId: existingBatch.journalEntryId,
           financialYear: existingBatch.financialYear
         } : null;
 
-        // If existing batch, delete old batch lines & soft-delete old journal entry
-        if (existingBatch) {
-          await tx.openingBalanceLine.deleteMany({
-            where: { batchId: existingBatch.id }
+        // If existing batch had a previous journal entry, soft-delete it and recalculate
+        if (existingBatch?.journalEntryId) {
+          await tx.journalEntry.update({
+            where: { id: existingBatch.journalEntryId },
+            data: {
+              isDeleted: true,
+              deletedAt: new Date(),
+              deletedBy: req.user!.id
+            }
           });
-
-          if (existingBatch.journalEntryId) {
-            await tx.journalEntry.update({
-              where: { id: existingBatch.journalEntryId },
-              data: {
-                isDeleted: true,
-                deletedAt: new Date(),
-                deletedBy: req.user!.id
-              }
-            });
-            await AccountingService.recalculateBalancesForJournalEntry(tx, existingBatch.journalEntryId);
-          }
+          await AccountingService.recalculateBalancesForJournalEntry(tx, existingBatch.journalEntryId);
         }
 
         // Build Journal Entry Lines
@@ -377,18 +397,61 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
               adjustmentReason: isAdjustment ? reason : existingBatch.adjustmentReason,
               adjustedById: isAdjustment ? req.user!.id : existingBatch.adjustedById,
               adjustedAt: isAdjustment ? new Date() : existingBatch.adjustedAt,
-              createdBy: req.user!.id,
-              lines: {
-                create: accountAmountPairs.map(p => ({
+              createdBy: req.user!.id
+            }
+          });
+
+          // Permanent Opening Balance Logic:
+          // UPDATE existing record instead of inserting another record!
+          // Saving multiple times never creates duplicates.
+          const existingLines = existingBatch.lines || [];
+          const existingLineByAccId = new Map<string, typeof existingLines[0]>();
+          const existingLineByGl = new Map<string, typeof existingLines[0]>();
+          for (const l of existingLines) {
+            existingLineByAccId.set(l.accountId, l);
+            if (l.glCode) existingLineByGl.set(l.glCode, l);
+          }
+
+          const activeAccountIds = new Set<string>();
+
+          for (const p of accountAmountPairs) {
+            activeAccountIds.add(p.account.id);
+            const existingLine = existingLineByAccId.get(p.account.id) || existingLineByGl.get(p.account.glCode);
+
+            if (existingLine) {
+              // UPDATE existing record
+              await tx.openingBalanceLine.update({
+                where: { id: existingLine.id },
+                data: {
                   accountId: p.account.id,
                   glCode: p.account.glCode,
                   debitCredit: p.debitCredit,
-                  amount: p.amount
-                }))
-              }
-            },
-            include: { lines: true }
-          });
+                  amount: p.amount.toNumber()
+                }
+              });
+            } else {
+              // INSERT new record only if account didn't exist in this batch
+              await tx.openingBalanceLine.create({
+                data: {
+                  batchId: existingBatch.id,
+                  accountId: p.account.id,
+                  glCode: p.account.glCode,
+                  debitCredit: p.debitCredit,
+                  amount: p.amount.toNumber()
+                }
+              });
+            }
+          }
+
+          // Clean up lines for accounts whose balances are zeroed or removed
+          const linesToDelete = existingLines.filter(
+            l => !activeAccountIds.has(l.accountId) && (!l.glCode || !accountAmountPairs.some(p => p.account.glCode === l.glCode))
+          );
+          if (linesToDelete.length > 0) {
+            await tx.openingBalanceLine.deleteMany({
+              where: { id: { in: linesToDelete.map(l => l.id) } }
+            });
+          }
         } else {
           batchRecord = await tx.openingBalanceBatch.create({
             data: {
@@ -402,13 +465,18 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
                   accountId: p.account.id,
                   glCode: p.account.glCode,
                   debitCredit: p.debitCredit,
-                  amount: p.amount
+                  amount: p.amount.toNumber()
                 }))
               }
-            },
-            include: { lines: true }
+            }
           });
         }
+
+        // Refetch full batch with lines
+        const finalBatch = await tx.openingBalanceBatch.findUnique({
+          where: { id: batchRecord.id },
+          include: { lines: true }
+        });
 
         // Ensure FinancialYear record is updated/created
         await FinancialYearService.getOrCreateYearByCode(financialYear, tx);
@@ -436,7 +504,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           req.headers['user-agent']
         );
 
-        return { batch: batchRecord, journalEntry, totalDebit: totalDebit.toNumber() };
+        return { batch: finalBatch, journalEntry, totalDebit: totalDebit.toNumber() };
       });
 
       return res.status(200).json({

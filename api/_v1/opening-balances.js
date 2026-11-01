@@ -117,7 +117,13 @@ var opening_balances_default = makeHandler(async (req, res) => {
     });
     const primaryAccountsMap = {};
     const allAccountsList = [];
+    const seenGlCodes = /* @__PURE__ */ new Set();
     for (const acc of allBsAccounts) {
+      const glCode = String(acc.glCode || "").trim();
+      if (!glCode || seenGlCodes.has(glCode)) {
+        continue;
+      }
+      seenGlCodes.add(glCode);
       const line = batch?.lines.find((l) => l.accountId === acc.id || l.glCode === acc.glCode);
       const amt = line ? Number(line.amount) : Number(acc.initialBalance || 0);
       const accData = {
@@ -194,14 +200,14 @@ var opening_balances_default = makeHandler(async (req, res) => {
     if (accounts.length === 0) {
       return res.status(400).json({ error: { message: "No valid accounts specified in opening balances payload.", status: 400 } });
     }
-    const existingBatch = await prisma.openingBalanceBatch.findUnique({
+    const preCheckBatch = await prisma.openingBalanceBatch.findUnique({
       where: { financialYear },
       include: { journalEntry: true }
     });
-    if (existingBatch?.isAutoRolled && !isAdjustment) {
+    if (preCheckBatch?.isAutoRolled && !isAdjustment) {
       return res.status(400).json({
         error: {
-          message: `Opening balances for ${financialYear} were automatically rolled forward from ${existingBatch.sourceFinancialYear}. Silent modification is not allowed. Please use the "Adjust Opening Balance" action with an explicit reason.`,
+          message: `Opening balances for ${financialYear} were automatically rolled forward from ${preCheckBatch.sourceFinancialYear}. Silent modification is not allowed. Please use the "Adjust Opening Balance" action with an explicit reason.`,
           status: 400
         }
       });
@@ -209,10 +215,19 @@ var opening_balances_default = makeHandler(async (req, res) => {
     if (isAdjustment && (!reason || reason.trim().length < 5)) {
       return res.status(400).json({ error: { message: "An explicit adjustment reason (at least 5 characters) is required when modifying opening balances.", status: 400 } });
     }
+    const uniqueAccountsByGl = /* @__PURE__ */ new Map();
+    for (const acc of accounts) {
+      const gl = String(acc.glCode || "").trim();
+      if (!gl) continue;
+      if (!uniqueAccountsByGl.has(gl)) {
+        uniqueAccountsByGl.set(gl, acc);
+      }
+    }
+    const uniqueAccounts = Array.from(uniqueAccountsByGl.values());
     const accountAmountPairs = [];
     let totalDebit = new Prisma.Decimal(0);
     let totalCredit = new Prisma.Decimal(0);
-    for (const acc of accounts) {
+    for (const acc of uniqueAccounts) {
       const key = balances[acc.id] !== void 0 ? acc.id : acc.glCode;
       const rawVal = balances[key] ?? 0;
       const numVal = Number(rawVal);
@@ -232,26 +247,28 @@ var opening_balances_default = makeHandler(async (req, res) => {
     try {
       const result = await prisma.$transaction(async (tx) => {
         const equityAccount = await getOrCreateOpeningEquityAccount(tx);
+        const existingBatch = await tx.openingBalanceBatch.findUnique({
+          where: { financialYear },
+          include: {
+            lines: true,
+            journalEntry: true
+          }
+        });
         const oldValues = existingBatch ? {
           batchId: existingBatch.id,
           journalEntryId: existingBatch.journalEntryId,
           financialYear: existingBatch.financialYear
         } : null;
-        if (existingBatch) {
-          await tx.openingBalanceLine.deleteMany({
-            where: { batchId: existingBatch.id }
+        if (existingBatch?.journalEntryId) {
+          await tx.journalEntry.update({
+            where: { id: existingBatch.journalEntryId },
+            data: {
+              isDeleted: true,
+              deletedAt: /* @__PURE__ */ new Date(),
+              deletedBy: req.user.id
+            }
           });
-          if (existingBatch.journalEntryId) {
-            await tx.journalEntry.update({
-              where: { id: existingBatch.journalEntryId },
-              data: {
-                isDeleted: true,
-                deletedAt: /* @__PURE__ */ new Date(),
-                deletedBy: req.user.id
-              }
-            });
-            await AccountingService.recalculateBalancesForJournalEntry(tx, existingBatch.journalEntryId);
-          }
+          await AccountingService.recalculateBalancesForJournalEntry(tx, existingBatch.journalEntryId);
         }
         const journalLinesPayload = [];
         for (const { account, amount, debitCredit } of accountAmountPairs) {
@@ -315,18 +332,50 @@ var opening_balances_default = makeHandler(async (req, res) => {
               adjustmentReason: isAdjustment ? reason : existingBatch.adjustmentReason,
               adjustedById: isAdjustment ? req.user.id : existingBatch.adjustedById,
               adjustedAt: isAdjustment ? /* @__PURE__ */ new Date() : existingBatch.adjustedAt,
-              createdBy: req.user.id,
-              lines: {
-                create: accountAmountPairs.map((p) => ({
+              createdBy: req.user.id
+            }
+          });
+          const existingLines = existingBatch.lines || [];
+          const existingLineByAccId = /* @__PURE__ */ new Map();
+          const existingLineByGl = /* @__PURE__ */ new Map();
+          for (const l of existingLines) {
+            existingLineByAccId.set(l.accountId, l);
+            if (l.glCode) existingLineByGl.set(l.glCode, l);
+          }
+          const activeAccountIds = /* @__PURE__ */ new Set();
+          for (const p of accountAmountPairs) {
+            activeAccountIds.add(p.account.id);
+            const existingLine = existingLineByAccId.get(p.account.id) || existingLineByGl.get(p.account.glCode);
+            if (existingLine) {
+              await tx.openingBalanceLine.update({
+                where: { id: existingLine.id },
+                data: {
                   accountId: p.account.id,
                   glCode: p.account.glCode,
                   debitCredit: p.debitCredit,
-                  amount: p.amount
-                }))
-              }
-            },
-            include: { lines: true }
-          });
+                  amount: p.amount.toNumber()
+                }
+              });
+            } else {
+              await tx.openingBalanceLine.create({
+                data: {
+                  batchId: existingBatch.id,
+                  accountId: p.account.id,
+                  glCode: p.account.glCode,
+                  debitCredit: p.debitCredit,
+                  amount: p.amount.toNumber()
+                }
+              });
+            }
+          }
+          const linesToDelete = existingLines.filter(
+            (l) => !activeAccountIds.has(l.accountId) && (!l.glCode || !accountAmountPairs.some((p) => p.account.glCode === l.glCode))
+          );
+          if (linesToDelete.length > 0) {
+            await tx.openingBalanceLine.deleteMany({
+              where: { id: { in: linesToDelete.map((l) => l.id) } }
+            });
+          }
         } else {
           batchRecord = await tx.openingBalanceBatch.create({
             data: {
@@ -340,13 +389,16 @@ var opening_balances_default = makeHandler(async (req, res) => {
                   accountId: p.account.id,
                   glCode: p.account.glCode,
                   debitCredit: p.debitCredit,
-                  amount: p.amount
+                  amount: p.amount.toNumber()
                 }))
               }
-            },
-            include: { lines: true }
+            }
           });
         }
+        const finalBatch = await tx.openingBalanceBatch.findUnique({
+          where: { id: batchRecord.id },
+          include: { lines: true }
+        });
         await FinancialYearService.getOrCreateYearByCode(financialYear, tx);
         await AccountingService.recalculateBalancesForJournalEntry(tx, journalEntry.id);
         const newValues = {
@@ -367,7 +419,7 @@ var opening_balances_default = makeHandler(async (req, res) => {
           req.headers["x-forwarded-for"],
           req.headers["user-agent"]
         );
-        return { batch: batchRecord, journalEntry, totalDebit: totalDebit.toNumber() };
+        return { batch: finalBatch, journalEntry, totalDebit: totalDebit.toNumber() };
       });
       return res.status(200).json({
         status: 200,

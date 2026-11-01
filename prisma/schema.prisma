@@ -980,6 +980,8 @@ model OpeningBalanceLine {
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
 
+  @@unique([batchId, accountId])
+  @@index([batchId, glCode])
   @@index([batchId])
   @@index([accountId])
 }

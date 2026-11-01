@@ -114,11 +114,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'Code, Name, and Type are required', status: 400 } });
     }
 
-    if (!/^\d{7}$/.test(code)) {
+    const cleanCode = String(code || '').trim();
+    if (!/^\d{7}$/.test(cleanCode)) {
       return res.status(400).json({ error: { message: 'GL Code must be exactly 7 digits (e.g., 1000000)', status: 400 } });
     }
 
-    const codeExists = await prisma.account.findUnique({ where: { glCode: code } });
+    const codeExists = await prisma.account.findFirst({ where: { glCode: cleanCode } });
     if (codeExists) {
       return res.status(400).json({ error: { message: `Account code ${code} is already in use`, status: 400 } });
     }
@@ -170,7 +171,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     const newAccount = await prisma.account.create({
       data: {
-        glCode: code,
+        glCode: cleanCode,
         accountName: name,
         accountLevel: accountLevel as any,
         parentId,
@@ -244,8 +245,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const { code, name, type, detailType, parentCode, currency, subsidiary, initialBalance, description, isLocked, isReserved } = req.body;
 
     if (code !== undefined) {
-      if (!/^\d{7}$/.test(code)) {
+      const cleanCode = String(code || '').trim();
+      if (!/^\d{7}$/.test(cleanCode)) {
         return res.status(400).json({ error: { message: 'GL Code must be exactly 7 digits (e.g., 1000000)', status: 400 } });
+      }
+      if (cleanCode !== existingAccount.glCode) {
+        const codeExists = await prisma.account.findFirst({ where: { glCode: cleanCode } });
+        if (codeExists && codeExists.id !== id) {
+          return res.status(400).json({ error: { message: "Account code " + cleanCode + " is already in use", status: 400 } });
+        }
       }
 
       // Reserved accounts cannot be assigned unless explicitly marked as reserved
@@ -262,7 +270,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     const updateData: any = {};
-    if (code !== undefined) updateData.glCode = code;
+    if (code !== undefined) updateData.glCode = String(code || '').trim();
     if (name !== undefined) updateData.accountName = name;
     if (description !== undefined) updateData.description = description;
     if (currency !== undefined) updateData.currency = currency;

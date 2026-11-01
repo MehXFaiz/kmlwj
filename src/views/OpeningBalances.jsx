@@ -108,9 +108,32 @@ export function OpeningBalances() {
 
   // Primary Accounts for quick entry / key presentation
   const primaryCodes = ['1010101', '1010102', '1010103', '1010104', '1010301', '1010201'];
-  const displayAccounts = (allAccounts && allAccounts.length > 0)
-    ? allAccounts
-    : primaryCodes.map(code => ({ glCode: code, accountName: getAccountName(code), accountType: 'ASSET', amount: formBalances[code] || 0 }));
+  const displayAccounts = React.useMemo(() => {
+    const rawList = (allAccounts && allAccounts.length > 0)
+      ? allAccounts
+      : primaryCodes.map(code => ({
+          glCode: code,
+          accountName: getAccountName(code),
+          accountType: 'ASSET',
+          amount: formBalances[code] || 0
+        }));
+
+    // Enforce: Every account must appear only ONCE with GL Code as primary unique identifier
+    const seenGls = new Set();
+    const uniqueList = [];
+
+    for (const acc of rawList) {
+      const gl = String(acc.glCode || '').trim();
+      if (!gl || seenGls.has(gl)) continue;
+      seenGls.add(gl);
+      uniqueList.push({
+        ...acc,
+        glCode: gl
+      });
+    }
+
+    return uniqueList;
+  }, [allAccounts, formBalances]);
 
   function getAccountName(code) {
     switch (code) {
