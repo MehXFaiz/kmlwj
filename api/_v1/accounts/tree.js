@@ -15,6 +15,13 @@ var tree_default = makeHandler(async (req, res) => {
       },
       orderBy: { glCode: "asc" }
     });
+    const seenGlCodes = /* @__PURE__ */ new Set();
+    const uniqueDbAccounts = dbAccounts.filter((acc) => {
+      if (!acc.glCode) return true;
+      if (seenGlCodes.has(acc.glCode)) return false;
+      seenGlCodes.add(acc.glCode);
+      return true;
+    });
     const aggregates = await AccountingService.getPostedAggregates();
     const liveBalance = (acc) => AccountingService.naturalBalance(acc.accountType?.name || "ASSET", acc.initialBalance, aggregates.get(acc.id));
     const formatAccount = (acc) => ({
@@ -38,10 +45,10 @@ var tree_default = makeHandler(async (req, res) => {
     });
     const accountMap = /* @__PURE__ */ new Map();
     const rootAccounts = [];
-    dbAccounts.forEach((acc) => {
+    uniqueDbAccounts.forEach((acc) => {
       accountMap.set(acc.id, { ...formatAccount(acc), _parentId: acc.parentId, _code: acc.glCode });
     });
-    dbAccounts.forEach((acc) => {
+    uniqueDbAccounts.forEach((acc) => {
       const formattedNode = accountMap.get(acc.id);
       if (acc.parentId && accountMap.has(acc.parentId)) {
         const parentNode = accountMap.get(acc.parentId);

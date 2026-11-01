@@ -23,6 +23,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     // Single source of truth: live balances derive from posted journal entry
     // lines (same source as every financial report), not the cached
     // Account.currentBalance column.
+    const seenGlCodes = new Set();
+    const uniqueDbAccounts = dbAccounts.filter(acc => {
+      if (!acc.glCode) return true;
+      if (seenGlCodes.has(acc.glCode)) return false;
+      seenGlCodes.add(acc.glCode);
+      return true;
+    });
+
     const aggregates = await AccountingService.getPostedAggregates();
     const liveBalance = (acc: any) =>
       AccountingService.naturalBalance(acc.accountType?.name || 'ASSET', acc.initialBalance, aggregates.get(acc.id));
@@ -52,12 +60,12 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const rootAccounts: any[] = [];
 
     // First pass: format all accounts
-    dbAccounts.forEach(acc => {
+    uniqueDbAccounts.forEach(acc => {
       accountMap.set(acc.id, { ...formatAccount(acc), _parentId: acc.parentId, _code: acc.glCode });
     });
 
     // Second pass: attach children to parents and link parentCodes
-    dbAccounts.forEach(acc => {
+    uniqueDbAccounts.forEach(acc => {
       const formattedNode = accountMap.get(acc.id);
       if (acc.parentId && accountMap.has(acc.parentId)) {
         const parentNode = accountMap.get(acc.parentId);

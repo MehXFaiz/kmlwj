@@ -85,7 +85,15 @@ var accounts_default = makeHandler(async (req, res) => {
       isSystemDefined: acc.isSystemDefined,
       isReserved: acc.isReserved
     }));
-    return res.status(200).json({ status: 200, data: formatted, meta: { total, page: pageNum, limit: limitNum } });
+    const seenCodes = /* @__PURE__ */ new Set();
+    const uniqueFormatted = formatted.filter((a) => {
+      const c = a.code || a.glCode;
+      if (!c) return true;
+      if (seenCodes.has(c)) return false;
+      seenCodes.add(c);
+      return true;
+    });
+    return res.status(200).json({ status: 200, data: uniqueFormatted, meta: { total: uniqueFormatted.length, page: pageNum, limit: limitNum } });
   }
   const userPerms = await loadPermissions(req);
   const checkPerm = (perm) => userPerms.has(perm);

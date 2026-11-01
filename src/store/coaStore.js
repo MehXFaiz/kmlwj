@@ -4,6 +4,19 @@ import { useDashboardStore } from './dashboardStore';
 
 export const getCurrentFiscalYear = () => String(new Date().getFullYear());
 
+const deduplicateAccountsByCode = (list) => {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set();
+  return list.filter(item => {
+    if (item.isDeleted) return false;
+    const code = item.code || item.glCode;
+    if (!code) return true;
+    if (seen.has(code)) return false;
+    seen.add(code);
+    return true;
+  });
+};
+
 export const useCoaStore = create((set, get) => ({
   accounts: [], // flat list fallback if needed globally
   treeAccounts: [], // Nested tree structure
@@ -24,7 +37,8 @@ export const useCoaStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const data = await accountService.getAll({ limit: 1000 });
-      set({ accounts: data.data || data, loading: false });
+      const rawList = data?.data || data || [];
+      set({ accounts: deduplicateAccountsByCode(rawList), loading: false });
     } catch (err) {
       set({ error: err.message || 'Failed to fetch accounts', loading: false });
     }
@@ -34,10 +48,12 @@ export const useCoaStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await accountService.getAll({ limit: 1000, ...params });
-      set({ 
-        flatAccounts: response.data, 
-        meta: response.meta || { total: 0, page: 1, limit: 1000 },
-        loading: false 
+      const rawList = response?.data || [];
+      const cleanList = deduplicateAccountsByCode(rawList);
+      set({
+        flatAccounts: cleanList,
+        meta: response.meta ? { ...response.meta, total: cleanList.length } : { total: cleanList.length, page: 1, limit: 1000 },
+        loading: false
       });
     } catch (err) {
       set({ error: err.message || 'Failed to fetch account list', loading: false });

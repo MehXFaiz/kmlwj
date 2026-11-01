@@ -1599,21 +1599,22 @@ export class AccountingService {
         });
         if (acc) return acc;
 
-        const knownAliases: Record<string, string> = {
-          'Salary': 'Staff Salary',
-          'Rent': 'Building Rent',
-          'Electricity Bill': 'K-Electric Bill',
-          'Generator Expense': 'Generator Fuel',
-          'Bus Expense': 'Bus Diesel',
-          'Medical Expense': 'Medical Donations',
-          'Hall Expense': 'Hall Operating Costs',
-          'Education Donation': 'Education Donation'
+        const knownAliases: Record<string, string[]> = {
+          'Salary': ['Staff Salary', 'staff salaries', 'SALARY'],
+          'Staff Salaries': ['Staff Salary', 'staff salaries', 'SALARY'],
+          'Rent': ['Building Rent', 'Rent'],
+          'Electricity Bill': ['K-Electric Bill'],
+          'Generator Expense': ['Generator Fuel', 'Generator petrol', 'Generator Repairs'],
+          'Bus Expense': ['Bus Diesel', 'Bus Repairs'],
+          'Medical Expense': ['Medical Donations'],
+          'Hall Expense': ['Hall Operating Costs', 'Hall Repairs', 'Sadaya Hall-Renovation', 'Zakriya Hall Renovation'],
+          'Education Donation': ['Education Donation']
         };
 
-        const mappedName = knownAliases[accountName];
-        if (mappedName) {
+        const mappedNames = knownAliases[accountName] || [];
+        for (const mName of mappedNames) {
           acc = await tx.account.findFirst({
-            where: { accountName: { equals: mappedName, mode: 'insensitive' }, children: { none: {} }, isDeleted: false }
+            where: { accountName: { equals: mName, mode: 'insensitive' }, children: { none: {} }, isDeleted: false }
           });
           if (acc) return acc;
         }

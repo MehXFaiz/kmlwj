@@ -96,7 +96,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       isReserved: acc.isReserved,
     }));
 
-    return res.status(200).json({ status: 200, data: formatted, meta: { total, page: pageNum, limit: limitNum } });
+    const seenCodes = new Set();
+    const uniqueFormatted = formatted.filter(a => {
+      const c = a.code || a.glCode;
+      if (!c) return true;
+      if (seenCodes.has(c)) return false;
+      seenCodes.add(c);
+      return true;
+    });
+    return res.status(200).json({ status: 200, data: uniqueFormatted, meta: { total: uniqueFormatted.length, page: pageNum, limit: limitNum } });
   }
 
   // Verify permissions for mutations — loaded live from DB, never from JWT role name.
