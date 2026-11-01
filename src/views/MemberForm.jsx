@@ -1,34 +1,30 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { useMemberStore } from '../store/memberStore';
+import { useCoaStore } from '../store/coaStore';
 import { memberService } from '../services/memberService';
 import { PhoneInput, validatePhoneNumber } from '../components/ui/PhoneInput';
 import { CNICInput, validateCNIC } from '../components/ui/CNICInput';
 import { sanitizeInputValue } from '../utils/validation';
+import { isGenuineBankAccount } from '../utils/accountFilters';
 import {
   Camera, Image as ImageIcon, ShieldCheck, QrCode,
   ChevronLeft, CheckCircle, AlertCircle, Save, X,
-  Upload, Loader2, IdCard,
+  Upload, Loader2, IdCard, DollarSign, Building, CreditCard,
+  Wallet, Calendar, Check,
 } from 'lucide-react';
 
-// ── Single image upload widget ────────────────────────────────────────────────
-// The authoritative check is server-side (magic-byte sniffing in
-// api/_v1/upload.ts, and Cloudinary's /image/upload endpoint in production) —
-// a client can never be trusted to self-report file type/size correctly. This
-// client-side check only gives immediate feedback for the common case,
-// avoiding an unnecessary round trip for an obviously wrong file.
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-const MAX_CLIENT_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB, matches the server-side cap
+const MAX_CLIENT_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
 
 function ImageUploadField({ label, fieldName, currentUrl, onUploaded, onError }) {
   const [preview, setPreview]     = useState(currentUrl || null);
-  const [progress, setProgress]   = useState(null);   // null | 0-100
+  const [progress, setProgress]   = useState(null);
   const [uploading, setUploading] = useState(false);
   const [fieldError, setFieldError] = useState(null);
   const inputRef = useRef(null);
 
-  // Sync preview when parent resets the form (e.g. after load of existing member)
   useEffect(() => {
     setPreview(currentUrl || null);
   }, [currentUrl]);
@@ -53,7 +49,6 @@ function ImageUploadField({ label, fieldName, currentUrl, onUploaded, onError })
       return;
     }
 
-    // Show local preview immediately
     const objectUrl = URL.createObjectURL(file);
     setPreview(objectUrl);
 
@@ -66,7 +61,6 @@ function ImageUploadField({ label, fieldName, currentUrl, onUploaded, onError })
       onUploaded(urls[urlKey]);
       setProgress(100);
     } catch (err) {
-      // Surface the backend's actual error message rather than a generic one
       const msg = err?.response?.data?.error?.message || err?.message || 'Upload failed. Please try again.';
       setFieldError(msg);
       setPreview(currentUrl || null);
@@ -98,53 +92,40 @@ function ImageUploadField({ label, fieldName, currentUrl, onUploaded, onError })
           <img src={preview} alt={label} className="w-full h-full object-cover" />
         ) : (
           <>
-            <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-              <ImageIcon className="w-5 h-5 text-slate-400 group-hover:text-amber-400 transition-colors" />
+            <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 group-hover:text-amber-400 group-hover:bg-slate-800/80 transition-colors">
+              <Camera className="w-5 h-5" />
             </div>
-            <span className="text-xs font-semibold text-slate-500 group-hover:text-slate-300 transition-colors text-center px-2">
-              Click to upload
-            </span>
+            <span className="text-[11px] font-semibold text-slate-400 mt-2">Upload Photo</span>
+            <span className="text-[10px] text-slate-600">JPG, PNG up to 8MB</span>
           </>
         )}
 
-        {/* Progress overlay */}
         {uploading && (
-          <div className="absolute inset-0 bg-slate-950/80 flex flex-col items-center justify-center gap-2">
+          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
             <Loader2 className="w-6 h-6 text-amber-400 animate-spin" />
-            <span className="text-xs font-bold text-amber-300">{progress ?? 0}%</span>
-            {/* Progress bar */}
-            <div className="w-3/4 h-1 bg-slate-700 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-amber-500 rounded-full transition-all duration-200"
-                style={{ width: `${progress ?? 0}%` }}
-              />
-            </div>
+            <span className="text-[11px] font-semibold text-slate-200">{progress ?? 0}%</span>
           </div>
         )}
 
-        <input
-          ref={inputRef}
-          type="file"
-          onChange={handleSelect}
-          className="hidden"
-          disabled={uploading}
-        />
-      </div>
-
-      {/* Actions */}
-      {preview && !uploading && (
-        <div className="text-center">
+        {preview && !uploading && (
           <button
             type="button"
-            onClick={handleRemove}
-            className="text-xs font-semibold text-red-400 hover:text-red-300 bg-red-500/10 px-3 py-1 rounded-lg border border-red-500/20 transition-colors flex items-center gap-1 mx-auto"
+            onClick={(e) => { e.stopPropagation(); handleRemove(); }}
+            className="absolute top-2 right-2 p-1.5 rounded-full bg-slate-900/80 hover:bg-red-600 text-slate-300 hover:text-white transition-colors"
           >
-            <X className="w-3 h-3" /> Remove
+            <X className="w-3.5 h-3.5" />
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Field-level error */}
+      <input
+        ref={inputRef}
+        type="file"
+        accept={ACCEPTED_IMAGE_TYPES.join(',')}
+        onChange={handleSelect}
+        className="hidden"
+      />
+
       {fieldError && (
         <p className="text-xs text-red-400 text-center flex items-center justify-center gap-1">
           <AlertCircle className="w-3 h-3 shrink-0" /> {fieldError}
@@ -159,8 +140,8 @@ export const MemberForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { members, fetchMembers, addMember, updateMember, loading } = useMemberStore();
+  const { flatAccounts, fetchAccountsList } = useCoaStore();
 
-  // Uploaded URLs (stored separately, injected into form data on submit)
   const [photoUrl,     setPhotoUrl]     = useState('');
   const [cnicFrontUrl, setCnicFrontUrl] = useState('');
   const [cnicBackUrl,  setCnicBackUrl]  = useState('');
@@ -176,24 +157,57 @@ export const MemberForm = () => {
     reset,
     control,
     setValue,
+    watch,
   } = useForm({
     defaultValues: {
       fullName: '', fatherName: '', cnic: '', dob: '', address: '',
       mobile: '', email: '', city: '', area: '', ghamName: '',
       education: '', profession: '', company: '',
       doi: new Date().toISOString().split('T')[0],
+      membershipType: 'Regular',
+      feeAmount: 500,
+      startDate: new Date().toISOString().split('T')[0],
+      expiryDate: '',
+      initialPayment: 500,
+      paymentMethod: 'CASH',
+      bankAccountId: '',
+      chequeNumber: '',
       isActive: true,
     },
   });
 
-  useEffect(() => { fetchMembers(); }, [fetchMembers]);
+  const watchFeeAmount = watch('feeAmount');
+  const watchInitialPayment = watch('initialPayment');
+  const watchPaymentMethod = watch('paymentMethod');
+
+  const feeAmt = Number(watchFeeAmount) || 0;
+  const payAmt = Number(watchInitialPayment) || 0;
+  const bal = Math.max(0, feeAmt - payAmt);
+  const statusLabel = payAmt >= feeAmt && feeAmt > 0 ? 'Paid' : (payAmt > 0 ? 'Partially Paid' : 'Unpaid');
+  const statusColor = statusLabel === 'Paid' ? 'emerald' : (statusLabel === 'Partially Paid' ? 'amber' : 'red');
+
+  useEffect(() => {
+    fetchMembers();
+    fetchAccountsList();
+  }, [fetchMembers, fetchAccountsList]);
+
+  const bankAccounts = useMemo(() => {
+    return flatAccounts.filter(isGenuineBankAccount);
+  }, [flatAccounts]);
 
   useEffect(() => {
     if (id && members.length > 0) {
       const existing = members.find(m => m.id === id);
       if (existing) {
         const { photoUrl: p, cnicFrontUrl: cf, cnicBackUrl: cb, ...rest } = existing;
-        reset(rest);
+        reset({
+          ...rest,
+          membershipType: existing.membershipType || 'Regular',
+          feeAmount: existing.feeAmount != null ? existing.feeAmount : 500,
+          startDate: existing.startDate || '',
+          expiryDate: existing.expiryDate || '',
+          initialPayment: 0,
+        });
         setPhotoUrl(p || '');
         setCnicFrontUrl(cf || '');
         setCnicBackUrl(cb || '');
@@ -215,7 +229,6 @@ export const MemberForm = () => {
   }, []);
 
   const onSubmit = async (data) => {
-    // Block submit if an upload error is outstanding
     if (Object.keys(uploadErrors).length > 0) {
       showToast('error', 'Please fix the upload errors before submitting.');
       return;
@@ -223,6 +236,8 @@ export const MemberForm = () => {
 
     const payload = {
       ...data,
+      feeAmount: data.feeAmount !== undefined ? Number(data.feeAmount) : 500,
+      initialPayment: data.initialPayment !== undefined ? Number(data.initialPayment) : 0,
       photoUrl:     photoUrl     || null,
       cnicFrontUrl: cnicFrontUrl || null,
       cnicBackUrl:  cnicBackUrl  || null,
@@ -234,7 +249,7 @@ export const MemberForm = () => {
         showToast('success', 'Member details updated successfully!');
       } else {
         await addMember(payload);
-        showToast('success', 'New member registered successfully!');
+        showToast('success', 'New member registered and linked fee record created!');
       }
       setTimeout(() => navigate('/members'), 1500);
     } catch (err) {
@@ -257,7 +272,6 @@ export const MemberForm = () => {
      ${hasError ? 'border-red-500/60' : 'border-slate-800'}`;
 
   const labelClass = 'block text-xs font-semibold text-slate-400 mb-1.5';
-
   const isDisabled = isSubmitting || loading || anyUploading;
 
   return (
@@ -289,11 +303,11 @@ export const MemberForm = () => {
             <h1 className="text-xl font-bold text-slate-100">
               {id ? 'Edit Member Record' : 'Register New Member'}
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">Jamia Community Census &amp; Records</p>
+            <p className="text-xs text-slate-500 mt-0.5">Jamia Community Census &amp; Membership Management</p>
           </div>
         </div>
         <span className="text-xs font-semibold text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20">
-          {id ? 'Editing Record' : 'New Registration'}
+          {id ? 'Editing Record' : 'Unified Registration & Fee Linking'}
         </span>
       </div>
 
@@ -323,30 +337,30 @@ export const MemberForm = () => {
               </p>
             </div>
 
-            {/* Info Card */}
+            {/* Unified System Info Card */}
             <div className="bg-amber-500/5 rounded-2xl border border-amber-500/20 p-5">
               <div className="flex items-center gap-2 mb-4">
                 <ShieldCheck className="w-4 h-4 text-amber-400" />
-                <h3 className="text-sm font-semibold text-amber-300">System Info</h3>
+                <h3 className="text-sm font-semibold text-amber-300">Unified Management</h3>
               </div>
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="w-7 h-7 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-                    <Upload className="w-3.5 h-3.5 text-amber-400" />
+                    <DollarSign className="w-3.5 h-3.5 text-amber-400" />
                   </div>
-                  <span className="text-xs font-semibold text-slate-300">Images upload instantly on selection</span>
+                  <span className="text-xs font-semibold text-slate-300">Auto-linked Membership Fee Record</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                    <Building className="w-3.5 h-3.5 text-amber-400" />
+                  </div>
+                  <span className="text-xs font-semibold text-slate-300">Instant General Ledger Posting</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-7 h-7 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
                     <QrCode className="w-3.5 h-3.5 text-amber-400" />
                   </div>
-                  <span className="text-xs font-semibold text-slate-300">Instant QR Generation</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-                    <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                  </div>
-                  <span className="text-xs font-semibold text-slate-300">Secure Entry Protocol Active</span>
+                  <span className="text-xs font-semibold text-slate-300">Automatic ID &amp; QR Code Generation</span>
                 </div>
               </div>
               <div className="border-t border-amber-500/20 my-4" />
@@ -473,11 +487,11 @@ export const MemberForm = () => {
               </div>
             </div>
 
-            {/* Card 03: Professional & System Info */}
+            {/* Card 03: Professional & Registration */}
             <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
               <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
                 <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">03</span>
-                <h3 className="text-sm font-semibold text-slate-200">Professional &amp; System Info</h3>
+                <h3 className="text-sm font-semibold text-slate-200">Professional &amp; Registration</h3>
               </div>
               <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -496,9 +510,131 @@ export const MemberForm = () => {
                 </div>
 
                 <div>
-                  <label className={labelClass}>Date of Insertion (DOI)</label>
+                  <label className={labelClass}>Registration Date (DOI)</label>
                   <input type="date" {...register('doi')} className={inputClass(false)} />
                 </div>
+              </div>
+            </div>
+
+            {/* Card 04: Membership & Fee Configuration (Integrated Module) */}
+            <div className="bg-slate-900 rounded-2xl border border-amber-500/30 overflow-hidden shadow-lg shadow-amber-500/5">
+              <div className="px-5 py-3.5 border-b border-amber-500/20 flex items-center justify-between bg-amber-500/10">
+                <div className="flex items-center gap-3">
+                  <span className="w-6 h-6 rounded-full bg-amber-500 text-slate-950 font-bold text-xs flex items-center justify-center shrink-0">04</span>
+                  <h3 className="text-sm font-bold text-amber-300">Membership Fee &amp; Payment Configuration</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                    statusColor === 'emerald'
+                      ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                      : statusColor === 'amber'
+                      ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                      : 'bg-red-500/15 text-red-400 border-red-500/30'
+                  }`}>
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    {statusLabel}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-5 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div>
+                    <label className={labelClass}>Membership Type</label>
+                    <select {...register('membershipType')} className={inputClass(false)}>
+                      <option value="Regular">Regular Member</option>
+                      <option value="Life Time">Life Time Member</option>
+                      <option value="Annual">Annual Member</option>
+                      <option value="Student">Student Member</option>
+                      <option value="Senior Citizen">Senior Citizen</option>
+                      <option value="Honorary">Honorary</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Annual / Standard Fee (PKR)</label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      {...register('feeAmount')}
+                      placeholder="500"
+                      className={inputClass(false)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Membership Start Date</label>
+                    <input type="date" {...register('startDate')} className={inputClass(false)} />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Expiry Date (Optional)</label>
+                    <input type="date" {...register('expiryDate')} className={inputClass(false)} />
+                  </div>
+                </div>
+
+                {!id && (
+                  <div className="mt-4 pt-4 border-t border-slate-800">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                        <Wallet className="w-3.5 h-3.5 text-amber-400" />
+                        Initial Payment on Registration
+                      </span>
+                      <span className="text-xs text-slate-400">
+                        Outstanding Balance: <strong className={bal > 0 ? 'text-amber-400' : 'text-emerald-400'}>Rs. {bal.toLocaleString()}</strong>
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className={labelClass}>Amount Paid (PKR)</label>
+                        <input
+                          type="number"
+                          step="1"
+                          min="0"
+                          {...register('initialPayment')}
+                          placeholder="500"
+                          className={inputClass(false)}
+                        />
+                      </div>
+
+                      <div>
+                        <label className={labelClass}>Payment Method</label>
+                        <select {...register('paymentMethod')} className={inputClass(false)}>
+                          <option value="CASH">Cash in Hand</option>
+                          <option value="BANK">Bank Transfer / Online</option>
+                          <option value="CHEQUE">Cheque</option>
+                        </select>
+                      </div>
+
+                      {watchPaymentMethod !== 'CASH' && (
+                        <div>
+                          <label className={labelClass}>Deposit Bank Account *</label>
+                          <select {...register('bankAccountId')} className={inputClass(false)}>
+                            <option value="">Select Bank Account</option>
+                            {bankAccounts.map((acc) => (
+                              <option key={acc.id} value={acc.id}>
+                                {acc.accountName} ({acc.glCode})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {watchPaymentMethod === 'CHEQUE' && (
+                        <div>
+                          <label className={labelClass}>Cheque Number</label>
+                          <input
+                            {...register('chequeNumber')}
+                            placeholder="e.g. CHQ-981240"
+                            className={inputClass(false)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -521,7 +657,7 @@ export const MemberForm = () => {
                 ) : anyUploading ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /><span>Uploading...</span></>
                 ) : (
-                  <><Save className="w-4 h-4" /><span>{id ? 'Update Member' : 'Register Member'}</span></>
+                  <><Save className="w-4 h-4" /><span>{id ? 'Update Member' : 'Register Member & Link Fees'}</span></>
                 )}
               </button>
             </div>

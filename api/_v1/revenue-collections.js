@@ -64,6 +64,7 @@ var revenue_collections_default = makeHandler(async (req, res) => {
     const skip = (pageNum - 1) * limitNum;
     const whereClause = {
       ...categoryFilter ? { category: categoryFilter } : {},
+      ...req.query.memberId ? { memberId: String(req.query.memberId) } : {},
       ...getDeletedFilter(req.query)
     };
     if (startDate || endDate) {
@@ -91,7 +92,22 @@ var revenue_collections_default = makeHandler(async (req, res) => {
         where: whereClause,
         include: {
           bankAccount: true,
-          createdBy: { select: { id: true, fullName: true, email: true } }
+          createdBy: { select: { id: true, fullName: true, email: true } },
+          member: {
+            select: {
+              id: true,
+              memberNo: true,
+              fullName: true,
+              mobile: true,
+              address: true,
+              cnic: true,
+              membershipType: true,
+              feeAmount: true,
+              startDate: true,
+              expiryDate: true,
+              doi: true
+            }
+          }
         },
         orderBy: { createdAt: "desc" },
         skip,
@@ -206,8 +222,16 @@ var revenue_collections_default = makeHandler(async (req, res) => {
       return res.status(200).json({ status: 200, data: result2, message: `${item.category} reverted from ledger successfully` });
     }
     if (!await verifyPermission(req, res, ["revenueCollections.create", PERMS.CREATE_REVENUE_COLLECTION])) return;
-    const { category, title, subTitle, mobile, eventDate, quantity, rate, destination, amount, paymentMethod, bankAccountId, chequeNumber, remarks } = req.body;
-    if (!category || !title || !amount || !paymentMethod) {
+    const { category, title, subTitle, mobile, eventDate, quantity, rate, destination, amount, paymentMethod, bankAccountId, chequeNumber, remarks, memberId } = req.body;
+    let linkedMember = null;
+    if (memberId) {
+      linkedMember = await prisma.member.findUnique({ where: { id: memberId } });
+    }
+    const resolvedTitle = title && String(title).trim() || linkedMember?.fullName;
+    const resolvedSubTitle = subTitle && String(subTitle).trim() || linkedMember?.memberNo || null;
+    const resolvedMobile = mobile && String(mobile).trim() || linkedMember?.mobile || null;
+    const resolvedDestination = destination && String(destination).trim() || linkedMember?.address || null;
+    if (!category || !resolvedTitle || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: "Missing required fields (category, title, amount, paymentMethod)", status: 400 } });
     }
     if (!ALLOWED_CATEGORIES.includes(category)) {
@@ -260,13 +284,14 @@ var revenue_collections_default = makeHandler(async (req, res) => {
         data: {
           category,
           receiptNo,
-          title,
-          subTitle: subTitle || null,
-          mobile: mobile || null,
+          memberId: linkedMember?.id || (memberId || null),
+          title: resolvedTitle,
+          subTitle: resolvedSubTitle,
+          mobile: resolvedMobile,
           eventDate: eventDate ? new Date(eventDate) : /* @__PURE__ */ new Date(),
           quantity: quantity ? parseInt(quantity, 10) : null,
           rate: rate ? parseFloat(rate) : null,
-          destination: destination || null,
+          destination: resolvedDestination,
           amount: parsedAmount,
           paymentMethod,
           bankAccountId: bankAccountId || null,
@@ -278,7 +303,8 @@ var revenue_collections_default = makeHandler(async (req, res) => {
         },
         include: {
           bankAccount: true,
-          journalEntry: true
+          journalEntry: true,
+          member: true
         }
       });
       return newItem;
@@ -362,8 +388,16 @@ var revenue_collections_default = makeHandler(async (req, res) => {
     if (!existingItem) {
       return res.status(404).json({ error: { message: "Record not found", status: 404 } });
     }
-    const { category, title, subTitle, mobile, eventDate, quantity, rate, destination, amount, paymentMethod, bankAccountId, chequeNumber, remarks } = req.body;
-    if (!category || !title || !amount || !paymentMethod) {
+    const { category, title, subTitle, mobile, eventDate, quantity, rate, destination, amount, paymentMethod, bankAccountId, chequeNumber, remarks, memberId } = req.body;
+    let linkedMember = null;
+    if (memberId) {
+      linkedMember = await prisma.member.findUnique({ where: { id: memberId } });
+    }
+    const resolvedTitle = title && String(title).trim() || linkedMember?.fullName || existingItem.title;
+    const resolvedSubTitle = subTitle !== void 0 ? String(subTitle).trim() || null : linkedMember?.memberNo || existingItem.subTitle;
+    const resolvedMobile = mobile !== void 0 ? String(mobile).trim() || null : linkedMember?.mobile || existingItem.mobile;
+    const resolvedDestination = destination !== void 0 ? String(destination).trim() || null : linkedMember?.address || existingItem.destination;
+    if (!category || !resolvedTitle || !amount || !paymentMethod) {
       return res.status(400).json({ error: { message: "Missing required fields (category, title, amount, paymentMethod)", status: 400 } });
     }
     if (!ALLOWED_CATEGORIES.includes(category)) {
@@ -415,13 +449,14 @@ var revenue_collections_default = makeHandler(async (req, res) => {
         where: { id: id2 },
         data: {
           category,
-          title,
-          subTitle: subTitle || null,
-          mobile: mobile || null,
+          memberId: memberId !== void 0 ? linkedMember?.id || memberId || null : void 0,
+          title: resolvedTitle,
+          subTitle: resolvedSubTitle,
+          mobile: resolvedMobile,
           eventDate: eventDate ? new Date(eventDate) : /* @__PURE__ */ new Date(),
           quantity: quantity ? parseInt(quantity, 10) : null,
           rate: rate ? parseFloat(rate) : null,
-          destination: destination || null,
+          destination: resolvedDestination,
           amount: parsedAmount,
           paymentMethod,
           bankAccountId: bankAccountId || null,
@@ -432,7 +467,8 @@ var revenue_collections_default = makeHandler(async (req, res) => {
         },
         include: {
           bankAccount: true,
-          journalEntry: true
+          journalEntry: true,
+          member: true
         }
       });
     }, accountingTxOptions);

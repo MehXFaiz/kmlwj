@@ -626,6 +626,8 @@ model RevenueCollection {
   createdBy      User?         @relation("RevenueCollectionCreatedBy", fields: [createdById], references: [id])
   journalEntryId String?       @unique
   journalEntry   JournalEntry? @relation("RevenueCollectionJournalEntry", fields: [journalEntryId], references: [id])
+  memberId       String?
+  member         Member?       @relation("MemberRevenueCollections", fields: [memberId], references: [id])
   isDeleted      Boolean       @default(false)
   deletedAt      DateTime?
   deletedBy      String?
@@ -657,10 +659,15 @@ model Member {
   photoUrl        String?
   cnicFrontUrl    String?
   cnicBackUrl     String?
+  membershipType  String?              @default("Regular")
+  feeAmount       Float?               @default(500)
+  startDate       String?
+  expiryDate      String?
   isActive        Boolean              @default(true)
   isDeleted       Boolean              @default(false)
   deletedAt       DateTime?
   deletedBy       String?
+  revenueCollections RevenueCollection[] @relation("MemberRevenueCollections")
   zakatCards      ZakatCard[]
   familyLinksFrom FamilyRelationship[] @relation("MemberFamilyLinks")
   familyLinksTo   FamilyRelationship[] @relation("RelatedMemberFamilyLinks")

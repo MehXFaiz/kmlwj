@@ -7,6 +7,7 @@ import { logger } from "../_utils/logger.js";
 import { PERMS } from "../_constants/permissions.js";
 import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from "../_utils/soft-delete.js";
 import { createMemberSchema, updateMemberSchema } from "../_schemas/members.schema.js";
+import { AccountingService } from "../_services/accounting.service.js";
 function trimOrNull(v) {
   if (v === void 0 || v === null) return null;
   const trimmed = String(v).trim();
@@ -59,6 +60,26 @@ async function backfillMemberNos(members) {
   }
   return members;
 }
+function enrichMemberFinancials(member) {
+  const feeAmount = member.feeAmount != null ? Number(member.feeAmount) : 500;
+  const collections = member.revenueCollections || [];
+  const totalPaid = collections.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+  const outstandingBalance = Math.max(0, feeAmount - totalPaid);
+  let paymentStatus = "Unpaid";
+  if (totalPaid >= feeAmount && feeAmount > 0) {
+    paymentStatus = "Paid";
+  } else if (totalPaid > 0) {
+    paymentStatus = "Partially Paid";
+  }
+  return {
+    ...member,
+    feeAmount,
+    totalPaid,
+    outstandingBalance,
+    paymentStatus,
+    revenueCollections: collections
+  };
+}
 var members_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -69,12 +90,21 @@ var members_default = makeHandler(async (req, res) => {
   if (method === "GET") {
     if (!await verifyPermission(req, res, ["members.view", PERMS.VIEW_MEMBERS])) return;
     if (id && !req.query.limit) {
-      const member = await prisma.member.findUnique({ where: { id } });
+      const member = await prisma.member.findUnique({
+        where: { id },
+        include: {
+          revenueCollections: {
+            where: { category: "Membership Fee", isDeleted: false },
+            orderBy: { eventDate: "desc" },
+            include: { bankAccount: true }
+          }
+        }
+      });
       if (!member) {
         return res.status(404).json({ error: { message: "Member not found", status: 404 } });
       }
       await backfillMemberNos([member]);
-      return res.status(200).json({ status: 200, data: member });
+      return res.status(200).json({ status: 200, data: enrichMemberFinancials(member) });
     }
     const { limit = "100", page = "1" } = req.query;
     const pageNum = parseInt(page) || 1;
@@ -84,6 +114,12 @@ var members_default = makeHandler(async (req, res) => {
     const [members, total] = await Promise.all([
       prisma.member.findMany({
         where: whereClause,
+        include: {
+          revenueCollections: {
+            where: { category: "Membership Fee", isDeleted: false },
+            select: { id: true, receiptNo: true, amount: true, paymentMethod: true, eventDate: true, status: true, remarks: true }
+          }
+        },
         orderBy: { createdAt: "desc" },
         skip,
         take: limitNum
@@ -91,7 +127,8 @@ var members_default = makeHandler(async (req, res) => {
       prisma.member.count({ where: whereClause })
     ]);
     await backfillMemberNos(members);
-    return res.status(200).json({ status: 200, data: members, meta: { total, page: pageNum, limit: limitNum } });
+    const enriched = members.map(enrichMemberFinancials);
+    return res.status(200).json({ status: 200, data: enriched, meta: { total, page: pageNum, limit: limitNum } });
   }
   if (method === "PUT" || method === "POST" || method === "PATCH") {
     if (action === "restore") {
@@ -136,7 +173,15 @@ var members_default = makeHandler(async (req, res) => {
       photoUrl,
       cnicFrontUrl,
       cnicBackUrl,
-      isActive
+      isActive,
+      membershipType,
+      feeAmount,
+      startDate,
+      expiryDate,
+      initialPayment,
+      paymentMethod,
+      bankAccountId,
+      chequeNumber
     } = validated;
     logger.info({ photoUrl, cnicFrontUrl, cnicBackUrl }, "Saving new member with image URLs");
     let newMember;
@@ -163,7 +208,11 @@ var members_default = makeHandler(async (req, res) => {
             photoUrl: photoUrl || null,
             cnicFrontUrl: cnicFrontUrl || null,
             cnicBackUrl: cnicBackUrl || null,
-            isActive: isActive !== void 0 ? Boolean(isActive) : true
+            isActive: isActive !== void 0 ? Boolean(isActive) : true,
+            membershipType: membershipType || "Regular",
+            feeAmount: feeAmount !== void 0 ? feeAmount : 500,
+            startDate: startDate || null,
+            expiryDate: expiryDate || null
           }
         });
         break;
@@ -178,9 +227,92 @@ var members_default = makeHandler(async (req, res) => {
         throw err;
       }
     }
+    let initialCollection = null;
+    const paymentAmount = Number(initialPayment || 0);
+    if (paymentAmount > 0) {
+      try {
+        let debitAccountId = null;
+        const methodType = paymentMethod || "CASH";
+        if (methodType === "CASH") {
+          const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
+          debitAccountId = cashAccount.id;
+        } else {
+          debitAccountId = bankAccountId || null;
+        }
+        const incomeAccount = await prisma.account.findFirst({
+          where: {
+            accountType: { name: { in: ["Revenue", "Income"], mode: "insensitive" } },
+            accountName: { contains: "Membership", mode: "insensitive" },
+            isLocked: false,
+            children: { none: {} }
+          },
+          orderBy: { glCode: "asc" }
+        });
+        const accountingTxOptions = { maxWait: 1e4, timeout: 3e4 };
+        initialCollection = await prisma.$transaction(async (tx) => {
+          let journalEntryId = null;
+          if (incomeAccount && debitAccountId) {
+            const count = await tx.revenueCollection.count({ where: { category: "Membership Fee" } });
+            const refNo = count + 1;
+            const postingResult = await AccountingService.postReceipt(tx, {
+              amount: paymentAmount,
+              cashOrBankAccountId: debitAccountId,
+              incomeAccountId: incomeAccount.id,
+              reference: `MEM-${refNo}`,
+              description: `Membership Fee Receipt from ${newMember.fullName} (${newMember.memberNo})`,
+              module: "Membership Fee",
+              voucherType: "BR",
+              postedBy: req.user.id,
+              postingDate: startDate ? new Date(startDate) : /* @__PURE__ */ new Date(),
+              ipAddress: req.headers["x-forwarded-for"],
+              userAgent: req.headers["user-agent"]
+            });
+            journalEntryId = postingResult.journalEntry.id;
+          }
+          const lastCollection = await tx.revenueCollection.findFirst({
+            orderBy: { receiptNo: "desc" },
+            select: { receiptNo: true }
+          });
+          const receiptNo = (lastCollection?.receiptNo || 0) + 1;
+          return await tx.revenueCollection.create({
+            data: {
+              category: "Membership Fee",
+              receiptNo,
+              memberId: newMember.id,
+              title: newMember.fullName,
+              subTitle: newMember.memberNo || null,
+              mobile: newMember.mobile || null,
+              destination: newMember.address || null,
+              eventDate: startDate ? new Date(startDate) : /* @__PURE__ */ new Date(),
+              amount: paymentAmount,
+              paymentMethod: methodType,
+              bankAccountId: bankAccountId || null,
+              chequeNumber: chequeNumber || null,
+              status: journalEntryId ? "POSTED" : "Confirmed",
+              remarks: "Initial membership fee payment on registration",
+              journalEntryId,
+              createdById: req.user.id
+            }
+          });
+        }, accountingTxOptions);
+        logger.info({ memberId: newMember.id, receiptNo: initialCollection.receiptNo }, "Initial membership fee recorded and posted");
+      } catch (payErr) {
+        logger.error({ err: payErr, memberId: newMember.id }, "Failed to record initial fee payment during member registration");
+      }
+    }
     logger.info({ memberId: newMember.id, memberNo: newMember.memberNo, photoUrl: newMember.photoUrl }, "Member saved to database successfully");
     await logAudit(req.user.id, "Register Member", "MEMBER", null, newMember, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    return res.status(201).json({ status: 201, data: newMember });
+    const fullMember = await prisma.member.findUnique({
+      where: { id: newMember.id },
+      include: {
+        revenueCollections: {
+          where: { category: "Membership Fee", isDeleted: false },
+          orderBy: { eventDate: "desc" },
+          include: { bankAccount: true }
+        }
+      }
+    });
+    return res.status(201).json({ status: 201, data: enrichMemberFinancials(fullMember || newMember) });
   }
   if (method === "PUT") {
     if (!await verifyPermission(req, res, ["members.update", PERMS.UPDATE_MEMBER])) return;
@@ -211,7 +343,11 @@ var members_default = makeHandler(async (req, res) => {
       photoUrl,
       cnicFrontUrl,
       cnicBackUrl,
-      isActive
+      isActive,
+      membershipType,
+      feeAmount,
+      startDate,
+      expiryDate
     } = validated;
     if (fullName !== void 0 && !String(fullName).trim()) {
       return res.status(400).json({ error: { message: "Full Member Name is required", status: 400 } });
@@ -269,13 +405,34 @@ var members_default = makeHandler(async (req, res) => {
         photoUrl: photoUrl !== void 0 ? photoUrl || null : void 0,
         cnicFrontUrl: cnicFrontUrl !== void 0 ? cnicFrontUrl || null : void 0,
         cnicBackUrl: cnicBackUrl !== void 0 ? cnicBackUrl || null : void 0,
-        isActive: isActive !== void 0 ? Boolean(isActive) : void 0
+        isActive: isActive !== void 0 ? Boolean(isActive) : void 0,
+        membershipType: membershipType !== void 0 ? membershipType || null : void 0,
+        feeAmount: feeAmount !== void 0 ? feeAmount : void 0,
+        startDate: startDate !== void 0 ? startDate || null : void 0,
+        expiryDate: expiryDate !== void 0 ? expiryDate || null : void 0
+      },
+      include: {
+        revenueCollections: {
+          where: { category: "Membership Fee", isDeleted: false },
+          orderBy: { eventDate: "desc" },
+          include: { bankAccount: true }
+        }
       }
     });
+    if (fullName || mobile || address) {
+      await prisma.revenueCollection.updateMany({
+        where: { memberId: id },
+        data: {
+          title: fullName || void 0,
+          mobile: mobile !== void 0 ? mobile || null : void 0,
+          destination: address !== void 0 ? address || null : void 0
+        }
+      }).catch(() => {
+      });
+    }
     logger.info({ memberId: updatedMember.id, photoUrl: updatedMember.photoUrl }, "Member updated in database successfully");
     await logAudit(req.user.id, "Update Member", "MEMBER", existingMember, updatedMember, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    const activationChanged = isActive !== void 0 && Boolean(isActive) !== Boolean(existingMember.isActive);
-    return res.status(200).json({ status: 200, data: updatedMember });
+    return res.status(200).json({ status: 200, data: enrichMemberFinancials(updatedMember) });
   }
   if (method === "DELETE") {
     const isPermanent = req.query.permanent === "true" || req.query.action === "permanent_delete" || req.body?.permanent === true;
@@ -312,5 +469,6 @@ var members_default = makeHandler(async (req, res) => {
   return res.status(405).json({ error: { message: "Method not allowed", status: 405 } });
 });
 export {
-  members_default as default
+  members_default as default,
+  enrichMemberFinancials
 };

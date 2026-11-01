@@ -33,7 +33,15 @@ const createMemberSchema = z.object({
   photoUrl: urlOrPathSchema,
   cnicFrontUrl: urlOrPathSchema,
   cnicBackUrl: urlOrPathSchema,
-  isActive: z.boolean().optional().default(true)
+  isActive: z.boolean().optional().default(true),
+  membershipType: optionalSanitizedString({ max: 50, fieldName: "Membership Type" }),
+  feeAmount: z.preprocess((val) => val === "" || val === null || val === void 0 ? void 0 : Number(val), z.number().min(0).optional()),
+  startDate: optionalDateSchema,
+  expiryDate: optionalDateSchema,
+  initialPayment: z.preprocess((val) => val === "" || val === null || val === void 0 ? 0 : Number(val), z.number().min(0).optional()),
+  paymentMethod: z.enum(["CASH", "BANK", "CHEQUE"]).optional(),
+  bankAccountId: optionalSanitizedString({ max: 100, fieldName: "Bank Account" }),
+  chequeNumber: optionalSanitizedString({ max: 50, fieldName: "Cheque Number" })
 });
 const updateMemberSchema = createMemberSchema.partial();
 const familyRelationshipSchema = z.object({

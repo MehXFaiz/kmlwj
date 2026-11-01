@@ -542,9 +542,16 @@ export const SpecializedRevenueSection = ({
                                 {item.title ? item.title.charAt(0).toUpperCase() : <User className="w-4 h-4 text-amber-400" />}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <h4 className="text-sm sm:text-base font-bold text-slate-100 group-hover:text-amber-400 transition-colors leading-tight tracking-tight truncate">
-                                  {item.title || 'Unknown'}
-                                </h4>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <h4 className="text-sm sm:text-base font-bold text-slate-100 group-hover:text-amber-400 transition-colors leading-tight tracking-tight truncate">
+                                    {item.title || 'Unknown'}
+                                  </h4>
+                                  {(item.member?.memberNo || (isMembershipFee && item.subTitle)) && (
+                                    <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20">
+                                      {item.member?.memberNo || item.subTitle}
+                                    </span>
+                                  )}
+                                </div>
                                 <p className="text-xs text-slate-400 font-medium mt-1 flex items-center gap-1.5 truncate">
                                   {item.mobile ? (
                                     <>
@@ -604,7 +611,38 @@ export const SpecializedRevenueSection = ({
                               </span>
                             </div>
 
-                            {subTitleLabel && (
+                            {isMembershipFee ? (
+                              <>
+                                <div className="flex items-center justify-between py-2.5">
+                                  <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider flex items-center gap-1.5">
+                                    <Building className="w-3.5 h-3.5 text-amber-400 shrink-0" /> MEMBERSHIP TYPE
+                                  </span>
+                                  <span className="font-semibold text-slate-200 text-xs">
+                                    {item.member?.membershipType || 'Regular'}
+                                  </span>
+                                </div>
+                                {(item.member?.address || item.destination) && (
+                                  <div className="flex items-center justify-between py-2.5">
+                                    <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider flex items-center gap-1.5">
+                                      <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" /> ADDRESS
+                                    </span>
+                                    <span className="font-medium text-slate-300 text-xs truncate max-w-[150px]" title={item.member?.address || item.destination}>
+                                      {item.member?.address || item.destination}
+                                    </span>
+                                  </div>
+                                )}
+                                {item.member?.doi && (
+                                  <div className="flex items-center justify-between py-2.5">
+                                    <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider flex items-center gap-1.5">
+                                      <Calendar className="w-3.5 h-3.5 text-amber-400 shrink-0" /> REG. DATE
+                                    </span>
+                                    <span className="font-medium text-slate-300 text-xs">
+                                      {formatDateDDMMYYYY(item.member.doi)}
+                                    </span>
+                                  </div>
+                                )}
+                              </>
+                            ) : subTitleLabel && (
                               <div className="flex items-center justify-between py-2.5">
                                 <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider flex items-center gap-1.5 truncate pr-2">
                                   <Tag className="w-3.5 h-3.5 text-amber-400 shrink-0" /> {subTitleLabel}
@@ -748,8 +786,14 @@ export const SpecializedRevenueSection = ({
                       )}
                       <td className="px-6 py-4 font-mono text-xs font-bold text-slate-400">#{item.receiptNo}</td>
                       <td className="px-6 py-4">
-                        <div className="font-bold text-slate-200">{item.title}</div>
-                        <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">{item.mobile || 'N/A'}</div>
+                        {isMembershipFee && (item.member?.id || item.memberId) ? (
+                          <Link to={`/members/${item.member?.id || item.memberId}`} className="font-bold text-slate-200 hover:text-amber-400 transition-colors">
+                            {item.title}
+                          </Link>
+                        ) : (
+                          <div className="font-bold text-slate-200">{item.title}</div>
+                        )}
+                        <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">{item.mobile || 'N/A'}{item.member?.address ? ` • ${item.member.address}` : ''}</div>
                       </td>
                       {subTitleLabel && (
                         <td className="px-6 py-4 font-mono text-xs text-slate-300">{item.subTitle || '—'}</td>

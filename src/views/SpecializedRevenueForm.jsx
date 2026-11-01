@@ -5,10 +5,13 @@ import { useCoaStore } from '../store/coaStore';
 import { useMemberStore } from '../store/memberStore';
 import { PhoneInput } from '../components/ui/PhoneInput';
 import {
-  DollarSign, Building, Bus, Users, ChevronLeft, CheckCircle, AlertCircle, Save, Search, ChevronDown
+  DollarSign, Building, Bus, Users, ChevronLeft, CheckCircle, AlertCircle,
+  Save, Search, ChevronDown, Check, User, IdCard, MapPin, Phone,
+  Calendar, CreditCard, Wallet, AlertTriangle
 } from 'lucide-react';
 import { showToast } from '../components/ui/Toast';
 import { isGenuineBankAccount } from '../utils/accountFilters';
+import { formatDateDDMMYYYY } from '../utils/dateUtils';
 
 export const SpecializedRevenueForm = ({
   category = 'Membership Fee',
@@ -53,6 +56,7 @@ export const SpecializedRevenueForm = ({
 
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
 
   // Member dropdown state
   const [memberSearch, setMemberSearch] = useState('');
@@ -60,6 +64,7 @@ export const SpecializedRevenueForm = ({
   const memberDropdownRef = useRef(null);
 
   const [form, setForm] = useState({
+    memberId: '',
     title: '',
     fatherName: '',
     husbandName: '',
@@ -94,6 +99,20 @@ export const SpecializedRevenueForm = ({
     return () => document.removeEventListener('mousedown', handleOutside);
   }, []);
 
+  // Preselect member from URL query param if present e.g. /membership-fees/new?memberId=123
+  useEffect(() => {
+    if (isMembershipFee && !id && members.length > 0) {
+      const searchParams = new URLSearchParams(location.search);
+      const mId = searchParams.get('memberId');
+      if (mId) {
+        const found = members.find(m => m.id === mId || m.memberNo === mId);
+        if (found) {
+          handleSelectMember(found);
+        }
+      }
+    }
+  }, [isMembershipFee, id, members, location.search]);
+
   useEffect(() => {
     if (id && collections.length > 0) {
       const existing = collections.find(c => c.id === id);
@@ -117,6 +136,7 @@ export const SpecializedRevenueForm = ({
         }
 
         setForm({
+          memberId: existing.memberId || '',
           title: existing.title || '',
           fatherName: extFather,
           husbandName: extHusband,
@@ -134,12 +154,20 @@ export const SpecializedRevenueForm = ({
           remarks: extRemarks,
           postImmediately: existing.status === 'POSTED'
         });
+
+        if (existing.member) {
+          setSelectedMember(existing.member);
+        } else if (existing.memberId && members.length > 0) {
+          const m = members.find(item => item.id === existing.memberId);
+          if (m) setSelectedMember(m);
+        }
+
         if (isMembershipFee && existing.title) {
           setMemberSearch(existing.title);
         }
       }
     }
-  }, [id, collections, isMembershipFee]);
+  }, [id, collections, isMembershipFee, members]);
 
   const bankAccounts = useMemo(() => {
     return flatAccounts.filter(isGenuineBankAccount);
@@ -150,6 +178,7 @@ export const SpecializedRevenueForm = ({
     const q = memberSearch.toLowerCase();
     return members.filter(m =>
       (m.fullName && m.fullName.toLowerCase().includes(q)) ||
+      (m.memberNo && m.memberNo.toLowerCase().includes(q)) ||
       (m.fatherName && m.fatherName.toLowerCase().includes(q)) ||
       (m.cnic && m.cnic.includes(q)) ||
       (m.mobile && m.mobile.includes(q))
@@ -157,15 +186,19 @@ export const SpecializedRevenueForm = ({
   }, [members, memberSearch]);
 
   const handleSelectMember = (member) => {
+    setSelectedMember(member);
     setForm(prev => ({
       ...prev,
+      memberId: member.id,
       title: member.fullName || '',
       fatherName: member.fatherName || '',
       husbandName: member.husbandName || '',
-      subTitle: member.cnic || '',
+      subTitle: member.memberNo || member.cnic || '',
       mobile: member.mobile || '',
       gham: member.ghamName || member.gham || member.fatherGham || '',
-      destination: member.address || [member.area, member.city].filter(Boolean).join(', ') || ''
+      destination: member.address || [member.area, member.city].filter(Boolean).join(', ') || '',
+      rate: prev.rate || member.feeAmount || 500,
+      amount: prev.amount || (member.outstandingBalance > 0 ? member.outstandingBalance : (member.feeAmount || 500))
     }));
     setMemberSearch(member.fullName || '');
     setMemberDropdownOpen(false);
@@ -211,6 +244,7 @@ export const SpecializedRevenueForm = ({
       const payload = {
         ...form,
         category: activeCategory,
+        memberId: form.memberId || undefined,
         amount: Number(form.amount),
         quantity: form.quantity ? Number(form.quantity) : null,
         rate: form.rate ? Number(form.rate) : null,
@@ -260,67 +294,48 @@ export const SpecializedRevenueForm = ({
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
-          <Link to={activeBackPath} className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700 transition-colors">
+          <Link
+            to={activeBackPath}
+            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700 transition-colors"
+          >
             <ChevronLeft className="w-4 h-4" />
           </Link>
           <div>
             <h1 className="text-xl font-bold text-slate-100">
-              {id ? `Edit ${activeCategory} Record` : `New ${activeTitle}`}
+              {id ? `Edit ${activeCategory} Record` : `New ${activeCategory} Entry`}
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">{activeDesc}</p>
           </div>
         </div>
         <span className="text-xs font-semibold text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20">
-          {id ? 'Editing Record' : 'New Entry'}
+          {id ? 'Editing Receipt' : 'General Ledger Connected'}
         </span>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          
-          {/* LEFT: Info */}
-          <div className="lg:col-span-4 space-y-5">
-            <div className="bg-amber-500/5 rounded-2xl border border-amber-500/20 p-5">
-              <div className="flex items-center gap-2 mb-4">
-                {isBusBooking ? <Bus className="w-4 h-4 text-amber-400" /> : <Building className="w-4 h-4 text-amber-400" />}
-                <h3 className="text-sm font-semibold text-amber-300">{activeCategory} Info</h3>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-                    <DollarSign className="w-3.5 h-3.5 text-amber-400" />
-                  </div>
-                  <span className="text-xs font-semibold text-slate-300">Dedicated Revenue Ledger</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-                    <Users className="w-3.5 h-3.5 text-amber-400" />
-                  </div>
-                  <span className="text-xs font-semibold text-slate-300">Tracks Contributor History</span>
-                </div>
-              </div>
-              <div className="border-t border-amber-500/20 my-4" />
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Fields marked with <span className="text-red-400 font-bold">*</span> are mandatory.
-              </p>
-            </div>
-          </div>
 
-          {/* RIGHT: Form Cards */}
+          {/* LEFT: Core Details */}
           <div className="lg:col-span-8 space-y-5">
-            
-            {/* Card 01: Core Details */}
             <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
               <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
                 <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">01</span>
-                <h3 className="text-sm font-semibold text-slate-200">{activeCategory} Details</h3>
+                <h3 className="text-sm font-semibold text-slate-200">
+                  {isMembershipFee ? 'Member Registration & Fee Link' : 'Payer Information'}
+                </h3>
               </div>
+
               <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
 
                 {/* Member search dropdown if Membership Fee */}
                 {isMembershipFee ? (
                   <div className="sm:col-span-2 relative" ref={memberDropdownRef}>
-                    <label className={labelClass}>{activeTitleLabel} *</label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-semibold text-slate-400">Search Registered Member *</label>
+                      <Link to="/members/new" className="text-xs text-amber-400 hover:text-amber-300 font-semibold inline-flex items-center gap-1">
+                        + Register New Member
+                      </Link>
+                    </div>
                     <div className="relative">
                       <input
                         type="text"
@@ -332,7 +347,7 @@ export const SpecializedRevenueForm = ({
                           setMemberDropdownOpen(true);
                         }}
                         onFocus={() => setMemberDropdownOpen(true)}
-                        placeholder="Search & select member by name, CNIC or phone..."
+                        placeholder="Type member name, KML number, CNIC, or mobile..."
                         className="w-full pl-9 pr-8 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 transition-all font-medium"
                       />
                       <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
@@ -342,7 +357,7 @@ export const SpecializedRevenueForm = ({
                     {memberDropdownOpen && (
                       <div className="absolute z-[70] left-0 right-0 mt-1.5 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto divide-y divide-slate-800">
                         {filteredMembersList.length === 0 ? (
-                          <div className="p-3 text-xs text-slate-500 text-center">No members matched</div>
+                          <div className="p-3 text-xs text-slate-500 text-center">No registered members matched your search</div>
                         ) : (
                           filteredMembersList.map(m => (
                             <div
@@ -351,10 +366,14 @@ export const SpecializedRevenueForm = ({
                               className="p-3 hover:bg-slate-800/80 cursor-pointer transition-colors flex items-center justify-between"
                             >
                               <div>
-                                <div className="text-sm font-bold text-slate-200">{m.fullName}</div>
-                                <div className="text-xs text-slate-400">
-                                  {m.fatherName ? `F/N: ${m.fatherName} ` : ''}
-                                  {m.husbandName ? `H/N: ${m.husbandName} ` : ''}
+                                <div className="text-sm font-bold text-slate-200 flex items-center gap-2">
+                                  <span>{m.fullName}</span>
+                                  <span className="text-[10px] font-mono text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20">
+                                    {m.memberNo || 'KML'}
+                                  </span>
+                                </div>
+                                <div className="text-xs text-slate-400 mt-0.5">
+                                  {m.fatherName ? `s/o ${m.fatherName} ` : ''}
                                   {m.cnic ? `| CNIC: ${m.cnic} ` : ''}
                                   {m.mobile ? `| Ph: ${m.mobile}` : ''}
                                 </div>
@@ -365,7 +384,16 @@ export const SpecializedRevenueForm = ({
                                   </div>
                                 )}
                               </div>
-                              <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20 shrink-0">Select</span>
+                              <div className="text-right shrink-0">
+                                <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20 font-semibold">
+                                  Select Member
+                                </span>
+                                {m.paymentStatus && (
+                                  <div className="text-[10px] text-slate-400 mt-1">
+                                    Status: <strong className={m.paymentStatus === 'Paid' ? 'text-emerald-400' : 'text-amber-400'}>{m.paymentStatus}</strong>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           ))
                         )}
@@ -383,6 +411,60 @@ export const SpecializedRevenueForm = ({
                       placeholder="e.g. Muhammad Ali / Donor Name"
                       className={inputClass}
                     />
+                  </div>
+                )}
+
+                {/* Selected Member Details Card */}
+                {isMembershipFee && selectedMember && (
+                  <div className="sm:col-span-2 bg-slate-950/60 rounded-xl border border-amber-500/30 p-4 space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-amber-300">Registered Member Details</span>
+                        <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                          {selectedMember.memberNo || 'KML'}
+                        </span>
+                      </div>
+                      <Link
+                        to={`/members/${selectedMember.id}`}
+                        target="_blank"
+                        className="text-xs text-amber-400 hover:text-amber-300 font-semibold underline"
+                      >
+                        View Full Profile
+                      </Link>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                      <div>
+                        <span className="text-slate-500 text-[10px] font-bold uppercase block">Full Name</span>
+                        <span className="font-semibold text-slate-200">{selectedMember.fullName}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-[10px] font-bold uppercase block">Contact Number</span>
+                        <span className="font-mono text-slate-200">{selectedMember.mobile || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-[10px] font-bold uppercase block">CNIC / ID</span>
+                        <span className="font-mono text-slate-200">{selectedMember.cnic || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-[10px] font-bold uppercase block">Membership Type</span>
+                        <span className="font-semibold text-amber-400">{selectedMember.membershipType || 'Regular'}</span>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <span className="text-slate-500 text-[10px] font-bold uppercase block">Residential Address</span>
+                        <span className="text-slate-300 truncate block">{selectedMember.address || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-[10px] font-bold uppercase block">Registration Date</span>
+                        <span className="text-slate-300">{selectedMember.doi ? formatDateDDMMYYYY(selectedMember.doi) : 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-[10px] font-bold uppercase block">Current Fee Status</span>
+                        <span className={`font-bold ${selectedMember.paymentStatus === 'Paid' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                          {selectedMember.paymentStatus || 'Unpaid'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -417,7 +499,7 @@ export const SpecializedRevenueForm = ({
                       type="text"
                       value={form.subTitle}
                       onChange={e => setForm({ ...form, subTitle: e.target.value })}
-                      placeholder={isBusBooking ? 'e.g. Bus # 5 / Toyota Coaster' : 'e.g. 42101-1234567-1'}
+                      placeholder={isBusBooking ? 'e.g. Bus # 5 / Toyota Coaster' : 'e.g. KML-0004 or 42101-1234567-1'}
                       className={inputClass}
                     />
                   </div>
@@ -451,11 +533,22 @@ export const SpecializedRevenueForm = ({
                     type="text"
                     value={form.destination}
                     onChange={e => setForm({ ...form, destination: e.target.value })}
-                    placeholder="e.g. House # 12, Street 3, Baldia Town, Karachi"
+                    placeholder="e.g. Karachi / Saddar"
                     className={inputClass}
                   />
                 </div>
 
+              </div>
+            </div>
+
+            {/* Payment & Ledger Card */}
+            <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
+                <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">02</span>
+                <h3 className="text-sm font-semibold text-slate-200">Financial &amp; General Ledger Details</h3>
+              </div>
+
+              <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass}>{activeDateLabel} *</label>
                   <input
@@ -467,25 +560,25 @@ export const SpecializedRevenueForm = ({
                   />
                 </div>
 
-                {activeShowDest && (
-                  <div>
-                    <label className={labelClass}>{activeDestLabel}</label>
-                    <input
-                      type="text"
-                      value={form.destination}
-                      onChange={e => setForm({ ...form, destination: e.target.value })}
-                      placeholder="e.g. Makli / Thatta / Hyderabad"
-                      className={inputClass}
-                    />
-                  </div>
-                )}
+                <div>
+                  <label className={labelClass}>Amount Paid (PKR) *</label>
+                  <input
+                    type="number"
+                    step="1"
+                    min="1"
+                    required
+                    value={form.amount}
+                    onChange={e => setForm({ ...form, amount: e.target.value })}
+                    placeholder="500"
+                    className={inputClass}
+                  />
+                </div>
 
                 {activeShowQty && (
                   <div>
                     <label className={labelClass}>{activeQtyLabel}</label>
                     <input
                       type="number"
-                      min="1"
                       value={form.quantity}
                       onChange={e => handleQtyRateChange('quantity', e.target.value)}
                       className={inputClass}
@@ -495,10 +588,9 @@ export const SpecializedRevenueForm = ({
 
                 {activeShowRate && (
                   <div>
-                    <label className={labelClass}>{activeRateLabel} (PKR)</label>
+                    <label className={labelClass}>{activeRateLabel}</label>
                     <input
                       type="number"
-                      step="any"
                       value={form.rate}
                       onChange={e => handleQtyRateChange('rate', e.target.value)}
                       className={inputClass}
@@ -507,129 +599,90 @@ export const SpecializedRevenueForm = ({
                 )}
 
                 <div>
-                  <label className={labelClass}>Amount (PKR) *</label>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">PKR</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      required
-                      value={form.amount}
-                      onChange={e => setForm({ ...form, amount: e.target.value })}
-                      placeholder="0.00"
-                      className="w-full pl-12 pr-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-amber-400 focus:outline-none focus:border-amber-500/60 transition-all font-bold"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 02: Payment & Settlement */}
-            <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
-                <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">02</span>
-                <h3 className="text-sm font-semibold text-slate-200">Payment & Settlement</h3>
-              </div>
-              <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
                   <label className={labelClass}>Payment Method *</label>
                   <select
                     value={form.paymentMethod}
                     onChange={e => setForm({ ...form, paymentMethod: e.target.value })}
                     className={inputClass}
                   >
-                    <option value="CASH">CASH</option>
-                    <option value="BANK">BANK / ONLINE</option>
-                    <option value="CHEQUE">CHEQUE</option>
+                    <option value="CASH">Cash in Hand</option>
+                    <option value="BANK">Bank Transfer / Online</option>
+                    <option value="CHEQUE">Cheque</option>
                   </select>
                 </div>
 
                 {form.paymentMethod !== 'CASH' && (
                   <div>
-                    <label className={labelClass}>Select Bank Account *</label>
+                    <label className={labelClass}>Bank Account *</label>
                     <select
                       required
                       value={form.bankAccountId}
                       onChange={e => setForm({ ...form, bankAccountId: e.target.value })}
                       className={inputClass}
                     >
-                      <option value="">-- Select Bank Account --</option>
-                      {bankAccounts.map(a => (
-                        <option key={a.id} value={a.id}>{a.accountName || a.name} ({a.glCode || a.code})</option>
+                      <option value="">Select Deposit Bank Account</option>
+                      {bankAccounts.map(acc => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.accountName} ({acc.glCode})
+                        </option>
                       ))}
                     </select>
                   </div>
                 )}
 
                 {form.paymentMethod === 'CHEQUE' && (
-                  <div className="sm:col-span-2">
-                    <label className={labelClass}>Cheque Number / Reference</label>
+                  <div>
+                    <label className={labelClass}>Cheque Number</label>
                     <input
                       type="text"
                       value={form.chequeNumber}
                       onChange={e => setForm({ ...form, chequeNumber: e.target.value })}
-                      placeholder="e.g. CHQ-123456"
+                      placeholder="e.g. CHQ-981240"
                       className={inputClass}
                     />
                   </div>
                 )}
-              </div>
-            </div>
 
-            {/* Card 03: Remarks & Posting */}
-            <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-800/40">
-                <span className="w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">03</span>
-                <h3 className="text-sm font-semibold text-slate-200">Remarks & Posting</h3>
-              </div>
-              <div className="p-5 grid grid-cols-1 gap-4">
-                <div>
-                  <label className={labelClass}>Remarks / Narration</label>
-                  <textarea
-                    rows={2}
+                <div className="sm:col-span-2">
+                  <label className={labelClass}>Remarks / Description</label>
+                  <input
+                    type="text"
                     value={form.remarks}
                     onChange={e => setForm({ ...form, remarks: e.target.value })}
-                    placeholder="Optional notes, receipt number or payment details..."
-                    className={`${inputClass} resize-none`}
+                    placeholder="e.g. Annual membership fee 2026-2027"
+                    className={inputClass}
                   />
                 </div>
-
-                {!id && (
-                  <div className="flex items-center pt-2">
-                    <label className="flex items-center gap-2.5 cursor-pointer text-sm text-slate-300 font-semibold">
-                      <input
-                        type="checkbox"
-                        checked={form.postImmediately}
-                        onChange={e => setForm({ ...form, postImmediately: e.target.checked })}
-                        className="h-4 w-4 rounded border-slate-800 bg-slate-950/60 text-amber-600 focus:ring-amber-600 focus:ring-offset-slate-900 cursor-pointer"
-                      />
-                      Post immediately to General Ledger
-                    </label>
-                  </div>
-                )}
               </div>
             </div>
-
-            {/* Submit Bar */}
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <Link to={activeBackPath} className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">
-                Cancel
-              </Link>
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold transition-all shadow-lg shadow-amber-600/25 active:scale-95 disabled:opacity-50 cursor-pointer"
-              >
-                <Save className="w-4 h-4" />
-                <span>{loading ? 'Saving...' : (id ? 'Update Record' : 'Save Record')}</span>
-              </button>
-            </div>
-
           </div>
+
+          {/* RIGHT: Actions + Info */}
+          <div className="lg:col-span-4 space-y-5">
+            <div className="bg-slate-900 rounded-2xl border border-slate-800 p-5 space-y-4">
+              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                <Check className="w-4 h-4 text-emerald-400" />
+                Posting Confirmation
+              </h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Saving this entry will automatically record the fee against the member's account and post a receipt to the General Ledger.
+              </p>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold shadow-lg shadow-amber-600/25 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{loading ? 'Saving...' : (id ? 'Update Record' : 'Save & Post Receipt')}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
         </div>
       </form>
     </div>
   );
 };
-
-export default SpecializedRevenueForm;
