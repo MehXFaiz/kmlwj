@@ -232,9 +232,11 @@ export const PettyCash = () => {
       return (
         codeStr === '1010101' ||
         codeStr === '1010102' ||
+        codeStr === '1010105' ||
         codeStr === '1010103' ||
         nameStr.includes('national bank') ||
         nameStr.includes('nbp-zakat') ||
+        nameStr.includes('hbl') ||
         nameStr.includes('cash in hand')
       );
     });

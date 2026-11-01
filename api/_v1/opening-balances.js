@@ -19,6 +19,8 @@ function getFinancialYearFromDate(dateInput) {
 const PRIMARY_GL_CODES = [
   "1010101",
   // National Bank of Pakistan
+  "1010105",
+  // HBL Bank Account
   "1010102",
   // NBP Zakat Bank
   "1010103",

@@ -1454,6 +1454,7 @@ export class AccountingService {
    */
   static readonly BALANCE_CATEGORY_BY_GL_CODE: Readonly<Record<string, 'cashInHand' | 'banks' | 'advanceAndLoan' | 'receivable'>> = {
     '1010101': 'banks',          // National Bank of Pakistan
+    '1010105': 'banks',          // HBL Bank Account
     '1010102': 'banks',          // NBP Zakat Bank
     '1010103': 'cashInHand',     // Cash in Hand
     '1010104': 'cashInHand',     // Petty Cash

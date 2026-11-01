@@ -27,7 +27,7 @@ export function isGenuineBankAccount(account) {
   if (name.includes('charge') || name.includes('fee') || name.includes('expense')) return false;
 
   // Recognized Bank Accounts
-  if (code === '1010101' || code === '1010102') return true;
+  if (code === '1010101' || code === '1010102' || code === '1010105') return true;
   if (detail === 'bank') return true;
 
   if (

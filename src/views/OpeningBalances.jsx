@@ -107,7 +107,7 @@ export function OpeningBalances() {
   };
 
   // Primary Accounts for quick entry / key presentation
-  const primaryCodes = ['1010101', '1010102', '1010103', '1010104', '1010301', '1010201'];
+  const primaryCodes = ['1010101', '1010105', '1010102', '1010103', '1010104', '1010301', '1010201'];
   const displayAccounts = React.useMemo(() => {
     const rawList = (allAccounts && allAccounts.length > 0)
       ? allAccounts
@@ -132,12 +132,24 @@ export function OpeningBalances() {
       });
     }
 
+        // Sort to place primary accounts in the designated sequence:
+    // National Bank of Pakistan (1010101), HBL Bank Account (1010105), NBP-Zakat Account (1010102), etc.
+    uniqueList.sort((a, b) => {
+      const idxA = primaryCodes.indexOf(a.glCode);
+      const idxB = primaryCodes.indexOf(b.glCode);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return (a.glCode || '').localeCompare(b.glCode || '');
+    });
+
     return uniqueList;
   }, [allAccounts, formBalances]);
 
   function getAccountName(code) {
     switch (code) {
       case '1010101': return 'National Bank of Pakistan';
+      case '1010105': return 'HBL Bank Account';
       case '1010102': return 'NBP Zakat Bank';
       case '1010103': return 'Cash in Hand';
       case '1010104': return 'Petty Cash';
