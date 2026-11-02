@@ -86,7 +86,7 @@ export class PettyCashService {
       config = await prisma.pettyCashConfig.create({
         data: {
           accountId: account.id,
-          fundLimit: new Prisma.Decimal(50000),
+          fundLimit: 50000,
           custodianName: 'Authorized Custodian',
           status: 'ACTIVE',
           remarks: 'Default Petty Cash Fund Configuration'
@@ -378,14 +378,14 @@ export class PettyCashService {
             create: [
               {
                 accountId: account.id, // DEBIT: Petty Cash (ASSET increase)
-                debit: amountDec,
+                debit: amountDec.toNumber(),
                 credit: 0,
                 description: `Petty Cash Deposit from ${sourceAccount.accountName}`
               },
               {
                 accountId: sourceAccount.id, // CREDIT: Source Account (ASSET decrease)
                 debit: 0,
-                credit: amountDec,
+                credit: amountDec.toNumber(),
                 description: `Transfer to Petty Cash Fund`
               }
             ]
@@ -396,12 +396,12 @@ export class PettyCashService {
       // Update Account Balances atomically
       await tx.account.update({
         where: { id: account.id },
-        data: { currentBalance: { increment: amountDec } }
+        data: { currentBalance: { increment: amountDec.toNumber() } }
       });
 
       await tx.account.update({
         where: { id: sourceAccount.id },
-        data: { currentBalance: { decrement: amountDec } }
+        data: { currentBalance: { decrement: amountDec.toNumber() } }
       });
 
       // Create Petty Cash Transaction Record
@@ -411,7 +411,7 @@ export class PettyCashService {
           transactionType: data.isReplenishment ? 'REPLENISHMENT' : 'TRANSFER_IN',
           pettyCashAccountId: account.id,
           sourceAccountId: sourceAccount.id,
-          amount: amountDec,
+          amount: amountDec.toNumber(),
           date,
           referenceNo: data.referenceNo,
           narration: data.narration,
@@ -537,14 +537,14 @@ export class PettyCashService {
             create: [
               {
                 accountId: expenseAccount.id, // DEBIT: Expense Account (P&L Expense increase)
-                debit: amountDec,
+                debit: amountDec.toNumber(),
                 credit: 0,
                 description: `Paid to ${data.paidTo}: ${data.narration || expenseAccount.accountName}`
               },
               {
                 accountId: account.id, // CREDIT: Petty Cash (ASSET decrease)
                 debit: 0,
-                credit: amountDec,
+                credit: amountDec.toNumber(),
                 description: `Petty Cash Payment to ${data.paidTo}`
               }
             ]
@@ -555,12 +555,12 @@ export class PettyCashService {
       // Update Account Balances atomically
       await tx.account.update({
         where: { id: expenseAccount.id },
-        data: { currentBalance: { increment: amountDec } }
+        data: { currentBalance: { increment: amountDec.toNumber() } }
       });
 
       await tx.account.update({
         where: { id: account.id },
-        data: { currentBalance: { decrement: amountDec } }
+        data: { currentBalance: { decrement: amountDec.toNumber() } }
       });
 
       // Create Petty Cash Transaction Record
@@ -571,7 +571,7 @@ export class PettyCashService {
           pettyCashAccountId: account.id,
           expenseAccountId: expenseAccount.id,
           expenseHeadId: data.expenseHeadId || null,
-          amount: amountDec,
+          amount: amountDec.toNumber(),
           date,
           paidTo: data.paidTo,
           referenceNo: data.referenceNo,
@@ -629,9 +629,9 @@ export class PettyCashService {
       data: {
         pettyCashAccountId: account.id,
         reconciliationDate: new Date(),
-        systemBalance,
-        physicalCount,
-        difference,
+        systemBalance: systemBalance.toNumber(),
+        physicalCount: physicalCount.toNumber(),
+        difference: difference.toNumber(),
         explanation: data.explanation || null,
         status: difference.isZero() ? 'APPROVED' : 'PENDING_APPROVAL',
         reconciledById
@@ -723,19 +723,19 @@ export class PettyCashService {
         // Physical count is less than system balance -> Cash Shortage (Expense)
         const absDiff = diffDec.abs();
         jeLines = [
-          { accountId: adjAccount.id, debit: absDiff, credit: 0, description: 'Petty Cash Shortage Adjustment' },
-          { accountId: rec.pettyCashAccountId, debit: 0, credit: absDiff, description: 'Petty Cash Shortage Adjustment' }
+          { accountId: adjAccount.id, debit: absDiff.toNumber(), credit: 0, description: 'Petty Cash Shortage Adjustment' },
+          { accountId: rec.pettyCashAccountId, debit: 0, credit: absDiff.toNumber(), description: 'Petty Cash Shortage Adjustment' }
         ];
-        await tx.account.update({ where: { id: rec.pettyCashAccountId }, data: { currentBalance: { decrement: absDiff } } });
-        await tx.account.update({ where: { id: adjAccount.id }, data: { currentBalance: { increment: absDiff } } });
+        await tx.account.update({ where: { id: rec.pettyCashAccountId }, data: { currentBalance: { decrement: absDiff.toNumber() } } });
+        await tx.account.update({ where: { id: adjAccount.id }, data: { currentBalance: { increment: absDiff.toNumber() } } });
       } else {
         // Physical count is greater than system balance -> Cash Surplus (Income)
         jeLines = [
-          { accountId: rec.pettyCashAccountId, debit: diffDec, credit: 0, description: 'Petty Cash Excess Adjustment' },
-          { accountId: adjAccount.id, debit: 0, credit: diffDec, description: 'Petty Cash Excess Adjustment' }
+          { accountId: rec.pettyCashAccountId, debit: diffDec.toNumber(), credit: 0, description: 'Petty Cash Excess Adjustment' },
+          { accountId: adjAccount.id, debit: 0, credit: diffDec.toNumber(), description: 'Petty Cash Excess Adjustment' }
         ];
-        await tx.account.update({ where: { id: rec.pettyCashAccountId }, data: { currentBalance: { increment: diffDec } } });
-        await tx.account.update({ where: { id: adjAccount.id }, data: { currentBalance: { increment: diffDec } } });
+        await tx.account.update({ where: { id: rec.pettyCashAccountId }, data: { currentBalance: { increment: diffDec.toNumber() } } });
+        await tx.account.update({ where: { id: adjAccount.id }, data: { currentBalance: { increment: diffDec.toNumber() } } });
       }
 
       const je = await tx.journalEntry.create({
@@ -757,7 +757,7 @@ export class PettyCashService {
           voucherNo,
           transactionType: 'ADMIN_ADJUSTMENT',
           pettyCashAccountId: rec.pettyCashAccountId,
-          amount: diffDec,
+          amount: diffDec.toNumber(),
           date,
           narration: `Admin Adjustment: ${rec.explanation || 'Reconciliation variance'}`,
           journalEntryId: je.id,
@@ -810,7 +810,7 @@ export class PettyCashService {
 
           await tx.account.update({
             where: { id: line.accountId },
-            data: { currentBalance: { decrement: netEffect } }
+            data: { currentBalance: { decrement: netEffect.toNumber() } }
           });
         }
 
@@ -890,7 +890,8 @@ export class PettyCashService {
     if (!pcTx) throw new Error('Petty Cash transaction not found.');
     if (pcTx.isDeleted) throw new Error('Cannot edit a deleted/reverted transaction.');
 
-    const newAmount = data.amount !== undefined ? validateAmount(data.amount).amount : Number(pcTx.amount);
+    const valRes = data.amount !== undefined ? validateAmount(data.amount) : null;
+    const newAmount = valRes && valRes.valid && valRes.amount !== undefined ? valRes.amount : Number(pcTx.amount);
     const newAmountDec = new Prisma.Decimal(newAmount);
     const newDate = data.date ? new Date(data.date) : pcTx.date;
     const newPaidTo = data.paidTo !== undefined ? String(data.paidTo).trim() : pcTx.paidTo;
@@ -909,7 +910,7 @@ export class PettyCashService {
 
           await tx.account.update({
             where: { id: line.accountId },
-            data: { currentBalance: { decrement: netEffect } }
+            data: { currentBalance: { decrement: netEffect.toNumber() } }
           });
         }
       }
@@ -920,21 +921,21 @@ export class PettyCashService {
         const expAccId = newExpenseAccountId || pcTx.expenseAccountId;
         if (!expAccId) throw new Error('Expense account is required.');
         newJeLines = [
-          { accountId: expAccId, debit: newAmountDec, credit: 0, description: `Paid to ${newPaidTo || 'Recipient'}: ${newNarration || ''}` },
-          { accountId: pcTx.pettyCashAccountId, debit: 0, credit: newAmountDec, description: `Petty Cash Payment` }
+          { accountId: expAccId, debit: newAmountDec.toNumber(), credit: 0, description: `Paid to ${newPaidTo || 'Recipient'}: ${newNarration || ''}` },
+          { accountId: pcTx.pettyCashAccountId, debit: 0, credit: newAmountDec.toNumber(), description: `Petty Cash Payment` }
         ];
-        await tx.account.update({ where: { id: expAccId }, data: { currentBalance: { increment: newAmountDec } } });
-        await tx.account.update({ where: { id: pcTx.pettyCashAccountId }, data: { currentBalance: { decrement: newAmountDec } } });
+        await tx.account.update({ where: { id: expAccId }, data: { currentBalance: { increment: newAmountDec.toNumber() } } });
+        await tx.account.update({ where: { id: pcTx.pettyCashAccountId }, data: { currentBalance: { decrement: newAmountDec.toNumber() } } });
 
       } else if (['TRANSFER_IN', 'REPLENISHMENT'].includes(pcTx.transactionType)) {
         const srcAccId = newSourceAccountId || pcTx.sourceAccountId;
         if (!srcAccId) throw new Error('Source account is required.');
         newJeLines = [
-          { accountId: pcTx.pettyCashAccountId, debit: newAmountDec, credit: 0, description: `Petty Cash Deposit` },
-          { accountId: srcAccId, debit: 0, credit: newAmountDec, description: `Transfer to Petty Cash` }
+          { accountId: pcTx.pettyCashAccountId, debit: newAmountDec.toNumber(), credit: 0, description: `Petty Cash Deposit` },
+          { accountId: srcAccId, debit: 0, credit: newAmountDec.toNumber(), description: `Transfer to Petty Cash` }
         ];
-        await tx.account.update({ where: { id: pcTx.pettyCashAccountId }, data: { currentBalance: { increment: newAmountDec } } });
-        await tx.account.update({ where: { id: srcAccId }, data: { currentBalance: { decrement: newAmountDec } } });
+        await tx.account.update({ where: { id: pcTx.pettyCashAccountId }, data: { currentBalance: { increment: newAmountDec.toNumber() } } });
+        await tx.account.update({ where: { id: srcAccId }, data: { currentBalance: { decrement: newAmountDec.toNumber() } } });
       }
 
       // 3. Update Journal Entry if linked
@@ -955,7 +956,7 @@ export class PettyCashService {
       const updatedPcTx = await tx.pettyCashTransaction.update({
         where: { id: transactionId },
         data: {
-          amount: newAmountDec,
+          amount: newAmountDec.toNumber(),
           date: newDate,
           paidTo: newPaidTo,
           narration: newNarration,

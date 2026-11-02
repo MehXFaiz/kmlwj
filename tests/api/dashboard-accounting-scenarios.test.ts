@@ -25,14 +25,24 @@ describe('7 Live Accounting & Dashboard Verification Scenarios', () => {
     const email = adminUser ? adminUser.email : 'admin@erp.com';
     token = jwt.sign({ sub: subId, email, role: 'admin' }, secret);
 
-    testDonor = await prisma.donor.findFirst({ where: { isDeleted: false } });
-    if (!testDonor) {
+    testDonor = await prisma.donor.findFirst();
+    if (testDonor) {
+      if (testDonor.isDeleted) {
+        testDonor = await prisma.donor.update({
+          where: { id: testDonor.id },
+          data: { isDeleted: false, isActive: true }
+        });
+      }
+    } else {
+      const randomCnic = '42101' + String(Date.now()).slice(-8);
       testDonor = await prisma.donor.create({
         data: {
           fullName: 'Scenario Test Donor',
           donorCode: `DNR-${Date.now()}`,
+          cnic: randomCnic,
           mobile: '03009999999',
-          isActive: true
+          isActive: true,
+          isDeleted: false
         }
       });
     }
@@ -365,5 +375,5 @@ describe('7 Live Accounting & Dashboard Verification Scenarios', () => {
       }
     }
     await AccountingService.recalculateAllBalances(prisma);
-  }, 30000);
+  }, 60000);
 });

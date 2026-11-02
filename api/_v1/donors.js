@@ -131,7 +131,7 @@ var donors_default = makeHandler(async (req, res) => {
             fullName,
             fatherName: fatherName || null,
             mobile: mobile || null,
-            cnic: cnic || null,
+            cnic: cnic ? String(cnic).trim() : void 0,
             email: email || null,
             address: address || null,
             city: city || null,

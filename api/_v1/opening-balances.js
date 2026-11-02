@@ -310,7 +310,7 @@ var opening_balances_default = makeHandler(async (req, res) => {
             subsidiary: "Global",
             reference: refStr,
             description: isAdjustment ? `Adjusted Opening Balances - ${financialYear}: ${reason}` : `Opening Balances - ${financialYear}`,
-            postedBy: req.user.fullName || "Administrator",
+            postedBy: req.user?.fullName || req.user?.email || "Administrator",
             status: "Posted",
             voucherType: "JV",
             lines: {

@@ -70,6 +70,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const formatted = dbAccounts.map((acc) => ({
       id: acc.id,
       code: acc.glCode,
+      glCode: acc.glCode,
       name: acc.accountName,
       accountName: acc.accountName,
       accountLevel: acc.accountLevel,

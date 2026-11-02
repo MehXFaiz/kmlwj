@@ -50,8 +50,8 @@ export class AccountingBalanceRebuildService {
         include: { accountType: true }
       });
 
-      const leafAccounts = accounts.filter(a => !accounts.some(child => child.parentId === a.id));
-      const leafIds = leafAccounts.map(a => a.id);
+      const leafAccounts = accounts.filter((a: any) => !accounts.some((child: any) => child.parentId === a.id));
+      const leafIds = leafAccounts.map((a: any) => a.id);
 
       // Date boundaries
       const from = startDate ? new Date(startDate) : undefined;
@@ -96,10 +96,10 @@ export class AccountingBalanceRebuildService {
         }) : Promise.resolve([])
       ]);
 
-      const periodMap = new Map(periodGroups.map(g => [g.accountId, { debit: new Prisma.Decimal(g._sum.debit ?? 0), credit: new Prisma.Decimal(g._sum.credit ?? 0) }]));
-      const priorMap = new Map(priorGroups.map(g => [g.accountId, { debit: new Prisma.Decimal(g._sum.debit ?? 0), credit: new Prisma.Decimal(g._sum.credit ?? 0) }]));
+      const periodMap = new Map<string, { debit: Prisma.Decimal; credit: Prisma.Decimal }>(periodGroups.map((g: any) => [g.accountId, { debit: new Prisma.Decimal(g._sum.debit ?? 0), credit: new Prisma.Decimal(g._sum.credit ?? 0) }]));
+      const priorMap = new Map<string, { debit: Prisma.Decimal; credit: Prisma.Decimal }>(priorGroups.map((g: any) => [g.accountId, { debit: new Prisma.Decimal(g._sum.debit ?? 0), credit: new Prisma.Decimal(g._sum.credit ?? 0) }]));
       const cumulativeMap = (from || toDate)
-        ? new Map(cumulativeGroups.map(g => [g.accountId, { debit: new Prisma.Decimal(g._sum.debit ?? 0), credit: new Prisma.Decimal(g._sum.credit ?? 0) }]))
+        ? new Map<string, { debit: Prisma.Decimal; credit: Prisma.Decimal }>(cumulativeGroups.map((g: any) => [g.accountId, { debit: new Prisma.Decimal(g._sum.debit ?? 0), credit: new Prisma.Decimal(g._sum.credit ?? 0) }]))
         : periodMap;
 
       let totalAssets = new Prisma.Decimal(0);

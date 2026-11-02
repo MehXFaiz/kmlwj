@@ -4,8 +4,8 @@ import { AccountingService } from '../../api/_services/accounting.service.js';
 import { FinancialYearService } from '../../api/_services/financial-year.service.js';
 
 describe('Financial Year Opening/Closing & Automatic Rollover Engine', { timeout: 30000 }, () => {
-  const testFy1 = 'FY 2026-2027';
-  const testFy2 = 'FY 2027-2028';
+  const testFy1 = 'FY 2048-2049';
+  const testFy2 = 'FY 2049-2050';
   let testUserId: string;
 
   let cashAccountId: string;
@@ -31,12 +31,17 @@ describe('Financial Year Opening/Closing & Automatic Rollover Engine', { timeout
     }
     testUserId = user.id;
 
-    // 2. Clean up ALL previous test data for FY 2026-2027 and FY 2027-2028 to keep DB isolated
+    // 2. Clean up ALL previous test data for FY 2048-2049 and FY 2049-2050 to keep DB isolated
     const testJvs = await prisma.journalEntry.findMany({
       where: {
         OR: [
-          { reference: { contains: 'TEST' } },
-          { postingDate: { gte: new Date('2026-07-01'), lte: new Date('2028-06-30') } }
+          { reference: { contains: 'TEST-OP-2048' } },
+          { reference: { contains: 'TEST-REV-2048' } },
+          { reference: { contains: 'TEST-EXP-2048' } },
+          { reference: { contains: 'TEST-EXP-2049' } },
+          { reference: { contains: 'OPENING-BALANCE-2049' } },
+          { description: { contains: 'FY 2048-2049' } },
+          { description: { contains: 'FY 2049-2050' } }
         ]
       },
       select: { id: true }
@@ -111,20 +116,40 @@ describe('Financial Year Opening/Closing & Automatic Rollover Engine', { timeout
   });
 
   afterAll(async () => {
+    try {
+      const testJes = await prisma.journalEntry.findMany({
+        where: {
+          reference: { in: ['TEST-OP-2048', 'TEST-REV-2048', 'AUTO-ROLLOVER-FY 2048-2049'] }
+        }
+      });
+      for (const je of testJes) {
+        await prisma.journalEntryLine.deleteMany({ where: { journalEntryId: je.id } });
+        await prisma.journalEntry.delete({ where: { id: je.id } });
+      }
+      await prisma.openingBalanceLine.deleteMany({
+        where: { batch: { financialYear: { in: [testFy1, testFy2] } } }
+      });
+      await prisma.openingBalanceBatch.deleteMany({
+        where: { financialYear: { in: [testFy1, testFy2] } }
+      });
+      await prisma.financialYear.deleteMany({
+        where: { code: { in: [testFy1, testFy2] } }
+      });
+    } catch {}
     await prisma.$disconnect();
   });
 
-  it('Step 1: Financial Year Setup & Manual Opening Balance Entry (FY 2026-2027)', async () => {
-    // Create FY 2026-2027 record
+  it('Step 1: Financial Year Setup & Manual Opening Balance Entry (FY 2048-2049)', async () => {
+    // Create FY 2048-2049 record
     const fy1Record = await FinancialYearService.getOrCreateYearByCode(testFy1);
     expect(fy1Record.code).toBe(testFy1);
     expect(fy1Record.isClosed).toBe(false);
 
-    // Initial Opening Balance for Cash = PKR 100,000 on 01-07-2026
-    const opDate = new Date('2026-07-01');
+    // Initial Opening Balance for Cash = PKR 100,000 on 01-07-2048
+    const opDate = new Date('2048-07-01');
 
     const opJv = await AccountingService.postTransaction(prisma, {
-      reference: 'TEST-OP-2026',
+      reference: 'TEST-OP-2048',
       description: 'Initial Opening Balance Test',
       module: 'Opening Balances',
       voucherType: 'OP',
@@ -157,31 +182,31 @@ describe('Financial Year Opening/Closing & Automatic Rollover Engine', { timeout
   });
 
   it('Step 2: Full Year Operational Transactions (Revenue: 50,000, Expense: 20,000)', async () => {
-    // Transaction 1: Revenue Receipt (+50,000 Cash, +50,000 Revenue) on 15-10-2026
+    // Transaction 1: Revenue Receipt (+50,000 Cash, +50,000 Revenue) on 15-10-2048
     await AccountingService.postReceipt(prisma, {
       amount: 50000,
       cashOrBankAccountId: cashAccountId,
       incomeAccountId: revenueAccountId,
-      reference: 'TEST-REV-2026-001',
+      reference: 'TEST-REV-2048-001',
       description: 'Donation Receipt',
       module: 'Donations',
       postedBy: 'Test Admin',
-      postingDate: '2026-10-15'
+      postingDate: '2048-10-15'
     });
 
-    // Transaction 2: Expense Payment (-20,000 Cash, +20,000 Expense) on 20-03-2027
+    // Transaction 2: Expense Payment (-20,000 Cash, +20,000 Expense) on 20-03-2049
     await AccountingService.postPayment(prisma, {
       amount: 20000,
       cashOrBankAccountId: cashAccountId,
       expenseAccountId: expenseAccountId,
-      reference: 'TEST-EXP-2026-001',
+      reference: 'TEST-EXP-2048-001',
       description: 'Office Maintenance Expense',
       module: 'Expenses',
       postedBy: 'Test Admin',
-      postingDate: '2027-03-20'
+      postingDate: '2049-03-20'
     });
 
-    const isReport = await AccountingService.getIncomeStatement('2026-07-01', '2027-06-30');
+    const isReport = await AccountingService.getIncomeStatement('2048-07-01', '2049-06-30');
     expect(isReport.netProfit).toBe(30000); // 50,000 - 20,000
   });
 
@@ -192,23 +217,23 @@ describe('Financial Year Opening/Closing & Automatic Rollover Engine', { timeout
     expect(validation.summary.netProfitOrLoss).toBe(30000);
   });
 
-  it('Step 4: Execute Atomic Year-End Closing & Automatic Rollover to FY 2027-2028', async () => {
+  it('Step 4: Execute Atomic Year-End Closing & Automatic Rollover to FY 2049-2050', async () => {
     const closeResult = await FinancialYearService.executeYearEndClosing(
       testFy1,
-      '2027-06-30',
+      '2049-06-30',
       testUserId,
-      'Automated test execution of FY 2026-2027 closing'
+      'Automated test execution of FY 2048-2049 closing'
     );
 
     expect(closeResult.closedFinancialYear).toBe(testFy1);
     expect(closeResult.nextFinancialYear).toBe(testFy2);
     expect(closeResult.netProfitLoss).toBe(30000);
 
-    // Verify FY 2026-2027 is now closed in DB
+    // Verify FY 2048-2049 is now closed in DB
     const fy1Db = await prisma.financialYear.findUnique({ where: { code: testFy1 } });
     expect(fy1Db?.isClosed).toBe(true);
 
-    // Verify FY 2027-2028 Opening Balance Batch was created automatically
+    // Verify FY 2049-2050 Opening Balance Batch was created automatically
     const fy2Batch = await prisma.openingBalanceBatch.findUnique({
       where: { financialYear: testFy2 },
       include: { lines: { include: { account: true } } }
@@ -218,37 +243,37 @@ describe('Financial Year Opening/Closing & Automatic Rollover Engine', { timeout
     expect(fy2Batch?.isAutoRolled).toBe(true);
     expect(fy2Batch?.sourceFinancialYear).toBe(testFy1);
 
-    // Check Cash in Hand opening line for FY 2027-2028
+    // Check Cash in Hand opening line for FY 2049-2050
     const cashLine = fy2Batch?.lines.find(l => l.accountId === cashAccountId || l.glCode === cashGlCode);
 
     expect(cashLine).toBeDefined();
     expect(Number(cashLine?.amount)).toBe(130000); // Exactly PKR 130,000 opening!
   });
 
-  it('Step 5: Verify Next Year (FY 2027-2028) Revenue & Expense Opening Balances Reset to 0', async () => {
-    const isReportNextYear = await AccountingService.getIncomeStatement('2027-07-01', '2028-06-30');
+  it('Step 5: Verify Next Year (FY 2049-2050) Revenue & Expense Opening Balances Reset to 0', async () => {
+    const isReportNextYear = await AccountingService.getIncomeStatement('2049-07-01', '2050-06-30');
     expect(isReportNextYear.totalRevenue).toBe(0);
     expect(isReportNextYear.totalExpense).toBe(0);
     expect(isReportNextYear.netProfit).toBe(0);
   });
 
   it('Step 6: Post Next Year Transaction (Expense: 10,000) & Verify Real-Time Balance (120,000)', async () => {
-    // Next year expense payment on 10-08-2027
+    // Next year expense payment on 10-08-2049
     await AccountingService.postPayment(prisma, {
       amount: 10000,
       cashOrBankAccountId: cashAccountId,
       expenseAccountId: expenseAccountId,
-      reference: 'TEST-EXP-2027-001',
+      reference: 'TEST-EXP-2049-001',
       description: 'Next Year Fuel Expense',
       module: 'Expenses',
       postedBy: 'Test Admin',
-      postingDate: '2027-08-10'
+      postingDate: '2049-08-10'
     });
 
-    // Verify General Ledger for FY 2027-2028 Opening (130,000), Credit (10,000), Closing (120,000)
+    // Verify General Ledger for FY 2049-2050 Opening (130,000), Credit (10,000), Closing (120,000)
     const glNext = await AccountingService.getGeneralLedger({
-      startDate: '2027-07-01',
-      endDate: '2028-06-30',
+      startDate: '2049-07-01',
+      endDate: '2050-06-30',
       accountId: cashAccountId
     });
 
@@ -258,17 +283,17 @@ describe('Financial Year Opening/Closing & Automatic Rollover Engine', { timeout
   });
 
   it('Step 7: Closed Year Lock Enforcement', async () => {
-    // Attempt to post transaction in closed FY 2026-2027 (date: 2026-11-20)
+    // Attempt to post transaction in closed FY 2048-2049 (date: 2048-11-20)
     await expect(
       AccountingService.postPayment(prisma, {
         amount: 5000,
         cashOrBankAccountId: cashAccountId,
         expenseAccountId: expenseAccountId,
-        reference: 'TEST-ILLEGAL-2026',
+        reference: 'TEST-ILLEGAL-2048',
         description: 'Posting into closed year',
         module: 'Expenses',
         postedBy: 'Test Admin',
-        postingDate: '2026-11-20'
+        postingDate: '2048-11-20'
       })
     ).rejects.toThrow(/closed/i);
   });
@@ -277,7 +302,7 @@ describe('Financial Year Opening/Closing & Automatic Rollover Engine', { timeout
     const reopened = await FinancialYearService.reopenFinancialYear(
       testFy1,
       testUserId,
-      'Reopening FY 2026-2027 for external audit adjustment per request.'
+      'Reopening FY 2048-2049 for external audit adjustment per request.'
     );
 
     expect(reopened.isClosed).toBe(false);

@@ -18,8 +18,28 @@ describe('Donors Bulk Delete API', () => {
 
   /** Creates a throwaway user attached to an existing seeded role. */
   async function makeUser(roleName: string) {
-    const role = await prisma.role.findFirst({ where: { name: roleName } });
-    if (!role) throw new Error(`Seeded role "${roleName}" not found — run prisma db seed first.`);
+    let role = await prisma.role.findFirst({
+      where: { name: roleName }
+    });
+    if (!role) {
+      role = await prisma.role.create({
+        data: {
+          name: roleName,
+          description: `${roleName} test role`,
+          isPrivileged: roleName === 'Admin' || roleName === 'Super Admin'
+        }
+      });
+    }
+    if (roleName === 'Manager') {
+      const perm = await prisma.permission.findFirst({ where: { name: 'MANAGE_DONORS' } });
+      if (perm) {
+        await prisma.rolePermission.upsert({
+          where: { roleId_permissionId: { roleId: role.id, permissionId: perm.id } },
+          create: { roleId: role.id, permissionId: perm.id },
+          update: {}
+        });
+      }
+    }
     return prisma.user.create({
       data: {
         email: `test_bulkdelete_${roleName.replace(/\s+/g, '_').toLowerCase()}_${Date.now()}@erp.com`,

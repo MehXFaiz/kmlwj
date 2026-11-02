@@ -8,7 +8,7 @@ import { prisma } from '../_prisma.js';
  * Called from: GET /api/v1/zakat-card/verify/:cardNumber
  */
 export async function zakatCardVerifyHandler(req: Request, res: Response) {
-  const { cardNumber } = req.params;
+  const cardNumber = String(req.params.cardNumber || '');
 
   if (!cardNumber || cardNumber.trim().length < 2) {
     return res.status(400).json({

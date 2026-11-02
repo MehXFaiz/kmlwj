@@ -515,91 +515,94 @@ var donations_default = makeHandler(async (req, res) => {
     if (!isWithinMaxLength(chequeNumber, 30)) return res.status(400).json({ error: maxLengthError("Cheque number", 30) });
     const donorName = rawDonorName && rawDonorName.trim() ? rawDonorName.trim() : `Monthly ${displayCategory} Disbursement - ${monthLabel}`;
     const isDirectPost = requestedStatus === "APPROVED" || requestedStatus === "POSTED";
-    const newDonation = await prisma.$transaction(async (tx) => {
-      let cashOrBankAccountId = null;
-      if (paymentMethod === "CASH") {
-        const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
-        cashOrBankAccountId = cashAccount.id;
-      } else if (paymentMethod === "BANK" || paymentMethod === "CHEQUE") {
-        cashOrBankAccountId = bankAccountId || null;
-      }
-      if (isDirectPost) {
-        const typeFilter = isZakat ? { donationType: "ZAKAT" } : { donationType: { in: ["MONTHLY", "GENERAL_DONATION", "CUSTOM"] } };
-        const existingDuplicate = await tx.donation.findFirst({
-          where: {
-            isDeleted: false,
-            status: { in: ["APPROVED", "DISBURSED"] },
-            bankAccountId: cashOrBankAccountId || null,
+    let newDonation;
+    try {
+      newDonation = await prisma.$transaction(async (tx) => {
+        let cashOrBankAccountId = null;
+        if (paymentMethod === "CASH") {
+          const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
+          cashOrBankAccountId = cashAccount.id;
+        } else if (paymentMethod === "BANK" || paymentMethod === "CHEQUE") {
+          cashOrBankAccountId = bankAccountId || null;
+        }
+        if (isDirectPost) {
+          const typeFilter = isZakat ? { donationType: "ZAKAT" } : { donationType: { in: ["MONTHLY", "GENERAL_DONATION", "CUSTOM"] } };
+          const existingDuplicate = await tx.donation.findFirst({
+            where: {
+              isDeleted: false,
+              status: { in: ["APPROVED", "DISBURSED"] },
+              bankAccountId: cashOrBankAccountId || null,
+              disbursementMonth,
+              ...typeFilter
+            }
+          });
+          if (existingDuplicate) {
+            throw new Error(`DUPLICATE_MONTHLY_POSTING:Monthly ${displayCategory} for ${monthLabel} has already been posted.`);
+          }
+        }
+        const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const voucherNo = `MDON-${disbursementMonth.replace("-", "")}-${randomStr}`;
+        let journalEntryId = null;
+        if (isDirectPost) {
+          journalEntryId = await postDonationDisbursement(tx, {
+            amount: parsedAmount,
+            cashOrBankAccountId,
+            isZakat,
+            displayCategory,
+            monthLabel,
+            remarks,
+            voucherNo,
+            voucherType: paymentMethod === "CASH" ? "CP" : "BP",
+            postingDate: dateObj,
+            userId: req.user.id,
+            ipAddress: req.headers["x-forwarded-for"],
+            userAgent: req.headers["user-agent"],
+            donationType: enumType
+          });
+        }
+        const createdDonation = await tx.donation.create({
+          data: {
+            month: monthLabel,
             disbursementMonth,
-            ...typeFilter
+            financialYear,
+            voucherNo,
+            beneficiaryId: beneficiaryId || null,
+            beneficiaries: beneficiariesJson,
+            donorName,
+            donorMobile: donorMobile || null,
+            donationType: enumType,
+            customDonationType: enumType === "CUSTOM" ? customDonationType || null : null,
+            amount: parsedAmount,
+            paymentMethod,
+            bankAccountId: paymentMethod === "BANK" || paymentMethod === "CHEQUE" ? bankAccountId || null : null,
+            chequeNumber: chequeNumber || null,
+            donorBankName: donorBankName || null,
+            remarks: remarks || null,
+            journalEntryId,
+            status: isDirectPost ? "APPROVED" : "PENDING",
+            postedAt: isDirectPost ? /* @__PURE__ */ new Date() : null,
+            postedById: isDirectPost ? req.user.id : null,
+            createdAt: dateObj,
+            createdById: req.user.id
+          },
+          include: {
+            beneficiary: true,
+            bankAccount: true,
+            journalEntry: { select: { id: true, voucherNo: true, status: true, postingDate: true } },
+            createdBy: { select: { id: true, fullName: true, email: true } }
           }
         });
-        if (existingDuplicate) {
-          throw new Error(`DUPLICATE_MONTHLY_POSTING:Monthly ${displayCategory} for ${monthLabel} has already been posted.`);
-        }
-      }
-      const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
-      const voucherNo = `MDON-${disbursementMonth.replace("-", "")}-${randomStr}`;
-      let journalEntryId = null;
-      if (isDirectPost) {
-        journalEntryId = await postDonationDisbursement(tx, {
-          amount: parsedAmount,
-          cashOrBankAccountId,
-          isZakat,
-          displayCategory,
-          monthLabel,
-          remarks,
-          voucherNo,
-          voucherType: paymentMethod === "CASH" ? "CP" : "BP",
-          postingDate: dateObj,
-          userId: req.user.id,
-          ipAddress: req.headers["x-forwarded-for"],
-          userAgent: req.headers["user-agent"],
-          donationType: enumType
-        });
-      }
-      const createdDonation = await tx.donation.create({
-        data: {
-          month: monthLabel,
-          disbursementMonth,
-          financialYear,
-          voucherNo,
-          beneficiaryId: beneficiaryId || null,
-          beneficiaries: beneficiariesJson,
-          donorName,
-          donorMobile: donorMobile || null,
-          donationType: enumType,
-          customDonationType: enumType === "CUSTOM" ? customDonationType || null : null,
-          amount: parsedAmount,
-          paymentMethod,
-          bankAccountId: paymentMethod === "BANK" || paymentMethod === "CHEQUE" ? bankAccountId || null : null,
-          chequeNumber: chequeNumber || null,
-          donorBankName: donorBankName || null,
-          remarks: remarks || null,
-          journalEntryId,
-          status: isDirectPost ? "APPROVED" : "PENDING",
-          postedAt: isDirectPost ? /* @__PURE__ */ new Date() : null,
-          postedById: isDirectPost ? req.user.id : null,
-          createdAt: dateObj,
-          createdById: req.user.id
-        },
-        include: {
-          beneficiary: true,
-          bankAccount: true,
-          journalEntry: { select: { id: true, voucherNo: true, status: true, postingDate: true } },
-          createdBy: { select: { id: true, fullName: true, email: true } }
-        }
+        return createdDonation;
+      }, {
+        timeout: 2e4
       });
-      return createdDonation;
-    }, {
-      timeout: 2e4
-    }).catch((err) => {
+    } catch (err) {
       if (err.message && err.message.startsWith("DUPLICATE_MONTHLY_POSTING:")) {
         const msg = err.message.replace("DUPLICATE_MONTHLY_POSTING:", "");
         return res.status(409).json({ error: { message: msg, status: 409 } });
       }
       throw err;
-    });
+    }
     if (!newDonation) return;
     await logAudit(req.user.id, "Create Monthly Donation", "DONATION", null, newDonation, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     return res.status(201).json({
@@ -648,98 +651,101 @@ var donations_default = makeHandler(async (req, res) => {
     const targetBankAccountId = bankAccountId !== void 0 ? bankAccountId || null : existingDonation.bankAccountId;
     const targetStatus = status !== void 0 ? status : existingDonation.status;
     const isApproved = targetStatus === "APPROVED";
-    const updatedDonation = await prisma.$transaction(async (tx) => {
-      if (existingDonation.status === "APPROVED" && existingDonation.journalEntryId) {
-        try {
-          await AccountingService.deleteJournalEntry(tx, existingDonation.journalEntryId, req.user.id, "Donation Updated");
-        } catch (e) {
+    let updatedDonation;
+    try {
+      updatedDonation = await prisma.$transaction(async (tx) => {
+        if (existingDonation.status === "APPROVED" && existingDonation.journalEntryId) {
+          try {
+            await AccountingService.deleteJournalEntry(tx, existingDonation.journalEntryId, req.user.id, "Donation Updated");
+          } catch (e) {
+          }
         }
-      }
-      if (isApproved) {
-        const typeFilter = isZakat ? { donationType: "ZAKAT" } : { donationType: { in: ["MONTHLY", "GENERAL_DONATION", "CUSTOM"] } };
-        const existingDuplicate = await tx.donation.findFirst({
-          where: {
-            id: { not: existingDonation.id },
-            isDeleted: false,
-            status: { in: ["APPROVED", "DISBURSED"] },
-            bankAccountId: targetBankAccountId || null,
+        if (isApproved) {
+          const typeFilter = isZakat ? { donationType: "ZAKAT" } : { donationType: { in: ["MONTHLY", "GENERAL_DONATION", "CUSTOM"] } };
+          const existingDuplicate = await tx.donation.findFirst({
+            where: {
+              id: { not: existingDonation.id },
+              isDeleted: false,
+              status: { in: ["APPROVED", "DISBURSED"] },
+              bankAccountId: targetBankAccountId || null,
+              disbursementMonth,
+              ...typeFilter
+            }
+          });
+          if (existingDuplicate) {
+            throw new Error(`DUPLICATE_MONTHLY_POSTING:Monthly ${displayCategory} for ${monthLabel} has already been posted.`);
+          }
+        }
+        const effectiveAmount = parsedAmount !== void 0 ? parsedAmount : existingDonation.amount;
+        const effectivePaymentMethod = paymentMethod || existingDonation.paymentMethod;
+        const voucherNo = existingDonation.voucherNo || `MDON-${disbursementMonth.replace("-", "")}-${existingDonation.id.slice(0, 4).toUpperCase()}`;
+        let journalEntryId = null;
+        if (isApproved) {
+          let cashOrBankAccountId = null;
+          if (effectivePaymentMethod === "CASH") {
+            const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
+            cashOrBankAccountId = cashAccount.id;
+          } else if (effectivePaymentMethod === "BANK" || effectivePaymentMethod === "CHEQUE") {
+            cashOrBankAccountId = targetBankAccountId || null;
+          }
+          journalEntryId = await postDonationDisbursement(tx, {
+            amount: effectiveAmount,
+            cashOrBankAccountId,
+            isZakat,
+            displayCategory,
+            monthLabel,
+            remarks,
+            voucherNo,
+            voucherType: effectivePaymentMethod === "CASH" ? "CP" : "BP",
+            postingDate: dateObj,
+            userId: req.user.id,
+            ipAddress: req.headers["x-forwarded-for"],
+            userAgent: req.headers["user-agent"],
+            donationType: enumType
+          });
+        }
+        const updated = await tx.donation.update({
+          where: { id },
+          data: {
+            month: monthLabel,
             disbursementMonth,
-            ...typeFilter
+            financialYear,
+            voucherNo,
+            beneficiaryId: beneficiaryId !== void 0 ? beneficiaryId || null : void 0,
+            beneficiaries: beneficiaries !== void 0 ? beneficiaries : void 0,
+            donorName: donorName || void 0,
+            donorMobile: donorMobile !== void 0 ? donorMobile || null : void 0,
+            donationType: enumType,
+            customDonationType: enumType === "CUSTOM" ? customDonationType || null : null,
+            amount: parsedAmount !== void 0 ? parsedAmount : void 0,
+            paymentMethod: paymentMethod || void 0,
+            bankAccountId: targetBankAccountId,
+            chequeNumber: chequeNumber !== void 0 ? chequeNumber || null : void 0,
+            donorBankName: donorBankName !== void 0 ? donorBankName || null : void 0,
+            remarks: remarks !== void 0 ? remarks || null : void 0,
+            journalEntryId,
+            status: status || void 0,
+            postedAt: isApproved ? existingDonation.postedAt || /* @__PURE__ */ new Date() : null,
+            postedById: isApproved ? existingDonation.postedById || req.user.id : null
+          },
+          include: {
+            beneficiary: true,
+            bankAccount: true,
+            journalEntry: { select: { id: true, voucherNo: true, status: true, postingDate: true } },
+            createdBy: { select: { id: true, fullName: true, email: true } }
           }
         });
-        if (existingDuplicate) {
-          throw new Error(`DUPLICATE_MONTHLY_POSTING:Monthly ${displayCategory} for ${monthLabel} has already been posted.`);
-        }
-      }
-      const effectiveAmount = parsedAmount !== void 0 ? parsedAmount : existingDonation.amount;
-      const effectivePaymentMethod = paymentMethod || existingDonation.paymentMethod;
-      const voucherNo = existingDonation.voucherNo || `MDON-${disbursementMonth.replace("-", "")}-${existingDonation.id.slice(0, 4).toUpperCase()}`;
-      let journalEntryId = null;
-      if (isApproved) {
-        let cashOrBankAccountId = null;
-        if (effectivePaymentMethod === "CASH") {
-          const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
-          cashOrBankAccountId = cashAccount.id;
-        } else if (effectivePaymentMethod === "BANK" || effectivePaymentMethod === "CHEQUE") {
-          cashOrBankAccountId = targetBankAccountId || null;
-        }
-        journalEntryId = await postDonationDisbursement(tx, {
-          amount: effectiveAmount,
-          cashOrBankAccountId,
-          isZakat,
-          displayCategory,
-          monthLabel,
-          remarks,
-          voucherNo,
-          voucherType: effectivePaymentMethod === "CASH" ? "CP" : "BP",
-          postingDate: dateObj,
-          userId: req.user.id,
-          ipAddress: req.headers["x-forwarded-for"],
-          userAgent: req.headers["user-agent"],
-          donationType: enumType
-        });
-      }
-      const updated = await tx.donation.update({
-        where: { id },
-        data: {
-          month: monthLabel,
-          disbursementMonth,
-          financialYear,
-          voucherNo,
-          beneficiaryId: beneficiaryId !== void 0 ? beneficiaryId || null : void 0,
-          beneficiaries: beneficiaries !== void 0 ? beneficiaries : void 0,
-          donorName: donorName || void 0,
-          donorMobile: donorMobile !== void 0 ? donorMobile || null : void 0,
-          donationType: enumType,
-          customDonationType: enumType === "CUSTOM" ? customDonationType || null : null,
-          amount: parsedAmount !== void 0 ? parsedAmount : void 0,
-          paymentMethod: paymentMethod || void 0,
-          bankAccountId: targetBankAccountId,
-          chequeNumber: chequeNumber !== void 0 ? chequeNumber || null : void 0,
-          donorBankName: donorBankName !== void 0 ? donorBankName || null : void 0,
-          remarks: remarks !== void 0 ? remarks || null : void 0,
-          journalEntryId,
-          status: status || void 0,
-          postedAt: isApproved ? existingDonation.postedAt || /* @__PURE__ */ new Date() : null,
-          postedById: isApproved ? existingDonation.postedById || req.user.id : null
-        },
-        include: {
-          beneficiary: true,
-          bankAccount: true,
-          journalEntry: { select: { id: true, voucherNo: true, status: true, postingDate: true } },
-          createdBy: { select: { id: true, fullName: true, email: true } }
-        }
+        return updated;
+      }, {
+        timeout: 2e4
       });
-      return updated;
-    }, {
-      timeout: 2e4
-    }).catch((err) => {
+    } catch (err) {
       if (err.message && err.message.startsWith("DUPLICATE_MONTHLY_POSTING:")) {
         const msg = err.message.replace("DUPLICATE_MONTHLY_POSTING:", "");
         return res.status(409).json({ error: { message: msg, status: 409 } });
       }
       throw err;
-    });
+    }
     if (!updatedDonation) return;
     await logAudit(req.user.id, "Update Donation", "DONATION", existingDonation, updatedDonation, req.headers["x-forwarded-for"], req.headers["user-agent"]);
     return res.status(200).json({ status: 200, data: updatedDonation });

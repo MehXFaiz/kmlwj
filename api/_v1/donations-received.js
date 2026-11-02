@@ -282,10 +282,10 @@ var donations_received_default = makeHandler(async (req, res) => {
       return res.status(404).json({ error: { message: "Selected donor / beneficiary not found", status: 404 } });
     }
     const resolvedDonorId = donor.id;
-    let debitAccountId2 = null;
+    let debitAccountId = null;
     if (paymentMethod === "CASH" || paymentMethod === "DONATION_FUND") {
       const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
-      debitAccountId2 = cashAccount.id;
+      debitAccountId = cashAccount.id;
     } else {
       if (!bankAccountId) {
         const defaultBank = await prisma.account.findFirst({
@@ -297,9 +297,9 @@ var donations_received_default = makeHandler(async (req, res) => {
           orderBy: { glCode: "asc" }
         });
         if (!defaultBank) return res.status(400).json({ error: { message: "Bank account is required for Bank/Cheque/Online payments", status: 400 } });
-        debitAccountId2 = defaultBank.id;
+        debitAccountId = defaultBank.id;
       } else {
-        debitAccountId2 = bankAccountId;
+        debitAccountId = bankAccountId;
       }
     }
     const year = (/* @__PURE__ */ new Date()).getFullYear();
@@ -327,7 +327,7 @@ var donations_received_default = makeHandler(async (req, res) => {
             const generalDonationAccount = isGeneralDonation ? await AccountingService.ensureGeneralDonationAccount(tx) : null;
             const postingResult = await AccountingService.postReceipt(tx, {
               amount: parsedAmount,
-              cashOrBankAccountId: debitAccountId2,
+              cashOrBankAccountId: debitAccountId,
               incomeAccountId: generalDonationAccount ? generalDonationAccount.id : void 0,
               incomeAccountKeyword: generalDonationAccount ? void 0 : donationType,
               reference: `DONATION-${receiptNo}`,
@@ -352,8 +352,8 @@ var donations_received_default = makeHandler(async (req, res) => {
               customDonationType: donationType === "CUSTOM" ? customDonationType : null,
               amount: parsedAmount,
               paymentMethod,
-              cashAccountId: paymentMethod === "CASH" || paymentMethod === "DONATION_FUND" ? debitAccountId2 : null,
-              bankAccountId: paymentMethod !== "CASH" && paymentMethod !== "DONATION_FUND" ? debitAccountId2 : null,
+              cashAccountId: paymentMethod === "CASH" || paymentMethod === "DONATION_FUND" ? debitAccountId : null,
+              bankAccountId: paymentMethod !== "CASH" && paymentMethod !== "DONATION_FUND" ? debitAccountId : null,
               chequeNo: chequeNo || null,
               chequeDate: chequeDate ? new Date(chequeDate) : null,
               referenceNo: referenceNo || null,
@@ -440,6 +440,8 @@ var donations_received_default = makeHandler(async (req, res) => {
       resolvedDonorId = donor.id;
       resolvedDonor = donor;
     }
+    const currentMethod = paymentMethod !== void 0 ? paymentMethod : existing.paymentMethod;
+    let debitAccountId = null;
     const result = await prisma.$transaction(async (tx) => {
       let journalEntryId = existing.journalEntryId;
       let newStatus = status !== void 0 ? status : existing.status;
@@ -451,15 +453,13 @@ var donations_received_default = makeHandler(async (req, res) => {
           } catch (e) {
           }
         }
-        let debitAccountId2 = null;
-        const currentMethod2 = paymentMethod !== void 0 ? paymentMethod : existing.paymentMethod;
-        if (currentMethod2 === "CASH" || currentMethod2 === "DONATION_FUND") {
+        if (currentMethod === "CASH" || currentMethod === "DONATION_FUND") {
           const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
-          debitAccountId2 = cashAccount.id;
+          debitAccountId = cashAccount.id;
         } else {
-          debitAccountId2 = bankAccountId !== void 0 ? bankAccountId : existing.bankAccountId || existing.cashAccountId;
+          debitAccountId = bankAccountId !== void 0 ? bankAccountId : existing.bankAccountId || existing.cashAccountId;
         }
-        if (debitAccountId2) {
+        if (debitAccountId) {
           const updatedAmount = parsedAmount !== void 0 ? parsedAmount : existing.amount;
           const updatedType = donationType !== void 0 ? donationType : existing.donationType;
           const updatedCustomType = customDonationType !== void 0 ? customDonationType : existing.customDonationType;
@@ -469,7 +469,7 @@ var donations_received_default = makeHandler(async (req, res) => {
           const generalDonationAccount = isGeneralDonation ? await AccountingService.ensureGeneralDonationAccount(tx) : null;
           const postingResult = await AccountingService.postReceipt(tx, {
             amount: updatedAmount,
-            cashOrBankAccountId: debitAccountId2,
+            cashOrBankAccountId: debitAccountId,
             incomeAccountId: generalDonationAccount ? generalDonationAccount.id : void 0,
             incomeAccountKeyword: generalDonationAccount ? void 0 : updatedType,
             reference: `DONATION-${existing.receiptNo}`,
@@ -479,7 +479,7 @@ var donations_received_default = makeHandler(async (req, res) => {
             postingDate: updatedDate,
             ipAddress: req.headers["x-forwarded-for"],
             userAgent: req.headers["user-agent"],
-            voucherType: currentMethod2 === "CASH" || currentMethod2 === "DONATION_FUND" ? "CR" : "BR"
+            voucherType: currentMethod === "CASH" || currentMethod === "DONATION_FUND" ? "CR" : "BR"
           });
           if (postingResult && postingResult.journalEntry) {
             journalEntryId = postingResult.journalEntry.id;
@@ -532,7 +532,7 @@ var donations_received_default = makeHandler(async (req, res) => {
       return res.status(403).json({ error: { message: "Forbidden: Only Admin or Super Admin can permanently delete records", status: 403 } });
     }
     if (!await verifyPermission(req, res, [PERMS.RECORD_INCOME, "donations.delete"])) return;
-    const idsRaw = req.params?.id || req.body?.ids || req.body?.id || req.query.ids || req.query.id;
+    const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id || req.params?.id || id;
     if (!idsRaw) {
       return res.status(400).json({ error: { message: "Receipt ID(s) required", status: 400 } });
     }

@@ -60,6 +60,7 @@ var accounts_default = makeHandler(async (req, res) => {
     const formatted = dbAccounts.map((acc) => ({
       id: acc.id,
       code: acc.glCode,
+      glCode: acc.glCode,
       name: acc.accountName,
       accountName: acc.accountName,
       accountLevel: acc.accountLevel,

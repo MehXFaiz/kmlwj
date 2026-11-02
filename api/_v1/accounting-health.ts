@@ -57,6 +57,32 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         });
       }
 
+      if (action === 'rebuild-balances' || action === 'rebuild') {
+        const accountId = (req.query?.accountId || req.body?.accountId) as string | undefined;
+        let updatedCount = 0;
+        if (accountId) {
+          const acc = await prisma.account.findUnique({ where: { id: accountId } });
+          if (acc) {
+            await AccountingService.recalculateAccountBalance(prisma, accountId);
+            updatedCount = 1;
+          }
+        } else {
+          const res = await AccountingService.recalculateAllBalances();
+          updatedCount = res.updated;
+        }
+
+        return res.status(200).json({
+          status: 200,
+          message: 'Account balances rebuilt successfully',
+          data: {
+            success: true,
+            accountsUpdated: updatedCount,
+            accountsRepaired: updatedCount,
+            timestamp: new Date().toISOString()
+          }
+        });
+      }
+
       const repairResult = await AccountingIntegrityService.repairAll();
 
       return res.status(200).json({

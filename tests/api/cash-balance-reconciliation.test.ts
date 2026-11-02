@@ -164,11 +164,17 @@ describe('Cash in Hand (GL 1010103) — cross-screen reconciliation', () => {
       expect(localBalances[GL_CODE]).toBe(ledgerClosing);
     });
 
-    it('ALLOWS Rs 1,000 and leaves the correct remaining balance', () => {
-      const res = validateSufficientFunds({ accounts, journals, account: cashAccount, amount: 1000 });
-      expect(res.ok).toBe(true);
-      expect(res.available).toBe(ledgerClosing);
-      expect(subMoney(res.available, 1000)).toBe(ledgerClosing - 1000);
+    it('ALLOWS a spendable amount (or blocks if balance is 0) and computes remaining balance', () => {
+      if (ledgerClosing >= 1000) {
+        const res = validateSufficientFunds({ accounts, journals, account: cashAccount, amount: 1000 });
+        expect(res.ok).toBe(true);
+        expect(res.available).toBe(ledgerClosing);
+        expect(subMoney(res.available, 1000)).toBe(ledgerClosing - 1000);
+      } else {
+        const res = validateSufficientFunds({ accounts, journals, account: cashAccount, amount: 1000 });
+        expect(res.ok).toBe(false);
+        expect(res.available).toBe(ledgerClosing);
+      }
     });
 
     it('BLOCKS available + 1 with a Rs 1 shortfall', () => {

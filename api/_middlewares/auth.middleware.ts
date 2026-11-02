@@ -8,6 +8,7 @@ export interface AuthenticatedRequest extends VercelRequest {
     email: string;
     /** Display-only — never use for authorization. Call verifyPermission() instead. */
     role: string;
+    fullName?: string;
   };
 }
 

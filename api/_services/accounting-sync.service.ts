@@ -366,17 +366,15 @@ class AccountingSyncHub {
           }
         });
         await db.journalEntryLine.deleteMany({ where: { journalEntryId: existingJe.id } });
-        for (const line of lines) {
-          await db.journalEntryLine.create({
-            data: {
-              journalEntryId: existingJe.id,
-              accountId: line.accountId,
-              debit: line.debit,
-              credit: line.credit,
-              description: line.description
-            }
-          });
-        }
+        await db.journalEntryLine.createMany({
+          data: lines.map(line => ({
+            journalEntryId: existingJe.id,
+            accountId: line.accountId,
+            debit: line.debit,
+            credit: line.credit,
+            description: line.description
+          }))
+        });
       } else {
         const voucherNo = `BR-${postingDate.toISOString().slice(2, 10).replace(/-/g, '')}-${Math.floor(100000 + Math.random() * 900000)}`;
         const newJe = await db.journalEntry.create({
@@ -446,11 +444,15 @@ class AccountingSyncHub {
           data: { status: 'Posted', isDeleted: false, postingDate, reference: `DNR-${d.receiptNo}` }
         });
         await db.journalEntryLine.deleteMany({ where: { journalEntryId: existingJe.id } });
-        for (const line of lines) {
-          await db.journalEntryLine.create({
-            data: { journalEntryId: existingJe.id, accountId: line.accountId, debit: line.debit, credit: line.credit, description: line.description }
-          });
-        }
+        await db.journalEntryLine.createMany({
+          data: lines.map(line => ({
+            journalEntryId: existingJe.id,
+            accountId: line.accountId,
+            debit: line.debit,
+            credit: line.credit,
+            description: line.description
+          }))
+        });
       } else {
         const voucherNo = `CR-${postingDate.toISOString().slice(2, 10).replace(/-/g, '')}-${Math.floor(100000 + Math.random() * 900000)}`;
         const newJe = await db.journalEntry.create({
@@ -578,7 +580,7 @@ class AccountingSyncHub {
       _sum: { debit: true, credit: true }
     });
 
-    const sumsMap = new Map(postedSums.map((s: any) => [s.accountId, { debit: Number(s._sum?.debit || 0), credit: Number(s._sum?.credit || 0) }]));
+    const sumsMap = new Map<string, { debit: number; credit: number }>(postedSums.map((s: any) => [s.accountId, { debit: Number(s._sum?.debit || 0), credit: Number(s._sum?.credit || 0) }]));
     let accountsRebuilt = 0;
 
     for (const acc of accounts) {
