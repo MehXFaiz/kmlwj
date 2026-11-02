@@ -1,6 +1,7 @@
 import type { VercelResponse } from '@vercel/node';
 import { prisma as defaultPrisma } from '../_prisma.js';
 import { logger } from '../_utils/logger.js';
+import { AccountingService } from './accounting.service.js';
 
 export interface SyncEventPayload {
   action: 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE' | 'POST' | 'REVERSE' | 'APPROVE' | 'REJECT' | string;
@@ -15,6 +16,10 @@ export interface ModuleSyncResult {
   hallBookingsSynced: number;
   donationsReceivedSynced: number;
   donationsDisbursedSynced: number;
+  revenueCollectionsSynced: number;
+  addIncomeSynced: number;
+  simpleExpensesSynced: number;
+  pettyCashSynced: number;
   orphanJEsDeleted: number;
   accountsRebuilt: number;
   timestamp: string;
@@ -56,8 +61,9 @@ class AccountingSyncHub {
 
   /**
    * Synchronizes all operational module records (Hall Bookings, Donations Received,
-   * Donations Disbursed, Income/Expenses) directly to the General Ledger (JournalEntry + lines),
-   * cleans up orphan 0-line journal headers, and rebuilds the chart of accounts balance cache.
+   * Revenue Collections, Add Income, Simple Expenses, Petty Cash, Donations Disbursed)
+   * directly to the General Ledger (JournalEntry + lines), cleans up orphan headers,
+   * and rebuilds the chart of accounts balance cache.
    */
   async syncAllModulesToLedger(prismaClient?: any): Promise<ModuleSyncResult> {
     const db = prismaClient || defaultPrisma;
@@ -153,6 +159,7 @@ class AccountingSyncHub {
       where: {
         OR: [
           { glCode: '1010200' },
+          { glCode: '1010201' },
           { accountName: { contains: 'Accounts Receivable', mode: 'insensitive' } }
         ],
         children: { none: {} }
@@ -343,13 +350,18 @@ class AccountingSyncHub {
       });
 
       const postingDate = hb.bookingDate || hb.programDate || hb.createdAt || new Date();
-      const existingJe = hb.journalEntry;
+      let existingJe = hb.journalEntry;
+      if (!existingJe && hb.journalEntryId) {
+        existingJe = await db.journalEntry.findUnique({
+          where: { id: hb.journalEntryId },
+          include: { lines: true }
+        });
+      }
 
       // Check if existing JE already has valid lines matching the total amount
       if (existingJe && existingJe.lines && existingJe.lines.length > 0 && !existingJe.isDeleted && existingJe.status === 'Posted') {
         const currentCredit = existingJe.lines.reduce((s: number, l: any) => s + Number(l.credit || 0), 0);
         if (Math.abs(currentCredit - netAmt) < 0.01) {
-          // Already in sync
           continue;
         }
       }
@@ -360,22 +372,25 @@ class AccountingSyncHub {
           data: {
             status: 'Posted',
             isDeleted: false,
+            deletedAt: null,
+            deletedBy: null,
             postingDate,
             reference: `HB-${hb.receiptNo}`,
             voucherType: 'BR'
           }
         });
         await db.journalEntryLine.deleteMany({ where: { journalEntryId: existingJe.id } });
-        for (const line of lines) {
-          await db.journalEntryLine.create({
-            data: {
-              journalEntryId: existingJe.id,
-              accountId: line.accountId,
-              debit: line.debit,
-              credit: line.credit,
-              description: line.description
-            }
-          });
+        await db.journalEntryLine.createMany({
+          data: lines.map(l => ({
+            journalEntryId: existingJe.id,
+            accountId: l.accountId,
+            debit: l.debit,
+            credit: l.credit,
+            description: l.description
+          }))
+        });
+        if (hb.status !== 'POSTED') {
+          await db.hallBooking.update({ where: { id: hb.id }, data: { status: 'POSTED' } });
         }
       } else {
         const voucherNo = `BR-${postingDate.toISOString().slice(2, 10).replace(/-/g, '')}-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -390,9 +405,7 @@ class AccountingSyncHub {
             postedBy: hb.createdById || 'system',
             status: 'Posted',
             isDeleted: false,
-            lines: {
-              create: lines
-            }
+            lines: { create: lines }
           }
         });
         await db.hallBooking.update({
@@ -406,7 +419,7 @@ class AccountingSyncHub {
 
     // 4. Sync Donations Received
     const donRecs = await db.donationReceived.findMany({
-      where: { isDeleted: false, status: 'POSTED' },
+      where: { isDeleted: false },
       include: { journalEntry: { include: { lines: true } } }
     });
     let donationsReceivedSynced = 0;
@@ -426,12 +439,18 @@ class AccountingSyncHub {
       }
 
       const lines = [
-        { accountId: debitAccId, debit: amount, credit: 0, description: `Receipt: Donation from ${d.donorName || 'Donor'} (${d.donationType})` },
-        { accountId: creditAccId, debit: 0, credit: amount, description: `Revenue: Donation from ${d.donorName || 'Donor'} (${d.donationType})` }
+        { accountId: debitAccId, debit: amount, credit: 0, description: `Receipt: Donation from ${d.donorId || 'Donor'} (${d.donationType})` },
+        { accountId: creditAccId, debit: 0, credit: amount, description: `Revenue: Donation from ${d.donorId || 'Donor'} (${d.donationType})` }
       ];
 
       const postingDate = d.receiptDate || d.createdAt || new Date();
-      const existingJe = d.journalEntry;
+      let existingJe = d.journalEntry;
+      if (!existingJe && d.journalEntryId) {
+        existingJe = await db.journalEntry.findUnique({
+          where: { id: d.journalEntryId },
+          include: { lines: true }
+        });
+      }
 
       if (existingJe && existingJe.lines && existingJe.lines.length > 0 && !existingJe.isDeleted && existingJe.status === 'Posted') {
         const currentCredit = existingJe.lines.reduce((s: number, l: any) => s + Number(l.credit || 0), 0);
@@ -443,13 +462,20 @@ class AccountingSyncHub {
       if (existingJe) {
         await db.journalEntry.update({
           where: { id: existingJe.id },
-          data: { status: 'Posted', isDeleted: false, postingDate, reference: `DNR-${d.receiptNo}` }
+          data: { status: 'Posted', isDeleted: false, deletedAt: null, deletedBy: null, postingDate, reference: `DNR-${d.receiptNo}` }
         });
         await db.journalEntryLine.deleteMany({ where: { journalEntryId: existingJe.id } });
-        for (const line of lines) {
-          await db.journalEntryLine.create({
-            data: { journalEntryId: existingJe.id, accountId: line.accountId, debit: line.debit, credit: line.credit, description: line.description }
-          });
+        await db.journalEntryLine.createMany({
+          data: lines.map(l => ({
+            journalEntryId: existingJe.id,
+            accountId: l.accountId,
+            debit: l.debit,
+            credit: l.credit,
+            description: l.description
+          }))
+        });
+        if (d.status !== 'POSTED') {
+          await db.donationReceived.update({ where: { id: d.id }, data: { status: 'POSTED' } });
         }
       } else {
         const voucherNo = `CR-${postingDate.toISOString().slice(2, 10).replace(/-/g, '')}-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -460,7 +486,7 @@ class AccountingSyncHub {
             postingDate,
             subsidiary: 'Global',
             reference: `DNR-${d.receiptNo}`,
-            description: `Donation Received from ${d.donorName || 'Donor'} (${d.donationType})`,
+            description: `Donation Received (${d.donationType})`,
             postedBy: d.createdById || 'system',
             status: 'Posted',
             isDeleted: false,
@@ -469,14 +495,399 @@ class AccountingSyncHub {
         });
         await db.donationReceived.update({
           where: { id: d.id },
-          data: { journalEntryId: newJe.id }
+          data: { journalEntryId: newJe.id, status: 'POSTED' }
         });
       }
 
       donationsReceivedSynced++;
     }
 
-    // 5. Sync Donations Disbursed
+    // 5. Sync Revenue Collections (Membership Fees, Bus Booking, etc.)
+    const revCollections = await db.revenueCollection.findMany({
+      where: { isDeleted: false },
+      include: { journalEntry: { include: { lines: true } } }
+    });
+    let revenueCollectionsSynced = 0;
+
+    for (const rc of revCollections) {
+      const amount = Number(rc.amount || 0);
+      if (amount <= 0) continue;
+
+      let debitAccId = cashAccount.id;
+      if (rc.paymentMethod !== 'CASH') {
+        debitAccId = rc.bankAccountId || defaultBank?.id || cashAccount.id;
+      }
+
+      let creditAcc = null;
+      const catUpper = (rc.category || '').toUpperCase();
+      if (catUpper.includes('MEMBERSHIP')) {
+        creditAcc = await db.account.findFirst({
+          where: {
+            OR: [
+              { glCode: '3021002' },
+              { accountName: { contains: 'Membership', mode: 'insensitive' } }
+            ],
+            isDeleted: false,
+            children: { none: {} }
+          }
+        });
+      } else if (catUpper.includes('BUS')) {
+        creditAcc = await db.account.findFirst({
+          where: {
+            OR: [
+              { glCode: '3021001' },
+              { accountName: { contains: 'Bus', mode: 'insensitive' } }
+            ],
+            isDeleted: false,
+            children: { none: {} }
+          }
+        });
+      } else if (catUpper.includes('ZAKAT')) {
+        creditAcc = await db.account.findFirst({
+          where: {
+            OR: [
+              { glCode: '3020101' },
+              { glCode: '3021004' },
+              { accountName: { contains: 'Zakat', mode: 'insensitive' } }
+            ],
+            isDeleted: false,
+            children: { none: {} }
+          }
+        });
+      }
+      const creditAccId = creditAcc?.id || generalDonationAccount.id;
+
+      const lines = [
+        { accountId: debitAccId, debit: amount, credit: 0, description: `Collection: ${rc.category} - ${rc.title || 'Member'}` },
+        { accountId: creditAccId, debit: 0, credit: amount, description: `Revenue: ${rc.category} - ${rc.title || 'Member'}` }
+      ];
+
+      const postingDate = rc.eventDate || rc.createdAt || new Date();
+      let existingJe = rc.journalEntry;
+      if (!existingJe && rc.journalEntryId) {
+        existingJe = await db.journalEntry.findUnique({
+          where: { id: rc.journalEntryId },
+          include: { lines: true }
+        });
+      }
+
+      if (existingJe && existingJe.lines && existingJe.lines.length > 0 && !existingJe.isDeleted && existingJe.status === 'Posted') {
+        const currentCredit = existingJe.lines.reduce((s: number, l: any) => s + Number(l.credit || 0), 0);
+        if (Math.abs(currentCredit - amount) < 0.01) {
+          continue;
+        }
+      }
+
+      if (existingJe) {
+        await db.journalEntry.update({
+          where: { id: existingJe.id },
+          data: { status: 'Posted', isDeleted: false, deletedAt: null, deletedBy: null, postingDate, reference: `REV-${rc.receiptNo || rc.id.slice(0, 8)}` }
+        });
+        await db.journalEntryLine.deleteMany({ where: { journalEntryId: existingJe.id } });
+        await db.journalEntryLine.createMany({
+          data: lines.map(l => ({
+            journalEntryId: existingJe.id,
+            accountId: l.accountId,
+            debit: l.debit,
+            credit: l.credit,
+            description: l.description
+          }))
+        });
+        if (rc.status !== 'POSTED') {
+          await db.revenueCollection.update({ where: { id: rc.id }, data: { status: 'POSTED' } });
+        }
+      } else {
+        const voucherNo = `CR-${postingDate.toISOString().slice(2, 10).replace(/-/g, '')}-${Math.floor(100000 + Math.random() * 900000)}`;
+        const newJe = await db.journalEntry.create({
+          data: {
+            voucherNo,
+            voucherType: 'CR',
+            postingDate,
+            subsidiary: 'Global',
+            reference: `REV-${rc.receiptNo || rc.id.slice(0, 8)}`,
+            description: `Revenue Collection: ${rc.category} (${rc.title || 'Member'})`,
+            postedBy: rc.createdById || 'system',
+            status: 'Posted',
+            isDeleted: false,
+            lines: { create: lines }
+          }
+        });
+        await db.revenueCollection.update({
+          where: { id: rc.id },
+          data: { journalEntryId: newJe.id, status: 'POSTED' }
+        });
+      }
+
+      revenueCollectionsSynced++;
+    }
+
+    // 6. Sync Add Income Records
+    const addIncomes = await db.addIncomeRecord.findMany({
+      where: { isDeleted: false },
+      include: { category: true, journalEntry: { include: { lines: true } } }
+    });
+    let addIncomeSynced = 0;
+
+    for (const ai of addIncomes) {
+      const amount = Number(ai.amount || 0);
+      if (amount <= 0) continue;
+
+      let debitAccId = cashAccount.id;
+      if (ai.paymentMethod !== 'CASH') {
+        debitAccId = ai.bankAccountId || defaultBank?.id || cashAccount.id;
+      }
+
+      let creditAccId = null;
+      if (ai.category?.glAccountId) {
+        creditAccId = ai.category.glAccountId;
+      } else {
+        const matched = await db.account.findFirst({
+          where: {
+            accountName: { contains: ai.category?.name || 'Income', mode: 'insensitive' },
+            accountType: { name: { in: ['Revenue', 'Income', 'REVENUE', 'INCOME'] } },
+            isDeleted: false,
+            children: { none: {} }
+          }
+        });
+        creditAccId = matched?.id || generalDonationAccount.id;
+      }
+
+      const lines = [
+        { accountId: debitAccId, debit: amount, credit: 0, description: `Receipt: ${ai.category?.name || 'Income'} - ${ai.referenceNumber || 'Direct'}` },
+        { accountId: creditAccId, debit: 0, credit: amount, description: `Revenue: ${ai.category?.name || 'Income'} - ${ai.referenceNumber || 'Direct'}` }
+      ];
+
+      const postingDate = ai.date || ai.createdAt || new Date();
+      let existingJe = ai.journalEntry;
+      if (!existingJe && ai.journalEntryId) {
+        existingJe = await db.journalEntry.findUnique({
+          where: { id: ai.journalEntryId },
+          include: { lines: true }
+        });
+      }
+
+      if (existingJe && existingJe.lines && existingJe.lines.length > 0 && !existingJe.isDeleted && existingJe.status === 'Posted') {
+        const currentCredit = existingJe.lines.reduce((s: number, l: any) => s + Number(l.credit || 0), 0);
+        if (Math.abs(currentCredit - amount) < 0.01) {
+          continue;
+        }
+      }
+
+      if (existingJe) {
+        await db.journalEntry.update({
+          where: { id: existingJe.id },
+          data: { status: 'Posted', isDeleted: false, deletedAt: null, deletedBy: null, postingDate, reference: ai.referenceNumber || `INC-${ai.id.slice(0, 8)}` }
+        });
+        await db.journalEntryLine.deleteMany({ where: { journalEntryId: existingJe.id } });
+        await db.journalEntryLine.createMany({
+          data: lines.map(l => ({
+            journalEntryId: existingJe.id,
+            accountId: l.accountId,
+            debit: l.debit,
+            credit: l.credit,
+            description: l.description
+          }))
+        });
+        if (ai.status !== 'POSTED') {
+          await db.addIncomeRecord.update({ where: { id: ai.id }, data: { status: 'POSTED' } });
+        }
+      } else {
+        const voucherNo = `CR-${postingDate.toISOString().slice(2, 10).replace(/-/g, '')}-${Math.floor(100000 + Math.random() * 900000)}`;
+        const newJe = await db.journalEntry.create({
+          data: {
+            voucherNo,
+            voucherType: 'CR',
+            postingDate,
+            subsidiary: 'Global',
+            reference: ai.referenceNumber || `INC-${ai.id.slice(0, 8)}`,
+            description: `Direct Income: ${ai.category?.name || 'Income'}`,
+            postedBy: ai.createdById || 'system',
+            status: 'Posted',
+            isDeleted: false,
+            lines: { create: lines }
+          }
+        });
+        await db.addIncomeRecord.update({
+          where: { id: ai.id },
+          data: { journalEntryId: newJe.id, status: 'POSTED' }
+        });
+      }
+
+      addIncomeSynced++;
+    }
+
+    // 7. Sync Simple Expenses
+    let simpleExpensesSynced = 0;
+    try {
+      const simpleExpenses = await db.simpleExpense.findMany({
+        where: { isDeleted: false },
+        include: { expenseHead: true }
+      });
+
+      for (const se of simpleExpenses) {
+        const amount = Number(se.amount || 0);
+        if (amount <= 0) continue;
+
+        let creditAccId = cashAccount.id;
+        if (se.paymentMethod !== 'CASH') {
+          creditAccId = se.bankAccountId || defaultBank?.id || cashAccount.id;
+        }
+
+        let debitAccId = se.expenseHead?.glAccountId;
+        if (!debitAccId) {
+          const matched = await db.account.findFirst({
+            where: {
+              accountName: { contains: se.expenseHead?.name || 'Expense', mode: 'insensitive' },
+              accountType: { name: { in: ['Expense', 'EXPENSE', 'Expenses', 'EXPENSES'] } },
+              isDeleted: false,
+              children: { none: {} }
+            }
+          });
+          debitAccId = matched?.id || donationExpenseAccount?.id;
+        }
+        if (!debitAccId) continue;
+
+        const lines = [
+          { accountId: debitAccId, debit: amount, credit: 0, description: `Expense: ${se.description || se.expenseHead?.name || 'General Expense'}` },
+          { accountId: creditAccId, debit: 0, credit: amount, description: `Payment: ${se.description || se.expenseHead?.name || 'General Expense'}` }
+        ];
+
+        const postingDate = se.date || se.createdAt || new Date();
+        let existingJe = null;
+        if (se.journalEntryId) {
+          existingJe = await db.journalEntry.findUnique({
+            where: { id: se.journalEntryId },
+            include: { lines: true }
+          });
+        }
+
+        if (existingJe) {
+          await db.journalEntry.update({
+            where: { id: existingJe.id },
+            data: { status: 'Posted', isDeleted: false, deletedAt: null, deletedBy: null, postingDate, reference: se.reference || `EXP-${se.id.slice(0, 8)}` }
+          });
+          await db.journalEntryLine.deleteMany({ where: { journalEntryId: existingJe.id } });
+          await db.journalEntryLine.createMany({
+            data: lines.map(l => ({
+              journalEntryId: existingJe.id,
+              accountId: l.accountId,
+              debit: l.debit,
+              credit: l.credit,
+              description: l.description
+            }))
+          });
+          if (se.status !== 'POSTED') {
+            await db.simpleExpense.update({ where: { id: se.id }, data: { status: 'POSTED' } });
+          }
+        } else {
+          const voucherNo = `CP-${postingDate.toISOString().slice(2, 10).replace(/-/g, '')}-${Math.floor(100000 + Math.random() * 900000)}`;
+          const newJe = await db.journalEntry.create({
+            data: {
+              voucherNo,
+              voucherType: 'CP',
+              postingDate,
+              subsidiary: 'Global',
+              reference: se.reference || `EXP-${se.id.slice(0, 8)}`,
+              description: `Expense: ${se.description || se.expenseHead?.name || 'Expense'}`,
+              postedBy: se.createdById || 'system',
+              status: 'Posted',
+              isDeleted: false,
+              lines: { create: lines }
+            }
+          });
+          await db.simpleExpense.update({
+            where: { id: se.id },
+            data: { journalEntryId: newJe.id, status: 'POSTED' }
+          });
+        }
+        simpleExpensesSynced++;
+      }
+    } catch (e) {}
+
+    // 8. Sync Petty Cash Transactions
+    let pettyCashSynced = 0;
+    try {
+      const pcTxs = await db.pettyCashTransaction.findMany({
+        where: { isDeleted: false }
+      });
+
+      for (const pc of pcTxs) {
+        const amount = Number(pc.amount || 0);
+        if (amount <= 0) continue;
+
+        let lines: { accountId: string; debit: number; credit: number; description: string }[] = [];
+        if (pc.transactionType === 'EXPENSE') {
+          const debitId = pc.expenseAccountId;
+          const creditId = pc.pettyCashAccountId || cashAccount.id;
+          if (debitId && creditId) {
+            lines = [
+              { accountId: debitId, debit: amount, credit: 0, description: `Petty Cash Expense: ${pc.narration || pc.paidTo || 'Expense'}` },
+              { accountId: creditId, debit: 0, credit: amount, description: `Petty Cash Payment: ${pc.narration || pc.paidTo || 'Expense'}` }
+            ];
+          }
+        } else if (pc.transactionType === 'TOPUP') {
+          const debitId = pc.pettyCashAccountId || cashAccount.id;
+          const creditId = pc.sourceAccountId || defaultBank?.id || cashAccount.id;
+          if (debitId && creditId) {
+            lines = [
+              { accountId: debitId, debit: amount, credit: 0, description: `Petty Cash Replenishment: ${pc.narration || 'Topup'}` },
+              { accountId: creditId, debit: 0, credit: amount, description: `Source Account: ${pc.narration || 'Topup'}` }
+            ];
+          }
+        }
+
+        if (lines.length === 2) {
+          const postingDate = pc.date || pc.createdAt || new Date();
+          let existingJe = null;
+          if (pc.journalEntryId) {
+            existingJe = await db.journalEntry.findUnique({
+              where: { id: pc.journalEntryId },
+              include: { lines: true }
+            });
+          }
+
+          if (existingJe) {
+            await db.journalEntry.update({
+              where: { id: existingJe.id },
+              data: { status: 'Posted', isDeleted: false, deletedAt: null, deletedBy: null, postingDate, reference: pc.referenceNo || `PC-${pc.id.slice(0, 8)}` }
+            });
+            await db.journalEntryLine.deleteMany({ where: { journalEntryId: existingJe.id } });
+            await db.journalEntryLine.createMany({
+              data: lines.map(l => ({
+                journalEntryId: existingJe.id,
+                accountId: l.accountId,
+                debit: l.debit,
+                credit: l.credit,
+                description: l.description
+              }))
+            });
+          } else {
+            const voucherNo = `PC-${postingDate.toISOString().slice(2, 10).replace(/-/g, '')}-${Math.floor(100000 + Math.random() * 900000)}`;
+            const newJe = await db.journalEntry.create({
+              data: {
+                voucherNo,
+                voucherType: 'PC',
+                postingDate,
+                subsidiary: 'Global',
+                reference: pc.referenceNo || `PC-${pc.id.slice(0, 8)}`,
+                description: `Petty Cash: ${pc.narration || pc.paidTo || 'Transaction'}`,
+                postedBy: pc.createdById || 'system',
+                status: 'Posted',
+                isDeleted: false,
+                lines: { create: lines }
+              }
+            });
+            await db.pettyCashTransaction.update({
+              where: { id: pc.id },
+              data: { journalEntryId: newJe.id }
+            });
+          }
+          pettyCashSynced++;
+        }
+      }
+    } catch (e) {}
+
+    // 9. Sync Donations Disbursed
     const donDisbs = await db.donation.findMany({
       where: { isDeleted: false, status: 'APPROVED' },
       include: { journalEntry: { include: { lines: true } } }
@@ -516,7 +927,13 @@ class AccountingSyncHub {
       ];
 
       const postingDate = d.createdAt || new Date();
-      const existingJe = d.journalEntry;
+      let existingJe = d.journalEntry;
+      if (!existingJe && d.journalEntryId) {
+        existingJe = await db.journalEntry.findUnique({
+          where: { id: d.journalEntryId },
+          include: { lines: true }
+        });
+      }
 
       if (existingJe && existingJe.lines && existingJe.lines.length > 0 && !existingJe.isDeleted && existingJe.status === 'Posted') {
         const currentCredit = existingJe.lines.reduce((s: number, l: any) => s + Number(l.credit || 0), 0);
@@ -528,14 +945,18 @@ class AccountingSyncHub {
       if (existingJe) {
         await db.journalEntry.update({
           where: { id: existingJe.id },
-          data: { status: 'Posted', isDeleted: false, postingDate, reference: d.voucherNumber || `DON-${d.id.slice(0, 8)}` }
+          data: { status: 'Posted', isDeleted: false, deletedAt: null, deletedBy: null, postingDate, reference: d.voucherNumber || `DON-${d.id.slice(0, 8)}` }
         });
         await db.journalEntryLine.deleteMany({ where: { journalEntryId: existingJe.id } });
-        for (const line of lines) {
-          await db.journalEntryLine.create({
-            data: { journalEntryId: existingJe.id, accountId: line.accountId, debit: line.debit, credit: line.credit, description: line.description }
-          });
-        }
+        await db.journalEntryLine.createMany({
+          data: lines.map(l => ({
+            journalEntryId: existingJe.id,
+            accountId: l.accountId,
+            debit: l.debit,
+            credit: l.credit,
+            description: l.description
+          }))
+        });
       } else {
         const voucherNo = `BP-${postingDate.toISOString().slice(2, 10).replace(/-/g, '')}-${Math.floor(100000 + Math.random() * 900000)}`;
         const newJe = await db.journalEntry.create({
@@ -563,39 +984,9 @@ class AccountingSyncHub {
 
     const orphanJEsDeleted = 0;
 
-    // 6. Rebuild all Account.currentBalance cache from posted lines
-    const accounts = await db.account.findMany({
-      where: { accountLevel: { in: ['GL', 'SUBSIDIARY'] }, isDeleted: false },
-      include: { accountType: true }
-    });
-
-    const postedSums = await db.journalEntryLine.groupBy({
-      by: ['accountId'],
-      where: {
-        accountId: { in: accounts.map((a: any) => a.id) },
-        journalEntry: { status: 'Posted', isDeleted: false }
-      },
-      _sum: { debit: true, credit: true }
-    });
-
-    const sumsMap = new Map(postedSums.map((s: any) => [s.accountId, { debit: Number(s._sum?.debit || 0), credit: Number(s._sum?.credit || 0) }]));
-    let accountsRebuilt = 0;
-
-    for (const acc of accounts) {
-      const typeName = (acc.accountType?.name || 'ASSET').toUpperCase();
-      const isDebitNormal = typeName === 'ASSET' || typeName === 'EXPENSE' || typeName === 'EXPENSES' || typeName === 'ASSETS';
-      const sum = sumsMap.get(acc.id) || { debit: 0, credit: 0 };
-      const movement = isDebitNormal ? (sum.debit - sum.credit) : (sum.credit - sum.debit);
-      const newBal = Number(acc.initialBalance || 0) + movement;
-
-      if (Math.abs(Number(acc.currentBalance ?? 0) - newBal) > 0.001) {
-        await db.account.update({
-          where: { id: acc.id },
-          data: { currentBalance: newBal }
-        });
-        accountsRebuilt++;
-      }
-    }
+    // 10. Recalculate all Account balances from posted lines
+    const rebuildResult = await AccountingService.recalculateAllBalances(db);
+    const accountsRebuilt = rebuildResult.updated ?? 0;
 
     this.emitSyncEvent({
       action: 'SYNC_ALL_MODULES',
@@ -607,6 +998,10 @@ class AccountingSyncHub {
       hallBookingsSynced,
       donationsReceivedSynced,
       donationsDisbursedSynced,
+      revenueCollectionsSynced,
+      addIncomeSynced,
+      simpleExpensesSynced,
+      pettyCashSynced,
       orphanJEsDeleted,
       accountsRebuilt
     }, 'AccountingSyncService: syncAllModulesToLedger completed successfully');
@@ -616,6 +1011,10 @@ class AccountingSyncHub {
       hallBookingsSynced,
       donationsReceivedSynced,
       donationsDisbursedSynced,
+      revenueCollectionsSynced,
+      addIncomeSynced,
+      simpleExpensesSynced,
+      pettyCashSynced,
       orphanJEsDeleted,
       accountsRebuilt,
       timestamp: nowIso
@@ -624,4 +1023,3 @@ class AccountingSyncHub {
 }
 
 export const AccountingSyncService = new AccountingSyncHub();
-
