@@ -62,14 +62,14 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   // set — a concurrent delete of the same donor can't inflate the reported count.
   const { deleted, donors } = await prisma.$transaction(async (tx) => {
     const targets = await tx.donor.findMany({
-      where: { id: { in: validIds }, isDeleted: false },
+      where: { id: { in: validIds } },
       select: { id: true, donorCode: true, fullName: true },
     });
 
     if (targets.length === 0) return { deleted: 0, donors: targets };
 
     const result = await tx.donor.updateMany({
-      where: { id: { in: targets.map(t => t.id) }, isDeleted: false },
+      where: { id: { in: targets.map(t => t.id) } },
       data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user!.id },
     });
 

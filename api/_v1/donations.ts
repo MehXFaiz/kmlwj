@@ -637,9 +637,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const isDirectPost = requestedStatus === 'APPROVED' || requestedStatus === 'POSTED';
 
     // ── Server-side Duplicate Prevention inside Atomic Transaction ─────────
-    let newDonation;
-    try {
-      newDonation = await prisma.$transaction(async (tx) => {
+    const newDonation = await prisma.$transaction(async (tx) => {
       let cashOrBankAccountId: string | null = null;
       if (paymentMethod === 'CASH') {
         const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
@@ -728,14 +726,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return createdDonation;
     }, {
       timeout: 20000,
-    });
-    } catch (err: any) {
+    }).catch((err) => {
       if (err.message && err.message.startsWith('DUPLICATE_MONTHLY_POSTING:')) {
         const msg = err.message.replace('DUPLICATE_MONTHLY_POSTING:', '');
         return res.status(409).json({ error: { message: msg, status: 409 } });
       }
       throw err;
-    }
+    });
 
     if (!newDonation) return;
 
@@ -795,9 +792,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const targetStatus = status !== undefined ? status : existingDonation.status;
     const isApproved = targetStatus === 'APPROVED';
 
-    let updatedDonation;
-    try {
-      updatedDonation = await prisma.$transaction(async (tx) => {
+    const updatedDonation = await prisma.$transaction(async (tx) => {
       // If already posted, reverse previous journal entry so we can re-post fresh figures
       if (existingDonation.status === 'APPROVED' && existingDonation.journalEntryId) {
         try {
@@ -896,14 +891,13 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return updated;
     }, {
       timeout: 20000,
-    });
-    } catch (err: any) {
+    }).catch((err) => {
       if (err.message && err.message.startsWith('DUPLICATE_MONTHLY_POSTING:')) {
         const msg = err.message.replace('DUPLICATE_MONTHLY_POSTING:', '');
         return res.status(409).json({ error: { message: msg, status: 409 } });
       }
       throw err;
-    }
+    });
 
     if (!updatedDonation) return;
 

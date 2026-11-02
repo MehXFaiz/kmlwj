@@ -95,7 +95,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   if (!await enforceRestrictedRolePolicy(req, res)) return;
 
   const { method } = req;
-  const id = ((req as any).params?.id || req.query.id || req.body?.id) as string;
+  const id = (req.params?.id || req.query.id || req.body?.id) as string;
   const action = (req.query.action || req.body?.action) as string;
 
   if (method === 'GET') {
@@ -507,8 +507,6 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       resolvedDonor = donor;
     }
 
-    const currentMethod = paymentMethod !== undefined ? paymentMethod : existing.paymentMethod;
-    let debitAccountId: string | null = null;
     const result = await prisma.$transaction(async (tx) => {
       let journalEntryId = existing.journalEntryId;
       let newStatus = status !== undefined ? status : existing.status;
@@ -522,6 +520,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           } catch (e) {}
         }
 
+        let debitAccountId: string | null = null;
+        const currentMethod = paymentMethod !== undefined ? paymentMethod : existing.paymentMethod;
         if (currentMethod === 'CASH' || currentMethod === 'DONATION_FUND') {
           const cashAccount = await AccountingService.ensureCashInHandAccount(tx);
           debitAccountId = cashAccount.id;
@@ -615,7 +615,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     if (!await verifyPermission(req, res, [PERMS.RECORD_INCOME, 'donations.delete'])) return;
 
-    const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id || (req as any).params?.id || id;
+    const idsRaw = req.params?.id || req.body?.ids || req.body?.id || req.query.ids || req.query.id;
     if (!idsRaw) {
       return res.status(400).json({ error: { message: 'Receipt ID(s) required', status: 400 } });
     }

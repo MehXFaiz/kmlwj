@@ -148,7 +148,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             fullName,
             fatherName: fatherName || null,
             mobile: mobile || null,
-            cnic: cnic ? String(cnic).trim() : undefined,
+            cnic: cnic || null,
             email: email || null,
             address: address || null,
             city: city || null,

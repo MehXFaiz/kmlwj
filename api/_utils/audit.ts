@@ -23,32 +23,14 @@ export interface AuditTrailOptions {
   newValues?: any;
 }
 
-function safeJsonValue(val: any): any {
-  if (val === null || val === undefined) return null;
-  if (typeof val !== 'object') return val;
-  try {
-    const seen = new WeakSet();
-    const str = JSON.stringify(val, (key, value) => {
-      if (typeof value === 'object' && value !== null) {
-        if (seen.has(value)) return '[Circular]';
-        seen.add(value);
-      }
-      return value;
-    });
-    return JSON.parse(str);
-  } catch {
-    return { summary: String(val) };
-  }
-}
-
 export async function logAudit(
   userIdOrOptions: string | null | AuditTrailOptions,
   action?: string,
   module?: string,
   oldValues?: any,
   newValues?: any,
-  ipAddress?: string | null,
-  userAgent?: string | null
+  ipAddress?: string,
+  userAgent?: string
 ) {
   try {
     let options: AuditTrailOptions;
@@ -110,8 +92,8 @@ export async function logAudit(
           userId: validUserId,
           action: options.action,
           module: options.module,
-          oldValues: safeJsonValue(enrichedOldValues),
-          newValues: safeJsonValue(enrichedNewValues),
+          oldValues: enrichedOldValues,
+          newValues: enrichedNewValues,
           ipAddress: options.ipAddress || null,
           userAgent: options.userAgent || null,
         },
@@ -123,8 +105,8 @@ export async function logAudit(
             userId: null,
             action: options.action,
             module: options.module,
-            oldValues: safeJsonValue(enrichedOldValues),
-            newValues: safeJsonValue(enrichedNewValues),
+            oldValues: enrichedOldValues,
+            newValues: enrichedNewValues,
             ipAddress: options.ipAddress || null,
             userAgent: options.userAgent || null,
           },

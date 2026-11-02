@@ -1,5 +1,5 @@
 import { prisma } from '../_prisma.js';
-import { AccountingService } from './accounting.service.js';
+import { AccountingService } from './accounting.service.ts';
 import { logAudit } from '../_utils/audit.js';
 
 const accountingTxOptions = { maxWait: 10000, timeout: 30000 };
@@ -452,7 +452,7 @@ export class LedgerWorkflowService {
 
         const postingResult = await AccountingService.postPayment(tx, {
           amount: Number(record.amount),
-          cashOrBankAccountId: cashOrBankAccountId || undefined,
+          cashOrBankAccountId,
           expenseAccountId: expenseAccount.id,
           reference: voucherNo,
           description: `Monthly ${displayCategory} Disbursement - ${monthLabel}${record.remarks ? ` (${record.remarks})` : ''}`,
@@ -640,7 +640,7 @@ export class LedgerWorkflowService {
 
         const postingResult = await AccountingService.postReceipt(tx, {
           amount: record.amount,
-          cashOrBankAccountId: debitAccountId || undefined,
+          cashOrBankAccountId: debitAccountId,
           incomeAccountId: incomeAccount.id,
           reference: `${record.category.slice(0, 3).toUpperCase()}-${record.receiptNo}`,
           description: `${record.category} Receipt from ${record.title} ${record.subTitle ? `(${record.subTitle})` : ''}`,
@@ -782,10 +782,10 @@ export class LedgerWorkflowService {
 
         const postingResult = await AccountingService.postReceipt(tx, {
           amount: record.amount,
-          cashOrBankAccountId: debitAccountId || undefined,
+          cashOrBankAccountId: debitAccountId,
           incomeAccountId: incomeAccount.id,
           reference: `REC-${record.receiptNo}`,
-          description: `Donation received from ${record.donor?.fullName || (record.donor as any)?.name || 'Donor'} (${record.donationType})`,
+          description: `Donation received from ${record.donor?.name || 'Donor'} (${record.donationType})`,
           module: 'Donations Received',
           postedBy: userId,
           postingDate: record.receiptDate || new Date(),
@@ -851,19 +851,18 @@ export class LedgerWorkflowService {
 
         await AccountingService.recalculateBalancesForJournalEntry(tx, record.id);
 
-        const entryTotal = record.lines.reduce((s: number, l: any) => s + Number(l.debit || 0), 0);
         await logAudit({
           userId,
           action: 'POST_TO_LEDGER',
           module: 'Journal Entries',
-          oldValues: { status: record.status, transaction: recordId, amount: entryTotal },
+          oldValues: { status: record.status, transaction: recordId, amount: Number(record.totalAmount) },
           newValues: {
             action: 'POST_TO_LEDGER',
             user: user?.fullName || user?.email || userId,
             role: userRole,
             transaction: recordId,
             module: 'Journal Entries',
-            amount: entryTotal,
+            amount: Number(record.totalAmount),
             timestamp: new Date().toISOString(),
             status: 'Posted'
           },

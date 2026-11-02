@@ -1,6 +1,6 @@
 import { prisma } from "../_prisma.js";
 async function zakatCardVerifyHandler(req, res) {
-  const cardNumber = String(req.params.cardNumber || "");
+  const { cardNumber } = req.params;
   if (!cardNumber || cardNumber.trim().length < 2) {
     return res.status(400).json({
       verified: false,

@@ -205,7 +205,7 @@ export class FinancialYearService {
     const isReport = await AccountingService.getIncomeStatement(startDateStr, endDateStr);
     const totalRevenue = isReport.totalRevenue || 0;
     const totalExpense = isReport.totalExpense || 0;
-    const netProfitOrLoss = (isReport as any).netIncome ?? isReport.netProfit ?? (totalRevenue - totalExpense);
+    const netProfitOrLoss = isReport.netIncome || (totalRevenue - totalExpense);
 
     checks.push({
       name: 'P&L Reconciliation',
@@ -519,6 +519,15 @@ export class FinancialYearService {
           status: 'Posted',
           journalEntryId: opJournalEntry.id,
           createdBy: userId,
+          lines: {
+            create: rolloverLines.map(rl => ({
+              accountId: rl.accountId,
+              glCode: rl.glCode,
+              debitCredit: rl.debitCredit,
+              amount: rl.closingBalance,
+              sourceClosingBalance: rl.closingBalance
+            }))
+          }
         },
         create: {
           financialYear: nextFyCode,
@@ -529,25 +538,18 @@ export class FinancialYearService {
           status: 'Posted',
           journalEntryId: opJournalEntry.id,
           createdBy: userId,
-        }
+          lines: {
+            create: rolloverLines.map(rl => ({
+              accountId: rl.accountId,
+              glCode: rl.glCode,
+              debitCredit: rl.debitCredit,
+              amount: rl.closingBalance,
+              sourceClosingBalance: rl.closingBalance
+            }))
+          }
+        },
+        include: { lines: true }
       });
-
-      await tx.openingBalanceLine.deleteMany({
-        where: { batchId: nextBatch.id }
-      });
-
-      if (rolloverLines.length > 0) {
-        await tx.openingBalanceLine.createMany({
-          data: rolloverLines.map(rl => ({
-            batchId: nextBatch.id,
-            accountId: rl.accountId,
-            glCode: rl.glCode,
-            debitCredit: rl.debitCredit,
-            amount: rl.closingBalance.toNumber(),
-            sourceClosingBalance: rl.closingBalance.toNumber()
-          }))
-        });
-      }
 
       await AccountingService.recalculateBalancesForJournalEntry(tx, opJournalEntry.id);
 

@@ -76,24 +76,14 @@ describe('Standalone Donations Module (Inflows, GL Posting & RBAC)', () => {
     nonAdminToken = jwt.sign({ sub: operatorUser.id, email: operatorUser.email, role: operatorUser.role.name }, secret);
 
     // 3. Ensure Test Donor exists
-    testDonor = await prisma.donor.findFirst();
-    if (testDonor) {
-      if (testDonor.isDeleted) {
-        testDonor = await prisma.donor.update({
-          where: { id: testDonor.id },
-          data: { isDeleted: false, isActive: true }
-        });
-      }
-    } else {
-      const randomCnic = '42101' + String(Date.now()).slice(-8);
+    testDonor = await prisma.donor.findFirst({ where: { isDeleted: false } });
+    if (!testDonor) {
       testDonor = await prisma.donor.create({
         data: {
           fullName: 'Haji Abdul Sattar',
           donorCode: `DNR-${Date.now()}`,
-          cnic: randomCnic,
           mobile: '03001234567',
-          isActive: true,
-          isDeleted: false
+          isActive: true
         }
       });
     }

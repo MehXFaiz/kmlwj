@@ -12,7 +12,7 @@ import { prisma } from '../_prisma.js';
  * Called from: GET /api/v1/member/verify/:id
  */
 export async function memberVerifyHandler(req: Request, res: Response) {
-  const id = String(req.params.id || '');
+  const { id } = req.params;
 
   if (!id || id.trim().length < 2) {
     return res.status(400).json({

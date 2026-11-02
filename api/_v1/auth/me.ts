@@ -95,8 +95,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         name: user.role.name,
         isPrivileged,
       },
-      permissions: Array.from(permissionSet),
-      structuredPermissions,
+      permissions: structuredPermissions,
       rawPermissions: Array.from(permissionSet),
       // Flat properties for backward compatibility
       id: user.id,

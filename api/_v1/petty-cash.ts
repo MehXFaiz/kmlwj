@@ -140,7 +140,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       }
 
       if (action === 'approve-reconciliation') {
-        const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'Super Admin' || req.user?.role === 'Admin';
+        const isAdmin = user?.role === 'ADMIN' || user?.roleName === 'ADMIN' || user?.role?.name === 'ADMIN' || user?.role === 'Super Admin';
         if (!isAdmin) {
           return res.status(403).json({ error: 'Permission denied. Only Administrators can approve reconciliation adjustments.' });
         }

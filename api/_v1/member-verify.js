@@ -1,6 +1,6 @@
 import { prisma } from "../_prisma.js";
 async function memberVerifyHandler(req, res) {
-  const id = String(req.params.id || "");
+  const { id } = req.params;
   if (!id || id.trim().length < 2) {
     return res.status(400).json({
       verified: false,
