@@ -21,6 +21,30 @@ export const canUserPostToLedger = (isPrivileged, permissions = [], module = nul
   return checkPerm(permissions, isPrivileged, module, 'post', role);
 };
 
+export const AUTO_LOGOUT_STORAGE_KEY = 'kmlwj_auto_logout_minutes';
+export const LAST_ACTIVITY_STORAGE_KEY = 'kmlwj_last_activity_at';
+
+export const AUTO_LOGOUT_OPTIONS = [
+  { value: 0, label: 'Disabled (Never)', shortLabel: 'Off' },
+  { value: 5, label: '5 Minutes', shortLabel: '5m' },
+  { value: 15, label: '15 Minutes', shortLabel: '15m' },
+  { value: 30, label: '30 Minutes (Default)', shortLabel: '30m' },
+  { value: 60, label: '1 Hour', shortLabel: '1h' },
+  { value: 120, label: '2 Hours', shortLabel: '2h' },
+];
+
+const getSavedAutoLogoutMinutes = () => {
+  if (typeof window === 'undefined') return 30;
+  try {
+    const saved = localStorage.getItem(AUTO_LOGOUT_STORAGE_KEY);
+    if (saved === null || saved === undefined || saved === '') return 30;
+    const parsed = parseInt(saved, 10);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : 30;
+  } catch {
+    return 30;
+  }
+};
+
 export const useAuthStore = create((set, get) => {
   // Listen for session expiry event from service layer
   if (typeof window !== 'undefined') {
@@ -58,6 +82,17 @@ export const useAuthStore = create((set, get) => {
     error: null,
     successMessage: null,
     showSplash: false,
+    autoLogoutMinutes: getSavedAutoLogoutMinutes(),
+    setAutoLogoutMinutes: (minutes) => {
+      const normalized = Number.isFinite(Number(minutes)) && Number(minutes) >= 0 ? Number(minutes) : 0;
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(AUTO_LOGOUT_STORAGE_KEY, String(normalized));
+          localStorage.setItem(LAST_ACTIVITY_STORAGE_KEY, String(Date.now()));
+        } catch (e) {}
+      }
+      set({ autoLogoutMinutes: normalized });
+    },
     triggerSplash: () => set({ showSplash: true }),
     dismissSplash: () => set({ showSplash: false }),
 
@@ -232,6 +267,12 @@ export const useAuthStore = create((set, get) => {
         const isAccountant = roleName === 'Accountant' || roleObj?.name === 'Accountant' || roleName?.toLowerCase?.().includes('accountant');
         const canPost = privileged || isAccountant || permsList.some(p => p.action === 'post') || rawPerms.includes('POST_JOURNAL') || rawPerms.includes('POST_LEDGER') || rawPerms.includes('ledger.post');
 
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(LAST_ACTIVITY_STORAGE_KEY, String(Date.now()));
+          } catch (e) {}
+        }
+
         set({
           user: normalizedUser,
           role: roleName,
@@ -270,11 +311,17 @@ export const useAuthStore = create((set, get) => {
       }
     },
 
-    logout: async () => {
+    logout: async (options = {}) => {
+      const isAutoLogout = options && typeof options === 'object' && options.reason === 'inactivity';
       set({ loading: true });
       try {
         await authService.logout();
       } finally {
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.removeItem(LAST_ACTIVITY_STORAGE_KEY);
+          } catch (e) {}
+        }
         set({
           user: null,
           role: null,
@@ -287,7 +334,8 @@ export const useAuthStore = create((set, get) => {
           canPostToLedger: false,
           isAuthenticated: false,
           loading: false,
-          successMessage: 'Logged out successfully',
+          error: isAutoLogout ? 'Your session was automatically logged out due to inactivity.' : null,
+          successMessage: isAutoLogout ? null : 'Logged out successfully',
         });
       }
     },

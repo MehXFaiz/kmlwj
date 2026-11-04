@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getCurrentFiscalYear, useCoaStore } from '../../store/coaStore';
-import { useAuthStore } from '../../store/authStore';
-import { Menu, User, Settings, LogOut, ChevronDown, Globe } from 'lucide-react';
+import { useAuthStore, AUTO_LOGOUT_OPTIONS } from '../../store/authStore';
+import { showToast } from '../ui/Toast';
+import { Menu, User, Settings, LogOut, ChevronDown, Globe, Timer } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -49,11 +50,13 @@ const menuItemClass =
   'focus-visible:ring-2 focus-visible:ring-brand-500';
 
 export const Topbar = ({ onMobileMenuToggle }) => {
-  const { user, loading, logout } = useAuthStore(
+  const { user, loading, logout, autoLogoutMinutes, setAutoLogoutMinutes } = useAuthStore(
     useShallow((state) => ({
       user: state.user,
       loading: state.loading,
       logout: state.logout,
+      autoLogoutMinutes: state.autoLogoutMinutes,
+      setAutoLogoutMinutes: state.setAutoLogoutMinutes,
     }))
   );
   const {
@@ -261,6 +264,45 @@ export const Topbar = ({ onMobileMenuToggle }) => {
                   <Link role="menuitem" to="/settings" onClick={() => setUserMenuOpen(false)} className={menuItemClass}>
                     <Settings className="h-3.5 w-3.5" /> Settings
                   </Link>
+                </div>
+                <div className="px-3 py-2.5 border-t border-brand-800/40 bg-slate-950/40 space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Timer className="h-3.5 w-3.5 text-brand-400" />
+                      Auto Logout
+                    </span>
+                    <span className="text-[10px] font-bold text-brand-300 uppercase">
+                      {autoLogoutMinutes > 0 ? `${autoLogoutMinutes} min` : 'Off'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-6 gap-1">
+                    {AUTO_LOGOUT_OPTIONS.map((opt) => {
+                      const active = Number(autoLogoutMinutes) === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => {
+                            setAutoLogoutMinutes(opt.value);
+                            showToast(
+                              opt.value > 0
+                                ? `Auto-logout set to ${opt.label}`
+                                : 'Auto-logout disabled',
+                              'success'
+                            );
+                          }}
+                          className={`py-1 rounded-md text-[10px] font-bold transition-colors cursor-pointer ${
+                            active
+                              ? 'bg-brand-500 text-slate-950'
+                              : 'bg-slate-800/80 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                          }`}
+                          title={opt.label}
+                        >
+                          {opt.shortLabel}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div className="p-1.5 border-t border-brand-800/40">
                   <button

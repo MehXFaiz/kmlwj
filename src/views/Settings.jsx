@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useCoaStore } from '../store/coaStore';
 import { useJournalStore } from '../store/journalStore';
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore, AUTO_LOGOUT_OPTIONS } from '../store/authStore';
 import { useConfirmStore } from '../store/confirmStore';
 import { showToast } from '../components/ui/Toast';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Settings as SettingsIcon, RotateCcw, ShieldCheck, Database, HardDrive, RefreshCw, Lock, Loader2, Monitor, CheckCircle2, DownloadCloud, ShieldAlert } from 'lucide-react';
+import { Settings as SettingsIcon, RotateCcw, ShieldCheck, Database, HardDrive, RefreshCw, Lock, Loader2, Monitor, CheckCircle2, DownloadCloud, ShieldAlert, Timer } from 'lucide-react';
 import api from '../services/api';
 import { syncEngine } from '../services/syncEngine';
 import { useUpdaterStore } from '../store/updaterStore';
@@ -120,8 +120,17 @@ export const Settings = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  // Auth Store hooks for Change Password
-  const { changePassword, loading: authLoading, error: authError, successMessage: authSuccess, clearError: clearAuthError, clearSuccess: clearAuthSuccess } = useAuthStore();
+  // Auth Store hooks for Change Password & Auto Logout
+  const {
+    changePassword,
+    loading: authLoading,
+    error: authError,
+    successMessage: authSuccess,
+    clearError: clearAuthError,
+    clearSuccess: clearAuthSuccess,
+    autoLogoutMinutes,
+    setAutoLogoutMinutes,
+  } = useAuthStore();
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -214,6 +223,72 @@ export const Settings = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Settings Columns */}
         <div className="lg:col-span-2 space-y-6">
+
+          {/* Auto-Logout & Session Timeout Card */}
+          <Card>
+            <CardHeader className="border-b border-slate-800/80 pb-4 mb-4">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Timer className="h-5 w-5 text-brand-400" />
+                  <CardTitle>Auto-Logout & Inactivity Timeout</CardTitle>
+                </div>
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border ${
+                    Number(autoLogoutMinutes) > 0
+                      ? 'bg-emerald-950/50 border-emerald-800/60 text-emerald-300'
+                      : 'bg-slate-800/60 border-slate-700 text-slate-400'
+                  }`}
+                >
+                  {Number(autoLogoutMinutes) > 0
+                    ? `Active · ${autoLogoutMinutes} Minutes`
+                    : 'Disabled'}
+                </span>
+              </div>
+              <CardDescription className="mt-1">
+                Automatically sign out of your account when no keyboard, mouse, or touch activity is detected for the selected duration. A 60-second warning prompt appears before signing out.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                {AUTO_LOGOUT_OPTIONS.map((opt) => {
+                  const isSelected = Number(autoLogoutMinutes) === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        setAutoLogoutMinutes(opt.value);
+                        showToast(
+                          opt.value > 0
+                            ? `Auto-logout set to ${opt.label}`
+                            : 'Auto-logout disabled',
+                          'success'
+                        );
+                      }}
+                      className={`flex flex-col items-start justify-between p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-brand-500/15 border-brand-500/70 text-slate-100 shadow-lg shadow-brand-500/10'
+                          : 'bg-slate-950/60 border-slate-800/80 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full mb-1">
+                        <span className="text-xs font-bold">
+                          {opt.value === 0 ? 'Off' : `${opt.value} Min`}
+                        </span>
+                        <span
+                          className={`h-2.5 w-2.5 rounded-full ${
+                            isSelected ? 'bg-brand-400 ring-4 ring-brand-500/20' : 'bg-slate-700'
+                          }`}
+                        />
+                      </div>
+                      <span className="text-[11px] text-slate-400 font-medium">{opt.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
           
           {/* Change Password Card */}
           <Card>

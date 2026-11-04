@@ -4,6 +4,7 @@ import { BookOpen } from 'lucide-react';
 import { SplashScreen } from './components/common/SplashScreen';
 import { Sidebar } from './components/common/Sidebar';
 import { Topbar } from './components/common/Topbar';
+import { AutoLogoutManager } from './components/common/AutoLogoutManager';
 import { useAuthStore } from './store/authStore';
 import { ToastContainer } from './components/ui/Toast';
 import { UpdateBanner } from './components/common/UpdateBanner';
@@ -209,6 +210,7 @@ const ProtectedRoutesWrapper = () => {
 
   return (
     <div className="flex h-[100dvh] w-full overflow-hidden bg-slate-950 text-slate-100 font-sans">
+      <AutoLogoutManager />
       {/* Navigation Sidebar */}
       <Sidebar
         isMobileOpen={isMobileOpen}

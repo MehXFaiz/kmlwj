@@ -28,7 +28,10 @@ export const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    clearError();
+    const currentErr = useAuthStore.getState().error || '';
+    if (!currentErr.toLowerCase().includes('inactivity') && !currentErr.toLowerCase().includes('expired')) {
+      clearError();
+    }
     clearSuccess();
   }, [clearError, clearSuccess]);
 
