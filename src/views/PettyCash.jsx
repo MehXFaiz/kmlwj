@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { 
   Wallet, 
   ArrowUpRight, 
@@ -735,7 +736,7 @@ export const PettyCash = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-slate-400 font-semibold mb-1">Date *</label>
-                      <input
+                      <DateInput
                         type="date"
                         required
                         value={addCashForm.date}
@@ -831,7 +832,7 @@ export const PettyCash = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-slate-400 font-semibold mb-1">Date *</label>
-                      <input
+                      <DateInput
                         type="date"
                         required
                         value={replenishForm.date}
@@ -938,7 +939,7 @@ export const PettyCash = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-slate-400 font-semibold mb-1">Date *</label>
-                    <input
+                    <DateInput
                       type="date"
                       required
                       value={expenseForm.date}
@@ -1084,7 +1085,7 @@ export const PettyCash = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-400 font-semibold mb-1">Date *</label>
-                  <input
+                  <DateInput
                     type="date"
                     required
                     value={countForm.date}
@@ -1313,7 +1314,7 @@ export const PettyCash = () => {
                     <option value="ADMIN_ADJUSTMENT">Admin Adjustment</option>
                   </select>
 
-                  <input
+                  <DateInput
                     type="date"
                     value={startDateFilter}
                     onChange={(e) => setStartDateFilter(e.target.value)}
@@ -1322,7 +1323,7 @@ export const PettyCash = () => {
 
                   <span className="text-slate-500">to</span>
 
-                  <input
+                  <DateInput
                     type="date"
                     value={endDateFilter}
                     onChange={(e) => setEndDateFilter(e.target.value)}
@@ -1580,7 +1581,7 @@ export const PettyCash = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-slate-400 font-semibold mb-1">Date *</label>
-                    <input
+                    <DateInput
                       type="date"
                       required
                       value={editForm.date}

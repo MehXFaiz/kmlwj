@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCoaStore } from '../store/coaStore';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
@@ -265,7 +266,7 @@ export const TransferForm = () => {
               <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass}>{t('forms.transactionDate')}</label>
-                  <input
+                  <DateInput
                     type="date"
                     value={postingDate}
                     onChange={e => setPostingDate(e.target.value)}

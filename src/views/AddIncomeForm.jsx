@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { useNavigate, useParams, Link, useLocation } from 'react-router-dom';
 import { useAddIncomeStore } from '../store/addIncomeStore';
 import { useCoaStore } from '../store/coaStore';
@@ -646,7 +647,7 @@ export const AddIncomeForm = () => {
                   <label className={labelStyle}>
                     Date <span className="text-red-400">*</span>
                   </label>
-                  <input
+                  <DateInput
                     type="date"
                     value={form.date}
                     onChange={(e) => handleInputChange('date', e.target.value)}

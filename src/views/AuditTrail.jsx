@@ -499,11 +499,7 @@ export const AuditTrail = () => {
               filteredLogs.map((log) => {
                 const badgeConfig = getActionBadgeConfig(log.cleanAction);
                 const ActionIcon = badgeConfig.icon;
-                const formattedDate = new Date(log.timestamp).toLocaleDateString(undefined, {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                });
+                const formattedDate = new Date(log.timestamp).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
                 const formattedTime = new Date(log.timestamp).toLocaleTimeString(undefined, {
                   hour: '2-digit',
                   minute: '2-digit',
@@ -587,11 +583,7 @@ export const AuditTrail = () => {
                       const ActionIcon = badgeConfig.icon;
 
                       const dateObj = new Date(log.timestamp);
-                      const formattedDate = dateObj.toLocaleDateString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      });
+                      const formattedDate = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
                       const formattedTime = dateObj.toLocaleTimeString(undefined, {
                         hour: '2-digit',
                         minute: '2-digit',

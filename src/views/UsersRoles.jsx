@@ -899,7 +899,7 @@ export const UsersRoles = () => {
                     filteredActivity.map((a) => {
                       const dateObj = new Date(a.timestamp || a.createdAt);
                       const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                      const dateStr = dateObj.toLocaleDateString();
+                      const dateStr = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
                       const isRoles = a.module === 'ROLES' || a.module === 'USERS';
 
                       return (

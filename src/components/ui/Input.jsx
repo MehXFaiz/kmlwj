@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useState } from 'react';
 import { sanitizeInputValue } from '../../utils/validation';
+import { DateInput } from './DateInput';
 
 export const Input = forwardRef(({
   label,
@@ -30,6 +31,15 @@ export const Input = forwardRef(({
     }
   };
   const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+  const resolvedClassName = `
+    w-full px-3.5 py-2.5 bg-slate-950/60 border rounded-xl text-sm text-slate-100 placeholder:text-slate-600
+    focus:outline-none transition-all duration-200 font-medium
+    ${error 
+      ? 'border-red-500/60 focus:border-red-500/60' 
+      : 'border-slate-800 focus:border-amber-500/60'
+    }
+    ${className}
+  `;
   
   return (
     <div className="flex flex-col gap-1.5 w-full text-left">
@@ -43,23 +53,27 @@ export const Input = forwardRef(({
         </label>
       )}
       
-      <input
-        ref={ref}
-        type={type}
-        id={inputId}
-        value={internalValue}
-        onChange={handleChange}
-        className={`
-          w-full px-3.5 py-2.5 bg-slate-950/60 border rounded-xl text-sm text-slate-100 placeholder:text-slate-600
-          focus:outline-none transition-all duration-200 font-medium
-          ${error 
-            ? 'border-red-500/60 focus:border-red-500/60' 
-            : 'border-slate-800 focus:border-amber-500/60'
-          }
-          ${className}
-        `}
-        {...props}
-      />
+      {type === 'date' ? (
+        <DateInput
+          ref={ref}
+          id={inputId}
+          required={required}
+          value={value}
+          onChange={onChange}
+          className={resolvedClassName}
+          {...props}
+        />
+      ) : (
+        <input
+          ref={ref}
+          type={type}
+          id={inputId}
+          value={internalValue}
+          onChange={handleChange}
+          className={resolvedClassName}
+          {...props}
+        />
+      )}
       
       {description && !error && (
         <span className="text-xs text-slate-500">{description}</span>

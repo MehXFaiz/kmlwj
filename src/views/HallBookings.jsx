@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, Search, Printer, Download, Upload, AlertTriangle, CheckCircle, X, Trash2, Edit2, CheckCircle2, Calendar, Table as TableIcon, LayoutGrid, Building2, Phone, DollarSign, FileText, Clock, RotateCcw } from 'lucide-react';
@@ -446,7 +447,7 @@ export const HallBookings = () => {
                   <option value="day">Daily income</option>
                 </select>
                 {period === 'month' && <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="rounded-lg bg-slate-950/70 border border-slate-800 px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-amber-500/50" />}
-                {period === 'day' && <input type="date" value={selectedDay} onChange={e => setSelectedDay(e.target.value)} className="rounded-lg bg-slate-950/70 border border-slate-800 px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-amber-500/50" />}
+                {period === 'day' && <DateInput type="date" value={selectedDay} onChange={e => setSelectedDay(e.target.value)} className="rounded-lg bg-slate-950/70 border border-slate-800 px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-amber-500/50" />}
                 <select value={selectedHallId} onChange={e => setSelectedHallId(e.target.value)} className="min-w-[180px] rounded-lg bg-slate-950/70 border border-slate-800 px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-amber-500/50">
                   <option value="">All halls</option>
                   {hallOptions.map(hall => <option key={hall.id} value={hall.id}>{hall.name}</option>)}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { useMonthlyDonationCardStore } from '../store/monthlyDonationCardStore';
 import { useAuthStore } from '../store/authStore';
 import { useConfirmStore } from '../store/confirmStore';
@@ -246,7 +247,7 @@ function IssueModal({ onClose, onSubmit }) {
             <label style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, marginBottom: '5px', display: 'block' }}>
               Issue Date (تاریخ اجراء)
             </label>
-            <input
+            <DateInput
               type="date"
               value={issueDate}
               onChange={e => setIssueDate(e.target.value)}

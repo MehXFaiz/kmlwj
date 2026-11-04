@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { useOpeningBalanceStore } from '../store/openingBalanceStore';
 import { useFinancialYearStore } from '../store/financialYearStore';
 import { useAuthStore } from '../store/authStore';
@@ -284,7 +285,7 @@ export function OpeningBalances() {
 
           <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
             <span className="text-slate-400">Opening Date:</span>
-            <input
+            <DateInput
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}

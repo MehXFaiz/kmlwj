@@ -407,7 +407,7 @@ export const ReservedCodes = () => {
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-[11px] text-slate-500">
-                      {new Date(c.createdAt).toLocaleDateString()}
+                      {new Date(c.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">

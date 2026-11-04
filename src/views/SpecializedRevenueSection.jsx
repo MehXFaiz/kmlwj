@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, Search, Printer, Download, Upload, AlertTriangle, CheckCircle, Trash2, X, DollarSign, Calendar, Users, Building, Edit2, CheckCircle2, ChevronDown, LayoutGrid, Table as TableIcon, MapPin, Tag, Phone, Bus, Heart, User, Hash, RotateCcw } from 'lucide-react';
@@ -463,7 +464,7 @@ export const SpecializedRevenueSection = ({
                   />
                 )}
                 {period === 'day' && (
-                  <input
+                  <DateInput
                     type="date"
                     value={selectedDay}
                     onChange={(e) => setSelectedDay(e.target.value)}

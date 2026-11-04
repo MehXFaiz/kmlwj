@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useBeneficiaryStore } from '../store/beneficiaryStore';
 import { beneficiaryService } from '../services/beneficiaryService';
@@ -447,7 +448,7 @@ export const BeneficiaryForm = () => {
                 </div>
                 <div>
                   <label className={labelClass}>Date of Birth</label>
-                  <input type="date" value={form.dob} onChange={set('dob')}
+                  <DateInput type="date" value={form.dob} onChange={set('dob')}
                     className={inputClass(false)} />
                 </div>
                 <div>

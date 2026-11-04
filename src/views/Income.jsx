@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { useIncomeStore } from '../store/incomeStore';
 import { useRevenueStore } from '../store/revenueStore';
 import { useCoaStore } from '../store/coaStore';
@@ -49,7 +50,7 @@ function IncomeModal({ isOpen, onClose, onSave, revenueHeads, accounts }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Date *</label>
-              <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+              <DateInput type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
                 className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-emerald-600/60 transition-all" />
             </div>
             <div>

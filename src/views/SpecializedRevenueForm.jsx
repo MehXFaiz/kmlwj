@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { useNavigate, useParams, Link, useLocation } from 'react-router-dom';
 import { useRevenueCollectionStore } from '../store/revenueCollectionStore';
 import { useCoaStore } from '../store/coaStore';
@@ -551,7 +552,7 @@ export const SpecializedRevenueForm = ({
               <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass}>{activeDateLabel} *</label>
-                  <input
+                  <DateInput
                     type="date"
                     required
                     value={form.eventDate}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { useZakatCardStore } from '../store/zakatCardStore';
 import { zakatCardService } from '../services/zakatCardService';
 import { useAuthStore } from '../store/authStore';
@@ -333,7 +334,7 @@ function IssueModal({ beneficiaries, beneficiariesLoading, onClose, onSubmit }) 
           <label style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, marginBottom: '6px', display: 'block' }}>
             Issue Date
           </label>
-          <input
+          <DateInput
             type="date"
             value={issueDate}
             onChange={e => setIssueDate(e.target.value)}

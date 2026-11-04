@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -426,7 +427,7 @@ export const DonationsList = () => {
 
             {/* Date Range Inputs */}
             <div className="flex items-center gap-1.5 ml-2">
-              <input
+              <DateInput
                 type="date"
                 value={startDate}
                 onChange={(e) => {
@@ -436,7 +437,7 @@ export const DonationsList = () => {
                 className="px-2 py-1 text-[11px] rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 text-slate-700 dark:text-slate-300"
               />
               <span className="text-slate-400 text-xs">to</span>
-              <input
+              <DateInput
                 type="date"
                 value={endDate}
                 onChange={(e) => {
@@ -626,7 +627,7 @@ export const DonationsList = () => {
 
                       {/* Date */}
                       <td className="py-3 px-4 whitespace-nowrap text-slate-600 dark:text-slate-300">
-                        {d.receiptDate ? new Date(d.receiptDate).toLocaleDateString() : '-'}
+                        {d.receiptDate ? new Date(d.receiptDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
                       </td>
 
                       {/* Status */}

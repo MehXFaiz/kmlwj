@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { createPortal } from 'react-dom';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
@@ -477,7 +478,7 @@ function BankVoucherEditModal({ voucher, onClose, onSave }) {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Date *</label>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} required
+            <DateInput type="date" value={date} onChange={e => setDate(e.target.value)} required
               className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-amber-500 transition-all" />
           </div>
           <div>

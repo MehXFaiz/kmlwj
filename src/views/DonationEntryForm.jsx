@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -464,7 +465,7 @@ export const DonationEntryForm = () => {
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                   Donation Date <span className="text-rose-500">*</span>
                 </label>
-                <input
+                <DateInput
                   type="date"
                   value={formData.donationDate}
                   onChange={(e) => setFormData({ ...formData, donationDate: e.target.value })}
@@ -668,7 +669,7 @@ export const DonationEntryForm = () => {
                         <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                           Cheque Date (Optional)
                         </label>
-                        <input
+                        <DateInput
                           type="date"
                           value={formData.chequeDate}
                           onChange={(e) => setFormData({ ...formData, chequeDate: e.target.value })}

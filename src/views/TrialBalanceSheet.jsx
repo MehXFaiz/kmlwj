@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { Card, CardContent } from '../components/ui/Card';
 import { Search, Download, Printer, Plus, Edit2, CheckCircle2, AlertTriangle, Grid, List, FileText } from 'lucide-react';
 import { Button } from '../components/ui/Button';
@@ -874,7 +875,7 @@ export const TrialBalanceSheet = () => {
           <div className="flex flex-wrap items-center gap-4 w-full">
             <div className="flex flex-col gap-1.5 flex-1 min-w-[130px] sm:flex-none">
               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">From Date</label>
-              <input
+              <DateInput
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
@@ -883,7 +884,7 @@ export const TrialBalanceSheet = () => {
             </div>
             <div className="flex flex-col gap-1.5 flex-1 min-w-[130px] sm:flex-none">
               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">To Date</label>
-              <input
+              <DateInput
                 type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
@@ -956,7 +957,7 @@ export const TrialBalanceSheet = () => {
                     <tr><td colSpan={6} className="py-10 text-center text-slate-500">No bank transactions found for this date range.</td></tr>
                   ) : bankStatementEntries.map(entry => (
                     <tr key={entry.id} className="hover:bg-slate-900/40">
-                      <td className="py-3 px-4 text-slate-300 whitespace-nowrap">{new Date(entry.postingDate).toLocaleDateString()}</td>
+                      <td className="py-3 px-4 text-slate-300 whitespace-nowrap">{new Date(entry.postingDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
                       <td className="py-3 px-4 text-slate-200 font-medium">{entry.accountName} <span className="text-slate-600">({entry.glCode})</span></td>
                       <td className="py-3 px-4 text-amber-300">{entry.voucherNo}<div className="text-slate-500">{entry.reference}</div></td>
                       <td className="py-3 px-4 text-slate-400">{entry.description || '-'}</td>

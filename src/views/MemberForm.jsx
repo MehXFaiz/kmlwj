@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { useMemberStore } from '../store/memberStore';
@@ -420,7 +421,7 @@ export const MemberForm = () => {
 
                 <div>
                   <label className={labelClass}>Date of Birth *</label>
-                  <input
+                  <DateInput
                     type="date"
                     {...register('dob', { required: 'Date of birth is required' })}
                     className={inputClass(errors.dob)}
@@ -511,7 +512,7 @@ export const MemberForm = () => {
 
                 <div>
                   <label className={labelClass}>Registration Date (DOI)</label>
-                  <input type="date" {...register('doi')} className={inputClass(false)} />
+                  <DateInput type="date" {...register('doi')} className={inputClass(false)} />
                 </div>
               </div>
             </div>
@@ -565,12 +566,12 @@ export const MemberForm = () => {
 
                   <div>
                     <label className={labelClass}>Membership Start Date</label>
-                    <input type="date" {...register('startDate')} className={inputClass(false)} />
+                    <DateInput type="date" {...register('startDate')} className={inputClass(false)} />
                   </div>
 
                   <div>
                     <label className={labelClass}>Expiry Date (Optional)</label>
-                    <input type="date" {...register('expiryDate')} className={inputClass(false)} />
+                    <DateInput type="date" {...register('expiryDate')} className={inputClass(false)} />
                   </div>
                 </div>
 

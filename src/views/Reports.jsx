@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -234,8 +235,8 @@ export const Reports = () => {
             <div className="flex flex-col gap-1">
               <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Start Date</label>
               <div className="relative">
-                <Calendar className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-500 pointer-events-none" />
-                <input
+                <Calendar className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-500 z-10 pointer-events-none" />
+                <DateInput
                   type="date"
                   value={startDate}
                   onChange={(e) => handleStartDateChange(e.target.value)}
@@ -250,8 +251,8 @@ export const Reports = () => {
             <div className="flex flex-col gap-1">
               <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">End Date</label>
               <div className="relative">
-                <Calendar className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-500 pointer-events-none" />
-                <input
+                <Calendar className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-500 z-10 pointer-events-none" />
+                <DateInput
                   type="date"
                   value={endDate}
                   onChange={(e) => handleEndDateChange(e.target.value)}

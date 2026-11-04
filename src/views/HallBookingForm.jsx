@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useForm, Controller } from 'react-hook-form';
@@ -648,7 +649,7 @@ export const HallBookingForm = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className={labelClass}>{t('receipt.bookingDate') || 'Booking Date'} *</label>
-                      <input type="date" {...register('bookingDate', {
+                      <DateInput type="date" {...register('bookingDate', {
                         required: 'Booking date is required',
                         pattern: {
                           value: /^\d{4}-\d{2}-\d{2}$/,
@@ -663,7 +664,7 @@ export const HallBookingForm = () => {
 
                     <div>
                       <label className={labelClass}>{t('receipt.programDate')} *</label>
-                      <input type="date" {...register('programDate', {
+                      <DateInput type="date" {...register('programDate', {
                         required: 'Program date is required',
                         pattern: {
                           value: /^\d{4}-\d{2}-\d{2}$/,
@@ -1046,7 +1047,7 @@ export const HallBookingForm = () => {
 
                   <div>
                     <label className={labelClass}>Refund Date</label>
-                    <input type="date" {...register('refundDate')}
+                    <DateInput type="date" {...register('refundDate')}
                       className={inputClass(errors.refundDate)} />
                   </div>
 

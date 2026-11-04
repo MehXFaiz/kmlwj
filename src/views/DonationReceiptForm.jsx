@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom';
 import { useDonationReceivedStore } from '../store/donationReceivedStore';
 import { useDonorStore } from '../store/donorStore';
@@ -409,7 +410,7 @@ export const DonationReceiptForm = () => {
 
                 <div>
                   <label className={labelClass}>Receipt Date *</label>
-                  <input
+                  <DateInput
                     type="date"
                     required
                     value={form.receiptDate}
@@ -593,7 +594,7 @@ export const DonationReceiptForm = () => {
                     </div>
                     <div>
                       <label className={labelClass}>Cheque Date</label>
-                      <input type="date" value={form.chequeDate} onChange={e => setForm({ ...form, chequeDate: e.target.value })} className={inputClass} />
+                      <DateInput type="date" value={form.chequeDate} onChange={e => setForm({ ...form, chequeDate: e.target.value })} className={inputClass} />
                     </div>
                   </>
                 )}

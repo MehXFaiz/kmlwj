@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { useFinancialYearStore } from '../store/financialYearStore';
 import { useAuthStore } from '../store/authStore';
 import {
@@ -162,7 +163,7 @@ export function YearEndClosing() {
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-1">Official Closing Date</label>
-              <input
+              <DateInput
                 type="date"
                 value={closingDate}
                 onChange={(e) => setClosingDate(e.target.value)}

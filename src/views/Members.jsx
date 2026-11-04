@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMemberStore } from '../store/memberStore';
 import { useCoaStore } from '../store/coaStore';
@@ -586,7 +587,7 @@ export const Members = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 mb-1.5">Receipt Date *</label>
-                  <input
+                  <DateInput
                     type="date"
                     required
                     value={payDate}

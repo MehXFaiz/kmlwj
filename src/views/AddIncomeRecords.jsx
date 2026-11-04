@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAddIncomeStore } from '../store/addIncomeStore';
 import { useAuthStore } from '../store/authStore';
@@ -402,7 +403,7 @@ export const AddIncomeRecords = () => {
             </div>
 
             <div>
-              <input
+              <DateInput
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
@@ -412,7 +413,7 @@ export const AddIncomeRecords = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <input
+              <DateInput
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}

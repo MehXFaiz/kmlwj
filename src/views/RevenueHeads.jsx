@@ -256,14 +256,14 @@ function RevenueHeadViewModal({ isOpen, onClose, item }) {
              <div className="flex flex-col gap-1.5 p-4 rounded-xl bg-slate-800/30 border border-slate-700/40 hover:bg-slate-800/50 transition-colors">
                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Created At</span>
                <span className="text-slate-300 text-sm font-medium">
-                 {new Date(item.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                 {new Date(item.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                </span>
              </div>
              
              <div className="flex flex-col gap-1.5 p-4 rounded-xl bg-slate-800/30 border border-slate-700/40 hover:bg-slate-800/50 transition-colors">
                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Last Updated</span>
                <span className="text-slate-300 text-sm font-medium">
-                 {new Date(item.updatedAt || item.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                 {new Date(item.updatedAt || item.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                </span>
              </div>
           </div>
@@ -597,7 +597,7 @@ export const RevenueHeads = () => {
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-xs text-slate-400">
-                      {new Date(h.createdAt).toLocaleDateString()}
+                      {new Date(h.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </td>
                     <td className="px-4 py-3.5">
                       {canEditOrDelete && (

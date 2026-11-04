@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCoaStore } from '../store/coaStore';
 import { useBankVoucherStore } from '../store/bankVoucherStore';
@@ -231,7 +232,7 @@ export const BankVoucherForm = () => {
               <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass}>Transaction Date *</label>
-                  <input type="date" value={postingDate} onChange={e => setPostingDate(e.target.value)}
+                  <DateInput type="date" value={postingDate} onChange={e => setPostingDate(e.target.value)}
                     className={inputClass} />
                 </div>
 

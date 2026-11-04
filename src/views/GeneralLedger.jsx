@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, startTransition } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -722,8 +723,8 @@ export const GeneralLedger = () => {
           <div className="flex-1 space-y-1 w-full">
             <label className="text-xs text-slate-400">Start Date</label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
-              <input
+              <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-slate-500 z-10 pointer-events-none" />
+              <DateInput
                 type="date"
                 name="startDate"
                 value={filters.startDate}
@@ -736,8 +737,8 @@ export const GeneralLedger = () => {
           <div className="flex-1 space-y-1 w-full">
             <label className="text-xs text-slate-400">End Date</label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
-              <input
+              <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-slate-500 z-10 pointer-events-none" />
+              <DateInput
                 type="date"
                 name="endDate"
                 value={filters.endDate}
@@ -884,7 +885,7 @@ export const GeneralLedger = () => {
                       {/* Beginning Balance Row */}
                       <tr className="bg-slate-800/20 text-slate-400 font-medium italic print:bg-transparent print:text-slate-600 print:border-b print:border-slate-200">
                         {canEditOrDelete && <td className="py-3 px-4 print:hidden" />}
-                        <td className="py-3 px-4 text-slate-300 font-semibold print:text-slate-800">{filters.startDate || 'Beg. Balance'}</td>
+                        <td className="py-3 px-4 text-slate-300 font-semibold print:text-slate-800">{filters.startDate ? formatDateDDMMYYYY(filters.startDate) : 'Beg. Balance'}</td>
                         <td className="py-3 px-4 text-slate-300 font-semibold print:text-slate-800">Beg. Balance</td>
                         <td className="py-3 px-4 font-mono text-slate-500 print:text-slate-400">—</td>
                         <td className="py-3 px-4 text-right font-mono text-slate-500 print:text-slate-400">—</td>
@@ -928,7 +929,7 @@ export const GeneralLedger = () => {
                                 />
                               </td>
                             )}
-                            <td className="py-3 px-4 text-slate-300 font-medium whitespace-nowrap print:text-slate-800">{entry.date}</td>
+                            <td className="py-3 px-4 text-slate-300 font-medium whitespace-nowrap print:text-slate-800">{formatDateDDMMYYYY(entry.date)}</td>
                             <td className="py-3 px-4 text-slate-200 print:text-slate-800">{entry.description || '—'}</td>
                             <td className="py-3 px-4 font-mono text-amber-400/90 whitespace-nowrap print:text-slate-800">{entry.reference}</td>
                             <td className="py-3 px-4 text-right font-mono text-emerald-400 print:text-slate-800">

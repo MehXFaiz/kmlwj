@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { DateInput } from '../components/ui/DateInput';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useCustomerStore } from '../store/customerStore';
 import { useInvoiceStore } from '../store/invoiceStore';
@@ -231,13 +232,13 @@ export const InvoiceForm = () => {
 
               <div>
                 <label className={labelClass}>Issue Date *</label>
-                <input type="date" value={issueDate} onChange={e => setIssueDate(e.target.value)}
+                <DateInput type="date" value={issueDate} onChange={e => setIssueDate(e.target.value)}
                   className={inputClass} />
               </div>
 
               <div>
                 <label className={labelClass}>Due Date *</label>
-                <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
+                <DateInput type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
                   className={inputClass} />
               </div>
             </div>
