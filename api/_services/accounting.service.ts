@@ -1904,12 +1904,34 @@ export class AccountingService {
    * Aggregates posted journal entry lines per account, optionally restricted
    * to a posting-date window. One groupBy query — no per-account N+1.
    */
-  static async getPostedAggregates(opts: { from?: Date; to?: Date; accountIds?: string[] } = {}): Promise<Map<string, { debit: Prisma.Decimal; credit: Prisma.Decimal }>> {
+  static async getPostedAggregates(opts: {
+    from?: Date;
+    to?: Date;
+    accountIds?: string[];
+    excludeOpening?: boolean;
+    onlyOpening?: boolean;
+  } = {}): Promise<Map<string, { debit: Prisma.Decimal; credit: Prisma.Decimal }>> {
     const journalWhere: any = { ...POSTED_JOURNAL_FILTER };
     if (opts.from || opts.to) {
       journalWhere.postingDate = {};
       if (opts.from) journalWhere.postingDate.gte = opts.from;
       if (opts.to) journalWhere.postingDate.lte = opts.to;
+    }
+
+    if (opts.excludeOpening) {
+      journalWhere.NOT = [
+        { voucherType: 'OP' },
+        { voucherNo: { startsWith: 'OP-' } },
+        { reference: { startsWith: 'OPENING-BALANCE' } }
+      ];
+    }
+
+    if (opts.onlyOpening) {
+      journalWhere.OR = [
+        { voucherType: 'OP' },
+        { voucherNo: { startsWith: 'OP-' } },
+        { reference: { startsWith: 'OPENING-BALANCE' } }
+      ];
     }
 
     const where: any = { journalEntry: journalWhere };
@@ -2149,13 +2171,34 @@ export class AccountingService {
     //                 when `from` is unset, since priorAggregates is then an
     //                 empty map and naturalBalance treats a missing aggregate
     //                 as zero activity)
-    const periodAggregates = await AccountingService.getPostedAggregates({ from, to });
+    const periodAggregates = await AccountingService.getPostedAggregates({ from, to, excludeOpening: true });
     const cumulativeAggregates = hasDateFilter
       ? await AccountingService.getPostedAggregates({ to })
       : periodAggregates;
-    const priorAggregates = from
+    const priorStrict = from
       ? await AccountingService.getPostedAggregates({ to: new Date(from.getTime() - 1) })
       : new Map<string, { debit: Prisma.Decimal; credit: Prisma.Decimal }>();
+
+    const openingVouchersOnFrom = from && startDate
+      ? await AccountingService.getPostedAggregates({
+          from,
+          to: AccountingService.endOfDay(startDate),
+          onlyOpening: true
+        })
+      : new Map<string, { debit: Prisma.Decimal; credit: Prisma.Decimal }>();
+
+    const priorAggregates = new Map<string, { debit: Prisma.Decimal; credit: Prisma.Decimal }>(priorStrict);
+    for (const [accId, agg] of openingVouchersOnFrom) {
+      const existing = priorAggregates.get(accId);
+      if (existing) {
+        priorAggregates.set(accId, {
+          debit: existing.debit.plus(agg.debit),
+          credit: existing.credit.plus(agg.credit)
+        });
+      } else {
+        priorAggregates.set(accId, { debit: agg.debit, credit: agg.credit });
+      }
+    }
 
     // Cash deposited into a bank is identified from the posted double-entry
     // lines: Cash in Hand is credited and a bank account is debited.

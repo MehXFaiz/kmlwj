@@ -562,7 +562,10 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         orderBy: { receiptNo: 'desc' },
         select: { receiptNo: true },
       });
-      const receiptNo = (lastBooking?.receiptNo || 0) + 1;
+      const parsedCustomReceiptNo = req.body.receiptNo ? parseInt(req.body.receiptNo, 10) : (req.body.slipNo ? parseInt(req.body.slipNo, 10) : null);
+      const receiptNo = parsedCustomReceiptNo && !isNaN(parsedCustomReceiptNo) && parsedCustomReceiptNo > 0
+        ? parsedCustomReceiptNo
+        : (lastBooking?.receiptNo || 0) + 1;
 
       const bookingDateOnlyStr = bookingDate
         ? (typeof bookingDate === 'string' && bookingDate.includes('T') ? bookingDate.split('T')[0] : (typeof bookingDate === 'string' ? bookingDate : new Date(bookingDate).toISOString().split('T')[0]))
@@ -1001,9 +1004,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
           ? (typeof req.body.refundDate === 'string' && req.body.refundDate.includes('T') ? req.body.refundDate.split('T')[0] : (typeof req.body.refundDate === 'string' ? req.body.refundDate : new Date(req.body.refundDate).toISOString().split('T')[0]))
           : null;
 
+        const parsedCustomReceiptNo = req.body.receiptNo ? parseInt(req.body.receiptNo, 10) : (req.body.slipNo ? parseInt(req.body.slipNo, 10) : undefined);
         return await tx.hallBooking.update({
           where: { id },
           data: {
+            ...(parsedCustomReceiptNo && !isNaN(parsedCustomReceiptNo) && parsedCustomReceiptNo > 0 ? { receiptNo: parsedCustomReceiptNo } : {}),
             bookingDate: bookingDateOnlyStr ? new Date(`${bookingDateOnlyStr}T00:00:00.000Z`) : undefined,
             bookerName,
             fatherHusbandName: fatherHusbandName || null,

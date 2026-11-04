@@ -342,6 +342,17 @@ export const DonationsReceived = ({ defaultType = null, titleOverride = null }) 
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {filtered.length > 0 && (
+            <label className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-800 text-xs font-semibold text-slate-300 cursor-pointer hover:border-slate-700 transition-colors select-none">
+              <input
+                type="checkbox"
+                checked={filtered.length > 0 && selectedIds.length === filtered.length}
+                onChange={handleSelectAll}
+                className="rounded border-slate-700 bg-slate-800 text-amber-500 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+              />
+              <span>Select All</span>
+            </label>
+          )}
           <select
             value={filterType}
             onChange={e => setFilterType(e.target.value)}

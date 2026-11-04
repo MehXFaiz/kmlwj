@@ -310,7 +310,18 @@ export const Beneficiaries = () => {
             name="beneficiary-search" autoComplete="off"
             className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-950/80 border border-slate-800/80 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 transition-all" />
         </div>
-        <div className="flex items-center gap-2 self-end sm:self-auto text-xs font-medium text-slate-400 px-2">
+        <div className="flex items-center gap-3 self-end sm:self-auto text-xs font-medium text-slate-400 px-2">
+          {canEditOrDelete && filtered.length > 0 && (
+            <label className="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white transition-colors">
+              <input
+                type="checkbox"
+                checked={isAllSelected}
+                onChange={toggleAll}
+                className="rounded border-slate-700 bg-slate-800 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 cursor-pointer w-4 h-4"
+              />
+              <span>Select All</span>
+            </label>
+          )}
           <span>Showing <strong className="text-slate-200">{filtered.length}</strong> {filtered.length === 1 ? 'beneficiary' : 'beneficiaries'}</span>
         </div>
       </div>

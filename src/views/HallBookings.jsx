@@ -202,14 +202,21 @@ export const HallBookings = () => {
   };
 
   const filtered = useMemo(() => {
-    const q = search.toLowerCase();
+    const q = search.toLowerCase().trim();
     return bookings.filter(b => {
+      if (!q) return true;
       const cleanHall = formatHallName(b).toLowerCase();
       const rawHall = (b.hallAccount?.accountName || b.hallName || '').toLowerCase();
       return (
         b.bookerName?.toLowerCase().includes(q) ||
-        b.mobile?.includes(search) ||
-        b.receiptNo?.toString().includes(search) ||
+        b.fatherHusbandName?.toLowerCase().includes(q) ||
+        b.address?.toLowerCase().includes(q) ||
+        b.mobile?.includes(q) ||
+        b.receiptNo?.toString().includes(q) ||
+        b.status?.toLowerCase().includes(q) ||
+        b.timings?.toLowerCase().includes(q) ||
+        b.functionType?.toLowerCase().includes(q) ||
+        b.paymentMethod?.toLowerCase().includes(q) ||
         cleanHall.includes(q) ||
         rawHall.includes(q)
       );
@@ -444,6 +451,17 @@ export const HallBookings = () => {
                   <option value="">All halls</option>
                   {hallOptions.map(hall => <option key={hall.id} value={hall.id}>{hall.name}</option>)}
                 </select>
+                {canEditOrDelete && filtered.length > 0 && (
+                  <label className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-950/70 border border-slate-800 text-xs font-semibold text-slate-300 cursor-pointer hover:border-slate-700 transition-colors select-none">
+                    <input
+                      type="checkbox"
+                      checked={filtered.length > 0 && selectedIds.length === filtered.length}
+                      onChange={handleSelectAll}
+                      className="rounded border-slate-700 bg-slate-800 text-amber-500 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                    />
+                    <span>Select All ({filtered.length})</span>
+                  </label>
+                )}
               </div>
               <div className="flex items-center bg-slate-950/80 rounded-xl p-1 border border-slate-800">
                 <button

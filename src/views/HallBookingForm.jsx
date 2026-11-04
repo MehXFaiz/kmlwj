@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useForm, Controller } from 'react-hook-form';
 import { PhoneInput, validatePhoneNumber } from '../components/ui/PhoneInput';
-import { Save, ChevronLeft, Calendar, User, Phone, MapPin, Clock, CreditCard, Landmark, Info, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Save, ChevronLeft, Calendar, User, Phone, MapPin, Clock, CreditCard, Landmark, Info, RotateCcw, AlertTriangle, Hash } from 'lucide-react';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { useHallBookingStore } from '../store/hallBookingStore';
 import { useCoaStore } from '../store/coaStore';
@@ -42,6 +42,7 @@ export const HallBookingForm = () => {
   const { register, handleSubmit, watch, setValue, reset, formState: { isSubmitting, dirtyFields, errors }, control } = useForm({
     mode: 'onChange',
     defaultValues: {
+      receiptNo: '',
       bookerName: '',
       fatherHusbandName: '',
       mobile: '',
@@ -136,6 +137,7 @@ export const HallBookingForm = () => {
             }
           }
           reset({
+            receiptNo: booking.receiptNo ? String(booking.receiptNo) : '',
             bookerName: booking.bookerName || '',
             fatherHusbandName: booking.fatherHusbandName || '',
             mobile: booking.mobile || '',
@@ -302,6 +304,7 @@ export const HallBookingForm = () => {
       let savedBooking;
       const payload = {
         ...data,
+        receiptNo: data.receiptNo ? parseInt(data.receiptNo, 10) : undefined,
         functionType: resolvedFunctionType,
         amount: parsedAmount,
         hallCharges: parsedAmount,
@@ -589,6 +592,25 @@ export const HallBookingForm = () => {
                     </div>
                     {errors.mobile && (
                       <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.mobile.message}</span>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>SLIP #</label>
+                    <div className="relative">
+                      <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                      <input {...register('receiptNo', {
+                        pattern: {
+                          value: /^\d*$/,
+                          message: 'Slip # must be a numeric value'
+                        }
+                      })}
+                        type="text"
+                        placeholder="Auto-generated if empty (e.g. 1001)"
+                        className={inputWithIconClass(errors.receiptNo)} />
+                    </div>
+                    {errors.receiptNo && (
+                      <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.receiptNo.message}</span>
                     )}
                   </div>
 

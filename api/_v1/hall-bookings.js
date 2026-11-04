@@ -439,7 +439,8 @@ var hall_bookings_default = makeHandler(async (req, res) => {
           orderBy: { receiptNo: "desc" },
           select: { receiptNo: true }
         });
-        const receiptNo = (lastBooking?.receiptNo || 0) + 1;
+        const parsedCustomReceiptNo = req.body.receiptNo ? parseInt(req.body.receiptNo, 10) : req.body.slipNo ? parseInt(req.body.slipNo, 10) : null;
+        const receiptNo = parsedCustomReceiptNo && !isNaN(parsedCustomReceiptNo) && parsedCustomReceiptNo > 0 ? parsedCustomReceiptNo : (lastBooking?.receiptNo || 0) + 1;
         const bookingDateOnlyStr = bookingDate ? typeof bookingDate === "string" && bookingDate.includes("T") ? bookingDate.split("T")[0] : typeof bookingDate === "string" ? bookingDate : new Date(bookingDate).toISOString().split("T")[0] : null;
         const refundDateOnlyStr = req.body.refundDate ? typeof req.body.refundDate === "string" && req.body.refundDate.includes("T") ? req.body.refundDate.split("T")[0] : typeof req.body.refundDate === "string" ? req.body.refundDate : new Date(req.body.refundDate).toISOString().split("T")[0] : null;
         let newBooking = await tx.hallBooking.create({
@@ -799,9 +800,11 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         const finalStatus = targetStatus === "Cancelled" || targetStatus === "Refunded" ? targetStatus : wasPosted && newJournalEntryId ? "POSTED" : "Confirmed";
         const bookingDateOnlyStr = bookingDate ? typeof bookingDate === "string" && bookingDate.includes("T") ? bookingDate.split("T")[0] : typeof bookingDate === "string" ? bookingDate : new Date(bookingDate).toISOString().split("T")[0] : null;
         const refundDateOnlyStr = req.body.refundDate ? typeof req.body.refundDate === "string" && req.body.refundDate.includes("T") ? req.body.refundDate.split("T")[0] : typeof req.body.refundDate === "string" ? req.body.refundDate : new Date(req.body.refundDate).toISOString().split("T")[0] : null;
+        const parsedCustomReceiptNo = req.body.receiptNo ? parseInt(req.body.receiptNo, 10) : req.body.slipNo ? parseInt(req.body.slipNo, 10) : void 0;
         return await tx.hallBooking.update({
           where: { id },
           data: {
+            ...parsedCustomReceiptNo && !isNaN(parsedCustomReceiptNo) && parsedCustomReceiptNo > 0 ? { receiptNo: parsedCustomReceiptNo } : {},
             bookingDate: bookingDateOnlyStr ? /* @__PURE__ */ new Date(`${bookingDateOnlyStr}T00:00:00.000Z`) : void 0,
             bookerName,
             fatherHusbandName: fatherHusbandName || null,

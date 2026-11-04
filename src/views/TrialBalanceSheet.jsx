@@ -486,11 +486,11 @@ export const TrialBalanceSheet = () => {
 
       if (Math.abs(bal) > 0.001) {
         if (bal > 0) {
-          crd = bal;
-          totalCreditSum += crd;
-        } else {
-          deb = Math.abs(bal);
+          deb = bal;
           totalDebitSum += deb;
+        } else {
+          crd = Math.abs(bal);
+          totalCreditSum += crd;
         }
       }
 
@@ -515,8 +515,31 @@ export const TrialBalanceSheet = () => {
       });
     });
 
-    // 2. REVENUE / INCOME ITEMS (Credit Column)
+    // 2. EQUITY & CAPITAL (Credit Column - Double-Entry Balancing)
     const typeOf = (e) => (e.accountType || '').toUpperCase();
+    const equityEntries = entries.filter(e => typeOf(e) === 'EQUITY');
+    equityEntries.forEach(e => {
+      const creditVal = Math.max(0, (e.credit || 0) - (e.debit || 0));
+      const debitVal = Math.max(0, (e.debit || 0) - (e.credit || 0));
+      if (creditVal > 0.001 || debitVal > 0.001) {
+        if (creditVal > 0) {
+          totalCreditSum += creditVal;
+        } else {
+          totalDebitSum += debitVal;
+        }
+        rows.push({
+          id: `eq-${e.id || e.glCode}`,
+          section: 'EQUITY',
+          sectionLabel: 'Equity & Capital Funds',
+          description: e.accountName,
+          note: '',
+          debit: debitVal > 0.001 ? debitVal : 0,
+          credit: creditVal > 0.001 ? creditVal : 0
+        });
+      }
+    });
+
+    // 3. REVENUE / INCOME ITEMS (Credit Column)
     const revenueEntries = entries.filter(e => typeOf(e) === 'REVENUE' || typeOf(e) === 'INCOME');
 
     const hallEntries = revenueEntries.filter(e => 
@@ -573,19 +596,22 @@ export const TrialBalanceSheet = () => {
       }
     });
 
-    // 4. CLOSING BALANCES (Dynamic DEBIT/CREDIT placement)
+    // 5. CLOSING BALANCES (Dynamic DEBIT/CREDIT placement)
     const closingAccounts = collectCategoryAccounts(closing, true);
     closingAccounts.forEach(acc => {
-      const bal = acc.balance || 0;
+      const openAcc = openingAccounts.find(o => o.glCode === acc.glCode);
+      const openBal = openAcc?.balance || 0;
+      const hasMovement = Math.abs((acc.balance || 0) - openBal) > 0.001;
+      const displayBal = hasMovement ? (acc.balance || 0) : 0;
       let deb = 0;
       let crd = 0;
 
-      if (Math.abs(bal) > 0.001) {
-        if (bal > 0) {
-          deb = bal;
+      if (Math.abs(displayBal) > 0.001) {
+        if (displayBal > 0) {
+          deb = displayBal;
           totalDebitSum += deb;
         } else {
-          crd = Math.abs(bal);
+          crd = Math.abs(displayBal);
           totalCreditSum += crd;
         }
       }
