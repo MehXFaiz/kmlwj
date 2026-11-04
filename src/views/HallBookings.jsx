@@ -16,16 +16,40 @@ import { HallBookingGLModal } from '../components/receipts/HallBookingGLModal';
 import HallBookingCalendar from '../components/common/HallBookingCalendar';
 import { formatDateDDMMYYYY } from '../utils/dateUtils';
 
-const formatHallName = (booking) => {
-  if (!booking) return 'N/A';
-  let raw = typeof booking === 'string' ? booking : (booking.hallName || booking.hallAccount?.accountName || booking.hallAccount?.name || '');
-  if (!raw) return 'N/A';
+const cleanSingleHallName = (rawInput) => {
+  if (!rawInput) return '';
+  let raw = String(rawInput).trim();
   const parenMatch = raw.match(/(?:Hall Booking Revenue|Hall Booking)\s*\((.+?)\)/i);
   if (parenMatch && parenMatch[1]) raw = parenMatch[1].trim();
   const dashMatch = raw.match(/(?:Hall Booking Revenue|Hall Booking)\s*[-:]\s*(.+)/i);
   if (dashMatch && dashMatch[1]) raw = dashMatch[1].trim();
   if (/bagh/i.test(raw) || /hajiani/i.test(raw) || /hajiyani/i.test(raw)) return 'Bagh-e-Hajiani Kareema';
+  if (/sadaya/i.test(raw) || /sada/i.test(raw)) return 'Sadaya Hall';
+  if (/zikarya/i.test(raw) || /zikriya/i.test(raw) || /zakaria/i.test(raw) || /zakriya/i.test(raw)) return 'Zikarya Hall';
+  if (/annexy/i.test(raw) || /anexy/i.test(raw) || /gosha/i.test(raw) || /anxy/i.test(raw)) return 'Annexy Hall';
   return raw;
+};
+
+const getBookingHallNamesList = (booking) => {
+  if (!booking) return [];
+  if (typeof booking === 'string') {
+    const cleaned = cleanSingleHallName(booking);
+    return cleaned ? [cleaned] : [];
+  }
+  if (Array.isArray(booking.hallNames) && booking.hallNames.length > 0) {
+    return Array.from(new Set(booking.hallNames.map(cleanSingleHallName).filter(Boolean)));
+  }
+  if (Array.isArray(booking.hallDetails) && booking.hallDetails.length > 0) {
+    const fromDetails = booking.hallDetails.map(d => cleanSingleHallName(d?.hallName)).filter(Boolean);
+    if (fromDetails.length > 0) return Array.from(new Set(fromDetails));
+  }
+  const single = cleanSingleHallName(booking.hallName || booking.hallAccount?.accountName || booking.hallAccount?.name || '');
+  return single ? [single] : [];
+};
+
+const formatHallName = (booking) => {
+  const list = getBookingHallNamesList(booking);
+  return list.length > 0 ? list.join(', ') : 'N/A';
 };
 
 const parseImportedDate = (value) => {
@@ -615,13 +639,23 @@ export const HallBookings = () => {
                               #{booking.receiptNo}
                             </span>
                           </div>
-                          <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
-                            <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
-                              <Building2 className="w-3.5 h-3.5 text-amber-400" /> HALL
+                          <div className="flex items-start justify-between gap-2 border-b border-slate-800/60 pb-2">
+                            <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5 shrink-0 mt-0.5">
+                              <Building2 className="w-3.5 h-3.5 text-amber-400" /> HALL{getBookingHallNamesList(booking).length > 1 ? `S (${getBookingHallNamesList(booking).length})` : ''}
                             </span>
-                            <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded bg-slate-800/90 text-slate-200 border border-slate-700/60">
-                              {formatHallName(booking)}
-                            </span>
+                            <div className="flex flex-wrap justify-end gap-1">
+                              {getBookingHallNamesList(booking).length > 0 ? (
+                                getBookingHallNamesList(booking).map((hName, idx) => (
+                                  <span key={idx} className="inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded bg-slate-800/90 text-slate-200 border border-slate-700/60">
+                                    {hName}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded bg-slate-800/90 text-slate-200 border border-slate-700/60">
+                                  N/A
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
@@ -756,9 +790,19 @@ export const HallBookings = () => {
                         <div className="text-xs text-slate-500">{booking.timings || 'Any time'}</div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2 py-1 rounded bg-slate-800/50 border border-slate-700/50 text-xs font-medium text-slate-300">
-                          {formatHallName(booking)}
-                        </span>
+                        <div className="flex flex-wrap gap-1 max-w-[260px]">
+                          {getBookingHallNamesList(booking).length > 0 ? (
+                            getBookingHallNamesList(booking).map((hName, idx) => (
+                              <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded bg-slate-800/50 border border-slate-700/50 text-xs font-medium text-slate-300">
+                                {hName}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-1 rounded bg-slate-800/50 border border-slate-700/50 text-xs font-medium text-slate-300">
+                              N/A
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 font-bold text-slate-200">Rs. {Math.round(Number(booking.hallCharges ?? booking.amount ?? 0)).toLocaleString()}</td>
                       <td className="px-6 py-4 font-bold text-orange-400">Rs. {Math.round(Number(booking.discount || 0)).toLocaleString()}</td>

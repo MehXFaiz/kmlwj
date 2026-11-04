@@ -2,18 +2,27 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, User, Building, Hash, AlertCircle, CheckCircle } from 'lucide-react';
 import { getLocalDateString, formatDateToInput, parseLocalDate } from '../../utils/dateUtils';
 
-const formatHallName = (booking) => {
-  if (!booking) return 'N/A';
-  const raw = typeof booking === 'string' ? booking : (booking.hallName || booking.hallAccount?.accountName || booking.hallAccount?.name || '');
-  if (!raw) return 'N/A';
+const cleanSingleHallName = (rawInput) => {
+  if (!rawInput) return '';
+  let raw = String(rawInput).trim();
   const parenMatch = raw.match(/(?:Hall Booking Revenue|Hall Booking)\s*\((.+?)\)/i);
-  if (parenMatch && parenMatch[1]) return parenMatch[1].trim();
+  if (parenMatch && parenMatch[1]) raw = parenMatch[1].trim();
   const dashMatch = raw.match(/(?:Hall Booking Revenue|Hall Booking)\s*[-:]\s*(.+)/i);
-  if (dashMatch && dashMatch[1]) return dashMatch[1].trim();
+  if (dashMatch && dashMatch[1]) raw = dashMatch[1].trim();
   return raw;
 };
 
-export default function HallBookingCalendar({ bookings = [], selectedHallId, onSelectDate, selectedDate }) {
+const formatHallName = (booking) => {
+  if (!booking) return 'N/A';
+  if (typeof booking === 'string') return cleanSingleHallName(booking) || 'N/A';
+  if (Array.isArray(booking.hallNames) && booking.hallNames.length > 0) {
+    return booking.hallNames.map(cleanSingleHallName).filter(Boolean).join(', ');
+  }
+  const raw = booking.hallName || booking.hallAccount?.accountName || booking.hallAccount?.name || '';
+  return cleanSingleHallName(raw) || 'N/A';
+};
+
+export default function HallBookingCalendar({ bookings = [], selectedHallId, selectedHallIds = [], onSelectDate, selectedDate }) {
   const [currentDate, setCurrentDate] = useState(() => {
     return parseLocalDate(selectedDate || new Date());
   });
@@ -37,12 +46,22 @@ export default function HallBookingCalendar({ bookings = [], selectedHallId, onS
 
   // Filter active bookings
   const activeBookings = useMemo(() => {
-    return bookings.filter(b => 
-      b.status !== 'Cancelled' && 
-      b.status !== 'Rejected' &&
-      (!selectedHallId || b.hallId === selectedHallId || b.hallAccount?.id === selectedHallId || b.hallAccount?.accountId === selectedHallId)
-    );
-  }, [bookings, selectedHallId]);
+    const filterIds = Array.isArray(selectedHallIds) && selectedHallIds.length > 0
+      ? selectedHallIds
+      : (selectedHallId ? [selectedHallId] : []);
+
+    return bookings.filter(b => {
+      if (b.status === 'Cancelled' || b.status === 'Rejected') return false;
+      if (filterIds.length === 0) return true;
+      const bIds = [
+        ...(Array.isArray(b.hallIds) ? b.hallIds : []),
+        b.hallId,
+        b.hallAccount?.id,
+        b.hallAccount?.accountId,
+      ].filter(Boolean);
+      return bIds.some(hid => filterIds.includes(hid));
+    });
+  }, [bookings, selectedHallId, selectedHallIds]);
 
   // Map dates (YYYY-MM-DD) to booking objects
   const bookingMap = useMemo(() => {

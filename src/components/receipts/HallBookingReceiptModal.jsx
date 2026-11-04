@@ -100,12 +100,16 @@ const ReceiptSlip = ({ booking, copyType, copyUrduTitle, copyEnglishTitle }) => 
   const isRefundish = Number(booking.refundAmount || 0) > 0 || booking.status === 'Cancelled' || booking.status === 'Refunded';
   const amountWords = numberToWordsPKR(receivedAmount);
 
-  const rawHallName = (
-    booking.hallName ||
-    booking.hallAccount?.accountName ||
-    booking.hallAccount?.name ||
-    ''
-  ).toLowerCase();
+  const rawHallName = [
+    ...(Array.isArray(booking.hallNames) ? booking.hallNames : []),
+    ...(Array.isArray(booking.hallDetails) ? booking.hallDetails.map(d => d?.hallName) : []),
+    booking.hallName,
+    booking.hallAccount?.accountName,
+    booking.hallAccount?.name,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
 
   const isBagh =
     rawHallName.includes('bagh') ||

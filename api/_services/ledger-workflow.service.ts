@@ -515,8 +515,19 @@ export class LedgerWorkflowService {
           throw new LedgerConflictError('Transaction has already been posted to the General Ledger.');
         }
 
-        const revenueAccountId = record.hallId;
-        if (!revenueAccountId) throw new Error('Revenue account (Hall) is required to post.');
+        const bookingHallIds = Array.from(new Set([
+          ...(Array.isArray((record as any).hallIds) ? (record as any).hallIds : []),
+          ...(record.hallId ? [record.hallId] : []),
+        ].filter(Boolean)));
+        if (bookingHallIds.length === 0) throw new Error('Revenue account (Hall) is required to post.');
+
+        const hallAccountsList = await tx.account.findMany({
+          where: { id: { in: bookingHallIds } }
+        });
+        const hallAccountsMap = new Map(hallAccountsList.map((a: any) => [a.id, a]));
+        const hallSummaryLabel = (Array.isArray((record as any).hallNames) && (record as any).hallNames.length > 0)
+          ? (record as any).hallNames.join(', ')
+          : (hallAccountsList.length > 0 ? hallAccountsList.map((a: any) => a.accountName).join(', ') : (record.hallAccount?.accountName || 'Selected Hall'));
 
         let debitAccountId: string | null = null;
         if (record.paymentMethod === 'CASH') {
@@ -537,7 +548,7 @@ export class LedgerWorkflowService {
             accountId: debitAccountId,
             debit: recAmt,
             credit: 0,
-            description: `Receipt: Hall Booking Receipt for ${record.bookerName} - ${record.hallAccount?.accountName || 'Selected Hall'}`
+            description: `Receipt: Hall Booking Receipt for ${record.bookerName} - ${hallSummaryLabel}`
           });
         }
         if (remAmt > 0) {
@@ -550,12 +561,45 @@ export class LedgerWorkflowService {
           });
         }
         if (netAmt > 0) {
-          lines.push({
-            accountId: revenueAccountId,
-            debit: 0,
-            credit: netAmt,
-            description: `Revenue for ${record.bookerName} - ${record.hallAccount?.accountName || 'Selected Hall'}`
-          });
+          if (bookingHallIds.length === 1) {
+            lines.push({
+              accountId: bookingHallIds[0],
+              debit: 0,
+              credit: netAmt,
+              description: `Revenue for ${record.bookerName} - ${hallSummaryLabel}`
+            });
+          } else {
+            const detailList = Array.isArray((record as any).hallDetails) ? (record as any).hallDetails : [];
+            const weights = bookingHallIds.map((hid: string) => {
+              const detail = detailList.find((d: any) => d && d.hallId === hid);
+              const explicitCharge = detail ? Number(detail.charges ?? detail.amount ?? 0) : 0;
+              if (explicitCharge > 0) return explicitCharge;
+              const acc: any = hallAccountsMap.get(hid);
+              const n = (acc?.accountName || '').toLowerCase();
+              if (n.includes('bagh') || n.includes('hajiani') || n.includes('kareema')) return 46000;
+              if (n.includes('annexy') || n.includes('gosha')) return 36000;
+              return 28000;
+            });
+            const totalWeight = weights.reduce((s: number, w: number) => s + w, 0) || bookingHallIds.length;
+            let allocatedSum = 0;
+            bookingHallIds.forEach((hid: string, idx: number) => {
+              const acc: any = hallAccountsMap.get(hid);
+              const hallLabel = acc?.accountName || `Hall ${idx + 1}`;
+              const isLast = idx === bookingHallIds.length - 1;
+              const share = isLast
+                ? Math.round((netAmt - allocatedSum) * 100) / 100
+                : Math.round(((netAmt * weights[idx]) / totalWeight) * 100) / 100;
+              allocatedSum = Math.round((allocatedSum + share) * 100) / 100;
+              if (share > 0) {
+                lines.push({
+                  accountId: hid,
+                  debit: 0,
+                  credit: share,
+                  description: `Revenue for ${record.bookerName} - ${hallLabel}`
+                });
+              }
+            });
+          }
         }
 
         let postingResult: any = null;
@@ -563,7 +607,7 @@ export class LedgerWorkflowService {
           postingResult = await AccountingService.postTransaction(tx, {
             voucherType: 'BR',
             reference: `HALL-${record.receiptNo}`,
-            description: `Hall Booking - ${record.bookerName} (${record.hallAccount?.accountName || 'Selected Hall'})`,
+            description: `Hall Booking - ${record.bookerName} (${hallSummaryLabel})`,
             module: 'Hall Bookings',
             postedBy: userId,
             lines,

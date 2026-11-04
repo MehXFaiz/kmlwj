@@ -314,7 +314,12 @@ class AccountingSyncHub {
         debitAccountId = hb.bankAccountId || defaultBank?.id || cashAccount.id;
       }
 
-      let revenueAccountId = hb.hallId;
+      const bookingHallIds: string[] = Array.from(new Set([
+        ...(Array.isArray((hb as any).hallIds) ? (hb as any).hallIds : []),
+        ...(hb.hallId ? [hb.hallId] : []),
+      ].filter(Boolean)));
+
+      let revenueAccountId = bookingHallIds[0] || hb.hallId;
       if (!revenueAccountId) {
         const matchingHall = await db.account.findFirst({
           where: {
@@ -324,6 +329,10 @@ class AccountingSyncHub {
         });
         revenueAccountId = matchingHall?.id || generalDonationAccount.id;
       }
+      const effectiveHallIds = bookingHallIds.length > 0 ? bookingHallIds : [revenueAccountId];
+      const hallSummaryLabel = (Array.isArray((hb as any).hallNames) && (hb as any).hallNames.length > 0)
+        ? (hb as any).hallNames.join(', ')
+        : (hb.hallAccount?.accountName || 'Hall');
 
       const lines: { accountId: string; debit: number; credit: number; description: string }[] = [];
       if (recAmt > 0) {
@@ -331,7 +340,7 @@ class AccountingSyncHub {
           accountId: debitAccountId,
           debit: recAmt,
           credit: 0,
-          description: `Receipt: Hall Booking #${hb.receiptNo} for ${hb.bookerName} - ${hb.hallAccount?.accountName || 'Hall'}`
+          description: `Receipt: Hall Booking #${hb.receiptNo} for ${hb.bookerName} - ${hallSummaryLabel}`
         });
       }
       if (remAmt > 0) {
@@ -342,12 +351,47 @@ class AccountingSyncHub {
           description: `Receivable: Hall Booking #${hb.receiptNo} for ${hb.bookerName}`
         });
       }
-      lines.push({
-        accountId: revenueAccountId,
-        debit: 0,
-        credit: netAmt,
-        description: `Revenue: Hall Booking #${hb.receiptNo} for ${hb.bookerName} - ${hb.hallAccount?.accountName || 'Hall'}`
-      });
+      if (effectiveHallIds.length === 1) {
+        lines.push({
+          accountId: effectiveHallIds[0],
+          debit: 0,
+          credit: netAmt,
+          description: `Revenue: Hall Booking #${hb.receiptNo} for ${hb.bookerName} - ${hallSummaryLabel}`
+        });
+      } else {
+        const hallAccs = await db.account.findMany({ where: { id: { in: effectiveHallIds } } });
+        const hallAccMap = new Map(hallAccs.map((a: any) => [a.id, a]));
+        const detailList = Array.isArray((hb as any).hallDetails) ? (hb as any).hallDetails : [];
+        const weights = effectiveHallIds.map((hid: string) => {
+          const detail = detailList.find((d: any) => d && d.hallId === hid);
+          const explicitCharge = detail ? Number(detail.charges ?? detail.amount ?? 0) : 0;
+          if (explicitCharge > 0) return explicitCharge;
+          const acc: any = hallAccMap.get(hid);
+          const n = (acc?.accountName || '').toLowerCase();
+          if (n.includes('bagh') || n.includes('hajiani') || n.includes('kareema')) return 46000;
+          if (n.includes('annexy') || n.includes('gosha')) return 36000;
+          return 28000;
+        });
+        const totalWeight = weights.reduce((s: number, w: number) => s + w, 0) || effectiveHallIds.length;
+        let allocatedSum = 0;
+        effectiveHallIds.forEach((hid: string, idx: number) => {
+          const acc: any = hallAccMap.get(hid);
+          const hallLabel = acc?.accountName || `Hall ${idx + 1}`;
+          const isLast = idx === effectiveHallIds.length - 1;
+          const share = isLast
+            ? Math.round((netAmt - allocatedSum) * 100) / 100
+            : Math.round(((netAmt * weights[idx]) / totalWeight) * 100) / 100;
+          allocatedSum = Math.round((allocatedSum + share) * 100) / 100;
+          if (share > 0) {
+            lines.push({
+              accountId: hid,
+              debit: 0,
+              credit: share,
+              description: `Revenue: Hall Booking #${hb.receiptNo} for ${hb.bookerName} - ${hallLabel}`
+            });
+          }
+        });
+      }
 
       const postingDate = hb.bookingDate || hb.programDate || hb.createdAt || new Date();
       let existingJe = hb.journalEntry;

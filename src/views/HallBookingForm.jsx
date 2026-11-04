@@ -4,7 +4,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useForm, Controller } from 'react-hook-form';
 import { PhoneInput, validatePhoneNumber } from '../components/ui/PhoneInput';
-import { Save, ChevronLeft, Calendar, User, Phone, MapPin, Clock, CreditCard, Landmark, Info, RotateCcw, AlertTriangle, Hash } from 'lucide-react';
+import { Save, ChevronLeft, Calendar, User, Phone, MapPin, Clock, CreditCard, Landmark, Info, RotateCcw, AlertTriangle, Hash, Check, Building2 } from 'lucide-react';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { useHallBookingStore } from '../store/hallBookingStore';
 import { useCoaStore } from '../store/coaStore';
@@ -25,6 +25,41 @@ const getNormalizedHallName = (name) => {
   if (n.includes('zikarya') || n.includes('zikriya') || n.includes('zakaria') || n.includes('zakriya')) return 'Zikarya Hall';
   if (n.includes('annexy') || n.includes('anexy') || n.includes('gosha') || n.includes('anxy')) return 'Annexy Hall';
   return null;
+};
+
+const getHallDefaultRate = (name) => {
+  const norm = getNormalizedHallName(name) || name || '';
+  if (norm === 'Bagh-e-Hajiani Kareema') return 46000;
+  if (norm === 'Sadaya Hall') return 28000;
+  if (norm === 'Annexy Hall') return 36000;
+  if (norm === 'Zikarya Hall') return 28000;
+  return 28000;
+};
+
+const getBookingHallIds = (booking) => {
+  if (!booking) return [];
+  const ids = [];
+  if (Array.isArray(booking.hallIds)) {
+    booking.hallIds.forEach(hid => { if (hid) ids.push(String(hid)); });
+  }
+  if (booking.hallId) ids.push(String(booking.hallId));
+  if (booking.hallAccount?.id) ids.push(String(booking.hallAccount.id));
+  if (booking.hallAccount?.accountId) ids.push(String(booking.hallAccount.accountId));
+  return Array.from(new Set(ids));
+};
+
+const getBookingHallDisplay = (booking, hallAccounts = []) => {
+  if (!booking) return 'Hall';
+  if (Array.isArray(booking.hallNames) && booking.hallNames.length > 0) {
+    return booking.hallNames.map(n => getNormalizedHallName(n) || n).join(', ');
+  }
+  const ids = getBookingHallIds(booking);
+  if (ids.length > 1 && hallAccounts.length > 0) {
+    const matched = ids.map(hid => hallAccounts.find(h => h.id === hid)?.name).filter(Boolean);
+    if (matched.length > 0) return matched.join(', ');
+  }
+  const raw = booking.hallAccount?.accountName || booking.hallAccount?.name || booking.hallName || 'Hall';
+  return getNormalizedHallName(raw) || raw;
 };
 
 export const HallBookingForm = () => {
@@ -57,6 +92,7 @@ export const HallBookingForm = () => {
       timeTo: '',
       timings: 'Evening',
       hallId: '',
+      hallIds: [],
       isForJamaat: false,
       amount: '',
       discount: '0',
@@ -77,6 +113,12 @@ export const HallBookingForm = () => {
 
   const paymentMethod = watch('paymentMethod');
   const hallId = watch('hallId');
+  const watchedHallIds = watch('hallIds');
+  const selectedHallIds = React.useMemo(() => {
+    if (Array.isArray(watchedHallIds) && watchedHallIds.length > 0) return watchedHallIds;
+    if (hallId) return [hallId];
+    return [];
+  }, [watchedHallIds, hallId]);
   const isForJamaat = watch('isForJamaat');
   const programDate = watch('programDate');
   const timings = watch('timings');
@@ -126,17 +168,21 @@ export const HallBookingForm = () => {
         if (booking) {
           const formattedDate = formatDateToInput(booking.programDate);
           const formattedBookingDate = formatDateToInput(booking.bookingDate || booking.createdAt || new Date());
-          let resolvedHallId = booking.hallId || '';
-          if (resolvedHallId && flatAccounts) {
-            const acc = flatAccounts.find(a => a.id === resolvedHallId);
-            if (acc) {
-              const normName = getNormalizedHallName(acc.name || acc.accountName);
-              if (normName) {
-                const canonicalAcc = flatAccounts.find(a => (a.type === 'Revenue' || a.accountTypeName === 'REVENUE' || a.accountTypeName === 'Revenue') && getNormalizedHallName(a.name || a.accountName) === normName);
-                if (canonicalAcc) resolvedHallId = canonicalAcc.id;
+          const rawIds = getBookingHallIds(booking);
+          const resolvedHallIds = rawIds.map(rawId => {
+            if (flatAccounts) {
+              const acc = flatAccounts.find(a => a.id === rawId);
+              if (acc) {
+                const normName = getNormalizedHallName(acc.name || acc.accountName);
+                if (normName) {
+                  const canonicalAcc = flatAccounts.find(a => (a.type === 'Revenue' || a.accountTypeName === 'REVENUE' || a.accountTypeName === 'Revenue') && getNormalizedHallName(a.name || a.accountName) === normName);
+                  if (canonicalAcc) return canonicalAcc.id;
+                }
               }
             }
-          }
+            return rawId;
+          }).filter(Boolean);
+          const resolvedHallId = resolvedHallIds[0] || '';
           reset({
             receiptNo: booking.receiptNo ? String(booking.receiptNo) : '',
             bookerName: booking.bookerName || '',
@@ -152,6 +198,7 @@ export const HallBookingForm = () => {
             timeTo: booking.timeTo || '',
             timings: booking.timings || 'Evening',
             hallId: resolvedHallId,
+            hallIds: resolvedHallIds,
             isForJamaat: booking.isForJamaat || false,
             amount: booking.hallCharges != null ? String(booking.hallCharges) : (booking.amount != null ? String(booking.amount) : ''),
             discount: booking.discount != null ? String(booking.discount) : '0',
@@ -219,7 +266,11 @@ export const HallBookingForm = () => {
       const bDate = formatDateToInput(b.programDate);
       return bDate >= todayStr;
     })
-    .filter(b => !hallId || b.hallId === hallId || b.hallAccount?.id === hallId || b.hallAccount?.accountId === hallId)
+    .filter(b => {
+      if (selectedHallIds.length === 0) return true;
+      const bHallIds = getBookingHallIds(b);
+      return bHallIds.some(hid => selectedHallIds.includes(hid));
+    })
     .sort((a, b) => new Date(a.programDate) - new Date(b.programDate));
 
   const conflictBooking = (bookings || []).find(b => {
@@ -228,13 +279,57 @@ export const HallBookingForm = () => {
     const bDate = formatDateToInput(b.programDate);
     const targetDate = formatDateToInput(programDate);
     if (bDate !== targetDate) return false;
-    if (hallId && b.hallId !== hallId && b.hallAccount?.id !== hallId && b.hallAccount?.accountId !== hallId) return false;
+    if (selectedHallIds.length > 0) {
+      const bHallIds = getBookingHallIds(b);
+      if (!bHallIds.some(hid => selectedHallIds.includes(hid))) return false;
+    }
     if (b.timings === timings || b.timings === 'Full Day' || timings === 'Full Day' || !timings || !b.timings) return true;
     return false;
   });
 
+  const selectedHallsSummary = React.useMemo(() => {
+    if (selectedHallIds.length === 0) return '';
+    return selectedHallIds
+      .map(hid => hallAccounts.find(h => h.id === hid)?.name)
+      .filter(Boolean)
+      .join(', ');
+  }, [selectedHallIds, hallAccounts]);
+
+  const handleUpdateSelectedHalls = (nextIds) => {
+    const uniqueIds = Array.from(new Set(nextIds.filter(Boolean)));
+    const primary = uniqueIds[0] || '';
+    setValue('hallIds', uniqueIds, { shouldValidate: true, shouldDirty: true });
+    setValue('hallId', primary, { shouldValidate: true, shouldDirty: true });
+
+    if (uniqueIds.length > 0) {
+      const totalDefaultAmt = uniqueIds.reduce((sum, hid) => {
+        const h = hallAccounts.find(acc => acc.id === hid);
+        return sum + (h ? getHallDefaultRate(h.name) : 0);
+      }, 0);
+      if (totalDefaultAmt > 0) {
+        setValue('amount', String(totalDefaultAmt), { shouldValidate: true });
+        const disc = toNumber(discountVal);
+        const net = Math.max(0, totalDefaultAmt - disc);
+        setValue('receivedAmount', String(net), { shouldValidate: true });
+      }
+    } else {
+      setValue('amount', '', { shouldValidate: true });
+      setValue('receivedAmount', '', { shouldValidate: true });
+    }
+  };
+
+  const toggleHallSelection = (targetHallId) => {
+    const exists = selectedHallIds.includes(targetHallId);
+    const nextIds = exists
+      ? selectedHallIds.filter(hid => hid !== targetHallId)
+      : [...selectedHallIds, targetHallId];
+    handleUpdateSelectedHalls(nextIds);
+  };
+
+  const selectedHallIdsKey = selectedHallIds.join(',');
+
   useEffect(() => {
-    if (!hallId || !programDate) {
+    if (selectedHallIds.length === 0 || !programDate) {
       setAvailability({ checking: false, available: true, conflict: null });
       return;
     }
@@ -243,7 +338,8 @@ export const HallBookingForm = () => {
 
     api.get('/api/v1/hall-bookings/check-availability', {
       params: {
-        hallId,
+        hallId: selectedHallIds[0],
+        hallIds: selectedHallIdsKey,
         bookingDate: programDate,
         timings: timings || undefined,
         excludeId: id || undefined
@@ -265,13 +361,18 @@ export const HallBookingForm = () => {
     });
 
     return () => { isMounted = false; };
-  }, [hallId, programDate, timings, id]);
+  }, [selectedHallIdsKey, programDate, timings, id]);
 
   // Fixed payment rates removed per user request so amounts can be entered manually
 
   const onSubmit = async (data) => {
-    if (!data.bookerName || !data.bookingDate || !data.programDate || !data.hallId || !data.amount) {
-      showToast('Please fill all required fields.', 'warning');
+    const finalHallIds = Array.isArray(data.hallIds) && data.hallIds.length > 0
+      ? data.hallIds
+      : (data.hallId ? [data.hallId] : []);
+    const primaryHallId = finalHallIds[0] || '';
+
+    if (!data.bookerName || !data.bookingDate || !data.programDate || !primaryHallId || !data.amount) {
+      showToast('Please fill all required fields and select at least one hall.', 'warning');
       return;
     }
 
@@ -303,8 +404,22 @@ export const HallBookingForm = () => {
 
     try {
       let savedBooking;
+      const selectedHallObjects = finalHallIds
+        .map(hid => hallAccounts.find(h => h.id === hid))
+        .filter(Boolean);
+      const resolvedHallNames = selectedHallObjects.map(h => h.name);
+      const resolvedHallDetails = selectedHallObjects.map(h => ({
+        hallId: h.id,
+        hallName: h.name,
+        charges: getHallDefaultRate(h.name),
+      }));
+
       const payload = {
         ...data,
+        hallId: primaryHallId,
+        hallIds: finalHallIds,
+        hallNames: resolvedHallNames,
+        hallDetails: resolvedHallDetails,
         receiptNo: data.receiptNo ? parseInt(data.receiptNo, 10) : undefined,
         functionType: resolvedFunctionType,
         amount: parsedAmount,
@@ -421,10 +536,10 @@ export const HallBookingForm = () => {
                     </div>
                     <div>
                       <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-                        {hallId ? `Reserved Dates: ${hallAccounts.find(h => h.id === hallId)?.name || 'Selected Hall'}` : 'All Reserved Program Dates'}
+                        {selectedHallIds.length > 0 ? `Reserved Dates: ${selectedHallsSummary || 'Selected Hall(s)'}` : 'All Reserved Program Dates'}
                       </h4>
                       <p className="text-xs text-slate-400 mt-0.5">
-                        {hallId ? 'Showing booked programs for the selected hall' : 'Select a hall above to filter bookings specifically for that hall'}
+                        {selectedHallIds.length > 0 ? `Showing booked programs for ${selectedHallIds.length} selected hall(s)` : 'Select one or more halls to filter bookings'}
                       </p>
                     </div>
                   </div>
@@ -464,19 +579,21 @@ export const HallBookingForm = () => {
                   <HallBookingCalendar
                     bookings={bookings}
                     selectedHallId={hallId}
+                    selectedHallIds={selectedHallIds}
                     selectedDate={programDate}
                     onSelectDate={(d) => setValue('programDate', d, { shouldValidate: true })}
                   />
                 ) : activeBookings.length === 0 ? (
                   <div className="text-center py-6 text-xs text-slate-500 italic bg-slate-950/40 rounded-xl border border-slate-800/60">
-                    No {showAllDates ? '' : 'upcoming'} bookings found {hallId ? 'for this hall' : ''}.
+                    No {showAllDates ? '' : 'upcoming'} bookings found {selectedHallIds.length > 0 ? 'for the selected hall(s)' : ''}.
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-2.5 max-h-[400px] overflow-y-auto pr-1">
                     {activeBookings.map((b) => {
                       const bDateStr = formatDateToInput(b.programDate);
+                      const bHallIds = getBookingHallIds(b);
                       const isConflict = bDateStr && programDate && bDateStr === formatDateToInput(programDate) &&
-                        (!hallId || b.hallId === hallId || b.hallAccount?.id === hallId || b.hallAccount?.accountId === hallId) &&
+                        (selectedHallIds.length === 0 || bHallIds.some(hid => selectedHallIds.includes(hid))) &&
                         (!timings || timings === 'Full Day' || b.timings === 'Full Day' || b.timings === timings);
 
                       return (
@@ -506,7 +623,7 @@ export const HallBookingForm = () => {
                           </div>
                           <div className="mt-2 pt-1.5 border-t border-slate-800/60 flex items-center justify-between text-xs text-slate-400">
                             <span className="truncate flex items-center gap-1">
-                              📍 {b.hallAccount?.accountName || b.hallAccount?.name || 'Hall'}
+                              📍 {getBookingHallDisplay(b, hallAccounts)}
                             </span>
                             {isConflict && (
                               <span className="font-bold text-red-400 flex items-center gap-0.5">
@@ -758,50 +875,125 @@ export const HallBookingForm = () => {
                       </div>
                     </div>
 
-                    <div>
-                      <label className={labelClass}>{t('receipt.hall')} *</label>
-                      <select
+                    <div className="sm:col-span-2 space-y-2.5">
+                      <input
+                        type="hidden"
                         {...register('hallId', {
-                          required: 'Hall selection is required',
-                          pattern: {
-                            value: /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
-                            message: 'Invalid Hall selection'
-                          }
+                          required: 'Please select at least one hall',
                         })}
-                        required
-                        onChange={(e) => {
-                          register('hallId').onChange(e);
-                          const val = e.target.value;
-                          const selectedHall = hallAccounts.find(h => h.id === val);
-                          if (selectedHall) {
-                            let amt = 0;
-                            const name = selectedHall.name;
-                            if (name === 'Bagh-e-Hajiani Kareema') amt = 46000;
-                            else if (name === 'Sadaya Hall') amt = 28000;
-                            else if (name === 'Annexy Hall') amt = 36000;
-                            else if (name === 'Zikarya Hall') amt = 28000;
+                      />
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <label className="text-xs font-semibold text-slate-300 flex items-center gap-2">
+                            <Building2 className="w-3.5 h-3.5 text-amber-400" />
+                            <span>{t('receipt.hall')} * <span className="text-slate-500 font-normal">(Select 1 to 4 Halls for One Booking)</span></span>
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                            {selectedHallIds.length} of {hallAccounts.length} Hall{selectedHallIds.length === 1 ? '' : 's'} Selected
+                          </span>
+                          {hallAccounts.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (selectedHallIds.length === hallAccounts.length) {
+                                  handleUpdateSelectedHalls([]);
+                                } else {
+                                  handleUpdateSelectedHalls(hallAccounts.map(h => h.id));
+                                }
+                              }}
+                              className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 transition-colors cursor-pointer"
+                            >
+                              {selectedHallIds.length === hallAccounts.length ? 'Clear All' : `Select All ${hallAccounts.length} Halls`}
+                            </button>
+                          )}
+                        </div>
+                      </div>
 
-                            if (amt > 0) {
-                              setValue('amount', String(amt), { shouldValidate: true });
-                              const disc = toNumber(discountVal);
-                              const net = Math.max(0, amt - disc);
-                              setValue('receivedAmount', String(net), { shouldValidate: true });
-                            }
-                          }
-                        }}
-                        className={inputClass(errors.hallId)}
-                      >
-                        <option value="">-- Select Hall --</option>
-                        {hallAccounts.map(h => (
-                          <option key={h.id} value={h.id}>{h.name}</option>
-                        ))}
-                      </select>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {hallAccounts.map((h) => {
+                          const isSelected = selectedHallIds.includes(h.id);
+                          const defaultRate = getHallDefaultRate(h.name);
+                          const hallBookedConflict = (bookings || []).find(b => {
+                            if (b.id === id || b.isDeleted || b.status === 'Cancelled' || b.status === 'Rejected') return false;
+                            if (!b.programDate || !programDate) return false;
+                            if (formatDateToInput(b.programDate) !== formatDateToInput(programDate)) return false;
+                            const bIds = getBookingHallIds(b);
+                            if (!bIds.includes(h.id)) return false;
+                            return (!timings || timings === 'Full Day' || b.timings === 'Full Day' || b.timings === timings);
+                          });
+
+                          return (
+                            <div
+                              key={h.id}
+                              onClick={() => toggleHallSelection(h.id)}
+                              className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between gap-3 select-none ${
+                                isSelected && hallBookedConflict
+                                  ? 'bg-red-500/15 border-red-500 text-red-200 ring-1 ring-red-500/40'
+                                  : isSelected
+                                    ? 'bg-amber-500/15 border-amber-500 text-amber-200 shadow-md shadow-amber-500/10 ring-1 ring-amber-500/30'
+                                    : hallBookedConflict
+                                      ? 'bg-red-950/20 border-red-500/30 text-slate-400 hover:border-red-500/50'
+                                      : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-700 hover:bg-slate-900/60'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-all ${
+                                  isSelected
+                                    ? 'bg-amber-500 border-amber-400 text-slate-950'
+                                    : 'bg-slate-900 border-slate-700 text-transparent'
+                                }`}>
+                                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="text-sm font-bold truncate">
+                                    {h.name}
+                                  </div>
+                                  <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
+                                    <span>Rate: Rs. {defaultRate.toLocaleString()}</span>
+                                    {hallBookedConflict && (
+                                      <span className="text-red-400 font-semibold">
+                                        • Booked ({hallBookedConflict.bookerName})
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md border shrink-0 ${
+                                isSelected
+                                  ? 'bg-amber-500/20 border-amber-400/40 text-amber-300'
+                                  : hallBookedConflict
+                                    ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                                    : 'bg-slate-900 border-slate-800 text-slate-500'
+                              }`}>
+                                {isSelected ? 'Selected' : hallBookedConflict ? 'Booked' : 'Available'}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {selectedHallIds.length > 1 && (
+                        <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-xs text-emerald-300 flex items-center justify-between gap-2">
+                          <span>
+                            <strong>Multi-Hall Booking ({selectedHallIds.length} Halls):</strong> {selectedHallsSummary}
+                          </span>
+                          <span className="font-bold shrink-0">
+                            Combined Standard Rate: Rs. {selectedHallIds.reduce((s, hid) => {
+                              const h = hallAccounts.find(acc => acc.id === hid);
+                              return s + (h ? getHallDefaultRate(h.name) : 0);
+                            }, 0).toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+
                       {errors.hallId && (
                         <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.hallId.message}</span>
                       )}
                     </div>
 
-                    <div className="flex items-end">
+                    <div className="sm:col-span-2">
                       <label className="w-full flex items-center gap-3 cursor-pointer p-2.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:bg-slate-800/60 transition-colors">
                         <input type="checkbox" {...register('isForJamaat')} className="w-4 h-4 accent-amber-500" />
                         <span className="text-sm font-semibold text-slate-300">{t('receipt.forJamaat')}</span>

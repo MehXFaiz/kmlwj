@@ -509,6 +509,9 @@ model HallBooking {
   timings           String?
   hallId            String?
   hallAccount       Account?      @relation("HallBookingAccount", fields: [hallId], references: [id])
+  hallIds           String[]      @default([])
+  hallNames         String[]      @default([])
+  hallDetails       Json?
   isForJamaat       Boolean       @default(false)
   hallCharges       Float
   discount          Float         @default(0)

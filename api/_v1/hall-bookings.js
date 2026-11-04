@@ -38,6 +38,86 @@ const ALLOWED_STATUS_TRANSITIONS = {
 function isKnownStatus(value) {
   return HALL_BOOKING_STATUSES.includes(value);
 }
+function extractHallIds(inputHallId, inputHallIds) {
+  const raw = [];
+  if (Array.isArray(inputHallIds)) {
+    for (const item of inputHallIds) {
+      if (item && typeof item === "string") raw.push(item.trim());
+      else if (item && typeof item === "object" && item.hallId) raw.push(String(item.hallId).trim());
+    }
+  } else if (typeof inputHallIds === "string" && inputHallIds.trim()) {
+    raw.push(...inputHallIds.split(",").map((s) => s.trim()).filter(Boolean));
+  }
+  if (typeof inputHallId === "string" && inputHallId.trim()) {
+    raw.push(...inputHallId.split(",").map((s) => s.trim()).filter(Boolean));
+  }
+  return Array.from(new Set(raw.filter(Boolean)));
+}
+function getBookingHallIds(booking) {
+  if (!booking) return [];
+  const ids = [];
+  if (Array.isArray(booking.hallIds)) {
+    for (const hid of booking.hallIds) {
+      if (hid && typeof hid === "string") ids.push(hid.trim());
+    }
+  }
+  if (booking.hallId && typeof booking.hallId === "string") {
+    ids.push(booking.hallId.trim());
+  }
+  return Array.from(new Set(ids.filter(Boolean)));
+}
+function getStandardHallRate(hallName) {
+  const n = (hallName || "").toLowerCase();
+  if (n.includes("bagh") || n.includes("hajiani") || n.includes("hajiyani") || n.includes("kareema")) return 46e3;
+  if (n.includes("annexy") || n.includes("anexy") || n.includes("gosha") || n.includes("anxy")) return 36e3;
+  if (n.includes("sadaya") || n.includes("sada")) return 28e3;
+  if (n.includes("zikarya") || n.includes("zikriya") || n.includes("zakaria") || n.includes("zakriya")) return 28e3;
+  return 28e3;
+}
+function buildHallRevenueCreditLines(params) {
+  const { hallIds, hallAccountsMap, hallDetails, netAmount, bookerName } = params;
+  if (!hallIds.length || netAmount <= 0) return [];
+  if (hallIds.length === 1) {
+    const hid = hallIds[0];
+    const acc = hallAccountsMap.get(hid);
+    const hallLabel = acc?.accountName || acc?.name || "Selected Hall";
+    return [
+      {
+        accountId: hid,
+        debit: 0,
+        credit: netAmount,
+        description: `Revenue: Hall Booking Receipt for ${bookerName} - ${hallLabel}`
+      }
+    ];
+  }
+  const detailList = Array.isArray(hallDetails) ? hallDetails : [];
+  const weights = hallIds.map((hid) => {
+    const detail = detailList.find((d) => d && d.hallId === hid);
+    const explicitCharge = detail ? Number(detail.charges ?? detail.amount ?? 0) : 0;
+    if (explicitCharge > 0) return explicitCharge;
+    const acc = hallAccountsMap.get(hid);
+    return getStandardHallRate(acc?.accountName || acc?.name || "");
+  });
+  const totalWeight = weights.reduce((s, w) => s + w, 0) || hallIds.length;
+  const lines = [];
+  let allocatedSum = 0;
+  hallIds.forEach((hid, idx) => {
+    const acc = hallAccountsMap.get(hid);
+    const hallLabel = acc?.accountName || acc?.name || `Hall ${idx + 1}`;
+    const isLast = idx === hallIds.length - 1;
+    const share = isLast ? Math.round((netAmount - allocatedSum) * 100) / 100 : Math.round(netAmount * weights[idx] / totalWeight * 100) / 100;
+    allocatedSum = Math.round((allocatedSum + share) * 100) / 100;
+    if (share > 0) {
+      lines.push({
+        accountId: hid,
+        debit: 0,
+        credit: share,
+        description: `Revenue: Hall Booking Receipt for ${bookerName} - ${hallLabel}`
+      });
+    }
+  });
+  return lines;
+}
 var hall_bookings_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -55,12 +135,12 @@ var hall_bookings_default = makeHandler(async (req, res) => {
   const action = req.query.action;
   if (method === "GET") {
     if (req.url?.includes("/check-availability") || action === "check-availability") {
-      const hallId2 = req.query.hallId;
+      const requestedHallIds = extractHallIds(req.query.hallId, req.query.hallIds);
       const dateParam = req.query.bookingDate || req.query.programDate;
       const excludeId = req.query.excludeId;
       const requestedTimings = req.query.timings;
-      if (!hallId2 || !dateParam) {
-        return res.status(400).json({ error: { message: "hallId and bookingDate (or programDate) are required parameters", status: 400 } });
+      if (requestedHallIds.length === 0 || !dateParam) {
+        return res.status(400).json({ error: { message: "hallId (or hallIds) and bookingDate (or programDate) are required parameters", status: 400 } });
       }
       const dateOnlyStr = typeof dateParam === "string" && dateParam.includes("T") ? dateParam.split("T")[0] : typeof dateParam === "string" ? dateParam : new Date(dateParam).toISOString().split("T")[0];
       const startOfDay = /* @__PURE__ */ new Date(`${dateOnlyStr}T00:00:00.000Z`);
@@ -71,7 +151,6 @@ var hall_bookings_default = makeHandler(async (req, res) => {
       const sameDayBookings = await prisma.hallBooking.findMany({
         where: {
           isDeleted: false,
-          hallId: hallId2,
           programDate: {
             gte: startOfDay,
             lte: endOfDay
@@ -89,8 +168,19 @@ var hall_bookings_default = makeHandler(async (req, res) => {
       if (typeof requestedTimings === "undefined") {
         return res.status(200).json({ available: true });
       }
-      const conflictBooking = sameDayBookings.find((b) => timingsConflict(b.timings, requestedTimings));
+      const conflictBooking = sameDayBookings.find((b) => {
+        const existingHallIds = getBookingHallIds(b);
+        const hallOverlap = existingHallIds.some((hid) => requestedHallIds.includes(hid));
+        return hallOverlap && timingsConflict(b.timings, requestedTimings);
+      });
       if (conflictBooking) {
+        const existingHallIds = getBookingHallIds(conflictBooking);
+        const overlappingHallIds = existingHallIds.filter((hid) => requestedHallIds.includes(hid));
+        const overlappingAccounts = await prisma.account.findMany({
+          where: { id: { in: overlappingHallIds } },
+          select: { id: true, accountName: true }
+        });
+        const conflictHallName = overlappingAccounts.length > 0 ? overlappingAccounts.map((a) => a.accountName).join(", ") : Array.isArray(conflictBooking.hallNames) && conflictBooking.hallNames.length > 0 ? conflictBooking.hallNames.join(", ") : conflictBooking.hallAccount?.accountName || "Selected Hall";
         const ipAddress = req.headers["x-forwarded-for"] || req.socket?.remoteAddress;
         await logAudit(
           req.user.id,
@@ -99,7 +189,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
           null,
           {
             user: req.user.fullName || req.user.email,
-            hall: conflictBooking.hallAccount?.accountName || "Selected Hall",
+            hall: conflictHallName,
             bookingDate: dateParam,
             attemptedBy: req.user.id,
             ipAddress,
@@ -112,7 +202,8 @@ var hall_bookings_default = makeHandler(async (req, res) => {
           available: false,
           bookedBy: conflictBooking.bookerName,
           bookingDate: conflictBooking.programDate.toISOString().split("T")[0],
-          hallName: conflictBooking.hallAccount?.accountName || "Selected Hall",
+          hallName: conflictHallName,
+          conflictingHallIds: overlappingHallIds,
           receiptNo: conflictBooking.receiptNo,
           status: conflictBooking.status
         });
@@ -137,7 +228,12 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     const limitNum = parseInt(limit) || 100;
     const skip = (pageNum - 1) * limitNum;
     const whereClause = getDeletedFilter(req.query);
-    if (hallId) whereClause.hallId = hallId;
+    if (hallId) {
+      whereClause.OR = [
+        { hallId },
+        { hallIds: { has: hallId } }
+      ];
+    }
     if (startDate || endDate) {
       whereClause.bookingDate = {};
       if (startDate) {
@@ -217,8 +313,13 @@ var hall_bookings_default = makeHandler(async (req, res) => {
           error: { message: `Cannot post hall booking: Remaining amount must be 0 before posting to ledger. (Remaining: Rs. ${Math.round(checkRemAmt).toLocaleString()})`, status: 400 }
         });
       }
-      const revenueAccountId = booking.hallId;
-      if (!revenueAccountId) return res.status(400).json({ error: { message: "Revenue account (Hall) is required to post.", status: 400 } });
+      const bookingHallIds = getBookingHallIds(booking);
+      if (bookingHallIds.length === 0) return res.status(400).json({ error: { message: "Revenue account (Hall) is required to post.", status: 400 } });
+      const hallAccountsList2 = await prisma.account.findMany({
+        where: { id: { in: bookingHallIds } }
+      });
+      const hallAccountsMap2 = new Map(hallAccountsList2.map((a) => [a.id, a]));
+      const hallSummaryLabel2 = Array.isArray(booking.hallNames) && booking.hallNames.length > 0 ? booking.hallNames.join(", ") : hallAccountsList2.length > 0 ? hallAccountsList2.map((a) => a.accountName).join(", ") : booking.hallAccount?.accountName || "Selected Hall";
       let debitAccountId2 = null;
       if (booking.paymentMethod === "CASH") {
         const cashAccount = await AccountingService.ensureCashInHandAccount(prisma);
@@ -237,7 +338,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
             accountId: debitAccountId2,
             debit: recAmt,
             credit: 0,
-            description: `Receipt: Hall Booking Receipt for ${booking.bookerName} - ${booking.hallAccount?.accountName || "Selected Hall"}`
+            description: `Receipt: Hall Booking Receipt for ${booking.bookerName} - ${hallSummaryLabel2}`
           });
         }
         if (remAmt > 0) {
@@ -246,16 +347,17 @@ var hall_bookings_default = makeHandler(async (req, res) => {
             accountId: arAccount.id,
             debit: remAmt,
             credit: 0,
-            description: `Outstanding Receivable: Hall Booking Receipt for ${booking.bookerName} - ${booking.hallAccount?.accountName || "Selected Hall"}`
+            description: `Outstanding Receivable: Hall Booking Receipt for ${booking.bookerName} - ${hallSummaryLabel2}`
           });
         }
         if (netAmt > 0) {
-          lines.push({
-            accountId: revenueAccountId,
-            debit: 0,
-            credit: netAmt,
-            description: `Revenue: Hall Booking Receipt for ${booking.bookerName} - ${booking.hallAccount?.accountName || "Selected Hall"}`
-          });
+          lines.push(...buildHallRevenueCreditLines({
+            hallIds: bookingHallIds,
+            hallAccountsMap: hallAccountsMap2,
+            hallDetails: booking.hallDetails,
+            netAmount: netAmt,
+            bookerName: booking.bookerName
+          }));
         }
         let postingResult = null;
         if (lines.length > 0) {
@@ -263,7 +365,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
             voucherType: "BR",
             postingDate: booking.bookingDate || /* @__PURE__ */ new Date(),
             reference: `HB-${booking.receiptNo}`,
-            description: `Hall Booking Receipt for ${booking.bookerName} - ${booking.hallAccount?.accountName || "Selected Hall"}`,
+            description: `Hall Booking Receipt for ${booking.bookerName} - ${hallSummaryLabel2}`,
             module: "Hall Booking",
             postedBy: req.user.id,
             lines,
@@ -308,7 +410,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
       await logAudit(req.user.id, "Revert Hall Booking", "REVENUE", booking, result, req.headers["x-forwarded-for"], req.headers["user-agent"]);
       return res.status(200).json({ status: 200, data: result, message: "Booking reverted from ledger successfully" });
     }
-    const { bookingDate, bookerName, fatherHusbandName, address, mobile, programDate, programType, functionType, timeFrom, timeTo, timings, hallId, isForJamaat, amount, hallCharges, discount, netAmount, receivedAmount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
+    const { bookingDate, bookerName, fatherHusbandName, address, mobile, programDate, programType, functionType, timeFrom, timeTo, timings, hallId, hallIds: rawHallIds, hallNames: rawHallNames, hallDetails: rawHallDetails, isForJamaat, amount, hallCharges, discount, netAmount, receivedAmount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
     if (bookerName && !/^[a-zA-Z\s.-]{2,80}$/.test(String(bookerName))) {
       return res.status(400).json({ error: { message: "Booker name can only contain letters, spaces, hyphens, and dots", status: 400 } });
     }
@@ -327,8 +429,10 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     if (chequeBankName && !/^[a-zA-Z\s.-]{2,80}$/.test(String(chequeBankName))) {
       return res.status(400).json({ error: { message: "Cheque bank name can only contain letters, spaces, hyphens, and dots", status: 400 } });
     }
+    const resolvedHallIds = extractHallIds(hallId, rawHallIds);
+    const primaryHallId = resolvedHallIds[0] || "";
     const rawHallCharges = hallCharges ?? amount;
-    if (!bookerName || !programDate || !hallId || rawHallCharges == null || !paymentMethod) {
+    if (!bookerName || !programDate || !primaryHallId || rawHallCharges == null || !paymentMethod) {
       return res.status(400).json({ error: { message: "Missing required fields", status: 400 } });
     }
     const parsedProgramDateForValidation = new Date(programDate);
@@ -375,6 +479,12 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     } else {
       debitAccountId = bankAccountId;
     }
+    const hallAccountsList = await prisma.account.findMany({
+      where: { id: { in: resolvedHallIds } }
+    });
+    const hallAccountsMap = new Map(hallAccountsList.map((a) => [a.id, a]));
+    const resolvedHallNames = Array.isArray(rawHallNames) && rawHallNames.length > 0 ? rawHallNames.map(String) : resolvedHallIds.map((hid) => hallAccountsMap.get(hid)?.accountName || "Selected Hall");
+    const hallSummaryLabel = resolvedHallNames.join(", ");
     const eventDateStr = programDate || bookingDate;
     const dateOnlyStr = typeof eventDateStr === "string" && eventDateStr.includes("T") ? eventDateStr.split("T")[0] : typeof eventDateStr === "string" ? eventDateStr : new Date(eventDateStr).toISOString().split("T")[0];
     const startOfDay = /* @__PURE__ */ new Date(`${dateOnlyStr}T00:00:00.000Z`);
@@ -382,7 +492,6 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     const sameDayBookings = await prisma.hallBooking.findMany({
       where: {
         isDeleted: false,
-        hallId,
         programDate: {
           gte: startOfDay,
           lte: endOfDay
@@ -398,7 +507,11 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     if (typeof timings === "undefined") {
       return res.status(200).json({ available: true });
     }
-    const conflictBooking = sameDayBookings.find((b) => timingsConflict(b.timings, timings));
+    const conflictBooking = sameDayBookings.find((b) => {
+      const existingHallIds = getBookingHallIds(b);
+      const hallOverlap = existingHallIds.some((hid) => resolvedHallIds.includes(hid));
+      return hallOverlap && timingsConflict(b.timings, timings);
+    });
     if (conflictBooking) {
       const ipAddress = req.headers["x-forwarded-for"] || req.socket?.remoteAddress;
       await logAudit(
@@ -419,7 +532,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
       );
       return res.status(409).json({
         success: false,
-        message: "This hall is already booked for the selected date and time slot. Please choose another date or time."
+        message: "One or more selected halls are already booked for the selected date and time slot. Please choose another date, time, or hall."
       });
     }
     try {
@@ -427,13 +540,12 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         const sameDayInTx = await tx.hallBooking.findMany({
           where: {
             isDeleted: false,
-            hallId,
             programDate: { gte: startOfDay, lte: endOfDay },
             status: { in: ["Confirmed", "Pending", "POSTED"] }
           }
         });
-        if (sameDayInTx.some((b) => timingsConflict(b.timings, timings))) {
-          throw Object.assign(new Error("This hall is already booked for the selected date and time slot. Please choose another date or time."), { status: 409 });
+        if (sameDayInTx.some((b) => getBookingHallIds(b).some((hid) => resolvedHallIds.includes(hid)) && timingsConflict(b.timings, timings))) {
+          throw Object.assign(new Error("One or more selected halls are already booked for the selected date and time slot. Please choose another date, time, or hall."), { status: 409 });
         }
         const lastBooking = await tx.hallBooking.findFirst({
           orderBy: { receiptNo: "desc" },
@@ -457,7 +569,10 @@ var hall_bookings_default = makeHandler(async (req, res) => {
             timeFrom: timeFrom || null,
             timeTo: timeTo || null,
             timings: timings || null,
-            hallId,
+            hallId: primaryHallId,
+            hallIds: resolvedHallIds,
+            hallNames: resolvedHallNames,
+            hallDetails: rawHallDetails || null,
             isForJamaat: Boolean(isForJamaat),
             hallCharges: parsedHallCharges,
             discount: parsedDiscount,
@@ -487,7 +602,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
               accountId: debitAccountId,
               debit: parsedReceivedAmount,
               credit: 0,
-              description: `Receipt: Hall Booking Receipt for ${bookerName} - ${newBooking.hallAccount?.accountName || "Selected Hall"}`
+              description: `Receipt: Hall Booking Receipt for ${bookerName} - ${hallSummaryLabel}`
             });
           }
           if (calculatedRemainingAmount > 0) {
@@ -496,20 +611,21 @@ var hall_bookings_default = makeHandler(async (req, res) => {
               accountId: arAccount.id,
               debit: calculatedRemainingAmount,
               credit: 0,
-              description: `Outstanding Receivable: Hall Booking Receipt for ${bookerName} - ${newBooking.hallAccount?.accountName || "Selected Hall"}`
+              description: `Outstanding Receivable: Hall Booking Receipt for ${bookerName} - ${hallSummaryLabel}`
             });
           }
-          lines.push({
-            accountId: hallId,
-            debit: 0,
-            credit: calculatedNetAmount,
-            description: `Revenue: Hall Booking Receipt for ${bookerName} - ${newBooking.hallAccount?.accountName || "Selected Hall"}`
-          });
+          lines.push(...buildHallRevenueCreditLines({
+            hallIds: resolvedHallIds,
+            hallAccountsMap,
+            hallDetails: rawHallDetails,
+            netAmount: calculatedNetAmount,
+            bookerName
+          }));
           const postingResult = await AccountingService.postTransaction(tx, {
             voucherType: "BR",
             postingDate: newBooking.bookingDate || /* @__PURE__ */ new Date(),
             reference: `HB-${newBooking.receiptNo}`,
-            description: `Hall Booking Receipt for ${bookerName} - ${newBooking.hallAccount?.accountName || "Selected Hall"}`,
+            description: `Hall Booking Receipt for ${bookerName} - ${hallSummaryLabel}`,
             module: "Hall Booking",
             postedBy: req.user.id,
             lines,
@@ -629,7 +745,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     if (!existingBooking) {
       return res.status(404).json({ error: { message: "Booking not found", status: 404 } });
     }
-    const { bookingDate, bookerName, fatherHusbandName, address, mobile, programDate, programType, functionType, timeFrom, timeTo, timings, hallId, isForJamaat, amount, hallCharges, discount, receivedAmount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
+    const { bookingDate, bookerName, fatherHusbandName, address, mobile, programDate, programType, functionType, timeFrom, timeTo, timings, hallId, hallIds: rawHallIds, hallNames: rawHallNames, hallDetails: rawHallDetails, isForJamaat, amount, hallCharges, discount, receivedAmount, paymentMethod, bankAccountId, chequeNumber, chequeBankName, remarks } = req.body;
     if (bookerName && !/^[a-zA-Z\s.-]{2,80}$/.test(String(bookerName))) {
       return res.status(400).json({ error: { message: "Booker name can only contain letters, spaces, hyphens, and dots", status: 400 } });
     }
@@ -648,8 +764,10 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     if (chequeBankName && !/^[a-zA-Z\s.-]{2,80}$/.test(String(chequeBankName))) {
       return res.status(400).json({ error: { message: "Cheque bank name can only contain letters, spaces, hyphens, and dots", status: 400 } });
     }
+    const resolvedHallIds = extractHallIds(hallId, rawHallIds);
+    const primaryHallId = resolvedHallIds[0] || "";
     const rawHallCharges = hallCharges ?? amount;
-    if (!bookerName || !programDate || !hallId || rawHallCharges == null || !paymentMethod) {
+    if (!bookerName || !programDate || !primaryHallId || rawHallCharges == null || !paymentMethod) {
       return res.status(400).json({ error: { message: "Missing required fields", status: 400 } });
     }
     const parsedProgramDateForValidationPut = new Date(programDate);
@@ -692,6 +810,12 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     if ((paymentMethod === "BANK" || paymentMethod === "CHEQUE") && !bankAccountId) {
       return res.status(400).json({ error: { message: "Bank account is required for Bank/Cheque payment methods", status: 400 } });
     }
+    const hallAccountsList = await prisma.account.findMany({
+      where: { id: { in: resolvedHallIds } }
+    });
+    const hallAccountsMap = new Map(hallAccountsList.map((a) => [a.id, a]));
+    const resolvedHallNames = Array.isArray(rawHallNames) && rawHallNames.length > 0 ? rawHallNames.map(String) : resolvedHallIds.map((hid) => hallAccountsMap.get(hid)?.accountName || "Selected Hall");
+    const hallSummaryLabel = resolvedHallNames.join(", ");
     const eventDateStr = programDate || bookingDate;
     const dateOnlyStr = typeof eventDateStr === "string" && eventDateStr.includes("T") ? eventDateStr.split("T")[0] : typeof eventDateStr === "string" ? eventDateStr : new Date(eventDateStr).toISOString().split("T")[0];
     const startOfDay = /* @__PURE__ */ new Date(`${dateOnlyStr}T00:00:00.000Z`);
@@ -699,7 +823,6 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     const sameDayBookingsForUpdate = await prisma.hallBooking.findMany({
       where: {
         isDeleted: false,
-        hallId,
         programDate: {
           gte: startOfDay,
           lte: endOfDay
@@ -713,7 +836,11 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         hallAccount: true
       }
     });
-    const conflictBooking = sameDayBookingsForUpdate.find((b) => timingsConflict(b.timings, timings));
+    const conflictBooking = sameDayBookingsForUpdate.find((b) => {
+      const existingHallIds = getBookingHallIds(b);
+      const hallOverlap = existingHallIds.some((hid) => resolvedHallIds.includes(hid));
+      return hallOverlap && timingsConflict(b.timings, timings);
+    });
     if (conflictBooking) {
       const ipAddress = req.headers["x-forwarded-for"] || req.socket?.remoteAddress;
       await logAudit(
@@ -734,7 +861,7 @@ var hall_bookings_default = makeHandler(async (req, res) => {
       );
       return res.status(409).json({
         success: false,
-        message: "This hall is already booked for the selected date and time slot. Please choose another date or time."
+        message: "One or more selected halls are already booked for the selected date and time slot. Please choose another date, time, or hall."
       });
     }
     try {
@@ -755,14 +882,14 @@ var hall_bookings_default = makeHandler(async (req, res) => {
         const wasPosted = existingBooking.status === "POSTED" || Boolean(existingBooking.journalEntryId);
         let newJournalEntryId = null;
         const targetStatus = req.body.status || existingBooking.status;
-        if (wasPosted && debitAccountId && hallId && targetStatus !== "Cancelled" && targetStatus !== "Refunded") {
+        if (wasPosted && debitAccountId && primaryHallId && targetStatus !== "Cancelled" && targetStatus !== "Refunded") {
           const lines = [];
           if (parsedReceivedAmount > 0) {
             lines.push({
               accountId: debitAccountId,
               debit: parsedReceivedAmount,
               credit: 0,
-              description: `Receipt: Hall Booking Receipt for ${bookerName}`
+              description: `Receipt: Hall Booking Receipt for ${bookerName} - ${hallSummaryLabel}`
             });
           }
           if (calculatedRemainingAmount > 0) {
@@ -771,23 +898,24 @@ var hall_bookings_default = makeHandler(async (req, res) => {
               accountId: arAccount.id,
               debit: calculatedRemainingAmount,
               credit: 0,
-              description: `Outstanding Receivable: Hall Booking Receipt for ${bookerName}`
+              description: `Outstanding Receivable: Hall Booking Receipt for ${bookerName} - ${hallSummaryLabel}`
             });
           }
           if (calculatedNetAmount > 0) {
-            lines.push({
-              accountId: hallId,
-              debit: 0,
-              credit: calculatedNetAmount,
-              description: `Revenue: Hall Booking Receipt for ${bookerName}`
-            });
+            lines.push(...buildHallRevenueCreditLines({
+              hallIds: resolvedHallIds,
+              hallAccountsMap,
+              hallDetails: rawHallDetails,
+              netAmount: calculatedNetAmount,
+              bookerName
+            }));
           }
           if (lines.length > 0) {
             const postingResult = await AccountingService.postTransaction(tx, {
               voucherType: "BR",
               postingDate: new Date(programDate),
               reference: `HB-${existingBooking.receiptNo}`,
-              description: `Hall Booking Receipt for ${bookerName}`,
+              description: `Hall Booking Receipt for ${bookerName} - ${hallSummaryLabel}`,
               module: "Hall Booking",
               postedBy: req.user.id,
               lines,
@@ -816,7 +944,10 @@ var hall_bookings_default = makeHandler(async (req, res) => {
             timeFrom: timeFrom || null,
             timeTo: timeTo || null,
             timings: timings || null,
-            hallId,
+            hallId: primaryHallId,
+            hallIds: resolvedHallIds,
+            hallNames: resolvedHallNames,
+            hallDetails: rawHallDetails !== void 0 ? rawHallDetails : existingBooking.hallDetails,
             isForJamaat: Boolean(isForJamaat),
             hallCharges: parsedHallCharges,
             discount: parsedDiscount,
