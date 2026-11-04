@@ -263,11 +263,12 @@ async function main() {
   // Seed Accountant User (Mr. ZAHID)
   console.log('Seeding Accountant User (Mr. ZAHID)...');
   const accountantEmail = 'account@erp.com';
-  const hashedAccountantPassword = await bcrypt.hash('account123', 12);
+  const hashedAccountantPassword = await bcrypt.hash('13196555', 12);
   await prisma.user.upsert({
     where: { email: accountantEmail },
     update: {
       fullName: 'Mr. ZAHID',
+      password: hashedAccountantPassword,
       roleId: seededRoles['Accountant'].id,
       isActive: true,
     },
