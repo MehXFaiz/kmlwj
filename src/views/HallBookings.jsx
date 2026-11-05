@@ -333,8 +333,8 @@ export const HallBookings = () => {
       'Receipt No': booking.receiptNo || '',
       'Booker Name': booking.bookerName || '',
       'Mobile': booking.mobile || '',
-      'Booking Date': booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString('en-GB') : '',
-      'Program Date': booking.programDate ? new Date(booking.programDate).toLocaleDateString('en-GB') : '',
+      'Booking Date': booking.bookingDate || booking.createdAt ? formatDateDDMMYYYY(booking.bookingDate || booking.createdAt) : '',
+      'Program Date': booking.programDate ? formatDateDDMMYYYY(booking.programDate) : '',
       'Hall': formatHallName(booking),
       'Timings': booking.timings || '',
       'Hall Charges': Number(booking.hallCharges ?? booking.amount ?? 0),
@@ -377,7 +377,7 @@ export const HallBookings = () => {
         <td>${escapeHtml(booking.receiptNo)}</td>
         <td>${escapeHtml(booking.bookerName)}</td>
         <td>${escapeHtml(booking.mobile)}</td>
-        <td>${escapeHtml(booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : '')}</td>
+        <td>${escapeHtml(booking.bookingDate || booking.createdAt ? formatDateDDMMYYYY(booking.bookingDate || booking.createdAt) : '')}</td>
         <td>${escapeHtml(formatHallName(booking))}</td>
         <td>${money(booking.netAmount ?? ((booking.hallCharges ?? booking.amount ?? 0) - (booking.discount || 0)))}</td>
         <td>${money(booking.receivedAmount)}</td>
@@ -851,7 +851,7 @@ export const HallBookings = () => {
                               <Clock className="w-3.5 h-3.5 text-amber-400" /> BOOKING DATE
                             </span>
                             <span className="font-semibold text-slate-100 text-xs">
-                              {formatDateDDMMYYYY(booking.createdAt)}
+                              {formatDateDDMMYYYY(booking.bookingDate || booking.programDate || booking.createdAt)}
                               {booking.timings && <span className="text-slate-400 font-normal ml-1.5">({booking.timings})</span>}
                             </span>
                           </div>
@@ -861,7 +861,7 @@ export const HallBookings = () => {
                       {/* Card Footer: Date & Action Icons */}
                       <div className="flex flex-col gap-3 pt-3.5 border-t border-slate-800/80">
                         <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5 text-slate-400" /> {formatDateDDMMYYYY(booking.createdAt)}
+                          <Calendar className="w-3.5 h-3.5 text-slate-400" /> {formatDateDDMMYYYY(booking.bookingDate || booking.programDate || booking.createdAt)}
                         </span>
                         <div className="flex items-center justify-end gap-2 w-full">
                           <button
@@ -975,7 +975,7 @@ export const HallBookings = () => {
                         <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">{booking.mobile || 'N/A'}</div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="font-medium">{formatDateDDMMYYYY(booking.createdAt)}</div>
+                        <div className="font-medium">{formatDateDDMMYYYY(booking.bookingDate || booking.programDate || booking.createdAt)}</div>
                         <div className="text-xs text-slate-500">{booking.timings || 'Any time'}</div>
                       </td>
                       <td className="px-6 py-4">
