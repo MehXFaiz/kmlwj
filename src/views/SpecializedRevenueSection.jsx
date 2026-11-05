@@ -245,12 +245,49 @@ export const SpecializedRevenueSection = ({
 
   const parseImportedDate = (value) => {
     if (!value) return new Date().toISOString().slice(0, 10);
+    if (value instanceof Date) {
+      if (Number.isNaN(value.getTime())) return new Date().toISOString().slice(0, 10);
+      const rounded = new Date(Math.round(value.getTime() / 60000) * 60000);
+      return `${rounded.getFullYear()}-${String(rounded.getMonth() + 1).padStart(2, '0')}-${String(rounded.getDate()).padStart(2, '0')}`;
+    }
     if (typeof value === 'number') {
       const parsed = XLSX.SSF.parse_date_code(value);
-      if (parsed) return `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`;
+      if (parsed && parsed.y && parsed.m && parsed.d) {
+        return `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`;
+      }
     }
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10);
+    const str = String(value).trim();
+    const isoMatch = str.match(/^(\d{4})[\/\-.\s](\d{1,2})[\/\-.\s](\d{1,2})/);
+    if (isoMatch) {
+      return `${isoMatch[1]}-${String(isoMatch[2]).padStart(2, '0')}-${String(isoMatch[3]).padStart(2, '0')}`;
+    }
+    const dmyMatch = str.match(/^(\d{1,2})[\/\-.\s](\d{1,2})[\/\-.\s](\d{2,4})$/);
+    if (dmyMatch) {
+      let d = Number(dmyMatch[1]);
+      let m = Number(dmyMatch[2]);
+      let y = Number(dmyMatch[3]);
+      if (y < 100) y += 2000;
+      if (m > 12 && d <= 12) {
+        const tmp = d;
+        d = m;
+        m = tmp;
+      }
+      if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+        return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      }
+    }
+    const date = new Date(str);
+    return Number.isNaN(date.getTime())
+      ? new Date().toISOString().slice(0, 10)
+      : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
+
+  const parseImportedAmount = (value) => {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+    if (value === undefined || value === null) return 0;
+    const cleaned = String(value).replace(/[^0-9.-]/g, '');
+    const num = parseFloat(cleaned);
+    return Number.isFinite(num) ? num : 0;
   };
 
   const handleImport = async (event) => {
@@ -276,7 +313,7 @@ export const SpecializedRevenueSection = ({
           row['Name'] ||
           ''
         ).trim();
-        const amount = Number(row['Total Amount'] || row['Amount'] || 0);
+        const amount = parseImportedAmount(row['Total Amount'] || row['Amount'] || 0);
         const eventDateVal = parseImportedDate(
           row[dateLabel] ||
           row['Trip Date'] ||
@@ -284,12 +321,15 @@ export const SpecializedRevenueSection = ({
           row['Collection Date'] ||
           row['Date']
         );
-        if (!itemTitle || !amount || !eventDateVal) {
+        if (!itemTitle || amount <= 0 || !eventDateVal) {
           failed += 1;
           continue;
         }
 
         try {
+          const rawMethod = String(row['Payment Method'] || 'CASH').trim().toUpperCase();
+          const paymentMethod = ['CASH', 'BANK', 'CHEQUE', 'ONLINE'].includes(rawMethod) ? rawMethod : 'CASH';
+          const defaultBankId = bankAccounts[0]?.id || undefined;
           await addCollection({
             category,
             title: itemTitle,
@@ -302,11 +342,12 @@ export const SpecializedRevenueSection = ({
             ).trim(),
             mobile: String(row.Mobile || row.Phone || '').trim(),
             eventDate: eventDateVal,
-            quantity: Number((showQty && row[qtyLabel]) || row['Quantity'] || row['Head Count'] || 1),
-            rate: Number((showRate && row[rateLabel]) || row['Rate'] || row['Fee Rate'] || amount),
+            quantity: Math.max(1, parseImportedAmount((showQty && row[qtyLabel]) || row['Quantity'] || row['Head Count'] || 1)),
+            rate: parseImportedAmount((showRate && row[rateLabel]) || row['Rate'] || row['Fee Rate'] || amount),
             destination: String((showDest && row[destLabel]) || row['Trip Destination'] || row['Destination'] || '').trim(),
             amount,
-            paymentMethod: String(row['Payment Method'] || 'CASH').trim(),
+            paymentMethod: (paymentMethod === 'BANK' || paymentMethod === 'CHEQUE') && !defaultBankId ? 'CASH' : paymentMethod,
+            ...((paymentMethod === 'BANK' || paymentMethod === 'CHEQUE') && defaultBankId ? { bankAccountId: defaultBankId } : {}),
             remarks: '',
             postImmediately: false,
           });

@@ -54,18 +54,92 @@ const formatHallName = (booking) => {
 
 const parseImportedDate = (value) => {
   if (!value) return '';
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return '';
+    const rounded = new Date(Math.round(value.getTime() / 60000) * 60000);
+    return `${rounded.getFullYear()}-${String(rounded.getMonth() + 1).padStart(2, '0')}-${String(rounded.getDate()).padStart(2, '0')}`;
+  }
   if (typeof value === 'number') {
     const parsed = XLSX.SSF.parse_date_code(value);
-    if (!parsed) return '';
+    if (!parsed || !parsed.y || !parsed.m || !parsed.d) return '';
     return `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`;
   }
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10);
+  const str = String(value).trim();
+  if (!str) return '';
+
+  const isoMatch = str.match(/^(\d{4})[\/\-.\s](\d{1,2})[\/\-.\s](\d{1,2})/);
+  if (isoMatch) {
+    return `${isoMatch[1]}-${String(isoMatch[2]).padStart(2, '0')}-${String(isoMatch[3]).padStart(2, '0')}`;
+  }
+
+  const dmyMatch = str.match(/^(\d{1,2})[\/\-.\s](\d{1,2})[\/\-.\s](\d{2,4})$/);
+  if (dmyMatch) {
+    let d = Number(dmyMatch[1]);
+    let m = Number(dmyMatch[2]);
+    let y = Number(dmyMatch[3]);
+    if (y < 100) y += 2000;
+    if (m > 12 && d <= 12) {
+      const tmp = d;
+      d = m;
+      m = tmp;
+    }
+    if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+      return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    }
+  }
+
+  const date = new Date(str);
+  if (Number.isNaN(date.getTime())) return '';
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+
+const getRowValue = (row, keys) => {
+  if (!row || typeof row !== 'object') return '';
+  for (const key of keys) {
+    if (row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== '') {
+      return row[key];
+    }
+  }
+  const normalizedEntries = Object.entries(row).map(([k, v]) => [k.trim().toLowerCase(), v]);
+  for (const key of keys) {
+    const target = key.trim().toLowerCase();
+    const found = normalizedEntries.find(([k]) => k === target);
+    if (found && found[1] !== undefined && found[1] !== null && String(found[1]).trim() !== '') {
+      return found[1];
+    }
+  }
+  return '';
+};
+
+const parseImportedAmount = (value) => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  if (value === undefined || value === null) return 0;
+  const cleaned = String(value).replace(/[^0-9.-]/g, '');
+  const num = parseFloat(cleaned);
+  return Number.isFinite(num) ? num : 0;
+};
+
+const normalizeImportedMobile = (raw) => {
+  if (!raw) return '';
+  let digits = String(raw).replace(/\D/g, '');
+  if (digits.length === 10 && digits.startsWith('3')) digits = `0${digits}`;
+  if (digits.length === 12 && digits.startsWith('92')) digits = `0${digits.slice(2)}`;
+  return /^\d{11}$/.test(digits) ? digits : '';
+};
+
+const sanitizeImportedBookerName = (raw) => {
+  const cleaned = String(raw || '')
+    .replace(/[^a-zA-Z0-9\s.,'()&/-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80);
+  if (cleaned.length >= 2) return cleaned;
+  return String(raw || '').trim() ? 'Guest Booker' : '';
 };
 
 export const HallBookings = () => {
   const { t, i18n } = useTranslation();
-  const { bookings, loading, fetchBookings, postBooking, revertBooking, deleteBooking, bulkDeleteBookings } = useHallBookingStore();
+  const { bookings, loading, fetchBookings, addBooking, updateBooking, postBooking, revertBooking, deleteBooking, bulkDeleteBookings } = useHallBookingStore();
   const { flatAccounts, fetchAccountsList } = useCoaStore();
   const { canEditOrDelete } = useAuthStore();
   const canPostToLedger = useAuthStore((s) => s.canPostToLedger);
@@ -340,48 +414,163 @@ export const HallBookings = () => {
 
     setIsImporting(true);
     try {
+      let currentAccounts = flatAccounts || [];
+      if (currentAccounts.length === 0) {
+        await fetchAccountsList();
+        currentAccounts = useCoaStore.getState().flatAccounts || [];
+      }
+
+      const availableHalls = [];
+      const hallByName = new Map();
+      for (const account of currentAccounts) {
+        if (account.type === 'Revenue' || account.accountTypeName === 'REVENUE' || account.accountTypeName === 'Revenue') {
+          const formatted = formatHallName(account.name || account.accountName);
+          if (formatted && formatted !== 'N/A') {
+            if (!hallByName.has(formatted.toLowerCase())) {
+              hallByName.set(formatted.toLowerCase(), { id: account.id, name: formatted });
+              availableHalls.push({ id: account.id, name: formatted });
+            }
+          }
+          const rawName = String(account.name || account.accountName || '').trim();
+          if (rawName && !hallByName.has(rawName.toLowerCase())) {
+            hallByName.set(rawName.toLowerCase(), { id: account.id, name: formatted !== 'N/A' ? formatted : rawName });
+          }
+        }
+      }
+
+      const resolveHallsFromRow = (rawHallStr) => {
+        const parts = String(rawHallStr || '')
+          .split(/[,+]/)
+          .map(s => s.trim())
+          .filter(Boolean);
+        const matched = [];
+        const seenIds = new Set();
+
+        for (const part of parts) {
+          const cleaned = cleanSingleHallName(part);
+          const candidate =
+            hallByName.get(cleaned.toLowerCase()) ||
+            hallByName.get(part.toLowerCase()) ||
+            availableHalls.find(h =>
+              h.name.toLowerCase().includes(cleaned.toLowerCase()) ||
+              cleaned.toLowerCase().includes(h.name.toLowerCase())
+            );
+          if (candidate && !seenIds.has(candidate.id)) {
+            seenIds.add(candidate.id);
+            matched.push(candidate);
+          }
+        }
+
+        if (matched.length === 0 && availableHalls.length > 0) {
+          matched.push(availableHalls[0]);
+        }
+        return matched;
+      };
+
       const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-      const hallByName = new Map(hallOptions.map(hall => [hall.name.toLowerCase(), hall.id]));
       let imported = 0;
       let failed = 0;
 
-      for (const row of rows) {
-        const hallName = String(row.Hall || '').trim();
-        const hallId = hallByName.get(hallName.toLowerCase());
-        const amount = Number(row['Hall Charges'] || 0);
-        const programDate = parseImportedDate(row['Program Date']);
-        const bookingDate = parseImportedDate(row['Booking Date']) || new Date().toISOString().slice(0, 10);
+      const currentBookings = Array.isArray(bookings) ? [...bookings] : [];
 
-        if (!row['Booker Name'] || !programDate || !hallId || !amount) {
+      for (const row of rows) {
+        const rawBooker = getRowValue(row, ['Booker Name', 'Booker', 'Customer Name', 'Client Name', 'Party Name', 'Name']);
+        const bookerName = sanitizeImportedBookerName(rawBooker);
+
+        const rawHall = getRowValue(row, ['Hall', 'Hall Name', 'Halls']);
+        const matchedHalls = resolveHallsFromRow(rawHall);
+        const hallId = matchedHalls[0]?.id || '';
+        const hallIds = matchedHalls.map(h => h.id);
+        const hallNames = matchedHalls.map(h => h.name);
+
+        const discount = Math.max(0, parseImportedAmount(getRowValue(row, ['Discount'])));
+        const rawCharges = parseImportedAmount(getRowValue(row, ['Hall Charges', 'Charges', 'Amount', 'Gross Amount']));
+        const rawNet = parseImportedAmount(getRowValue(row, ['Net Amount', 'Net', 'Total Amount', 'Total']));
+        const rawReceived = parseImportedAmount(getRowValue(row, ['Received', 'Received Amount', 'Paid']));
+        const amount = rawCharges > 0 ? rawCharges : (rawNet > 0 ? rawNet + discount : (rawReceived > 0 ? rawReceived + discount : 0));
+
+        const rawProgramDate = getRowValue(row, ['Program Date', 'Event Date', 'Function Date', 'Date']);
+        const rawBookingDate = getRowValue(row, ['Booking Date', 'Receipt Date', 'Created Date']);
+        const programDate = parseImportedDate(rawProgramDate) || parseImportedDate(rawBookingDate);
+        const bookingDate = parseImportedDate(rawBookingDate) || programDate || new Date().toISOString().slice(0, 10);
+
+        if (!bookerName || !programDate || !hallId || amount <= 0) {
           failed += 1;
           continue;
         }
 
+        const netAmount = Math.max(0, amount - discount);
+        const receivedAmount = Math.min(netAmount, Math.max(0, rawReceived));
+        const timings = String(getRowValue(row, ['Timings', 'Timing', 'Time Slot']) || 'Evening').trim() || 'Evening';
+        const mobile = normalizeImportedMobile(getRowValue(row, ['Mobile', 'Mobile No', 'Phone', 'Contact']));
+        const rawReceiptNo = parseInt(String(getRowValue(row, ['Receipt No', 'Receipt #', 'Slip No']) || '').replace(/\D/g, ''), 10);
+        const receiptNo = Number.isFinite(rawReceiptNo) && rawReceiptNo > 0 ? rawReceiptNo : undefined;
+
+        const payload = {
+          ...(receiptNo ? { receiptNo } : {}),
+          bookingDate,
+          bookerName,
+          mobile,
+          programDate,
+          hallId,
+          hallIds,
+          hallNames,
+          timings,
+          amount,
+          hallCharges: amount,
+          discount,
+          netAmount,
+          receivedAmount,
+          remainingAmount: Math.max(0, netAmount - receivedAmount),
+          paymentMethod: 'CASH',
+          status: 'Confirmed',
+        };
+
         try {
-          const discount = Number(row.Discount || 0);
-          const netAmount = Math.max(0, amount - discount);
-          const receivedAmount = Number(row.Received || 0);
-          await addBooking({
-            bookingDate,
-            bookerName: String(row['Booker Name']).trim(),
-            mobile: String(row.Mobile || '').trim(),
-            programDate,
-            hallId,
-            timings: String(row.Timings || 'Evening').trim(),
-            amount,
-            hallCharges: amount,
-            discount,
-            netAmount,
-            receivedAmount,
-            remainingAmount: Math.max(0, netAmount - receivedAmount),
-            paymentMethod: 'CASH',
-            status: 'Confirmed',
+          const existingMatch = currentBookings.find(b => {
+            if (b.isDeleted) return false;
+            if (receiptNo && Number(b.receiptNo) === receiptNo) return true;
+            const bProgDate = b.programDate ? new Date(b.programDate).toISOString().slice(0, 10) : '';
+            const bHallId = b.hallId || b.hallAccount?.id || (Array.isArray(b.hallIds) ? b.hallIds[0] : '');
+            const bTimings = String(b.timings || 'Evening').trim().toLowerCase();
+            return bProgDate === programDate && bHallId === hallId && bTimings === timings.toLowerCase();
           });
-          imported += 1;
-        } catch {
-          failed += 1;
+
+          if (existingMatch) {
+            if (existingMatch.status === 'POSTED') {
+              imported += 1;
+            } else {
+              await updateBooking(existingMatch.id, payload);
+              imported += 1;
+            }
+          } else {
+            const created = await addBooking(payload);
+            if (created) currentBookings.push(created);
+            imported += 1;
+          }
+        } catch (err) {
+          if (err?.response?.status === 409) {
+            const fallbackTimings = ['Morning', 'Afternoon', 'Evening', 'Night'].filter(
+              slot => slot.toLowerCase() !== timings.toLowerCase()
+            );
+            let recovered = false;
+            for (const altTiming of fallbackTimings) {
+              try {
+                const created = await addBooking({ ...payload, timings: altTiming });
+                if (created) currentBookings.push(created);
+                imported += 1;
+                recovered = true;
+                break;
+              } catch {
+                // try next slot
+              }
+            }
+            if (!recovered) failed += 1;
+          } else {
+            failed += 1;
+          }
         }
       }
 

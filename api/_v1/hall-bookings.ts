@@ -701,6 +701,25 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         throw Object.assign(new Error('One or more selected halls are already booked for the selected date and time slot. Please choose another date, time, or hall.'), { status: 409 });
       }
 
+      // Disambiguate any soft-deleted bookings on the same hall/date/timings so
+      // the database unique constraint (hallId, programDate, timings) does not
+      // reject re-booking or re-importing a previously deleted slot.
+      const softDeletedSameSlot = await tx.hallBooking.findMany({
+        where: {
+          isDeleted: true,
+          hallId: primaryHallId,
+          programDate: { gte: startOfDay, lte: endOfDay },
+          timings: timings || null,
+        },
+        select: { id: true, timings: true },
+      });
+      for (const deletedBooking of softDeletedSameSlot) {
+        await tx.hallBooking.update({
+          where: { id: deletedBooking.id },
+          data: { timings: `${deletedBooking.timings || 'Slot'}#deleted-${deletedBooking.id.slice(0, 8)}` },
+        });
+      }
+
       const lastBooking = await tx.hallBooking.findFirst({
         orderBy: { receiptNo: 'desc' },
         select: { receiptNo: true },
