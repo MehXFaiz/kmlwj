@@ -1298,7 +1298,7 @@ export class AccountingService {
     });
 
     if (!je) throw new Error('Accounting Engine Error: Journal entry not found.');
-    if (je.status !== 'Cancelled') return je;
+    if (je.status !== 'Cancelled' && !je.isDeleted) return je;
 
     if (newStatus === 'Posted') {
       const accountCreditsMap = new Map<string, number>();
@@ -1325,7 +1325,10 @@ export class AccountingService {
       where: { id: je.id },
       data: {
         status: newStatus,
-        description: newDescription
+        description: newDescription,
+        isDeleted: false,
+        deletedAt: null,
+        deletedBy: null,
       }
     });
 
@@ -1361,7 +1364,7 @@ export class AccountingService {
    * Permanently deletes a Journal Entry, its lines, and associated Ledger Entries from the database,
    * while recalculating account balances.
    */
-  static async deleteJournalEntry(tx: any, journalEntryId: string, postedBy?: string, reason?: string) {
+  static async deleteJournalEntry(tx: any, journalEntryId: string, postedBy?: string, reason?: string, forcePermanent: boolean = false) {
     const je = await tx.journalEntry.findUnique({
       where: { id: journalEntryId },
       include: { lines: true }
@@ -1370,17 +1373,35 @@ export class AccountingService {
     if (!je) return null;
     await AccountingService.assertFinancialYearOpen(tx, je.postingDate);
 
-    // Capture the affected account IDs before the lines are removed so the
-    // balance cache can be scoped to just the accounts this entry touched.
+    // Capture the affected account IDs before the entry is soft-deleted or permanently removed
+    // so the balance cache can be scoped to just the accounts this entry touched.
     const accountIds = Array.from(new Set(je.lines.map((l: any) => l.accountId))) as string[];
+    const validUserId = postedBy && postedBy !== 'system' && postedBy.length === 36 ? postedBy : null;
 
-    await tx.journalEntryLine.deleteMany({
-      where: { journalEntryId: je.id }
-    });
-
-    const deletedJe = await tx.journalEntry.delete({
-      where: { id: je.id }
-    });
+    let deletedJe: any;
+    if (forcePermanent) {
+      await tx.journalEntryLine.deleteMany({
+        where: { journalEntryId: je.id }
+      });
+      deletedJe = await tx.journalEntry.delete({
+        where: { id: je.id }
+      });
+    } else {
+      // Centralized Soft Delete: preserve JournalEntry and its JournalEntryLines in MongoDB,
+      // mark as soft-deleted & Cancelled so POSTED_JOURNAL_FILTER immediately excludes it from all balances.
+      deletedJe = await tx.journalEntry.update({
+        where: { id: je.id },
+        data: {
+          isDeleted: true,
+          deletedAt: new Date(),
+          deletedBy: validUserId,
+          status: 'Cancelled',
+          reversedById: validUserId,
+          reversedAt: new Date(),
+          reversalReason: reason || je.reversalReason || 'Soft deleted / Reverted',
+        }
+      });
+    }
 
     // SQA fix: the previous implementation looped per account, issuing three
     // DB round-trips each (findUnique + aggregate + update) and silently

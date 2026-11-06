@@ -69,13 +69,7 @@ class AccountingSyncHub {
     const db = prismaClient || defaultPrisma;
     const nowIso = new Date().toISOString();
 
-    // 1. Clean up contaminated test initial balances (e.g., from failed test runs)
-    await db.account.updateMany({
-      where: {
-        glCode: { in: ['1010102', '4080103'] }
-      },
-      data: { initialBalance: 0 }
-    });
+    // 1. Preserve all existing account initial balances (do NOT reset 1010102 or 4080103)
 
     // 2. Resolve standard accounts
     let cashAccount = await db.account.findFirst({
@@ -297,7 +291,7 @@ class AccountingSyncHub {
 
     // 3. Sync Hall Bookings (Total Net Amount to General Ledger)
     const hallBookings = await db.hallBooking.findMany({
-      where: { isDeleted: false },
+      where: { isDeleted: false, status: 'POSTED' },
       include: { hallAccount: true, journalEntry: { include: { lines: true } } }
     });
 
@@ -463,7 +457,7 @@ class AccountingSyncHub {
 
     // 4. Sync Donations Received
     const donRecs = await db.donationReceived.findMany({
-      where: { isDeleted: false },
+      where: { isDeleted: false, status: 'POSTED' },
       include: { journalEntry: { include: { lines: true } } }
     });
     let donationsReceivedSynced = 0;
@@ -548,7 +542,7 @@ class AccountingSyncHub {
 
     // 5. Sync Revenue Collections (Membership Fees, Bus Booking, etc.)
     const revCollections = await db.revenueCollection.findMany({
-      where: { isDeleted: false },
+      where: { isDeleted: false, status: 'POSTED' },
       include: { journalEntry: { include: { lines: true } } }
     });
     let revenueCollectionsSynced = 0;
@@ -667,7 +661,7 @@ class AccountingSyncHub {
 
     // 6. Sync Add Income Records
     const addIncomes = await db.addIncomeRecord.findMany({
-      where: { isDeleted: false },
+      where: { isDeleted: false, status: 'POSTED' },
       include: { category: true, journalEntry: { include: { lines: true } } }
     });
     let addIncomeSynced = 0;
@@ -764,7 +758,7 @@ class AccountingSyncHub {
     let simpleExpensesSynced = 0;
     try {
       const simpleExpenses = await db.simpleExpense.findMany({
-        where: { isDeleted: false },
+        where: { isDeleted: false, status: 'POSTED' },
         include: { expenseHead: true }
       });
 
@@ -852,7 +846,7 @@ class AccountingSyncHub {
     let pettyCashSynced = 0;
     try {
       const pcTxs = await db.pettyCashTransaction.findMany({
-        where: { isDeleted: false }
+        where: { isDeleted: false, status: { notIn: ['REVERTED', 'CANCELLED', 'DRAFT'] } }
       });
 
       for (const pc of pcTxs) {
