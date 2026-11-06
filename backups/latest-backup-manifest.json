@@ -1,0 +1,1307 @@
+{
+  "backupFile": "D:\\kmlwj\\backups\\mongodb-atlas-backup-2026-11-06T14-56-26-991Z.json",
+  "createdAt": "2026-11-06T14:56:27.229Z",
+  "databaseName": "kmlwj",
+  "totalCollections": 37,
+  "totalDocuments": 4173,
+  "totalActiveDocuments": 4029,
+  "totalSoftDeletedDocuments": 144,
+  "collectionSummary": {
+    "Account": {
+      "total": 224,
+      "active": 189,
+      "softDeleted": 35,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Account_glCode_key",
+          "key": {
+            "glCode": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "Account_parentId_idx",
+          "key": {
+            "parentId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Account_accountLevel_idx",
+          "key": {
+            "accountLevel": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Account_isDeleted_idx",
+          "key": {
+            "isDeleted": 1
+          },
+          "unique": false
+        }
+      ]
+    },
+    "AccountType": {
+      "total": 5,
+      "active": 5,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "AccountType_name_key",
+          "key": {
+            "name": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    "AddIncomeRecord": {
+      "total": 0,
+      "active": 0,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "AddIncomeRecord_isDeleted_idx",
+          "key": {
+            "isDeleted": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "AddIncomeRecord_date_idx",
+          "key": {
+            "date": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "AddIncomeRecord_categoryId_idx",
+          "key": {
+            "categoryId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "AddIncomeRecord_bankAccountId_idx",
+          "key": {
+            "bankAccountId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "AddIncomeRecord_journalEntryId_key",
+          "key": {
+            "journalEntryId": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    "AiRepairIssue": {
+      "total": 160,
+      "active": 160,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "AiRepairIssue_status_idx",
+          "key": {
+            "status": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "AiRepairIssue_type_idx",
+          "key": {
+            "type": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "AiRepairIssue_detectedAt_idx",
+          "key": {
+            "detectedAt": 1
+          },
+          "unique": false
+        }
+      ]
+    },
+    "AiRepairLog": {
+      "total": 9,
+      "active": 9,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "AiRepairLog_createdAt_idx",
+          "key": {
+            "createdAt": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "AiRepairLog_issueId_idx",
+          "key": {
+            "issueId": 1
+          },
+          "unique": false
+        }
+      ]
+    },
+    "AuditLog": {
+      "total": 2299,
+      "active": 2299,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "AuditLog_createdAt_idx",
+          "key": {
+            "createdAt": 1
+          },
+          "unique": false
+        }
+      ]
+    },
+    "Beneficiary": {
+      "total": 3,
+      "active": 0,
+      "softDeleted": 3,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Beneficiary_isDeleted_idx",
+          "key": {
+            "isDeleted": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Beneficiary_cnic_key",
+          "key": {
+            "cnic": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    "Customer": {
+      "total": 0,
+      "active": 0,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Customer_isDeleted_idx",
+          "key": {
+            "isDeleted": 1
+          },
+          "unique": false
+        }
+      ]
+    },
+    "Donation": {
+      "total": 0,
+      "active": 0,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Donation_isDeleted_idx",
+          "key": {
+            "isDeleted": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Donation_bankAccountId_idx",
+          "key": {
+            "bankAccountId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Donation_beneficiaryId_idx",
+          "key": {
+            "beneficiaryId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Donation_createdAt_idx",
+          "key": {
+            "createdAt": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Donation_disbursementMonth_donationType_bankAccountId_status_isDeleted_idx",
+          "key": {
+            "disbursementMonth": 1,
+            "donationType": 1,
+            "bankAccountId": 1,
+            "status": 1,
+            "isDeleted": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Donation_status_isDeleted_idx",
+          "key": {
+            "status": 1,
+            "isDeleted": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Donation_journalEntryId_key",
+          "key": {
+            "journalEntryId": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    "DonationReceived": {
+      "total": 0,
+      "active": 0,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "DonationReceived_receiptNo_key",
+          "key": {
+            "receiptNo": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "DonationReceived_receiptDate_idx",
+          "key": {
+            "receiptDate": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "DonationReceived_donorId_idx",
+          "key": {
+            "donorId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "DonationReceived_paymentMethod_idx",
+          "key": {
+            "paymentMethod": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "DonationReceived_isDeleted_idx",
+          "key": {
+            "isDeleted": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "DonationReceived_journalEntryId_key",
+          "key": {
+            "journalEntryId": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    "Donor": {
+      "total": 5,
+      "active": 0,
+      "softDeleted": 5,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Donor_donorCode_key",
+          "key": {
+            "donorCode": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "Donor_isDeleted_idx",
+          "key": {
+            "isDeleted": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Donor_cnic_key",
+          "key": {
+            "cnic": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    "ExpenseHead": {
+      "total": 20,
+      "active": 20,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "ExpenseHead_isDeleted_idx",
+          "key": {
+            "isDeleted": 1
+          },
+          "unique": false
+        }
+      ]
+    },
+    "FamilyRelationship": {
+      "total": 0,
+      "active": 0,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "FamilyRelationship_memberId_idx",
+          "key": {
+            "memberId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "FamilyRelationship_relatedMemberId_idx",
+          "key": {
+            "relatedMemberId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "FamilyRelationship_isDeleted_idx",
+          "key": {
+            "isDeleted": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "FamilyRelationship_memberId_relatedMemberId_key",
+          "key": {
+            "memberId": 1,
+            "relatedMemberId": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    "FinancialYear": {
+      "total": 1,
+      "active": 1,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "FinancialYear_code_key",
+          "key": {
+            "code": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "FinancialYear_startDate_endDate_idx",
+          "key": {
+            "startDate": 1,
+            "endDate": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "FinancialYear_isClosed_idx",
+          "key": {
+            "isClosed": 1
+          },
+          "unique": false
+        }
+      ]
+    },
+    "HallBooking": {
+      "total": 112,
+      "active": 49,
+      "softDeleted": 63,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "HallBooking_isDeleted_idx",
+          "key": {
+            "isDeleted": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "HallBooking_bankAccountId_idx",
+          "key": {
+            "bankAccountId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "HallBooking_createdById_idx",
+          "key": {
+            "createdById": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "HallBooking_hallId_programDate_timings_key",
+          "key": {
+            "hallId": 1,
+            "programDate": 1,
+            "timings": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    "IncomeCategory": {
+      "total": 12,
+      "active": 11,
+      "softDeleted": 1,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "IncomeCategory_name_key",
+          "key": {
+            "name": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "IncomeCategory_isDeleted_idx",
+          "key": {
+            "isDeleted": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "IncomeCategory_accountId_key",
+          "key": {
+            "accountId": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    "Invoice": {
+      "total": 0,
+      "active": 0,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Invoice_invoiceNo_key",
+          "key": {
+            "invoiceNo": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "Invoice_isDeleted_idx",
+          "key": {
+            "isDeleted": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Invoice_customerId_idx",
+          "key": {
+            "customerId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Invoice_issueDate_idx",
+          "key": {
+            "issueDate": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Invoice_dueDate_idx",
+          "key": {
+            "dueDate": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Invoice_status_idx",
+          "key": {
+            "status": 1
+          },
+          "unique": false
+        }
+      ]
+    },
+    "InvoiceItem": {
+      "total": 0,
+      "active": 0,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        }
+      ]
+    },
+    "JournalEntry": {
+      "total": 67,
+      "active": 48,
+      "softDeleted": 19,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "JournalEntry_voucherNo_key",
+          "key": {
+            "voucherNo": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "JournalEntry_status_postingDate_idx",
+          "key": {
+            "status": 1,
+            "postingDate": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "JournalEntry_voucherType_postingDate_idx",
+          "key": {
+            "voucherType": 1,
+            "postingDate": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "JournalEntry_isDeleted_idx",
+          "key": {
+            "isDeleted": 1
+          },
+          "unique": false
+        }
+      ]
+    },
+    "JournalEntryLine": {
+      "total": 145,
+      "active": 145,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "JournalEntryLine_accountId_idx",
+          "key": {
+            "accountId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "JournalEntryLine_journalEntryId_idx",
+          "key": {
+            "journalEntryId": 1
+          },
+          "unique": false
+        }
+      ]
+    },
+    "Member": {
+      "total": 12,
+      "active": 12,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Member_memberNo_key",
+          "key": {
+            "memberNo": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "Member_isDeleted_idx",
+          "key": {
+            "isDeleted": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Member_cnic_key",
+          "key": {
+            "cnic": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    "OpeningBalanceBatch": {
+      "total": 1,
+      "active": 1,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "OpeningBalanceBatch_financialYear_key",
+          "key": {
+            "financialYear": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "OpeningBalanceBatch_openingDate_idx",
+          "key": {
+            "openingDate": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "OpeningBalanceBatch_journalEntryId_key",
+          "key": {
+            "journalEntryId": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    "OpeningBalanceLine": {
+      "total": 6,
+      "active": 6,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "OpeningBalanceLine_batchId_idx",
+          "key": {
+            "batchId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "OpeningBalanceLine_accountId_idx",
+          "key": {
+            "accountId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "OpeningBalanceLine_batchId_accountId_unique",
+          "key": {
+            "batchId": 1,
+            "accountId": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "OpeningBalanceLine_batchId_glCode_idx",
+          "key": {
+            "batchId": 1,
+            "glCode": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "OpeningBalanceLine_batchId_glCode_unique",
+          "key": {
+            "batchId": 1,
+            "glCode": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    "Permission": {
+      "total": 136,
+      "active": 136,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Permission_name_key",
+          "key": {
+            "name": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    "PettyCashConfig": {
+      "total": 1,
+      "active": 1,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "PettyCashConfig_accountId_key",
+          "key": {
+            "accountId": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    "PettyCashReconciliation": {
+      "total": 0,
+      "active": 0,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "PettyCashReconciliation_pettyCashAccountId_idx",
+          "key": {
+            "pettyCashAccountId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "PettyCashReconciliation_reconciliationDate_idx",
+          "key": {
+            "reconciliationDate": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "PettyCashReconciliation_journalEntryId_key",
+          "key": {
+            "journalEntryId": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    "PettyCashTransaction": {
+      "total": 0,
+      "active": 0,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "PettyCashTransaction_voucherNo_key",
+          "key": {
+            "voucherNo": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "PettyCashTransaction_isDeleted_idx",
+          "key": {
+            "isDeleted": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "PettyCashTransaction_date_idx",
+          "key": {
+            "date": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "PettyCashTransaction_pettyCashAccountId_idx",
+          "key": {
+            "pettyCashAccountId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "PettyCashTransaction_transactionType_idx",
+          "key": {
+            "transactionType": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "PettyCashTransaction_journalEntryId_key",
+          "key": {
+            "journalEntryId": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    "RefreshToken": {
+      "total": 635,
+      "active": 635,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "RefreshToken_token_key",
+          "key": {
+            "token": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    "ReservedCode": {
+      "total": 0,
+      "active": 0,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "ReservedCode_reserveStart_key",
+          "key": {
+            "reserveStart": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "ReservedCode_isDeleted_idx",
+          "key": {
+            "isDeleted": 1
+          },
+          "unique": false
+        }
+      ]
+    },
+    "RevenueCollection": {
+      "total": 0,
+      "active": 0,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "RevenueCollection_isDeleted_idx",
+          "key": {
+            "isDeleted": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "RevenueCollection_eventDate_idx",
+          "key": {
+            "eventDate": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "RevenueCollection_bankAccountId_idx",
+          "key": {
+            "bankAccountId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "RevenueCollection_journalEntryId_key",
+          "key": {
+            "journalEntryId": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    "RevenueHead": {
+      "total": 22,
+      "active": 21,
+      "softDeleted": 1,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "RevenueHead_isDeleted_idx",
+          "key": {
+            "isDeleted": 1
+          },
+          "unique": false
+        }
+      ]
+    },
+    "Role": {
+      "total": 11,
+      "active": 11,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "Role_name_key",
+          "key": {
+            "name": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    "RolePermission": {
+      "total": 261,
+      "active": 261,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "RolePermission_roleId_permissionId_key",
+          "key": {
+            "roleId": 1,
+            "permissionId": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    "SimpleExpense": {
+      "total": 0,
+      "active": 0,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "SimpleExpense_isDeleted_idx",
+          "key": {
+            "isDeleted": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "SimpleExpense_date_idx",
+          "key": {
+            "date": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "SimpleExpense_expenseHeadId_idx",
+          "key": {
+            "expenseHeadId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "SimpleExpense_bankAccountId_idx",
+          "key": {
+            "bankAccountId": 1
+          },
+          "unique": false
+        }
+      ]
+    },
+    "SimpleIncome": {
+      "total": 0,
+      "active": 0,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "SimpleIncome_isDeleted_idx",
+          "key": {
+            "isDeleted": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "SimpleIncome_date_idx",
+          "key": {
+            "date": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "SimpleIncome_revenueHeadId_idx",
+          "key": {
+            "revenueHeadId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "SimpleIncome_bankAccountId_idx",
+          "key": {
+            "bankAccountId": 1
+          },
+          "unique": false
+        }
+      ]
+    },
+    "User": {
+      "total": 26,
+      "active": 9,
+      "softDeleted": 17,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "User_email_key",
+          "key": {
+            "email": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "User_isDeleted_idx",
+          "key": {
+            "isDeleted": 1
+          },
+          "unique": false
+        }
+      ]
+    },
+    "ZakatCard": {
+      "total": 0,
+      "active": 0,
+      "softDeleted": 0,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "ZakatCard_cardNumber_key",
+          "key": {
+            "cardNumber": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "ZakatCard_memberId_idx",
+          "key": {
+            "memberId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "ZakatCard_beneficiaryId_idx",
+          "key": {
+            "beneficiaryId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "ZakatCard_isDeleted_idx",
+          "key": {
+            "isDeleted": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "ZakatCard_journalEntryId_key",
+          "key": {
+            "journalEntryId": 1
+          },
+          "unique": true
+        }
+      ]
+    }
+  }
+}

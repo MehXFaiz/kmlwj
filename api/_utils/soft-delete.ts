@@ -2,7 +2,9 @@ import type { AuthenticatedRequest } from '../_middlewares/auth.middleware.js';
 import { loadPermissions } from '../_services/permission.service.js';
 import { loadIsPrivileged } from '../_middlewares/rbac.middleware.js';
 import { PERMS } from '../_constants/permissions.js';
-import { prisma } from '../_prisma.js';
+import { SOFT_DELETE_MODELS, softDeleteAsyncContext } from '../_prisma.js';
+
+export { SOFT_DELETE_MODELS };
 
 /**
  * Checks if the authenticated user is a Super Admin.
@@ -11,10 +13,13 @@ import { prisma } from '../_prisma.js';
  */
 export async function isSuperAdmin(req: AuthenticatedRequest): Promise<boolean> {
   if (!req.user) return false;
-  // Check DB flag first
+  const roleStr = String((req.user as any).role || '').trim();
+  if (roleStr === 'Super Admin') {
+    const privileged = await loadIsPrivileged(req);
+    if (privileged) return true;
+  }
   const privileged = await loadIsPrivileged(req);
   if (privileged) {
-    // Distinguish Super Admin from Admin by SYSTEM_SETTINGS permission
     const perms = await loadPermissions(req);
     return perms.has(PERMS.SYSTEM_SETTINGS);
   }
@@ -23,10 +28,6 @@ export async function isSuperAdmin(req: AuthenticatedRequest): Promise<boolean> 
 
 /**
  * Checks if the authenticated user holds a privileged (Admin-tier) role.
- *
- * This replaces the old string-based ADMIN_ROLE_NAMES check with a DB-driven
- * flag so a demotion takes effect immediately without waiting for token expiry.
- * Mirrors canUserEditOrDelete() in src/store/authStore.js.
  */
 export async function isAdminOrAbove(req: AuthenticatedRequest): Promise<boolean> {
   if (!req.user?.id) return false;
@@ -36,10 +37,13 @@ export async function isAdminOrAbove(req: AuthenticatedRequest): Promise<boolean
 /**
  * Parses `isDeleted` and `includeDeleted` query parameters to build Prisma where clause filter.
  * Defaults to `{ isDeleted: false }` if no explicit filter is provided.
+ * When `includeDeleted=true`, returns `{ isDeleted: { in: [true, false] } }` so centralized
+ * Prisma query protection recognizes the explicit filter and returns both active and deleted records.
  */
-export function getDeletedFilter(query: any): { isDeleted?: boolean } {
+export function getDeletedFilter(query: any): { isDeleted?: any } {
+  if (!query) return { isDeleted: false };
   if (query.includeDeleted === 'true' || query.includeDeleted === true) {
-    return {};
+    return { isDeleted: { in: [true, false] } };
   }
   if (query.isDeleted === 'true' || query.isDeleted === true) {
     return { isDeleted: true };
@@ -48,4 +52,33 @@ export function getDeletedFilter(query: any): { isDeleted?: boolean } {
     return { isDeleted: false };
   }
   return { isDeleted: false };
+}
+
+/**
+ * Runs a callback with centralized soft-delete filtering bypassed (allows querying deleted + active records).
+ */
+export function runWithDeleted<T>(fn: () => Promise<T>): Promise<T> {
+  return softDeleteAsyncContext.run({ includeDeleted: true }, fn);
+}
+
+/**
+ * Standard payload for marking a record as soft-deleted.
+ */
+export function buildSoftDeleteData(userId?: string | null) {
+  return {
+    isDeleted: true,
+    deletedAt: new Date(),
+    deletedBy: userId || null,
+  };
+}
+
+/**
+ * Standard payload for restoring a soft-deleted record.
+ */
+export function buildRestoreData() {
+  return {
+    isDeleted: false,
+    deletedAt: null,
+    deletedBy: null,
+  };
 }

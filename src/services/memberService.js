@@ -8,11 +8,6 @@ const FIELD_TO_URL_KEY = {
 };
 
 export const memberService = {
-  // SQA fix: the API paginates (default limit 100) but this previously fetched
-  // only the first page — any org with more than 100 members silently lost
-  // visibility into the rest, with no pagination UI to reach them either.
-  // This loops every page and returns the full combined list, preserving the
-  // { status, data } shape callers already expect.
   getAll: async () => {
     const PAGE_SIZE = 500;
     let page = 1;
@@ -24,7 +19,7 @@ export const memberService = {
       const { data, meta } = res.data;
       all = all.concat(data || []);
       total = meta?.total ?? all.length;
-      if (!data || data.length === 0) break; // safety net against an infinite loop
+      if (!data || data.length === 0) break;
       page += 1;
     }
 
@@ -33,30 +28,12 @@ export const memberService = {
   getById: (id) => api.get(`/api/v1/members?id=${id}`).then(res => res.data),
   create: (data) => api.post('/api/v1/members', data).then(res => res.data),
   update: (id, data) => api.put(`/api/v1/members?id=${id}`, data).then(res => res.data),
-  delete: (id) => api.delete(`/api/v1/members?id=${id}&permanent=true`).then(res => res.data),
-  bulkDelete: (ids) => api.delete('/api/v1/members', { data: { ids, permanent: true } }).then(res => res.data),
+  delete: (id, permanent = false) =>
+    api.delete(`/api/v1/members?id=${id}${permanent ? '&permanent=true' : ''}`).then(res => res.data),
+  bulkDelete: (ids, permanent = false) =>
+    api.delete('/api/v1/members', { data: { ids, permanent } }).then(res => res.data),
 
-  /**
-   * Upload a single member file (profile photo or CNIC image).
-   *
-   * When Cloudinary is configured on the backend, the file is uploaded directly
-   * from the browser to Cloudinary using a short-lived signature — the raw bytes
-   * never pass through our own server. This matters because our API runs as a
-   * Vercel serverless function, and Vercel caps request bodies at 4.5 MB at the
-   * platform level; proxying uploads through our own endpoint would fail for any
-   * real photo regardless of application code.
-   *
-   * When Cloudinary isn't configured (local dev), the file is posted to our own
-   * /api/v1/upload endpoint, which writes it to the local disk instead.
-   *
-   * @param {string} fieldName - 'photo' | 'cnicFront' | 'cnicBack'
-   * @param {File} file
-   * @param {(pct: number) => void} [onProgress] - called with 0-100 percent
-   * @returns {Promise<{ photoUrl?, cnicFrontUrl?, cnicBackUrl? }>}
-   */
   uploadFile: async (fieldName, file, onProgress) => {
-    // Response body shape: { status: 200, data: { mode, ... } } — unwrap both
-    // the axios envelope and the API envelope to get the sign payload itself.
     const signResult = (await api.post('/api/v1/upload/sign')).data.data;
 
     if (signResult.mode === 'cloud') {
@@ -69,8 +46,6 @@ export const memberService = {
       form.append('signature', signature);
       form.append('folder', folder);
 
-      // Plain axios (not our `api` instance) — this request goes straight to
-      // Cloudinary's API, not our backend, so it must skip our auth/refresh interceptors.
       const cloudRes = await axios.post(
         `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
         form,
@@ -85,7 +60,6 @@ export const memberService = {
       return { [FIELD_TO_URL_KEY[fieldName] || fieldName]: cloudRes.data.secure_url };
     }
 
-    // Local fallback (development)
     const form = new FormData();
     form.append(fieldName, file);
 

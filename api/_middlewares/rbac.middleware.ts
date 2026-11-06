@@ -9,7 +9,8 @@
 import type { VercelResponse } from '@vercel/node';
 import type { AuthenticatedRequest } from './auth.middleware.js';
 import { prisma } from '../_prisma.js';
-import { loadPermissions, checkPermission } from '../_services/permission.service.js';
+import { checkPermission } from '../_services/permission.service.js';
+import { logDeletionAudit } from '../_utils/audit.js';
 
 // Cache key on req to avoid double DB round-trips within one request
 const PRIV_CACHE_KEY = '__isPrivileged';
@@ -68,9 +69,21 @@ export async function enforceRestrictedRolePolicy(
     if (requiredPermission) {
       const hasPerm = await checkPermission(req, requiredPermission);
       if (!hasPerm) {
-        const message = method === 'DELETE'
-          ? 'You do not have permission to delete this record.'
-          : `Forbidden: '${Array.isArray(requiredPermission) ? requiredPermission.join(' or ') : requiredPermission}' permission required`;
+        const message =
+          method === 'DELETE'
+            ? 'You do not have permission to delete this record.'
+            : `Forbidden: '${Array.isArray(requiredPermission) ? requiredPermission.join(' or ') : requiredPermission}' permission required`;
+        if (method === 'DELETE') {
+          await logDeletionAudit({
+            req,
+            recordId: (req.query?.id as string) || (req.body?.id as string) || (req.body?.ids as string[]) || 'unknown',
+            modelName: req.url || 'API_RESOURCE',
+            module: 'RBAC_SECURITY',
+            actionType: 'UNAUTHORIZED_DELETE_ATTEMPT',
+            actionLabel: 'Unauthorized Delete Attempt (Missing Permission)',
+            reason: message,
+          });
+        }
         res.status(403).json({
           success: false,
           message,
@@ -106,6 +119,18 @@ export async function enforceRestrictedRolePolicy(
       ? 'You do not have permission to delete this record.'
       : 'Forbidden: You do not have permission to edit this record. Please contact an administrator.';
 
+  if (method === 'DELETE') {
+    await logDeletionAudit({
+      req,
+      recordId: (req.query?.id as string) || (req.body?.id as string) || (req.body?.ids as string[]) || 'unknown',
+      modelName: req.url || 'API_RESOURCE',
+      module: 'RBAC_SECURITY',
+      actionType: 'UNAUTHORIZED_DELETE_ATTEMPT',
+      actionLabel: 'Unauthorized Delete Attempt (Non-Privileged Role)',
+      reason: message,
+    });
+  }
+
   res.status(403).json({
     success: false,
     message,
@@ -124,7 +149,7 @@ export async function enforceRestrictedRolePolicy(
 export function enforceRestrictedRolePolicyMiddleware(
   req: any,
   res: any,
-  next: any,
+  next: any
 ): void {
   const method = (req.method ?? '').toUpperCase();
 
@@ -153,6 +178,18 @@ export function enforceRestrictedRolePolicyMiddleware(
         method === 'DELETE'
           ? 'You do not have permission to delete this record.'
           : 'Forbidden: You do not have permission to edit this record. Please contact an administrator.';
+
+      if (method === 'DELETE') {
+        await logDeletionAudit({
+          req,
+          recordId: (req.query?.id as string) || (req.body?.id as string) || (req.body?.ids as string[]) || 'unknown',
+          modelName: req.url || 'API_RESOURCE',
+          module: 'RBAC_SECURITY',
+          actionType: 'UNAUTHORIZED_DELETE_ATTEMPT',
+          actionLabel: 'Unauthorized Delete Attempt (Non-Privileged Role)',
+          reason: message,
+        });
+      }
 
       res.status(403).json({
         success: false,
