@@ -5,7 +5,7 @@ import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { logger } from "../_utils/logger.js";
 import { PERMS } from "../_constants/permissions.js";
-import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from "../_utils/soft-delete.js";
+import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 import { createMemberSchema, updateMemberSchema } from "../_schemas/members.schema.js";
 import { AccountingService } from "../_services/accounting.service.js";
 function trimOrNull(v) {
@@ -436,8 +436,8 @@ var members_default = makeHandler(async (req, res) => {
   }
   if (method === "DELETE") {
     const isPermanent = req.query.permanent === "true" || req.query.action === "permanent_delete" || req.body?.permanent === true;
-    if (isPermanent && !await isAdminOrAbove(req)) {
-      return res.status(403).json({ error: { message: "Forbidden: Only Admin or Super Admin can permanently delete records", status: 403 } });
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can permanently delete records", status: 403 } });
     }
     if (!await verifyPermission(req, res, ["members.delete", PERMS.DELETE_MEMBER])) return;
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
@@ -457,6 +457,10 @@ var members_default = makeHandler(async (req, res) => {
           where: { id: { in: ids } }
         });
       } else {
+        await tx.familyRelationship.updateMany({
+          where: { OR: [{ memberId: { in: ids } }, { relatedMemberId: { in: ids } }], isDeleted: false },
+          data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
+        });
         await tx.member.updateMany({
           where: { id: { in: ids } },
           data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }

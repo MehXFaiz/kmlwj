@@ -190,7 +190,7 @@ export const DonationsReceived = ({ defaultType = null, titleOverride = null }) 
       details: {
         'Receipt Number': item.receiptNo,
         'Amount': `Rs. ${item.amount?.toLocaleString()}`,
-        'Warning': 'This will permanently remove the receipt from the database and general ledger. This action cannot be undone.'
+        'Warning': 'This will permanently remove the receipt from the database and general ledger. This record will be moved to the Recycle Bin and can be restored by an administrator.'
       },
       type: 'error',
       confirmLabel: 'Delete',
@@ -559,7 +559,7 @@ export const DonationsReceived = ({ defaultType = null, titleOverride = null }) 
               <h3 className="text-lg font-bold text-slate-100">Confirm Bulk Deletion</h3>
             </div>
             <p className="text-sm text-slate-300 leading-relaxed">
-              Are you sure you want to delete <span className="font-bold text-white">{selectedIds.length}</span> selected donation receipt(s)? Their associated ledger entries will be removed/reversed. This action cannot be undone.
+              Are you sure you want to delete <span className="font-bold text-white">{selectedIds.length}</span> selected donation receipt(s)? Their associated ledger entries will be removed/reversed. This record will be moved to the Recycle Bin and can be restored by an administrator.
             </p>
             <div className="flex items-center justify-end gap-3 pt-2">
               <button

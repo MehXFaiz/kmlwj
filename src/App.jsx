@@ -22,6 +22,7 @@ const JournalEntries = lazyWithRetry(() => import('./views/JournalEntries').then
 const AuditTrail = lazyWithRetry(() => import('./views/AuditTrail').then(m => ({ default: m.AuditTrail })));
 const Settings = lazyWithRetry(() => import('./views/Settings').then(m => ({ default: m.Settings })));
 const AccountingHealthCheck = lazyWithRetry(() => import('./views/AccountingHealthCheck').then(m => ({ default: m.AccountingHealthCheck })));
+const RecycleBin = lazyWithRetry(() => import('./views/RecycleBin').then(m => ({ default: m.RecycleBin })));
 const Profile = lazyWithRetry(() => import('./views/Profile').then(m => ({ default: m.Profile })));
 const MyAccount = lazyWithRetry(() => import('./views/MyAccount').then(m => ({ default: m.MyAccount })));
 const RevenueHeads = lazyWithRetry(() => import('./views/RevenueHeads').then(m => ({ default: m.RevenueHeads })));
@@ -697,6 +698,11 @@ function App() {
             <Route path="/accounting-health" element={
               <RouteGuard module="audit">
                 <AccountingHealthCheck />
+              </RouteGuard>
+            } />
+            <Route path="/recycle-bin" element={
+              <RouteGuard module="audit">
+                <RecycleBin />
               </RouteGuard>
             } />
 

@@ -68,6 +68,7 @@ import { memberVerifyHandler } from './_v1/member-verify.js';
 import { zakatCardVerifyHandler } from './_v1/zakat-card-verify.js';
 import financialYearsHandler from './_v1/financial-years.js';
 import openingBalancesHandler from './_v1/opening-balances.js';
+import recycleBinHandler from './_v1/recycle-bin.js';
 import { uploadFields, handleUploadError } from './_middlewares/upload.middleware.js';
 
 // ── Startup storage configuration check ─────────────────────────────────────
@@ -200,6 +201,7 @@ app.get('/api/v1/roles/:id', makeExpress(rolesHandler));
 app.put('/api/v1/roles/:id', makeExpress(rolesHandler));
 app.delete('/api/v1/roles/:id', makeExpress(rolesHandler));
 app.get('/api/v1/audit-logs', makeExpress(auditLogsHandler));
+app.all('/api/v1/recycle-bin', makeExpress(recycleBinHandler));
 app.get('/api/v1/reserved-codes', makeExpress(reservedCodesHandler));
 app.post('/api/v1/reserved-codes', makeExpress(reservedCodesHandler));
 app.put('/api/v1/reserved-codes', makeExpress(reservedCodesHandler));

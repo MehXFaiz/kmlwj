@@ -8,6 +8,12 @@ import path from 'path';
 
 dotenv.config({ path: path.join(process.cwd(), '.env') });
 
+if (process.env.CONFIRM_PRODUCTION_RESET !== 'YES_I_AM_SURE') {
+  console.error('[SAFETY GUARD] Destructive database script blocked. Set CONFIRM_PRODUCTION_RESET=YES_I_AM_SURE if you explicitly intend to run this.');
+  process.exit(1);
+}
+
+
 async function clearCollections() {
   const client = new MongoClient(process.env.MONGODB_URI!);
   try {

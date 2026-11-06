@@ -36,6 +36,12 @@
 
 import { PrismaClient } from '@prisma/client';
 
+if (process.env.CONFIRM_PRODUCTION_RESET !== 'YES_I_AM_SURE') {
+  console.error('[SAFETY GUARD] Destructive database script blocked. Set CONFIRM_PRODUCTION_RESET=YES_I_AM_SURE if you explicitly intend to run this.');
+  process.exit(1);
+}
+
+
 const prisma = new PrismaClient();
 
 async function main() {

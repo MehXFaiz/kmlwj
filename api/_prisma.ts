@@ -72,57 +72,57 @@ function hasExplicitIsDeletedFilter(where: any): boolean {
   return false;
 }
 
-const READ_ACTIONS_WITH_WHERE = new Set<string>([
-  'findMany',
-  'findFirst',
-  'count',
-  'aggregate',
-  'groupBy',
-]);
+function applyDefaultSoftDeleteWhere(model: string | undefined, args: any): any {
+  if (!model || !SOFT_DELETE_MODELS.has(model)) return args;
+  const ctx = softDeleteAsyncContext.getStore();
+  if (ctx?.includeDeleted) return args;
 
-function attachSoftDeleteProtection(client: PrismaClient): PrismaClient {
-  if ((client as any).__softDeleteAttached) {
-    return client;
+  const nextArgs = args ? { ...args } : {};
+  if (!hasExplicitIsDeletedFilter(nextArgs.where)) {
+    nextArgs.where = {
+      ...(nextArgs.where || {}),
+      isDeleted: false,
+    };
   }
-  (client as any).__softDeleteAttached = true;
+  return nextArgs;
+}
 
-  if (typeof (client as any).$use === 'function') {
-    (client as any).$use(async (params: any, next: (p: any) => Promise<any>) => {
-      const model = params.model;
-      const action = params.action;
+function createProtectedPrismaClient(): PrismaClient {
+  const baseClient = new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+  });
 
-      if (model && SOFT_DELETE_MODELS.has(model)) {
-        const ctx = softDeleteAsyncContext.getStore();
+  const extended = baseClient.$extends({
+    query: {
+      $allModels: {
+        async findMany({ model, args, query }) {
+          return query(applyDefaultSoftDeleteWhere(model, args));
+        },
+        async findFirst({ model, args, query }) {
+          return query(applyDefaultSoftDeleteWhere(model, args));
+        },
+        async count({ model, args, query }) {
+          return query(applyDefaultSoftDeleteWhere(model, args));
+        },
+        async aggregate({ model, args, query }) {
+          return query(applyDefaultSoftDeleteWhere(model, args));
+        },
+        async groupBy({ model, args, query }) {
+          return query(applyDefaultSoftDeleteWhere(model, args));
+        },
+      },
+    },
+  });
 
-        if (READ_ACTIONS_WITH_WHERE.has(action) && !ctx?.includeDeleted) {
-          params.args = params.args || {};
-          if (!hasExplicitIsDeletedFilter(params.args.where)) {
-            params.args.where = {
-              ...params.args.where,
-              isDeleted: false,
-            };
-          }
-        }
-      }
-
-      return next(params);
-    });
-  }
-
-  return client;
+  return extended as unknown as PrismaClient;
 }
 
 const globalForDb = globalThis as unknown as {
   prisma?: PrismaClient;
 };
 
-const baseClient =
-  globalForDb.prisma ??
-  new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
-  });
-
-export const prisma = attachSoftDeleteProtection(baseClient);
+export const prisma: PrismaClient =
+  globalForDb.prisma ?? createProtectedPrismaClient();
 
 if (process.env.NODE_ENV !== 'production') {
   globalForDb.prisma = prisma;

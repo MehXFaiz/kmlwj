@@ -249,9 +249,9 @@ export const HallBookings = () => {
       title: 'Delete Hall Booking?',
       description: 'Are you sure you want to delete this booking? If posted, its journal entries will be automatically reversed.',
       details: [
-        'Hall booking record will be permanently deleted.',
+        'Hall booking record will be moved to the Recycle Bin and reversed from active balances.',
         'If posted, accounting journal entries will be reversed.',
-        'This action cannot be undone.',
+        'This record will be moved to the Recycle Bin and can be restored by an administrator.',
       ],
       confirmLabel: 'Delete Booking',
       cancelLabel: 'Cancel',
@@ -1098,7 +1098,7 @@ export const HallBookings = () => {
             </div>
             <p className="text-sm text-slate-300 leading-relaxed">
               Are you sure you want to delete <span className="font-bold text-white">{selectedIds.length}</span> selected hall bookings? 
-              If any of these bookings are posted, their associated journal entries will be automatically reversed in the General Ledger. This action cannot be undone.
+              If any of these bookings are posted, their associated journal entries will be automatically reversed in the General Ledger. This record will be moved to the Recycle Bin and can be restored by an administrator.
             </p>
             <div className="flex items-center justify-end gap-3 pt-2">
               <button

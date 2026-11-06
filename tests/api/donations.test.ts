@@ -9,8 +9,8 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
   let token: string;
   let bankAccount1: any;
   let bankAccount2: any;
-  let origBank1Init = 0;
-  let origBank2Init = 0;
+  let origBank1Init = bankAccount1 ? Number(bankAccount1.initialBalance || 0) : 0;
+  let origBank2Init = bankAccount2 ? Number(bankAccount2.initialBalance || 0) : 0;
   let createdDonationIds: string[] = [];
   const secret = process.env.JWT_SECRET || 'super_secret_jwt_sign_key_123_abc';
 
@@ -132,7 +132,8 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
     // Clean up any test records for test months before running
     const priorTestRecords = await prisma.donation.findMany({
       where: {
-        disbursementMonth: { in: ['2026-09', '2026-10'] }
+        beneficiaryId: beneficiary.id,
+        disbursementMonth: { in: ['2096-09', '2096-10'] }
       }
     });
     for (const r of priorTestRecords) {
@@ -145,7 +146,8 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
     }
     await prisma.donation.deleteMany({
       where: {
-        disbursementMonth: { in: ['2026-09', '2026-10'] }
+        beneficiaryId: beneficiary.id,
+        disbursementMonth: { in: ['2096-09', '2096-10'] }
       }
     });
   }, 90000);
@@ -191,7 +193,7 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         month: 'September 2026',
-        disbursementMonth: '2026-09',
+        disbursementMonth: '2096-09',
         donationType: 'DONATION',
         amount: 100000,
         paymentMethod: 'BANK',
@@ -202,7 +204,7 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
     expect(res.status).toBe(201);
     expect(res.body.data).toHaveProperty('id');
     expect(res.body.data.status).toBe('APPROVED');
-    expect(res.body.data.disbursementMonth).toBe('2026-09');
+    expect(res.body.data.disbursementMonth).toBe('2096-09');
     expect(res.body.data.bankAccountId).toBe(bankAccount1.id);
     expect(res.body.data.journalEntryId).toBeTruthy();
 
@@ -228,7 +230,7 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         month: 'September 2026',
-        disbursementMonth: '2026-09',
+        disbursementMonth: '2096-09',
         donationType: 'DONATION',
         amount: 50000,
         paymentMethod: 'BANK',
@@ -246,7 +248,7 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
       .get('/api/v1/donations')
       .query({
         action: 'check-duplicate',
-        disbursementMonth: '2026-09',
+        disbursementMonth: '2096-09',
         donationType: 'DONATION',
         bankAccountId: bankAccount1.id
       })
@@ -263,7 +265,7 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         month: 'September 2026',
-        disbursementMonth: '2026-09',
+        disbursementMonth: '2096-09',
         donationType: 'ZAKAT',
         amount: 50000,
         paymentMethod: 'BANK',
@@ -273,7 +275,7 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.data.donationType).toBe('ZAKAT');
-    expect(res.body.data.disbursementMonth).toBe('2026-09');
+    expect(res.body.data.disbursementMonth).toBe('2096-09');
     expect(res.body.data.status).toBe('APPROVED');
 
     createdDonationIds.push(res.body.data.id);
@@ -285,7 +287,7 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         month: 'September 2026',
-        disbursementMonth: '2026-09',
+        disbursementMonth: '2096-09',
         donationType: 'DONATION',
         amount: 75000,
         paymentMethod: 'BANK',
@@ -306,7 +308,7 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         month: 'October 2026',
-        disbursementMonth: '2026-10',
+        disbursementMonth: '2096-10',
         donationType: 'DONATION',
         amount: 100000,
         paymentMethod: 'BANK',
@@ -315,7 +317,7 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
       });
 
     expect(res.status).toBe(201);
-    expect(res.body.data.disbursementMonth).toBe('2026-10');
+    expect(res.body.data.disbursementMonth).toBe('2096-10');
     expect(res.body.data.status).toBe('APPROVED');
 
     createdDonationIds.push(res.body.data.id);
@@ -327,7 +329,7 @@ describe('Monthly Donation Disbursement & Bank Deduction Workflow', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         month: 'October 2026',
-        disbursementMonth: '2026-10',
+        disbursementMonth: '2096-10',
         donationType: 'ZAKAT',
         amount: 100000,
         paymentMethod: 'BANK',

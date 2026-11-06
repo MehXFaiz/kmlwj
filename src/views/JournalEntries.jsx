@@ -76,7 +76,7 @@ export const JournalEntries = () => {
       details: [
         'Journal entry will be removed from the database.',
         'Account balances will be adjusted.',
-        'This action cannot be undone.',
+        'This record will be moved to the Recycle Bin and can be restored by an administrator.',
       ],
       confirmLabel: 'Delete Entry',
       cancelLabel: 'Cancel',
@@ -457,7 +457,7 @@ export const JournalEntries = () => {
               <h3 className="text-lg font-bold text-slate-100">Confirm Bulk Deletion</h3>
             </div>
             <p className="text-sm text-slate-300 leading-relaxed">
-              Are you sure you want to permanently delete <span className="font-bold text-white">{selectedIds.length}</span> selected journal entry(s)? Account balances will be automatically re-adjusted. This action cannot be undone.
+              Are you sure you want to permanently delete <span className="font-bold text-white">{selectedIds.length}</span> selected journal entry(s)? Account balances will be automatically re-adjusted. This record will be moved to the Recycle Bin and can be restored by an administrator.
             </p>
             <div className="flex items-center justify-end gap-3 pt-2">
               <Button

@@ -221,7 +221,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   if (req.method === 'DELETE') {
     const isPermanent = req.query.permanent === 'true' || req.query.action === 'permanent_delete' || req.body?.permanent === true;
-    if (isPermanent && !await isAdminOrAbove(req)) {
+    if (isPermanent && !await isSuperAdmin(req)) {
       return res.status(403).json({ error: { message: 'Forbidden: Only Admin or Super Admin can permanently delete records', status: 403 } });
     }
 

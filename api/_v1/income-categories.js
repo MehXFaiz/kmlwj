@@ -1,21 +1,16 @@
 import { makeHandler } from "../_utils/handler.js";
 import { verifyAuth } from "../_middlewares/auth.middleware.js";
 import { prisma } from "../_prisma.js";
-import { logAudit } from "../_utils/audit.js";
-import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
+import { logAudit, logDeletionAudit } from "../_utils/audit.js";
+import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from "../_utils/soft-delete.js";
 var income_categories_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
   const { method } = req;
   const id = req.query.id || req.body?.id;
   const action = req.query.action || req.body?.action;
-  const isAdminOrSuperAdmin = req.user.role === "Admin" || req.user.role === "Super Admin" || await isSuperAdmin(req);
+  const isAdminOrSuperAdmin = req.user.role === "Admin" || req.user.role === "Super Admin" || await isAdminOrAbove(req) || await isSuperAdmin(req);
   const ensureDefaultCategories = async () => {
-    await prisma.incomeCategory.updateMany({
-      where: { name: "Donation Income" },
-      data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date() }
-    }).catch(() => {
-    });
     await prisma.incomeCategory.updateMany({
       where: { name: "Other Income (Coconuts, Oil, Battery, Scraps, Rabi-ul-Awal, Qurbani Space)" },
       data: { name: "Other Income" }
@@ -33,12 +28,13 @@ var income_categories_default = makeHandler(async (req, res) => {
       "Ramzan Zakat Income": "3020509"
     };
     for (const catName of Object.keys(defaultCatGlCodes)) {
-      await prisma.incomeCategory.upsert({
-        where: { name: catName },
-        update: { isDeleted: false },
-        create: { name: catName, isActive: true }
-      }).catch(() => {
-      });
+      const existing = await prisma.incomeCategory.findUnique({ where: { name: catName } }).catch(() => null);
+      if (!existing) {
+        await prisma.incomeCategory.create({
+          data: { name: catName, isActive: true }
+        }).catch(() => {
+        });
+      }
     }
     for (const [catName, glCode] of Object.entries(defaultCatGlCodes)) {
       const category = await prisma.incomeCategory.findUnique({ where: { name: catName } }).catch(() => null);
@@ -57,8 +53,7 @@ var income_categories_default = makeHandler(async (req, res) => {
     const filter = getDeletedFilter(req.query);
     const categories = await prisma.incomeCategory.findMany({
       where: {
-        ...filter,
-        NOT: { name: "Donation Income" }
+        ...filter
       },
       orderBy: { createdAt: "asc" },
       include: {
@@ -69,8 +64,8 @@ var income_categories_default = makeHandler(async (req, res) => {
   }
   if (method === "PUT" || method === "POST" || method === "PATCH") {
     if (action === "restore") {
-      if (!await isSuperAdmin(req)) {
-        return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can restore categories", status: 403 } });
+      if (!isAdminOrSuperAdmin) {
+        return res.status(403).json({ error: { message: "Forbidden: Only Admin or Super Admin can restore categories", status: 403 } });
       }
       if (!id) {
         return res.status(400).json({ error: { message: "Category ID is required", status: 400 } });
@@ -83,11 +78,30 @@ var income_categories_default = makeHandler(async (req, res) => {
         where: { id },
         data: { isDeleted: false, deletedAt: null, deletedBy: null }
       });
-      await logAudit(req.user.id, "Restore Income Category", "Add Income", existing, restored, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      await logDeletionAudit({
+        req,
+        recordId: id,
+        modelName: "IncomeCategory",
+        module: "Add Income",
+        actionType: "RESTORE",
+        actionLabel: "Restore Income Category",
+        previousState: existing,
+        newState: restored
+      });
       return res.status(200).json({ status: 200, message: "Income Category restored successfully", data: restored });
     }
   }
   if (!isAdminOrSuperAdmin) {
+    if (method === "DELETE") {
+      await logDeletionAudit({
+        req,
+        recordId: id || "unknown",
+        modelName: "IncomeCategory",
+        module: "Add Income",
+        actionType: "UNAUTHORIZED_DELETE_ATTEMPT",
+        reason: "Only Admin and Super Admin can delete Income Categories"
+      });
+    }
     return res.status(403).json({ error: { message: "Forbidden: Only Admin and Super Admin can Add/Edit/Delete Income Categories", status: 403 } });
   }
   if (method === "POST") {
@@ -104,7 +118,7 @@ var income_categories_default = makeHandler(async (req, res) => {
           where: { id: existingName.id },
           data: {
             description: description !== void 0 ? description : existingName.description,
-            accountId: accountId || null,
+            accountId: accountId || existingName.accountId || null,
             isActive: isActive !== void 0 ? Boolean(isActive) : true,
             isDeleted: false,
             deletedAt: null,
@@ -169,19 +183,46 @@ var income_categories_default = makeHandler(async (req, res) => {
     }
     const isPermanent = req.query.permanent === "true" || req.query.action === "permanent_delete" || req.body?.permanent === true;
     if (isPermanent) {
-      if (!isAdminOrSuperAdmin) {
-        return res.status(403).json({ error: { message: "Forbidden: Only Admin or Super Admin can permanently delete records", status: 403 } });
+      if (!await isSuperAdmin(req)) {
+        await logDeletionAudit({
+          req,
+          recordId: id,
+          modelName: "IncomeCategory",
+          module: "Add Income",
+          actionType: "UNAUTHORIZED_DELETE_ATTEMPT",
+          previousState: existing,
+          reason: "Only Super Admin can permanently delete Income Categories"
+        });
+        return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can permanently delete records", status: 403 } });
       }
       await prisma.incomeCategory.delete({ where: { id } });
-      await logAudit(req.user.id, "Permanent Delete Income Category", "Add Income", existing, null, req.headers["x-forwarded-for"], req.headers["user-agent"]);
+      await logDeletionAudit({
+        req,
+        recordId: id,
+        modelName: "IncomeCategory",
+        module: "Add Income",
+        actionType: "PERMANENT_DELETE",
+        actionLabel: "Permanent Delete Income Category",
+        previousState: existing,
+        newState: null
+      });
       return res.status(200).json({ status: 200, message: "Income Category permanently deleted successfully" });
     }
     const updated = await prisma.incomeCategory.update({
       where: { id },
       data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
     });
-    await logAudit(req.user.id, "Delete Income Category", "Add Income", existing, updated, req.headers["x-forwarded-for"], req.headers["user-agent"]);
-    return res.status(200).json({ status: 200, message: "Income Category deleted successfully" });
+    await logDeletionAudit({
+      req,
+      recordId: id,
+      modelName: "IncomeCategory",
+      module: "Add Income",
+      actionType: "SOFT_DELETE",
+      actionLabel: "Soft Delete Income Category",
+      previousState: existing,
+      newState: updated
+    });
+    return res.status(200).json({ status: 200, message: "Income Category moved to Recycle Bin successfully" });
   }
   return res.status(405).json({ error: { message: "Method Not Allowed", status: 405 } });
 });

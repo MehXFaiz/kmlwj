@@ -267,8 +267,8 @@ var hall_bookings_default = makeHandler(async (req, res) => {
     const action2 = req.query.action || req.body?.action;
     const id = req.query.id || req.body?.id;
     if (action2 === "restore") {
-      if (!await isSuperAdmin(req)) {
-        return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can restore records", status: 403 } });
+      if (!await isAdminOrAbove(req)) {
+        return res.status(403).json({ error: { message: "Forbidden: Only Admin or Super Admin can restore records", status: 403 } });
       }
       if (!id) {
         return res.status(400).json({ error: { message: "Booking ID is required", status: 400 } });
@@ -277,9 +277,10 @@ var hall_bookings_default = makeHandler(async (req, res) => {
       if (!existing) {
         return res.status(404).json({ error: { message: "Booking not found", status: 404 } });
       }
+      const cleanTimings = existing.timings ? String(existing.timings).split("#DELETED:")[0] : existing.timings;
       const restored = await prisma.hallBooking.update({
         where: { id },
-        data: { isDeleted: false, deletedAt: null, deletedBy: null }
+        data: { isDeleted: false, deletedAt: null, deletedBy: null, timings: cleanTimings }
       });
       if (existing.journalEntryId) {
         await prisma.journalEntry.update({
@@ -686,8 +687,8 @@ var hall_bookings_default = makeHandler(async (req, res) => {
   }
   if (method === "DELETE") {
     const isPermanent = req.query.permanent === "true" || req.query.action === "permanent_delete" || req.body?.permanent === true;
-    if (isPermanent && !await isAdminOrAbove(req)) {
-      return res.status(403).json({ error: { message: "Forbidden: Only Admin or Super Admin can permanently delete records", status: 403 } });
+    if (isPermanent && !await isSuperAdmin(req)) {
+      return res.status(403).json({ error: { message: "Forbidden: Only Super Admin can permanently delete records", status: 403 } });
     }
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;
     if (!idsRaw) {
@@ -726,10 +727,18 @@ var hall_bookings_default = makeHandler(async (req, res) => {
             where: { id: { in: bookings.map((b) => b.id) } }
           });
         } else {
-          await tx.hallBooking.updateMany({
-            where: { id: { in: bookings.map((b) => b.id) } },
-            data: { isDeleted: true, deletedAt: /* @__PURE__ */ new Date(), deletedBy: req.user.id }
-          });
+          for (const b of bookings) {
+            const currentTimings = String(b.timings || "SLOT").split("#DELETED:")[0];
+            await tx.hallBooking.update({
+              where: { id: b.id },
+              data: {
+                isDeleted: true,
+                deletedAt: /* @__PURE__ */ new Date(),
+                deletedBy: req.user.id,
+                timings: `${currentTimings}#DELETED:${b.id.slice(0, 8)}`
+              }
+            });
+          }
         }
         return bookings;
       });

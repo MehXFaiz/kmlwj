@@ -7,7 +7,7 @@ import { AccountingService } from "../_services/accounting.service.js";
 import { validateAmount } from "../_utils/amount.js";
 import { isWithinMaxLength, maxLengthError } from "../_utils/text-length.js";
 import { PERMS } from "../_constants/permissions.js";
-import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from "../_utils/soft-delete.js";
+import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function isValidBeneficiaryId(beneficiaryId) {
   return typeof beneficiaryId === "string" && UUID_RE.test(beneficiaryId);
@@ -746,7 +746,7 @@ var donations_default = makeHandler(async (req, res) => {
   }
   if (method === "DELETE") {
     const isPermanent = req.query.permanent === "true" || req.query.action === "permanent_delete" || req.body?.permanent === true;
-    if (isPermanent && !await isAdminOrAbove(req)) {
+    if (isPermanent && !await isSuperAdmin(req)) {
       return res.status(403).json({ error: { message: "Forbidden: Only Admin or Super Admin can permanently delete records", status: 403 } });
     }
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;

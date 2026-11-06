@@ -7,6 +7,12 @@ import path from 'path';
 
 dotenv.config({ path: path.resolve('C:/Users/dania.shabih/Documents/GitHub/kmlwj/.env'), override: true });
 
+if (process.env.CONFIRM_PRODUCTION_RESET !== 'YES_I_AM_SURE') {
+  console.error('[SAFETY GUARD] Destructive database script blocked. Set CONFIRM_PRODUCTION_RESET=YES_I_AM_SURE if you explicitly intend to run this.');
+  process.exit(1);
+}
+
+
 const connectionString = process.env.DIRECT_URL || process.env.DATABASE_URL;
 const pool = new pg.Pool({
   connectionString,

@@ -43,6 +43,7 @@ import {
   Link2,
   Scale,
   Coins,
+  Trash2,
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -280,6 +281,7 @@ export const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed, setIsColla
         { name: t('sidebar.usersAccess'), hint: t('sidebar.usersAccessHint'), icon: BadgeCheck, path: '/users-roles', module: 'roles' },
         { name: t('sidebar.auditTrail'), hint: t('sidebar.auditTrailHint'), icon: History, path: '/audit', module: 'audit' },
         { name: 'Accounting Health Check', hint: 'Verify accounting integrity & consistency', icon: ShieldCheck, path: '/accounting-health', module: 'audit' },
+        { name: 'Recycle Bin', hint: 'View & restore soft-deleted records', icon: Trash2, path: '/recycle-bin', module: 'audit' },
       ],
     },
   ], [t]);

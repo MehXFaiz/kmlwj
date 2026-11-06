@@ -5,7 +5,7 @@ import { prisma } from "../_prisma.js";
 import { logAudit } from "../_utils/audit.js";
 import { AccountingService } from "../_services/accounting.service.js";
 import { PERMS } from "../_constants/permissions.js";
-import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from "../_utils/soft-delete.js";
+import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
 function generateInvoiceNumber() {
   const date = /* @__PURE__ */ new Date();
   const year = date.getFullYear().toString().slice(-2);
@@ -415,7 +415,7 @@ var invoices_default = makeHandler(async (req, res) => {
   }
   if (method === "DELETE") {
     const isPermanent = req.query.permanent === "true" || req.query.action === "permanent_delete" || req.body?.permanent === true;
-    if (isPermanent && !await isAdminOrAbove(req)) {
+    if (isPermanent && !await isSuperAdmin(req)) {
       return res.status(403).json({ error: { message: "Forbidden: Only Admin or Super Admin can permanently delete records", status: 403 } });
     }
     const idsRaw = req.body?.ids || req.body?.id || req.query.ids || req.query.id;

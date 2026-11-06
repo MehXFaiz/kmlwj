@@ -127,8 +127,11 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'GL Code must be exactly 7 digits (e.g., 1000000)', status: 400 } });
     }
 
-    const codeExists = await prisma.account.findFirst({ where: { glCode: cleanCode } });
+    const codeExists = await prisma.account.findUnique({ where: { glCode: cleanCode } });
     if (codeExists) {
+      if (codeExists.isDeleted) {
+        return res.status(400).json({ error: { message: `Account code ${code} belongs to a soft-deleted account ("${codeExists.accountName}") in the Recycle Bin. Please restore it from the Recycle Bin or choose a different GL code.`, status: 400 } });
+      }
       return res.status(400).json({ error: { message: `Account code ${code} is already in use`, status: 400 } });
     }
 
@@ -338,8 +341,8 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   if (method === 'DELETE') {
     const isPermanent = req.query.permanent === 'true' || req.query.action === 'permanent_delete' || req.body?.permanent === true;
     if (isPermanent) {
-      if (!await isAdminOrAbove(req)) {
-        return res.status(403).json({ error: { message: 'Forbidden: Only Admin or Super Admin can permanently delete records', status: 403 } });
+      if (!await isSuperAdmin(req)) {
+        return res.status(403).json({ error: { message: 'Forbidden: Only Super Admin can permanently delete records', status: 403 } });
       }
       if (!id) {
         return res.status(400).json({ error: { message: 'Account ID is required', status: 400 } });
@@ -348,8 +351,15 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       if (!existingAccount) {
         return res.status(404).json({ error: { message: 'Account not found', status: 404 } });
       }
-      if (existingAccount.accountLevel === 'MAIN' || existingAccount.isLocked || existingAccount.glCode === '3000000' || existingAccount.glCode === '4000000') {
-        return res.status(400).json({ error: { message: 'MAIN accounts are permanently locked and cannot be deleted.', status: 400 } });
+      if (existingAccount.accountLevel === 'MAIN' || existingAccount.isLocked || existingAccount.isSystemDefined || existingAccount.glCode === '3000000' || existingAccount.glCode === '4000000') {
+        return res.status(400).json({ error: { message: 'System-defined or locked accounts cannot be permanently deleted.', status: 400 } });
+      }
+      const [lineCount, childCount] = await Promise.all([
+        prisma.journalEntryLine.count({ where: { accountId: id } }),
+        prisma.account.count({ where: { parentId: id, isDeleted: { in: [true, false] } } as any }),
+      ]);
+      if (lineCount > 0 || childCount > 0) {
+        return res.status(400).json({ error: { message: 'Cannot permanently delete an account that has ledger entries or child accounts.', status: 400 } });
       }
       await prisma.account.delete({ where: { id } });
       await logAudit(req.user.id, 'Permanent Delete Account', 'COA', existingAccount, null, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
@@ -371,8 +381,23 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     }
 
     // Only GL (Level 4) accounts can be deleted; MAIN/PARENT/SUBSIDIARY are system-locked
-    if (existingAccount.accountLevel !== 'GL') {
-      return res.status(400).json({ error: { message: `${existingAccount.accountLevel} accounts are system-defined and cannot be deleted. Only Level 4 (GL) accounts can be deleted.`, status: 400 } });
+    if (existingAccount.accountLevel !== 'GL' || existingAccount.isLocked) {
+      return res.status(400).json({ error: { message: `${existingAccount.accountLevel} or locked accounts are system-protected and cannot be deleted. Only unlocked Level 4 (GL) accounts can be deleted.`, status: 400 } });
+    }
+
+    const activePostedLines = await prisma.journalEntryLine.count({
+      where: {
+        accountId: id,
+        journalEntry: { isDeleted: false, status: 'Posted' },
+      },
+    });
+    if (activePostedLines > 0) {
+      return res.status(400).json({
+        error: {
+          message: `Cannot delete account "${existingAccount.accountName}" because it has ${activePostedLines} active posted General Ledger entries. Please reverse or reassign those transactions first.`,
+          status: 400,
+        },
+      });
     }
 
     const updated = await prisma.account.update({
@@ -382,8 +407,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
     await logAudit(req.user.id, 'Delete Account', 'COA', existingAccount, updated, req.headers['x-forwarded-for'] as string, req.headers['user-agent']);
 
-
-    return res.status(200).json({ status: 200, message: 'Account deleted successfully' });
+    return res.status(200).json({ status: 200, message: 'Account moved to Recycle Bin successfully' });
   }
 
   return res.status(405).json({ error: { message: 'Method Not Allowed', status: 405 } });
