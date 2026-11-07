@@ -53,12 +53,13 @@ export interface SoftDeleteQueryContext {
 export const softDeleteAsyncContext = new AsyncLocalStorage<SoftDeleteQueryContext>();
 
 /**
- * Checks whether a Prisma `where` clause already contains an explicit `isDeleted` filter
+ * Checks whether a Prisma `where` clause already contains an explicit `isDeleted` key
+ * (including `{ isDeleted: undefined }` from `getDeletedFilter({ includeDeleted: true })`)
  * at the top level or inside logical combinators (`AND`, `OR`, `NOT`).
  */
 function hasExplicitIsDeletedFilter(where: any): boolean {
   if (!where || typeof where !== 'object') return false;
-  if (Object.prototype.hasOwnProperty.call(where, 'isDeleted') && where.isDeleted !== undefined) {
+  if (Object.prototype.hasOwnProperty.call(where, 'isDeleted')) {
     return true;
   }
   for (const key of ['AND', 'OR', 'NOT']) {
@@ -83,6 +84,10 @@ function applyDefaultSoftDeleteWhere(model: string | undefined, args: any): any 
       ...(nextArgs.where || {}),
       isDeleted: false,
     };
+  } else if (nextArgs.where && Object.prototype.hasOwnProperty.call(nextArgs.where, 'isDeleted') && nextArgs.where.isDeleted === undefined) {
+    const cleanWhere = { ...nextArgs.where };
+    delete cleanWhere.isDeleted;
+    nextArgs.where = cleanWhere;
   }
   return nextArgs;
 }

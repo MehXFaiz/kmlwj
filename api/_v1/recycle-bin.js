@@ -397,7 +397,7 @@ var recycle_bin_default = makeHandler(async (req, res) => {
       }
     }
     const usersList = userIdsSet.size > 0 ? await prisma.user.findMany({
-      where: { id: { in: Array.from(userIdsSet) }, isDeleted: { in: [true, false] } },
+      where: { id: { in: Array.from(userIdsSet) }, isDeleted: void 0 },
       select: { id: true, fullName: true, email: true, role: { select: { name: true } } }
     }) : [];
     const userMap = new Map(
@@ -750,7 +750,7 @@ var recycle_bin_default = makeHandler(async (req, res) => {
             }
             const [lineCount, childCount] = await Promise.all([
               tx.journalEntryLine.count({ where: { accountId: existing.id } }),
-              tx.account.count({ where: { parentId: existing.id, isDeleted: { in: [true, false] } } })
+              tx.account.count({ where: { parentId: existing.id, isDeleted: void 0 } })
             ]);
             if (lineCount > 0 || childCount > 0) {
               throw new Error(
@@ -760,7 +760,7 @@ var recycle_bin_default = makeHandler(async (req, res) => {
           }
           if (cfg.moduleKey === "donors") {
             const receiptCount = await tx.donationReceived.count({
-              where: { donorId: existing.id, isDeleted: { in: [true, false] } }
+              where: { donorId: existing.id, isDeleted: void 0 }
             });
             if (receiptCount > 0) {
               throw new Error(
@@ -770,7 +770,7 @@ var recycle_bin_default = makeHandler(async (req, res) => {
           }
           if (cfg.moduleKey === "beneficiaries") {
             const disbCount = await tx.donation.count({
-              where: { beneficiaryId: existing.id, isDeleted: { in: [true, false] } }
+              where: { beneficiaryId: existing.id, isDeleted: void 0 }
             });
             if (disbCount > 0) {
               throw new Error(

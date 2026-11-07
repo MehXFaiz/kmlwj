@@ -295,7 +295,7 @@ var accounts_default = makeHandler(async (req, res) => {
       }
       const [lineCount, childCount] = await Promise.all([
         prisma.journalEntryLine.count({ where: { accountId: id } }),
-        prisma.account.count({ where: { parentId: id, isDeleted: { in: [true, false] } } })
+        prisma.account.count({ where: { parentId: id, isDeleted: void 0 } })
       ]);
       if (lineCount > 0 || childCount > 0) {
         return res.status(400).json({ error: { message: "Cannot permanently delete an account that has ledger entries or child accounts.", status: 400 } });

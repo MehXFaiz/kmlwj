@@ -435,7 +435,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     const usersList =
       userIdsSet.size > 0
         ? await prisma.user.findMany({
-            where: { id: { in: Array.from(userIdsSet) }, isDeleted: { in: [true, false] } } as any,
+            where: { id: { in: Array.from(userIdsSet) }, isDeleted: undefined } as any,
             select: { id: true, fullName: true, email: true, role: { select: { name: true } } },
           })
         : [];
@@ -860,7 +860,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             }
             const [lineCount, childCount] = await Promise.all([
               tx.journalEntryLine.count({ where: { accountId: existing.id } }),
-              tx.account.count({ where: { parentId: existing.id, isDeleted: { in: [true, false] } } as any }),
+              tx.account.count({ where: { parentId: existing.id, isDeleted: undefined } as any }),
             ]);
             if (lineCount > 0 || childCount > 0) {
               throw new Error(
@@ -871,7 +871,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
           if (cfg.moduleKey === 'donors') {
             const receiptCount = await tx.donationReceived.count({
-              where: { donorId: existing.id, isDeleted: { in: [true, false] } } as any,
+              where: { donorId: existing.id, isDeleted: undefined } as any,
             });
             if (receiptCount > 0) {
               throw new Error(
@@ -882,7 +882,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
           if (cfg.moduleKey === 'beneficiaries') {
             const disbCount = await tx.donation.count({
-              where: { beneficiaryId: existing.id, isDeleted: { in: [true, false] } } as any,
+              where: { beneficiaryId: existing.id, isDeleted: undefined } as any,
             });
             if (disbCount > 0) {
               throw new Error(

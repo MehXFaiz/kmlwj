@@ -40,10 +40,10 @@ export async function isAdminOrAbove(req: AuthenticatedRequest): Promise<boolean
  * When `includeDeleted=true`, returns `{ isDeleted: { in: [true, false] } }` so centralized
  * Prisma query protection recognizes the explicit filter and returns both active and deleted records.
  */
-export function getDeletedFilter(query: any): { isDeleted?: any } {
+export function getDeletedFilter(query: any): { isDeleted?: boolean } {
   if (!query) return { isDeleted: false };
   if (query.includeDeleted === 'true' || query.includeDeleted === true) {
-    return { isDeleted: { in: [true, false] } };
+    return { isDeleted: undefined };
   }
   if (query.isDeleted === 'true' || query.isDeleted === true) {
     return { isDeleted: true };
