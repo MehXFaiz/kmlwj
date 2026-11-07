@@ -79,7 +79,7 @@ async function getExpenseAccountForDonation(donationType, tx) {
     });
     if (zakatAcc) return zakatAcc;
   }
-  const primaryCode = isZakat ? "4060104" : "4060101";
+  const primaryCode = isZakat ? "4070103" : "4070101";
   let acc = await tx.account.findFirst({
     where: {
       glCode: primaryCode,

@@ -61,21 +61,17 @@ export const ExpenseEntryForm = () => {
 
   // Handle URL type parameter matching if provided
   useEffect(() => {
-    if (expenseCategories.length > 0 && !selectedParentId) {
-      if (typeParam) {
-        const query = typeParam.toLowerCase();
-        const matched = expenseCategories.find(c =>
-          (c.name || '').toLowerCase().includes(query) ||
-          (query === 'fuel' && (c.name || '').toLowerCase().includes('fuel')) ||
-          (query === 'salary' && (c.name || '').toLowerCase().includes('admin')) ||
-          (query.includes('repair') && (c.name || '').toLowerCase().includes('repair'))
-        );
-        if (matched) {
-          setSelectedParentId(matched.id);
-          return;
-        }
+    if (expenseCategories.length > 0 && !selectedParentId && typeParam) {
+      const query = typeParam.toLowerCase();
+      const matched = expenseCategories.find(c =>
+        (c.name || '').toLowerCase().includes(query) ||
+        (query === 'fuel' && (c.name || '').toLowerCase().includes('fuel')) ||
+        (query === 'salary' && (c.name || '').toLowerCase().includes('salar')) ||
+        (query.includes('repair') && (c.name || '').toLowerCase().includes('repair'))
+      );
+      if (matched) {
+        setSelectedParentId(matched.id);
       }
-      setSelectedParentId(expenseCategories[0].id);
     }
   }, [expenseCategories, selectedParentId, typeParam]);
 
@@ -151,6 +147,11 @@ export const ExpenseEntryForm = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
+
+    if (!selectedParentId) {
+      showToast('Please select an Expense Parent Category first.', 'warning');
+      return;
+    }
 
     if (!selectedSubAccount) {
       showToast('Please select a subsidiary expense account.', 'warning');
@@ -302,13 +303,17 @@ export const ExpenseEntryForm = () => {
 
             <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className={labelClass}>1. Expense Category (Parent) *</label>
+                <label className={labelClass}>1. Expense Parent Category *</label>
                 <select
                   value={selectedParentId}
-                  onChange={e => setSelectedParentId(e.target.value)}
+                  onChange={e => {
+                    setSelectedParentId(e.target.value);
+                    setSelectedSubAccountId('');
+                  }}
                   className={inputClass}
                   required
                 >
+                  <option value="">-- Select Expense Parent Category --</option>
                   {expenseCategories.map(cat => (
                     <option key={cat.id} value={cat.id}>
                       {cat.code} - {cat.name}
@@ -322,11 +327,13 @@ export const ExpenseEntryForm = () => {
                 <select
                   value={selectedSubAccountId}
                   onChange={e => setSelectedSubAccountId(e.target.value)}
-                  className={inputClass}
+                  className={inputClass + (!selectedParentId ? ' opacity-60 cursor-not-allowed' : '')}
                   required
-                  disabled={subsidiaryAccounts.length === 0}
+                  disabled={!selectedParentId || subsidiaryAccounts.length === 0}
                 >
-                  {subsidiaryAccounts.length === 0 ? (
+                  {!selectedParentId ? (
+                    <option value="">-- Select Parent Category First --</option>
+                  ) : subsidiaryAccounts.length === 0 ? (
                     <option value="">No subsidiary accounts under this category</option>
                   ) : (
                     subsidiaryAccounts.map(sub => (

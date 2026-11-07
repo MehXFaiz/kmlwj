@@ -92,7 +92,7 @@ async function getExpenseAccountForDonation(donationType: string, tx: any) {
   }
 
   // 1. Check primary standard codes
-  const primaryCode = isZakat ? '4060104' : '4060101'; // 4060101 = Monthly Donations
+  const primaryCode = isZakat ? '4070103' : '4070101'; // 4070101 = MONTHLY DONATION, 4070103 = OTHER THAN GENERAL DONATION
   let acc = await tx.account.findFirst({
     where: {
       glCode: primaryCode,

@@ -19,9 +19,25 @@ import { isGenuineBankAccount } from '../utils/accountFilters';
 function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editingExpense }) {
   const { journals } = useJournalStore();
   const [form, setForm] = useState({ date: getLocalDateString(new Date()), expenseHeadId: '', paidTo: '', fatherName: '', cnic: '', mobile: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [subType, setSubType] = useState('Repair');
   const [customSubType, setCustomSubType] = useState('');
   const [selectedHallName, setSelectedHallName] = useState('Bagh-e-Hajiani Garden');
+
+  // Dynamic Expense Parent Categories from COA Level 2 PARENT accounts (4010100..4160100)
+  const parentCategories = (accounts || [])
+    .filter(acc =>
+      (acc.type === 'Expense' || acc.accountTypeName === 'EXPENSE' || (acc.accountType?.name || '').toUpperCase() === 'EXPENSE') &&
+      acc.level === 'PARENT' &&
+      !acc.isDeleted
+    )
+    .sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+
+  const filteredHeads = selectedCategory
+    ? expenseHeads
+        .filter(h => h.isActive && (h.category || '').toUpperCase() === selectedCategory.toUpperCase())
+        .sort((a, b) => (a.account?.glCode || a.name || '').localeCompare(b.account?.glCode || b.name || ''))
+    : [];
 
   useEffect(() => {
     if (isOpen) {
@@ -111,11 +127,13 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
           bankAccountId: editingExpense.bankAccountId || '',
           reference: editingExpense.reference || ''
         });
+        setSelectedCategory(head?.category || '');
         setSubType(initialSubType);
         setCustomSubType(initialCustomSubType);
         setSelectedHallName(initialHallName);
       } else {
         setForm({ date: getLocalDateString(new Date()), expenseHeadId: '', paidTo: '', fatherName: '', cnic: '', mobile: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
+        setSelectedCategory('');
         setSubType('Repair');
         setCustomSubType('');
         setSelectedHallName('Bagh-e-Hajiani Garden');
@@ -223,20 +241,54 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Expense Head *</label>
-              <select value={form.expenseHeadId} onChange={e => setForm(f => ({ ...f, expenseHeadId: e.target.value }))}
-                className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all">
-                <option value="">Select Expense Type...</option>
-                {expenseHeads.filter(h => h.isActive).map(h => (
-                  <option key={h.id} value={h.id}>{h.name}</option>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">1. Expense Parent Category *</label>
+              <select
+                value={selectedCategory}
+                onChange={e => {
+                  const catName = e.target.value;
+                  setSelectedCategory(catName);
+                  const matching = expenseHeads
+                    .filter(h => h.isActive && (h.category || '').toUpperCase() === catName.toUpperCase())
+                    .sort((a, b) => (a.account?.glCode || a.name || '').localeCompare(b.account?.glCode || b.name || ''));
+                  setForm(f => ({ ...f, expenseHeadId: matching[0]?.id || '' }));
+                }}
+                className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all"
+              >
+                <option value="">-- Select Parent Category --</option>
+                {parentCategories.map(cat => (
+                  <option key={cat.id} value={cat.name}>
+                    {cat.code} - {cat.name}
+                  </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Paid To (Payee Name) *</label>
-              <input type="text" value={form.paidTo} onChange={e => setForm(f => ({ ...f, paidTo: e.target.value }))}
-                placeholder="e.g. Muhammad Faizan" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all" />
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">2. Subsidiary Account *</label>
+              <select
+                value={form.expenseHeadId}
+                onChange={e => setForm(f => ({ ...f, expenseHeadId: e.target.value }))}
+                disabled={!selectedCategory || filteredHeads.length === 0}
+                className={`w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all ${!selectedCategory ? 'opacity-60 cursor-not-allowed' : ''}`}
+              >
+                {!selectedCategory ? (
+                  <option value="">-- Select Parent Category First --</option>
+                ) : filteredHeads.length === 0 ? (
+                  <option value="">No subsidiary accounts under this category</option>
+                ) : (
+                  filteredHeads.map(h => (
+                    <option key={h.id} value={h.id}>
+                      {h.account?.glCode ? `${h.account.glCode} - ${h.name}` : h.name}
+                    </option>
+                  ))
+                )}
+              </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Paid To (Payee Name) *</label>
+            <input type="text" value={form.paidTo} onChange={e => setForm(f => ({ ...f, paidTo: e.target.value }))}
+              placeholder="e.g. Muhammad Faizan" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all" />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

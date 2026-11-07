@@ -178,7 +178,7 @@ export class AccountingBalanceRebuildService {
           // Categorize Expense Sub-metrics
           if (code.startsWith('40602') || code === '4040203' || code === '4060104' || code === '4060106' || code === '4060107' || code === '4060108' || (nameLower.includes('zakat') && nameLower.includes('distribut'))) {
             zakatDistribution = zakatDistribution.plus(netExp);
-          } else if (code.startsWith('40601') || code.startsWith('40710') || nameLower.includes('monthly donation') || nameLower.includes('marriage donation') || nameLower.includes('medical donation') || nameLower.includes('welfare')) {
+          } else if (code.startsWith('40701') || code.startsWith('40601') || code.startsWith('40710') || nameLower.includes('monthly donation') || nameLower.includes('marriage donation') || nameLower.includes('medical donation') || nameLower.includes('other than general donation') || nameLower.includes('welfare')) {
             donationDistribution = donationDistribution.plus(netExp);
           } else {
             otherExpenses = otherExpenses.plus(netExp);

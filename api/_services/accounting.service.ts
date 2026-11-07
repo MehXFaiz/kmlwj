@@ -1563,7 +1563,7 @@ export class AccountingService {
 
       // 2. Ensure parent header for Expense Heads (4080000 or 4000000)
       let expenseParent = await tx.account.findFirst({
-        where: { glCode: '4080000' }
+        where: { glCode: '4150100' }
       }) || await tx.account.findFirst({ where: { glCode: '4000000' } });
 
       const revenueType = await tx.accountType.findFirst({
@@ -1642,20 +1642,20 @@ export class AccountingService {
         }
 
         const lastGl = await tx.account.findFirst({
-          where: { glCode: { startsWith: '40801' } },
+          where: { glCode: { startsWith: '41501' } },
           orderBy: { glCode: 'desc' }
         });
         // SQA fix: same 7-digit overflow as the income generator above.
         // Treat the full GL code as a 7-digit integer and increment from
         // the last known value; throw clearly if the prefix space is exhausted.
-        const lastCodeNum = lastGl ? parseInt(lastGl.glCode) : 4080100;
-        let nextNum = (isNaN(lastCodeNum) ? 4080100 : lastCodeNum) + 1;
+        const lastCodeNum = lastGl ? parseInt(lastGl.glCode) : 4150102;
+        let nextNum = (isNaN(lastCodeNum) ? 4150102 : lastCodeNum) + 1;
         let glCode = String(nextNum);
-        if (glCode.length !== 7) nextNum = 4080101, glCode = '4080101';
+        if (glCode.length !== 7) nextNum = 4150103, glCode = '4150103';
         while (await tx.account.findUnique({ where: { glCode } })) {
           nextNum += 1;
           glCode = String(nextNum);
-          if (glCode.length > 7) throw new Error(`GL code space exhausted under prefix 40801 — all 7-digit codes are taken.`);
+          if (glCode.length > 7) throw new Error(`GL code space exhausted under prefix 41501 — all 7-digit codes are taken.`);
         }
 
         return tx.account.create({

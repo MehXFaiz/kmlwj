@@ -42,100 +42,87 @@ const ACCOUNTS_TO_SEED: AccountDef[] = [
   // ── EXPENSES MAIN ─────────────────────────────────────────────────────────
   { glCode: '4000000', name: 'EXPENSES', level: 'MAIN', accountType: 'EXPENSE', isLocked: true, isSystemDefined: true, detailType: 'Header', description: 'Root control account for all Expense accounts' },
 
-  // ── EXPENSES PARENTS & SUBSIDIARIES ───────────────────────────────────────
-  // 4010000 ADMINISTRATIVE EXPENSE
-  { glCode: '4010000', name: 'ADMINISTRATIVE EXPENSE', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Administrative and operational expenses' },
-  { glCode: '4011000', name: 'SALARIES AND OTHER BENEFITS', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4010000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Salaries and other staff benefits' },
-  { glCode: '4011001', name: 'SALARY', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4010000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Staff salary disbursements' },
-  { glCode: '4011002', name: 'BONUS TO STAFF', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4010000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Bonus to staff' },
+  // ── EXPENSES PARENTS & SUBSIDIARIES (Official 16 Parents + 31 Subsidiaries) ──
+  // 1. 4010100 SALARIES AND OTHER BENEFITS
+  { glCode: '4010100', name: 'SALARIES AND OTHER BENEFITS', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Salaries and other staff benefits' },
+  { glCode: '4010101', name: 'SALARY', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4010100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Staff salary disbursements' },
+  { glCode: '4010102', name: 'BONUS TO STAFF', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4010100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Bonus to staff' },
 
-  // 4020000 RENT, RATES AND TAXES
-  { glCode: '4020000', name: 'RENT, RATES AND TAXES', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Rent, rates and property taxes' },
-  { glCode: '4021001', name: 'RENT', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4020000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Building rent' },
-  { glCode: '4021002', name: 'PROPERTY TAX / LOCAL PROPERTY TAX', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4020000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Property tax and local property tax' },
+  // 2. 4020100 RENT, RATES AND TAXES
+  { glCode: '4020100', name: 'RENT, RATES AND TAXES', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Rent, rates and property taxes' },
+  { glCode: '4020101', name: 'RENT', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4020100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Rent expenses' },
+  { glCode: '4020102', name: 'TAXES - INCLUDE PROPERTY TAX', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4020100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Taxes including property tax' },
 
-  // 4030000 FUEL AND POWER
-  { glCode: '4030000', name: 'FUEL AND POWER', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Fuel and power costs' },
-  { glCode: '4031001', name: 'BUS DIESEL', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4030000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Bus diesel expenses' },
-  { glCode: '4031002', name: 'GENERATOR DIESEL', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4030000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Generator diesel expenses' },
-  { glCode: '4031003', name: 'GENERATOR PETROL / OFFICE USE', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4030000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Generator petrol and office use fuel' },
+  // 3. 4030100 FUEL AND POWER
+  { glCode: '4030100', name: 'FUEL AND POWER', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Fuel and power costs' },
+  { glCode: '4030101', name: 'BUS DIESEL', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4030100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Bus diesel expenses' },
+  { glCode: '4030102', name: 'GENERATOR DIESEL - MAIN', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4030100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Main generator diesel expenses' },
+  { glCode: '4030103', name: 'GENERATOR PETROL - OFFICE USE', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4030100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Generator petrol for office use' },
 
-  // 4040000 REPAIR AND MAINTENANCE
-  { glCode: '4040000', name: 'REPAIR AND MAINTENANCE', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Repair and maintenance expenses' },
-  { glCode: '4041001', name: 'BUS REPAIR', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4040000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Bus repair and maintenance' },
-  { glCode: '4041002', name: 'GENERATOR REPAIR', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4040000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Generator repair and maintenance' },
-  { glCode: '4041003', name: 'HALL REPAIR', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4040000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Hall repair and maintenance' },
-  { glCode: '4041004', name: 'SMALL REPAIR', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4040000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Small and minor repairs' },
-  { glCode: '4041005', name: 'OTHER REPAIR / MAINTENANCE', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4040000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Other repair and maintenance costs' },
+  // 4. 4040100 REPAIR AND MAINTENANCE
+  { glCode: '4040100', name: 'REPAIR AND MAINTENANCE', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Repair and maintenance expenses' },
+  { glCode: '4040101', name: 'BUS REPAIRING', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4040100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Bus repairing expenses' },
+  { glCode: '4040102', name: 'GENERATOR REPAIRING', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4040100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Generator repairing expenses' },
+  { glCode: '4040103', name: 'HALL REPAIRING', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4040100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Hall repairing expenses' },
+  { glCode: '4040104', name: 'DAILY REPAIR AND MAINTENANCE', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4040100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Daily repair and maintenance expenses' },
 
-  // 4050000 COURIER EXPENSE
-  { glCode: '4050000', name: 'COURIER EXPENSE', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Courier and parcel expense' },
-  { glCode: '4051001', name: 'COURIER EXPENSE', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4050000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Courier and delivery charges' },
+  // 5. 4050100 COMPUTER EXPENSES
+  { glCode: '4050100', name: 'COMPUTER EXPENSES', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Computer and internet expenses' },
+  { glCode: '4050101', name: 'COMPUTER EXPENSE', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4050100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Computer hardware, software and maintenance expense' },
+  { glCode: '4050102', name: 'INTERNET FEE', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4050100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Internet subscription and connectivity fee' },
 
-  // 4060000 PRINTING AND STATIONERY
-  { glCode: '4060000', name: 'PRINTING AND STATIONERY', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Printing, stationery and postage expenses' },
-  { glCode: '4061001', name: 'PRINTING AND STATIONERY', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4060000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Printing and stationery supplies' },
-  { glCode: '4061002', name: 'POSTAGE AND COURIER', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4060000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Postage and courier expenses' },
+  // 6. 4060100 PRINTING AND STATIONERY
+  { glCode: '4060100', name: 'PRINTING AND STATIONERY', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Printing, stationery and postage expenses' },
+  { glCode: '4060101', name: 'PRINTING AND STATIONERY', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4060100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Printing and stationery supplies' },
+  { glCode: '4060102', name: 'POSTAGE AND TELEGRAM', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4060100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Postage, courier and telegram expenses' },
 
-  // 4070000 DONATION
-  { glCode: '4070000', name: 'DONATION', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Donation and charitable disbursements' },
-  { glCode: '4071001', name: 'MONTHLY DONATION', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4070000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Monthly donation payments' },
-  { glCode: '4071002', name: 'MARRIAGE DONATION', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4070000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Marriage assistance donations' },
-  { glCode: '4071003', name: 'MEDICAL DONATION', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4070000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Medical aid donations' },
-  { glCode: '4071004', name: 'OTHER DONATION', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4070000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Other charitable donations and distributions' },
+  // 7. 4070100 DONATION
+  { glCode: '4070100', name: 'DONATION', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Donation and charitable disbursements' },
+  { glCode: '4070101', name: 'MONTHLY DONATION', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4070100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Monthly donation payments' },
+  { glCode: '4070102', name: 'MARRIAGE DONATION', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4070100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Marriage assistance donations' },
+  { glCode: '4070103', name: 'OTHER THAN GENERAL DONATION', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4070100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Other than general donation disbursements' },
+  { glCode: '4070104', name: 'MEDICAL DONATION', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4070100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Medical aid donations' },
 
-  // 4080000 LEGAL AND PROFESSIONAL
-  { glCode: '4080000', name: 'LEGAL AND PROFESSIONAL', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Legal and professional services' },
-  { glCode: '4081001', name: 'LEGAL FEES', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4080000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Legal and attorney fees' },
-  { glCode: '4081002', name: 'PROFESSIONAL FEES', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4080000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Professional consulting fees' },
+  // 8. 4080100 LEGAL AND PROFESSIONAL
+  { glCode: '4080100', name: 'LEGAL AND PROFESSIONAL', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Legal and professional services' },
+  { glCode: '4080101', name: 'LEGAL CHARGES', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4080100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Legal and professional charges' },
 
-  // 4090000 AUDITOR / AUDIT EXPENSE
-  { glCode: '4090000', name: 'AUDITOR / AUDIT EXPENSE', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'External audit and auditor fees' },
-  { glCode: '4091001', name: 'AUDIT FEE', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4090000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Annual and periodic audit fees' },
+  // 9. 4090100 AUDITOR REMUNERATION
+  { glCode: '4090100', name: 'AUDITOR REMUNERATION', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Auditor remuneration and audit fees' },
+  { glCode: '4090101', name: 'AUDIT FEE', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4090100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Annual and periodic audit fees' },
 
-  // 4100000 COMPANY CHARGES
-  { glCode: '4100000', name: 'COMPANY CHARGES', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Corporate and company charges' },
-  { glCode: '4101001', name: 'COMPANY CHARGES', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4100000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Company filing and registration charges' },
+  // 10. 4100100 TRAVELLING AND CONVEYANCE
+  { glCode: '4100100', name: 'TRAVELLING AND CONVEYANCE', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Travelling and conveyance expenses' },
+  { glCode: '4100101', name: 'CONVEYANCE CHARGES', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4100100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Conveyance charges' },
+  { glCode: '4100102', name: 'TRAVELLING EXPENSE', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4100100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Staff and official travelling expenses' },
 
-  // 4110000 TRAVELLING EXPENSE
-  { glCode: '4110000', name: 'TRAVELLING EXPENSE', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Travel and transport charges' },
-  { glCode: '4111001', name: 'TRAVELLING EXPENSE', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4110000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Staff and official travelling expenses' },
+  // 11. 4110100 GENERAL OFFICE EXPENSE
+  { glCode: '4110100', name: 'GENERAL OFFICE EXPENSE', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'General office expenses' },
+  { glCode: '4110101', name: 'ENTERTAINMENT', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4110100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Entertainment and guest refreshment expenses' },
 
-  // 4120000 CENTRAL OFFICE EXPENSE
-  { glCode: '4120000', name: 'CENTRAL OFFICE EXPENSE', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Central office administrative expenses' },
-  { glCode: '4121001', name: 'CENTRAL OFFICE EXPENSE', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4120000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Central office operations' },
+  // 12. 4120100 RECEPTION, MEETING AND FUNCTIONS
+  { glCode: '4120100', name: 'RECEPTION, MEETING AND FUNCTIONS', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Reception, meeting and official function expenses' },
+  { glCode: '4120101', name: 'MEETING EXPENSE', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4120100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Meeting arrangement expenses' },
+  { glCode: '4120102', name: 'FUNCTION EXPENSE', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4120100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Official function expenses' },
+  { glCode: '4120103', name: 'OTHER RECEPTION EXPENSE', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4120100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Other reception expenses' },
 
-  // 4130000 ENTERTAINMENT
-  { glCode: '4130000', name: 'ENTERTAINMENT', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Entertainment and guest refreshment expenses' },
-  { glCode: '4131001', name: 'ENTERTAINMENT', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4130000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Entertainment and refreshment' },
+  // 13. 4130100 SECURITY EXPENSE
+  { glCode: '4130100', name: 'SECURITY EXPENSE', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Premises security services' },
+  { glCode: '4130101', name: 'SECURITY EXPENSE', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4130100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Security guards and security services expense' },
 
-  // 4140000 RECEPTION, MEETING AND FUNCTIONS
-  { glCode: '4140000', name: 'RECEPTION, MEETING AND FUNCTIONS', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Reception, meeting and official function expenses' },
-  { glCode: '4141001', name: 'RECEPTION, MEETING AND FUNCTIONS', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4140000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Meeting and function arrangement costs' },
+  // 14. 4140100 SUBSCRIPTION FEE
+  { glCode: '4140100', name: 'SUBSCRIPTION FEE', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Membership and subscription fees paid' },
+  { glCode: '4140101', name: 'SUBSCRIPTION FEE', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4140100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Organizational subscription fees' },
 
-  // 4150000 SECURITY EXPENSE
-  { glCode: '4150000', name: 'SECURITY EXPENSE', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Premises security services' },
-  { glCode: '4151001', name: 'SECURITY EXPENSE', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4150000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Security guards and equipment charges' },
+  // 15. 4150100 OTHER EXPENSE
+  { glCode: '4150100', name: 'OTHER EXPENSE', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Other and miscellaneous expenses' },
+  { glCode: '4150101', name: 'MISCELLANEOUS EXPENSE', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4150100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Miscellaneous expenses' },
+  { glCode: '4150102', name: 'OTHER EXPENSE', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4150100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Other general expenses' },
 
-  // 4160000 SUBSCRIPTION FEE
-  { glCode: '4160000', name: 'SUBSCRIPTION FEE', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Membership and subscription fees paid' },
-  { glCode: '4161001', name: 'SUBSCRIPTION FEE', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4160000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Organizational subscription fees' },
-
-  // 4170000 OTHER EXPENSES
-  { glCode: '4170000', name: 'OTHER EXPENSES', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'General miscellaneous expenses' },
-  { glCode: '4171001', name: 'OTHER EXPENSES', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4170000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Miscellaneous expenses' },
-
-  // 4180000 FINANCIAL CHARGES
-  { glCode: '4180000', name: 'FINANCIAL CHARGES', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Financial charges and processing fees' },
-  { glCode: '4181001', name: 'FINANCIAL CHARGES', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4180000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Financial fees and charges' },
-
-  // 4190000 BANK CHARGES
-  { glCode: '4190000', name: 'BANK CHARGES', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Bank maintenance and transactional fees' },
-  { glCode: '4191001', name: 'BANK CHARGES', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4190000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Bank charges and deduction fees' },
-
-  // 4200000 OTHER CHARGES
-  { glCode: '4200000', name: 'OTHER CHARGES', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Other regulatory and sundry charges' },
-  { glCode: '4201001', name: 'OTHER CHARGES', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4200000', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Other sundry charges' },
+  // 16. 4160100 FINANCIAL CHARGES
+  { glCode: '4160100', name: 'FINANCIAL CHARGES', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Financial and bank charges' },
+  { glCode: '4160101', name: 'BANK CHARGES', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4160100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Bank charges and deduction fees' },
+  { glCode: '4160102', name: 'OTHER CHARGES', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4160100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Other financial charges' },
 ];
 
 async function migrate() {

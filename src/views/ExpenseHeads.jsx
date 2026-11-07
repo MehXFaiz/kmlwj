@@ -11,25 +11,6 @@ import { MobileOnly, DesktopOnly, pageActionsClass, statGridClass } from '../com
 import { showToast } from '../components/ui/Toast';
 import { handleDeleteError } from '../utils/deleteHandler';
 
-const EXPENSE_CATEGORIES = [
-  'Salaries & Benefits',
-  'Rent, Rates & Taxes',
-  'Fuel & Power',
-  'Repair & Maintenance',
-  'Computer Expenses',
-  'Printing & Stationery',
-  'Donations',
-  'Legal & Professional',
-  'Audit Expenses',
-  'Travelling & Conveyance',
-  'General Office Expenses',
-  'Reception, Meetings & Functions',
-  'Security Expenses',
-  'Subscription Expenses',
-  'Other Expenses',
-  'Financial Charges',
-];
-
 /* ─── Stat Card ─── */
 function StatCard({ title, value, prefix = '', icon: Icon, iconBg, iconColor, sub, delay = 0 }) {
   return (
@@ -53,18 +34,17 @@ function StatCard({ title, value, prefix = '', icon: Icon, iconBg, iconColor, su
 const nullsToEmpty = (obj) =>
   Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === null ? '' : v]));
 
-const DEFAULT_EXPENSE_HEAD = { name: '', category: 'Salaries & Benefits', accountId: '', isActive: true };
-
 /* ─── Modal ─── */
-function ExpenseHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
+function ExpenseHeadModal({ isOpen, onClose, onSave, initial, accounts, parentCategories = [] }) {
+  const defaultCat = parentCategories[0]?.name || 'SALARIES AND OTHER BENEFITS';
   const [form, setForm] = useState(
-    initial ? nullsToEmpty(initial) : DEFAULT_EXPENSE_HEAD
+    initial ? nullsToEmpty(initial) : { name: '', category: defaultCat, accountId: '', isActive: true }
   );
   
   useEffect(() => {
     if (initial) setForm(nullsToEmpty(initial));
-    else setForm(DEFAULT_EXPENSE_HEAD);
-  }, [initial, isOpen]);
+    else setForm({ name: '', category: parentCategories[0]?.name || 'SALARIES AND OTHER BENEFITS', accountId: '', isActive: true });
+  }, [initial, isOpen, parentCategories]);
 
   if (!isOpen) return null;
 
@@ -108,11 +88,11 @@ function ExpenseHeadModal({ isOpen, onClose, onSave, initial, accounts }) {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Category</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">Parent Category *</label>
             <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-red-600/50 transition-all font-medium">
-              {EXPENSE_CATEGORIES.map(c => (
-                <option key={c} value={c}>{c}</option>
+              {parentCategories.map(c => (
+                <option key={c.id || c.name} value={c.name}>{c.code ? `${c.code} - ${c.name}` : c.name}</option>
               ))}
             </select>
           </div>
@@ -182,7 +162,20 @@ export const ExpenseHeads = () => {
     inactive: heads.filter(h => !h.isActive).length,
   }), [heads]);
 
-  const categories = useMemo(() => ['All', ...EXPENSE_CATEGORIES], []);
+  const parentCategories = useMemo(() => {
+    return (flatAccounts || [])
+      .filter(acc =>
+        (acc.type === 'Expense' || acc.accountTypeName === 'EXPENSE' || (acc.accountType?.name || '').toUpperCase() === 'EXPENSE') &&
+        acc.level === 'PARENT' &&
+        !acc.isDeleted
+      )
+      .sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+  }, [flatAccounts]);
+
+  const categories = useMemo(() => {
+    const names = parentCategories.map(p => p.name);
+    return ['All', ...names];
+  }, [parentCategories]);
 
   const filtered = useMemo(() => {
     let list = [...heads];
@@ -502,7 +495,7 @@ export const ExpenseHeads = () => {
       )}
 
       <ExpenseHeadModal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditItem(null); }}
-        onSave={handleSave} initial={editItem} accounts={flatAccounts} />
+        onSave={handleSave} initial={editItem} accounts={flatAccounts} parentCategories={parentCategories} />
     </div>
   );
 };

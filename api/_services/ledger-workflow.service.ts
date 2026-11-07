@@ -31,11 +31,11 @@ async function getExpenseAccountForDonation(donationType: string, tx: any) {
     if (zakatAcc) return zakatAcc;
   }
 
-  const primaryCode = isZakat ? '4060104' : (norm.includes('MONTHLY') || norm.includes('RATION') || norm.includes('DONATION') ? '4060101' : (norm.includes('MARRIAGE') ? '4060102' : (norm.includes('MEDICAL') ? '4060103' : '4060101')));
+  const primaryCode = isZakat ? '4070103' : (norm.includes('MONTHLY') || norm.includes('RATION') || norm.includes('DONATION') ? '4070101' : (norm.includes('MARRIAGE') ? '4070102' : (norm.includes('MEDICAL') ? '4070104' : '4070101')));
 
   let acc = await tx.account.findFirst({
     where: {
-      OR: [{ glCode: primaryCode }, { glCode: isZakat ? '4071004' : '4071001' }],
+      OR: [{ glCode: primaryCode }, { glCode: isZakat ? '4070103' : '4070101' }, { glCode: isZakat ? '4060104' : '4060101' }],
       isLocked: false,
       isDeleted: false
     }

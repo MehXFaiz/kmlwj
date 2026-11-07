@@ -206,6 +206,7 @@ class AccountingSyncHub {
     const zakatExpenseAccount = await db.account.findFirst({
       where: {
         OR: [
+          { glCode: '4070103' },
           { glCode: '4060104' },
           { glCode: '4040203' },
           { glCode: '4060201' },
@@ -218,6 +219,7 @@ class AccountingSyncHub {
     const donationExpenseAccount = await db.account.findFirst({
       where: {
         OR: [
+          { glCode: '4070101' },
           { glCode: '4060101' },
           { accountName: { contains: 'Monthly Donation', mode: 'insensitive' } }
         ],
@@ -771,7 +773,7 @@ class AccountingSyncHub {
           creditAccId = se.bankAccountId || defaultBank?.id || cashAccount.id;
         }
 
-        let debitAccId = se.expenseHead?.glAccountId;
+        let debitAccId = se.expenseHead?.accountId || se.expenseHead?.glAccountId;
         if (!debitAccId) {
           const matched = await db.account.findFirst({
             where: {
