@@ -15,6 +15,7 @@ var accounts_default = makeHandler(async (req, res) => {
   const id = req.query.id;
   const action = req.query.action || req.body?.action;
   if (method === "GET") {
+    await AccountingService.ensureRequiredExpenseCategories(prisma);
     const { search, type, status, level, nature, reserved, sortBy = "glCode", order = "asc", page = "1", limit = "100" } = req.query;
     const whereClause = { ...getDeletedFilter(req.query) };
     if (search) {

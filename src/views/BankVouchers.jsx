@@ -404,7 +404,7 @@ function BankVoucherPrintModal({ voucher, onClose }) {
       onClose={onClose}
       title={isPayment ? 'BANK PAYMENT VOUCHER' : 'BANK RECEIPT VOUCHER'}
       voucherNo={voucher.voucherNo || voucher.id?.slice(0, 8)?.toUpperCase()}
-      fileNo={voucher.chequeNo ? `Cheque #${voucher.chequeNo}` : 'BANK'}
+      fileNo={rec.slipNo !== '-' ? `SLIP # ${rec.slipNo}` : (voucher.chequeNo ? `Cheque #${voucher.chequeNo}` : (voucher.reference || 'BANK'))}
       date={voucher.date || voucher.postingDate}
       name={rec.name !== '-' ? rec.name : ''}
       fatherName={rec.fatherName !== '-' ? rec.fatherName : ''}
@@ -424,12 +424,18 @@ function BankVoucherPrintModal({ voucher, onClose }) {
 }
 
 function BankVoucherEditModal({ voucher, onClose, onSave }) {
+  const rec = resolveVoucherRecipientDetails(voucher);
   const [date, setDate] = useState(() => {
     const d = voucher.postingDate || voucher.date;
     return d ? new Date(d).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
   });
-  const [reference, setReference] = useState(voucher.reference || '');
-  const [description, setDescription] = useState(voucher.description || '');
+  const [slipNo, setSlipNo] = useState(() => (rec.slipNo !== '-' ? rec.slipNo : ''));
+  const [reference, setReference] = useState(() =>
+    (voucher.reference || '').replace(/\|?\s*SLIP\s*#\s*:?\s*[^|]+/gi, '').replace(/^SLIP\s*#\s*:?\s*[^|]+\s*\|\s*/gi, '').trim()
+  );
+  const [description, setDescription] = useState(() =>
+    (voucher.description || '').replace(/\|?\s*SLIP\s*#\s*:?\s*[^|]+/gi, '').replace(/^SLIP\s*#\s*:?\s*[^|]+\s*\|\s*/gi, '').trim()
+  );
   const [amount, setAmount] = useState(() => {
     const sum = voucher.lines?.reduce((s, l) => s + (Number(l.debit) || 0), 0);
     return sum ? sum.toString() : '';
@@ -441,11 +447,14 @@ function BankVoucherEditModal({ voucher, onClose, onSave }) {
     if (!amount || Number(amount) <= 0) return;
     setLoading(true);
     try {
+      const trimmedSlip = (slipNo || '').trim();
+      const finalReference = [trimmedSlip && `SLIP # ${trimmedSlip}`, reference].filter(Boolean).join(' | ');
+      const finalDescription = [trimmedSlip && `SLIP #: ${trimmedSlip}`, description].filter(Boolean).join(' | ');
       await onSave({
         id: voucher.dbId || voucher.id,
         postingDate: date,
-        reference,
-        description,
+        reference: finalReference,
+        description: finalDescription,
         amount: Number(amount)
       });
       onClose();
@@ -484,6 +493,11 @@ function BankVoucherEditModal({ voucher, onClose, onSave }) {
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Amount (PKR) *</label>
             <input type="number" step="0.01" min="0.01" value={amount} onChange={e => setAmount(e.target.value)} required placeholder="0.00"
+              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm font-mono focus:border-amber-500 transition-all" />
+          </div>
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">SLIP #</label>
+            <input type="text" value={slipNo} onChange={e => setSlipNo(e.target.value)} placeholder="Enter SLIP # (e.g. SLIP-001)"
               className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm font-mono focus:border-amber-500 transition-all" />
           </div>
           <div>
@@ -843,6 +857,14 @@ export const BankVouchers = () => {
                       </span>
                       <span className="text-xs font-mono font-bold text-slate-300 bg-slate-800/45 border border-slate-700/40 px-2 py-0.5 rounded">
                         {getOffsetAccount(v)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-amber-400" /> SLIP #
+                      </span>
+                      <span className="font-mono font-bold text-amber-400 text-xs truncate max-w-[150px]">
+                        {resolveVoucherRecipientDetails(v).slipNo}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">

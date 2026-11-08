@@ -18,13 +18,13 @@ import { isGenuineBankAccount } from '../utils/accountFilters';
 
 function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editingExpense }) {
   const { journals } = useJournalStore();
-  const [form, setForm] = useState({ date: getLocalDateString(new Date()), expenseHeadId: '', paidTo: '', fatherName: '', cnic: '', mobile: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
+  const [form, setForm] = useState({ date: getLocalDateString(new Date()), slipNo: '', expenseHeadId: '', paidTo: '', fatherName: '', cnic: '', mobile: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
   const [selectedCategory, setSelectedCategory] = useState('');
   const [subType, setSubType] = useState('Repair');
   const [customSubType, setCustomSubType] = useState('');
   const [selectedHallName, setSelectedHallName] = useState('Bagh-e-Hajiani Garden');
 
-  // Dynamic Expense Parent Categories from COA Level 2 PARENT accounts (4010100..4160100)
+  // Dynamic Expense Parent Categories from COA Level 2 PARENT accounts (4010100..4180100)
   const parentCategories = (accounts || [])
     .filter(acc =>
       (acc.type === 'Expense' || acc.accountTypeName === 'EXPENSE' || (acc.accountType?.name || '').toUpperCase() === 'EXPENSE') &&
@@ -114,25 +114,31 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
           }
         }
         
+        const resolvedRec = resolveVoucherRecipientDetails(editingExpense);
+        const extractedSlipNo = resolvedRec.slipNo !== '-' ? resolvedRec.slipNo : '';
+        const cleanDesc = (extraDesc || '').replace(/\|?\s*SLIP\s*#\s*:?\s*[^|]+/gi, '').replace(/^SLIP\s*#\s*:?\s*[^|]+\s*\|\s*/gi, '').trim();
+        const cleanRef = (editingExpense.reference || '').replace(/\|?\s*SLIP\s*#\s*:?\s*[^|]+/gi, '').replace(/^SLIP\s*#\s*:?\s*[^|]+\s*\|\s*/gi, '').trim();
+
         setForm({
           date: formatDateToInput(editingExpense.date || new Date()),
+          slipNo: extractedSlipNo,
           expenseHeadId: editingExpense.expenseHeadId || '',
           paidTo: editingExpense.paidTo || '',
           fatherName: editingExpense.fatherName || '',
           cnic: editingExpense.cnic || '',
           mobile: editingExpense.mobile || '',
-          description: extraDesc,
+          description: cleanDesc,
           amount: editingExpense.amount !== undefined ? editingExpense.amount.toString() : '',
           paymentMethod: editingExpense.paymentMethod || 'CASH',
           bankAccountId: editingExpense.bankAccountId || '',
-          reference: editingExpense.reference || ''
+          reference: cleanRef
         });
         setSelectedCategory(head?.category || '');
         setSubType(initialSubType);
         setCustomSubType(initialCustomSubType);
         setSelectedHallName(initialHallName);
       } else {
-        setForm({ date: getLocalDateString(new Date()), expenseHeadId: '', paidTo: '', fatherName: '', cnic: '', mobile: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
+        setForm({ date: getLocalDateString(new Date()), slipNo: '', expenseHeadId: '', paidTo: '', fatherName: '', cnic: '', mobile: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
         setSelectedCategory('');
         setSubType('Repair');
         setCustomSubType('');
@@ -200,7 +206,11 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
       return;
     }
 
-    onSave({ ...form, amount: val, description: finalDescription });
+    const trimmedSlip = (form.slipNo || '').trim();
+    const finalRef = [trimmedSlip && `SLIP # ${trimmedSlip}`, form.reference].filter(Boolean).join(' | ');
+    const finalDescWithSlip = [trimmedSlip && `SLIP #: ${trimmedSlip}`, finalDescription].filter(Boolean).join(' | ');
+
+    onSave({ ...form, amount: val, reference: finalRef, description: finalDescWithSlip });
     onClose();
   };
 
@@ -285,10 +295,22 @@ function ExpenseModal({ isOpen, onClose, onSave, expenseHeads, accounts, editing
             </div>
           </div>
 
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Paid To (Payee Name) *</label>
-            <input type="text" value={form.paidTo} onChange={e => setForm(f => ({ ...f, paidTo: e.target.value }))}
-              placeholder="e.g. Muhammad Faizan" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">3. SLIP #</label>
+              <input
+                type="text"
+                value={form.slipNo}
+                onChange={e => setForm(f => ({ ...f, slipNo: e.target.value }))}
+                placeholder="Enter SLIP # (e.g. SLIP-001)"
+                className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Paid To (Payee Name) *</label>
+              <input type="text" value={form.paidTo} onChange={e => setForm(f => ({ ...f, paidTo: e.target.value }))}
+                placeholder="e.g. Muhammad Faizan" className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-red-600/60 transition-all" />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -496,6 +518,7 @@ export const Expenses = () => {
               <thead>
                 <tr className="border-b border-slate-800/60 bg-slate-900/50">
                   <th className="py-3 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-500">Date</th>
+                  <th className="py-3 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-500">SLIP #</th>
                   <th className="py-3 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-500">Expense Head</th>
                   <th className="py-3 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-500">Paid To & Desc</th>
                   <th className="py-3 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-500">Method</th>
@@ -503,10 +526,15 @@ export const Expenses = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/40">
-                {filteredExpenses.map((exp) => (
+                {filteredExpenses.map((exp) => {
+                  const recInfo = resolveVoucherRecipientDetails(exp);
+                  return (
                   <tr key={exp.id} className="group hover:bg-slate-800/20 transition-colors">
                     <td className="py-3 px-4 text-xs text-slate-400 whitespace-nowrap">
                       {formatDateDDMMYYYY(exp.date)}
+                    </td>
+                    <td className="py-3 px-4 text-xs font-mono font-bold text-amber-400 whitespace-nowrap">
+                      {recInfo.slipNo !== '-' ? recInfo.slipNo : '—'}
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
@@ -574,7 +602,8 @@ export const Expenses = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -606,7 +635,7 @@ export const Expenses = () => {
             onClose={() => setPrintExpense(null)}
             title="EXPENSE PAYMENT VOUCHER"
             voucherNo={printExpense.id?.slice(0, 8)?.toUpperCase() || 'EXP-VOUCHER'}
-            fileNo={printExpense.reference || 'EXPENSE'}
+            fileNo={rec.slipNo !== '-' ? `SLIP # ${rec.slipNo}` : (printExpense.reference || 'EXPENSE')}
             date={printExpense.date}
             name={rec.name !== '-' ? rec.name : ''}
             fatherName={rec.fatherName !== '-' ? rec.fatherName : ''}

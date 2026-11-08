@@ -158,6 +158,22 @@ export const OFFICIAL_EXPENSE_COA: OfficialParentDef[] = [
       { glCode: '4160102', name: 'OTHER CHARGES', description: 'Other financial charges' },
     ],
   },
+  {
+    glCode: '4170100',
+    name: 'LOYALTY',
+    description: 'Loyalty expenses',
+    subsidiaries: [
+      { glCode: '4170101', name: 'LOYALTY', description: 'Loyalty expense' },
+    ],
+  },
+  {
+    glCode: '4180100',
+    name: 'MEDICAL EXPENSE',
+    description: 'Medical expenses',
+    subsidiaries: [
+      { glCode: '4180101', name: 'MEDICAL EXPENSE', description: 'Medical expense' },
+    ],
+  },
 ];
 
 // Legacy-to-New GL code mapping for all known legacy expense codes

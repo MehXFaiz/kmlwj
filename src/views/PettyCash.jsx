@@ -89,7 +89,9 @@ export const PettyCash = () => {
   });
 
   const [expenseForm, setExpenseForm] = useState({
+    parentAccountId: '',
     expenseAccountId: '',
+    slipNo: '',
     amount: '',
     paidTo: '',
     date: new Date().toISOString().split('T')[0],
@@ -243,18 +245,41 @@ export const PettyCash = () => {
     });
   }, [accounts, config?.accountId]);
 
-  // Expense Accounts
-  const expenseAccounts = useMemo(() => {
-    return accounts.filter(a => {
-      if (a.isLocked || a.status === 'Inactive') return false;
-
-      const isPostingLevel = ['GL', 'SUBSIDIARY'].includes(a.level || a.accountLevel);
-      if (!isPostingLevel) return false;
-
-      const typeStr = (a.type || a.accountType?.name || '').toLowerCase();
-      return typeStr === 'expense';
-    });
+  // Expense Parent Categories (Level 2 PARENT accounts under EXPENSES 4000000)
+  const expenseParentAccounts = useMemo(() => {
+    return accounts
+      .filter(a => {
+        if (a.isDeleted || a.status === 'Inactive') return false;
+        const levelStr = a.level || a.accountLevel;
+        if (levelStr !== 'PARENT') return false;
+        const typeStr = (a.type || a.accountType?.name || '').toLowerCase();
+        return typeStr === 'expense';
+      })
+      .sort((a, b) => (a.code || a.glCode || '').localeCompare(b.code || b.glCode || ''));
   }, [accounts]);
+
+  // Expense Subsidiary Accounts
+  const expenseAccounts = useMemo(() => {
+    return accounts
+      .filter(a => {
+        if (a.isLocked || a.isDeleted || a.status === 'Inactive') return false;
+
+        const isPostingLevel = ['GL', 'SUBSIDIARY'].includes(a.level || a.accountLevel);
+        if (!isPostingLevel) return false;
+
+        const typeStr = (a.type || a.accountType?.name || '').toLowerCase();
+        return typeStr === 'expense';
+      })
+      .sort((a, b) => (a.code || a.glCode || '').localeCompare(b.code || b.glCode || ''));
+  }, [accounts]);
+
+  const filteredExpenseSubAccounts = useMemo(() => {
+    if (!expenseForm.parentAccountId) return [];
+    const parent = expenseParentAccounts.find(p => p.id === expenseForm.parentAccountId);
+    if (!parent) return [];
+    const pCode = parent.code || parent.glCode;
+    return expenseAccounts.filter(a => a.parentId === parent.id || a.parentCode === pCode);
+  }, [expenseForm.parentAccountId, expenseParentAccounts, expenseAccounts]);
 
   // Filtered Register Rows
   const filteredRegister = useMemo(() => {
@@ -401,17 +426,23 @@ export const PettyCash = () => {
     }
 
     try {
+      const trimmedSlip = (expenseForm.slipNo || '').trim();
+      const combinedRef = [trimmedSlip && `SLIP # ${trimmedSlip}`, expenseForm.referenceNo].filter(Boolean).join(' | ');
+      const combinedNarration = [trimmedSlip && `SLIP #: ${trimmedSlip}`, expenseForm.narration].filter(Boolean).join(' | ');
+
       await recordExpense({
         expenseAccountId: expenseForm.expenseAccountId,
         amount: amt,
         paidTo: expenseForm.paidTo.trim(),
         date: expenseForm.date,
-        referenceNo: expenseForm.referenceNo,
-        narration: expenseForm.narration
+        referenceNo: combinedRef,
+        narration: combinedNarration
       });
       showToast('Petty Cash Expense recorded successfully!', 'success');
       setExpenseForm({
+        parentAccountId: '',
         expenseAccountId: '',
+        slipNo: '',
         amount: '',
         paidTo: '',
         date: new Date().toISOString().split('T')[0],
@@ -900,27 +931,74 @@ export const PettyCash = () => {
               </div>
 
               <form onSubmit={handleExpenseSubmit} className="space-y-4 text-xs">
-                {/* Row 1: Expense Category & Amount */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Row 1: Expense Parent Category, Subsidiary Account & SLIP # */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-slate-400 font-semibold mb-1">Expense Category *</label>
+                    <label className="block text-slate-400 font-semibold mb-1">1. Expense Parent Category *</label>
                     <select
                       required
-                      value={expenseForm.expenseAccountId}
-                      onChange={(e) => setExpenseForm({ ...expenseForm, expenseAccountId: e.target.value })}
+                      value={expenseForm.parentAccountId}
+                      onChange={(e) => {
+                        const pId = e.target.value;
+                        const parent = expenseParentAccounts.find(p => p.id === pId);
+                        const pCode = parent ? (parent.code || parent.glCode) : '';
+                        const subs = pId ? expenseAccounts.filter(a => a.parentId === pId || a.parentCode === pCode) : [];
+                        setExpenseForm({
+                          ...expenseForm,
+                          parentAccountId: pId,
+                          expenseAccountId: subs[0]?.id || ''
+                        });
+                      }}
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-amber-500"
                     >
                       <option value="">
-                        {loadingCoa ? 'Loading accounts...' : expenseAccounts.length === 0 ? 'No eligible Expense accounts found' : 'Select Expense Category'}
+                        {loadingCoa ? 'Loading categories...' : '-- Select Parent Category --'}
                       </option>
-                      {expenseAccounts.map(a => (
-                        <option key={a.id} value={a.id}>
-                          {a.name || a.accountName} — {a.code || a.glCode}
+                      {expenseParentAccounts.map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.code || p.glCode} - {p.name || p.accountName}
                         </option>
                       ))}
                     </select>
                   </div>
 
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">2. Subsidiary Account *</label>
+                    <select
+                      required
+                      disabled={!expenseForm.parentAccountId || filteredExpenseSubAccounts.length === 0}
+                      value={expenseForm.expenseAccountId}
+                      onChange={(e) => setExpenseForm({ ...expenseForm, expenseAccountId: e.target.value })}
+                      className={`w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-amber-500 ${!expenseForm.parentAccountId ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    >
+                      {!expenseForm.parentAccountId ? (
+                        <option value="">-- Select Parent Category First --</option>
+                      ) : filteredExpenseSubAccounts.length === 0 ? (
+                        <option value="">No subsidiary accounts under this category</option>
+                      ) : (
+                        filteredExpenseSubAccounts.map(a => (
+                          <option key={a.id} value={a.id}>
+                            {a.code || a.glCode} - {a.name || a.accountName}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">3. SLIP #</label>
+                    <input
+                      type="text"
+                      placeholder="Enter SLIP # (e.g. SLIP-001)"
+                      value={expenseForm.slipNo}
+                      onChange={(e) => setExpenseForm({ ...expenseForm, slipNo: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 2: Amount, Date & Reference */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-slate-400 font-semibold mb-1">Amount (PKR) *</label>
                     <input
@@ -933,10 +1011,7 @@ export const PettyCash = () => {
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 font-mono text-slate-200 focus:outline-none focus:border-amber-500"
                     />
                   </div>
-                </div>
 
-                {/* Row 2: Date & Reference */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-slate-400 font-semibold mb-1">Date *</label>
                     <DateInput

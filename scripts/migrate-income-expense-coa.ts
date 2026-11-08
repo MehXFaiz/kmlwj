@@ -123,6 +123,14 @@ const ACCOUNTS_TO_SEED: AccountDef[] = [
   { glCode: '4160100', name: 'FINANCIAL CHARGES', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Financial and bank charges' },
   { glCode: '4160101', name: 'BANK CHARGES', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4160100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Bank charges and deduction fees' },
   { glCode: '4160102', name: 'OTHER CHARGES', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4160100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Other financial charges' },
+
+  // 17. 4170100 LOYALTY
+  { glCode: '4170100', name: 'LOYALTY', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Loyalty expenses' },
+  { glCode: '4170101', name: 'LOYALTY', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4170100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Loyalty expense' },
+
+  // 18. 4180100 MEDICAL EXPENSE
+  { glCode: '4180100', name: 'MEDICAL EXPENSE', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Medical expenses' },
+  { glCode: '4180101', name: 'MEDICAL EXPENSE', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4180100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Medical expense' },
 ];
 
 async function migrate() {

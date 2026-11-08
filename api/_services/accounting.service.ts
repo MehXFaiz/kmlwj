@@ -1529,7 +1529,136 @@ export class AccountingService {
    * caught, logged in full, and recorded in `skipped` with a plain-English
    * reason; every other item still gets attempted. Nothing is silently lost.
    */
+  private static _expenseCategoriesEnsured = false;
+
+  /**
+   * Ensures required official expense parent categories, subsidiary accounts,
+   * and expense heads (such as LOYALTY 4170100/4170101 and MEDICAL EXPENSE 4180100/4180101)
+   * exist in the database.
+   */
+  static async ensureRequiredExpenseCategories(tx: any = prisma): Promise<void> {
+    if (AccountingService._expenseCategoriesEnsured) return;
+    try {
+      const mainExpense = await tx.account.findUnique({ where: { glCode: '4000000' } });
+      if (!mainExpense) return;
+
+      const requiredCategories = [
+        {
+          parentCode: '4170100',
+          parentName: 'LOYALTY',
+          parentDesc: 'Loyalty expenses',
+          subCode: '4170101',
+          subName: 'LOYALTY',
+          subDesc: 'Loyalty expense',
+        },
+        {
+          parentCode: '4180100',
+          parentName: 'MEDICAL EXPENSE',
+          parentDesc: 'Medical expenses',
+          subCode: '4180101',
+          subName: 'MEDICAL EXPENSE',
+          subDesc: 'Medical expense',
+        },
+      ];
+
+      for (const item of requiredCategories) {
+        const parentAcc = await tx.account.upsert({
+          where: { glCode: item.parentCode },
+          update: {
+            accountName: item.parentName,
+            accountLevel: 'PARENT',
+            parentId: mainExpense.id,
+            accountTypeId: mainExpense.accountTypeId,
+            detailType: 'Header',
+            isDeleted: false,
+          },
+          create: {
+            glCode: item.parentCode,
+            accountName: item.parentName,
+            accountLevel: 'PARENT',
+            parentId: mainExpense.id,
+            accountTypeId: mainExpense.accountTypeId,
+            detailType: 'Header',
+            description: item.parentDesc,
+            currency: 'PKR',
+            subsidiary: ['Global'],
+            initialBalance: 0,
+            currentBalance: 0,
+            isLocked: false,
+            isSystemDefined: true,
+            isDeleted: false,
+          },
+        });
+
+        const subAcc = await tx.account.upsert({
+          where: { glCode: item.subCode },
+          update: {
+            accountName: item.subName,
+            accountLevel: 'SUBSIDIARY',
+            parentId: parentAcc.id,
+            accountTypeId: mainExpense.accountTypeId,
+            detailType: 'Expense',
+            isDeleted: false,
+          },
+          create: {
+            glCode: item.subCode,
+            accountName: item.subName,
+            accountLevel: 'SUBSIDIARY',
+            parentId: parentAcc.id,
+            accountTypeId: mainExpense.accountTypeId,
+            detailType: 'Expense',
+            description: item.subDesc,
+            currency: 'PKR',
+            subsidiary: ['Global'],
+            initialBalance: 0,
+            currentBalance: 0,
+            isLocked: false,
+            isSystemDefined: true,
+            isDeleted: false,
+          },
+        });
+
+        const existingHead = await tx.expenseHead.findFirst({
+          where: {
+            OR: [
+              { accountId: subAcc.id },
+              { name: { equals: item.subName, mode: 'insensitive' }, category: { equals: item.parentName, mode: 'insensitive' } },
+            ],
+          },
+        });
+
+        if (existingHead) {
+          await tx.expenseHead.update({
+            where: { id: existingHead.id },
+            data: {
+              name: item.subName,
+              category: item.parentName,
+              accountId: subAcc.id,
+              isActive: true,
+              isDeleted: false,
+            },
+          });
+        } else {
+          await tx.expenseHead.create({
+            data: {
+              name: item.subName,
+              category: item.parentName,
+              accountId: subAcc.id,
+              isActive: true,
+              isDeleted: false,
+            },
+          });
+        }
+      }
+
+      AccountingService._expenseCategoriesEnsured = true;
+    } catch (err) {
+      // Non-blocking fallback
+    }
+  }
+
   static async ensureCategoryAndHeadGLAccounts(tx: any = prisma): Promise<{ repaired: RepairItem[]; skipped: RepairItem[] }> {
+    await AccountingService.ensureRequiredExpenseCategories(tx);
     const repaired: RepairItem[] = [];
     const skipped: RepairItem[] = [];
     try {
@@ -1628,7 +1757,10 @@ export class AccountingService {
           'Electricity Bill': ['K-Electric Bill'],
           'Generator Expense': ['Generator Fuel', 'Generator petrol', 'Generator Repairs'],
           'Bus Expense': ['Bus Diesel', 'Bus Repairs'],
-          'Medical Expense': ['Medical Donations'],
+          'Medical Expense': ['MEDICAL EXPENSE', 'Medical Donations'],
+          'MEDICAL EXPENSE': ['MEDICAL EXPENSE', 'Medical Donations'],
+          'Loyalty': ['LOYALTY'],
+          'LOYALTY': ['LOYALTY'],
           'Hall Expense': ['Hall Operating Costs', 'Hall Repairs', 'Sadaya Hall-Renovation', 'Zakriya Hall Renovation'],
           'Education Donation': ['Education Donation']
         };

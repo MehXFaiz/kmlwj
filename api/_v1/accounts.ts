@@ -21,6 +21,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const action = (req.query.action || req.body?.action) as string;
 
   if (method === 'GET') {
+    await AccountingService.ensureRequiredExpenseCategories(prisma);
     const { search, type, status, level, nature, reserved, sortBy = 'glCode', order = 'asc', page = '1', limit = '100' } = req.query as any;
 
     const whereClause: any = { ...getDeletedFilter(req.query) };

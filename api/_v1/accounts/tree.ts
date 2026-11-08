@@ -11,6 +11,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
 
   if (req.method === 'GET') {
     if (!await verifyPermission(req, res, PERMS.VIEW_REPORTS)) return;
+    await AccountingService.ensureRequiredExpenseCategories(prisma);
     // Fetch all accounts
     const dbAccounts = await prisma.account.findMany({
       where: { isDeleted: false },

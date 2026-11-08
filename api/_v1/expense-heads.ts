@@ -6,6 +6,7 @@ import { logAudit } from '../_utils/audit.js';
 import { loadPermissions } from '../_services/permission.service.js';
 import { PERMS } from '../_constants/permissions.js';
 import { isSuperAdmin, isAdminOrAbove, getDeletedFilter } from '../_utils/soft-delete.js';
+import { AccountingService } from '../_services/accounting.service.js';
 
 export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse) => {
   const authenticated = await verifyAuth(req, res);
@@ -16,6 +17,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
   const action = (req.query.action || req.body?.action) as string;
 
   if (method === 'GET') {
+    await AccountingService.ensureRequiredExpenseCategories(prisma);
     const dbExpenseHeads = await prisma.expenseHead.findMany({
       where: getDeletedFilter(req.query),
       orderBy: { name: 'asc' },

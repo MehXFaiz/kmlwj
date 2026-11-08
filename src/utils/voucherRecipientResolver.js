@@ -68,6 +68,10 @@ export function parseEmbeddedBio(text) {
   const addressMatch = text.match(/Address:\s*([^|]+)/i);
   if (addressMatch) details.address = addressMatch[1].trim();
 
+  // Pattern: "SLIP #: <val>" or "SLIP #<val>" or "Slip No: <val>"
+  const slipMatch = text.match(/(?:SLIP\s*#\s*:?|Slip\s*No\s*:?)\s*([^|]+)/i);
+  if (slipMatch) details.slipNo = slipMatch[1].trim();
+
   // Pattern: "Receipt from <Name> (<CNIC>)" e.g. "Membership Fee Receipt from Test m (4240155512158)"
   const receiptFromMatch = text.match(/Receipt\s+from\s+([^(|]+)(?:\s*\(([^)]+)\))?/i);
   if (receiptFromMatch) {
@@ -89,7 +93,8 @@ export function resolveVoucherRecipientDetails(voucher) {
       cnic: '-',
       mobile: '-',
       gham: '-',
-      address: '-'
+      address: '-',
+      slipNo: '-'
     };
   }
 
@@ -175,13 +180,20 @@ export function resolveVoucherRecipientDetails(voucher) {
     textBio.address ||
     '';
 
+  // 9. Resolve SLIP #
+  let slipNo =
+    voucher.slipNo || voucher.slipNumber ||
+    textBio.slipNo ||
+    '';
+
   return {
     name: name?.trim() || '-',
     fatherName: fatherName?.trim() || '-',
     cnic: formatCNIC(cnic),
     mobile: mobile?.trim() || '-',
     gham: gham?.trim() || '-',
-    address: address?.trim() || '-'
+    address: address?.trim() || '-',
+    slipNo: slipNo?.trim() || '-'
   };
 }
 

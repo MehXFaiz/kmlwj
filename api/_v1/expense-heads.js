@@ -5,6 +5,7 @@ import { logAudit } from "../_utils/audit.js";
 import { loadPermissions } from "../_services/permission.service.js";
 import { PERMS } from "../_constants/permissions.js";
 import { isSuperAdmin, getDeletedFilter } from "../_utils/soft-delete.js";
+import { AccountingService } from "../_services/accounting.service.js";
 var expense_heads_default = makeHandler(async (req, res) => {
   const authenticated = await verifyAuth(req, res);
   if (!authenticated || !req.user) return;
@@ -12,6 +13,7 @@ var expense_heads_default = makeHandler(async (req, res) => {
   const id = req.query.id;
   const action = req.query.action || req.body?.action;
   if (method === "GET") {
+    await AccountingService.ensureRequiredExpenseCategories(prisma);
     const dbExpenseHeads = await prisma.expenseHead.findMany({
       where: getDeletedFilter(req.query),
       orderBy: { name: "asc" },
