@@ -646,6 +646,15 @@ export const SpecializedRevenueSection = ({
 
                             <div className="flex items-center justify-between py-2.5">
                               <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider flex items-center gap-1.5">
+                                <Hash className="w-3.5 h-3.5 text-amber-400" /> SLIP #
+                              </span>
+                              <span className="font-mono text-xs font-bold text-amber-400">
+                                {resolveVoucherRecipientDetails(item).slipNo}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between py-2.5">
+                              <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider flex items-center gap-1.5">
                                 <Calendar className="w-3.5 h-3.5 text-amber-400" /> {dateLabel}
                               </span>
                               <span className="font-medium text-slate-200 text-xs">
@@ -802,6 +811,7 @@ export const SpecializedRevenueSection = ({
                       </th>
                     )}
                     <th className="px-6 py-4">Receipt #</th>
+                    <th className="px-6 py-4">SLIP #</th>
                     <th className="px-6 py-4">{titleLabel}</th>
                     {subTitleLabel && <th className="px-6 py-4">{subTitleLabel}</th>}
                     <th className="px-6 py-4">{dateLabel}</th>
@@ -827,6 +837,7 @@ export const SpecializedRevenueSection = ({
                         </td>
                       )}
                       <td className="px-6 py-4 font-mono text-xs font-bold text-slate-400">#{item.receiptNo}</td>
+                      <td className="px-6 py-4 font-mono text-xs font-bold text-amber-400">{resolveVoucherRecipientDetails(item).slipNo}</td>
                       <td className="px-6 py-4">
                         {isMembershipFee && (item.member?.id || item.memberId) ? (
                           <Link to={`/members/${item.member?.id || item.memberId}`} className="font-bold text-slate-200 hover:text-amber-400 transition-colors">
@@ -972,6 +983,7 @@ export const SpecializedRevenueSection = ({
         const rec = resolveVoucherRecipientDetails(printItem);
 
         const cleanRemarks = (printItem.remarks || '')
+          .replace(/(?:SLIP\s*#\s*:?|Slip\s*No\s*:?)\s*[^|]+\s*\|?/gi, '')
           .replace(/Father:\s*[^|]+\s*\|?/gi, '')
           .replace(/Husband:\s*[^|]+\s*\|?/gi, '')
           .replace(/Gham:\s*[^|]+\s*\|?/gi, '')
@@ -983,7 +995,7 @@ export const SpecializedRevenueSection = ({
             onClose={() => setPrintItem(null)}
             title={`${printItem.category} VOUCHER`}
             voucherNo={printItem.receiptNo || printItem.id?.slice(0, 8)?.toUpperCase()}
-            fileNo={printItem.subTitle || ''}
+            fileNo={rec.slipNo !== '-' ? `SLIP # ${rec.slipNo}` : (printItem.subTitle || '')}
             date={printItem.eventDate || printItem.createdAt}
             name={rec.name !== '-' ? rec.name : ''}
             fatherName={rec.fatherName !== '-' ? rec.fatherName : ''}

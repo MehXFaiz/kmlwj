@@ -11,17 +11,20 @@ import { formatDateDDMMYYYY, getLocalDateString } from '../utils/dateUtils';
 import { isGenuineBankAccount } from '../utils/accountFilters';
 
 function IncomeModal({ isOpen, onClose, onSave, revenueHeads, accounts }) {
-  const [form, setForm] = useState({ date: getLocalDateString(new Date()), revenueHeadId: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
+  const [form, setForm] = useState({ date: getLocalDateString(new Date()), slipNo: '', revenueHeadId: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
 
   useEffect(() => {
-    if (isOpen) setForm({ date: getLocalDateString(new Date()), revenueHeadId: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
+    if (isOpen) setForm({ date: getLocalDateString(new Date()), slipNo: '', revenueHeadId: '', description: '', amount: '', paymentMethod: 'CASH', bankAccountId: '', reference: '' });
   }, [isOpen]);
 
   if (!isOpen) return null;
 
   const handleSave = () => {
     if (!form.revenueHeadId || !form.amount || !form.date) return;
-    onSave({ ...form, amount: Number(form.amount) });
+    const trimmedSlip = (form.slipNo || '').trim();
+    const finalRef = [trimmedSlip && `SLIP # ${trimmedSlip}`, form.reference].filter(Boolean).join(' | ');
+    const finalDesc = [trimmedSlip && `SLIP #: ${trimmedSlip}`, form.description].filter(Boolean).join(' | ');
+    onSave({ ...form, amount: Number(form.amount), reference: finalRef, description: finalDesc });
     onClose();
   };
 
@@ -60,15 +63,27 @@ function IncomeModal({ isOpen, onClose, onSave, revenueHeads, accounts }) {
             </div>
           </div>
 
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Revenue Head *</label>
-            <select value={form.revenueHeadId} onChange={e => setForm(f => ({ ...f, revenueHeadId: e.target.value }))}
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-emerald-600/60 transition-all">
-              <option value="">Select Revenue Source...</option>
-              {revenueHeads.filter(h => h.isActive).map(h => (
-                <option key={h.id} value={h.id}>{h.name}</option>
-              ))}
-            </select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Revenue Head *</label>
+              <select value={form.revenueHeadId} onChange={e => setForm(f => ({ ...f, revenueHeadId: e.target.value }))}
+                className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-emerald-600/60 transition-all">
+                <option value="">Select Revenue Source...</option>
+                {revenueHeads.filter(h => h.isActive).map(h => (
+                  <option key={h.id} value={h.id}>{h.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">SLIP #</label>
+              <input
+                type="text"
+                value={form.slipNo}
+                onChange={e => setForm(f => ({ ...f, slipNo: e.target.value }))}
+                placeholder="Enter SLIP # (e.g. SLIP-001)"
+                className="w-full px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-200 text-sm focus:border-emerald-600/60 transition-all"
+              />
+            </div>
           </div>
 
           <div>
@@ -177,6 +192,7 @@ export const Income = () => {
               <thead>
                 <tr className="border-b border-slate-800/60 bg-slate-900/50">
                   <th className="py-3 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-500">Date</th>
+                  <th className="py-3 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-500">SLIP #</th>
                   <th className="py-3 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-500">Revenue Head</th>
                   <th className="py-3 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-500">Description</th>
                   <th className="py-3 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-500">Method</th>
@@ -184,10 +200,15 @@ export const Income = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/40">
-                {filteredIncomes.map((inc) => (
+                {filteredIncomes.map((inc) => {
+                  const recInfo = resolveVoucherRecipientDetails(inc);
+                  return (
                   <tr key={inc.id} className="hover:bg-slate-800/20 transition-colors">
                     <td className="py-3 px-4 text-xs text-slate-400 whitespace-nowrap">
                       {formatDateDDMMYYYY(inc.date)}
+                    </td>
+                    <td className="py-3 px-4 text-xs font-mono font-bold text-amber-400 whitespace-nowrap">
+                      {recInfo.slipNo !== '-' ? recInfo.slipNo : '—'}
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
@@ -220,7 +241,8 @@ export const Income = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -246,7 +268,7 @@ export const Income = () => {
             onClose={() => setPrintIncome(null)}
             title="INCOME RECEIPT VOUCHER"
             voucherNo={printIncome.id?.slice(0, 8)?.toUpperCase() || 'INC-VOUCHER'}
-            fileNo={printIncome.reference || 'INCOME'}
+            fileNo={rec.slipNo !== '-' ? `SLIP # ${rec.slipNo}` : (printIncome.reference || 'INCOME')}
             date={printIncome.date}
             name={rec.name !== '-' ? rec.name : ''}
             fatherName={rec.fatherName !== '-' ? rec.fatherName : ''}

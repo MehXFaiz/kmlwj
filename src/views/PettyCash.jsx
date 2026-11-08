@@ -34,6 +34,7 @@ import { DashboardLayout } from '../layouts/DashboardLayout';
 import { usePettyCashStore } from '../store/pettyCashStore';
 import { useCoaStore } from '../store/coaStore';
 import { PettyCashVoucherModal } from '../components/common/PettyCashVoucherModal';
+import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolver';
 
 export const PettyCash = () => {
   const [toast, setToast] = useState(null);
@@ -74,6 +75,7 @@ export const PettyCash = () => {
   // Form States
   const [addCashForm, setAddCashForm] = useState({
     sourceAccountId: '',
+    slipNo: '',
     amount: '',
     date: new Date().toISOString().split('T')[0],
     referenceNo: '',
@@ -82,6 +84,7 @@ export const PettyCash = () => {
 
   const [replenishForm, setReplenishForm] = useState({
     sourceAccountId: '',
+    slipNo: '',
     amount: '',
     date: new Date().toISOString().split('T')[0],
     referenceNo: '',
@@ -120,6 +123,7 @@ export const PettyCash = () => {
 
   const [editingTx, setEditingTx] = useState(null);
   const [editForm, setEditForm] = useState({
+    slipNo: '',
     amount: '',
     paidTo: '',
     date: '',
@@ -145,12 +149,20 @@ export const PettyCash = () => {
 
   const handleOpenEdit = (row) => {
     setEditingTx(row);
+    const resolved = resolveVoucherRecipientDetails(row);
+    const cleanRef = String(row.referenceNo || '')
+      .replace(/SLIP\s*#\s*:?\s*[^|,]+\s*(\|\s*)?/gi, '')
+      .trim();
+    const cleanNarration = String(row.narration || '')
+      .replace(/SLIP\s*#\s*:?\s*[^|,]+\s*(\|\s*)?/gi, '')
+      .trim();
     setEditForm({
+      slipNo: resolved.slipNo !== '—' ? resolved.slipNo : '',
       amount: row.credit > 0 ? row.credit : row.debit,
       paidTo: row.paidTo !== '-' ? row.paidTo : '',
       date: row.date,
-      referenceNo: row.referenceNo || '',
-      narration: row.narration || '',
+      referenceNo: cleanRef,
+      narration: cleanNarration,
       expenseAccountId: '',
       sourceAccountId: ''
     });
@@ -160,7 +172,14 @@ export const PettyCash = () => {
     e.preventDefault();
     if (!editingTx) return;
     try {
-      await updateTransaction(editingTx.id, editForm);
+      const trimmedSlip = (editForm.slipNo || '').trim();
+      const combinedRef = [trimmedSlip && `SLIP # ${trimmedSlip}`, editForm.referenceNo].filter(Boolean).join(' | ');
+      const combinedNarration = [trimmedSlip && `SLIP #: ${trimmedSlip}`, editForm.narration].filter(Boolean).join(' | ');
+      await updateTransaction(editingTx.id, {
+        ...editForm,
+        referenceNo: combinedRef,
+        narration: combinedNarration,
+      });
       setEditingTx(null);
       showToast('Petty Cash transaction updated successfully!', 'success');
     } catch (err) {
@@ -332,16 +351,21 @@ export const PettyCash = () => {
     }
 
     try {
+      const trimmedSlip = (addCashForm.slipNo || '').trim();
+      const combinedRef = [trimmedSlip && `SLIP # ${trimmedSlip}`, addCashForm.referenceNo].filter(Boolean).join(' | ');
+      const combinedNarration = [trimmedSlip && `SLIP #: ${trimmedSlip}`, addCashForm.narration || 'Add Cash to Petty Cash Fund'].filter(Boolean).join(' | ');
+
       await addCash({
         sourceAccountId: addCashForm.sourceAccountId,
         amount: amt,
         date: addCashForm.date,
-        referenceNo: addCashForm.referenceNo,
-        narration: addCashForm.narration || 'Add Cash to Petty Cash Fund'
+        referenceNo: combinedRef,
+        narration: combinedNarration
       });
       showToast('Cash transferred to Petty Cash successfully!', 'success');
       setAddCashForm({
         sourceAccountId: '',
+        slipNo: '',
         amount: '',
         date: new Date().toISOString().split('T')[0],
         referenceNo: '',
@@ -379,16 +403,21 @@ export const PettyCash = () => {
     }
 
     try {
+      const trimmedSlip = (replenishForm.slipNo || '').trim();
+      const combinedRef = [trimmedSlip && `SLIP # ${trimmedSlip}`, replenishForm.referenceNo].filter(Boolean).join(' | ');
+      const combinedNarration = [trimmedSlip && `SLIP #: ${trimmedSlip}`, replenishForm.narration || 'Petty Cash Fund Replenishment'].filter(Boolean).join(' | ');
+
       await replenish({
         sourceAccountId: replenishForm.sourceAccountId,
         amount: amt,
         date: replenishForm.date,
-        referenceNo: replenishForm.referenceNo,
-        narration: replenishForm.narration || 'Petty Cash Fund Replenishment'
+        referenceNo: combinedRef,
+        narration: combinedNarration
       });
       showToast('Petty Cash fund replenished successfully!', 'success');
       setReplenishForm({
         sourceAccountId: '',
+        slipNo: '',
         amount: '',
         date: new Date().toISOString().split('T')[0],
         referenceNo: '',
@@ -763,8 +792,8 @@ export const PettyCash = () => {
                     </div>
                   </div>
 
-                  {/* Row 2: Date & Reference */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Row 2: Date, SLIP # & Reference */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-slate-400 font-semibold mb-1">Date *</label>
                       <DateInput
@@ -773,6 +802,17 @@ export const PettyCash = () => {
                         value={addCashForm.date}
                         onChange={(e) => setAddCashForm({ ...addCashForm, date: e.target.value })}
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-400 font-semibold mb-1">SLIP #</label>
+                      <input
+                        type="text"
+                        placeholder="Enter SLIP # (e.g. SLIP-001)"
+                        value={addCashForm.slipNo}
+                        onChange={(e) => setAddCashForm({ ...addCashForm, slipNo: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-amber-500"
                       />
                     </div>
 
@@ -859,8 +899,8 @@ export const PettyCash = () => {
                     </div>
                   </div>
 
-                  {/* Row 2: Date & Reference */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Row 2: Date, SLIP # & Reference */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-slate-400 font-semibold mb-1">Date *</label>
                       <DateInput
@@ -869,6 +909,17 @@ export const PettyCash = () => {
                         value={replenishForm.date}
                         onChange={(e) => setReplenishForm({ ...replenishForm, date: e.target.value })}
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-400 font-semibold mb-1">SLIP #</label>
+                      <input
+                        type="text"
+                        placeholder="Enter SLIP # (e.g. SLIP-001)"
+                        value={replenishForm.slipNo}
+                        onChange={(e) => setReplenishForm({ ...replenishForm, slipNo: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-amber-500"
                       />
                     </div>
 
@@ -1458,6 +1509,7 @@ export const PettyCash = () => {
                       </th>
                       <th className="py-3 px-3">Date</th>
                       <th className="py-3 px-3">Voucher #</th>
+                      <th className="py-3 px-3">SLIP #</th>
                       <th className="py-3 px-3">Type</th>
                       <th className="py-3 px-3">Description</th>
                       <th className="py-3 px-3">Category / Account</th>
@@ -1482,6 +1534,7 @@ export const PettyCash = () => {
                         </td>
                         <td className="py-3 px-3 font-mono text-slate-400">{row.date}</td>
                         <td className="py-3 px-3 font-mono font-bold text-amber-400">{row.voucherNo}</td>
+                        <td className="py-3 px-3 font-mono text-amber-300 font-semibold">{resolveVoucherRecipientDetails(row).slipNo}</td>
                         <td className="py-3 px-3">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                             row.transactionType === 'EXPENSE' ? 'bg-rose-950 text-rose-300 border border-rose-900/50' :
@@ -1697,6 +1750,17 @@ export const PettyCash = () => {
                     type="text"
                     value={editForm.narration}
                     onChange={(e) => setEditForm({ ...editForm, narration: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">SLIP #</label>
+                  <input
+                    type="text"
+                    placeholder="Enter SLIP # (e.g. SLIP-001)"
+                    value={editForm.slipNo || ''}
+                    onChange={(e) => setEditForm({ ...editForm, slipNo: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>

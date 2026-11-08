@@ -46,6 +46,7 @@ function PrintReceiptModal({ donation, onClose }) {
   const rec = resolveVoucherRecipientDetails(donation);
 
   const cleanNarration = (donation.narration || '')
+    .replace(/(?:SLIP\s*#\s*:?|Slip\s*No\s*:?)\s*[^|]+\s*\|?/gi, '')
     .replace(/Father:\s*[^|]+\s*\|?/gi, '')
     .replace(/Gham:\s*[^|]+\s*\|?/gi, '')
     .replace(/Address:\s*[^|]+\s*\|?/gi, '')
@@ -57,7 +58,7 @@ function PrintReceiptModal({ donation, onClose }) {
       onClose={onClose}
       title={`${categoryLabel} RECEIPT`}
       voucherNo={donation.receiptNo || donation.id?.slice(0, 8)?.toUpperCase()}
-      fileNo={donation.donor?.donorCode || donation.donor?.cnic || ''}
+      fileNo={rec.slipNo !== '-' ? `SLIP # ${rec.slipNo}` : (donation.donor?.donorCode || donation.donor?.cnic || '')}
       date={donation.receiptDate || donation.createdAt}
       name={rec.name !== '-' ? rec.name : ''}
       fatherName={rec.fatherName !== '-' ? rec.fatherName : ''}
@@ -465,6 +466,14 @@ export const DonationsReceived = ({ defaultType = null, titleOverride = null }) 
                       </span>
                       <span className="font-mono font-bold text-slate-100 text-xs">
                         {d.receiptNo || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                      <span className="text-slate-400 uppercase text-[11px] font-bold tracking-wider flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-amber-400" /> SLIP #
+                      </span>
+                      <span className="font-mono font-bold text-amber-400 text-xs">
+                        {resolveVoucherRecipientDetails(d).slipNo}
                       </span>
                     </div>
                     <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">

@@ -200,6 +200,7 @@ export const AddIncomeRecords = () => {
       'Amount (PKR)': Number(r.amount) || 0,
       'Payment Method': r.paymentMethod || 'CASH',
       'Bank Account': r.bankAccount?.accountName || 'Cash in Hand',
+      'SLIP #': resolveVoucherRecipientDetails(r).slipNo !== '-' ? resolveVoucherRecipientDetails(r).slipNo : '',
       'Reference No': r.referenceNumber || '',
       'Voucher No': r.journalEntry?.voucherNo || '',
       'Created By': r.createdBy?.fullName || r.createdBy?.email || 'System',
@@ -575,6 +576,11 @@ export const AddIncomeRecords = () => {
                           </div>
 
                           <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                            <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider">SLIP #</span>
+                            <span className="font-mono font-bold text-amber-400 text-xs">{resolveVoucherRecipientDetails(rec).slipNo}</span>
+                          </div>
+
+                          <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
                             <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider">Reference / Voucher</span>
                             <div className="text-right">
                               <p className="font-mono text-slate-200 font-bold text-[11px]">{rec.referenceNumber || '—'}</p>
@@ -718,6 +724,7 @@ export const AddIncomeRecords = () => {
                     )}
                   </th>
                   <th className="py-3 px-4">Date</th>
+                  <th className="py-3 px-4">SLIP #</th>
                   <th className="py-3 px-4">Category</th>
                   <th className="py-3 px-4">Amount</th>
                   <th className="py-3 px-4">Status</th>
@@ -732,14 +739,14 @@ export const AddIncomeRecords = () => {
               <tbody className="divide-y divide-slate-800/60">
                 {loading && records.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="py-12 text-center text-slate-500">
+                    <td colSpan={12} className="py-12 text-center text-slate-500">
                       <div className="h-6 w-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                       Loading income records...
                     </td>
                   </tr>
                 ) : records.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="py-12 text-center text-slate-500">
+                    <td colSpan={12} className="py-12 text-center text-slate-500">
                       <TrendingUp className="h-10 w-10 mx-auto text-slate-700 mb-2" />
                       <p className="font-semibold text-slate-400">No income records found</p>
                       <p className="text-[11px] text-slate-600 mt-1">Try adjusting filters or click "Add Income Entry"</p>
@@ -788,6 +795,9 @@ export const AddIncomeRecords = () => {
                         </td>
                         <td className="py-3 px-4 font-mono text-slate-300 whitespace-nowrap">
                           {rec.date ? new Date(rec.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
+                        </td>
+                        <td className="py-3 px-4 font-mono font-bold text-amber-400 whitespace-nowrap">
+                          {resolveVoucherRecipientDetails(rec).slipNo}
                         </td>
                         <td className="py-3 px-4 font-semibold text-slate-200">
                           {rec.category?.name ? (rec.subCategory ? `${rec.category.name} - ${rec.subCategory}` : rec.category.name) : 'Unassigned'}
@@ -1114,7 +1124,7 @@ export const AddIncomeRecords = () => {
             onClose={() => setPrintRecord(null)}
             title={`${(printRecord.category?.name || 'INCOME').toUpperCase()} RECEIPT VOUCHER`}
             voucherNo={printRecord.journalEntry?.voucherNo || printRecord.referenceNumber || `INC-${printRecord.id?.slice(0, 8)?.toUpperCase()}`}
-            fileNo={printRecord.referenceNumber || 'ADD-INCOME'}
+            fileNo={rec.slipNo !== '-' ? `SLIP # ${rec.slipNo}` : (printRecord.referenceNumber || 'ADD-INCOME')}
             date={printRecord.date || printRecord.createdAt}
             name={rec.name !== '-' ? rec.name : ''}
             fatherName={rec.fatherName !== '-' ? rec.fatherName : ''}

@@ -20,6 +20,7 @@ export const RevenueEntryForm = () => {
   const sourceParam = searchParams.get('source');
 
   const [postingDate, setPostingDate] = useState(new Date().toISOString().split('T')[0]);
+  const [slipNo, setSlipNo] = useState('');
   const [reference, setReference] = useState('');
   const [description, setDescription] = useState('');
 
@@ -177,6 +178,7 @@ export const RevenueEntryForm = () => {
       setCreationStatus("Posting double-entry transaction to ledger...");
 
       const bioParts = [
+        slipNo && `SLIP #: ${slipNo.trim()}`,
         receivedFrom && `Received From: ${receivedFrom}`,
         fatherName && `Father: ${fatherName}`,
         cnic && `CNIC: ${cnic}`,
@@ -211,7 +213,8 @@ export const RevenueEntryForm = () => {
         voucherNo,
         postingDate: new Date(postingDate).toISOString(),
         subsidiary: 'Global',
-        reference: reference || `${selectedSubAccount.name} Receipt`,
+        reference: [slipNo && `SLIP # ${slipNo.trim()}`, reference].filter(Boolean).join(' | ') || `${selectedSubAccount.name} Receipt`,
+        slipNo: slipNo.trim(),
         description: memo,
         status: 'Posted',
         voucherType: prefix,
@@ -308,6 +311,17 @@ export const RevenueEntryForm = () => {
                     ))
                   )}
                 </select>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className={labelClass}>3. SLIP #</label>
+                <input
+                  type="text"
+                  value={slipNo}
+                  onChange={e => setSlipNo(e.target.value)}
+                  placeholder="Enter SLIP # (e.g. SLIP-001)"
+                  className={inputClass}
+                />
               </div>
             </div>
           </div>

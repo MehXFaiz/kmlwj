@@ -41,7 +41,7 @@ export function parseEmbeddedBio(text) {
   const details = {};
 
   // Pattern: "Paid To: <val>"
-  const paidToMatch = text.match(/Paid\s+To:\s*([^|]+)/i);
+  const paidToMatch = text.match(/(?:Paid\s+To|Payer|Received\s+From):\s*([^|]+)/i);
   if (paidToMatch) details.name = paidToMatch[1].trim();
 
   // Pattern: "Father: <val>"
@@ -109,6 +109,8 @@ export function resolveVoucherRecipientDetails(voucher) {
   const combinedText = [
     voucher.description,
     voucher.reference,
+    voucher.referenceNumber,
+    voucher.referenceNo,
     voucher.narration,
     voucher.remarks,
     ...(voucher.lines || []).map(l => l.description)

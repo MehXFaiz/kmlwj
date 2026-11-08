@@ -66,6 +66,7 @@ export const SpecializedRevenueForm = ({
 
   const [form, setForm] = useState({
     memberId: '',
+    slipNo: '',
     title: '',
     fatherName: '',
     husbandName: '',
@@ -121,8 +122,11 @@ export const SpecializedRevenueForm = ({
         let extFather = existing.fatherName || '';
         let extHusband = existing.husbandName || '';
         let extGham = existing.gham || '';
+        let extSlip = existing.slipNo || '';
         let extRemarks = existing.remarks || '';
         if (existing.remarks) {
+          const sMatch = existing.remarks.match(/(?:SLIP\s*#\s*:?|Slip\s*No\s*:?)\s*([^|]+)/i);
+          if (sMatch) extSlip = sMatch[1].trim();
           const fMatch = existing.remarks.match(/Father:\s*([^|]+)/i);
           if (fMatch) extFather = fMatch[1].trim();
           const hMatch = existing.remarks.match(/Husband:\s*([^|]+)/i);
@@ -130,6 +134,7 @@ export const SpecializedRevenueForm = ({
           const gMatch = existing.remarks.match(/Gham:\s*([^|]+)/i);
           if (gMatch) extGham = gMatch[1].trim();
           extRemarks = existing.remarks
+            .replace(/(?:SLIP\s*#\s*:?|Slip\s*No\s*:?)\s*[^|]+\s*\|?/gi, '')
             .replace(/Father:\s*[^|]+\s*\|?/gi, '')
             .replace(/Husband:\s*[^|]+\s*\|?/gi, '')
             .replace(/Gham:\s*[^|]+\s*\|?/gi, '')
@@ -138,6 +143,7 @@ export const SpecializedRevenueForm = ({
 
         setForm({
           memberId: existing.memberId || '',
+          slipNo: extSlip,
           title: existing.title || '',
           fatherName: extFather,
           husbandName: extHusband,
@@ -236,6 +242,7 @@ export const SpecializedRevenueForm = ({
     setLoading(true);
     try {
       const metaParts = [
+        (form.slipNo || '').trim() && `SLIP #: ${(form.slipNo || '').trim()}`,
         form.fatherName && `Father: ${form.fatherName}`,
         form.husbandName && `Husband: ${form.husbandName}`,
         form.gham && `Gham: ${form.gham}`,
@@ -550,6 +557,17 @@ export const SpecializedRevenueForm = ({
               </div>
 
               <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClass}>SLIP #</label>
+                  <input
+                    type="text"
+                    value={form.slipNo}
+                    onChange={e => setForm({ ...form, slipNo: e.target.value })}
+                    placeholder="Enter SLIP # (e.g. SLIP-001)"
+                    className={inputClass}
+                  />
+                </div>
+
                 <div>
                   <label className={labelClass}>{activeDateLabel} *</label>
                   <DateInput

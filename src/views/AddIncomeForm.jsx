@@ -34,6 +34,7 @@ import {
 import { pageActionsClass } from '../components/common/responsive';
 
 import { PhoneInput } from '../components/ui/PhoneInput';
+import { resolveVoucherRecipientDetails } from '../utils/voucherRecipientResolver';
 import { CNICInput } from '../components/ui/CNICInput';
 
 const OTHER_INCOME_TYPES = [
@@ -90,6 +91,7 @@ export const AddIncomeForm = () => {
     date: new Date().toISOString().split('T')[0],
     paymentMethod: 'CASH',
     bankAccountId: '',
+    slipNo: '',
     referenceNumber: '',
     remarks: '',
     attachmentUrl: ''
@@ -167,6 +169,19 @@ export const AddIncomeForm = () => {
             }
 
             const catIdValue = isCustomCat ? 'CUSTOM' : (rec.categoryId || rec.category?.id || '');
+            const resolvedRec = resolveVoucherRecipientDetails(rec);
+            const extractedSlipNo = resolvedRec.slipNo !== '-' ? resolvedRec.slipNo : '';
+            const cleanRef = (rec.referenceNumber || '').replace(/\|?\s*SLIP\s*#\s*:?\s*[^|]+/gi, '').replace(/^SLIP\s*#\s*:?\s*[^|]+\s*\|\s*/gi, '').trim();
+            const cleanRemarks = (rec.remarks || '')
+              .replace(/\|?\s*SLIP\s*#\s*:?\s*[^|]+/gi, '')
+              .replace(/^SLIP\s*#\s*:?\s*[^|]+\s*\|\s*/gi, '')
+              .replace(/Payer:\s*[^|]+\s*\|?/gi, '')
+              .replace(/Father:\s*[^|]+\s*\|?/gi, '')
+              .replace(/CNIC:\s*[^|]+\s*\|?/gi, '')
+              .replace(/Ph:\s*[^|]+\s*\|?/gi, '')
+              .replace(/Gham:\s*[^|]+\s*\|?/gi, '')
+              .replace(/Address:\s*[^|]+\s*\|?/gi, '')
+              .trim();
 
             setForm({
               categoryId: catIdValue,
@@ -177,8 +192,15 @@ export const AddIncomeForm = () => {
               date: rec.date ? new Date(rec.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
               paymentMethod: rec.paymentMethod || 'CASH',
               bankAccountId: rec.bankAccountId || '',
-              referenceNumber: rec.referenceNumber || '',
-              remarks: rec.remarks || '',
+              slipNo: extractedSlipNo,
+              referenceNumber: cleanRef,
+              payerName: resolvedRec.name !== '-' ? resolvedRec.name : '',
+              fatherName: resolvedRec.fatherName !== '-' ? resolvedRec.fatherName : '',
+              cnic: resolvedRec.cnic !== '-' ? resolvedRec.cnic : '',
+              mobile: resolvedRec.mobile !== '-' ? resolvedRec.mobile : '',
+              gham: resolvedRec.gham !== '-' ? resolvedRec.gham : '',
+              address: resolvedRec.address !== '-' ? resolvedRec.address : '',
+              remarks: cleanRemarks,
               attachmentUrl: rec.attachmentUrl || ''
             });
             setIsDirty(false);
@@ -350,6 +372,7 @@ export const AddIncomeForm = () => {
     }
 
     const metaParts = [
+      (form.slipNo || '').trim() && `SLIP #: ${(form.slipNo || '').trim()}`,
       form.payerName && `Payer: ${form.payerName}`,
       form.fatherName && `Father: ${form.fatherName}`,
       form.cnic && `CNIC: ${form.cnic}`,
@@ -367,7 +390,7 @@ export const AddIncomeForm = () => {
       date: form.date,
       paymentMethod: form.paymentMethod,
       bankAccountId: form.bankAccountId,
-      referenceNumber: form.referenceNumber,
+      referenceNumber: [(form.slipNo || '').trim() && `SLIP # ${(form.slipNo || '').trim()}`, form.referenceNumber].filter(Boolean).join(' | '),
       remarks: metaParts.join(' | '),
       attachmentUrl: form.attachmentUrl
     };
@@ -394,7 +417,8 @@ export const AddIncomeForm = () => {
           date: new Date().toISOString().split('T')[0],
           paymentMethod: 'CASH',
           bankAccountId: bankAccounts.length > 0 ? bankAccounts[0].id : '',
-          referenceNumber: '',
+          slipNo: '',
+    referenceNumber: '',
           remarks: '',
           attachmentUrl: ''
         });
@@ -696,6 +720,18 @@ export const AddIncomeForm = () => {
                     </select>
                   </div>
                 )}
+              </div>
+
+              {/* SLIP # */}
+              <div>
+                <label className={labelStyle}>SLIP #</label>
+                <input
+                  type="text"
+                  placeholder="Enter SLIP # (e.g. SLIP-001)"
+                  value={form.slipNo}
+                  onChange={(e) => handleInputChange('slipNo', e.target.value)}
+                  className={inputStyle}
+                />
               </div>
 
               {/* Reference Number */}

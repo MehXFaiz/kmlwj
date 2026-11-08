@@ -41,6 +41,7 @@ export const DonationForm = () => {
   const [disbursementMonth, setDisbursementMonth] = useState(getCurrentYyyyMm());
   const [amount, setAmount] = useState('');
   const [bankAccountId, setBankAccountId] = useState('');
+  const [slipNo, setSlipNo] = useState('');
   const [remarks, setRemarks] = useState('');
   const [referenceNo, setReferenceNo] = useState('');
 
@@ -86,8 +87,12 @@ export const DonationForm = () => {
         }
         setAmount(String(existing.amount || ''));
         setBankAccountId(existing.bankAccountId || '');
-        setRemarks(existing.remarks || '');
-        setReferenceNo(existing.voucherNo || existing.chequeNumber || '');
+        const rawRemarks = existing.remarks || '';
+        const rawRef = existing.voucherNo || existing.chequeNumber || '';
+        const sMatch = (rawRef + ' | ' + rawRemarks).match(/(?:SLIP\s*#\s*:?|Slip\s*No\s*:?)\s*([^|]+)/i);
+        setSlipNo(sMatch ? sMatch[1].trim() : '');
+        setRemarks(rawRemarks.replace(/\|?\s*(?:SLIP\s*#\s*:?|Slip\s*No\s*:?)\s*[^|]+/gi, '').replace(/^(?:SLIP\s*#\s*:?|Slip\s*No\s*:?)\s*[^|]+\s*\|\s*/gi, '').trim());
+        setReferenceNo(rawRef.replace(/\|?\s*(?:SLIP\s*#\s*:?|Slip\s*No\s*:?)\s*[^|]+/gi, '').replace(/^(?:SLIP\s*#\s*:?|Slip\s*No\s*:?)\s*[^|]+\s*\|\s*/gi, '').trim());
 
         if (Array.isArray(existing.beneficiaries) && existing.beneficiaries.length > 0) {
           setBeneficiaryMode('multiple');
@@ -261,6 +266,10 @@ export const DonationForm = () => {
     const monthLabel = getMonthLabel(disbursementMonth);
     const displayCategory = donationType === 'ZAKAT' ? 'Zakat' : 'Donation';
 
+    const trimmedSlip = (slipNo || '').trim();
+    const finalRemarks = [trimmedSlip && `SLIP #: ${trimmedSlip}`, remarks ? remarks.trim() : ''].filter(Boolean).join(' | ') || null;
+    const finalRef = [trimmedSlip && `SLIP # ${trimmedSlip}`, referenceNo ? referenceNo.trim() : ''].filter(Boolean).join(' | ') || null;
+
     const payload = {
       month: monthLabel,
       disbursementMonth,
@@ -270,8 +279,8 @@ export const DonationForm = () => {
       bankAccountId,
       beneficiaryId: payloadBeneficiaryId,
       beneficiaries: payloadBeneficiaries,
-      remarks: remarks ? remarks.trim() : null,
-      chequeNumber: referenceNo ? referenceNo.trim() : null,
+      remarks: finalRemarks,
+      chequeNumber: finalRef,
       status: 'APPROVED'
     };
 
@@ -497,7 +506,17 @@ export const DonationForm = () => {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                  <div>
+                    <label className={labelClass}>SLIP #</label>
+                    <input
+                      type="text"
+                      placeholder="Enter SLIP # (e.g. SLIP-001)"
+                      value={slipNo}
+                      onChange={(e) => setSlipNo(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
                   <div>
                     <label className={labelClass}>7. Reference / Voucher Number (Optional)</label>
                     <input

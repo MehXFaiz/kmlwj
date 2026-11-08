@@ -65,6 +65,7 @@ export const DonationEntryForm = () => {
   // Form State
   const [formData, setFormData] = useState({
     donorId: '',
+    slipNo: '',
     donationType: 'GENERAL_DONATION',
     customDonationType: '',
     amount: '',
@@ -128,8 +129,17 @@ export const DonationEntryForm = () => {
         .then((res) => {
           const rec = res.data;
           if (rec) {
+            let extSlip = rec.slipNo || '';
+            let extRef = rec.referenceNo || '';
+            let extNotes = rec.narration || '';
+            const sMatch = (extRef + ' | ' + extNotes).match(/(?:SLIP\s*#\s*:?|Slip\s*No\s*:?)\s*([^|]+)/i);
+            if (sMatch && !extSlip) extSlip = sMatch[1].trim();
+            extRef = extRef.replace(/\|?\s*(?:SLIP\s*#\s*:?|Slip\s*No\s*:?)\s*[^|]+/gi, '').replace(/^(?:SLIP\s*#\s*:?|Slip\s*No\s*:?)\s*[^|]+\s*\|\s*/gi, '').trim();
+            extNotes = extNotes.replace(/\|?\s*(?:SLIP\s*#\s*:?|Slip\s*No\s*:?)\s*[^|]+/gi, '').replace(/^(?:SLIP\s*#\s*:?|Slip\s*No\s*:?)\s*[^|]+\s*\|\s*/gi, '').trim();
+
             setFormData({
               donorId: rec.donorId || '',
+              slipNo: extSlip,
               donationType: rec.donationType || 'GENERAL_DONATION',
               customDonationType: rec.customDonationType || '',
               amount: rec.amount ? String(rec.amount) : '',
@@ -139,8 +149,8 @@ export const DonationEntryForm = () => {
               chequeDate: rec.chequeDate ? rec.chequeDate.split('T')[0] : '',
               donationDate: rec.receiptDate ? rec.receiptDate.split('T')[0] : (rec.createdAt ? rec.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]),
               mobile: rec.donor?.mobile || '',
-              referenceNo: rec.referenceNo || '',
-              notes: rec.narration || '',
+              referenceNo: extRef,
+              notes: extNotes,
               autoPostGL: rec.status === 'POSTED',
             });
           }
@@ -232,6 +242,10 @@ export const DonationEntryForm = () => {
 
     setIsSubmitting(true);
     try {
+      const trimmedSlip = (formData.slipNo || '').trim();
+      const finalRef = [trimmedSlip && `SLIP # ${trimmedSlip}`, formData.referenceNo?.trim()].filter(Boolean).join(' | ') || null;
+      const finalNarration = [trimmedSlip && `SLIP #: ${trimmedSlip}`, formData.notes?.trim()].filter(Boolean).join(' | ') || null;
+
       const payload = {
         donorId: formData.donorId,
         donationType: formData.donationType,
@@ -242,8 +256,8 @@ export const DonationEntryForm = () => {
         chequeNo: formData.paymentMethod === 'CHEQUE' ? (formData.chequeNo.trim() || null) : null,
         chequeDate: formData.paymentMethod === 'CHEQUE' && formData.chequeDate ? formData.chequeDate : null,
         receiptDate: formData.donationDate,
-        referenceNo: formData.referenceNo?.trim() || null,
-        narration: formData.notes?.trim() || null,
+        referenceNo: finalRef,
+        narration: finalNarration,
         status: formData.autoPostGL ? 'POSTED' : 'DRAFT',
       };
 
@@ -693,6 +707,23 @@ export const DonationEntryForm = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* SLIP # */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  SLIP #
+                </label>
+                <div className="relative">
+                  <Hash className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={formData.slipNo}
+                    onChange={(e) => setFormData({ ...formData, slipNo: e.target.value })}
+                    placeholder="Enter SLIP # (e.g. SLIP-001)"
+                    className="w-full pl-9 pr-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                  />
+                </div>
+              </div>
+
               {/* Reference Number */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">

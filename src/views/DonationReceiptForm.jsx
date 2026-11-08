@@ -155,6 +155,7 @@ export const DonationReceiptForm = () => {
 
   const [form, setForm] = useState({
     receiptDate: new Date().toISOString().slice(0, 10),
+    slipNo: '',
     donorId: '',
     fatherName: '',
     gham: '',
@@ -230,8 +231,20 @@ export const DonationReceiptForm = () => {
         let extFather = existing.fatherName || '';
         let extGham = existing.gham || '';
         let extAddress = existing.address || '';
+        let extSlip = existing.slipNo || '';
         let extNarration = existing.narration || '';
+        let extRefNo = existing.referenceNo || '';
+        if (existing.referenceNo) {
+          const rMatch = existing.referenceNo.match(/(?:SLIP\s*#\s*:?|Slip\s*No\s*:?)\s*([^|]+)/i);
+          if (rMatch) extSlip = rMatch[1].trim();
+          extRefNo = existing.referenceNo
+            .replace(/\|?\s*(?:SLIP\s*#\s*:?|Slip\s*No\s*:?)\s*[^|]+/gi, '')
+            .replace(/^(?:SLIP\s*#\s*:?|Slip\s*No\s*:?)\s*[^|]+\s*\|\s*/gi, '')
+            .trim();
+        }
         if (existing.narration) {
+          const sMatch = existing.narration.match(/(?:SLIP\s*#\s*:?|Slip\s*No\s*:?)\s*([^|]+)/i);
+          if (sMatch && !extSlip) extSlip = sMatch[1].trim();
           const fMatch = existing.narration.match(/Father:\s*([^|]+)/i);
           if (fMatch) extFather = fMatch[1].trim();
           const gMatch = existing.narration.match(/Gham:\s*([^|]+)/i);
@@ -239,6 +252,7 @@ export const DonationReceiptForm = () => {
           const aMatch = existing.narration.match(/Address:\s*([^|]+)/i);
           if (aMatch) extAddress = aMatch[1].trim();
           extNarration = existing.narration
+            .replace(/(?:SLIP\s*#\s*:?|Slip\s*No\s*:?)\s*[^|]+\s*\|?/gi, '')
             .replace(/Father:\s*[^|]+\s*\|?/gi, '')
             .replace(/Gham:\s*[^|]+\s*\|?/gi, '')
             .replace(/Address:\s*[^|]+\s*\|?/gi, '')
@@ -247,6 +261,8 @@ export const DonationReceiptForm = () => {
 
         setForm({
           ...nullsToEmpty(existing),
+          slipNo: extSlip,
+          referenceNo: extRefNo,
           fatherName: extFather,
           gham: extGham,
           address: extAddress,
@@ -288,15 +304,23 @@ export const DonationReceiptForm = () => {
 
     setLoading(true);
     try {
+      const trimmedSlip = (form.slipNo || '').trim();
       const metaParts = [
+        trimmedSlip && `SLIP #: ${trimmedSlip}`,
         form.fatherName && `Father: ${form.fatherName}`,
         form.gham && `Gham: ${form.gham}`,
         form.address && `Address: ${form.address}`,
         form.narration
       ].filter(Boolean);
 
+      const finalRefNo = [
+        trimmedSlip && `SLIP # ${trimmedSlip}`,
+        form.referenceNo
+      ].filter(Boolean).join(' | ');
+
       const payload = {
         ...form,
+        referenceNo: finalRefNo,
         amount: Math.round(Number(form.amount)),
         narration: metaParts.join(' | ')
       };
@@ -415,6 +439,17 @@ export const DonationReceiptForm = () => {
                     required
                     value={form.receiptDate}
                     onChange={e => setForm({ ...form, receiptDate: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className={labelClass}>SLIP #</label>
+                  <input
+                    type="text"
+                    value={form.slipNo}
+                    onChange={e => setForm({ ...form, slipNo: e.target.value })}
+                    placeholder="Enter SLIP # (e.g. SLIP-001)"
                     className={inputClass}
                   />
                 </div>

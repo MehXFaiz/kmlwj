@@ -16,6 +16,7 @@ export const BankVoucherForm = () => {
 
   const [voucherType, setVoucherType] = useState('BP'); // BP or BR
   const [postingDate, setPostingDate] = useState(new Date().toISOString().split('T')[0]);
+  const [slipNo, setSlipNo] = useState('');
   const [reference, setReference] = useState('');
   const [description, setDescription] = useState('');
   const [bankAccountId, setBankAccountId] = useState('');
@@ -100,16 +101,19 @@ export const BankVoucherForm = () => {
     }
 
     // Build the lines for the Journal Entry
+    const trimmedSlip = slipNo.trim();
+    const combinedRef = [trimmedSlip && `SLIP # ${trimmedSlip}`, reference].filter(Boolean).join(' | ') || 'Bank Transaction';
+    const combinedDesc = [trimmedSlip && `SLIP #: ${trimmedSlip}`, description].filter(Boolean).join(' | ');
     const lines = [];
     if (voucherType === 'BP') {
       lines.push(
-        { accountCode: offsetAcc.code, debit: val, credit: 0, description: `Bank Payout: ${description || reference || 'Payment'}` },
-        { accountCode: bankAcc.code, debit: 0, credit: val, description: `Bank Payout: ${description || reference || 'Payment'}` }
+        { accountCode: offsetAcc.code, debit: val, credit: 0, description: `Bank Payout: ${combinedDesc || combinedRef || 'Payment'}` },
+        { accountCode: bankAcc.code, debit: 0, credit: val, description: `Bank Payout: ${combinedDesc || combinedRef || 'Payment'}` }
       );
     } else {
       lines.push(
-        { accountCode: bankAcc.code, debit: val, credit: 0, description: `Bank Receipt: ${description || reference || 'Receipt'}` },
-        { accountCode: offsetAcc.code, debit: 0, credit: val, description: `Bank Receipt: ${description || reference || 'Receipt'}` }
+        { accountCode: bankAcc.code, debit: val, credit: 0, description: `Bank Receipt: ${combinedDesc || combinedRef || 'Receipt'}` },
+        { accountCode: offsetAcc.code, debit: 0, credit: val, description: `Bank Receipt: ${combinedDesc || combinedRef || 'Receipt'}` }
       );
     }
 
@@ -121,8 +125,8 @@ export const BankVoucherForm = () => {
       voucherNo,
       postingDate: new Date(postingDate).toISOString(),
       subsidiary: 'Global',
-      reference: reference || 'Bank Transaction',
-      description: description || null,
+      reference: combinedRef,
+      description: combinedDesc || null,
       status: 'Posted',
       voucherType,
       lines
@@ -233,6 +237,12 @@ export const BankVoucherForm = () => {
                 <div>
                   <label className={labelClass}>Transaction Date *</label>
                   <DateInput type="date" value={postingDate} onChange={e => setPostingDate(e.target.value)}
+                    className={inputClass} />
+                </div>
+
+                <div>
+                  <label className={labelClass}>SLIP #</label>
+                  <input value={slipNo} onChange={e => setSlipNo(e.target.value)} placeholder="Enter SLIP # (e.g. SLIP-001)"
                     className={inputClass} />
                 </div>
 
