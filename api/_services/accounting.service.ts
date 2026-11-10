@@ -1559,6 +1559,14 @@ export class AccountingService {
           subName: 'MEDICAL EXPENSE',
           subDesc: 'Medical expense',
         },
+        {
+          parentCode: '4190100',
+          parentName: 'SOFTWARE EXPENSE',
+          parentDesc: 'Software expenses',
+          subCode: '4190101',
+          subName: 'SOFTWARE EXPENSE',
+          subDesc: 'Software expense',
+        },
       ];
 
       for (const item of requiredCategories) {
