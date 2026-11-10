@@ -139,7 +139,8 @@ const ACCOUNTS_TO_SEED: AccountDef[] = [
   // 20. 4200100 UTILITY BILLS
   { glCode: '4200100', name: 'UTILITY BILLS', level: 'PARENT', accountType: 'EXPENSE', parentCode: '4000000', isLocked: false, isSystemDefined: true, detailType: 'Header', description: 'Utility bill expenses' },
   { glCode: '4200101', name: 'WATER BILL', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4200100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Water bill expense' },
-  { glCode: '4200102', name: 'ELECTRICITY BILL', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4200100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Electricity bill expense' },
+  { glCode: '4200102', name: 'ELECTRICITY BILL JAMAT KHANA', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4200100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Electricity bill Jamat Khana expense' },
+  { glCode: '4200103', name: 'ELECTRICITY BILL SADAYA HALL', level: 'SUBSIDIARY', accountType: 'EXPENSE', parentCode: '4200100', isLocked: false, isSystemDefined: true, detailType: 'Expense', description: 'Electricity bill Sadaya Hall expense' },
 ];
 
 async function migrate() {

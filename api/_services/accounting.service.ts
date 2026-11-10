@@ -1580,8 +1580,16 @@ export class AccountingService {
           parentName: 'UTILITY BILLS',
           parentDesc: 'Utility bill expenses',
           subCode: '4200102',
-          subName: 'ELECTRICITY BILL',
-          subDesc: 'Electricity bill expense',
+          subName: 'ELECTRICITY BILL JAMAT KHANA',
+          subDesc: 'Electricity bill Jamat Khana expense',
+        },
+        {
+          parentCode: '4200100',
+          parentName: 'UTILITY BILLS',
+          parentDesc: 'Utility bill expenses',
+          subCode: '4200103',
+          subName: 'ELECTRICITY BILL SADAYA HALL',
+          subDesc: 'Electricity bill Sadaya Hall expense',
         },
       ];
 
