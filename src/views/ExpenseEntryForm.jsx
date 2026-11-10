@@ -11,6 +11,9 @@ import { useTranslation } from 'react-i18next';
 import { PhoneInput } from '../components/ui/PhoneInput';
 import { CNICInput } from '../components/ui/CNICInput';
 
+// Standard halls (same list used by the Hall Booking form)
+const HALL_OPTIONS = ['Bagh-e-Hajiani Kareema', 'Sadaya Hall', 'Zikarya Hall', 'Annexy Hall'];
+
 export const ExpenseEntryForm = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -33,6 +36,7 @@ export const ExpenseEntryForm = () => {
   // Dynamic Chart of Accounts hierarchy selection
   const [selectedParentId, setSelectedParentId] = useState('');
   const [selectedSubAccountId, setSelectedSubAccountId] = useState('');
+  const [selectedHall, setSelectedHall] = useState('');
 
   // Payee / Recipient Bio-Data
   const [paidTo, setPaidTo] = useState('');
@@ -139,6 +143,17 @@ export const ExpenseEntryForm = () => {
     return subsidiaryAccounts.find(s => s.id === selectedSubAccountId);
   }, [subsidiaryAccounts, selectedSubAccountId]);
 
+  // Hall selector is shown only for hall repair accounts (e.g. 4040103 - HALL REPAIRING)
+  const isHallRepair = useMemo(() => {
+    const name = selectedSubAccount?.name || '';
+    return /hall/i.test(name) && /repair/i.test(name);
+  }, [selectedSubAccount]);
+
+  // Clear hall selection when it no longer applies
+  useEffect(() => {
+    if (!isHallRepair) setSelectedHall('');
+  }, [isHallRepair]);
+
   const activeCreditAccount = useMemo(() => {
     if (paymentMethod === 'BANK') {
       return authorizedBankAccounts.find(a => a.id === bankAccountId);
@@ -156,6 +171,11 @@ export const ExpenseEntryForm = () => {
 
     if (!selectedSubAccount) {
       showToast('Please select a subsidiary expense account.', 'warning');
+      return;
+    }
+
+    if (isHallRepair && !selectedHall) {
+      showToast('Please select the hall for this repair expense.', 'warning');
       return;
     }
 
@@ -203,6 +223,7 @@ export const ExpenseEntryForm = () => {
       setCreationStatus("Posting double-entry transaction to ledger...");
 
       const payeeBioParts = [
+        isHallRepair && selectedHall && `Hall: ${selectedHall}`,
         slipNo && `SLIP #: ${slipNo.trim()}`,
         paidTo && `Paid To: ${paidTo}`,
         fatherName && `Father: ${fatherName}`,
@@ -235,6 +256,7 @@ export const ExpenseEntryForm = () => {
       ];
 
       const finalReference = [
+        isHallRepair && selectedHall && `Hall: ${selectedHall}`,
         slipNo && `SLIP # ${slipNo.trim()}`,
         reference
       ].filter(Boolean).join(' | ') || `${selectedSubAccount.name} Payout`;
@@ -353,8 +375,25 @@ export const ExpenseEntryForm = () => {
                 </select>
               </div>
 
+              {isHallRepair && (
+                <div className="sm:col-span-2">
+                  <label className={labelClass}>3. Select Hall *</label>
+                  <select
+                    value={selectedHall}
+                    onChange={e => setSelectedHall(e.target.value)}
+                    className={inputClass}
+                    required
+                  >
+                    <option value="">-- Select Hall --</option>
+                    {HALL_OPTIONS.map(hall => (
+                      <option key={hall} value={hall}>{hall}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="sm:col-span-2">
-                <label className={labelClass}>3. SLIP #</label>
+                <label className={labelClass}>{isHallRepair ? '4' : '3'}. SLIP #</label>
                 <input
                   type="text"
                   value={slipNo}
