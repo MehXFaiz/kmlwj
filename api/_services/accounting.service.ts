@@ -1567,6 +1567,22 @@ export class AccountingService {
           subName: 'SOFTWARE EXPENSE',
           subDesc: 'Software expense',
         },
+        {
+          parentCode: '4200100',
+          parentName: 'UTILITY BILLS',
+          parentDesc: 'Utility bill expenses',
+          subCode: '4200101',
+          subName: 'WATER BILL',
+          subDesc: 'Water bill expense',
+        },
+        {
+          parentCode: '4200100',
+          parentName: 'UTILITY BILLS',
+          parentDesc: 'Utility bill expenses',
+          subCode: '4200102',
+          subName: 'ELECTRICITY BILL',
+          subDesc: 'Electricity bill expense',
+        },
       ];
 
       for (const item of requiredCategories) {
