@@ -235,8 +235,25 @@ export const MemberForm = () => {
       return;
     }
 
+    const cleanCnic = data.cnic ? String(data.cnic).replace(/[^0-9]/g, '') : '';
+    const cleanMobile = data.mobile ? String(data.mobile).trim() : '';
+
     const payload = {
       ...data,
+      fullName: data.fullName?.trim(),
+      fatherName: data.fatherName?.trim(),
+      cnic: cleanCnic.length === 13 ? cleanCnic : null,
+      dob: data.dob?.trim() || null,
+      address: data.address?.trim() || null,
+      mobile: cleanMobile || null,
+      email: data.email?.trim() || null,
+      city: data.city?.trim() || null,
+      area: data.area?.trim() || null,
+      ghamName: data.ghamName?.trim() || null,
+      education: data.education?.trim() || null,
+      profession: data.profession?.trim() || null,
+      company: data.company?.trim() || null,
+      doi: data.doi?.trim() || null,
       feeAmount: data.feeAmount !== undefined ? Number(data.feeAmount) : 500,
       initialPayment: data.initialPayment !== undefined ? Number(data.initialPayment) : 0,
       photoUrl:     photoUrl     || null,
@@ -366,7 +383,7 @@ export const MemberForm = () => {
               </div>
               <div className="border-t border-amber-500/20 my-4" />
               <p className="text-xs text-slate-500 leading-relaxed">
-                Fields marked with <span className="text-red-400 font-bold">*</span> are mandatory.
+                Fields marked with <span className="text-red-400 font-bold">*</span> are mandatory (Only Name and Father's Name are compulsory).
               </p>
             </div>
           </div>
@@ -404,13 +421,15 @@ export const MemberForm = () => {
                 </div>
 
                 <div>
-                  <label className={labelClass}>National ID (CNIC) *</label>
+                  <label className={labelClass}>National ID (CNIC)</label>
                   <Controller
                     name="cnic"
                     control={control}
                     rules={{
-                      required: 'CNIC is required',
-                      validate: (v) => validateCNIC(v) || 'CNIC must contain exactly 13 digits',
+                      validate: (v) => {
+                        if (!v || !String(v).trim()) return true;
+                        return validateCNIC(v) || 'CNIC must contain exactly 13 digits';
+                      },
                     }}
                     render={({ field }) => (
                       <CNICInput {...field} className={inputClass(errors.cnic)} />
@@ -420,10 +439,10 @@ export const MemberForm = () => {
                 </div>
 
                 <div>
-                  <label className={labelClass}>Date of Birth *</label>
+                  <label className={labelClass}>Date of Birth</label>
                   <DateInput
                     type="date"
-                    {...register('dob', { required: 'Date of birth is required' })}
+                    {...register('dob')}
                     className={inputClass(errors.dob)}
                   />
                   {errors.dob && <span className="text-xs text-red-400 mt-1 block">{errors.dob.message}</span>}
@@ -439,10 +458,10 @@ export const MemberForm = () => {
               </div>
               <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
-                  <label className={labelClass}>Full Residential Address *</label>
+                  <label className={labelClass}>Full Residential Address</label>
                   <textarea
                     rows={3}
-                    {...register('address', { required: 'Residential address is required' })}
+                    {...register('address')}
                     onChange={handleTextFieldChange('address', 'address', 200)}
                     placeholder="House #, Street, Block, Area..."
                     className={inputClass(errors.address) + ' resize-none'}
@@ -451,13 +470,15 @@ export const MemberForm = () => {
                 </div>
 
                 <div>
-                  <label className={labelClass}>Primary Contact *</label>
+                  <label className={labelClass}>Primary Contact</label>
                   <Controller
                     name="mobile"
                     control={control}
                     rules={{
-                      required: 'Contact number is required',
-                      validate: (v) => validatePhoneNumber(v) || 'Phone number must contain exactly 11 digits',
+                      validate: (v) => {
+                        if (!v || !String(v).trim()) return true;
+                        return validatePhoneNumber(v) || 'Phone number must contain exactly 11 digits';
+                      },
                     }}
                     render={({ field }) => (
                       <PhoneInput {...field} className={inputClass(errors.mobile)} />

@@ -17,7 +17,7 @@ const urlOrPathSchema = z.preprocess(
 const createMemberSchema = z.object({
   memberNo: optionalSanitizedString({ max: 50, fieldName: "Member No" }),
   fullName: sanitizedString({ min: 2, max: 100, fieldName: "Full Member Name" }),
-  fatherName: optionalSanitizedString({ max: 80, fieldName: "Father Name" }),
+  fatherName: sanitizedString({ min: 2, max: 80, fieldName: "Father's Name" }),
   cnic: optionalCnicSchema,
   dob: optionalDateSchema,
   address: optionalSanitizedString({ max: 200, fieldName: "Address" }),
