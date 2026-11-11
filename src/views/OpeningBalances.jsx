@@ -11,10 +11,10 @@ import {
 import { showToast } from '../components/ui/Toast';
 
 export function OpeningBalances() {
-  const { user } = useAuthStore();
+  const { user, isPrivileged, role } = useAuthStore();
   const { years, fetchFinancialYears } = useFinancialYearStore();
   const {
-    financialYear, openingDate, isAutoRolled, sourceFinancialYear,
+    financialYear, openingDate, isAutoRolled, isLocked: storeIsLocked, sourceFinancialYear,
     sourceClosingDate, adjustmentReason, hasPreviousYear, accounts,
     allAccounts, batch, loading, saving, error, fetchOpeningBalances,
     saveOpeningBalances
@@ -27,7 +27,18 @@ export function OpeningBalances() {
   const [adjustReason, setAdjustReason] = useState('');
   const [adjusting, setAdjusting] = useState(false);
 
-  const isAdmin = user?.role === 'Super Admin' || user?.role === 'Admin';
+  const [isEditingByAdmin, setIsEditingByAdmin] = useState(false);
+
+  const roleName = typeof role === 'string' ? role : (role?.name || user?.role || '');
+  const isAdmin = isPrivileged === true ||
+    ['Super Admin', 'Admin', 'SUPER ADMIN', 'ADMIN'].includes(roleName);
+
+  // Once added (batch exists with ID or voucher), balances become locked.
+  const isAlreadyAdded = Boolean(batch?.id || batch?.voucherNo);
+  const isLocked = isAutoRolled || isAlreadyAdded || Boolean(storeIsLocked);
+
+  // Non-admins can NEVER edit once balances are added. Admin can explicitly unlock & edit.
+  const isFieldEditable = !isAutoRolled && (!isAlreadyAdded || (isAdmin && isEditingByAdmin));
 
   useEffect(() => {
     fetchFinancialYears();
@@ -49,11 +60,23 @@ export function OpeningBalances() {
   }, [financialYear, openingDate, allAccounts]);
 
   const handleFyChange = async (newFy) => {
+    setIsEditingByAdmin(false);
     setSelectedFy(newFy);
     const { startYear } = parseFyCode(newFy);
     const dateStr = `${startYear}-07-01`;
     setSelectedDate(dateStr);
     await fetchOpeningBalances(dateStr);
+  };
+
+  const handleCancelAdminEdit = () => {
+    const initialInputs = {};
+    if (allAccounts && allAccounts.length > 0) {
+      allAccounts.forEach(acc => {
+        initialInputs[acc.glCode] = acc.amount ?? 0;
+      });
+    }
+    setFormBalances(initialInputs);
+    setIsEditingByAdmin(false);
   };
 
   function parseFyCode(code) {
@@ -75,6 +98,11 @@ export function OpeningBalances() {
   const handleSave = async (e) => {
     e.preventDefault();
 
+    if (isAlreadyAdded && !isAdmin) {
+      showToast.error('Opening balances are locked. Only an Administrator can modify them.');
+      return;
+    }
+
     if (isAutoRolled) {
       showToast.error('Automatically rolled balances are locked. Use "Adjust Opening Balance" to make an explicit adjustment.');
       return;
@@ -83,6 +111,7 @@ export function OpeningBalances() {
     try {
       await saveOpeningBalances(selectedDate, formBalances, false, '', selectedFy);
       showToast.success(`Opening balances for ${selectedFy} saved successfully!`);
+      setIsEditingByAdmin(false);
     } catch (err) {
       showToast.error(err.response?.data?.error?.message || err.message || 'Failed to save opening balances');
     }
@@ -224,6 +253,11 @@ export function OpeningBalances() {
                     <CheckCircle2 className="h-5 w-5 text-emerald-400" />
                     <span>Automatically Rolled Forward from {sourceFinancialYear}</span>
                   </>
+                ) : isAlreadyAdded ? (
+                  <>
+                    <ShieldCheck className="h-5 w-5 text-emerald-400" />
+                    <span>Initial Opening Balance Setup (Locked)</span>
+                  </>
                 ) : hasPreviousYear ? (
                   <>
                     <Info className="h-5 w-5 text-amber-400" />
@@ -239,6 +273,8 @@ export function OpeningBalances() {
               <p className="text-xs text-slate-400 mt-1">
                 {isAutoRolled
                   ? `Balances automatically carried forward from ${sourceFinancialYear} closing balances as of ${sourceClosingDate || 'year end'}.`
+                  : isAlreadyAdded
+                  ? `Starting balances are locked and posted under voucher ${batch?.voucherNo || ''}. ${isAdmin ? 'As an administrator, you may unlock to make corrections.' : 'Only an Administrator can add or modify balances.'}`
                   : hasPreviousYear
                   ? 'Opening balances will be automatically carried forward when previous financial year is closed.'
                   : 'Organization first-year setup. Enter initial starting balances for cash, bank, and asset accounts.'}
@@ -250,6 +286,16 @@ export function OpeningBalances() {
                 <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 flex items-center gap-1.5">
                   <Lock className="h-3.5 w-3.5" /> Locked (Auto-Rolled)
                 </span>
+              ) : isAlreadyAdded ? (
+                isEditingByAdmin ? (
+                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-950/80 text-amber-400 border border-amber-800/60 flex items-center gap-1.5">
+                    <Unlock className="h-3.5 w-3.5" /> Unlocked (Admin Edit)
+                  </span>
+                ) : (
+                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 flex items-center gap-1.5">
+                    <Lock className="h-3.5 w-3.5" /> Locked (Setup Saved)
+                  </span>
+                )
               ) : (
                 <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-950/80 text-amber-400 border border-amber-800/60 flex items-center gap-1.5">
                   <Unlock className="h-3.5 w-3.5" /> Editable Initial Setup
@@ -289,7 +335,7 @@ export function OpeningBalances() {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              disabled={isAutoRolled}
+              disabled={!isFieldEditable}
               className="bg-slate-950 border border-slate-800 text-slate-200 font-mono text-xs px-2.5 py-1 rounded-lg focus:outline-none"
             />
           </div>
@@ -302,17 +348,46 @@ export function OpeningBalances() {
           <div className="flex items-center gap-2">
             <Layers className="h-5 w-5 text-amber-400" />
             <h2 className="text-base font-bold text-white">Account Opening Balances</h2>
+            {isLocked && !isEditingByAdmin && (
+              <span className="ml-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1">
+                <Lock className="h-3 w-3 text-emerald-400" /> Locked
+              </span>
+            )}
           </div>
 
-          {isAutoRolled && isAdmin && (
-            <button
-              type="button"
-              onClick={() => setIsAdjustModalOpen(true)}
-              className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/40 transition-colors flex items-center gap-1.5"
-            >
-              <Edit3 className="h-3.5 w-3.5" /> Adjust Opening Balance
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {isAutoRolled && isAdmin && (
+              <button
+                type="button"
+                onClick={() => setIsAdjustModalOpen(true)}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/40 transition-colors flex items-center gap-1.5"
+              >
+                <Edit3 className="h-3.5 w-3.5" /> Adjust Opening Balance
+              </button>
+            )}
+
+            {!isAutoRolled && isAlreadyAdded && isAdmin && (
+              <button
+                type="button"
+                onClick={() => isEditingByAdmin ? handleCancelAdminEdit() : setIsEditingByAdmin(true)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${
+                  isEditingByAdmin
+                    ? 'bg-rose-950/80 hover:bg-rose-900/80 text-rose-400 border border-rose-800/60'
+                    : 'bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/40'
+                }`}
+              >
+                {isEditingByAdmin ? (
+                  <>
+                    <Lock className="h-3.5 w-3.5" /> Cancel / Lock
+                  </>
+                ) : (
+                  <>
+                    <Unlock className="h-3.5 w-3.5" /> Unlock & Edit (Admin)
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         </div>
 
         {error && (
@@ -354,11 +429,7 @@ export function OpeningBalances() {
                       {acc.accountType || acc.detailType || 'Asset'}
                     </td>
                     <td className="py-3.5 px-6 text-right">
-                      {isAutoRolled ? (
-                        <span className="font-mono font-bold text-slate-100 text-sm">
-                          {Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                      ) : (
+                      {isFieldEditable ? (
                         <input
                           type="number"
                           step="0.01"
@@ -368,6 +439,10 @@ export function OpeningBalances() {
                           className="w-48 bg-slate-950 border border-slate-800 focus:border-amber-500 text-right font-mono font-bold text-amber-300 px-3 py-1.5 rounded-xl focus:outline-none transition-colors"
                           placeholder="0.00"
                         />
+                      ) : (
+                        <span className="font-mono font-bold text-slate-100 text-sm">
+                          {Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
                       )}
                     </td>
                   </tr>
@@ -377,19 +452,48 @@ export function OpeningBalances() {
           </table>
         </div>
 
-        {!isAutoRolled && (
+        {isFieldEditable ? (
           <div className="p-6 border-t border-slate-800/80 bg-slate-950/40 flex items-center justify-between">
             <span className="text-xs text-slate-400">
               * Opening balances will post through the double-entry accounting engine to Opening Equity.
             </span>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-6 py-2.5 rounded-xl text-sm font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 transition-all duration-150 flex items-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50"
-            >
-              {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              <span>Save Opening Balances</span>
-            </button>
+            <div className="flex items-center gap-3">
+              {isAlreadyAdded && isAdmin && (
+                <button
+                  type="button"
+                  onClick={handleCancelAdminEdit}
+                  className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-6 py-2.5 rounded-xl text-sm font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 transition-all duration-150 flex items-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50"
+              >
+                {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                <span>{isAlreadyAdded ? 'Update Opening Balances (Admin)' : 'Save Opening Balances'}</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="p-4 px-6 border-t border-slate-800/80 bg-slate-950/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-slate-400">
+            <div className="flex items-center gap-2">
+              <Lock className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+              <span>
+                {isAlreadyAdded
+                  ? (isAdmin
+                    ? 'Opening balances are locked to prevent accidental modification. Click "Unlock & Edit (Admin)" above to make changes.'
+                    : 'Opening balances are locked. Only an Administrator is authorized to modify or add amounts.')
+                  : 'Opening balances are locked (Auto-Rolled from previous year).'}
+              </span>
+            </div>
+            {batch?.voucherNo && (
+              <span className="font-mono text-slate-500 text-[11px]">
+                Posted Voucher: {batch.voucherNo}
+              </span>
+            )}
           </div>
         )}
       </form>

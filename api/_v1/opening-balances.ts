@@ -6,6 +6,7 @@ import { prisma } from '../_prisma.js';
 import { logAudit } from '../_utils/audit.js';
 import { AccountingService } from '../_services/accounting.service.js';
 import { FinancialYearService, parseFinancialYearCode } from '../_services/financial-year.service.js';
+import { isPrivilegedUser } from '../_services/permission.service.js';
 import { PERMS } from '../_constants/permissions.js';
 
 export function getFinancialYearFromDate(dateInput: Date | string): string {
@@ -175,6 +176,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         hasPreviousYear,
         previousFinancialYear: prevFyCode,
         isAutoRolled: batch?.isAutoRolled ?? false,
+        isLocked: (batch?.isAutoRolled ?? false) || Boolean(batch?.id),
         sourceFinancialYear: batch?.sourceFinancialYear ?? null,
         sourceClosingDate: batch?.sourceClosingDate ? batch.sourceClosingDate.toISOString().split('T')[0] : null,
         adjustmentReason: batch?.adjustmentReason ?? null,
@@ -235,11 +237,27 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
       return res.status(400).json({ error: { message: 'No valid accounts specified in opening balances payload.', status: 400 } });
     }
 
-    // Check if batch is auto-rolled and requires explicit adjustment
+    // Check if batch already exists (meaning opening balances were already added)
     const preCheckBatch = await prisma.openingBalanceBatch.findUnique({
       where: { financialYear },
       include: { journalEntry: true }
     });
+
+    if (preCheckBatch) {
+      // If batch already exists, only an Administrator can modify or add amounts
+      const isPrivileged = await isPrivilegedUser(req);
+      const userRole = (req.user?.role || '').toLowerCase();
+      const isAdmin = isPrivileged || userRole === 'admin' || userRole === 'super admin';
+
+      if (!isAdmin) {
+        return res.status(403).json({
+          error: {
+            message: 'Opening balances are locked after initial setup. Only an Administrator can add or modify amounts.',
+            status: 403
+          }
+        });
+      }
+    }
 
     if (preCheckBatch?.isAutoRolled && !isAdjustment) {
       return res.status(400).json({
