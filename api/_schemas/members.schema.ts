@@ -32,6 +32,7 @@ export const createMemberSchema = z.object({
   profession: optionalSanitizedString({ max: 100, fieldName: 'Profession' }),
   company: optionalSanitizedString({ max: 100, fieldName: 'Company' }),
   doi: optionalDateSchema,
+  slipNumber: optionalSanitizedString({ max: 50, fieldName: 'Slip Number' }),
   photoUrl: urlOrPathSchema,
   cnicFrontUrl: urlOrPathSchema,
   cnicBackUrl: urlOrPathSchema,

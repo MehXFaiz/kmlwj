@@ -176,6 +176,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     let {
       memberNo, fullName, fatherName, cnic, dob, address, mobile,
       email, city, area, ghamName, education, profession, company, doi,
+      slipNumber,
       photoUrl, cnicFrontUrl, cnicBackUrl, isActive,
       membershipType, feeAmount, startDate, expiryDate,
       initialPayment, paymentMethod, bankAccountId, chequeNumber
@@ -204,6 +205,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
             profession: profession || null,
             company: company || null,
             doi: doi || null,
+            slipNumber: slipNumber || null,
             photoUrl: photoUrl || null,
             cnicFrontUrl: cnicFrontUrl || null,
             cnicBackUrl: cnicBackUrl || null,
@@ -262,7 +264,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
               amount: paymentAmount,
               cashOrBankAccountId: debitAccountId!,
               incomeAccountId: incomeAccount.id,
-              reference: `MEM-${refNo}`,
+              reference: slipNumber ? `SLIP-${slipNumber}` : `MEM-${refNo}`,
               description: `Membership Fee Receipt from ${newMember.fullName} (${newMember.memberNo})`,
               module: 'Membership Fee',
               voucherType: 'BR',
@@ -293,9 +295,9 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
               amount: paymentAmount,
               paymentMethod: methodType,
               bankAccountId: bankAccountId || null,
-              chequeNumber: chequeNumber || null,
+              chequeNumber: chequeNumber || (slipNumber ? `SLIP-${slipNumber}` : null),
               status: journalEntryId ? 'POSTED' : 'Confirmed',
-              remarks: 'Initial membership fee payment on registration',
+              remarks: [slipNumber ? `SLIP #: ${slipNumber}` : null, 'Initial membership fee payment on registration'].filter(Boolean).join(' | '),
               journalEntryId,
               createdById: req.user!.id
             }
@@ -341,6 +343,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
     let {
       memberNo, fullName, fatherName, cnic, dob, address, mobile,
       email, city, area, ghamName, education, profession, company, doi,
+      slipNumber,
       photoUrl, cnicFrontUrl, cnicBackUrl, isActive,
       membershipType, feeAmount, startDate, expiryDate
     } = validated;
@@ -402,6 +405,7 @@ export default makeHandler(async (req: AuthenticatedRequest, res: VercelResponse
         profession: profession !== undefined ? (profession || null) : undefined,
         company: company !== undefined ? (company || null) : undefined,
         doi: doi !== undefined ? (doi || null) : undefined,
+        slipNumber: slipNumber !== undefined ? (slipNumber || null) : undefined,
         photoUrl: photoUrl !== undefined ? (photoUrl || null) : undefined,
         cnicFrontUrl: cnicFrontUrl !== undefined ? (cnicFrontUrl || null) : undefined,
         cnicBackUrl: cnicBackUrl !== undefined ? (cnicBackUrl || null) : undefined,

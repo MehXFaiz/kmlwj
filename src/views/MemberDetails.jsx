@@ -270,6 +270,12 @@ export const MemberDetails = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <div className="lg:col-span-1 bg-slate-900 rounded-2xl border border-slate-800 p-5 space-y-3">
               <h3 className="text-sm font-bold text-slate-100 mb-2">Member Details</h3>
+              {member.slipNumber && (
+                <div className="flex items-center justify-between text-xs border-b border-slate-800/60 pb-2">
+                  <span className="text-slate-500 uppercase text-[10px] font-semibold flex items-center gap-1"><Hash className="w-3 h-3 text-amber-400" />Slip #</span>
+                  <span className="font-mono font-semibold text-amber-400">{member.slipNumber}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between text-xs border-b border-slate-800/60 pb-2">
                 <span className="text-slate-500 uppercase text-[10px] font-semibold flex items-center gap-1"><IdCard className="w-3 h-3 text-amber-400" />CNIC</span>
                 <span className="font-mono font-semibold text-slate-200">{member.cnic || 'N/A'}</span>

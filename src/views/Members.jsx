@@ -76,6 +76,7 @@ export const Members = () => {
     return (
       (m.fullName && m.fullName.toLowerCase().includes(term)) ||
       (m.memberNo && m.memberNo.toLowerCase().includes(term)) ||
+      (m.slipNumber && m.slipNumber.toLowerCase().includes(term)) ||
       (m.cnic && m.cnic.toLowerCase().includes(term)) ||
       (m.mobile && m.mobile.toLowerCase().includes(term)) ||
       (m.ghamName && m.ghamName.toLowerCase().includes(term)) ||
@@ -382,6 +383,11 @@ export const Members = () => {
                             <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20">
                               {m.memberNo || 'KML'}
                             </span>
+                            {m.slipNumber && (
+                              <span className="text-[10px] font-mono text-slate-400 bg-slate-800/80 px-1.5 py-0.2 rounded border border-slate-700/60" title={`Slip #${m.slipNumber}`}>
+                                Slip #{m.slipNumber}
+                              </span>
+                            )}
                           </div>
                           <p className="text-xs text-slate-500 mt-0.5 truncate">
                             {m.fatherName ? `s/o ${m.fatherName}` : 'Member'} • {m.membershipType || 'Regular'}

@@ -162,6 +162,7 @@ export const MemberForm = () => {
   } = useForm({
     defaultValues: {
       fullName: '', fatherName: '', cnic: '', dob: '', address: '',
+      slipNumber: '',
       mobile: '', email: '', city: '', area: '', ghamName: '',
       education: '', profession: '', company: '',
       doi: new Date().toISOString().split('T')[0],
@@ -203,6 +204,7 @@ export const MemberForm = () => {
         const { photoUrl: p, cnicFrontUrl: cf, cnicBackUrl: cb, ...rest } = existing;
         reset({
           ...rest,
+          slipNumber: existing.slipNumber || '',
           membershipType: existing.membershipType || 'Regular',
           feeAmount: existing.feeAmount != null ? existing.feeAmount : 500,
           startDate: existing.startDate || '',
@@ -244,6 +246,7 @@ export const MemberForm = () => {
       fatherName: data.fatherName?.trim(),
       cnic: cleanCnic.length === 13 ? cleanCnic : null,
       dob: data.dob?.trim() || null,
+      slipNumber: data.slipNumber?.trim() || null,
       address: data.address?.trim() || null,
       mobile: cleanMobile || null,
       email: data.email?.trim() || null,
@@ -446,6 +449,16 @@ export const MemberForm = () => {
                     className={inputClass(errors.dob)}
                   />
                   {errors.dob && <span className="text-xs text-red-400 mt-1 block">{errors.dob.message}</span>}
+                </div>
+
+                <div>
+                  <label className={labelClass}>Slip Number</label>
+                  <input
+                    {...register('slipNumber')}
+                    onChange={handleTextFieldChange('slipNumber', 'text', 50)}
+                    placeholder="e.g. SLIP-00124 or 1052"
+                    className={inputClass(false)}
+                  />
                 </div>
               </div>
             </div>

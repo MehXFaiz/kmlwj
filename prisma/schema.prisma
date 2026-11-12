@@ -659,6 +659,7 @@ model Member {
   profession      String?
   company         String?
   doi             String?
+  slipNumber      String?
   photoUrl        String?
   cnicFrontUrl    String?
   cnicBackUrl     String?
