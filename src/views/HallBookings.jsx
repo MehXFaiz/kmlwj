@@ -52,6 +52,31 @@ const formatHallName = (booking) => {
   return list.length > 0 ? list.join(', ') : 'N/A';
 };
 
+// Income contribution of a booking for the currently filtered hall.
+// A booking that spans multiple halls must only contribute the filtered hall's
+// share (its own portion), never the whole booking amount for every hall.
+const getBookingHallIncome = (booking, hallFilterId) => {
+  const net = Number(booking?.netAmount ?? ((booking?.hallCharges ?? booking?.amount ?? 0) - (booking?.discount || 0))) || 0;
+  if (!hallFilterId) return net;
+
+  const bookingHallIds = Array.from(new Set([
+    ...(Array.isArray(booking.hallIds) ? booking.hallIds : []),
+    booking.hallId,
+  ].filter(Boolean).map(String)));
+  if (bookingHallIds.length <= 1) return net;
+
+  const details = Array.isArray(booking.hallDetails) ? booking.hallDetails : [];
+  const totalCharges = details.reduce((s, d) => s + Number(d?.charges ?? d?.amount ?? 0), 0);
+  if (totalCharges > 0) {
+    const match = details.find(d => String(d?.hallId) === String(hallFilterId));
+    if (match) {
+      const share = Number(match.charges ?? match.amount ?? 0);
+      return Math.round(net * (share / totalCharges) * 100) / 100;
+    }
+  }
+  return Math.round((net / bookingHallIds.length) * 100) / 100;
+};
+
 const parseImportedDate = (value) => {
   if (!value) return '';
   if (value instanceof Date) {
@@ -595,7 +620,7 @@ export const HallBookings = () => {
               </div>
               <div className="ml-3 px-3 py-2 rounded-lg bg-slate-800/40 border border-slate-700">
                 <p className="text-[11px] text-slate-400">Filtered Hall Income</p>
-                <p className="text-lg font-bold text-emerald-300">Rs {((bookings || []).reduce((s, b) => s + (Number(b.netAmount || 0)), 0)).toLocaleString()}</p>
+                <p className="text-lg font-bold text-emerald-300">Rs {((bookings || []).reduce((s, b) => s + getBookingHallIncome(b, selectedHallId), 0)).toLocaleString()}</p>
               </div>
             </div>
           </div>

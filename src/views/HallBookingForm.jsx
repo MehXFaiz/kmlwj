@@ -115,9 +115,8 @@ export const HallBookingForm = () => {
   const hallId = watch('hallId');
   const watchedHallIds = watch('hallIds');
   const selectedHallIds = React.useMemo(() => {
-    if (Array.isArray(watchedHallIds) && watchedHallIds.length > 0) return watchedHallIds;
-    if (hallId) return [hallId];
-    return [];
+    const firstId = Array.isArray(watchedHallIds) && watchedHallIds.length > 0 ? watchedHallIds[0] : hallId;
+    return firstId ? [firstId] : [];
   }, [watchedHallIds, hallId]);
   const isForJamaat = watch('isForJamaat');
   const programDate = watch('programDate');
@@ -198,7 +197,7 @@ export const HallBookingForm = () => {
             timeTo: booking.timeTo || '',
             timings: booking.timings || 'Evening',
             hallId: resolvedHallId,
-            hallIds: resolvedHallIds,
+            hallIds: resolvedHallIds.slice(0, 1),
             isForJamaat: booking.isForJamaat || false,
             amount: booking.hallCharges != null ? String(booking.hallCharges) : (booking.amount != null ? String(booking.amount) : ''),
             discount: booking.discount != null ? String(booking.discount) : '0',
@@ -319,11 +318,8 @@ export const HallBookingForm = () => {
   };
 
   const toggleHallSelection = (targetHallId) => {
-    const exists = selectedHallIds.includes(targetHallId);
-    const nextIds = exists
-      ? selectedHallIds.filter(hid => hid !== targetHallId)
-      : [...selectedHallIds, targetHallId];
-    handleUpdateSelectedHalls(nextIds);
+    const isSame = selectedHallIds[0] === targetHallId;
+    handleUpdateSelectedHalls(isSame ? [] : [targetHallId]);
   };
 
   const selectedHallIdsKey = selectedHallIds.join(',');
@@ -366,13 +362,11 @@ export const HallBookingForm = () => {
   // Fixed payment rates removed per user request so amounts can be entered manually
 
   const onSubmit = async (data) => {
-    const finalHallIds = Array.isArray(data.hallIds) && data.hallIds.length > 0
-      ? data.hallIds
-      : (data.hallId ? [data.hallId] : []);
+    const finalHallIds = (selectedHallIds.length > 0 ? selectedHallIds : (data.hallId ? [data.hallId] : [])).slice(0, 1);
     const primaryHallId = finalHallIds[0] || '';
 
     if (!data.bookerName || !data.bookingDate || !data.programDate || !primaryHallId || !data.amount) {
-      showToast('Please fill all required fields and select at least one hall.', 'warning');
+      showToast('Please fill all required fields and select a hall.', 'warning');
       return;
     }
 
@@ -882,33 +876,16 @@ export const HallBookingForm = () => {
                           required: 'Please select at least one hall',
                         })}
                       />
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                          <label className="text-xs font-semibold text-slate-300 flex items-center gap-2">
-                            <Building2 className="w-3.5 h-3.5 text-amber-400" />
-                            <span>{t('receipt.hall')} * <span className="text-slate-500 font-normal">(Select 1 to 4 Halls for One Booking)</span></span>
-                          </label>
-                        </div>
-                        <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <label className="text-xs font-semibold text-slate-300 flex items-center gap-2">
+                          <Building2 className="w-3.5 h-3.5 text-amber-400" />
+                          <span>{t('receipt.hall')} * <span className="text-slate-500 font-normal">(Select One Hall)</span></span>
+                        </label>
+                        {selectedHallIds.length > 0 && (
                           <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                            {selectedHallIds.length} of {hallAccounts.length} Hall{selectedHallIds.length === 1 ? '' : 's'} Selected
+                            {selectedHallsSummary || 'Hall Selected'}
                           </span>
-                          {hallAccounts.length > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (selectedHallIds.length === hallAccounts.length) {
-                                  handleUpdateSelectedHalls([]);
-                                } else {
-                                  handleUpdateSelectedHalls(hallAccounts.map(h => h.id));
-                                }
-                              }}
-                              className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 transition-colors cursor-pointer"
-                            >
-                              {selectedHallIds.length === hallAccounts.length ? 'Clear All' : `Select All ${hallAccounts.length} Halls`}
-                            </button>
-                          )}
-                        </div>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -973,20 +950,6 @@ export const HallBookingForm = () => {
                           );
                         })}
                       </div>
-
-                      {selectedHallIds.length > 1 && (
-                        <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-xs text-emerald-300 flex items-center justify-between gap-2">
-                          <span>
-                            <strong>Multi-Hall Booking ({selectedHallIds.length} Halls):</strong> {selectedHallsSummary}
-                          </span>
-                          <span className="font-bold shrink-0">
-                            Combined Standard Rate: Rs. {selectedHallIds.reduce((s, hid) => {
-                              const h = hallAccounts.find(acc => acc.id === hid);
-                              return s + (h ? getHallDefaultRate(h.name) : 0);
-                            }, 0).toLocaleString()}
-                          </span>
-                        </div>
-                      )}
 
                       {errors.hallId && (
                         <span className="text-xs text-red-400 mt-1 block">⚠️ {errors.hallId.message}</span>
