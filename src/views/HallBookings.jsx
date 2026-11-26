@@ -620,7 +620,7 @@ export const HallBookings = () => {
               </div>
               <div className="ml-3 px-3 py-2 rounded-lg bg-slate-800/40 border border-slate-700">
                 <p className="text-[11px] text-slate-400">Filtered Hall Income</p>
-                <p className="text-lg font-bold text-emerald-300">Rs {((bookings || []).reduce((s, b) => s + getBookingHallIncome(b, selectedHallId), 0)).toLocaleString()}</p>
+                <p className="text-lg font-bold text-emerald-300">Rs {Math.round((bookings || []).reduce((s, b) => s + getBookingHallIncome(b, selectedHallId), 0)).toLocaleString()}</p>
               </div>
             </div>
           </div>
